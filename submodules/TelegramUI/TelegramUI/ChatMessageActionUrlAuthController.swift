@@ -318,8 +318,8 @@ func chatMessageActionUrlAuthController(context: AccountContext, defaultUrl: Str
             open(contentNode.authorize, contentNode.allowWriteAccess)
         }
     })]
-    contentNode = ChatMessageActionUrlAuthAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: displayName, actions: actions)
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode!)
+    contentNode = ChatMessageActionUrlAuthAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: displayName, actions: actions)
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

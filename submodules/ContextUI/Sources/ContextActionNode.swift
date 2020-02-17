@@ -3,8 +3,6 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-private let textFont = Font.regular(17.0)
-
 enum ContextActionSibling {
     case none
     case item
@@ -23,17 +21,19 @@ final class ContextActionNode: ASDisplayNode {
     private let iconNode: ASImageNode
     private let buttonNode: HighlightTrackingButtonNode
     
-    init(theme: PresentationTheme, action: ContextMenuActionItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.action = action
         self.getController = getController
         self.actionSelected = actionSelected
         
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isAccessibilityElement = false
-        self.backgroundNode.backgroundColor = theme.contextMenu.itemBackgroundColor
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isAccessibilityElement = false
-        self.highlightedBackgroundNode.backgroundColor = theme.contextMenu.itemHighlightedBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         self.highlightedBackgroundNode.alpha = 0.0
         
         self.textNode = ImmediateTextNode()
@@ -43,9 +43,9 @@ final class ContextActionNode: ASDisplayNode {
         let textColor: UIColor
         switch action.textColor {
         case .primary:
-            textColor = theme.contextMenu.primaryColor
+            textColor = presentationData.theme.contextMenu.primaryColor
         case .destructive:
-            textColor = theme.contextMenu.destructiveColor
+            textColor = presentationData.theme.contextMenu.destructiveColor
         }
         self.textNode.attributedText = NSAttributedString(string: action.text, font: textFont, textColor: textColor)
         
@@ -62,7 +62,7 @@ final class ContextActionNode: ASDisplayNode {
             statusNode.isAccessibilityElement = false
             statusNode.isUserInteractionEnabled = false
             statusNode.displaysAsynchronously = false
-            statusNode.attributedText = NSAttributedString(string: value, font: textFont, textColor: theme.contextMenu.secondaryColor)
+            statusNode.attributedText = NSAttributedString(string: value, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
             statusNode.maximumNumberOfLines = 1
             self.statusNode = statusNode
         }
@@ -72,7 +72,7 @@ final class ContextActionNode: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.isUserInteractionEnabled = false
-        self.iconNode.image = action.icon(theme)
+        self.iconNode.image = action.icon(presentationData.theme)
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.isAccessibilityElement = true
@@ -149,27 +149,30 @@ final class ContextActionNode: ASDisplayNode {
         }
     }
     
-    func updateTheme(theme: PresentationTheme) {
-        self.backgroundNode.backgroundColor = theme.contextMenu.itemBackgroundColor
-        self.highlightedBackgroundNode.backgroundColor = theme.contextMenu.itemHighlightedBackgroundColor
+    func updateTheme(presentationData: PresentationData) {
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
         let textColor: UIColor
         switch action.textColor {
         case .primary:
-            textColor = theme.contextMenu.primaryColor
+            textColor = presentationData.theme.contextMenu.primaryColor
         case .destructive:
-            textColor = theme.contextMenu.destructiveColor
+            textColor = presentationData.theme.contextMenu.destructiveColor
         }
+        
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+        
         self.textNode.attributedText = NSAttributedString(string: self.action.text, font: textFont, textColor: textColor)
         
         switch self.action.textLayout {
         case let .secondLineWithValue(value):
-            self.statusNode?.attributedText = NSAttributedString(string: value, font: textFont, textColor: theme.contextMenu.secondaryColor)
+            self.statusNode?.attributedText = NSAttributedString(string: value, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
         default:
             break
         }
         
-        self.iconNode.image = self.action.icon(theme)
+        self.iconNode.image = self.action.icon(presentationData.theme)
     }
     
     @objc private func buttonPressed() {

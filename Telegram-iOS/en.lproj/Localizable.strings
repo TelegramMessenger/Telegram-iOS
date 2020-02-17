@@ -22,6 +22,10 @@
 "PUSH_CHANNEL_MESSAGE_POLL" = "%1$@|posted a poll %2$@";
 "PUSH_PINNED_POLL" = "%1$@|pinned a poll";
 
+"PUSH_MESSAGE_QUIZ" = "%1$@|sent you a quiz %2$@";
+"PUSH_CHANNEL_MESSAGE_QUIZ" = "%1$@|posted a quiz %2$@";
+"PUSH_PINNED_QUIZ" = "%1$@|pinned a quiz";
+
 "PUSH_CHAT_MESSAGE_TEXT" = "%2$@|%1$@: %3$@";
 "PUSH_CHAT_MESSAGE_NOTEXT" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGE_PHOTO" = "%2$@|%1$@ sent a photo";
@@ -93,6 +97,7 @@
 "PUSH_MESSAGE_GEO" = "%1$@|sent you a map";
 "PUSH_MESSAGE_GEOLIVE" = "%1$@|started sharing their live location";
 "PUSH_MESSAGE_POLL" = "%1$@|sent you a poll";
+"PUSH_MESSAGE_QUIZ" = "%1$@|sent you a quiz";
 "PUSH_MESSAGE_GIF" = "%1$@|sent you a GIF";
 "PUSH_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_MESSAGE_INVOICE" = "%1$@|sent you an invoice for %2$@";
@@ -125,6 +130,7 @@
 "PUSH_CHANNEL_MESSAGE_GEO" = "%1$@|posted a map";
 "PUSH_CHANNEL_MESSAGE_GEOLIVE" = "%1$@|posted a live location";
 "PUSH_CHANNEL_MESSAGE_POLL" = "%1$@|posted a poll";
+"PUSH_CHANNEL_MESSAGE_QUIZ" = "%1$@|posted a quiz";
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@|posted a GIF";
 "PUSH_CHANNEL_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHANNEL_MESSAGE_FWD" = "%1$@|posted a forwarded message";
@@ -155,6 +161,7 @@
 "PUSH_CHAT_MESSAGE_GEO" = "%2$@|%1$@ sent a map";
 "PUSH_CHAT_MESSAGE_GEOLIVE" = "%2$@|%1$@ started sharing their live location";
 "PUSH_CHAT_MESSAGE_POLL" = "%2$@|%1$@ sent a poll %3$@ to the group";
+"PUSH_CHAT_MESSAGE_QUIZ" = "%2$@|%1$@ sent a quiz %3$@ to the group";
 "PUSH_CHAT_MESSAGE_GIF" = "%2$@|%1$@ sent a GIF";
 "PUSH_CHAT_MESSAGE_GAME" = "%2$@|%1$@ invited the group to play %3$@";
 "PUSH_CHAT_MESSAGE_INVOICE" = "%2$@|%1$@ sent an invoice for %3$@";
@@ -197,6 +204,7 @@
 "PUSH_PINNED_GEO" = "%1$@|pinned a map";
 "PUSH_PINNED_GEOLIVE" = "%1$@|pinned a live location";
 "PUSH_PINNED_POLL" = "|%1$@|pinned a poll %2$@";
+"PUSH_PINNED_QUIZ" = "|%1$@|pinned a quiz %2$@";
 "PUSH_PINNED_GAME" = "%1$@|pinned a game";
 "PUSH_PINNED_INVOICE" = "%1$@|pinned an invoice";
 "PUSH_PINNED_GIF" = "%1$@|pinned a GIF";
@@ -253,6 +261,11 @@
 "State.ConnectingToProxyInfo" = "tap here for settings";
 "State.Updating" = "Updating...";
 "State.WaitingForNetwork" = "Waiting for network";
+
+"ChatState.Connecting" = "connecting...";
+"ChatState.ConnectingToProxy" = "connecting to proxy...";
+"ChatState.Updating" = "updating...";
+"ChatState.WaitingForNetwork" = "waiting for network...";
 
 // Presence
 "Presence.online" = "online";
@@ -505,6 +518,7 @@
 "Notification.JoinedChat" = "%@ joined the group";
 "Notification.JoinedChannel" = "%@ joined the channel";
 "Notification.Invited" = "%@ invited %@";
+"Notification.InvitedMultiple" = "%@ invited %@";
 "Notification.LeftChat" = "%@ left the group";
 "Notification.LeftChannel" = "%@ left the channel";
 "Notification.Kicked" = "%@ removed %@";
@@ -1926,6 +1940,7 @@
 "Notification.PinnedContactMessage" = "%@ pinned a contact";
 "Notification.PinnedDeletedMessage" = "%@ pinned deleted message";
 "Notification.PinnedPollMessage" = "%@ pinned a poll";
+"Notification.PinnedQuizMessage" = "%@ pinned a quiz";
 
 "Message.PinnedTextMessage" = "pinned \"%@\" ";
 "Message.PinnedPhotoMessage" = "pinned photo";
@@ -1936,7 +1951,6 @@
 "Message.PinnedStickerMessage" = "pinned sticker";
 "Message.PinnedLocationMessage" = "pinned location";
 "Message.PinnedContactMessage" = "pinned contact";
-"Message.PinnedPollMessage" = "pinned poll";
 
 "Notification.PinnedMessage" = "pinned message";
 
@@ -2561,6 +2575,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.InfoPanelTitle" = "What Is This?";
 "Channel.AdminLog.InfoPanelAlertTitle" = "What is the event log?";
 "Channel.AdminLog.InfoPanelAlertText" = "This is a list of all service actions taken by the group's members and admins in the last 48 hours.";
+"Channel.AdminLog.InfoPanelChannelAlertText" = "This is a list of all service actions taken by the channel's admins in the last 48 hours.";
 
 "Channel.AdminLog.BanReadMessages" = "Read Messages";
 "Channel.AdminLog.BanSendMessages" = "Send Messages";
@@ -3063,7 +3078,6 @@ Unused sets are archived when you add more.";
 
 "Settings.Appearance" = "Appearance";
 "Appearance.Title" = "Appearance";
-"Appearance.TextSize" = "TEXT SIZE";
 "Appearance.Preview" = "CHAT PREVIEW";
 "Appearance.ColorTheme" = "COLOR THEME";
 "Appearance.ThemeDayClassic" = "Day Classic";
@@ -3792,6 +3806,7 @@ Unused sets are archived when you add more.";
 "MessagePoll.VotedCount_any" = "%@ votes";
 "AttachmentMenu.Poll" = "Poll";
 "Conversation.PinnedPoll" = "Pinned Poll";
+"Conversation.PinnedQuiz" = "Pinned Quiz";
 
 "CreatePoll.Title" = "New Poll";
 "CreatePoll.Create" = "Send";
@@ -4676,6 +4691,12 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";
 "Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
 "Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
+"Appearance.ThemePreview.Chat.3.TextWithLink" = "Is that everything? It seemed like he said [quite a bit more] than that. 😯";
+
+"Appearance.ThemePreview.Chat.4.Text" = "For relaxing times, make it Suntory time. 😎";
+"Appearance.ThemePreview.Chat.5.Text" = "He wants you to turn, look in camera. O.K.?";
+"Appearance.ThemePreview.Chat.6.Text" = "That’s all he said?";
+"Appearance.ThemePreview.Chat.7.Text" = "Yes, turn to camera.";
 
 "GroupInfo.Permissions.SlowmodeValue.Off" = "Off";
 
@@ -4814,7 +4835,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Receive.CopyInvoiceUrl" = "Copy Invoice URL";
 "Wallet.Receive.ShareAddress" = "Share Wallet Address";
 "Wallet.Receive.ShareInvoiceUrl" = "Share Invoice URL";
-"Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them.";
+"Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them. Note: this link won't work for real Grams.";
 "Wallet.Receive.AmountHeader" = "AMOUNT";
 "Wallet.Receive.AmountText" = "Grams to receive";
 "Wallet.Receive.AmountInfo" = "You can specify the amount and purpose of the payment to save the sender some time.";
@@ -5104,3 +5125,222 @@ Any member of this group will be able to see messages in the channel.";
 "GroupInfo.ShowMoreMembers_3_10" = "%@ more";
 "GroupInfo.ShowMoreMembers_many" = "%@ more";
 "GroupInfo.ShowMoreMembers_any" = "%@ more";
+
+"ContactInfo.Note" = "note";
+
+"Group.Location.CreateInThisPlace" = "Create a group in this place";
+
+"Theme.Colors.Accent" = "Accent";
+"Theme.Colors.Background" = "Background";
+"Theme.Colors.Messages" = "Messages";
+"Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";
+"Theme.Colors.ColorWallpaperWarningProceed" = "Proceed";
+
+"ChatSettings.IntentsSettings" = "Share Sheet";
+"IntentsSettings.Title" = "Share Sheet";
+"IntentsSettings.MainAccount" = "Main Account";
+"IntentsSettings.MainAccountInfo" = "Choose an account for Siri and share suggestions.";
+"IntentsSettings.SuggestedChats" = "Suggested Chats";
+"IntentsSettings.SuggestedChatsContacts" = "Contacts";
+"IntentsSettings.SuggestedChatsSavedMessages" = "Saved Messages";
+"IntentsSettings.SuggestedChatsPrivateChats" = "Private Chats";
+"IntentsSettings.SuggestedChatsGroups" = "Groups";
+"IntentsSettings.SuggestedChatsInfo" = "Archived chats will not be suggested.";
+"IntentsSettings.SuggestedAndSpotlightChatsInfo" = "Suggestions will appear in the Share Sheet and Spotlight search results. Archived chats will not be suggested.";
+"IntentsSettings.SuggestBy" = "Suggest By";
+"IntentsSettings.SuggestByAll" = "All Sent Messages";
+"IntentsSettings.SuggestByShare" = "Only Shared Messages";
+"IntentsSettings.ResetAll" = "Reset All Share Suggestions";
+"IntentsSettings.Reset" = "Reset";
+
+"Conversation.SendingOptionsTooltip" = "Hold this button to schedule your message\nor send it without sound.";
+
+"Appearance.TextSizeSetting" = "Text Size";
+"Appearance.TextSize.Automatic" = "System";
+"Appearance.TextSize.Title" = "Text Size";
+"Appearance.TextSize.UseSystem" = "User System Text Size";
+"Appearance.TextSize.Apply" = "Set";
+
+"Shortcut.SwitchAccount" = "Switch Account";
+
+"Settings.Devices" = "Devices";
+"Settings.AddDevice" = "Scan QR";
+"AuthSessions.DevicesTitle" = "Devices";
+"AuthSessions.AddDevice" = "Scan QR";
+"AuthSessions.AddDevice.ScanInfo" = "Scan a QR code to log into\nthis account on another device.";
+"AuthSessions.AddDevice.ScanTitle" = "Scan QR Code";
+"AuthSessions.AddDevice.InvalidQRCode" = "Invalid QR Code";
+"AuthSessions.AddDeviceIntro.Title" = "Log in by QR Code";
+"AuthSessions.AddDeviceIntro.Text1" = "Download Telegram on your computer from [desktop.telegram.org]()";
+"AuthSessions.AddDeviceIntro.Text2" = "Run Telegram on your computer to get the QR code";
+"AuthSessions.AddDeviceIntro.Text3" = "Scan the QR code to connect your account";
+"AuthSessions.AddDeviceIntro.Action" = "Scan QR Code";
+"AuthSessions.AddedDeviceTitle" = "Login Successful";
+"AuthSessions.AddedDeviceTerminate" = "Terminate";
+
+"Map.SendThisPlace" = "Send This Place";
+"Map.SetThisPlace" = "Set This Place";
+"Map.AddressOnMap" = "Address On Map";
+"Map.PlacesNearby" = "Places Nearby";
+"Map.Home" = "Home";
+"Map.Work" = "Work";
+"Map.HomeAndWorkTitle" = "Home & Work Addresses";
+"Map.HomeAndWorkInfo" = "Telegram uses the Home and Work addresses from your Contact Card.\n\nKeep your Contact Card up to date for quick access to sending Home and Work addresses.";
+"Map.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"ChatList.Search.ShowMore" = "Show more";
+"ChatList.Search.ShowLess" = "Show less";
+
+"AuthSessions.OtherDevices" = "The official Telegram App is available for iPhone, iPad, Android, macOS, Windows and Linux. [Learn More]()";
+
+"MediaPlayer.UnknownArtist" = "Unknown Artist";
+"MediaPlayer.UnknownTrack" = "Unknown Track";
+
+"Contacts.InviteContacts_1" = "Invite %@ Contact";
+"Contacts.InviteContacts_2" = "Invite %@ Contacts";
+"Contacts.InviteContacts_3_10" = "Invite %@ Contacts";
+"Contacts.InviteContacts_any" = "Invite %@ Contacts";
+"Contacts.InviteContacts_many" = "Invite %@ Contacts";
+"Contacts.InviteContacts_0" = "Invite %@ Contacts";
+
+"Theme.Context.ChangeColors" = "Change Colors";
+
+"EditTheme.ChangeColors" = "Change Colors";
+
+"Theme.Colors.Proceed" = "Proceed";
+
+"AuthSessions.AddDevice.UrlLoginHint" = "This code can be used to allow someone to log in to your Telegram account.\n\nTo confirm Telegram login, please go to Settings > Devices > Scan QR and scan the code.";
+
+"Appearance.RemoveThemeColor" = "Remove";
+"Appearance.RemoveThemeColorConfirmation" = "Remove Color";
+
+"WallpaperPreview.PatternTitle" = "Choose Pattern";
+"WallpaperPreview.PatternPaternDiscard" = "Discard";
+"WallpaperPreview.PatternPaternApply" = "Apply";
+
+"ChatContextMenu.TextSelectionTip" = "Hold a word, then move cursor to select more| text to copy.";
+
+"OldChannels.Title" = "Limit Reached";
+"OldChannels.NoticeTitle" = "Too Many Groups and Channels";
+"OldChannels.NoticeText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before joining new one.";
+"OldChannels.NoticeCreateText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before creating a new one.";
+"OldChannels.NoticeUpgradeText" = "Sorry, you are a member of too many groups and channels.\nFor technical reasons, you need to leave some first before changing this setting in your groups.";
+"OldChannels.ChannelsHeader" = "MOST INACTIVE";
+"OldChannels.Leave_1" = "Leave %@ Chat";
+"OldChannels.Leave_any" = "Leave %@ Chats";
+
+"OldChannels.ChannelFormat" = "channel, ";
+"OldChannels.GroupEmptyFormat" = "group, ";
+"OldChannels.GroupFormat_1" = "%@ member ";
+"OldChannels.GroupFormat_any" = "%@ members ";
+
+"OldChannels.InactiveWeek_1" = "inactive %@ week";
+"OldChannels.InactiveWeek_any" = "inactive %@ weeks";
+
+"OldChannels.InactiveMonth_1" = "inactive %@ month";
+"OldChannels.InactiveMonth_any" = "inactive %@ months";
+
+"OldChannels.InactiveYear_1" = "inactive %@ year";
+"OldChannels.InactiveYear_any" = "inactive %@ years";
+
+"PrivacySettings.WebSessions" = "Active Websites";
+
+"Appearance.ShareThemeColor" = "Share";
+
+"Theme.ThemeChanged" = "Color Theme Changed";
+"Theme.ThemeChangedText" = "You can change it back in\n[Settings > Appearance]().";
+
+"StickerPackActionInfo.AddedTitle" = "Stickers Added";
+"StickerPackActionInfo.AddedText" = "%@ has been added to your stickers.";
+"StickerPackActionInfo.RemovedTitle" = "Stickers Removed";
+"StickerPackActionInfo.ArchivedTitle" = "Stickers Archived";
+"StickerPackActionInfo.RemovedText" = "%@ is no longer in your stickers.";
+
+"Conversation.ContextMenuCancelEditing" = "Cancel Editing";
+
+"Map.NoPlacesNearby" = "There are no known places nearby.\nTry a different location.";
+
+"CreatePoll.QuizTitle" = "New Quiz";
+"CreatePoll.QuizOptionsHeader" = "QUIZ ANSWERS";
+"CreatePoll.Anonymous" = "Anonymous Voting";
+"CreatePoll.MultipleChoice" = "Multiple Choice";
+"CreatePoll.MultipleChoiceQuizAlert" = "A quiz has one correct answer.";
+"CreatePoll.Quiz" = "Quiz Mode";
+"CreatePoll.QuizInfo" = "Polls in Quiz Mode have one correct answer. Users can't revoke their answers.";
+"CreatePoll.QuizTip" = "Tap to choose the correct answer";
+
+"MessagePoll.LabelPoll" = "Public Poll";
+"MessagePoll.LabelAnonymousQuiz" = "Anonymous Quiz";
+"MessagePoll.LabelQuiz" = "Quiz";
+"MessagePoll.SubmitVote" = "Vote";
+"MessagePoll.ViewResults" = "View Results";
+"MessagePoll.QuizNoUsers" = "Nobody answered yet";
+"MessagePoll.QuizCount_0" = "%@ answered";
+"MessagePoll.QuizCount_1" = "1 answered";
+"MessagePoll.QuizCount_2" = "2 answered";
+"MessagePoll.QuizCount_3_10" = "%@ answered";
+"MessagePoll.QuizCount_many" = "%@ answered";
+"MessagePoll.QuizCount_any" = "%@ answered";
+
+"PollResults.Title" = "Poll Results";
+"PollResults.Collapse" = "COLLAPSE";
+"PollResults.ShowMore_1" = "Show More (%@)";
+"PollResults.ShowMore_any" = "Show More (%@)";
+
+"Conversation.StopQuiz" = "Stop Quiz";
+"Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to submit answers. This action cannot be undone.";
+"Conversation.StopQuizConfirmation" = "Stop Quiz";
+
+"Forward.ErrorDisabledForChat" = "Sorry, you can't forward messages to this chat.";
+"Forward.ErrorPublicPollDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
+"Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
+
+"Map.PlacesInThisArea" = "Places In This Area";
+
+"Appearance.BubbleCornersSetting" = "Message Corners";
+"Appearance.BubbleCorners.Title" = "Message Corners";
+"Appearance.BubbleCorners.AdjustAdjacent" = "Adjust Adjacent Corners";
+"Appearance.BubbleCorners.Apply" = "Set";
+
+"Conversation.LiveLocationYouAndOther" = "**You** and %@";
+
+"PeopleNearby.MakeVisible" = "Make Myself Visible";
+"PeopleNearby.MakeInvisible" = "Stop Showing Me";
+
+"PeopleNearby.ShowMorePeople_0" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_1" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_2" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_3_10" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_many" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_any" = "Show %@ More People";
+
+"PeopleNearby.VisibleUntil" = "visible until %@";
+
+"PeopleNearby.MakeVisibleTitle" = "Make Myself Visible";
+"PeopleNearby.MakeVisibleDescription" = "Users nearby will be able to view your profile and send you messages. This may help you find new friends, but could also attract excessive attention. You can stop sharing your profile at any time.\n\nYour phone number will remain hidden.";
+
+"PeopleNearby.DiscoverDescription" = "Exchange contact info with people nearby\nand find new friends.";
+
+"Time.TomorrowAt" = "tomorrow at %@";
+
+"PeerInfo.ButtonMessage" = "Message";
+"PeerInfo.ButtonDiscuss" = "Discuss";
+"PeerInfo.ButtonCall" = "Call";
+"PeerInfo.ButtonMute" = "Mute";
+"PeerInfo.ButtonUnmute" = "Unmute";
+"PeerInfo.ButtonMore" = "More";
+"PeerInfo.ButtonAddMember" = "Add Members";
+"PeerInfo.ButtonSearch" = "Search";
+"PeerInfo.ButtonLeave" = "Leave";
+
+"PeerInfo.PaneMedia" = "Media";
+"PeerInfo.PaneFiles" = "Files";
+"PeerInfo.PaneLinks" = "Links";
+"PeerInfo.PaneVoice" = "Voice Messages";
+"PeerInfo.PaneAudio" = "Audio";
+"PeerInfo.PaneGroups" = "Groups";
+"PeerInfo.PaneMembers" = "Members";
+
+"PeerInfo.AddToContacts" = "Add to Contacts";
+
+"PeerInfo.BioExpand" = "more";

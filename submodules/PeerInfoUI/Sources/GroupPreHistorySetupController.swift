@@ -78,21 +78,21 @@ private enum GroupPreHistorySetupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupPreHistorySetupArguments
         switch self {
             case let .header(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .visible(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.toggle(true)
                 })
             case let .hidden(theme, text, value):
-                return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.toggle(false)
                 })
             case let .info(theme, text):
-                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
     }
 }
@@ -124,6 +124,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -161,14 +162,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                 if let value = value, value != defaultValue {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
                         let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                            guard let upgradedPeerId = upgradedPeerId else {
-                                return .single(nil)
-                            }
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
                             return updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
@@ -177,6 +171,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                                 return .complete()
                             }
                             |> then(.single(upgradedPeerId))
+                            |> castError(ConvertGroupToSupergroupError.self)
                         }
                         |> deliverOnMainQueue
                         applyDisposable.set((signal
@@ -185,6 +180,13 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                                 upgradedToSupergroup(upgradedPeerId, {
                                     dismissImpl?()
                                 })
+                            }
+                        }, error: { error in
+                            switch error {
+                            case .tooManyChannels:
+                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                            default:
+                                break
                             }
                         }))
                     } else {
@@ -199,8 +201,8 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
             })
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Group_Setup_HistoryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: groupPreHistorySetupEntries(isSupergroup: peerId.namespace == Namespaces.Peer.CloudChannel, presentationData: presentationData, defaultValue: defaultValue, state: state), style: .blocks)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Group_Setup_HistoryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupPreHistorySetupEntries(isSupergroup: peerId.namespace == Namespaces.Peer.CloudChannel, presentationData: presentationData, defaultValue: defaultValue, state: state), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
@@ -212,6 +214,9 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     return controller
 }

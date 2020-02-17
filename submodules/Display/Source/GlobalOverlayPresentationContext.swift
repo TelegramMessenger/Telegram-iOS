@@ -23,10 +23,10 @@ func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
     }
 }
 
-private final class HierarchyTrackingNode: ASDisplayNode {
+public final class HierarchyTrackingNode: ASDisplayNode {
     private let f: (Bool) -> Void
     
-    init(_ f: @escaping (Bool) -> Void) {
+    public init(_ f: @escaping (Bool) -> Void) {
         self.f = f
         
         super.init()
@@ -34,13 +34,13 @@ private final class HierarchyTrackingNode: ASDisplayNode {
         self.isLayerBacked = true
     }
     
-    override func didEnterHierarchy() {
+    override public func didEnterHierarchy() {
         super.didEnterHierarchy()
         
         self.f(true)
     }
     
-    override func didExitHierarchy() {
+    override public func didExitHierarchy() {
         super.didExitHierarchy()
         
         self.f(false)

@@ -69,7 +69,7 @@ enum PrivacyIntroControllerMode {
     }
 }
 
-final public class PrivacyIntroControllerPresentationArguments {
+public final class PrivacyIntroControllerPresentationArguments {
     let fadeIn: Bool
     let animateIn: Bool
     

@@ -11,6 +11,7 @@ import TelegramStringFormatting
 import PeerOnlineMarkerNode
 import SelectablePeerNode
 import ContextUI
+import AccountContext
 
 public enum HorizontalPeerItemMode {
     case list
@@ -23,7 +24,7 @@ public final class HorizontalPeerItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let mode: HorizontalPeerItemMode
-    let account: Account
+    let context: AccountContext
     public let peer: Peer
     let action: (Peer) -> Void
     let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
@@ -32,11 +33,11 @@ public final class HorizontalPeerItem: ListViewItem {
     let presence: PeerPresence?
     let unreadBadge: (Int32, Bool)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, account: Account, peer: Peer, presence: PeerPresence?, unreadBadge: (Int32, Bool)?, action: @escaping (Peer) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, context: AccountContext, peer: Peer, presence: PeerPresence?, unreadBadge: (Int32, Bool)?, action: @escaping (Peer) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
         self.mode = mode
-        self.account = account
+        self.context = context
         self.peer = peer
         self.action = action
         self.contextAction = contextAction
@@ -147,10 +148,10 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 let badgeTextColor: UIColor
                 let (unreadCount, isMuted) = unreadBadge
                 if isMuted {
-                    currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme)
+                    currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme, diameter: 20.0)
                     badgeTextColor = item.theme.chatList.unreadBadgeInactiveTextColor
                 } else {
-                    currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme)
+                    currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.theme, diameter: 20.0)
                     badgeTextColor = item.theme.chatList.unreadBadgeActiveTextColor
                 }
                 badgeAttributedString = NSAttributedString(string: unreadCount > 0 ? "\(unreadCount)" : " ", font: badgeFont, textColor: badgeTextColor)
@@ -187,7 +188,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.peerNode.theme = itemTheme
-                    strongSelf.peerNode.setup(account: item.account, theme: item.theme, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: false)
+                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: false)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     

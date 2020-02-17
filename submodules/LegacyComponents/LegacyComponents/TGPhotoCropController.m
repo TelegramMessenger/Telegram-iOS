@@ -625,8 +625,8 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
         };
         
         NSMutableArray *items = [[NSMutableArray alloc] init];
-        [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.CropAspectRatioOriginal") type:TGMenuSheetButtonTypeDefault action:^{ action(TGPhotoCropOriginalAspectRatio); }]];
-        [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.CropAspectRatioSquare") type:TGMenuSheetButtonTypeDefault action:^{ action(@"1.0"); }]];
+        [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.CropAspectRatioOriginal") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^{ action(TGPhotoCropOriginalAspectRatio); }]];
+        [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.CropAspectRatioSquare") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^{ action(@"1.0"); }]];
         
         CGSize croppedImageSize = _cropView.cropRect.size;
         if (_cropView.cropOrientation == UIImageOrientationLeft || _cropView.cropOrientation == UIImageOrientationRight)
@@ -666,10 +666,10 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
             
             ratio = heightComponent / widthComponent;
             
-            [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:[NSString stringWithFormat:@"%d:%d", (int)widthComponent, (int)heightComponent] type:TGMenuSheetButtonTypeDefault action:^{ action([NSString stringWithFormat:@"%f", ratio]); }]];
+            [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:[NSString stringWithFormat:@"%d:%d", (int)widthComponent, (int)heightComponent] type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^{ action([NSString stringWithFormat:@"%f", ratio]); }]];
         }
         
-        [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+        [items addObject:[[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
         {
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController != nil)

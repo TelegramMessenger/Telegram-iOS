@@ -143,7 +143,20 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         }
     }
     
+    public func setSelectedIndex(_ index: Int, animated: Bool) {
+        guard index != self._selectedIndex else {
+            return
+        }
+        self._selectedIndex = index
+        if let layout = self.validLayout {
+            let _ = self.updateLayout(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+    }
+    
     public var selectedIndexChanged: (Int) -> Void = { _ in }
+    public var selectedIndexShouldChange: (Int, @escaping (Bool) -> Void) -> Void = { _, f in
+        f(true)
+    }
     
     public init(theme: SegmentedControlTheme, items: [SegmentedControlItem], selectedIndex: Int) {
         self.theme = theme
@@ -347,16 +360,19 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             return
         }
         
-        self._selectedIndex = index
-        self.selectedIndexChanged(index)
-        if let layout = self.validLayout {
-            let _ = self.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
-        }
+        self.selectedIndexShouldChange(index, { [weak self] commit in
+            if let strongSelf = self, commit {
+                strongSelf._selectedIndex = index
+                strongSelf.selectedIndexChanged(index)
+                if let layout = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
+                }
+            }
+        })
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let location = gestureRecognizer.location(in: self.view)
-        return self.selectionNode.frame.contains(location)
+        return self.selectionNode.frame.contains(gestureRecognizer.location(in: self.view))
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -382,8 +398,18 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             case .ended:
                 if let gestureSelectedIndex = self.gestureSelectedIndex {
                     if gestureSelectedIndex != self.selectedIndex  {
-                        self._selectedIndex = gestureSelectedIndex
-                        self.selectedIndexChanged(self._selectedIndex)
+                        self.selectedIndexShouldChange(gestureSelectedIndex, { [weak self] commit in
+                            if let strongSelf = self {
+                                if commit {
+                                    strongSelf._selectedIndex = gestureSelectedIndex
+                                    strongSelf.selectedIndexChanged(gestureSelectedIndex)
+                                } else {
+                                    if let layout = strongSelf.validLayout {
+                                        let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
+                                    }
+                                }
+                            }
+                        })
                     }
                     self.gestureSelectedIndex = nil
                 }

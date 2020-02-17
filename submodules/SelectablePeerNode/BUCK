@@ -18,6 +18,7 @@ static_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/ContextUI:ContextUI",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
+        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

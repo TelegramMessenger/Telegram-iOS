@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-public struct HistoryPreloadIndex: Comparable {
+public struct HistoryPreloadIndex: Comparable, CustomStringConvertible {
     public let index: ChatListIndex?
     public let hasUnread: Bool
     public let isMuted: Bool
@@ -49,9 +49,13 @@ public struct HistoryPreloadIndex: Comparable {
             return true
         }
     }
+    
+    public var description: String {
+        return "index: \(String(describing: self.index)), hasUnread: \(self.hasUnread), isMuted: \(self.isMuted), isPriority: \(self.isPriority)"
+    }
 }
 
-private struct HistoryPreloadHole: Hashable, Comparable {
+private struct HistoryPreloadHole: Hashable, Comparable, CustomStringConvertible {
     let preloadIndex: HistoryPreloadIndex
     let hole: MessageOfInterestHole
     
@@ -65,6 +69,10 @@ private struct HistoryPreloadHole: Hashable, Comparable {
     
     var hashValue: Int {
         return self.preloadIndex.index.hashValue &* 31 &+ self.hole.hashValue
+    }
+    
+    var description: String {
+        return "(preloadIndex: \(self.preloadIndex), hole: \(self.hole))"
     }
 }
 
@@ -90,6 +98,9 @@ private final class HistoryPreloadEntry: Comparable {
             self.isStarted = true
             
             let hole = self.hole.hole
+            
+            Logger.shared.log("HistoryPreload", "start hole \(hole)")
+            
             let signal: Signal<Never, NoError> = .complete()
             |> delay(0.3, queue: queue)
             |> then(
@@ -98,8 +109,8 @@ private final class HistoryPreloadEntry: Comparable {
                 |> deliverOn(queue)
                 |> mapToSignal { download -> Signal<Never, NoError> in
                     switch hole.hole {
-                        case let .peer(peerHole):
-                            return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, limit: 60)
+                    case let .peer(peerHole):
+                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, count: 60)
                     }
                 }
             )
@@ -320,13 +331,12 @@ final class ChatHistoryPreloadManager {
                 return
             }
             #if DEBUG
-            if true {
-                //return
-            }
+            return
             #endif
+            
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for entry in view.0.entries {
-                if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
+                if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _, _) = entry {
                     var hasUnread = false
                     if let readState = readState {
                         hasUnread = readState.count != 0
@@ -396,7 +406,7 @@ final class ChatHistoryPreloadManager {
                     let key: PostboxViewKey
                     switch index.entity {
                         case let .peer(peerId):
-                            key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 60)
+                            key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 70)
                     }
                     view.disposable.set((self.postbox.combinedView(keys: [key])
                     |> deliverOn(self.queue)).start(next: { [weak self] next in
@@ -422,6 +432,14 @@ final class ChatHistoryPreloadManager {
                                 }
                                 
                                 let updatedHole = view.currentHole
+                                
+                                let holeIsUpdated = previousHole != updatedHole
+                                
+                                switch index.entity {
+                                case let .peer(peerId):
+                                    Logger.shared.log("HistoryPreload", "view \(peerId) hole \(updatedHole) isUpdated: \(holeIsUpdated)")
+                                }
+                                
                                 if previousHole != updatedHole {
                                     strongSelf.update(from: previousHole, to: updatedHole)
                                 }
@@ -449,7 +467,11 @@ final class ChatHistoryPreloadManager {
     
     private func update(from previousHole: HistoryPreloadHole?, to updatedHole: HistoryPreloadHole?) {
         assert(self.queue.isCurrent())
-        if previousHole == updatedHole {
+        let isHoleUpdated = previousHole != updatedHole
+        
+        Logger.shared.log("HistoryPreload", "update from \(String(describing: previousHole)) to \(String(describing: updatedHole)), isUpdated: \(isHoleUpdated)")
+        
+        if !isHoleUpdated {
             return
         }
         
@@ -483,9 +505,12 @@ final class ChatHistoryPreloadManager {
         }
         
         if self.canPreloadHistoryValue {
+            Logger.shared.log("HistoryPreload", "will start")
             for i in 0 ..< min(3, self.entries.count) {
                 self.entries[i].startIfNeeded(postbox: self.postbox, accountPeerId: self.accountPeerId, download: self.download.get() |> take(1), queue: self.queue)
             }
+        } else {
+            Logger.shared.log("HistoryPreload", "will not start, canPreloadHistoryValue = false")
         }
     }
 }

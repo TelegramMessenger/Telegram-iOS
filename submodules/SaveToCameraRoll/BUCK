@@ -18,6 +18,8 @@ static_library(
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/MobileCoreServices.framework",
-        "$SDKROOT/System/Library/Frameworks/Photos.framework",
+    ],
+    weak_frameworks = [
+        "Photos",
     ],
 )

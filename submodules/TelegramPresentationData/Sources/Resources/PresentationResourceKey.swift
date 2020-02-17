@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public struct PresentationResources {
 }
@@ -19,6 +20,7 @@ public enum PresentationResourceKey: Int32 {
     case navigationShareIcon
     case navigationSearchIcon
     case navigationCompactSearchIcon
+    case navigationMoreIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
     
@@ -47,6 +49,8 @@ public enum PresentationResourceKey: Int32 {
     case itemListVerifiedPeerIcon
     case itemListCloudFetchIcon
     case itemListCloseIconImage
+    case itemListMakeVisibleIcon
+    case itemListMakeInvisibleIcon
     case itemListCornersTop
     case itemListCornersBottom
     case itemListCornersBoth
@@ -76,12 +80,6 @@ public enum PresentationResourceKey: Int32 {
 
     case chatTitleLockIcon
     case chatTitleMuteIcon
-    
-    case chatPrincipalThemeEssentialGraphicsWithWallpaper
-    case chatPrincipalThemeEssentialGraphicsWithoutWallpaper
-    
-    case chatPrincipalThemeAdditionalGraphicsWithCustomWallpaper
-    case chatPrincipalThemeAdditionalGraphicsWithDefaultWallpaper
     
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage
@@ -203,9 +201,7 @@ public enum PresentationResourceKey: Int32 {
     
     case chatBubbleIncomingCallButtonImage
     case chatBubbleOutgoingCallButtonImage
-    
-    case chatBubbleMapPinImage
-    
+        
     case callListOutgoingIcon
     case callListInfoButton
     
@@ -220,4 +216,24 @@ public enum PresentationResourceKey: Int32 {
     case groupInfoMembersIcon
     
     case emptyChatListCheckIcon
+}
+
+public enum PresentationResourceParameterKey: Hashable {
+    case chatOutgoingFullCheck(CGFloat)
+    case chatOutgoingPartialCheck(CGFloat)
+    case chatMediaFullCheck(CGFloat)
+    case chatMediaPartialCheck(CGFloat)
+    case chatFreeFullCheck(CGFloat, Bool)
+    case chatFreePartialCheck(CGFloat, Bool)
+    
+    case chatListBadgeBackgroundActive(CGFloat)
+    case chatListBadgeBackgroundInactive(CGFloat)
+    case chatListBadgeBackgroundMention(CGFloat)
+    case chatListBadgeBackgroundInactiveMention(CGFloat)
+    case chatListBadgeBackgroundPinned(CGFloat)
+    
+    case chatBubbleMediaCorner(incoming: Bool, mainRadius: CGFloat, inset: CGFloat)
+    
+    case chatPrincipalThemeEssentialGraphics(hasWallpaper: Bool, bubbleCorners: PresentationChatBubbleCorners)
+    case chatPrincipalThemeAdditionalGraphics(isCustomWallpaper: Bool, bubbleCorners: PresentationChatBubbleCorners)
 }

@@ -14,13 +14,13 @@ import ItemListPeerItem
 import ContextUI
 
 private final class GroupsInCommonControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openPeer: (PeerId) -> Void
     let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     
-    init(account: Account, openPeer: @escaping (PeerId) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
-        self.account = account
+    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
+        self.context = context
         self.openPeer = openPeer
         self.contextAction = contextAction
     }
@@ -90,11 +90,11 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupsInCommonControllerArguments
         switch self {
         case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
-            return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                 arguments.openPeer(peer.id)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
@@ -141,7 +141,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     
     var contextActionImpl: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     
-    let arguments = GroupsInCommonControllerArguments(account: context.account, openPeer: { memberId in
+    let arguments = GroupsInCommonControllerArguments(context: context, openPeer: { memberId in
         guard let navigationController = getNavigationControllerImpl?() else {
             return
         }
@@ -154,7 +154,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
             return context.account.postbox.transaction { transaction -> [Peer] in
                 var result: [Peer] = []
                 for id in peerIds {
-                    if let peer = transaction.getPeer(id) {
+                    if let peer = transaction.getPeer(id.id) {
                         result.append(peer)
                     }
                 }
@@ -178,8 +178,8 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
             let previous = previousPeers
             previousPeers = peers
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_GroupsInCommon), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: groupsInCommonControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.UserInfo_GroupsInCommon), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupsInCommonControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -208,7 +208,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
                 arguments.openPeer(peer.id)
             }))
         ]
-        let contextController = ContextController(account: context.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
     }
     return controller

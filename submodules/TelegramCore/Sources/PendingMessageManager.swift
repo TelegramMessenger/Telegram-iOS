@@ -75,7 +75,7 @@ private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
 }
 
 private final class PeerPendingMessagesSummaryContext {
-    var messageDeliveredSubscribers = Bag<() -> Void>()
+    var messageDeliveredSubscribers = Bag<(MessageId.Namespace) -> Void>()
     var messageFailedSubscribers = Bag<(PendingMessageFailureReason) -> Void>()
 }
 
@@ -239,7 +239,7 @@ public final class PendingMessageManager {
                     for peerId in peerIdsWithDeliveredMessages {
                         if let context = strongSelf.peerSummaryContexts[peerId] {
                             for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                                subscriber()
+                                subscriber(Namespaces.Message.Cloud)
                             }
                         }
                     }
@@ -355,6 +355,8 @@ public final class PendingMessageManager {
                     strongSelf.collectUploadingInfo(messageContext: messageContext, message: message)
                 }
                 
+                var messagesToUpload: [(PendingMessageContext, Message, PendingMessageUploadedContentType, Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)] = []
+                var messagesToForward: [PeerIdAndNamespace: [(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = [:]
                 for (messageContext, _) in strongSelf.messageContexts.values.compactMap({ messageContext -> (PendingMessageContext, Message)? in
                     if case let .collectingInfo(message) = messageContext.state {
                         return (messageContext, message)
@@ -365,15 +367,57 @@ public final class PendingMessageManager {
                     return lhs.1.index < rhs.1.index
                 }) {
                     if case let .collectingInfo(message) = messageContext.state {
-                        let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, message: message)
-                        messageContext.contentType = contentType
-                        
-                        if strongSelf.canBeginUploadingMessage(id: message.id, type: contentType) {
-                            strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
-                        } else {
-                            messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
+                        let contentToUpload = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, message: message)
+                        messageContext.contentType = contentToUpload.type
+                        switch contentToUpload {
+                        case let .immediate(result, type):
+                            var isForward = false
+                            switch result {
+                            case let .content(content):
+                                switch content.content {
+                                case let .forward(forwardInfo):
+                                    isForward = true
+                                    let peerIdAndNamespace = PeerIdAndNamespace(peerId: message.id.peerId, namespace: message.id.namespace)
+                                    if messagesToForward[peerIdAndNamespace] == nil {
+                                        messagesToForward[peerIdAndNamespace] = []
+                                    }
+                                    messagesToForward[peerIdAndNamespace]!.append((messageContext, message, forwardInfo))
+                                default:
+                                    break
+                                }
+                            default:
+                                break
+                            }
+                            if !isForward {
+                                messagesToUpload.append((messageContext, message, type, .single(result)))
+                            }
+                        case let .signal(signal, type):
+                            messagesToUpload.append((messageContext, message, type, signal))
                         }
                     }
+                }
+                
+                for (messageContext, message, type, contentUploadSignal) in messagesToUpload {
+                    if strongSelf.canBeginUploadingMessage(id: message.id, type: type) {
+                        strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
+                    } else {
+                        messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
+                    }
+                }
+                
+                for (_, messages) in messagesToForward {
+                    for (context, _, _) in messages {
+                        context.state = .sending(groupId: nil)
+                    }
+                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, group: messages.map { data in
+                        let (_, message, forwardInfo) = data
+                        return (message.id, PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil))
+                    })
+                    |> map { next -> PendingMessageResult in
+                        return .progress(1.0)
+                    }
+                    messages[0].0.sendDisposable.set((sendMessage
+                    |> deliverOn(strongSelf.queue)).start())
                 }
             }
         }))
@@ -502,7 +546,8 @@ public final class PendingMessageManager {
                 }
             }
             return .complete()
-        }).start(next: { [weak self] next in
+        }
+        |> deliverOn(queue)).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
@@ -630,7 +675,9 @@ public final class PendingMessageManager {
                 
                 let sendMessageRequest: Signal<Api.Updates, MTRpcError>
                 if isForward {
-                    flags |= (1 << 9)
+                    if !messages.contains(where: { $0.0.groupingKey == nil }) {
+                        flags |= (1 << 9)
+                    }
                     
                     var forwardIds: [(MessageId, Int64)] = []
                     for (message, content) in messages {
@@ -1044,13 +1091,28 @@ public final class PendingMessageManager {
     }
     
     private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
+        var apiMessage: Api.Message?
+        for resultMessage in result.messages {
+            if let id = resultMessage.id(namespace: Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+                if id.peerId == message.id.peerId {
+                    apiMessage = resultMessage
+                    break
+                }
+            }
+        }
+        
+        var namespace = Namespaces.Message.Cloud
+        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+            namespace = id.namespace
+        }
+        
         return applyUpdateMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
         |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {
                     if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                         for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                            subscriber()
+                            subscriber(namespace)
                         }
                     }
                 }
@@ -1059,13 +1121,18 @@ public final class PendingMessageManager {
     }
     
     private func applySentGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
+        var namespace = Namespaces.Message.Cloud
+        if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
+            namespace = Namespaces.Message.ScheduledCloud
+        }
+        
         return applyUpdateGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages, result: result)
         |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {
-                    if let peerId = messages.first?.id.peerId, let context = strongSelf.peerSummaryContexts[peerId] {
+                    if let message = messages.first, let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                         for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                            subscriber()
+                            subscriber(namespace)
                         }
                     }
                 }
@@ -1073,7 +1140,7 @@ public final class PendingMessageManager {
         }
     }
     
-    public func deliveredMessageEvents(peerId: PeerId) -> Signal<Bool, NoError> {
+    public func deliveredMessageEvents(peerId: PeerId) -> Signal<MessageId.Namespace, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -1086,8 +1153,8 @@ public final class PendingMessageManager {
                     self.peerSummaryContexts[peerId] = summaryContext
                 }
                 
-                let index = summaryContext.messageDeliveredSubscribers.add({
-                    subscriber.putNext(true)
+                let index = summaryContext.messageDeliveredSubscribers.add({ namespace in
+                    subscriber.putNext(namespace)
                 })
                 
                 disposable.set(ActionDisposable {

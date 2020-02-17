@@ -8,15 +8,15 @@ import ActivityIndicator
 
 public class ItemListActivityTextItem: ListViewItem, ItemListItem {
     let displayActivity: Bool
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let text: NSAttributedString
     public let sectionId: ItemListSectionId
     
     public let isAlwaysPlain: Bool = true
     
-    public init(displayActivity: Bool, theme: PresentationTheme, text: NSAttributedString, sectionId: ItemListSectionId) {
+    public init(displayActivity: Bool, presentationData: ItemListPresentationData, text: NSAttributedString, sectionId: ItemListSectionId) {
         self.displayActivity = displayActivity
-        self.theme = theme
+        self.presentationData = presentationData
         self.text = text
         self.sectionId = sectionId
     }
@@ -58,8 +58,6 @@ public class ItemListActivityTextItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.regular(14.0)
-
 public class ItemListActivityTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let activityIndicator: ActivityIndicator
@@ -87,6 +85,8 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
             let leftInset: CGFloat = 12.0 + params.leftInset
             let verticalInset: CGFloat = 7.0
             
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            
             var activityWidth: CGFloat = 0.0
             if item.displayActivity {
                 activityWidth = 25.0
@@ -99,7 +99,7 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
                 titleString.addAttributes([NSAttributedString.Key.font: titleFont], range: NSMakeRange(0, titleString.length))
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(topLeft: CGSize(width: activityWidth, height: 4.0)), insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(topLeft: CGSize(width: activityWidth, height: 22.0)), insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -116,9 +116,9 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
                     let _ = titleApply()
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)
-                    strongSelf.activityIndicator.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: CGSize(width: 16.0, height: 16.0))
+                    strongSelf.activityIndicator.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((contentSize.height - 16.0) / 2.0)), size: CGSize(width: 16.0, height: 16.0))
                     
-                    strongSelf.activityIndicator.type = .custom(item.theme.list.itemAccentColor, 16.0, 2.0, false)
+                    strongSelf.activityIndicator.type = .custom(item.presentationData.theme.list.itemAccentColor, 16.0, 2.0, false)
                     
                     if item.displayActivity {
                         strongSelf.activityIndicator.isHidden = false

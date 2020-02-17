@@ -1,0 +1,19 @@
+load("//Config:buck_rule_macros.bzl", "framework")
+
+framework(
+    name = "SpotlightSupport",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/Postbox:Postbox#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/Display:Display#shared",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/CoreSpotlight.framework",
+    ],
+)

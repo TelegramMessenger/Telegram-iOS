@@ -17,8 +17,9 @@ public final class AlertControllerTheme: Equatable {
     public let accentColor: UIColor
     public let destructiveColor: UIColor
     public let disabledColor: UIColor
+    public let baseFontSize: CGFloat
     
-    public init(backgroundType: ActionSheetControllerThemeBackgroundType, backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor) {
+    public init(backgroundType: ActionSheetControllerThemeBackgroundType, backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor, baseFontSize: CGFloat) {
         self.backgroundType = backgroundType
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -28,6 +29,7 @@ public final class AlertControllerTheme: Equatable {
         self.accentColor = accentColor
         self.destructiveColor = destructiveColor
         self.disabledColor = disabledColor
+        self.baseFontSize = baseFontSize
     }
     
     public static func ==(lhs: AlertControllerTheme, rhs: AlertControllerTheme) -> Bool {
@@ -56,6 +58,9 @@ public final class AlertControllerTheme: Equatable {
             return false
         }
         if lhs.disabledColor != rhs.disabledColor {
+            return false
+        }
+        if lhs.baseFontSize != rhs.baseFontSize {
             return false
         }
         return true

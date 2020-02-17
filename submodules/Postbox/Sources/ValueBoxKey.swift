@@ -38,6 +38,13 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
         memcpy(self.memory, buffer.memory, buffer.length)
     }
     
+    public func setData(_ offset: Int, value: Data) {
+        let valueLength = value.count
+        value.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            memcpy(self.memory + offset, bytes, valueLength)
+        }
+    }
+    
     public func setInt32(_ offset: Int, value: Int32) {
         var bigEndianValue = Int32(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 4)

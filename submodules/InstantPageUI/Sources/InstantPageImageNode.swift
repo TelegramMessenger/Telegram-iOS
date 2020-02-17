@@ -11,8 +11,10 @@ import AccountContext
 import RadialStatusNode
 import PhotoResources
 import MediaResources
+import LocationResources
 import LiveLocationPositionNode
 import AppBundle
+import TelegramUIPreferences
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -46,7 +48,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
         self.theme = theme
         self.webPage = webPage
@@ -71,7 +73,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
             
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }, peerType: sourcePeerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: image) {
+                self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            }
             
             self.fetchControls = FetchControls(fetch: { [weak self] manual in
                 if let strongSelf = self {
@@ -101,7 +105,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
-                _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: fileReference).start()
+                if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }, peerType: sourcePeerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file) {
+                    _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: fileReference).start()
+                }
                 self.imageNode.setSignal(instantPageImageFile(account: context.account, fileReference: fileReference, fetched: true))
             } else {
                 self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, videoReference: fileReference))
@@ -230,7 +236,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 
                 let makePinLayout = self.pinNode.asyncLayout()
                 let theme = self.context.sharedContext.currentPresentationData.with { $0 }.theme
-                let (pinSize, pinApply) = makePinLayout(self.context.account, theme, nil, false)
+                let (pinSize, pinApply) = makePinLayout(self.context, theme, .location(nil))
                 self.pinNode.frame = CGRect(origin: CGPoint(x: floor((size.width - pinSize.width) / 2.0), y: floor(size.height * 0.5 - 10.0 - pinSize.height / 2.0)), size: pinSize)
                 pinApply()
             } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image, let largest = largestImageRepresentation(image.representations) {
@@ -244,10 +250,10 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if media == self.media {
             let imageNode = self.imageNode
-            return (self.imageNode, { [weak imageNode] in
+            return (self.imageNode, self.imageNode.bounds, { [weak imageNode] in
                 return (imageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {

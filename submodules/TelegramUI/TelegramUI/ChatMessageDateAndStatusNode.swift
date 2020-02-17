@@ -8,9 +8,9 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import AppBundle
 
-private let dateFont = UIFont.italicSystemFont(ofSize: 11.0)
-private let reactionCountFont = Font.semiboldItalic(11.0)
+private let reactionCountFont = Font.semibold(11.0)
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -32,29 +32,6 @@ enum ChatMessageDateAndStatusOutgoingType: Equatable {
     case Sent(read: Bool)
     case Sending
     case Failed
-    
-    static func ==(lhs: ChatMessageDateAndStatusOutgoingType, rhs: ChatMessageDateAndStatusOutgoingType) -> Bool {
-        switch lhs {
-            case let .Sent(read):
-                if case .Sent(read) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .Sending:
-                if case .Sending = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .Failed:
-                if case .Failed = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 enum ChatMessageDateAndStatusType: Equatable {
@@ -66,26 +43,90 @@ enum ChatMessageDateAndStatusType: Equatable {
     case FreeOutgoing(ChatMessageDateAndStatusOutgoingType)
 }
 
-private let reactionSize: CGFloat = 19.0
+private let reactionSize: CGFloat = 20.0
 private let reactionFont = Font.regular(12.0)
 
-private final class StatusReactionNode: ASImageNode {
+private final class StatusReactionNodeParameters: NSObject {
+    let value: String
+    let previousValue: String?
+    
+    init(value: String, previousValue: String?) {
+        self.value = value
+        self.previousValue = previousValue
+    }
+}
+
+private func drawReaction(context: CGContext, value: String, in rect: CGRect) {
+    var fileId: Int?
+    switch value {
+    case "😔":
+        fileId = 8
+    case "😳":
+        fileId = 19
+    case "😂":
+        fileId = 17
+    case "👍":
+        fileId = 6
+    case "❤":
+        fileId = 13
+    default:
+        break
+    }
+    if let fileId = fileId, let path = getAppBundle().path(forResource: "simplereaction_\(fileId)@2x", ofType: "png"), let image = UIImage(contentsOfFile: path) {
+        context.saveGState()
+        context.translateBy(x: rect.midX, y: rect.midY)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -rect.midX, y: -rect.midY)
+        context.draw(image.cgImage!, in: rect)
+        context.restoreGState()
+    } else {
+        let string = NSAttributedString(string: value, font: reactionFont, textColor: .black)
+        string.draw(at: CGPoint(x: rect.minX + 1.0, y: rect.minY + 3.0))
+    }
+}
+
+private final class StatusReactionNode: ASDisplayNode {
     let value: String
     var count: Int
+    var previousValue: String? {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
     
-    init(value: String, count: Int) {
+    init(value: String, count: Int, previousValue: String?) {
         self.value = value
         self.count = count
+        self.previousValue = previousValue
         
         super.init()
         
-        self.image = generateImage(CGSize(width: reactionSize, height: reactionSize), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            UIGraphicsPushContext(context)
-            let string = NSAttributedString(string: value, font: reactionFont, textColor: .black)
-            string.draw(at: CGPoint(x: 1.0, y: 3.0))
-            UIGraphicsPopContext()
-        })
+        self.isOpaque = false
+        self.backgroundColor = nil
+    }
+    
+    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+        return StatusReactionNodeParameters(value: self.value, previousValue: self.previousValue)
+    }
+    
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        let context = UIGraphicsGetCurrentContext()!
+        
+        if !isRasterizing {
+            context.setBlendMode(.copy)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fill(bounds)
+        }
+        
+        guard let parameters = parameters as? StatusReactionNodeParameters else {
+            return
+        }
+        drawReaction(context: context, value: parameters.value, in: bounds)
+        if let previousValue = parameters.previousValue {
+            let previousRect = bounds.offsetBy(dx: -14.0, dy: 0)
+            context.setBlendMode(.destinationOut)
+            drawReaction(context: context, value: previousValue, in: previousRect)
+        }
     }
 }
 
@@ -146,15 +187,18 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
+            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+            let isDefaultWallpaper = serviceMessageColorHasDefaultWallpaper(presentationData.theme.wallpaper)
             let offset: CGFloat = -UIScreenPixel
+            
+            let checkSize: CGFloat = floor(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
             
             switch type {
                 case .BubbleIncoming:
                     dateColor = presentationData.theme.theme.chat.message.incoming.secondaryTextColor
                     leftInset = 10.0
-                    loadedCheckFullImage = graphics.checkBubbleFullImage
-                    loadedCheckPartialImage = graphics.checkBubblePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatOutgoingFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatOutgoingPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockBubbleIncomingFrameImage
                     clockMinImage = graphics.clockBubbleIncomingMinImage
                     if impressionCount != nil {
@@ -164,8 +208,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     outgoingStatus = status
                     leftInset = 10.0
-                    loadedCheckFullImage = graphics.checkBubbleFullImage
-                    loadedCheckPartialImage = graphics.checkBubblePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatOutgoingFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatOutgoingPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockBubbleOutgoingFrameImage
                     clockMinImage = graphics.clockBubbleOutgoingMinImage
                     if impressionCount != nil {
@@ -175,8 +219,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkMediaFullImage
-                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatMediaFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatMediaPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockMediaFrameImage
                     clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
@@ -187,8 +231,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkMediaFullImage
-                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatMediaFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatMediaPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockMediaFrameImage
                     clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
@@ -199,8 +243,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = serviceColor.primaryText
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkFreeFullImage
-                    loadedCheckPartialImage = graphics.checkFreePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     clockFrameImage = graphics.clockFreeFrameImage
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
@@ -212,8 +256,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkFreeFullImage
-                    loadedCheckPartialImage = graphics.checkFreePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     clockFrameImage = graphics.clockFreeFrameImage
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
@@ -229,7 +273,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 updatedDateText = compactNumericCountString(impressionCount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " " + updatedDateText
             }
             
+            let dateFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
             let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let checkOffset = floor(presentationData.fontSize.baseDisplaySize * 6.0 / 17.0)
             
             let statusWidth: CGFloat
             
@@ -306,7 +353,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             clockFrameNode = nil
                             clockMinNode = nil
                         } else {
-                            statusWidth = 13.0
+                            statusWidth = floor(floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
                             
                             if checkReadNode == nil {
                                 checkReadNode = ASImageNode()
@@ -330,7 +377,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             if read {
                                 checkReadFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0 + offset), size: checkSize)
                             }
-                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0 + offset), size: checkSize)
+                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - checkOffset, y: 3.0 + offset), size: checkSize)
                         }
                     case .Failed:
                         statusWidth = 0.0
@@ -364,9 +411,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             var reactionCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             
+            let reactionSpacing: CGFloat = -4.0
+            let reactionTrailingSpacing: CGFloat = 4.0
             var reactionInset: CGFloat = 0.0
             if !reactions.isEmpty {
-                reactionInset = 5.0 + CGFloat(reactions.count) * reactionSize
+                reactionInset = 5.0 + CGFloat(reactions.count) * reactionSize + CGFloat(reactions.count - 1) * reactionSpacing + reactionTrailingSpacing
                 
                 var count = 0
                 for reaction in reactions {
@@ -415,7 +464,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             strongSelf.impressionIcon = currentImpressionIcon
                             strongSelf.addSubnode(currentImpressionIcon)
                         }
-                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 3.0 + offset), size: impressionSize)
+                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 1.0 + offset + floor((date.size.height - impressionSize.height) / 2.0)), size: impressionSize)
                     } else if let impressionIcon = strongSelf.impressionIcon {
                         impressionIcon.removeFromSupernode()
                         strongSelf.impressionIcon = nil
@@ -517,8 +566,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         if strongSelf.reactionNodes.count > i, strongSelf.reactionNodes[i].value == reactions[i].value {
                             node = strongSelf.reactionNodes[i]
                             node.count = Int(reactions[i].count)
+                            node.previousValue = i == 0 ? nil : reactions[i - 1].value
                         } else {
-                            node = StatusReactionNode(value: reactions[i].value, count: Int(reactions[i].count))
+                            node = StatusReactionNode(value: reactions[i].value, count: Int(reactions[i].count), previousValue: i == 0 ? nil : reactions[i - 1].value)
                             if strongSelf.reactionNodes.count > i {
                                 let previousNode = strongSelf.reactionNodes[i]
                                 if animated {
@@ -540,11 +590,15 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                         }
                         node.frame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + offset - 3.0), size: CGSize(width: reactionSize, height: reactionSize))
-                        reactionOffset += reactionSize
+                        reactionOffset += reactionSize + reactionSpacing
+                    }
+                    if !reactions.isEmpty {
+                        reactionOffset += reactionTrailingSpacing
                     }
                     for _ in reactions.count ..< strongSelf.reactionNodes.count {
                         let node = strongSelf.reactionNodes.removeLast()
                         if animated {
+                            node.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
                             node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
                                 node?.removeFromSupernode()
                             })
@@ -576,7 +630,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                     }
                     
-                    if !strongSelf.reactionNodes.isEmpty {
+                    if false, !strongSelf.reactionNodes.isEmpty {
                         if strongSelf.reactionButtonNode == nil {
                             let reactionButtonNode = HighlightTrackingButtonNode()
                             strongSelf.reactionButtonNode = reactionButtonNode
@@ -628,7 +682,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    func reactionNode(value: String) -> (ASImageNode, Int)? {
+    func reactionNode(value: String) -> (ASDisplayNode, Int)? {
         for node in self.reactionNodes {
             if node.value == value {
                 return (node, node.count)

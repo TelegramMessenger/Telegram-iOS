@@ -129,9 +129,12 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case volumeButtonToUnmuteTip = 9
     case archiveChatTips = 10
     case archiveIntroDismissed = 11
-    case callsTabTip = 12
     case cellularDataPermissionWarning = 13
     case chatMessageSearchResultsTip = 14
+    case chatMessageOptionsTip = 15
+    case chatTextSelectionTip = 16
+    case themeChangeTip = 17
+    case callsTabTip = 18
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -232,6 +235,18 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatMessageSearchResultsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatMessageSearchResultsTip.key)
+    }
+    
+    static func chatMessageOptionsTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatMessageOptionsTip.key)
+    }
+    
+    static func chatTextSelectionTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatTextSelectionTip.key)
+    }
+    
+    static func themeChangeTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.themeChangeTip.key)
     }
 }
 
@@ -489,7 +504,7 @@ public struct ApplicationSpecificNotice {
     public static func setVolumeButtonToUnmute(accountManager: AccountManager) {
         let _ = accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.volumeButtonToUnmuteTip(), ApplicationSpecificBoolNotice())
-            }.start()
+        }.start()
     }
     
     public static func getCallsTabTip(accountManager: AccountManager) -> Signal<Int32, NoError> {
@@ -544,6 +559,66 @@ public struct ApplicationSpecificNotice {
             
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatMessageSearchResultsTip(), ApplicationSpecificCounterNotice(value: currentValue))
         }
+    }
+    
+    public static func getChatMessageOptionsTip(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementChatMessageOptionsTip(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    public static func getChatTextSelectionTips(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementChatTextSelectionTips(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    public static func getThemeChangeTip(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.themeChangeTip()) as? ApplicationSpecificBoolNotice {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func markThemeChangeTipAsSeen(accountManager: AccountManager) {
+        let _ = accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.themeChangeTip(), ApplicationSpecificBoolNotice())
+        }.start()
     }
     
     public static func reset(accountManager: AccountManager) -> Signal<Void, NoError> {

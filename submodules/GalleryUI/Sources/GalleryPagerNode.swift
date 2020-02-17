@@ -152,15 +152,26 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func replaceItems(_ items: [GalleryItem], centralItemIndex: Int?, keepFirst: Bool = false) {
+        var items = items
+        if keepFirst && !self.items.isEmpty && !items.isEmpty {
+            items[0] = self.items[0]
+        }
+        
         var updateItems: [GalleryPagerUpdateItem] = []
-        let deleteItems: [Int] = []
+        var deleteItems: [Int] = []
         var insertItems: [GalleryPagerInsertItem] = []
-        for i in 0 ..< items.count {
-            if i == 0 && keepFirst {
-                updateItems.append(GalleryPagerUpdateItem(index: 0, previousIndex: 0, item: items[i]))
-            } else {
-                insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: nil))
+        var previousIndexById: [AnyHashable: Int] = [:]
+        var validIds = Set(items.map { $0.id })
+        
+        for i in 0 ..< self.items.count {
+            previousIndexById[self.items[i].id] = i
+            if !validIds.contains(self.items[i].id) {
+                deleteItems.append(i)
             }
+        }
+        
+        for i in 0 ..< items.count {
+            insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: previousIndexById[items[i].id]))
         }
         self.transaction(GalleryPagerTransaction(deleteItems: deleteItems, insertItems: insertItems, updateItems: updateItems, focusOnItem: centralItemIndex))
     }
@@ -169,6 +180,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         for updatedItem in transaction.updateItems {
             self.items[updatedItem.previousIndex] = updatedItem.item
             if let itemNode = self.visibleItemNode(at: updatedItem.previousIndex) {
+                //print("update visible node at \(updatedItem.previousIndex)")
                 updatedItem.item.updateNode(node: itemNode)
             }
         }
@@ -180,48 +192,43 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.items.remove(at: deleteItemIndex)
                 for i in 0 ..< self.itemNodes.count {
                     if self.itemNodes[i].index == deleteItemIndex {
+                        //print("delete visible node at \(deleteItemIndex)")
                         self.removeVisibleItemNode(internalIndex: i)
                         break
                     }
                 }
             }
             
-            for itemNode in self.itemNodes {
-                var indexOffset = 0
-                for deleteIndex in deleteItems {
-                    if deleteIndex < itemNode.index {
-                        indexOffset += 1
-                    } else {
-                        break
-                    }
-                }
-                
-                itemNode.index = itemNode.index - indexOffset
-            }
-            
             let insertItems = transaction.insertItems.sorted(by: { $0.index < $1.index })
-            if self.items.count == 0 && !insertItems.isEmpty {
-                if insertItems[0].index != 0 {
-                    fatalError("transaction: invalid insert into empty list")
-                }
+            
+            if transaction.updateItems.isEmpty && !insertItems.isEmpty {
+                self.items.removeAll()
             }
             
             for insertedItem in insertItems {
-                self.items.insert(insertedItem.item, at: insertedItem.index)
+                self.items.append(insertedItem.item)
+                //self.items.insert(insertedItem.item, at: insertedItem.index)
             }
             
-            let sortedInsertItems = transaction.insertItems.sorted(by: { $0.index < $1.index })
+            let visibleIndices: [Int] = self.itemNodes.map { $0.index }
+            
+            var remapIndices: [Int: Int] = [:]
+            for i in 0 ..< insertItems.count {
+                if let previousIndex = insertItems[i].previousIndex, visibleIndices.contains(previousIndex) {
+                    remapIndices[previousIndex] = i
+                }
+            }
             
             for itemNode in self.itemNodes {
-                var indexOffset = 0
-                for insertedItem in sortedInsertItems {
-                    if insertedItem.index <= itemNode.index + indexOffset {
-                        indexOffset += 1
-                    }
+                if let remappedIndex = remapIndices[itemNode.index] {
+                    //print("remap visible node \(itemNode.index) -> \(remappedIndex)")
+                    itemNode.index = remappedIndex
                 }
-                
-                itemNode.index = itemNode.index + indexOffset
             }
+            
+            self.itemNodes.sort(by: { $0.index < $1.index })
+            
+            //print("visible indices before update \(self.itemNodes.map { $0.index })")
             
             self.invalidatedItems = true
             if let focusOnItem = transaction.focusOnItem {
@@ -229,6 +236,8 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             self.updateItemNodes(transition: .immediate)
+            
+            //print("visible indices after update \(self.itemNodes.map { $0.index })")
         }
         else if let focusOnItem = transaction.focusOnItem {
             self.ignoreCentralItemIndexUpdate = true
@@ -241,6 +250,32 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private func makeNodeForItem(at index: Int) -> GalleryItemNode {
         let node = self.items[index].node()
         node.toggleControlsVisibility = self.toggleControlsVisibility
+        node.goToPreviousItem = { [weak self] in
+            if let strongSelf = self {
+                if let index = strongSelf.centralItemIndex, index > 0 {
+                    strongSelf.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                }
+            }
+        }
+        node.goToNextItem = { [weak self] in
+            if let strongSelf = self {
+                if let index = strongSelf.centralItemIndex, index < strongSelf.items.count - 1 {
+                    strongSelf.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index + 1))
+                }
+            }
+        }
+        node.canGoToPreviousItem = { [weak self] in
+            if let strongSelf = self, let index = strongSelf.centralItemIndex, index > 0 {
+                return true
+            }
+            return false
+        }
+        node.canGoToNextItem = { [weak self] in
+            if let strongSelf = self, let index = strongSelf.centralItemIndex, index < strongSelf.items.count - 1 {
+                return true
+            }
+            return false
+        }
         node.dismiss = self.dismiss
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss
@@ -314,7 +349,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             
-            if centralItemIndex != items.count - 1 {
+            if centralItemIndex != self.items.count - 1 {
                 if self.shouldLoadItems(force: forceLoad) && self.visibleItemNode(at: centralItemIndex + 1) == nil {
                     let node = self.makeNodeForItem(at: centralItemIndex + 1)
                     node.frame = centralItemNode.frame.offsetBy(dx: centralItemNode.frame.size.width + self.pageGap, dy: 0.0)

@@ -9,6 +9,7 @@ import SyncCore
 import LiveLocationTimerNode
 import PhotoResources
 import MediaResources
+import LocationResources
 import LiveLocationPositionNode
 
 private let titleFont = Font.medium(14.0)
@@ -141,15 +142,13 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 5.0, hidesBackground: (activeLiveBroadcastingTimeout == nil && selectedMedia?.venue == nil) ? .emptyWallpaper : .never, forceFullCorners: false, forceAlignment: .none)
             
-            var pinPeer: Peer?
-            var pinLiveLocationActive: Bool?
-            if let selectedMedia = selectedMedia {
+            var mode: ChatMessageLiveLocationPositionNode.Mode = .location(selectedMedia)
+            if let selectedMedia = selectedMedia, let peer = item.message.author {
                 if selectedMedia.liveBroadcastingTimeout != nil {
-                    pinPeer = item.message.author
-                    pinLiveLocationActive = activeLiveBroadcastingTimeout != nil
+                    mode = .liveLocation(peer, activeLiveBroadcastingTimeout != nil)
                 }
             }
-            let (pinSize, pinApply) = makePinLayout(item.context.account, item.presentationData.theme.theme, pinPeer, pinLiveLocationActive)
+            let (pinSize, pinApply) = makePinLayout(item.context, item.presentationData.theme.theme, mode)
             
             return (contentProperties, nil, maximumWidth, { constrainedSize, position in
                 let imageCorners: ImageCorners
@@ -160,19 +159,22 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     if case let .linear(top, _) = position {
                         relativePosition = .linear(top: top, bottom: ChatMessageBubbleRelativePosition.Neighbour)
                     }
-                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
+                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                     
                     maxTextWidth = constrainedSize.width - bubbleInsets.left + bubbleInsets.right - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 40.0
                 } else {
                     maxTextWidth = constrainedSize.width - imageSize.width - bubbleInsets.left + bubbleInsets.right - layoutConstants.text.bubbleInsets.right
                     
-                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
+                    imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: position, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                 }
                 
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, maxTextWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: max(1.0, maxTextWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 var edited = false
+                if item.attributes.updatingMedia != nil {
+                    edited = true
+                }
                 var viewCount: Int?
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
@@ -212,7 +214,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             } else {
                                 if item.message.flags.contains(.Failed) {
                                     statusType = .BubbleOutgoing(.Failed)
-                                } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
+                                } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
                                     statusType = .BubbleOutgoing(.Sending)
                                 } else {
                                     statusType = .BubbleOutgoing(.Sent(read: item.read))
@@ -224,7 +226,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             } else {
                                 if item.message.flags.contains(.Failed) {
                                     statusType = .ImageOutgoing(.Failed)
-                                } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
+                                } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
                                     statusType = .ImageOutgoing(.Sending)
                                 } else {
                                     statusType = .ImageOutgoing(.Sent(read: item.read))
@@ -311,14 +313,14 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if let statusApply = statusApply {
                                 if strongSelf.dateAndStatusNode.supernode == nil {
-                                    strongSelf.imageNode.addSubnode(strongSelf.dateAndStatusNode)
+                                    strongSelf.addSubnode(strongSelf.dateAndStatusNode)
                                 }
                                 var hasAnimation = true
                                 if case .None = animation {
                                     hasAnimation = false
                                 }
                                 statusApply(hasAnimation)
-                                strongSelf.dateAndStatusNode.frame = statusFrame
+                                strongSelf.dateAndStatusNode.frame = statusFrame.offsetBy(dx: imageFrame.minX, dy: imageFrame.minY)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -433,10 +435,10 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(to: media) {
             let imageNode = self.imageNode
-            return (self.imageNode, { [weak imageNode] in
+            return (self.imageNode, self.imageNode.bounds, { [weak imageNode] in
                 return (imageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }
@@ -458,7 +460,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         return .none
     }
     
@@ -470,7 +472,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionNode(value: value)
         }

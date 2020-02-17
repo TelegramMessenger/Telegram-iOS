@@ -3,8 +3,36 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
+private let leftFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
+    let bounds = CGRect(origin: CGPoint(), size: size)
+    context.clear(bounds)
+    
+    let gradientColors = [UIColor.black.withAlphaComponent(0.35).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor] as CFArray
+    
+    var locations: [CGFloat] = [0.0, 1.0]
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 64.0, y: 0.0), options: CGGradientDrawingOptions())
+})
+
+private let rightFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
+    let bounds = CGRect(origin: CGPoint(), size: size)
+    context.clear(bounds)
+    
+    let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.35).cgColor] as CFArray
+    
+    var locations: [CGFloat] = [0.0, 1.0]
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 64.0, y: 0.0), options: CGGradientDrawingOptions())
+})
+
 open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
     public let scrollNode: ASScrollNode
+    private let leftFadeNode: ASImageNode
+    private let rightFadeNode: ASImageNode
     
     private var containerLayout: ContainerViewLayout?
     
@@ -32,6 +60,16 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         
+        self.leftFadeNode = ASImageNode()
+        self.leftFadeNode.contentMode = .scaleToFill
+        self.leftFadeNode.image = leftFadeImage
+        self.leftFadeNode.alpha = 0.0
+        
+        self.rightFadeNode = ASImageNode()
+        self.rightFadeNode.contentMode = .scaleToFill
+        self.rightFadeNode.image = rightFadeImage
+        self.rightFadeNode.alpha = 0.0
+        
         super.init()
         
         self.scrollNode.view.delegate = self
@@ -41,42 +79,75 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
         self.scrollNode.view.scrollsToTop = false
         self.scrollNode.view.delaysContentTouches = false
         
+        let edgeWidth: CGFloat = 44.0
+        
         let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.contentTap(_:)))
-        tapRecognizer.tapActionAtPoint = { _ in
+        tapRecognizer.tapActionAtPoint = { [weak self] location in
+            if let strongSelf = self {
+                let pointInNode = strongSelf.scrollNode.view.convert(location, to: strongSelf.view)
+                if pointInNode.x < edgeWidth || pointInNode.x > strongSelf.frame.width - edgeWidth {
+                    return .waitForSingleTap
+                }
+            }
             return .waitForDoubleTap
+        }
+        tapRecognizer.highlight = { [weak self] location in
+            if let strongSelf = self {
+                let pointInNode = location.flatMap { strongSelf.scrollNode.view.convert($0, to: strongSelf.view) }
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.07, curve: .easeInOut)
+                if let location = pointInNode, location.x < edgeWidth && strongSelf.canGoToPreviousItem() {
+                    transition.updateAlpha(node: strongSelf.leftFadeNode, alpha: 1.0)
+                } else {
+                    transition.updateAlpha(node: strongSelf.leftFadeNode, alpha: 0.0)
+                }
+                if let location = pointInNode, location.x > strongSelf.frame.width - edgeWidth && strongSelf.canGoToNextItem() {
+                    transition.updateAlpha(node: strongSelf.rightFadeNode, alpha: 1.0)
+                } else {
+                    transition.updateAlpha(node: strongSelf.rightFadeNode, alpha: 0.0)
+                }
+            }
         }
         
         self.scrollNode.view.addGestureRecognizer(tapRecognizer)
-        
+
         self.addSubnode(self.scrollNode)
+        self.addSubnode(self.leftFadeNode)
+        self.addSubnode(self.rightFadeNode)
     }
     
     @objc open func contentTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if recognizer.state == .ended {
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                switch gesture {
-                    case .tap:
-                        self.toggleControlsVisibility()
-                    case .doubleTap:
-                        if let contentView = self.zoomableContent?.1.view, self.scrollNode.view.zoomScale.isLessThanOrEqualTo(self.scrollNode.view.minimumZoomScale) {
-                            let pointInView = self.scrollNode.view.convert(location, to: contentView)
-                            
-                            let newZoomScale = self.scrollNode.view.maximumZoomScale
-                            let scrollViewSize = self.scrollNode.view.bounds.size
-                            
-                            let w = scrollViewSize.width / newZoomScale
-                            let h = scrollViewSize.height / newZoomScale
-                            let x = pointInView.x - (w / 2.0)
-                            let y = pointInView.y - (h / 2.0)
-                            
-                            let rectToZoomTo = CGRect(x: x, y: y, width: w, height: h)
-                            
-                            self.scrollNode.view.zoom(to: rectToZoomTo, animated: true)
-                        } else {
-                            self.scrollNode.view.setZoomScale(self.scrollNode.view.minimumZoomScale, animated: true)
-                        }
-                    default:
-                        break
+                let pointInNode = self.scrollNode.view.convert(location, to: self.view)
+                if pointInNode.x < 44.0 {
+                    self.goToPreviousItem()
+                } else if pointInNode.x > self.frame.width - 44.0 {
+                    self.goToNextItem()
+                } else {
+                    switch gesture {
+                        case .tap:
+                            self.toggleControlsVisibility()
+                        case .doubleTap:
+                            if let contentView = self.zoomableContent?.1.view, self.scrollNode.view.zoomScale.isLessThanOrEqualTo(self.scrollNode.view.minimumZoomScale) {
+                                let pointInView = self.scrollNode.view.convert(location, to: contentView)
+                                
+                                let newZoomScale = self.scrollNode.view.maximumZoomScale
+                                let scrollViewSize = self.scrollNode.view.bounds.size
+                                
+                                let w = scrollViewSize.width / newZoomScale
+                                let h = scrollViewSize.height / newZoomScale
+                                let x = pointInView.x - (w / 2.0)
+                                let y = pointInView.y - (h / 2.0)
+                                
+                                let rectToZoomTo = CGRect(x: x, y: y, width: w, height: h)
+                                
+                                self.scrollNode.view.zoom(to: rectToZoomTo, animated: true)
+                            } else {
+                                self.scrollNode.view.setZoomScale(self.scrollNode.view.minimumZoomScale, animated: true)
+                            }
+                        default:
+                            break
+                    }
                 }
             }
         }
@@ -92,6 +163,10 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
             shouldResetContents = true
         }
         self.containerLayout = layout
+        
+        let fadeWidth = min(72.0, layout.size.width * 0.2)
+        self.leftFadeNode.frame = CGRect(x: 0.0, y: 0.0, width: fadeWidth, height: layout.size.height)
+        self.rightFadeNode.frame = CGRect(x: layout.size.width - fadeWidth, y: 0.0, width: fadeWidth, height: layout.size.height)
         
         if shouldResetContents {
             var previousFrame: CGRect?

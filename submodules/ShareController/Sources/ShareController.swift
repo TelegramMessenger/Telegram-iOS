@@ -172,10 +172,19 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                 text.append("\n— \(option.text)")
             }
             let totalVoters = poll.results.totalVoters ?? 0
-            if totalVoters == 0 {
-                text.append("\n\(strings.MessagePoll_NoVotes)")
-            } else {
-                text.append("\n\(strings.MessagePoll_VotedCount(totalVoters))")
+            switch poll.kind {
+            case .poll:
+                if totalVoters == 0 {
+                    text.append("\n\(strings.MessagePoll_NoVotes)")
+                } else {
+                    text.append("\n\(strings.MessagePoll_VotedCount(totalVoters))")
+                }
+            case .quiz:
+                if totalVoters == 0 {
+                    text.append("\n\(strings.MessagePoll_QuizNoUsers)")
+                } else {
+                    text.append("\n\(strings.MessagePoll_QuizCount(totalVoters))")
+                }
             }
             signals.append(.single(.done(.text(text))))
         } else if let mediaReference = item.mediaReference, let contact = mediaReference.media as? TelegramMediaContact {
@@ -183,7 +192,7 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
             if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let parsed = DeviceContactExtendedData(vcard: vCardData) {
                 contactData = parsed
             } else {
-                contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
             }
             
             if let vCard = contactData.serializedVCard() {
@@ -425,8 +434,8 @@ public final class ShareController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare)
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId)
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             self?.dismissed?(shared)
@@ -480,7 +489,7 @@ public final class ShareController: ViewController {
                     if !text.isEmpty {
                         messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                     }
-                    messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
+                    messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])), replyToMessageId: nil, localGroupingKey: nil))
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .media(mediaReference):
@@ -555,7 +564,7 @@ public final class ShareController: ViewController {
                                     }
                                     if !displayedError, case .slowmodeActive = error {
                                         displayedError = true
-                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: strongSelf.presentationData.strings.Chat_SlowmodeSendError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: strongSelf.presentationData.strings.Chat_SlowmodeSendError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                     }
                                 })
                             }
@@ -586,7 +595,7 @@ public final class ShareController: ViewController {
                     case let .quote(text, url):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "\"\(text)\"\n\n\(url)", author: nil, timestamp: nil, mediaReference: nil))
                     case let .image(representations):
-                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)
+                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", author: nil, timestamp: nil, mediaReference: .standalone(media: media)))
                     case let .media(mediaReference):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", author: nil, timestamp: nil, mediaReference: mediaReference))
@@ -680,7 +689,7 @@ public final class ShareController: ViewController {
             strongSelf.controllerNode.animateOut(shared: false, completion: {})
             
             let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
-            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let controller = ActionSheetController(presentationData: presentationData)
             controller.dismissed = { [weak self] cancelled in
                 if cancelled {
                     self?.controllerNode.animateIn()
@@ -691,7 +700,7 @@ public final class ShareController: ViewController {
             }
             var items: [ActionSheetItem] = []
             for info in strongSelf.switchableAccounts {
-                items.append(ActionSheetPeerItem(account: info.account, peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
+                items.append(ActionSheetPeerItem(context: strongSelf.sharedContext.makeTempAccountContext(account: info.account), peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
                     dismissAction()
                     self?.switchToAccount(account: info.account, animateIn: true)
                 }))
@@ -704,15 +713,12 @@ public final class ShareController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        if let _ = self.immediatePeerId {
-        } else {
-            self.peersDisposable.set((self.peers.get()
-            |> deliverOnMainQueue).start(next: { [weak self] next in
-                if let strongSelf = self {
-                    strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
-                }
-            }))
-        }
+        self.peersDisposable.set((self.peers.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePeers(context: strongSelf.sharedContext.makeTempAccountContext(account: strongSelf.currentAccount), switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+            }
+        }))
         self._ready.set(self.controllerNode.ready.get())
     }
     
@@ -773,7 +779,7 @@ public final class ShareController: ViewController {
     }
     
     private func saveToCameraRoll(representations: [ImageRepresentationWithReference]) {
-        let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)
+        let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
         let context: AccountContext
         if self.currentContext.account.id == self.currentAccount.id {
             context = self.currentContext
@@ -807,7 +813,7 @@ public final class ShareController: ViewController {
             var peers: [RenderedPeer] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
-                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _):
+                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _):
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
                             peers.append(renderedPeer)
                         }
@@ -827,31 +833,23 @@ public final class ShareController: ViewController {
                 return (resultPeers, accountPeer)
             }
         })
-        if let immediatePeerId = self.immediatePeerId {
-            self.sendImmediately(peerId: immediatePeerId)
-        } else {
-            self.peersDisposable.set((self.peers.get()
-            |> deliverOnMainQueue).start(next: { [weak self] next in
-                if let strongSelf = self {
-                    strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
-                    
-                    if animateIn {
-                        strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
-                        |> filter({ $0 })
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] _ in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.controllerNode.animateIn()
-                        }))
-                    }
+        self.peersDisposable.set((self.peers.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePeers(context: strongSelf.sharedContext.makeTempAccountContext(account: strongSelf.currentAccount), switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                
+                if animateIn {
+                    strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
+                    |> filter({ $0 })
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.controllerNode.animateIn()
+                    }))
                 }
-            }))
-        }
-    }
-    
-    private func sendImmediately(peerId: PeerId) {
-        self.controllerNode.send(peerId: peerId)
+            }
+        }))
     }
 }

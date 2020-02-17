@@ -32,6 +32,7 @@
 @property (nonatomic) bool disableStickers;
 @property (nonatomic) bool hasSilentPosting;
 @property (nonatomic) bool hasSchedule;
+@property (nonatomic) bool reminder;
 @property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 
 @property (nonatomic, strong) NSArray *underlyingViews;

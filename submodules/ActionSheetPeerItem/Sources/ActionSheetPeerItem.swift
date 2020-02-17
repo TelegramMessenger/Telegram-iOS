@@ -7,9 +7,10 @@ import SyncCore
 import Postbox
 import TelegramPresentationData
 import AvatarNode
+import AccountContext
 
 public class ActionSheetPeerItem: ActionSheetItem {
-    public let account: Account
+    public let context: AccountContext
     public let peer: Peer
     public let theme: PresentationTheme
     public let title: String
@@ -17,8 +18,8 @@ public class ActionSheetPeerItem: ActionSheetItem {
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(account: Account, peer: Peer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
-        self.account = account
+    public init(context: AccountContext, peer: Peer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
+        self.context = context
         self.peer = peer
         self.title = title
         self.isSelected = isSelected
@@ -48,7 +49,7 @@ private let avatarFont = avatarPlaceholderFont(size: 15.0)
 public class ActionSheetPeerItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     
-    public static let defaultFont: UIFont = Font.regular(20.0)
+    private let defaultFont: UIFont
     
     private var item: ActionSheetPeerItem?
     
@@ -61,6 +62,8 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
@@ -114,10 +117,12 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetPeerItem) {
         self.item = item
         
-        let textColor: UIColor = self.theme.primaryTextColor
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
-        self.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer)
+        let textColor: UIColor = self.theme.primaryTextColor
+        self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: textColor)
+        
+        self.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.peer)
         
         self.checkNode.isHidden = !item.isSelected
         

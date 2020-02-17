@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import TelegramCore
 import SyncCore
+import TelegramUIPreferences
 
 public func encodePresentationTheme(_ theme: PresentationTheme) -> String? {
     let encoding = PresentationThemeEncoding()
@@ -341,7 +342,7 @@ private class PresentationThemeDecodingLevel {
     }
 }
 
-public func makePresentationTheme(data: Data, resolvedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme? {
+public func makePresentationTheme(data: Data, themeReference: PresentationThemeReference? = nil, resolvedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme? {
     guard let string = String(data: data, encoding: .utf8) else {
         return nil
     }
@@ -402,6 +403,7 @@ public func makePresentationTheme(data: Data, resolvedWallpaper: TelegramWallpap
     }
     
     let decoder = PresentationThemeDecoding(referencing: topLevel.data)
+    decoder.reference = themeReference
     decoder.resolvedWallpaper = resolvedWallpaper
     if let value = try? decoder.unbox(topLevel.data, as: PresentationTheme.self) {
         return value
@@ -418,6 +420,7 @@ class PresentationThemeDecoding: Decoder {
         return [:]
     }
     
+    var reference: PresentationThemeReference?
     var referenceTheme: PresentationTheme?
     var serviceBackgroundColor: UIColor?
     var resolvedWallpaper: TelegramWallpaper?
@@ -925,7 +928,11 @@ extension PresentationThemeDecoding {
 
     fileprivate func unbox_(_ value: Any, as type: Decodable.Type) throws -> Any? {
         if type == Decimal.self || type == NSDecimalNumber.self {
-            return try self.unbox(value, as: Decimal.self)
+            if let value = value as? String {
+                return Decimal(string: value)
+            } else {
+                return try self.unbox(value, as: Decimal.self)
+            }
         } else if let stringKeyedDictType = type as? _YAMLStringDictionaryDecodableMarker.Type {
             return try self.unbox(value, as: stringKeyedDictType)
         } else {

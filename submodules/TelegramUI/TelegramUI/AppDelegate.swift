@@ -5,7 +5,6 @@ import TelegramCore
 import SyncCore
 import UserNotifications
 import Intents
-import HockeySDK
 import Postbox
 import PushKit
 import AsyncDisplayKit
@@ -26,14 +25,20 @@ import WatchBridge
 import LegacyDataImport
 import SettingsUI
 import AppBundle
+#if ENABLE_WALLET
 import WalletUI
+#endif
 import UrlHandling
+#if ENABLE_WALLET
 import WalletUrl
 import WalletCore
+#endif
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
-import AppIntents
+import TelegramIntents
+import AccountUtils
+import CoreSpotlight
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -155,12 +160,13 @@ final class SharedApplicationContext {
     }
 }
 
-@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, BITHockeyManagerDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
+@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
     private var dataImportSplash: LegacyDataImportSplash?
     
+    private var buildConfig: BuildConfig?
     let episodeId = arc4random()
     
     private let isInForegroundPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -182,6 +188,7 @@ final class SharedApplicationContext {
     
     private let logoutDisposable = MetaDisposable()
     
+    private let openNotificationSettingsWhenReadyDisposable = MetaDisposable()
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
     
@@ -366,12 +373,27 @@ final class SharedApplicationContext {
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        self.buildConfig = buildConfig
         let signatureDict = BuildConfigExtra.signatureDict()
         
         let apiId: Int32 = buildConfig.apiId
+        let apiHash: String = buildConfig.apiHash
         let languagesCategory = "ios"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
+        let autolockDeadine: Signal<Int32?, NoError>
+        if #available(iOS 10.0, *) {
+            autolockDeadine = .single(nil)
+        } else {
+            autolockDeadine = self.context.get()
+            |> mapToSignal { context -> Signal<Int32?, NoError> in
+                guard let context = context else {
+                    return .single(nil)
+                }
+                return context.context.sharedContext.appLockContext.autolockDeadline
+            }
+        }
+        
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
         |> map { token in
             let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
             if let data = data, let jsonString = String(data: data, encoding: .utf8) {
@@ -380,7 +402,7 @@ final class SharedApplicationContext {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider())
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider())
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
@@ -663,6 +685,7 @@ final class SharedApplicationContext {
             })
         }
         
+        #if ENABLE_WALLET
         let tonKeychain: TonKeychain
         
         #if targetEnvironment(simulator)
@@ -724,6 +747,7 @@ final class SharedApplicationContext {
             }
         })
         #endif
+        #endif
         
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
@@ -750,7 +774,7 @@ final class SharedApplicationContext {
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
             
@@ -799,12 +823,12 @@ final class SharedApplicationContext {
                     return
                 }
                 var exists = false
-                strongSelf.mainWindow.forEachViewController { controller in
-                    if controller is ThemeSettingsCrossfadeController {
+                strongSelf.mainWindow.forEachViewController({ controller in
+                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
                         exists = true
                     }
                     return true
-                }
+                })
                 
                 if !exists {
                     strongSelf.mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
@@ -958,15 +982,25 @@ final class SharedApplicationContext {
                 }
                 return true
             })
-            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
-                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
+            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings)?, NoError> in
+                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
                 }
-                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+                |> reduceLeft(value: nil) { current, updated -> CallListSettings? in
+                    var result: CallListSettings?
+                    if let updated = updated {
+                        result = updated
+                    } else if let current = current {
+                        result = current
+                    }
+                    return result
+                }
+                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings)?, NoError> in
                     if let account = account {
-                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings)? in
+                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings, ContentSettings)? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings)
+                            let contentSettings = getContentSettings(transaction: transaction)
+                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings, contentSettings)
                         }
                     } else {
                         return .single(nil)
@@ -975,9 +1009,11 @@ final class SharedApplicationContext {
             }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
+                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, contentSettings in
+                    #if ENABLE_WALLET
                     let tonContext = StoredTonContext(basePath: account.basePath, postbox: account.postbox, network: account.network, keychain: tonKeychain)
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
+                    #endif
+                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account/*, tonContext: tonContext*/, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
@@ -1129,6 +1165,8 @@ final class SharedApplicationContext {
                     self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                     
                     self.resetIntentsIfNeeded(context: context.context)
+                    
+                    let _ = storeCurrentCallListTabDefaultValue(accountManager: context.context.sharedContext.accountManager).start()
                 }))
             } else {
                 self.mainWindow.viewController = nil
@@ -1187,7 +1225,7 @@ final class SharedApplicationContext {
         
         self.logoutDisposable.set((self.sharedContextPromise.get()
         |> take(1)
-        |> mapToSignal { sharedContext -> Signal<Set<PeerId>, NoError> in
+        |> mapToSignal { sharedContext -> Signal<(AccountManager, Set<PeerId>), NoError> in
             return sharedContext.sharedContext.activeAccounts
             |> map { _, accounts, _ -> Set<PeerId> in
                 return Set(accounts.map { $0.1.peerId })
@@ -1198,10 +1236,25 @@ final class SharedApplicationContext {
                 }
                 return updated
             }
-        }).start(next: { loggedOutAccountPeerIds in
-            for peerId in loggedOutAccountPeerIds {
-                deleteAllSendMessageIntents(accountPeerId: peerId)
+            |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
+                return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
+        }).start(next: { [weak self] accountManager, loggedOutAccountPeerIds in
+            guard let strongSelf = self else {
+                return
+            }
+
+            let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
+                var updated = current
+                for peerId in loggedOutAccountPeerIds {
+                    if peerId == updated.account {
+                        deleteAllSendMessageIntents()
+                        updated = updated.withUpdatedAccount(nil)
+                        break
+                    }
+                }
+                return updated
+            }).start()
         }))
         
         self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
@@ -1242,7 +1295,22 @@ final class SharedApplicationContext {
             |> mapToSignal { context -> Signal<[ApplicationShortcutItem], NoError> in
                 if let context = context {
                     let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                    return .single(applicationShortcutItems(strings: presentationData.strings))
+                    
+                    return activeAccountsAndPeers(context: context.context)
+                    |> take(1)
+                    |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+                        return primaryAndAccounts.1.first
+                    }
+                    |> map { accountAndPeer -> String? in
+                        if let (_, peer, _) = accountAndPeer {
+                            return peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        } else {
+                            return nil
+                        }
+                    } |> mapToSignal { otherAccountName -> Signal<[ApplicationShortcutItem], NoError> in
+                        let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                        return .single(applicationShortcutItems(strings: presentationData.strings, otherAccountName: otherAccountName))
+                    }
                 } else {
                     return .single([])
                 }
@@ -1279,52 +1347,11 @@ final class SharedApplicationContext {
             self.isActivePromise.set(true)
         }
         
-        BITHockeyBaseManager.setPresentAlert({ [weak self] alert in
-            if let strongSelf = self, let alert = alert {
-                var actions: [TextAlertAction] = []
-                for action in alert.actions {
-                    let isDefault = action.style == .default
-                    actions.append(TextAlertAction(type: isDefault ? .defaultAction : .genericAction, title: action.title ?? "", action: {
-                        if let action = action as? BITAlertAction {
-                            action.invokeAction()
-                        }
-                    }))
-                }
-                if let sharedContext = strongSelf.contextValue?.context.sharedContext {
-                    let presentationData = sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
-                }
-            }
-        })
-        
-        BITHockeyBaseManager.setPresentView({ [weak self] controller in
-            if let strongSelf = self, let controller = controller {
-                let parent = LegacyController(presentation: .modal(animateIn: true), theme: nil)
-                let navigationController = UINavigationController(rootViewController: controller)
-                controller.navigation_setDismiss({ [weak parent] in
-                    parent?.dismiss()
-                }, rootController: nil)
-                parent.bind(controller: navigationController)
-                strongSelf.mainWindow.present(parent, on: .root)
-            }
-        })
-        
-        if let hockeyAppId = buildConfig.hockeyAppId, !hockeyAppId.isEmpty {
-            BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
-            BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
-            BITHockeyManager.shared().start()
-            #if targetEnvironment(simulator)
-            #else
-            BITHockeyManager.shared().authenticator.authenticateInstallation()
-            #endif
-        }
-        
         if UIApplication.shared.isStatusBarHidden {
             UIApplication.shared.setStatusBarHidden(false, with: .none)
         }
         
-        #if canImport(BackgroundTasks)
-        if #available(iOS 13.0, *) {
+        /*if #available(iOS 13.0, *) {
             BGTaskScheduler.shared.register(forTaskWithIdentifier: baseAppBundleId + ".refresh", using: nil, launchHandler: { task in
                 let _ = (self.sharedContextPromise.get()
                 |> take(1)
@@ -1343,8 +1370,9 @@ final class SharedApplicationContext {
                     })
                 })
             })
-        }
-        #endif
+        }*/
+        
+        self.maybeCheckForUpdates()
         
         return true
     }
@@ -1368,12 +1396,12 @@ final class SharedApplicationContext {
                 }
             }
         }
-        self.mainWindow.forEachViewController { controller in
+        self.mainWindow.forEachViewController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
             return true
-        }
+        })
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
@@ -1429,6 +1457,8 @@ final class SharedApplicationContext {
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
+        
+        self.maybeCheckForUpdates()
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -1673,21 +1703,24 @@ final class SharedApplicationContext {
                 if let proxyData = parseProxyUrl(url) {
                     authContext.rootController.view.endEditing(true)
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    let controller = ProxyServerActionSheetController(theme: presentationData.theme, strings: presentationData.strings, accountManager: authContext.sharedContext.accountManager, postbox: authContext.account.postbox, network: authContext.account.network, server: proxyData, presentationData: nil)
+                    let controller = ProxyServerActionSheetController(presentationData: presentationData, accountManager: authContext.sharedContext.accountManager, postbox: authContext.account.postbox, network: authContext.account.network, server: proxyData, updatedPresentationData: nil)
                     authContext.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
                 } else if let secureIdData = parseSecureIdUrl(url) {
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Calls_NotNow, action: {
+                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Calls_NotNow, action: {
                         if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
                             UIApplication.shared.openURL(callbackUrl)
                         }
                     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
-                } else if let _ = parseWalletUrl(url) {
-                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 }
+                #if ENABLE_WALLET
+                if let _ = parseWalletUrl(url) {
+                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
+                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
+                }
+                #endif
             }
         })
     }
@@ -1783,6 +1816,53 @@ final class SharedApplicationContext {
             self.openUrl(url: url)
         }
         
+        if userActivity.activityType == CSSearchableItemActionType {
+            if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String, uniqueIdentifier.hasPrefix("contact-") {
+                if let peerIdValue = Int64(String(uniqueIdentifier[uniqueIdentifier.index(uniqueIdentifier.startIndex, offsetBy: "contact-".count)...])) {
+                    let peerId = PeerId(peerIdValue)
+                
+                    let signal = self.sharedContextPromise.get()
+                    |> take(1)
+                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [Account?]), NoError> in
+                        return sharedApplicationContext.sharedContext.activeAccounts
+                        |> take(1)
+                        |> mapToSignal { primary, accounts, _ -> Signal<(AccountRecordId?, [Account?]), NoError> in
+                            return combineLatest(accounts.map { _, account, _ -> Signal<Account?, NoError> in
+                                return account.postbox.transaction { transaction -> Account? in
+                                    if transaction.getPeer(peerId) != nil {
+                                        return account
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            })
+                            |> map { accounts -> (AccountRecordId?, [Account?]) in
+                                return (primary?.id, accounts)
+                            }
+                        }
+                    }
+                    let _ = (signal
+                    |> deliverOnMainQueue).start(next: { primary, accounts in
+                        if let primary = primary {
+                            for account in accounts {
+                                if let account = account, account.id == primary {
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId)
+                                    return
+                                }
+                            }
+                        }
+                        
+                        for account in accounts {
+                            if let account = account {
+                                self.openChatWhenReady(accountId: account.id, peerId: peerId)
+                                return
+                            }
+                        }
+                    })
+                }
+            }
+        }
+        
         return true
     }
     
@@ -1791,27 +1871,31 @@ final class SharedApplicationContext {
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedContext in
+            let type = ApplicationShortcutItemType(rawValue: shortcutItem.type)
+            var immediately = type == .account
             let proceed: () -> Void = {
                 let _ = (self.context.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { context in
                     if let context = context {
-                        if let type = ApplicationShortcutItemType(rawValue: shortcutItem.type) {
+                        if let type = type {
                             switch type {
-                            case .search:
-                                context.openRootSearch()
-                            case .compose:
-                                context.openRootCompose()
-                            case .camera:
-                                context.openRootCamera()
-                            case .savedMessages:
-                                self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                                case .search:
+                                    context.openRootSearch()
+                                case .compose:
+                                    context.openRootCompose()
+                                case .camera:
+                                    context.openRootCamera()
+                                case .savedMessages:
+                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                                case .account:
+                                    context.switchAccount()
                             }
                         }
                     }
                 })
             }
-            if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl {
+            if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl, !immediately {
                 let _ = (appLockContext.isCurrentlyLocked
                 |> filter { !$0 }
                 |> take(1)
@@ -1821,6 +1905,14 @@ final class SharedApplicationContext {
             } else {
                 proceed()
             }
+        })
+    }
+    
+    private func openNotificationSettingsWhenReady() {
+        let signal = (self.authorizedContext()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            context.openNotificationSettings()
         })
     }
     
@@ -1982,10 +2074,9 @@ final class SharedApplicationContext {
                                         
                                         var carPlayOptions = options
                                         carPlayOptions.insert(.allowInCarPlay)
-                                        
-                                        //if #available(iOS 13.2, *) {
-                                        //    carPlayOptions.insert(.allowAnnouncement)
-                                        //}
+                                        if #available(iOS 13.2, *) {
+                                            carPlayOptions.insert(.allowAnnouncement)
+                                        }
                                         
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
@@ -2081,12 +2172,66 @@ final class SharedApplicationContext {
     
     @available(iOS 12.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, openSettingsFor notification: UNNotification?) {
-        
+        self.openNotificationSettingsWhenReady()
     }
     
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
         Logger.shared.log("App \(self.episodeId)", "handleEventsForBackgroundURLSession \(identifier)")
         completionHandler()
+    }
+    
+    private var lastCheckForUpdatesTimestamp: Double?
+    private let currentCheckForUpdatesDisposable = MetaDisposable()
+    
+    private func maybeCheckForUpdates() {
+        #if targetEnvironment(simulator)
+        return;
+        #endif
+        
+        guard let buildConfig = self.buildConfig, !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty else {
+            return
+        }
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        if self.lastCheckForUpdatesTimestamp == nil || self.lastCheckForUpdatesTimestamp! < timestamp - 10.0 * 60.0 {
+            self.lastCheckForUpdatesTimestamp = timestamp
+            
+            if let url = URL(string: "https://api.appcenter.ms/v0.1/public/sdk/apps/\(appCenterId)/releases/latest") {
+                self.currentCheckForUpdatesDisposable.set((downloadHTTPData(url: url)
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard let json = try? JSONSerialization.jsonObject(with: data, options: []) else {
+                        return
+                    }
+                    guard let dict = json as? [String: Any] else {
+                        return
+                    }
+                    guard let versionString = dict["version"] as? String, let version = Int(versionString) else {
+                        return
+                    }
+                    guard let releaseNotesUrl = dict["release_notes_url"] as? String else {
+                        return
+                    }
+                    guard let currentVersionString = Bundle.main.infoDictionary?["CFBundleVersion"] as? String, let currentVersion = Int(currentVersionString) else {
+                        return
+                    }
+                    if currentVersion < version {
+                        let _ = (strongSelf.sharedContextPromise.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { sharedContext in
+                            let presentationData = sharedContext.sharedContext.currentPresentationData.with { $0 }
+                            sharedContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "A new build is available", actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: "Show", action: {
+                                    sharedContext.sharedContext.applicationBindings.openUrl(releaseNotesUrl)
+                                })
+                            ]), on: .root, blockInteraction: false, completion: {})
+                        })
+                    }
+                }))
+            }
+        }
     }
     
     override var next: UIResponder? {
@@ -2113,14 +2258,14 @@ final class SharedApplicationContext {
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
         let _ = (context.sharedContext.accountManager.transaction { transaction in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
-            if !settings.initiallyReset {
+            if !settings.initiallyReset || settings.account == nil {
                 if #available(iOS 10.0, *) {
                     Queue.mainQueue().async {
                         INInteraction.deleteAll()
                     }
                 }
-                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { entry in
-                    return IntentsSettings(initiallyReset: true)
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { _ in
+                    return IntentsSettings(initiallyReset: true, account: context.account.peerId, contacts: settings.contacts, privateChats: settings.privateChats, savedMessages: settings.savedMessages, groups: settings.groups, onlyShared: settings.onlyShared)
                 })
             }
         }).start()
@@ -2229,4 +2374,30 @@ private func messageIdFromNotification(peerId: PeerId, notification: UNNotificat
         return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(msgIdValue.intValue))
     }
     return nil
+}
+
+private enum DownloadFileError {
+    case network
+}
+
+private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
+    return Signal { subscriber in
+        let completed = Atomic<Bool>(value: false)
+        let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in
+            let _ = completed.swap(true)
+            if let location = location, let data = try? Data(contentsOf: location) {
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putError(.network)
+            }
+        })
+        downloadTask.resume()
+        
+        return ActionDisposable {
+            if !completed.with({ $0 }) {
+                downloadTask.cancel()
+            }
+        }
+    }
 }

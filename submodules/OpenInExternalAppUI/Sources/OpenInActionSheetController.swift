@@ -35,11 +35,11 @@ public final class OpenInActionSheetController: ActionSheetController {
         let theme = presentationData.theme
         let strings = presentationData.strings
         
-        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
         })
         
@@ -116,9 +116,6 @@ private final class OpenInActionSheetItem: ActionSheetItem {
     }
 }
 
-private let titleFont = Font.medium(20.0)
-private let textFont = Font.regular(11.0)
-
 private final class OpenInActionSheetItemNode: ActionSheetItemNode {
     let theme: ActionSheetControllerTheme
     let strings: PresentationStrings
@@ -131,6 +128,9 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
     init(postbox: Postbox, context: AccountContext, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.theme = theme
         self.strings = strings
+        
+        let titleFont = Font.medium(floor(theme.baseFontSize * 20.0 / 17.0))
+        let textFont = Font.regular(floor(theme.baseFontSize * 11.0 / 17.0))
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -216,6 +216,7 @@ private final class OpenInAppNode : ASDisplayNode {
     }
     
     func setup(postbox: Postbox, context: AccountContext, theme: ActionSheetControllerTheme, option: OpenInOption, invokeAction: @escaping (OpenInAction) -> Void) {
+        let textFont = Font.regular(floor(theme.baseFontSize * 11.0 / 17.0))
         self.textNode.attributedText = NSAttributedString(string: option.title, font: textFont, textColor: theme.primaryTextColor, paragraphAlignment: .center)
         
         let iconSize = CGSize(width: 60.0, height: 60.0)

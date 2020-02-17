@@ -21,6 +21,7 @@ final class ChatScheduleTimeController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
+    private let peerId: PeerId
     private let mode: ChatScheduleTimeControllerMode
     private let currentTime: Int32?
     private let minimalTime: Int32?
@@ -29,10 +30,11 @@ final class ChatScheduleTimeController: ViewController {
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, peerId: PeerId, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
+        self.peerId = peerId
         self.mode = mode
-        self.currentTime = currentTime
+        self.currentTime = currentTime != scheduleWhenOnlineTimestamp ? currentTime : nil
         self.minimalTime = minimalTime
         self.dismissByTapOutside = dismissByTapOutside
         self.completion = completion
@@ -64,8 +66,11 @@ final class ChatScheduleTimeController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
-            self?.completion(time != scheduleWhenOnlineTimestamp ? time + 5 : time)
-            self?.dismiss()
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.completion(time == scheduleWhenOnlineTimestamp ? time : time + 5)
+            strongSelf.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

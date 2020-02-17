@@ -67,10 +67,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 } else {
                     var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                    let resultTitleString: (String, [(Int, NSRange)])
                     if peerIds.count == 1 {
                         attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_Invited(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                    } else {
+                        resultTitleString = strings.Notification_InvitedMultiple(authorName, peerDebugDisplayTitles(peerIds, message.peers))
                     }
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_Invited(authorName, peerDebugDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    
+                    attributedString = addAttributesToStringWithRanges(resultTitleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                 }
             case let .removedMembers(peerIds):
                 if peerIds.first == message.author?.id {
@@ -127,7 +132,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     case sticker
                     case location
                     case contact
-                    case poll
+                    case poll(TelegramMediaPollKind)
                     case deleted
                 }
                 
@@ -183,8 +188,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             type = .location
                         } else if let _ = media as? TelegramMediaContact {
                             type = .contact
-                        } else if let _ = media as? TelegramMediaPoll {
-                            type = .poll
+                        } else if let poll = media as? TelegramMediaPoll {
+                            type = .poll(poll.kind)
                         }
                     }
                 } else {
@@ -224,8 +229,13 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedLocationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 case .contact:
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedContactMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
-                case .poll:
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPollMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                case let .poll(kind):
+                    switch kind {
+                    case .poll:
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPollMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    case .quiz:
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedQuizMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    }
                 case .deleted:
                     attributedString = addAttributesToStringWithRanges(strings.PUSH_PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }

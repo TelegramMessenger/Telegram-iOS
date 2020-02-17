@@ -10,6 +10,7 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     case openWebApp
     case payment
     case urlAuth(url: String, buttonId: Int32)
+    case setupPoll(isQuiz: Bool?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -31,6 +32,8 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
                 self = .payment
             case 8:
                 self = .urlAuth(url: decoder.decodeStringForKey("u", orElse: ""), buttonId: decoder.decodeInt32ForKey("b", orElse: 0))
+            case 9:
+                self = .setupPoll(isQuiz: decoder.decodeOptionalInt32ForKey("isq").flatMap { $0 != 0 })
             default:
                 self = .text
         }
@@ -38,30 +41,37 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case .text:
-                encoder.encodeInt32(0, forKey: "v")
-            case let .url(url):
-                encoder.encodeInt32(1, forKey: "v")
-                encoder.encodeString(url, forKey: "u")
-            case let .callback(data):
-                encoder.encodeInt32(2, forKey: "v")
-                encoder.encodeBytes(data, forKey: "d")
-            case .requestPhone:
-                encoder.encodeInt32(3, forKey: "v")
-            case .requestMap:
-                encoder.encodeInt32(4, forKey: "v")
-            case let .switchInline(samePeer, query):
-                encoder.encodeInt32(5, forKey: "v")
-                encoder.encodeInt32(samePeer ? 1 : 0, forKey: "s")
-                encoder.encodeString(query, forKey: "q")
-            case .openWebApp:
-                encoder.encodeInt32(6, forKey: "v")
-            case .payment:
-                encoder.encodeInt32(7, forKey: "v")
-            case let .urlAuth(url, buttonId):
-                encoder.encodeInt32(8, forKey: "v")
-                encoder.encodeString(url, forKey: "u")
-                encoder.encodeInt32(buttonId, forKey: "b")
+        case .text:
+            encoder.encodeInt32(0, forKey: "v")
+        case let .url(url):
+            encoder.encodeInt32(1, forKey: "v")
+            encoder.encodeString(url, forKey: "u")
+        case let .callback(data):
+            encoder.encodeInt32(2, forKey: "v")
+            encoder.encodeBytes(data, forKey: "d")
+        case .requestPhone:
+            encoder.encodeInt32(3, forKey: "v")
+        case .requestMap:
+            encoder.encodeInt32(4, forKey: "v")
+        case let .switchInline(samePeer, query):
+            encoder.encodeInt32(5, forKey: "v")
+            encoder.encodeInt32(samePeer ? 1 : 0, forKey: "s")
+            encoder.encodeString(query, forKey: "q")
+        case .openWebApp:
+            encoder.encodeInt32(6, forKey: "v")
+        case .payment:
+            encoder.encodeInt32(7, forKey: "v")
+        case let .urlAuth(url, buttonId):
+            encoder.encodeInt32(8, forKey: "v")
+            encoder.encodeString(url, forKey: "u")
+            encoder.encodeInt32(buttonId, forKey: "b")
+        case let .setupPoll(isQuiz):
+            encoder.encodeInt32(9, forKey: "v")
+            if let isQuiz = isQuiz {
+                encoder.encodeInt32(isQuiz ? 1 : 0, forKey: "isq")
+            } else {
+                encoder.encodeNil(forKey: "isq")
+            }
         }
     }
 }

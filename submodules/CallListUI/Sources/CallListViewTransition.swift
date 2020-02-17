@@ -6,10 +6,12 @@ import SyncCore
 import SwiftSignalKit
 import Display
 import MergeLists
+import ItemListUI
 
 struct CallListNodeView {
     let originalView: CallListView
     let filteredEntries: [CallListNodeEntry]
+    let presentationData: ItemListPresentationData
 }
 
 enum CallListNodeViewTransitionReason {
@@ -49,7 +51,7 @@ enum CallListNodeViewScrollPosition {
 
 func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toView: CallListNodeView, reason: CallListNodeViewTransitionReason, disableAnimations: Bool, account: Account, scrollPosition: CallListNodeViewScrollPosition?) -> Signal<CallListNodeViewTransition, NoError> {
     return Signal { subscriber in
-        let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
+        let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries, allUpdated: fromView?.presentationData != toView.presentationData)
         
         var adjustedDeleteIndices: [ListViewDeleteItem] = []
         let previousCount: Int
@@ -70,11 +72,21 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
         var stationaryItemRange: (Int, Int)?
         var scrollToItem: ListViewScrollToItem?
         
+        var wasEmpty = false
+        if let fromView = fromView, fromView.originalView.entries.isEmpty {
+            wasEmpty = true
+        }
+        
         switch reason {
-            case .initial:
-                let _ = options.insert(.LowLatency)
+        case .initial:
+            let _ = options.insert(.LowLatency)
+            let _ = options.insert(.Synchronous)
+            let _ = options.insert(.PreferSynchronousResourceLoading)
+        case .interactiveChanges:
+            if wasEmpty {
                 let _ = options.insert(.Synchronous)
-            case .interactiveChanges:
+                let _ = options.insert(.PreferSynchronousResourceLoading)
+            } else {
                 let _ = options.insert(.AnimateAlpha)
                 if !disableAnimations {
                     let _ = options.insert(.AnimateInsertion)
@@ -86,12 +98,14 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
                         maxAnimatedInsertionIndex += 1
                     }
                 }
-            case .reload:
-                break
-            case .reloadAnimated:
-                let _ = options.insert(.LowLatency)
-                let _ = options.insert(.Synchronous)
-                let _ = options.insert(.AnimateCrossfade)
+            }
+        case .reload:
+            break
+        case .reloadAnimated:
+            let _ = options.insert(.LowLatency)
+            let _ = options.insert(.Synchronous)
+            let _ = options.insert(.AnimateCrossfade)
+            let _ = options.insert(.PreferSynchronousResourceLoading)
         }
         
         for (index, entry, previousIndex) in indicesAndItems {

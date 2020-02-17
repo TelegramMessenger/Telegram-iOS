@@ -35,7 +35,7 @@ public class CallRouteActionSheetItem: ActionSheetItem {
 public class CallRouteActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     
-    public static let defaultFont: UIFont = Font.regular(20.0)
+    private let defaultFont: UIFont
     
     private var item: CallRouteActionSheetItem?
     
@@ -48,6 +48,7 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
@@ -115,7 +116,9 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
     func setItem(_ item: CallRouteActionSheetItem) {
         self.item = item
         
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: self.theme.standardActionTextColor)
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        
+        self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.standardActionTextColor)
         if let icon = item.icon {
             self.iconNode.image = generateTintedImage(image: icon, color: self.theme.standardActionTextColor)
         } else {

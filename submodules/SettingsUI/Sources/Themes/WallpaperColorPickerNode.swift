@@ -5,20 +5,23 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 
-private let shadowImage: UIImage = {
-    return generateImage(CGSize(width: 45.0, height: 45.0), opaque: false, scale: nil, rotatedContext: { size, context in
-        context.setBlendMode(.clear)
-        context.setFillColor(UIColor.clear.cgColor)
-        context.fill(CGRect(origin: CGPoint(), size: size))
+private let knobBackgroundImage: UIImage? = {
+    return generateImage(CGSize(width: 45.0, height: 45.0), contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        context.setShadow(offset: CGSize(width: 0.0, height: -1.5), blur: 4.5, color: UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
+        context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
+        context.fillEllipse(in: bounds.insetBy(dx: 3.0 + UIScreenPixel, dy: 3.0 + UIScreenPixel))
+        
         context.setBlendMode(.normal)
-        context.setShadow(offset: CGSize(width: 0.0, height: 1.5), blur: 4.5, color: UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
-        context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 3.0 + UIScreenPixel, dy: 3.0 + UIScreenPixel))
-    })!
+        context.setFillColor(UIColor.white.cgColor)
+        context.fillEllipse(in: bounds.insetBy(dx: 3.0, dy: 3.0))
+    }, opaque: false, scale: nil)
 }()
 
-private let pointerImage: UIImage = {
-    return generateImage(CGSize(width: 12.0, height: 42.0), opaque: false, scale: nil, rotatedContext: { size, context in
+private let pointerImage: UIImage? = {
+    return generateImage(CGSize(width: 12.0, height: 55.0), opaque: false, scale: nil, rotatedContext: { size, context in
         context.setBlendMode(.clear)
         context.setFillColor(UIColor.clear.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
@@ -29,8 +32,9 @@ private let pointerImage: UIImage = {
         context.setStrokeColor(UIColor.white.cgColor)
         context.setLineWidth(lineWidth)
         context.setLineCap(.round)
+        context.setLineJoin(.round)
         
-        let pointerHeight: CGFloat = 6.0
+        let pointerHeight: CGFloat = 7.0
         context.move(to: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width - lineWidth / 2.0, y: lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width / 2.0, y: lineWidth / 2.0 + pointerHeight))
@@ -42,10 +46,36 @@ private let pointerImage: UIImage = {
         context.addLine(to: CGPoint(x: size.width - lineWidth / 2.0, y: size.height - lineWidth / 2.0))
         context.closePath()
         context.drawPath(using: .fillStroke)
-    })!
+    })
 }()
 
-private final class HSVParameter: NSObject {
+private let brightnessMaskImage: UIImage? = {
+    return generateImage(CGSize(width: 36.0, height: 36.0), opaque: false, scale: nil, rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(bounds)
+        
+        context.setBlendMode(.clear)
+        context.setFillColor(UIColor.clear.cgColor)
+        context.fillEllipse(in: bounds)
+    })?.stretchableImage(withLeftCapWidth: 18, topCapHeight: 18)
+}()
+
+private let brightnessGradientImage: UIImage? = {
+    return generateImage(CGSize(width: 160.0, height: 1.0), opaque: false, scale: nil, rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let gradientColors = [UIColor.black.withAlphaComponent(0.0), UIColor.black].map { $0.cgColor } as CFArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+    })
+}()
+
+private final class HSBParameter: NSObject {
     let hue: CGFloat
     let saturation: CGFloat
     let value: CGFloat
@@ -59,56 +89,49 @@ private final class HSVParameter: NSObject {
 }
 
 private final class WallpaperColorKnobNode: ASDisplayNode {
-    var hsv: (CGFloat, CGFloat, CGFloat) = (0.0, 0.0, 1.0) {
+    var hsb: (CGFloat, CGFloat, CGFloat) = (0.0, 0.0, 1.0) {
         didSet {
-            if self.hsv != oldValue {
-                self.setNeedsDisplay()
+            if self.hsb != oldValue {
+                let color = UIColor(hue: hsb.0, saturation: hsb.1, brightness: hsb.2, alpha: 1.0)
+                self.colorNode.backgroundColor = color
             }
         }
     }
     
+    private let backgroundNode: ASImageNode
+    private let colorNode: ASDisplayNode
+    
     override init() {
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.image = knobBackgroundImage
+        
+        self.colorNode = ASDisplayNode()
+        
         super.init()
         
-        self.isOpaque = false
-        self.displaysAsynchronously = false
         self.isUserInteractionEnabled = false
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.colorNode)
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return HSVParameter(hue: self.hsv.0, saturation: self.hsv.1, value: self.hsv.2)
-    }
-    
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        guard let parameters = parameters as? HSVParameter else {
-            return
-        }
-        let context = UIGraphicsGetCurrentContext()!
+    override func layout() {
+        super.layout()
         
-        if !isRasterizing {
-            context.setBlendMode(.copy)
-            context.setFillColor(UIColor.clear.cgColor)
-            context.fill(bounds)
-        }
-        
-        context.draw(shadowImage.cgImage!, in: bounds)
-        
-        context.setBlendMode(.normal)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: bounds.insetBy(dx: 3.0, dy: 3.0))
-        
-        let color = UIColor(hue: parameters.hue, saturation: parameters.saturation, brightness: parameters.value, alpha: 1.0)
-        context.setFillColor(color.cgColor)
-        
-        let borderWidth: CGFloat = bounds.width > 30.0 ? 5.0 : 5.0
-        context.fillEllipse(in: bounds.insetBy(dx: borderWidth - UIScreenPixel, dy: borderWidth - UIScreenPixel))
+        self.backgroundNode.frame = self.bounds
+        self.colorNode.frame = self.bounds.insetBy(dx: 7.0 - UIScreenPixel, dy: 7.0 - UIScreenPixel)
+        self.colorNode.cornerRadius = self.colorNode.frame.width / 2.0
     }
 }
 
 private final class WallpaperColorHueSaturationNode: ASDisplayNode {
     var value: CGFloat = 1.0 {
         didSet {
-            self.setNeedsDisplay()
+            if self.value != oldValue {
+                self.setNeedsDisplay()
+            }
         }
     }
     
@@ -120,11 +143,11 @@ private final class WallpaperColorHueSaturationNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return HSVParameter(hue: 1.0, saturation: 1.0, value: self.value)
+        return HSBParameter(hue: 1.0, saturation: 1.0, value: 1.0)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        guard let parameters = parameters as? HSVParameter else {
+        guard let parameters = parameters as? HSBParameter else {
             return
         }
         let context = UIGraphicsGetCurrentContext()!
@@ -146,47 +169,43 @@ private final class WallpaperColorHueSaturationNode: ASDisplayNode {
 }
 
 private final class WallpaperColorBrightnessNode: ASDisplayNode {
-    var hsv: (CGFloat, CGFloat, CGFloat) = (0.0, 1.0, 1.0) {
+    private let gradientNode: ASImageNode
+    private let maskNode: ASImageNode
+    
+    var hsb: (CGFloat, CGFloat, CGFloat) = (0.0, 1.0, 1.0) {
         didSet {
-            self.setNeedsDisplay()
+            if self.hsb.0 != oldValue.0 || self.hsb.1 != oldValue.1 {
+                let color = UIColor(hue: hsb.0, saturation: hsb.1, brightness: 1.0, alpha: 1.0)
+                self.backgroundColor = color
+            }
         }
     }
     
     override init() {
+        self.gradientNode = ASImageNode()
+        self.gradientNode.displaysAsynchronously = false
+        self.gradientNode.displayWithoutProcessing = true
+        self.gradientNode.image = brightnessGradientImage
+        self.gradientNode.contentMode = .scaleToFill
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.displaysAsynchronously = false
+        self.maskNode.displayWithoutProcessing = true
+        self.maskNode.image = brightnessMaskImage
+        self.maskNode.contentMode = .scaleToFill
+        
         super.init()
         
         self.isOpaque = true
-        self.displaysAsynchronously = false
+        self.addSubnode(self.gradientNode)
+        self.addSubnode(self.maskNode)
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return HSVParameter(hue: self.hsv.0, saturation: self.hsv.1, value: self.hsv.2)
-    }
-    
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        guard let parameters = parameters as? HSVParameter else {
-            return
-        }
-        let context = UIGraphicsGetCurrentContext()!
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
+    override func layout() {
+        super.layout()
         
-        context.setFillColor(UIColor(white: parameters.value, alpha: 1.0).cgColor)
-        context.fill(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: bounds.height / 2.0)
-        context.addPath(path.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillPath()
-        
-        let innerPath = UIBezierPath(roundedRect: bounds.insetBy(dx: 1.0, dy: 1.0), cornerRadius: bounds.height / 2.0)
-        context.addPath(innerPath.cgPath)
-        context.clip()
-        
-        let color = UIColor(hue: parameters.hue, saturation: parameters.saturation, brightness: 1.0, alpha: 1.0)
-        let colors = [color.cgColor, UIColor.black.cgColor]
-        var locations: [CGFloat] = [0.0, 1.0]
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: bounds.width, y: 0.0), options: CGGradientDrawingOptions())
+        self.gradientNode.frame = self.bounds
+        self.maskNode.frame = self.bounds
     }
 }
 
@@ -198,25 +217,15 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    var colorHSV: (CGFloat, CGFloat, CGFloat) = (0.0, 1.0, 1.0)
+    var colorHsb: (CGFloat, CGFloat, CGFloat) = (0.0, 1.0, 1.0)
     var color: UIColor {
         get {
-            return UIColor(hue: self.colorHSV.0, saturation: self.colorHSV.1, brightness: self.colorHSV.2, alpha: 1.0)
+            return UIColor(hue: self.colorHsb.0, saturation: self.colorHsb.1, brightness: self.colorHsb.2, alpha: 1.0)
         }
         set {
-            var hue: CGFloat = 0.0
-            var saturation: CGFloat = 0.0
-            var value: CGFloat = 0.0
-            
-            let newHSV: (CGFloat, CGFloat, CGFloat)
-            if newValue.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-                newHSV = (hue, saturation, value)
-            } else {
-                newHSV = (0.0, 0.0, 1.0)
-            }
-            
-            if newHSV != self.colorHSV {
-                self.colorHSV = newHSV
+            let newHsb = newValue.hsb
+            if newHsb != self.colorHsb {
+                self.colorHsb = newHsb
                 self.update()
             }
         }
@@ -259,17 +268,17 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     }
     
     private func update() {
-        self.backgroundColor = UIColor(white: self.colorHSV.2, alpha: 1.0)
-        self.colorNode.value = self.colorHSV.2
-        self.brightnessNode.hsv = self.colorHSV
-        self.colorKnobNode.hsv = self.colorHSV
+        self.backgroundColor = .white
+        self.colorNode.value = self.colorHsb.2
+        self.brightnessNode.hsb = self.colorHsb
+        self.colorKnobNode.hsb = self.colorHsb
     }
     
-    func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
+    private func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
         let knobSize = CGSize(width: 45.0, height: 45.0)
         
         let colorHeight = size.height - 66.0
-        var colorKnobFrame = CGRect(x: -knobSize.width / 2.0 + size.width * self.colorHSV.0, y: -knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHSV.1)), width: knobSize.width, height: knobSize.height)
+        var colorKnobFrame = CGRect(x: floorToScreenPixels(-knobSize.width / 2.0 + size.width * self.colorHsb.0), y: floorToScreenPixels(-knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHsb.1))), width: knobSize.width, height: knobSize.height)
         var origin = colorKnobFrame.origin
         if !panningColor {
             origin = CGPoint(x: max(0.0, min(origin.x, size.width - knobSize.width)), y: max(0.0, min(origin.y, colorHeight - knobSize.height)))
@@ -279,9 +288,9 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         colorKnobFrame.origin = origin
         transition.updateFrame(node: self.colorKnobNode, frame: colorKnobFrame)
         
-        let inset: CGFloat = 42.0
-        let brightnessKnobSize = CGSize(width: 12.0, height: 42.0)
-        let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.colorHSV.2), y: size.height - 61.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
+        let inset: CGFloat = 15.0
+        let brightnessKnobSize = CGSize(width: 12.0, height: 55.0)
+        let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.colorHsb.2), y: size.height - 65.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
         transition.updateFrame(node: self.brightnessKnobNode, frame: brightnessKnobFrame)
     }
     
@@ -291,8 +300,8 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         let colorHeight = size.height - 66.0
         transition.updateFrame(node: self.colorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: colorHeight))
         
-        let inset: CGFloat = 42.0
-        transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 29.0))
+        let inset: CGFloat = 15.0
+        transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 35.0))
         
         self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
     }
@@ -307,8 +316,8 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         let location = recognizer.location(in: recognizer.view)
         let newHue = max(0.0, min(1.0, location.x / size.width))
         let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
-        self.colorHSV.0 = newHue
-        self.colorHSV.1 = newSaturation
+        self.colorHsb.0 = newHue
+        self.colorHsb.1 = newSaturation
         
         self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
         
@@ -330,13 +339,13 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         if recognizer.state == .began {
             let newHue = max(0.0, min(1.0, location.x / size.width))
             let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
-            self.colorHSV.0 = newHue
-            self.colorHSV.1 = newSaturation
+            self.colorHsb.0 = newHue
+            self.colorHsb.1 = newSaturation
         } else {
-            let newHue = max(0.0, min(1.0, self.colorHSV.0 + transition.x / size.width))
-            let newSaturation = max(0.0, min(1.0, self.colorHSV.1 - transition.y / (size.height - 66.0)))
-            self.colorHSV.0 = newHue
-            self.colorHSV.1 = newSaturation
+            let newHue = max(0.0, min(1.0, self.colorHsb.0 + transition.x / size.width))
+            let newSaturation = max(0.0, min(1.0, self.colorHsb.1 - transition.y / (size.height - 66.0)))
+            self.colorHsb.0 = newHue
+            self.colorHsb.1 = newSaturation
         }
         
         var ended = false
@@ -372,8 +381,8 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         
         let transition = recognizer.translation(in: recognizer.view)
         let brightnessWidth: CGFloat = size.width - 42.0 * 2.0
-        let newValue = max(0.0, min(1.0, self.colorHSV.2 - transition.x / brightnessWidth))
-        self.colorHSV.2 = newValue
+        let newValue = max(0.0, min(1.0, self.colorHsb.2 - transition.x / brightnessWidth))
+        self.colorHsb.2 = newValue
         
         var ended = false
         switch recognizer.state {

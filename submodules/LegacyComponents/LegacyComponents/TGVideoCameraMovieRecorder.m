@@ -105,7 +105,7 @@ typedef enum {
 		if (_status != TGMovieRecorderStatusIdle)
 			return;
 		
-		[self transitionToStatus:TGMovieRecorderStatusPreparingToRecord error:nil];
+		[self transitionToStatus:TGMovieRecorderStatusPreparingToRecord error:nil completed:nil];
 	}
 	
 	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^
@@ -138,9 +138,9 @@ typedef enum {
 			@synchronized (self)
 			{
 				if (error || !succeed)
-					[self transitionToStatus:TGMovieRecorderStatusFailed error:error];
+					[self transitionToStatus:TGMovieRecorderStatusFailed error:error completed:nil];
 				else
-					[self transitionToStatus:TGMovieRecorderStatusRecording error:nil];
+					[self transitionToStatus:TGMovieRecorderStatusRecording error:nil completed:nil];
 			}
 		}
 	} );
@@ -169,8 +169,9 @@ typedef enum {
 	[self appendSampleBuffer:sampleBuffer ofMediaType:AVMediaTypeAudio];
 }
 
-- (void)finishRecording
+- (void)finishRecording:(void(^)())completed
 {
+    printf("finishRecording %d\n", _status);
 	@synchronized (self)
 	{
 		bool shouldFinishRecording = false;
@@ -190,9 +191,10 @@ typedef enum {
 		}
 		
 		if (shouldFinishRecording)
-			[self transitionToStatus:TGMovieRecorderStatusFinishingWaiting error:nil];
-		else
+			[self transitionToStatus:TGMovieRecorderStatusFinishingWaiting error:nil completed:completed];
+        else {
 			return;
+        }
 	}
 	
 	dispatch_async(_writingQueue, ^
@@ -201,10 +203,14 @@ typedef enum {
 		{
 			@synchronized (self)
 			{
-				if (_status != TGMovieRecorderStatusFinishingWaiting)
+                if (_status != TGMovieRecorderStatusFinishingWaiting) {
+                    if (completed) {
+                        completed();
+                    }
 					return;
+                }
 				
-				[self transitionToStatus:TGMovieRecorderStatusFinishingCommiting error:nil];
+				[self transitionToStatus:TGMovieRecorderStatusFinishingCommiting error:nil completed:nil];
 			}
 
 			[_assetWriter finishWritingWithCompletionHandler:^
@@ -213,9 +219,9 @@ typedef enum {
 				{
 					NSError *error = _assetWriter.error;
 					if (error)
-						[self transitionToStatus:TGMovieRecorderStatusFailed error:error];
+						[self transitionToStatus:TGMovieRecorderStatusFailed error:error completed:completed];
 					else
-						[self transitionToStatus:TGMovieRecorderStatusFinished error:nil];
+						[self transitionToStatus:TGMovieRecorderStatusFinished error:nil completed:completed];
 				}
 			}];
 		}
@@ -340,7 +346,7 @@ typedef enum {
 					NSError *error = _assetWriter.error;
 					@synchronized (self)
                     {
-						[self transitionToStatus:TGMovieRecorderStatusFailed error:error];
+						[self transitionToStatus:TGMovieRecorderStatusFailed error:error completed:nil];
 					}
 				}
 			}
@@ -349,8 +355,10 @@ typedef enum {
 	});
 }
 
-- (void)transitionToStatus:(TGMovieRecorderStatus)newStatus error:(NSError *)error
+- (void)transitionToStatus:(TGMovieRecorderStatus)newStatus error:(NSError *)error completed:(void(^)())completed
 {
+    printf("recorder transitionToStatus %d\n", newStatus);
+    
 	bool shouldNotifyDelegate = false;
 	
 	if (newStatus != _status)
@@ -389,6 +397,7 @@ typedef enum {
 						break;
                         
 					case TGMovieRecorderStatusFinished:
+                        printf("TGMovieRecorderStatusFinished _delegate == nil = %d\n", (int)(_delegate == nil));
 						[_delegate movieRecorderDidFinishRecording:self];
 						break;
                         
@@ -399,9 +408,16 @@ typedef enum {
 					default:
 						break;
 				}
+                if (completed) {
+                    completed();
+                }
 			}
 		});
-	}
+    } else {
+        if (completed) {
+            completed();
+        }
+    }
 }
 
 - (bool)setupAssetWriterAudioInputWithSourceFormatDescription:(CMFormatDescriptionRef)audioFormatDescription settings:(NSDictionary *)audioSettings

@@ -3,14 +3,14 @@
 include Utils.makefile
 
 BUCK_OPTIONS=\
-	--config custom.appVersion="5.12.2" \
+	--config custom.appVersion="5.15.1" \
 	--config custom.developmentCodeSignIdentity="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
 	--config custom.distributionCodeSignIdentity="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
 	--config custom.developmentTeam="${DEVELOPMENT_TEAM}" \
 	--config custom.baseApplicationBundleId="${BUNDLE_ID}" \
 	--config custom.apiId="${API_ID}" \
 	--config custom.apiHash="${API_HASH}" \
-	--config custom.hockeyAppId="${HOCKEYAPP_ID}" \
+	--config custom.appCenterId="${APP_CENTER_ID}" \
 	--config custom.isInternalBuild="${IS_INTERNAL_BUILD}" \
 	--config custom.isAppStoreBuild="${IS_APPSTORE_BUILD}" \
 	--config custom.appStoreId="${APPSTORE_ID}" \
@@ -356,7 +356,7 @@ build_verbose: check_env
 	//:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
 	//:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
 	//:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
-	--verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 deps: check_env
 	$(BUCK) query "deps(//:AppPackage)" --dot  \

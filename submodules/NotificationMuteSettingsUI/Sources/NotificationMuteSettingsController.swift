@@ -23,7 +23,7 @@ public struct NotificationSoundSettings {
 }
 
 public func notificationMuteSettingsController(presentationData: PresentationData, notificationSettings: MessageNotificationSettings, soundSettings: NotificationSoundSettings?, openSoundSettings: @escaping () -> Void, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
-    let controller = ActionSheetController(presentationTheme: presentationData.theme)
+    let controller = ActionSheetController(presentationData: presentationData)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
     }

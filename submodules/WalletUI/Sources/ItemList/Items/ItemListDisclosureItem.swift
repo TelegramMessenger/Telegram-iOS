@@ -279,12 +279,12 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             
             let height: CGFloat
             switch item.labelStyle {
-                    case .detailText:
-                        height = 64.0
-                    case .multilineDetailText:
-                        height = 44.0 + labelLayout.size.height
-                    default:
-                        height = 44.0
+                case .detailText:
+                    height = 64.0
+                case .multilineDetailText:
+                    height = 44.0 + labelLayout.size.height
+                default:
+                    height = 44.0
             }
             
             switch item.style {

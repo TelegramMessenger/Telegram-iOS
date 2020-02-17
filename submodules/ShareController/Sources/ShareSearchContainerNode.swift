@@ -94,17 +94,17 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
+    func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
         switch self {
             case let .topPeers(theme, strings):
-                return ShareControllerRecentPeersGridItem(account: account, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
+                return ShareControllerRecentPeersGridItem(context: context, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
             case let .peer(_, theme, peer, associatedPeer, presence, strings):
                 var peers: [PeerId: Peer] = [peer.id: peer]
                 if let associatedPeer = associatedPeer {
                     peers[associatedPeer.id] = associatedPeer
                 }
                 let peer = RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers))
-                return ShareControllerPeerGridItem(account: account, theme: theme, strings: strings, peer: peer, presence: presence, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+                return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -134,8 +134,8 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
+    func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
+        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -146,29 +146,29 @@ private struct ShareSearchGridTransaction {
     let animated: Bool
 }
 
-private func preparedGridEntryTransition(account: Account, from fromEntries: [ShareSearchPeerEntry], to toEntries: [ShareSearchPeerEntry], interfaceInteraction: ShareControllerInteraction) -> ShareSearchGridTransaction {
+private func preparedGridEntryTransition(context: AccountContext, from fromEntries: [ShareSearchPeerEntry], to toEntries: [ShareSearchPeerEntry], interfaceInteraction: ShareControllerInteraction) -> ShareSearchGridTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction)) }
     
     return ShareSearchGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false)
 }
 
-private func preparedRecentEntryTransition(account: Account, from fromEntries: [ShareSearchRecentEntry], to toEntries: [ShareSearchRecentEntry], interfaceInteraction: ShareControllerInteraction) -> ShareSearchGridTransaction {
+private func preparedRecentEntryTransition(context: AccountContext, from fromEntries: [ShareSearchRecentEntry], to toEntries: [ShareSearchRecentEntry], interfaceInteraction: ShareControllerInteraction) -> ShareSearchGridTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction)) }
     
     return ShareSearchGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false)
 }
 
 final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let sharedContext: SharedAccountContext
-    private let account: Account
+    private let context: AccountContext
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
     
@@ -198,9 +198,9 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchQuery = ValuePromise<String>("", ignoreRepeated: true)
     private let searchDisposable = MetaDisposable()
     
-    init(sharedContext: SharedAccountContext, account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
         self.sharedContext = sharedContext
-        self.account = account
+        self.context = context
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         
@@ -245,11 +245,11 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         let foundItems = searchQuery.get()
         |> mapToSignal { query -> Signal<[ShareSearchPeerEntry]?, NoError> in
             if !query.isEmpty {
-                let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
-                let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased())
+                let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
+                let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
                 |> then(
-                    searchPeers(account: account, query: query)
+                    searchPeers(account: context.account, query: query)
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                 )
                 
@@ -312,7 +312,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.entries = entries ?? []
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(context: context, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
                 if (previousEntries == nil) != (entries == nil) {
@@ -333,7 +333,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             self?.searchQuery.set(text)
         }
         
-        let hasRecentPeers = recentPeers(account: account)
+        let hasRecentPeers = recentPeers(account: context.account)
         |> map { value -> Bool in
             switch value {
             case let .peers(peers):
@@ -367,7 +367,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.recentEntries = entries
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedRecentEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                let transition = preparedRecentEntryTransition(context: context, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
             }
         }))

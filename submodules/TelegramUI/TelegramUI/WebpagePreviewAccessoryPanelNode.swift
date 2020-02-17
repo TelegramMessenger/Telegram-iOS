@@ -117,7 +117,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                         } else {
                             text = stringForMediaKind(mediaKind, strings: self.strings).0
                         }
-                    } else if let files = content.files, content.type == "telegram_theme" {
+                    } else if content.type == "telegram_theme" {
                         text = strings.Message_Theme
                     } else if let _ = content.image {
                         text = stringForMediaKind(.image, strings: self.strings).0

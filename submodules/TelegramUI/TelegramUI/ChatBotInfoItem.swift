@@ -111,13 +111,13 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
-                let tapAction = strongSelf.tapActionAtPoint(point, gesture: .tap)
+                let tapAction = strongSelf.tapActionAtPoint(point, gesture: .tap, isEstimating: true)
                 switch tapAction {
                     case .none:
                         break
                     case .ignore:
                         return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .tooltip:
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip:
                         return .waitForSingleTap
                 }
             }
@@ -264,7 +264,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
+    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - self.offsetContainer.frame.minX - textNodeFrame.minX, y: point.y - self.offsetContainer.frame.minY - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -295,12 +295,12 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            let tapAction = self.tapActionAtPoint(location, gesture: gesture)
+                            let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)
                             switch tapAction {
                                 case .none, .ignore:
                                     break
                                 case let .url(url, concealed):
-                                    self.item?.controllerInteraction.openUrl(url, concealed, nil)
+                                    self.item?.controllerInteraction.openUrl(url, concealed, nil, nil)
                                 case let .peerMention(peerId, _):
                                     self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil), nil)
                                 case let .textMention(name):
@@ -314,7 +314,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                             }
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
-                                let tapAction = self.tapActionAtPoint(location, gesture: gesture)
+                                let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)
                                 switch tapAction {
                                     case .none, .ignore:
                                         break

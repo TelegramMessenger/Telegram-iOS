@@ -13,6 +13,7 @@ import OverlayStatusController
 import AccountContext
 import StickerPackPreviewUI
 import ItemListStickerPackItem
+import UndoUI
 
 public enum ArchivedStickerPacksControllerMode {
     case stickers
@@ -154,13 +155,13 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ArchivedStickerPacksControllerArguments
         switch self {
             case let .info(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .pack(_, theme, strings, info, topItem, count, animatedStickers, enabled, editing):
-                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -248,6 +249,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var navigationControllerImpl: (() -> NavigationController?)?
     
     let actionsDisposable = DisposableSet()
     
@@ -300,24 +302,42 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             return
         }
         let _ = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-        |> mapToSignal { result -> Signal<Void, NoError> in
+        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
             switch result {
-                case let .result(info, items, installed):
-                    if installed {
-                        return .complete()
-                    } else {
-                        return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
-                    }
-                case .fetching:
-                    break
+            case let .result(info, items, installed):
+                if installed {
+                    return .complete()
+                } else {
+                    return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
+                        |> ignoreValues
+                        |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                            return .complete()
+                        }
+                        |> then(.single((info, items)))
+                }
+            case .fetching:
+                break
             case .none:
                 break
             }
             return .complete()
         }
-        |> deliverOnMainQueue).start(completed: {
+        |> deliverOnMainQueue).start(next: { info, items in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+            
+            var animateInAsReplacement = false
+            if let navigationController = navigationControllerImpl?() {
+                for controller in navigationController.overlayControllers {
+                    if let controller = controller as? UndoOverlayController {
+                        controller.dismissWithCommitActionAndReplacementAnimation()
+                        animateInAsReplacement = true
+                    }
+                }
+            }
+            
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                return true
+            }), nil)
             
             let applyPacks: Signal<Void, NoError> = stickerPacks.get()
             |> filter { $0 != nil }
@@ -414,9 +434,9 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.StickerPacksSettings_ArchivedPacks), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.StickerPacksSettings_ArchivedPacks), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(entries: archivedStickerPacksControllerEntries(presentationData: presentationData, state: state, packs: packs, installedView: installedView, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: archivedStickerPacksControllerEntries(presentationData: presentationData, state: state, packs: packs, installedView: installedView, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
@@ -428,9 +448,12 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             controller.present(c, in: .window(.root), with: p)
         }
     }
-    
+    navigationControllerImpl = { [weak controller] in
+        return controller?.navigationController as? NavigationController
+    }
     presentStickerPackController = { [weak controller] info in
-        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+        presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller?.navigationController as? NavigationController), nil)
     }
     
     return controller

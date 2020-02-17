@@ -239,7 +239,7 @@ final class WalletTransactionInfoScreen: ViewController {
             } else {
                 text = NSAttributedString(string: strongSelf.context.presentationData.strings.Wallet_TransactionInfo_StorageFeeInfo, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
             }
-            let controller = TooltipController(content: .attributedText(text), timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false, arrowOnBottom: false)
+            let controller = TooltipController(content: .attributedText(text), baseFontSize: 17.0, timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false, arrowOnBottom: false)
             controller.dismissed = { [weak self] tappedInside in
                 if let strongSelf = self, tappedInside {
                     if let feeInfoUrl = strongSelf.context.feeInfoUrl {

@@ -84,8 +84,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var nameText: String?
         var dateText: String?
         switch entry {
-            case let .image(_, _, peer, date, _, _):
-                nameText = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+            case let .image(_, _, _, peer, date, _, _):
+                nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
             default:
                 break
@@ -148,7 +148,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     @objc private func deleteButtonPressed() {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         let items: [ActionSheetItem] = [
             ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
@@ -158,7 +158,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
                                    ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                     })
                                     ])

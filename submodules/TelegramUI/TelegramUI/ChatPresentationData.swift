@@ -6,27 +6,6 @@ import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 
-extension PresentationFontSize {
-    var baseDisplaySize: CGFloat {
-        switch self {
-            case .extraSmall:
-                return 14.0
-            case .small:
-                return 15.0
-            case .medium:
-                return 16.0
-            case .regular:
-                return 17.0
-            case .large:
-                return 19.0
-            case .extraLarge:
-                return 23.0
-            case .extraLargeX2:
-                return 26.0
-        }
-    }
-}
-
 public final class ChatPresentationThemeData: Equatable {
     public let theme: PresentationTheme
     public let wallpaper: TelegramWallpaper
@@ -49,6 +28,7 @@ public final class ChatPresentationData {
     let nameDisplayOrder: PresentationPersonNameOrder
     let disableAnimations: Bool
     let largeEmoji: Bool
+    let chatBubbleCorners: PresentationChatBubbleCorners
     let animatedEmojiScale: CGFloat
     let isPreview: Bool
     
@@ -60,13 +40,14 @@ public final class ChatPresentationData {
     let messageFixedFont: UIFont
     let messageBlockQuoteFont: UIFont
     
-    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, chatBubbleCorners: PresentationChatBubbleCorners, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.disableAnimations = disableAnimations
+        self.chatBubbleCorners = chatBubbleCorners
         self.largeEmoji = largeEmoji
         self.isPreview = isPreview
         

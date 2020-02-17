@@ -132,8 +132,8 @@ public enum GetWallpaperError {
     case generic
 }
 
-public func getWallpaper(account: Account, slug: String) -> Signal<TelegramWallpaper, GetWallpaperError> {
-    return account.network.request(Api.functions.account.getWallPaper(wallpaper: .inputWallPaperSlug(slug: slug)))
+public func getWallpaper(network: Network, slug: String) -> Signal<TelegramWallpaper, GetWallpaperError> {
+    return network.request(Api.functions.account.getWallPaper(wallpaper: .inputWallPaperSlug(slug: slug)))
     |> mapError { _ -> GetWallpaperError in return .generic }
     |> map { wallpaper -> TelegramWallpaper in
         return TelegramWallpaper(apiWallpaper: wallpaper)

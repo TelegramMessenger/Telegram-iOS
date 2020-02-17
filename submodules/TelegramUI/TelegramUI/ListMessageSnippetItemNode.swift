@@ -14,8 +14,6 @@ import PhotoResources
 import WebsiteType
 import UrlHandling
 
-private let titleFont = Font.medium(16.0)
-private let descriptionFont = Font.regular(14.0)
 private let iconFont = Font.medium(22.0)
 
 private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 2.0, color: UIColor(rgb: 0xdfdfdf))
@@ -156,6 +154,9 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
             }
+            
+            let titleFont = Font.medium(floor(item.fontSize.baseDisplaySize * 16.0 / 17.0))
+            let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
             
             let leftInset: CGFloat = 65.0 + params.leftInset
             
@@ -327,7 +328,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 }
             }
             
-            let contentHeight = 40.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
+            let contentHeight = 9.0 + titleNodeLayout.size.height + 10.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
             
             var insets = UIEdgeInsets()
             if dateHeaderAtBottom, let header = item.header {
@@ -379,7 +380,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 9.0), size: titleNodeLayout.size))
                     let _ = titleNodeApply()
                     
-                    let descriptionFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: 32.0), size: descriptionNodeLayout.size)
+                    let descriptionFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: strongSelf.titleNode.frame.maxY + 3.0), size: descriptionNodeLayout.size)
                     transition.updateFrame(node: strongSelf.descriptionNode, frame: descriptionFrame)
                     let _ = descriptionNodeApply()
                     
@@ -466,10 +467,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let item = self.item, item.message.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
-            return (self.iconImageNode, { [weak iconImageNode] in
+            return (self.iconImageNode, self.iconImageNode.bounds, { [weak iconImageNode] in
                 return (iconImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }
@@ -500,12 +501,12 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     }
                 } else {
                     if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .link) {
-                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false, nil)
                     }
                 }
             } else {
                 if !item.controllerInteraction.openMessage(item.message, .default) {
-                    item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                    item.controllerInteraction.openUrl(currentPrimaryUrl, false, false, nil)
                 }
             }
         }
@@ -555,10 +556,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url), item.message)
                                 } else if url == self.currentPrimaryUrl {
                                     if !item.controllerInteraction.openMessage(item.message, .default) {
-                                        item.controllerInteraction.openUrl(url, false, false)
+                                        item.controllerInteraction.openUrl(url, false, false, nil)
                                     }
                                 } else {
-                                    item.controllerInteraction.openUrl(url, false, true)
+                                    item.controllerInteraction.openUrl(url, false, true, nil)
                                 }
                             }
                         case .hold, .doubleTap:

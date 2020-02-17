@@ -651,7 +651,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         print("Starting with \(documentsPath)")
         #endif
         
-        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/configuration")
+        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/configuration_v2")
         
         let initialConfigValue = storage.mergedLocalWalletConfiguration()
         |> take(1)

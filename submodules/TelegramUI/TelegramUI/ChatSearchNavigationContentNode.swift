@@ -8,6 +8,7 @@ import SyncCore
 import TelegramPresentationData
 import SearchBarNode
 import LocalizedPeerData
+import SwiftSignalKit
 
 private let searchBarFont = Font.regular(17.0)
 
@@ -18,6 +19,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     
     private let searchBar: SearchBarNode
     private let interaction: ChatPanelInterfaceInteraction
+    
+    private var searchingActivityDisposable: Disposable?
     
     init(theme: PresentationTheme, strings: PresentationStrings, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {
         self.theme = theme
@@ -51,6 +54,17 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.clearPrefix = { [weak self] in
             self?.interaction.toggleMembersSearch(false)
         }
+        
+        if let statuses = interaction.statuses {
+            self.searchingActivityDisposable = (statuses.searching
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                self?.searchBar.activity = value
+            })
+        }
+    }
+
+    deinit {
+        self.searchingActivityDisposable?.dispose()
     }
     
     override var nominalHeight: CGFloat {

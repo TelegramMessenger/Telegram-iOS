@@ -253,6 +253,10 @@ public final class AccountViewTracker {
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
+    private var updatedSeenLiveLocationMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextSeenLiveLocationDisposableId: Int32 = 0
+    private var seenLiveLocationDisposables = DisposableDict<Int32>()
+    
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
@@ -584,6 +588,61 @@ public final class AccountViewTracker {
         }
     }
     
+    public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedSeenLiveLocationMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 1 * 60 {
+                    self.updatedSeenLiveLocationMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextSeenLiveLocationDisposableId
+                    self.nextSeenLiveLocationDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                let request: Signal<Bool, MTRpcError>
+                                switch inputPeer {
+                                case .inputPeerChat, .inputPeerSelf, .inputPeerUser:
+                                    request = account.network.request(Api.functions.messages.readMessageContents(id: messageIds.map { $0.id }))
+                                    |> map { _ in true }
+                                case let .inputPeerChannel(channelId, accessHash):
+                                    request = account.network.request(Api.functions.channels.readMessageContents(channel: .inputChannel(channelId: channelId, accessHash: accessHash), id: messageIds.map { $0.id }))
+                                    |> map { _ in true }
+                                default:
+                                    return .complete()
+                                }
+                                
+                                return request
+                                |> `catch` { _ -> Signal<Bool, NoError> in
+                                    return .single(false)
+                                }
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        |> switchToLatest)
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.seenLiveLocationDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.seenLiveLocationDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
     public func updateUnsupportedMediaForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
@@ -772,9 +831,22 @@ public final class AccountViewTracker {
                 self.cachedDataContexts[peerId] = context
             }
             context.timestamp = CFAbsoluteTimeGetCurrent()
-            if let account = self.account {
-                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start())
+            guard let account = self.account else {
+                return
             }
+            let queue = self.queue
+            context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start(next: { [weak self] supplementalStatus, cachedStatus in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !supplementalStatus || !cachedStatus {
+                        if let existingContext = strongSelf.cachedDataContexts[peerId] {
+                            existingContext.timestamp = nil
+                        }
+                    }
+                }
+            }))
         }
     }
     
@@ -801,9 +873,22 @@ public final class AccountViewTracker {
             context.viewIds.insert(viewId)
             
             if dataUpdated {
-                if let account = self.account {
-                    context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start())
+                guard let account = self.account else {
+                    return
                 }
+                let queue = self.queue
+                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start(next: { [weak self] supplementalStatus, cachedStatus in
+                    queue.async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if !supplementalStatus || !cachedStatus {
+                            if let existingContext = strongSelf.cachedDataContexts[peerId] {
+                                existingContext.timestamp = nil
+                            }
+                        }
+                    }
+                }))
             }
         }
     }
@@ -979,7 +1064,7 @@ public final class AccountViewTracker {
         }
     }
     
-    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, clipHoles: Bool = true, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let inputAnchor: HistoryViewInputAnchor
             switch index {
@@ -990,7 +1075,7 @@ public final class AccountViewTracker {
                 case let .message(index):
                     inputAnchor = .index(index)
             }
-            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, clipHoles: clipHoles, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, addHoleIfNeeded: false)
         } else {
             return .never()
@@ -1136,7 +1221,7 @@ public final class AccountViewTracker {
                 return true
             }
             
-            let key = PostboxViewKey.globalMessageTags(globalTag: type == .all ? GlobalMessageTags.Calls : GlobalMessageTags.MissedCalls, position: index, count: 200, groupingPredicate: groupingPredicate)
+            let key = PostboxViewKey.globalMessageTags(globalTag: type == .all ? GlobalMessageTags.Calls : GlobalMessageTags.MissedCalls, position: index, count: count, groupingPredicate: groupingPredicate)
             let signal = account.postbox.combinedView(keys: [key]) |> map { view -> GlobalMessageTagsView in
                 let messageView = view.views[key] as! GlobalMessageTagsView
                 return messageView
@@ -1245,17 +1330,17 @@ public final class AccountViewTracker {
         })
     }
     
-    public func tailChatListView(groupId: PeerGroupId, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)? = nil, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
-            return self.wrappedChatListView(signal: account.postbox.tailChatListView(groupId: groupId, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
+            return self.wrappedChatListView(signal: account.postbox.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
         } else {
             return .never()
         }
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)? = nil, index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
-            return self.wrappedChatListView(signal: account.postbox.aroundChatListView(groupId: groupId, index: index, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
+            return self.wrappedChatListView(signal: account.postbox.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
         } else {
             return .never()
         }

@@ -67,7 +67,8 @@ public struct Namespaces {
         public static let cachedStickerQueryResults: Int8 = 5
         public static let cachedSecureIdConfiguration: Int8 = 6
         public static let cachedWallpapersConfiguration: Int8 = 7
-        public static let cachedThemesConfiguration: Int8 = 7
+        public static let cachedThemesConfiguration: Int8 = 8
+        public static let cachedPollResults: Int8 = 9
     }
     
     public struct UnorderedItemList {
@@ -138,10 +139,44 @@ public struct OperationLogTags {
     public static let SynchronizeEmojiKeywords = PeerOperationLogTag(value: 19)
 }
 
+public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let regularChatsAndPrivateGroups = LegacyPeerSummaryCounterTags(rawValue: 1 << 0)
+    public static let publicGroups = LegacyPeerSummaryCounterTags(rawValue: 1 << 1)
+    public static let channels = LegacyPeerSummaryCounterTags(rawValue: 1 << 2)
+    
+    public func makeIterator() -> AnyIterator<LegacyPeerSummaryCounterTags> {
+        var index = 0
+        return AnyIterator { () -> LegacyPeerSummaryCounterTags? in
+            while index < 31 {
+                let currentTags = self.rawValue >> UInt32(index)
+                let tag = LegacyPeerSummaryCounterTags(rawValue: 1 << UInt32(index))
+                index += 1
+                if currentTags == 0 {
+                    break
+                }
+                
+                if (currentTags & 1) != 0 {
+                    return tag
+                }
+            }
+            return nil
+        }
+    }
+}
+
 public extension PeerSummaryCounterTags {
-    static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
-    static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
-    static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
+    static let privateChat = PeerSummaryCounterTags(rawValue: 1 << 3)
+    static let secretChat = PeerSummaryCounterTags(rawValue: 1 << 4)
+    static let privateGroup = PeerSummaryCounterTags(rawValue: 1 << 5)
+    static let bot = PeerSummaryCounterTags(rawValue: 1 << 6)
+    static let channel = PeerSummaryCounterTags(rawValue: 1 << 7)
+    static let publicGroup = PeerSummaryCounterTags(rawValue: 1 << 8)
 }
 
 private enum PreferencesKeyValues: Int32 {
@@ -160,6 +195,9 @@ private enum PreferencesKeyValues: Int32 {
     case contactsSettings = 16
     case secretChatSettings = 17
     case walletCollection = 18
+    case contentSettings = 19
+    case chatListFilters = 20
+    case peersNearby = 21
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -262,6 +300,24 @@ public struct PreferencesKeys {
     public static let walletCollection: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.walletCollection.rawValue)
+        return key
+    }()
+    
+    public static let contentSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.contentSettings.rawValue)
+        return key
+    }()
+    
+    public static let chatListFilters: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.chatListFilters.rawValue)
+        return key
+    }()
+    
+    public static let peersNearby: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.peersNearby.rawValue)
         return key
     }()
 }

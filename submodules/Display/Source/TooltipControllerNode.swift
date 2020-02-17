@@ -3,6 +3,8 @@ import UIKit
 import AsyncDisplayKit
 
 final class TooltipControllerNode: ASDisplayNode {
+    private let baseFontSize: CGFloat
+    
     private let dismiss: (Bool) -> Void
     
     private var validLayout: ContainerViewLayout?
@@ -19,7 +21,9 @@ final class TooltipControllerNode: ASDisplayNode {
     private var dismissedByTouchOutside = false
     private var dismissByTapOutsideSource = false
     
-    init(content: TooltipControllerContent, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
+    init(content: TooltipControllerContent, baseFontSize: CGFloat, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
+        self.baseFontSize = baseFontSize
+        
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         
@@ -33,7 +37,7 @@ final class TooltipControllerNode: ASDisplayNode {
         if case let .attributedText(text) = content {
             self.textNode.attributedText = text
         } else {
-            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(floor(baseFontSize * 14.0 / 17.0)), textColor: .white, paragraphAlignment: .center)
         }
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
@@ -58,7 +62,7 @@ final class TooltipControllerNode: ASDisplayNode {
             })
             self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
         }
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(floor(self.baseFontSize * 14.0 / 17.0)), textColor: .white, paragraphAlignment: .center)
         if let layout = self.validLayout {
             self.containerLayoutUpdated(layout, transition: transition)
         }
@@ -120,6 +124,10 @@ final class TooltipControllerNode: ASDisplayNode {
         self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })
+    }
+    
+    func hide() {
+        self.containerNode.alpha = 0.0
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

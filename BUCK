@@ -48,8 +48,8 @@ resource_dependencies = [
     "//submodules/LegacyComponents:LegacyComponentsResources",
     "//submodules/TelegramUI:TelegramUIAssets",
     "//submodules/TelegramUI:TelegramUIResources",
-    "//submodules/WalletUI:WalletUIAssets",
-    "//submodules/WalletUI:WalletUIResources",
+    #"//submodules/WalletUI:WalletUIAssets",
+    #"//submodules/WalletUI:WalletUIResources",
     "//submodules/PasswordSetupUI:PasswordSetupUIResources",
     "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
     "//submodules/OverlayStatusController:OverlayStatusControllerResources",
@@ -464,8 +464,9 @@ apple_binary(
         "-DTARGET_OS_WATCH=1",
     ],
     linker_flags = [
-        #"-e",
-        #"_NSExtensionMain",
+        "-e",
+        "_WKExtensionMain",
+        "-lWKExtensionMainLegacy",
     ],
     configs = watch_extension_binary_configs(),
     frameworks = [

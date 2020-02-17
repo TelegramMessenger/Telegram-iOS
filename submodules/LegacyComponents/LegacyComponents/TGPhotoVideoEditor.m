@@ -10,7 +10,7 @@
 
 @implementation TGPhotoVideoEditor
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item recipientName:(NSString *)recipientName completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item recipientName:(NSString *)recipientName completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
@@ -78,13 +78,15 @@
         if (completion != nil)
             completion(item.asset, editingContext);
         
-        [UIView animateWithDuration:0.3f delay:0.0f options:(7 << 16) animations:^
+        [strongController dismissWhenReadyAnimated:true];
+        
+        /*[UIView animateWithDuration:0.3f delay:0.0f options:(7 << 16) animations:^
         {
             strongController.view.frame = CGRectOffset(strongController.view.frame, 0, strongController.view.frame.size.height);
         } completion:^(__unused BOOL finished)
         {
             [strongController dismiss];
-        }];
+        }];*/
     };
     
     galleryController.beginTransitionIn = ^UIView *(__unused TGMediaPickerGalleryItem *item, __unused TGModernGalleryItemView *itemView)
@@ -106,6 +108,9 @@
             TGOverlayControllerWindow *window = (TGOverlayControllerWindow *)navigationController.view.window;
             if ([window isKindOfClass:[TGOverlayControllerWindow class]])
                 [window dismiss];
+        }
+        if (dismissed) {
+            dismissed();
         }
     };
     

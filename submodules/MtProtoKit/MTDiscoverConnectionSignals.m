@@ -13,6 +13,7 @@
 #import "MTContext.h"
 #import "MTApiEnvironment.h"
 #import "MTLogging.h"
+#import "MTDatacenterAuthAction.h"
 
 #import <netinet/in.h>
 #import <arpa/inet.h>
@@ -242,6 +243,27 @@
     
     return [signal catch:^MTSignal *(id error) {
         return [MTSignal complete];
+    }];
+}
+
++ (MTSignal * _Nonnull)checkIfAuthKeyRemovedWithContext:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authKey:(MTDatacenterAuthKey *)authKey {
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+        
+        [[MTContext contextQueue] dispatchOnQueue:^{
+            MTDatacenterAuthAction *action = [[MTDatacenterAuthAction alloc] initWithTempAuth:true tempAuthKeyType:MTDatacenterAuthTempKeyTypeMain bindKey:authKey];
+            action.completedWithResult = ^(bool success) {
+                [subscriber putNext:@(!success)];
+                [subscriber putCompletion];
+            };
+            [action execute:context datacenterId:datacenterId isCdn:false];
+            
+            [disposable setDisposable:[[MTBlockDisposable alloc] initWithBlock:^{
+                [action cancel];
+            }]];
+        }];
+        
+        return disposable;
     }];
 }
 

@@ -106,12 +106,12 @@ public extension UIColor {
         }
     }
     
-    var hsv: (CGFloat, CGFloat, CGFloat) {
+    var hsb: (CGFloat, CGFloat, CGFloat) {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0
-        var value: CGFloat = 0.0
-        if self.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-            return (hue, saturation, value)
+        var brightness: CGFloat = 0.0
+        if self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil) {
+            return (hue, saturation, brightness)
         } else {
             return (0.0, 0.0, 0.0)
         }
@@ -318,6 +318,8 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
         maskLayer.contentsScale = mask.contentsScale
         maskLayer.contentsCenter = mask.contentsCenter
         maskLayer.contentsGravity = mask.contentsGravity
+        maskLayer.frame = mask.frame
+        maskLayer.bounds = mask.bounds
         view.layer.mask = maskLayer
     }
     view.layer.cornerRadius = layer.cornerRadius

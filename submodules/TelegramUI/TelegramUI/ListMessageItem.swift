@@ -8,10 +8,12 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AccountContext
+import TelegramUIPreferences
 
 final class ListMessageItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let fontSize: PresentationFontSize
     let dateTimeFormat: PresentationDateTimeFormat
     let context: AccountContext
     let chatLocation: ChatLocation
@@ -23,16 +25,17 @@ final class ListMessageItem: ListViewItem {
     
     let selectable: Bool = true
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
         self.theme = theme
         self.strings = strings
+        self.fontSize = fontSize
         self.dateTimeFormat = dateTimeFormat
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
         self.message = message
         if displayHeader {
-            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings)
+            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings, fontSize: fontSize)
         } else {
             self.header = nil
         }

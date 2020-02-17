@@ -93,6 +93,8 @@ public enum ViewControllerNavigationPresentation {
         }
     }
     
+    var blocksInteractionUntilReady: Bool = false
+    
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
     public final var automaticallyControlPresentationContextLayout: Bool = true
@@ -130,6 +132,15 @@ public enum ViewControllerNavigationPresentation {
     public var presentationArguments: Any?
     
     public var tabBarItemDebugTapAction: (() -> Void)?
+    
+    public private(set) var modalStyleOverlayTransitionFactor: CGFloat = 0.0
+    public var modalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public func updateModalStyleOverlayTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.modalStyleOverlayTransitionFactor != value {
+            self.modalStyleOverlayTransitionFactor = value
+            self.modalStyleOverlayTransitionFactorUpdated?(transition)
+        }
+    }
     
     private var _displayNode: ASDisplayNode?
     public final var displayNode: ASDisplayNode {
@@ -445,8 +456,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        super.present(viewControllerToPresent, animated: flag, completion: completion)
-        return
+        self.view.window?.rootViewController?.present(viewControllerToPresent, animated: flag, completion: completion)
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
@@ -526,7 +536,11 @@ public enum ViewControllerNavigationPresentation {
     }
     
     open func dismiss(completion: (() -> Void)? = nil) {
-        (self.navigationController as? NavigationController)?.filterController(self, animated: true)
+        if let navigationController = self.navigationController as? NavigationController {
+            navigationController.filterController(self, animated: true)
+        } else {
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
     }
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)

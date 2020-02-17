@@ -15,7 +15,7 @@ public enum AuthorizationCodeRequestError {
     case timeout
 }
 
-private func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: UnauthorizedAccount) {
+func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: UnauthorizedAccount) {
     let nextSortOrder = (transaction.getRecords().map({ record -> Int32 in
         for attribute in record.attributes {
             if let attribute = attribute as? AccountSortOrderAttribute {

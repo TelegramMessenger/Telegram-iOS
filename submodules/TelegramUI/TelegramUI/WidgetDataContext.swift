@@ -32,7 +32,20 @@ final class WidgetDataContext {
                         guard let user = peer as? TelegramUser else {
                             return nil
                         }
-                        return WidgetDataPeer(id: user.id.toInt64(), name: user.shortNameOrPhone ?? "", letters: user.displayLetters, avatarPath: smallestImageRepresentation(user.photo).flatMap { representation in
+                        
+                        var name: String = ""
+                        var lastName: String?
+                        
+                        if let firstName = user.firstName {
+                            name = firstName
+                            lastName = user.lastName
+                        } else if let lastName = user.lastName {
+                            name = lastName
+                        } else if let phone = user.phone, !phone.isEmpty {
+                            name = phone
+                        }
+                        
+                        return WidgetDataPeer(id: user.id.toInt64(), name: name, lastName: lastName, letters: user.displayLetters, avatarPath: smallestImageRepresentation(user.photo).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
                         })
                     }))

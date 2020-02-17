@@ -35,6 +35,12 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class InstantImageGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.itemId
+    }
+    
+    let itemId: AnyHashable
+    
     let context: AccountContext
     let presentationData: PresentationData
     let imageReference: ImageMediaReference
@@ -44,7 +50,8 @@ class InstantImageGalleryItem: GalleryItem {
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, itemId: AnyHashable, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+        self.itemId = itemId
         self.context = context
         self.presentationData = presentationData
         self.imageReference = imageReference
@@ -161,14 +168,14 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setShareMedia(fileReference.abstract)
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        let surfaceCopyView = node.1().0!
-        let copyView = node.1().0!
+        let surfaceCopyView = node.2().0!
+        let copyView = node.2().0!
         
         addToTransitionSurface(surfaceCopyView)
         
@@ -217,7 +224,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)*/
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         self.fetchDisposable.set(nil)
         
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
@@ -229,8 +236,8 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.1().0!
-        let surfaceCopyView = node.1().0!
+        let copyView = node.2().0!
+        let surfaceCopyView = node.2().0!
         
         addToTransitionSurface(surfaceCopyView)
         
@@ -301,7 +308,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._title.get()
     }
     
-    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
+    override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((self.footerContentNode, nil))
     }
 }

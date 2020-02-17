@@ -4,6 +4,8 @@ import Display
 import Postbox
 import TelegramPresentationData
 
+private let maskInset: CGFloat = 1.0
+
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private let backgroundContent: ASDisplayNode
     
@@ -14,11 +16,16 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     private var maskView: UIImageView?
     
+    var hasImage: Bool {
+        return self.backgroundContent.contents != nil
+    }
+    
     override var frame: CGRect {
         didSet {
             if let maskView = self.maskView {
-                if maskView.frame != self.bounds {
-                    maskView.frame = self.bounds
+                let maskFrame = self.bounds.insetBy(dx: -maskInset, dy: -maskInset)
+                if maskView.frame != maskFrame {
+                    maskView.frame = maskFrame
                 }
             }
         }
@@ -84,7 +91,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     }
     
     func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, mediaBox: MediaBox, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode: Bool) {
-        if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode {
+        if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics {
             self.currentType = type
             self.theme = theme
             self.essentialGraphics = essentialGraphics
@@ -98,7 +105,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                         maskView = current
                     } else {
                         maskView = UIImageView()
-                        maskView.frame = self.bounds
+                        maskView.frame = self.bounds.insetBy(dx: -maskInset, dy: -maskInset)
                         self.maskView = maskView
                         self.view.mask = maskView
                     }
@@ -140,7 +147,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition) {
         if let maskView = self.maskView {
-            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(), size: value.size))
+            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width + maskInset * 2.0, height: value.size.height + maskInset * 2.0)))
         }
         transition.updateFrame(node: self, frame: value)
     }

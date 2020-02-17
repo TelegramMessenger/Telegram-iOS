@@ -14,6 +14,12 @@ public final class ContextControllerSourceNode: ASDisplayNode {
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var customActivationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
     
+    public func cancelGesture() {
+        self.contextGesture?.cancel()
+        self.contextGesture?.isEnabled = false
+        self.contextGesture?.isEnabled = self.isGestureEnabled
+    }
+    
     override public func didLoad() {
         super.didLoad()
         

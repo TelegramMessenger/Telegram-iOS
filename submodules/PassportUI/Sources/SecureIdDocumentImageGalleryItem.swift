@@ -12,6 +12,12 @@ import PhotoResources
 import GalleryUI
 
 class SecureIdDocumentGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.itemId
+    }
+    
+    let itemId: AnyHashable
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -21,7 +27,8 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     let location: SecureIdDocumentGalleryEntryLocation
     let delete: () -> Void
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, itemId: AnyHashable, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
+        self.itemId = itemId
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -131,13 +138,13 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contextAndMedia = (context, secureIdContext, resource)
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        let copyView = node.1().0!
+        let copyView = node.2().0!
         
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
@@ -157,7 +164,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
@@ -167,7 +174,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.1().0!
+        let copyView = node.2().0!
         
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
@@ -210,8 +217,8 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._title.get()
     }
     
-    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
+    override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((self.footerContentNode, nil))
     }
 }
 

@@ -49,7 +49,19 @@ public func earliestUnseenPersonalMentionMessage(account: Account, peerId: PeerI
                 return .single(.result(message.id))
             }
         } else {
-            return .single(.result(nil))
+            return account.postbox.transaction { transaction -> EarliestUnseenPersonalMentionMessageResult in
+                if let topId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                    transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: 0, maxId: topId.id)
+                    
+                    transaction.removeHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .tag(.unseenPersonalMessage), range: 1 ... (Int32.max - 1))
+                    let ids = transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .unseenPersonalMessage).map({ $0.id })
+                    for id in ids {
+                        markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
+                    }
+                }
+                
+                return .result(nil)
+            }
         }
     }
     |> distinctUntilChanged

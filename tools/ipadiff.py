@@ -51,8 +51,6 @@ def remove_codesign_files(files):
             continue
         if re.match('Frameworks/.*\\.framework/_CodeSignature/CodeResources', f):
             continue
-        if f == 'Frameworks/ModernProto.framework/ModernProto':
-            continue
         result.add(f)
     return result
 
@@ -163,7 +161,7 @@ def is_plist(file1):
 
 
 def diff_plists(file1, file2):
-    remove_properties = ['UISupportedDevices', 'DTAppStoreToolsBuild', 'MinimumOSVersion', 'BuildMachineOSBuild']
+    remove_properties = ['UISupportedDevices', 'DTAppStoreToolsBuild', 'MinimumOSVersion', 'BuildMachineOSBuild', 'CFBundleVersion']
 
     clean1_properties = ''
     clean2_properties = ''
@@ -181,11 +179,6 @@ def diff_plists(file1, file2):
     if data1 == data2:
         return 'equal'
     else:
-        with open('lhs.plist', 'wb') as f:
-            f.write(str.encode(data1))
-        with open('rhs.plist', 'wb') as f:
-            f.write(str.encode(data2))
-        sys.exit(1)
         return 'not_equal'
 
 
@@ -285,6 +278,7 @@ def ipadiff(self_base_path, ipa1, ipa2):
         print('Different files in ' + ipa1 + ' and ' + ipa2)
         for relative_file_path in different_files:
             print('    ' + relative_file_path)
+        sys.exit(1)
     else:
         if len(encrypted_files) != 0 or len(watch_ipa1_files) != 0 or len(plugin_ipa1_files) != 0:
             print('IPAs are equal, except for the files that can\'t currently be checked:')

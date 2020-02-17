@@ -121,7 +121,9 @@ func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistor
     |> switchToLatest
 }
 
-func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, limit: Int = 100) -> Signal<Never, NoError> {
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<Never, NoError> {
+    let count = min(100, rawCount)
+    
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
         if let state = view.state as? AuthorizedAccountState {
@@ -136,8 +138,8 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         |> take(1)
         |> mapToSignal { peer in
             if let inputPeer = forceApiInputPeer(peer) {
-                print("fetchMessageHistoryHole for \(peer.debugDisplayTitle) \(direction) space \(space)")
-                Logger.shared.log("fetchMessageHistoryHole", "fetch for \(peer.debugDisplayTitle) \(direction) space \(space)")
+                print("fetchMessageHistoryHole for \(peer.id) \(peer.debugDisplayTitle) \(direction) space \(space)")
+                Logger.shared.log("fetchMessageHistoryHole", "fetch for \(peer.id) \(peer.debugDisplayTitle) \(direction) space \(space)")
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 var implicitelyFillHole = false
                 let minMaxRange: ClosedRange<MessageId.Id>
@@ -146,7 +148,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     case .everywhere:
                         let offsetId: Int32
                         let addOffset: Int32
-                        let selectedLimit = limit
+                        let selectedLimit = count
                         let maxId: Int32
                         let minId: Int32
                         
@@ -195,7 +197,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         if tag == .unseenPersonalMessage {
                             let offsetId: Int32
                             let addOffset: Int32
-                            let selectedLimit = limit
+                            let selectedLimit = count
                             let maxId: Int32
                             let minId: Int32
                             
@@ -241,7 +243,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             
                             request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                         } else if tag == .liveLocation {
-                            let selectedLimit = limit
+                            let selectedLimit = count
                             
                             switch direction {
                                 case .aroundId, .range:
@@ -252,7 +254,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         } else if let filter = messageFilterForTagMask(tag) {
                             let offsetId: Int32
                             let addOffset: Int32
-                            let selectedLimit = limit
+                            let selectedLimit = count
                             let maxId: Int32
                             let minId: Int32
                             
@@ -364,7 +366,23 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         let filledRange: ClosedRange<MessageId.Id>
-                        let ids = messages.compactMap({ $0.id()?.id })
+                        let ids = storeMessages.compactMap { message -> MessageId.Id? in
+                            switch message.id {
+                            case let .Id(id):
+                                switch space {
+                                case let .tag(tag):
+                                    if !message.tags.contains(tag) {
+                                        return nil
+                                    } else {
+                                        return id.id
+                                    }
+                                case .everywhere:
+                                    return id.id
+                                }
+                            case .Partial:
+                                return nil
+                            }
+                        }
                         if ids.count == 0 || implicitelyFillHole {
                             filledRange = minMaxRange
                         } else {
@@ -391,7 +409,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         })
                         updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                         
-                        print("fetchMessageHistoryHole for \(peer.debugDisplayTitle) space \(space) done")
+                        print("fetchMessageHistoryHole for \(peer.id) \(peer.debugDisplayTitle) space \(space) done")
                         
                         return
                     })

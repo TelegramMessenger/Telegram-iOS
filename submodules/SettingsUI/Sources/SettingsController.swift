@@ -17,7 +17,6 @@ import AccountContext
 import OverlayStatusController
 import AvatarNode
 import AlertUI
-import PresentationDataUtils
 import TelegramNotices
 import GalleryUI
 import LegacyUI
@@ -33,10 +32,12 @@ import PeerAvatarGalleryUI
 import MapResourceToAvatarSizes
 import AppBundle
 import ContextUI
+#if ENABLE_WALLET
 import WalletUI
+#endif
 import PhoneNumberFormat
-
-private let maximumNumberOfAccounts = 3
+import AccountUtils
+import AuthTransferUI
 
 private let avatarFont = avatarPlaceholderFont(size: 13.0)
 
@@ -81,7 +82,7 @@ private indirect enum SettingsEntryTag: Equatable, ItemListItemTag {
 }
 
 private final class SettingsItemArguments {
-    let accountManager: AccountManager
+    let sharedContext: SharedAccountContext
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
     let avatarTapAction: () -> Void
@@ -112,9 +113,10 @@ private final class SettingsItemArguments {
     let keepPhone: () -> Void
     let openPhoneNumberChange: () -> Void
     let accountContextAction: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
+    let openDevices: () -> Void
     
     init(
-        accountManager: AccountManager,
+        sharedContext: SharedAccountContext,
         avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext,
     
         avatarTapAction: @escaping () -> Void,
@@ -144,9 +146,10 @@ private final class SettingsItemArguments {
         removeAccount: @escaping (AccountRecordId) -> Void,
         keepPhone: @escaping () -> Void,
         openPhoneNumberChange: @escaping () -> Void,
-        accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
+        accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
+        openDevices: @escaping () -> Void
     ) {
-        self.accountManager = accountManager
+        self.sharedContext = sharedContext
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         
         self.avatarTapAction = avatarTapAction
@@ -177,6 +180,7 @@ private final class SettingsItemArguments {
         self.keepPhone = keepPhone
         self.openPhoneNumberChange = openPhoneNumberChange
         self.accountContextAction = accountContextAction
+        self.openDevices = openDevices
     }
 }
 
@@ -205,9 +209,12 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     
     case proxy(PresentationTheme, UIImage?, String, String)
     
+    case devices(PresentationTheme, UIImage?, String, String)
+    
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
+    case contentStickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
     
     case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?, Bool)
     case privacyAndSecurity(PresentationTheme, UIImage?, String, AccountPrivacySettings?)
@@ -215,7 +222,9 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     case themes(PresentationTheme, UIImage?, String)
     case language(PresentationTheme, UIImage?, String, String)
     case passport(PresentationTheme, UIImage?, String, String)
+    #if ENABLE_WALLET
     case wallet(PresentationTheme, UIImage?, String, String)
+    #endif
     case watch(PresentationTheme, UIImage?, String, String)
     
     case askAQuestion(PresentationTheme, UIImage?, String)
@@ -223,22 +232,28 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .userInfo, .setProfilePhoto, .setUsername:
-                return SettingsSection.info.rawValue
-            case .phoneInfo, .keepPhone, .changePhone:
-                return SettingsSection.phone.rawValue
-            case .account, .addAccount:
-                return SettingsSection.accounts.rawValue
-            case .proxy:
-                return SettingsSection.proxy.rawValue
-            case .savedMessages, .recentCalls, .stickers:
-                return SettingsSection.media.rawValue
-            case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
-                return SettingsSection.generalSettings.rawValue
-            case .passport, .wallet, .watch :
-                return SettingsSection.advanced.rawValue
-            case .askAQuestion, .faq:
-                return SettingsSection.help.rawValue
+        case .userInfo, .setProfilePhoto, .setUsername:
+            return SettingsSection.info.rawValue
+        case .phoneInfo, .keepPhone, .changePhone:
+            return SettingsSection.phone.rawValue
+        case .account, .addAccount:
+            return SettingsSection.accounts.rawValue
+        case .proxy:
+            return SettingsSection.proxy.rawValue
+        case .devices:
+            return SettingsSection.media.rawValue
+        case .savedMessages, .recentCalls, .stickers:
+            return SettingsSection.media.rawValue
+        case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language, .contentStickers:
+            return SettingsSection.generalSettings.rawValue
+        case .passport, .watch:
+            return SettingsSection.advanced.rawValue
+        #if ENABLE_WALLET
+        case .wallet:
+            return SettingsSection.advanced.rawValue
+        #endif
+        case .askAQuestion, .faq:
+            return SettingsSection.help.rawValue
         }
     }
     
@@ -268,26 +283,32 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return 1005
         case .stickers:
             return 1006
-        case .notificationsAndSounds:
+        case .devices:
             return 1007
-        case .privacyAndSecurity:
+        case .notificationsAndSounds:
             return 1008
-        case .dataAndStorage:
+        case .privacyAndSecurity:
             return 1009
-        case .themes:
+        case .dataAndStorage:
             return 1010
-        case .language:
+        case .themes:
             return 1011
-        case .wallet:
+        case .language:
             return 1012
-        case .passport:
+        case .contentStickers:
             return 1013
-        case .watch:
+        #if ENABLE_WALLET
+        case .wallet:
             return 1014
-        case .askAQuestion:
+        #endif
+        case .passport:
             return 1015
-        case .faq:
+        case .watch:
             return 1016
+        case .askAQuestion:
+            return 1017
+        case .faq:
+            return 1018
         }
     }
     
@@ -379,6 +400,12 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .devices(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .devices(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .savedMessages(lhsTheme, lhsImage, lhsText):
                 if case let .savedMessages(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
                     return true
@@ -393,6 +420,12 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 }
             case let .stickers(lhsTheme, lhsImage, lhsText, lhsValue, _):
                 if case let .stickers(rhsTheme, rhsImage, rhsText, rhsValue, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .contentStickers(lhsTheme, lhsImage, lhsText, lhsValue, _):
+                if case let .contentStickers(rhsTheme, rhsImage, rhsText, rhsValue, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -433,12 +466,14 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            #if ENABLE_WALLET
             case let .wallet(lhsTheme, lhsImage, lhsText, lhsValue):
                 if case let .wallet(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
+            #endif
             case let .watch(lhsTheme, lhsImage, lhsText, lhsValue):
                 if case let .watch(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -464,11 +499,11 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SettingsItemArguments
         switch self {
             case let .userInfo(account, theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.sharedContext.makeTempAccountContext(account: account), presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage, action: {
@@ -477,25 +512,25 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                     arguments.displayCopyContextMenu()
                 })
             case let .setProfilePhoto(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
             case let .setUsername(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openUsername()
                 })
             case let .phoneInfo(theme, title, text):
-                return ItemListInfoItem(theme: theme, title: title, text: .markdown(text), style: .blocks, sectionId: self.section, linkAction: { action in
+                return ItemListInfoItem(presentationData: presentationData, title: title, text: .markdown(text), style: .blocks, sectionId: self.section, linkAction: { action in
                     if case .tap = action {
                         arguments.openFaq("q-i-have-a-new-phone-number-what-do-i-do")
                     }
                 }, closeAction: nil)
             case let .keepPhone(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.keepPhone()
                 })
             case let .changePhone(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPhoneNumberChange()
                 })
             case let .account(_, account, theme, strings, dateTimeFormat, peer, badgeCount, revealed):
@@ -503,7 +538,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 if badgeCount > 0 {
                     label = .badge(compactNumericCountString(Int(badgeCount), decimalSeparator: dateTimeFormat.decimalSeparator))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.sharedContext.makeTempAccountContext(account: account), peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -521,63 +556,73 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                     arguments.accountContextAction(account.id, node, gesture)
                 }, tag: SettingsEntryTag.account(account.id))
             case let .addAccount(theme, text):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.addAccount()
                 })
             case let .proxy(theme, image, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openProxy()
                 })
+            case let .devices(theme, image, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openDevices()
+                })
             case let .savedMessages(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSavedMessages()
                 }, clearHighlightAutomatically: false)
             case let .recentCalls(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openRecentCalls()
                 }, clearHighlightAutomatically: false)
             case let .stickers(theme, image, text, value, archivedPacks):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openStickerPacks(archivedPacks)
+                }, clearHighlightAutomatically: false)
+            case let .contentStickers(theme, image, text, value, archivedPacks):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openStickerPacks(archivedPacks)
                 }, clearHighlightAutomatically: false)
             case let .notificationsAndSounds(theme, image, text, exceptionsList, warning):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openNotificationsAndSounds(exceptionsList)
                 }, clearHighlightAutomatically: false)
             case let .privacyAndSecurity(theme, image, text, privacySettings):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPrivacyAndSecurity(privacySettings)
                 }, clearHighlightAutomatically: false)
             case let .dataAndStorage(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openDataAndStorage()
                 }, clearHighlightAutomatically: false)
             case let .themes(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openThemes()
                 }, clearHighlightAutomatically: false)
             case let .language(theme, image, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openLanguage()
                 }, clearHighlightAutomatically: false)
             case let .passport(theme, image, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPassport()
                 })
+            #if ENABLE_WALLET
             case let .wallet(theme, image, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openWallet()
                 })
+            #endif
             case let .watch(theme, image, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openWatch()
                 }, clearHighlightAutomatically: false)
             case let .askAQuestion(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSupport()
                 })
             case let .faq(theme, image, text):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openFaq(nil)
                 }, clearHighlightAutomatically: false)
         }
@@ -590,7 +635,7 @@ private struct SettingsState: Equatable {
     var isSearching: Bool
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool, otherSessionCount: Int, enableQRLogin: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -638,7 +683,11 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
-        entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
+        if enableQRLogin {
+            entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount + 1)"))
+        } else {
+            entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? "" : "\(otherSessionCount + 1)"))
+        }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
         entries.append(.notificationsAndSounds(presentationData.theme, PresentationResourcesSettings.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
@@ -647,10 +696,13 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         entries.append(.themes(presentationData.theme, PresentationResourcesSettings.appearance, presentationData.strings.Settings_Appearance))
         let languageName = presentationData.strings.primaryComponent.localizedName
         entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
+        entries.append(.contentStickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
+        #if ENABLE_WALLET
         if hasWallet {
             entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.wallet, "Gram Wallet", ""))
         }
+        #endif
         if hasPassport {
             entries.append(.passport(presentationData.theme, PresentationResourcesSettings.passport, presentationData.strings.Settings_Passport, ""))
         }
@@ -693,12 +745,11 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         self.contextValue.set(.single(currentContext))
         
         let updatedPresentationData = self.contextValue.get()
-        |> mapToSignal { context -> Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError> in
+        |> mapToSignal { context -> Signal<PresentationData, NoError> in
             return context.sharedContext.presentationData
-            |> map { ($0.theme, $0.strings) }
         }
         
-        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: updatedPresentationData, state: state, tabBarItem: tabBarItem)
+        super.init(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: updatedPresentationData |> map(ItemListPresentationData.init(_:)), state: state, tabBarItem: tabBarItem)
         
         self.accountsAndPeersDisposable = (accountsAndPeers
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -783,6 +834,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     accountsAndPeers.set(activeAccountsAndPeers(context: context))
     
     let privacySettings = Promise<AccountPrivacySettings?>(nil)
+    
+    let enableQRLogin = Promise<Bool>()
 
     let openFaq: (Promise<ResolvedUrl>, String?) -> Void = { resolvedUrl, customAnchor in
         let _ = (contextValue.get()
@@ -803,7 +856,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
-                }, dismissInput: {})
+                }, dismissInput: {}, contentContext: nil)
             })
         })
     }
@@ -819,7 +872,28 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let displayPhoneNumberConfirmation = ValuePromise<Bool>(false)
     
-    let arguments = SettingsItemArguments(accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
+    let activeSessionsContextAndCountSignal = contextValue.get()
+    |> deliverOnMainQueue
+    |> mapToSignal { context -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
+        let activeSessionsContext = ActiveSessionsContext(account: context.account)
+        let webSessionsContext = WebSessionsContext(account: context.account)
+        let otherSessionCount = activeSessionsContext.state
+        |> map { state -> Int in
+            return state.sessions.filter({ !$0.isCurrent }).count
+        }
+        |> distinctUntilChanged
+        return otherSessionCount
+        |> map { value in
+            return (activeSessionsContext, value, webSessionsContext)
+        }
+    }
+    let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)>()
+    activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
+    
+    let blockedPeers = Promise<BlockedPeersContext?>(nil)
+    let hasTwoStepAuthPromise = Promise<Bool?>(nil)
+    
+    let arguments = SettingsItemArguments(sharedContext: context.sharedContext, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
             updating = $0.updatingAvatar != nil
@@ -876,9 +950,18 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
-                privacySettings.set(.single(settings))
-            }))
+            let _ = (combineLatest(activeSessionsContextAndCount.get(), blockedPeers.get(), hasTwoStepAuthPromise.get())
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { sessions, blockedPeersContext, hasTwoStepAuth in
+                let (activeSessionsContext, _, webSessionsContext) = sessions
+                pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
+                    privacySettings.set(.single(settings))
+                }, updatedBlockedPeers: { blockedPeersContext in
+                    blockedPeers.set(.single(blockedPeersContext))
+                }, updatedHasTwoStepAuth: { hasTwoStepAuthValue in
+                    hasTwoStepAuthPromise.set(.single(hasTwoStepAuthValue))
+                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth))
+            })
         })
     }, openDataAndStorage: {
         let _ = (contextValue.get()
@@ -921,6 +1004,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             pushControllerImpl?(SecureIdAuthController(context: context, mode: .list))
         })
     }, openWallet: {
+        #if ENABLE_WALLET
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
@@ -928,6 +1012,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 pushControllerImpl?(c)
             })
         })
+        #endif
     }, openWatch: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
@@ -1039,13 +1124,26 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             
             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
             
-            let contextController = ContextController(account: accountContext.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: accountContextMenuItems(context: accountContext, logout: {
+            let contextController = ContextController(account: accountContext.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: accountContextMenuItems(context: accountContext, logout: {
                 removeAccountImpl?(id)
             }), reactionItems: [], gesture: gesture)
             presentInGlobalOverlayImpl?(contextController, nil)
         } else {
             gesture?.cancel()
         }
+    }, openDevices: {
+        let _ = (combineLatest(queue: .mainQueue(),
+            activeSessionsContextAndCount.get(),
+            enableQRLogin.get()
+        )
+        |> take(1)).start(next: { activeSessionsContextAndCount, enableQRLogin in
+            let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
+            if count == 0 && enableQRLogin {
+                pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
+            } else {
+                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
+            }
+        })
     })
     
     changeProfilePhotoImpl = {
@@ -1171,11 +1269,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }
         )
     )
-    
+    #if ENABLE_WALLET
     let hasWallet = contextValue.get()
     |> mapToSignal { context in
         return context.hasWalletAccess
     }
+    #else
+    let hasWallet: Signal<Bool, NoError> = .single(false)
+    #endif
     
     let hasPassport = ValuePromise<Bool>(false)
     let updatePassport: () -> Void = {
@@ -1196,6 +1297,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }))
     }
     updatePassport()
+    
+    let updateActiveSessions: () -> Void = {
+        let _ = (activeSessionsContextAndCount.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { activeSessionsContext, _, _ in
+            activeSessionsContext.loadMore()
+        })
+    }
     
     let notificationsAuthorizationStatus = Promise<AccessType>(.allowed)
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -1282,8 +1391,26 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp), accountsAndPeers.get())
-    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let enableQRLoginSignal = contextValue.get()
+    |> mapToSignal { context -> Signal<Bool, NoError> in
+        return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> Bool in
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+                return false
+            }
+            guard let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR else {
+                return false
+            }
+            return true
+        }
+        |> distinctUntilChanged
+    }
+    enableQRLogin.set(enableQRLoginSignal)
+    
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get())
+    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let otherSessionCount = activeSessionsContextAndCount.1
+
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
         let experimentalUISettings: ExperimentalUISettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
@@ -1292,7 +1419,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             arguments.openEditing()
         })
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Settings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Settings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         
         var unreadTrendingStickerPacks = 0
         for item in featuredAndArchived.0 {
@@ -1318,10 +1445,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             presentControllerImpl?(c, a)
         }, pushController: { c in
             pushControllerImpl?(c)
-        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet)
+        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet, activeSessionsContext: activeSessionsContextAndCountSignal |> map { $0.0 } |> distinctUntilChanged(isEqual: { $0 === $1 }), webSessionsContext: activeSessionsContextAndCountSignal |> map { $0.2 } |> distinctUntilChanged(isEqual: { $0 === $1 }))
         
-        let (hasWallet, hasPassport, hasWatchApp) = hasWalletPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
+        let (hasWallet, hasPassport, hasWatchApp, enableQRLogin) = hasWalletPassportAndWatch
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount, enableQRLogin: enableQRLogin), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }
@@ -1329,7 +1456,12 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         actionsDisposable.dispose()
     }
     
-    let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    let icon: UIImage?
+    if useSpecialTabBarIcons() {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/Holiday/IconSettings")
+    } else {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    }
     
     let notificationsFromAllAccounts = accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     |> map { sharedData -> Bool in
@@ -1367,9 +1499,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         if let primary = primary {
             let size = CGSize(width: 31.0, height: 31.0)
             let inset: CGFloat = 3.0
-            if let signal = peerAvatarImage(account: primary.0, peer: primary.1, authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
+            if let signal = peerAvatarImage(account: primary.0, peerReference: PeerReference(primary.1), authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
                 return signal
-                |> map { image -> (UIImage, UIImage)? in
+                |> map { imageVersions -> (UIImage, UIImage)? in
+                    let image = imageVersions?.0
                     if let image = image, let selectedImage = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
@@ -1390,13 +1523,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: inset, y: inset)
-                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, accountPeerId: primary.1.id, peerId: primary.1.id)
+                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, peerId: primary.1.id)
                     })?.withRenderingMode(.alwaysOriginal)
                     
                     let selectedImage = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: inset, y: inset)
-                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, accountPeerId: primary.1.id, peerId: primary.1.id)
+                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, peerId: primary.1.id)
                         context.translateBy(x: -inset, y: -inset)
                         context.setLineWidth(1.0)
                         context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
@@ -1454,7 +1587,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: ((ASDisplayNode, () -> (UIView?, UIView?)), CGRect)?
+            var result: ((ASDisplayNode, CGRect, () -> (UIView?, UIView?)), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()
@@ -1539,7 +1672,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let controller = ActionSheetController(presentationData: presentationData)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
             }
@@ -1568,6 +1701,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     controller.didAppear = { _ in
         updatePassport()
         updateNotifyExceptions()
+        updateActiveSessions()
     }
     controller.previewItemWithTag = { tag in
         if let tag = tag as? SettingsEntryTag, case let .account(id) = tag {

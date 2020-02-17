@@ -44,19 +44,19 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.scaleBy(x: scale, y: scale)
         UIGraphicsPushContext(context)
-        window.forEachViewController { controller in
+        window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 0.0
             }
             return true
-        }
+        })
         window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
-        window.forEachViewController { controller in
+        window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 1.0
             }
             return true
-        }
+        })
         UIGraphicsPopContext()
     }).flatMap(applyScreenshotEffectToImage)
 }
@@ -69,6 +69,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let accountManager: AccountManager
     private let presentationDataSignal: Signal<PresentationData, NoError>
     private let window: Window1?
+    private let rootController: UIViewController?
     
     private var coveringView: LockedWindowCoveringView?
     private var passcodeController: PasscodeEntryController?
@@ -79,6 +80,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let currentState = Promise<LockState>()
     
     private let autolockTimeout = ValuePromise<Int32?>(nil, ignoreRepeated: true)
+    private let autolockReportTimeout = ValuePromise<Int32?>(nil, ignoreRepeated: true)
     
     private let isCurrentlyLockedPromise = Promise<Bool>()
     public var isCurrentlyLocked: Signal<Bool, NoError> {
@@ -89,7 +91,7 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
-    public init(rootPath: String, window: Window1?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -97,6 +99,7 @@ public final class AppLockContextImpl: AppLockContext {
         self.presentationDataSignal = presentationDataSignal
         self.rootPath = rootPath
         self.window = window
+        self.rootController = rootController
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: self.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
             self.currentStateValue = current
@@ -146,10 +149,24 @@ public final class AppLockContextImpl: AppLockContext {
                 }
                 
                 strongSelf.autolockTimeout.set(nil)
+                strongSelf.autolockReportTimeout.set(nil)
             } else {
                 if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
+                
+                if !appInForeground {
+                    if let autolockTimeout = passcodeSettings.autolockTimeout {
+                        strongSelf.autolockReportTimeout.set(autolockTimeout)
+                    } else if state.isManuallyLocked {
+                        strongSelf.autolockReportTimeout.set(1)
+                    } else {
+                        strongSelf.autolockReportTimeout.set(nil)
+                    }
+                } else {
+                    strongSelf.autolockReportTimeout.set(nil)
+                }
+                
                 strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
                 if isLocked(passcodeSettings: passcodeSettings, state: state, isApplicationActive: appInForeground) {
@@ -184,7 +201,14 @@ public final class AppLockContextImpl: AppLockContext {
                             }
                         }
                         passcodeController.presentedOverCoveringView = true
+                        passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
+                        if let rootViewController = strongSelf.rootController {
+                            if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                            } else {
+                                rootViewController.dismiss(animated: false, completion: nil)
+                            }
+                        }
                         strongSelf.window?.present(passcodeController, on: .passcode)
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
@@ -202,6 +226,13 @@ public final class AppLockContextImpl: AppLockContext {
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     strongSelf.coveringView = coveringView
                     window.coveringView = coveringView
+                    
+                    if let rootViewController = strongSelf.rootController {
+                        if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                        } else {
+                            rootViewController.dismiss(animated: false, completion: nil)
+                        }
+                    }
                 }
             } else {
                 if let coveringView = strongSelf.coveringView {
@@ -277,6 +308,18 @@ public final class AppLockContextImpl: AppLockContext {
         |> map { state in
             return state.unlockAttemts.flatMap { unlockAttemts in
                 return AccessChallengeAttempts(count: unlockAttemts.count, bootTimestamp: unlockAttemts.timestamp.bootTimestamp, uptime: unlockAttemts.timestamp.uptime)
+            }
+        }
+    }
+    
+    public var autolockDeadline: Signal<Int32?, NoError> {
+        return self.autolockReportTimeout.get()
+        |> distinctUntilChanged
+        |> map { value -> Int32? in
+            if let value = value {
+                return Int32(Date().timeIntervalSince1970) + value
+            } else {
+                return nil
             }
         }
     }

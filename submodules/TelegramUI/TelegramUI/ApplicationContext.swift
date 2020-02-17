@@ -22,6 +22,8 @@ import ImageBlur
 import WatchBridge
 import SettingsUI
 import AppLock
+import AccountUtils
+import ContextUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -40,7 +42,7 @@ final class UnauthorizedApplicationContext {
         
         var authorizationCompleted: (() -> Void)?
         
-        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, strings: presentationData.strings, theme: presentationData.theme, openUrl: sharedContext.applicationBindings.openUrl, apiId: apiId, apiHash: apiHash, authorizationCompleted: {
+        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, presentationData: presentationData, openUrl: sharedContext.applicationBindings.openUrl, apiId: apiId, apiHash: apiHash, authorizationCompleted: {
             authorizationCompleted?()
         })
         
@@ -57,6 +59,16 @@ final class UnauthorizedApplicationContext {
                 return .never
             }
         })
+        
+        DeviceAccess.authorizeAccess(to: .cellularData, presentationData: sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
+            if let strongSelf = self {
+                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
+            }
+        }, openSettings: {
+            sharedContext.applicationBindings.openSettings()
+        }, { result in
+            ApplicationSpecificNotice.setPermissionWarning(accountManager: sharedContext.accountManager, permission: .cellularData, value: 0)
+        })
     }
 }
 
@@ -70,6 +82,7 @@ final class AuthorizedApplicationContext {
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
     
+    private var scheduledOpenNotificationSettings: Bool = false
     private var scheduledOperChatWithPeerId: (PeerId, MessageId?, Bool)?
     private var scheduledOpenExternalUrl: URL?
         
@@ -137,6 +150,21 @@ final class AuthorizedApplicationContext {
         
         self.rootController = TelegramRootController(context: context)
         
+        self.rootController.globalOverlayControllersUpdated = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var hasContext = false
+            for controller in strongSelf.rootController.globalOverlayControllers {
+                if controller is ContextController {
+                    hasContext = true
+                    break
+                }
+            }
+            
+            strongSelf.notificationController.updateIsTemporaryHidden(hasContext)
+        }
+        
         if KeyShortcutsController.isAvailable {
             let keyShortcutsController = KeyShortcutsController { [weak self] f in
                 if let strongSelf = self, let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
@@ -148,9 +176,31 @@ final class AuthorizedApplicationContext {
                         }
                         if let tabController = strongSelf.rootController.rootTabController {
                             let selectedController = tabController.controllers[tabController.selectedIndex]
-                            if !f(selectedController) {
-                                return
+                            
+                            if let index = strongSelf.rootController.viewControllers.lastIndex(where: { controller in
+                                guard let controller = controller as? ViewController else {
+                                    return false
+                                }
+                                if controller === tabController {
+                                    return false
+                                }
+                                switch controller.navigationPresentation {
+                                case .master:
+                                    return true
+                                default:
+                                    break
+                                }
+                                return false
+                            }), let controller = strongSelf.rootController.viewControllers[index] as? ViewController {
+                                if !f(controller) {
+                                    return
+                                }
+                            } else {
+                                if !f(selectedController) {
+                                    return
+                                }
                             }
+                            
                             if let controller = strongSelf.rootController.topViewController as? ViewController, controller !== selectedController {
                                 if !f(controller) {
                                     return
@@ -283,7 +333,7 @@ final class AuthorizedApplicationContext {
                                         return false
                                     }
                                     return true
-                                })
+                                }, excludeNavigationSubControllers: true)
                                 
                                 if foundOverlay {
                                     return true
@@ -312,11 +362,11 @@ final class AuthorizedApplicationContext {
                             return false
                         }, expandAction: { expandData in
                             if let strongSelf = self {
-                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay)
+                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
                                 //chatController.navigation_setNavigationController(strongSelf.rootController)
                                 chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
-                                strongSelf.rootController.pushViewController(chatController)
-                                //(strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
+                                //strongSelf.rootController.pushViewController(chatController)
+                                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                             }
                         }))
                     }
@@ -335,7 +385,7 @@ final class AuthorizedApplicationContext {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 var acceptImpl: ((String?) -> Void)?
                 var declineImpl: (() -> Void)?
-                let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(presentationTheme: presentationData.theme), strings: presentationData.strings, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
+                let controller = TermsOfServiceController(presentationData: presentationData, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
                     acceptImpl?(proccedBot)
                 }, decline: {
                     declineImpl?()
@@ -609,7 +659,7 @@ final class AuthorizedApplicationContext {
         
         let showCallsTabSignal = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings])
         |> map { sharedData -> Bool in
-            var value = true
+            var value = CallListSettings.defaultSettings.showTab
             if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
                 value = settings.showTab
             }
@@ -685,6 +735,14 @@ final class AuthorizedApplicationContext {
         self.permissionsDisposable.dispose()
     }
     
+    func openNotificationSettings() {
+        if self.rootController.rootTabController != nil {
+            self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
+        } else {
+            self.scheduledOpenNotificationSettings = true
+        }
+    }
+    
     func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
         var visiblePeerId: PeerId?
         if let controller = self.rootController.topViewController as? ChatControllerImpl, case let .peer(peerId) = controller.chatLocation {
@@ -721,6 +779,27 @@ final class AuthorizedApplicationContext {
     
     func openRootCamera() {
         self.rootController.openRootCamera()
+    }
+    
+    func switchAccount() {
+        let _ = (activeAccountsAndPeers(context: self.context)
+        |> take(1)
+        |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+            return primaryAndAccounts.1.first
+        }
+        |> map { accountAndPeer -> Account? in
+            if let (account, _, _) = accountAndPeer {
+                return account
+            } else {
+                return nil
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] account in
+            guard let strongSelf = self, let account = account else {
+                return
+            }
+            strongSelf.context.sharedContext.switchToAccount(id: account.id, fromSettingsController: nil, withChatListController: nil)
+        })
     }
     
     private func updateCoveringViewSnaphot(_ visible: Bool) {

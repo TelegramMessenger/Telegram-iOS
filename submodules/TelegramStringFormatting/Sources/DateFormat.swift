@@ -93,10 +93,19 @@ public func stringForDate(timestamp: Int32, strings: PresentationStrings) -> Str
     return formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
 }
 
-public func stringForDateWithoutYear(date: Date, strings: PresentationStrings) -> String {
+public func stringForDate(date: Date, timeZone: TimeZone? = TimeZone(secondsFromGMT: 0), strings: PresentationStrings) -> String {
     let formatter = DateFormatter()
     formatter.timeStyle = .none
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateStyle = .medium
+    formatter.timeZone = timeZone
+    formatter.locale = localeWithStrings(strings)
+    return formatter.string(from: date)
+}
+
+public func stringForDateWithoutYear(date: Date, timeZone: TimeZone? = TimeZone(secondsFromGMT: 0), strings: PresentationStrings) -> String {
+    let formatter = DateFormatter()
+    formatter.timeStyle = .none
+    formatter.timeZone = timeZone
     formatter.locale = localeWithStrings(strings)
     formatter.setLocalizedDateFormatFromTemplate("MMMMd")
     return formatter.string(from: date)

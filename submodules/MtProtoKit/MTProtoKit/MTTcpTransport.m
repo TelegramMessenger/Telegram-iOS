@@ -620,7 +620,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [pingBuffer appendInt32:(int32_t)0x7abe77ec];
             [pingBuffer appendInt64:randomId];
             
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:pingBuffer.data metadata:@"ping" shortMetadata:@"ping"];
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:pingBuffer.data metadata:@"ping" additionalDebugDescription:nil shortMetadata:@"ping"];
             outgoingMessage.requiresConfirmation = false;
             
             __weak MTTcpTransport *weakSelf = self;

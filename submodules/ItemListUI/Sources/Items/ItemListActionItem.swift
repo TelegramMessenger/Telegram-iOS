@@ -18,7 +18,7 @@ public enum ItemListActionAlignment {
 }
 
 public class ItemListActionItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let title: String
     let kind: ItemListActionKind
     let alignment: ItemListActionAlignment
@@ -29,8 +29,8 @@ public class ItemListActionItem: ListViewItem, ItemListItem {
     let clearHighlightAutomatically: Bool
     public let tag: Any?
     
-    public init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, clearHighlightAutomatically: Bool = true, tag: Any? = nil) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, clearHighlightAutomatically: Bool = true, tag: Any? = nil) {
+        self.presentationData = presentationData
         self.title = title
         self.kind = kind
         self.alignment = alignment
@@ -85,8 +85,6 @@ public class ItemListActionItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.regular(17.0)
-
 public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -138,22 +136,24 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
         let currentItem = self.item
         
         return { item, params, neighbors in
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
             let textColor: UIColor
             switch item.kind {
-                case .destructive:
-                    textColor = item.theme.list.itemDestructiveColor
-                case .generic:
-                    textColor = item.theme.list.itemAccentColor
-                case .neutral:
-                    textColor = item.theme.list.itemPrimaryTextColor
-                case .disabled:
-                    textColor = item.theme.list.itemDisabledTextColor
+            case .destructive:
+                textColor = item.presentationData.theme.list.itemDestructiveColor
+            case .generic:
+                textColor = item.presentationData.theme.list.itemAccentColor
+            case .neutral:
+                textColor = item.presentationData.theme.list.itemPrimaryTextColor
+            case .disabled:
+                textColor = item.presentationData.theme.list.itemDisabledTextColor
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -165,16 +165,16 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             switch item.style {
-                case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 44.0)
-                    insets = itemListNeighborsPlainInsets(neighbors)
-                case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 44.0)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
+                insets = itemListNeighborsPlainInsets(neighbors)
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
+                insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -199,7 +199,7 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
@@ -258,7 +258,7 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
                                     strongSelf.bottomStripeNode.isHidden = hasCorners
                             }
                             
-                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                             
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                             strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -267,13 +267,13 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     switch item.alignment {
-                        case .natural:
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
-                        case .center:
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((params.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: 11.0), size: titleLayout.size)
+                    case .natural:
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    case .center:
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((params.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: 11.0), size: titleLayout.size)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })
         }

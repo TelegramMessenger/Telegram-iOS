@@ -21,7 +21,7 @@ typedef enum
 @property (nonatomic, copy) void (^action)(void);
 @property (nonatomic, assign) bool thickDivider;
 
-- (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type action:(void (^)(void))action;
+- (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type fontSize:(CGFloat)fontSize action:(void (^)(void))action;
 
 @property (nonatomic, assign) bool collapsed;
 - (void)setCollapsed:(bool)collapsed animated:(bool)animated;

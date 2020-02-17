@@ -132,7 +132,7 @@ public final class CallController: ViewController {
                     }
                 }
             } else {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
                     let title: String
@@ -158,7 +158,7 @@ public final class CallController: ViewController {
                 }
                 
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])
@@ -216,11 +216,13 @@ public final class CallController: ViewController {
                 } |> deliverOnMainQueue).start(next: { [weak self] callsTabTip in
                     if let strongSelf = self {
                         if callsTabTip == 2 {
-                            let controller = callSuggestTabController(sharedContext: strongSelf.sharedContext)
-                            strongSelf.present(controller, in: .window(.root))
+                            Queue.mainQueue().after(1.0) {
+                                let controller = callSuggestTabController(sharedContext: strongSelf.sharedContext)
+                                strongSelf.present(controller, in: .window(.root))
+                            }
                         }
                         if callsTabTip < 3 {
-                            let _ = ApplicationSpecificNotice.incrementCallsTabTips(accountManager: strongSelf.sharedContext.accountManager, count: 4).start()
+                            let _ = ApplicationSpecificNotice.incrementCallsTabTips(accountManager: strongSelf.sharedContext.accountManager).start()
                         }
                     }
                 })

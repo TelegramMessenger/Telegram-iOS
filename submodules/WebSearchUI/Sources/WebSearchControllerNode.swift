@@ -149,7 +149,6 @@ class WebSearchControllerNode: ASDisplayNode {
     
     private let attributionNode: ASImageNode
     
-    private let recentQueriesPlaceholder: ImmediateTextNode
     private let recentQueriesNode: ListView
     private var enqueuedRecentTransitions: [(WebSearchRecentTransition, Bool)] = []
     
@@ -216,8 +215,6 @@ class WebSearchControllerNode: ASDisplayNode {
         self.recentQueriesNode = ListView()
         self.recentQueriesNode.backgroundColor = theme.list.plainBackgroundColor
         
-        self.recentQueriesPlaceholder = ImmediateTextNode()
-        
         super.init()
         
         self.setViewBlock({
@@ -283,7 +280,6 @@ class WebSearchControllerNode: ASDisplayNode {
         self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
         }
-        
         
         self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
             if let strongSelf = self, let bottom = visibleItems.bottom, let entries = strongSelf.currentEntries {
@@ -448,30 +444,10 @@ class WebSearchControllerNode: ASDisplayNode {
         insets.bottom += toolbarHeight
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, preloadSize: 400.0, type: gridNodeLayoutForContainerLayout(size: layout.size)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        break
-                    case .spring:
-                        curve = 7
-                }
-        }
-        
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         self.recentQueriesNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.recentQueriesNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.recentQueriesNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
@@ -708,7 +684,7 @@ class WebSearchControllerNode: ASDisplayNode {
                     var entries: [WebSearchGalleryEntry] = []
                     var centralIndex: Int = 0
                     for i in 0 ..< results.count {
-                        entries.append(WebSearchGalleryEntry(result: results[i]))
+                        entries.append(WebSearchGalleryEntry(index: entries.count, result: results[i]))
                         if results[i] == currentResult {
                             centralIndex = i
                         }
@@ -735,7 +711,7 @@ class WebSearchControllerNode: ASDisplayNode {
                                 }
                             }
                             if let transitionNode = transitionNode {
-                                return GalleryTransitionArguments(transitionNode: (transitionNode, { [weak transitionNode] in
+                                return GalleryTransitionArguments(transitionNode: (transitionNode, transitionNode.bounds, { [weak transitionNode] in
                                         return (transitionNode?.transitionView().snapshotContentTree(unhide: true), nil)
                                 }), addToTransitionSurface: { view in
                                     if let strongSelf = self {

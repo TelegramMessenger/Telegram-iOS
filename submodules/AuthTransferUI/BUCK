@@ -1,0 +1,33 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "AuthTransferUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/QrCode:QrCode",
+        "//submodules/Camera:Camera",
+        "//submodules/GlassButtonNode:GlassButtonNode",
+        "//submodules/AlertUI:AlertUI",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/Markdown:Markdown",
+        "//submodules/AnimationUI:AnimationUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/DeviceAccess:DeviceAccess",
+        "//submodules/UndoUI:UndoUI",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

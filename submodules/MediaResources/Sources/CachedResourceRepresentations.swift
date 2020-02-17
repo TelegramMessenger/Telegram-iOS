@@ -147,21 +147,34 @@ public final class CachedPatternWallpaperMaskRepresentation: CachedMediaResource
 public final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     
-    public let color: Int32
+    public let color: UInt32
+    public let bottomColor: UInt32?
     public let intensity: Int32
+    public let rotation: Int32?
     
     public var uniqueId: String {
-        return "pattern-wallpaper-\(self.color)-\(self.intensity)"
+        var id: String
+        if let bottomColor = self.bottomColor {
+            id = "pattern-wallpaper-\(self.color)-\(bottomColor)-\(self.intensity)"
+        } else {
+            id = "pattern-wallpaper-\(self.color)-\(self.intensity)"
+        }
+        if let rotation = self.rotation, rotation != 0 {
+            id += "-\(rotation)deg"
+        }
+        return id
     }
     
-    public init(color: Int32, intensity: Int32) {
+    public init(color: UInt32, bottomColor: UInt32?, intensity: Int32, rotation: Int32?) {
         self.color = color
+        self.bottomColor = bottomColor
         self.intensity = intensity
+        self.rotation = rotation
     }
     
     public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
         if let to = to as? CachedPatternWallpaperRepresentation {
-            return self.color == to.color && self.intensity == intensity
+            return self.color == to.color && self.bottomColor == to.bottomColor && self.intensity == intensity && self.rotation == to.rotation
         } else {
             return false
         }

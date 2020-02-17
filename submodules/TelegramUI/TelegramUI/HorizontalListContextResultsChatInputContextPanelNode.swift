@@ -7,6 +7,7 @@ import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
@@ -86,7 +87,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.strings = strings
         
         self.separatorNode = ASDisplayNode()
@@ -100,7 +101,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.isHidden = true
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -111,7 +112,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let state = opaqueTransactionState as? HorizontalListContextResultsOpaqueState {
                 if let visible = displayedRange.visibleRange {
-                    if state.hasMore && visible.lastIndex <= state.entryCount - 10 {
+                    if state.hasMore && visible.lastIndex >= state.entryCount - 10 {
                         strongSelf.loadMore()
                     }
                 }
@@ -127,6 +128,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         super.didLoad()
         
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.listView.view.disablesInteractiveKeyboardGestureRecognizer = true
         self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
             if let strongSelf = self {
                 let convertedPoint = strongSelf.listView.view.convert(point, from: strongSelf.view)
@@ -149,17 +151,16 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 }
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                     if let strongSelf = self {
-                                        let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
-                                                    controller.sendSticker = { file, sourceNode, sourceRect in
-                                                        if let strongSelf = self {
-                                                            return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
-                                                        } else {
-                                                            return false
-                                                        }
-                                                    }
+                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                            if let strongSelf = self {
+                                                return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
+                                            } else {
+                                                return false
+                                            }
+                                        })
                                                     
-                                                    strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
-                                                    strongSelf.interfaceInteraction?.presentController(controller, nil)
+                                        strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
+                                        strongSelf.interfaceInteraction?.presentController(controller, nil)
                                     }
                                     return true
                                 }))
@@ -313,29 +314,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         var insets = UIEdgeInsets()
         insets.top = leftInset
         insets.bottom = rightInset
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        break
-                    case .spring:
-                        curve = 7
-                }
-        }
-        
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
-        
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: listHeight, height: size.width), insets: insets, duration: duration, curve: listViewCurve)
+
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: listHeight, height: size.width), insets: insets, duration: duration, curve: curve)
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         

@@ -374,6 +374,9 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         case tgvoip::STATE_FAILED:
             callState = OngoingCallStateFailed;
             break;
+        case tgvoip::STATE_RECONNECTING:
+            callState = OngoingCallStateReconnecting;
+            break;
         default:
             break;
     }

@@ -277,7 +277,7 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
     }
 }
 
-func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSettings?, settings: InstantPagePresentationSettings, time: Date?) -> (InstantPageThemeType, Bool) {
+func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSettings?, settings: InstantPagePresentationSettings, time: Date?, forceDarkTheme: Bool) -> (InstantPageThemeType, Bool) {
     if settings.autoNightMode {
         switch settings.themeType {
             case .light, .sepia, .gray:
@@ -288,7 +288,7 @@ func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSett
                     if case .explicitNone = themeSettings.automaticThemeSwitchSetting.trigger {
                     } else {
                         fallback = false
-                        useDarkTheme = automaticThemeShouldSwitchNow(settings: themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: .light)
+                        useDarkTheme = forceDarkTheme
                     }
                 }
                 if fallback, let time = time {
@@ -323,7 +323,7 @@ func instantPageThemeForType(_ type: InstantPageThemeType, settings: InstantPage
 
 extension ActionSheetControllerTheme {
     convenience init(instantPageTheme: InstantPageTheme) {
-        self.init(dimColor: UIColor(white: 0.0, alpha: 0.4), backgroundType: instantPageTheme.type != .dark ? .light : .dark, itemBackgroundColor: instantPageTheme.overlayPanelColor, itemHighlightedBackgroundColor: instantPageTheme.panelHighlightedBackgroundColor, standardActionTextColor: instantPageTheme.panelAccentColor, destructiveActionTextColor: instantPageTheme.panelAccentColor, disabledActionTextColor: instantPageTheme.panelAccentColor, primaryTextColor: instantPageTheme.textCategories.paragraph.color, secondaryTextColor: instantPageTheme.textCategories.caption.color, controlAccentColor: instantPageTheme.panelAccentColor, controlColor: instantPageTheme.tableBorderColor, switchFrameColor: .white, switchContentColor: .white, switchHandleColor: .white)
+        self.init(dimColor: UIColor(white: 0.0, alpha: 0.4), backgroundType: instantPageTheme.type != .dark ? .light : .dark, itemBackgroundColor: instantPageTheme.overlayPanelColor, itemHighlightedBackgroundColor: instantPageTheme.panelHighlightedBackgroundColor, standardActionTextColor: instantPageTheme.panelAccentColor, destructiveActionTextColor: instantPageTheme.panelAccentColor, disabledActionTextColor: instantPageTheme.panelAccentColor, primaryTextColor: instantPageTheme.textCategories.paragraph.color, secondaryTextColor: instantPageTheme.textCategories.caption.color, controlAccentColor: instantPageTheme.panelAccentColor, controlColor: instantPageTheme.tableBorderColor, switchFrameColor: .white, switchContentColor: .white, switchHandleColor: .white, baseFontSize: 17.0)
     }
 }
 

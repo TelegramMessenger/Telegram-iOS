@@ -1,3 +1,5 @@
+#if ENABLE_WALLET
+
 import Foundation
 import UIKit
 import Display
@@ -199,8 +201,8 @@ final class WalletContextImpl: WalletContext {
                 statusBarStyle: theme.rootController.statusBarStyle.style,
                 navigationBar: navigationBarData.theme,
                 keyboardAppearance: theme.rootController.keyboardColor.keyboardAppearance,
-                alert: AlertControllerTheme(presentationTheme: theme),
-                actionSheet: ActionSheetControllerTheme(presentationTheme: theme)
+                alert: AlertControllerTheme(presentationData: presentationData),
+                actionSheet: ActionSheetControllerTheme(presentationData: presentationData)
             ), strings: WalletStrings(
                 primaryComponent: WalletStringsComponent(
                     languageCode: strings.primaryComponent.languageCode,
@@ -278,3 +280,5 @@ final class WalletContextImpl: WalletContext {
         })
     }
 }
+
+#endif

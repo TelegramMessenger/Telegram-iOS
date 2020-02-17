@@ -84,7 +84,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                         guard let file = theme.file else {
                             return .complete()
                         }
-                        return telegramThemeData(account: account, accountManager: accountManager, resource: file.resource)
+                        return telegramThemeData(account: account, accountManager: accountManager, reference: .standalone(resource: file.resource))
                         |> mapToSignal { data -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                             guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
                                 return .complete()
@@ -104,17 +104,17 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                             |> mapToSignal { wallpaper -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                                 if let wallpaper = wallpaper, case let .file(file) = wallpaper {
                                     var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                                     return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                     |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                                         guard complete, let fullSizeData = fullSizeData else {
                                             return .complete()
                                         }
-                                        accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
-                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper)), presentationTheme))
+                                        accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData, synchronous: true)
+                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper, creatorAccountId: theme.isCreator ? account.id : nil)), presentationTheme))
                                     }
                                 } else {
-                                    return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil)), presentationTheme))
+                                    return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? account.id : nil)), presentationTheme))
                                 }
                             }
                         }
@@ -131,25 +131,15 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                         current = PresentationThemeSettings.defaultSettings
                                     }
                                     
-                                    var chatWallpaper = current.chatWallpaper
+                                    var theme = current.theme
                                     var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                                     if isAutoNight {
                                         automaticThemeSwitchSetting.theme = updatedTheme
                                     } else {
-                                        if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
-                                            chatWallpaper = themeSpecificWallpaper
-                                        } else if let presentationTheme = presentationTheme {
-                                            if case let .cloud(info) = updatedTheme, let resolvedWallpaper = info.resolvedWallpaper {
-                                                chatWallpaper = resolvedWallpaper
-                                            } else {
-                                                chatWallpaper = presentationTheme.chat.defaultWallpaper
-                                            }
-                                        } else {
-                                            chatWallpaper = current.chatWallpaper
-                                        }
+                                        theme = updatedTheme
                                     }
                                     
-                                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: updatedTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 })
                             }).start()
                         }

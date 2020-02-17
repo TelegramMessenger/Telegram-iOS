@@ -16,8 +16,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         return self.displayNode as! AuthorizationSequenceSignUpControllerNode
     }
     
-    private let strings: PresentationStrings
-    private let theme: PresentationTheme
+    private let presentationData: PresentationData
     private let back: () -> Void
     
     var initialName: (String, String) = ("", "")
@@ -30,27 +29,26 @@ final class AuthorizationSequenceSignUpController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
             }
             self.controllerNode.inProgress = self.inProgress
         }
     }
     
-    init(strings: PresentationStrings, theme: PresentationTheme, back: @escaping () -> Void, displayCancel: Bool) {
-        self.strings = strings
-        self.theme = theme
+    init(presentationData: PresentationData, back: @escaping () -> Void, displayCancel: Bool) {
+        self.presentationData = presentationData
         self.back = back
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
+        self.statusBar.statusBarStyle = presentationData.theme.intro.statusBarStyle.style
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
         self.attemptNavigation = { _ in
             return false
@@ -59,14 +57,14 @@ final class AuthorizationSequenceSignUpController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
-            }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Login_CancelPhoneVerificationContinue, action: {
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_CancelPhoneVerificationStop, action: {
                 back()
             })]), in: .window(.root))
         }
         
         if displayCancel {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
     }
     
@@ -75,8 +73,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
     }
     
     @objc private func cancelPressed() {
-        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.strings.Login_CancelPhoneVerificationContinue, action: {
-        }), TextAlertAction(type: .defaultAction, title: self.strings.Login_CancelPhoneVerificationStop, action: { [weak self] in
+        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Login_CancelPhoneVerificationContinue, action: {
+        }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_CancelPhoneVerificationStop, action: { [weak self] in
             self?.back()
         })]), in: .window(.root))
     }
@@ -84,7 +82,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     override public func loadDisplayNode() {
         let currentAvatarMixin = Atomic<NSObject?>(value: nil)
         
-        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.theme, strings: self.strings, addPhoto: { [weak self] in
+        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, addPhoto: { [weak self] in
             presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: true, theme: defaultPresentationTheme, present: { c, a in
                 self?.view.endEditing(true)
                 self?.present(c, in: .window(.root), with: a)
@@ -104,7 +102,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
                 return
             }
             strongSelf.view.endEditing(true)
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: defaultPresentationTheme), title: strongSelf.strings.Login_TermsOfServiceHeader, text: termsOfService.text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.Login_TermsOfServiceHeader, text: termsOfService.text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }
         
         self.controllerNode.updateData(firstName: self.initialName.0, lastName: self.initialName.1, hasTermsOfService: self.termsOfService != nil)

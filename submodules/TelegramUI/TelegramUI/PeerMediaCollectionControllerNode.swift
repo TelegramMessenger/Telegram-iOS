@@ -29,7 +29,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             }
             return node
         case .file:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false, displayHeaders: .all))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -40,7 +40,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             node.preloadPages = true
             return node
         case .music:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false, displayHeaders: .all))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -51,7 +51,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             node.preloadPages = true
             return node
         case .webpage:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false, displayHeaders: .all))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -155,7 +155,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         self.historyEmptyNode = PeerMediaCollectionEmptyNode(mode: self.mediaCollectionInterfaceState.mode, theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.historyEmptyNode.isHidden = true
         
-        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), isScheduledMessages: false)
+        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: self.presentationData.listsFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), isScheduledMessages: false)
         
         super.init()
         
@@ -258,7 +258,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedMessages = selectionState.selectedIds
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
                 if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
                     transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -273,12 +273,12 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 self.addSubnode(selectionPanelBackgroundNode)
                 self.selectionPanelBackgroundNode = selectionPanelBackgroundNode
                 
-                let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings)
+                let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, peerMedia: true)
                 selectionPanel.context = self.context
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessages = selectionState.selectedIds
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, interfaceState: interfaceState, metrics: layout.metrics)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: .immediate, interfaceState: interfaceState, metrics: layout.metrics)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
                 
@@ -312,21 +312,6 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             }
         }
         
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        break
-                    case .spring:
-                        curve = 7
-                }
-        }
-        
         let previousBounds = self.historyNode.bounds
         self.historyNode.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: layout.size.width, height: layout.size.height)
         self.historyNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
@@ -336,21 +321,15 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         
         self.historyEmptyNode.updateLayout(size: layout.size, insets: vanillaInsets, transition: transition, interfaceState: mediaCollectionInterfaceState)
         transition.updateFrame(node: self.historyEmptyNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
         
         var additionalBottomInset: CGFloat = 0.0
         if let selectionPanel = self.selectionPanel {
             additionalBottomInset = selectionPanel.bounds.size.height
         }
         
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         listViewTransaction(ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: insets.top, left:
-            insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.right), duration: duration, curve: listViewCurve))
+            insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.right), duration: duration, curve: curve))
         
         if let (candidateHistoryNode, _) = self.candidateHistoryNode {
             let previousBounds = candidateHistoryNode.bounds
@@ -358,7 +337,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             candidateHistoryNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
             
             (candidateHistoryNode as! ChatHistoryNode).updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: insets.top, left:
-                insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.left), duration: duration, curve: listViewCurve))
+                insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.left), duration: duration, curve: curve))
         }
     }
     
@@ -529,14 +508,14 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         return nil
     }
     
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
             if let transitionNode = searchContentNode.transitionNodeForGallery(messageId: messageId, media: media) {
                 return transitionNode
             }
         }
         
-        var transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+        var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 if let result = itemNode.transitionNode(id: messageId, media: media) {

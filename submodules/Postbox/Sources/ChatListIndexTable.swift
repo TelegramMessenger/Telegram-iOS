@@ -286,6 +286,20 @@ final class ChatListIndexTable: Table {
                 alteredPeerIds.insert(peerId)
             }
             
+            var additionalAlteredPeerIds = Set<PeerId>()
+            for peerId in alteredPeerIds {
+                guard let peer = postbox.peerTable.get(peerId) else {
+                    continue
+                }
+                if let associatedPeerId = peer.associatedPeerId {
+                    additionalAlteredPeerIds.insert(associatedPeerId)
+                }
+                if let reverseAssociatedPeerId = postbox.reverseAssociatedPeerTable.get(peerId: peerId).first {
+                    additionalAlteredPeerIds.insert(reverseAssociatedPeerId)
+                }
+            }
+            alteredPeerIds.formUnion(additionalAlteredPeerIds)
+            
             func alterTags(_ totalUnreadState: inout ChatListTotalUnreadState, _ peerId: PeerId, _ tag: PeerSummaryCounterTags, _ f: (ChatListTotalUnreadCounters, ChatListTotalUnreadCounters) -> (ChatListTotalUnreadCounters, ChatListTotalUnreadCounters)) {
                 if totalUnreadState.absoluteCounters[tag] == nil {
                     totalUnreadState.absoluteCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)
@@ -404,10 +418,10 @@ final class ChatListIndexTable: Table {
                     var initialFilteredStates: CombinedPeerReadState = initialStates
                     var currentFilteredStates: CombinedPeerReadState = currentStates
                     
-                    if transactionParticipationInTotalUnreadCountUpdates.added.contains(peerId) {
+                    if transactionParticipationInTotalUnreadCountUpdates.added.contains(peerId) || transactionParticipationInTotalUnreadCountUpdates.added.contains(notificationPeerId) {
                         initialFilteredValue = (0, false, false)
                         initialFilteredStates = CombinedPeerReadState(states: [])
-                    } else if transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId) {
+                    } else if transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId) || transactionParticipationInTotalUnreadCountUpdates.removed.contains(notificationPeerId) {
                         currentFilteredValue = (0, false, false)
                         currentFilteredStates = CombinedPeerReadState(states: [])
                     } else {
@@ -556,13 +570,10 @@ final class ChatListIndexTable: Table {
     
     func debugReindexUnreadCounts(postbox: Postbox) -> (ChatListTotalUnreadState, [PeerGroupId: PeerGroupUnreadCountersCombinedSummary]) {
         var peerIds: [PeerId] = []
-        self.valueBox.scanInt64(self.table, values: { key, _ in
-            let peerId = PeerId(key)
-            if peerId.namespace != Int32.max {
-                peerIds.append(peerId)
-            }
-            return true
-        })
+        for groupId in postbox.chatListTable.existingGroups() + [.root] {
+            let groupPeerIds = postbox.chatListTable.allPeerIds(groupId: groupId)
+            peerIds.append(contentsOf: groupPeerIds)
+        }
         var rootState = ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
         var summaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary] = [:]
         for peerId in peerIds {

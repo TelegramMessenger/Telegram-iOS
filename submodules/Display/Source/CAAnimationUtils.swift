@@ -72,7 +72,7 @@ public extension CALayer {
             animation.isAdditive = additive
             
             if !delay.isZero {
-                animation.beginTime = CACurrentMediaTime() + delay
+                animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
             
@@ -102,7 +102,7 @@ public extension CALayer {
             }
             
             if !delay.isZero {
-                animation.beginTime = CACurrentMediaTime() + delay
+                animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
             
@@ -179,7 +179,7 @@ public extension CALayer {
         }
         
         if !delay.isZero {
-            animation.beginTime = CACurrentMediaTime() + delay
+            animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
             animation.fillMode = .both
         }
         

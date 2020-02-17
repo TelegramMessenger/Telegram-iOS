@@ -42,9 +42,15 @@ public enum AnimatedStickerMode {
     case direct
 }
 
+public enum AnimatedStickerPlaybackPosition {
+    case start
+    case end
+}
+
 public enum AnimatedStickerPlaybackMode {
     case once
     case loop
+    case still(AnimatedStickerPlaybackPosition)
 }
 
 private final class AnimatedStickerFrame {
@@ -71,13 +77,25 @@ private protocol AnimatedStickerFrameSource: class {
     var frameRate: Int { get }
     var frameCount: Int { get }
     
-    func takeFrame() -> AnimatedStickerFrame
+    func takeFrame() -> AnimatedStickerFrame?
+    func skipToEnd()
+}
+
+private final class AnimatedStickerFrameSourceWrapper {
+    let value: AnimatedStickerFrameSource
+    
+    init(_ value: AnimatedStickerFrameSource) {
+        self.value = value
+    }
 }
 
 @available(iOS 9.0, *)
 private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
-    private let data: Data
+    private var data: Data
+    private var dataComplete: Bool
+    private let notifyUpdated: () -> Void
+    
     private var scratchBuffer: Data
     let width: Int
     let bytesPerRow: Int
@@ -90,9 +108,11 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
     var decodeBuffer: Data
     var frameBuffer: Data
     
-    init?(queue: Queue, data: Data) {
+    init?(queue: Queue, data: Data, complete: Bool, notifyUpdated: @escaping () -> Void) {
         self.queue = queue
         self.data = data
+        self.dataComplete = complete
+        self.notifyUpdated = notifyUpdated
         self.scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZFSE))
         
         var offset = 0
@@ -152,7 +172,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         assert(self.queue.isCurrent())
     }
     
-    func takeFrame() -> AnimatedStickerFrame {
+    func takeFrame() -> AnimatedStickerFrame? {
         var frameData: Data?
         var isLastFrame = false
         
@@ -163,8 +183,24 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         let frameIndex = self.frameIndex
         
         self.data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            if self.offset + 4 > dataLength {
+                if self.dataComplete {
+                    self.frameIndex = 0
+                    self.offset = self.initialOffset
+                    self.frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                        memset(bytes, 0, frameBufferLength)
+                    }
+                }
+                return
+            }
+            
             var frameLength: Int32 = 0
             memcpy(&frameLength, bytes.advanced(by: self.offset), 4)
+            
+            if self.offset + 4 + Int(frameLength) > dataLength {
+                return
+            }
+            
             self.offset += 4
             
             self.scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
@@ -194,7 +230,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             
             self.frameIndex += 1
             self.offset += Int(frameLength)
-            if self.offset == dataLength {
+            if self.offset == dataLength && self.dataComplete {
                 isLastFrame = true
                 self.frameIndex = 0
                 self.offset = self.initialOffset
@@ -204,7 +240,19 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             }
         }
         
-        return AnimatedStickerFrame(data: frameData!, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: isLastFrame)
+        if let frameData = frameData {
+            return AnimatedStickerFrame(data: frameData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: isLastFrame)
+        } else {
+            return nil
+        }
+    }
+    
+    func updateData(data: Data, complete: Bool) {
+        self.data = data
+        self.dataComplete = complete
+    }
+    
+    func skipToEnd() {
     }
 }
 
@@ -241,7 +289,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         assert(self.queue.isCurrent())
     }
     
-    func takeFrame() -> AnimatedStickerFrame {
+    func takeFrame() -> AnimatedStickerFrame? {
         let frameIndex = self.currentFrame % self.frameCount
         self.currentFrame += 1
         var frameData = Data(count: self.bytesPerRow * self.height)
@@ -250,6 +298,10 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
             self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height), bytesPerRow: Int32(self.bytesPerRow))
         }
         return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
+    }
+    
+    func skipToEnd() {
+        self.currentFrame = self.frameCount - 1
     }
 }
 
@@ -271,15 +323,23 @@ private final class AnimatedStickerFrameQueue {
     
     func take() -> AnimatedStickerFrame? {
         if self.frames.isEmpty {
-            self.frames.append(self.source.takeFrame())
+            if let frame = self.source.takeFrame() {
+                self.frames.append(frame)
+            }
         }
-        let frame = self.frames.removeFirst()
-        return frame
+        if !self.frames.isEmpty {
+            let frame = self.frames.removeFirst()
+            return frame
+        } else {
+            return nil
+        }
     }
     
     func generateFramesIfNeeded() {
         if self.frames.isEmpty {
-            self.frames.append(self.source.takeFrame())
+            if let frame = self.source.takeFrame() {
+                self.frames.append(frame)
+            }
         }
     }
 }
@@ -297,7 +357,7 @@ public struct AnimatedStickerStatus: Equatable {
 }
 
 public protocol AnimatedStickerNodeSource {
-    func cachedDataPath(width: Int, height: Int) -> Signal<String, NoError>
+    func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError>
     func directDataPath() -> Signal<String, NoError>
 }
 
@@ -312,7 +372,7 @@ public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource
         return .single(self.path)
     }
     
-    public func cachedDataPath(width: Int, height: Int) -> Signal<String, NoError> {
+    public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
         return .never()
     }
 }
@@ -330,13 +390,14 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var reportedStarted = false
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
+    private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
     
     private var directData: (Data, String, Int, Int)?
-    private var cachedData: Data?
+    private var cachedData: (Data, Bool)?
     
     private var renderer: (AnimationRenderer & ASDisplayNode)?
     
-    private var isPlaying: Bool = false
+    public var isPlaying: Bool = false
     private var canDisplayFirstFrame: Bool = false
     private var playbackMode: AnimatedStickerPlaybackMode = .loop
     
@@ -409,7 +470,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 if let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                     strongSelf.directData = (directData, path, width, height)
                 }
-                if strongSelf.isPlaying {
+                if case let .still(position) = playbackMode {
+                    strongSelf.seekTo(position)
+                } else if strongSelf.isPlaying {
                     strongSelf.play()
                 } else if strongSelf.canDisplayFirstFrame {
                     strongSelf.play(firstFrame: true)
@@ -421,15 +484,30 @@ public final class AnimatedStickerNode: ASDisplayNode {
             }))
         case .cached:
             self.disposable.set((source.cachedDataPath(width: width, height: height)
-            |> deliverOnMainQueue).start(next: { [weak self] path in
+            |> deliverOnMainQueue).start(next: { [weak self] path, complete in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead])
-                if strongSelf.isPlaying {
-                    strongSelf.play()
-                } else if strongSelf.canDisplayFirstFrame {
-                    strongSelf.play(firstFrame: true)
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                    if let (_, currentComplete) = strongSelf.cachedData {
+                        if !currentComplete {
+                            strongSelf.cachedData = (data, complete)
+                            strongSelf.frameSource.with { frameSource in
+                                frameSource?.with { frameSource in
+                                    if let frameSource = frameSource.value as? AnimatedStickerCachedFrameSource {
+                                        frameSource.updateData(data: data, complete: complete)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        strongSelf.cachedData = (data, complete)
+                        if strongSelf.isPlaying {
+                            strongSelf.play()
+                        } else if strongSelf.canDisplayFirstFrame {
+                            strongSelf.play(firstFrame: true)
+                        }
+                    }
                 }
             }))
         }
@@ -464,15 +542,24 @@ public final class AnimatedStickerNode: ASDisplayNode {
         let cachedData = self.cachedData
         let queue = self.queue
         let timerHolder = self.timer
+        let frameSourceHolder = self.frameSource
         self.queue.async { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource?
+            var notifyUpdated: (() -> Void)?
             if let directData = directData {
                 maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
-            } else if let cachedData = cachedData {
+            } else if let (cachedData, cachedDataComplete) = cachedData {
                 if #available(iOS 9.0, *) {
-                    maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData)
+                    maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
+                        notifyUpdated?()
+                    })
                 }
             }
+            let _ = frameSourceHolder.swap(maybeFrameSource.flatMap { maybeFrameSource in
+                return QueueLocalObject(queue: queue, generate: {
+                    return AnimatedStickerFrameSourceWrapper(maybeFrameSource)
+                })
+            })
             guard let frameSource = maybeFrameSource else {
                 return
             }
@@ -526,11 +613,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.reportedStarted = false
         self.timer.swap(nil)?.invalidate()
         if self.playToCompletionOnStop {
-            self.seekToStart()
+            self.seekTo(.start)
         }
     }
     
-    public func seekToStart() {
+    public func seekTo(_ position: AnimatedStickerPlaybackPosition) {
         self.isPlaying = false
         
         let directData = self.directData
@@ -541,9 +628,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
             var maybeFrameSource: AnimatedStickerFrameSource?
             if let directData = directData {
                 maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
-            } else if let cachedData = cachedData {
+                if position == .end {
+                    maybeFrameSource?.skipToEnd()
+                }
+            } else if let (cachedData, cachedDataComplete) = cachedData {
                 if #available(iOS 9.0, *) {
-                    maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData)
+                    maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {})
                 }
             }
             guard let frameSource = maybeFrameSource else {

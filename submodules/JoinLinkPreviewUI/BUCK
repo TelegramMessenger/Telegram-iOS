@@ -18,6 +18,7 @@ static_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ShareController:ShareController",
         "//submodules/SelectablePeerNode:SelectablePeerNode",
+        "//submodules/PeerInfoUI:PeerInfoUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

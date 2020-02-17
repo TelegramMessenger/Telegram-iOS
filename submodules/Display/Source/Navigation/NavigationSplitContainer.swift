@@ -57,6 +57,16 @@ final class NavigationSplitContainer: ASDisplayNode {
         self.view.addSubview(self.detailScrollToTopView)
     }
     
+    func hasNonReadyControllers() -> Bool {
+        if self.masterContainer.hasNonReadyControllers() {
+            return true
+        }
+        if self.detailContainer.hasNonReadyControllers() {
+            return true
+        }
+        return false
+    }
+    
     func updateTheme(theme: NavigationControllerTheme) {
         self.separator.backgroundColor = theme.navigationBar.separatorColor
     }

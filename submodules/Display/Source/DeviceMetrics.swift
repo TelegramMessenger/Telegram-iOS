@@ -182,7 +182,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 case .iPhone4, .iPhone5, .iPhone6:
                     return 216.0
                 case .iPhone6Plus:
-                    return 227.0
+                    return 226.0
                 case .iPhoneX:
                     return 291.0
                 case .iPhoneXSMax:
@@ -215,8 +215,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             switch self {
                 case .iPhone4, .iPhone5:
                     return 37.0
-                case .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax:
+                case .iPhone6, .iPhoneX, .iPhoneXSMax:
                     return 44.0
+                case .iPhone6Plus:
+                    return 45.0
                 case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
                     return 50.0
                 case .unknown:

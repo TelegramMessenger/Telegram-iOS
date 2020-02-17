@@ -9,6 +9,7 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 import AppBundle
+import ContextUI
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 16.0
@@ -32,7 +33,7 @@ private enum ChatSendMessageActionIcon {
 private final class ActionSheetItemNode: ASDisplayNode {
     private let title: String
     private let icon: ChatSendMessageActionIcon
-    private let action: () -> Void
+    let action: () -> Void
     
     private let separatorNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
@@ -92,13 +93,23 @@ private final class ActionSheetItemNode: ASDisplayNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if highlighted {
-                    strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.highlightedBackgroundNode.alpha = 1.0
-                } else {
-                    strongSelf.highlightedBackgroundNode.alpha = 0.0
-                    strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                }
+                strongSelf.setHighlighted(highlighted, animated: true)
+            }
+        }
+    }
+    
+    func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        if highlighted == (self.highlightedBackgroundNode.alpha == 1.0) {
+            return
+        }
+        
+        if highlighted {
+            self.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
+            self.highlightedBackgroundNode.alpha = 1.0
+        } else {
+            self.highlightedBackgroundNode.alpha = 0.0
+            if animated {
+                self.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
             }
         }
     }
@@ -170,7 +181,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContext, reminders: Bool, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, reminders: Bool, gesture: ContextGesture, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.sendButtonFrame = sendButtonFrame
@@ -254,14 +265,17 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 self.toMessageTextNode.attributedText = toAttributedText
             }
         } else {
-            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         
-            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         }
         self.messageBackgroundNode.contentMode = .scaleToFill
         
         let outgoing: PresentationThemeBubbleColorComponents = self.presentationData.chatWallpaper.isEmpty ? self.presentationData.theme.chat.message.outgoing.bubble.withoutWallpaper : self.presentationData.theme.chat.message.outgoing.bubble.withWallpaper
-        self.messageBackgroundNode.image = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
+        
+        let maxCornerRadius = self.presentationData.chatBubbleCorners.mainRadius
+        let minCornerRadius = self.presentationData.chatBubbleCorners.auxiliaryRadius
+        self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.gradientFill, strokeColor: outgoing.fill == outgoing.gradientFill ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
         
         self.view.addSubview(self.effectView)
         self.addSubnode(self.dimNode)
@@ -280,6 +294,38 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         self.contentNodes.forEach(self.contentContainerNode.addSubnode)
+        
+        gesture.externalUpdated = { [weak self] view, location in
+            guard let strongSelf = self else {
+                return
+            }
+            for contentNode in strongSelf.contentNodes {
+                let localPoint = contentNode.view.convert(location, from: view)
+                if contentNode.bounds.contains(localPoint) {
+                    contentNode.setHighlighted(true, animated: false)
+                } else {
+                    contentNode.setHighlighted(false, animated: false)
+                }
+            }
+        }
+        
+        gesture.externalEnded = { [weak self] viewAndLocation in
+            guard let strongSelf = self else {
+                return
+            }
+            for contentNode in strongSelf.contentNodes {
+                if let (view, location) = viewAndLocation {
+                    let localPoint = contentNode.view.convert(location, from: view)
+                    if contentNode.bounds.contains(localPoint) {
+                        contentNode.action()
+                    } else {
+                        contentNode.setHighlighted(false, animated: false)
+                    }
+                } else {
+                    contentNode.setHighlighted(false, animated: false)
+                }
+            }
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -333,7 +379,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         let outgoing: PresentationThemeBubbleColorComponents = self.presentationData.chatWallpaper.isEmpty ? self.presentationData.theme.chat.message.outgoing.bubble.withoutWallpaper : self.presentationData.theme.chat.message.outgoing.bubble.withWallpaper
-        self.messageBackgroundNode.image = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
+        let maxCornerRadius = self.presentationData.chatBubbleCorners.mainRadius
+        let minCornerRadius = self.presentationData.chatBubbleCorners.auxiliaryRadius
+        self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.gradientFill, strokeColor: outgoing.fill == outgoing.gradientFill ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
         
         for node in self.contentNodes {
             node.updateTheme(presentationData.theme)
@@ -395,11 +443,13 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             }
             self.fromMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.toMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
         
             let springDuration: Double = 0.42
             let springDamping: CGFloat = 104.0
             self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-            self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 160.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+            self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
         }
     }
     
@@ -499,8 +549,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 completedBubble = true
             }
             
-            self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 160.0, y: 0.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-            self.contentContainerNode.layer.animateScale(from: 1.0, to: 0.4, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
+            
+            self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentOffset, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            self.contentContainerNode.layer.animateScale(from: 1.0, to: 0.1, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         }
     }
     
@@ -514,7 +566,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.validLayout = layout
         
         transition.updateFrame(node: self.textCoverNode, frame: self.textFieldFrame)
-        transition.updateFrame(node: self.buttonCoverNode, frame: self.sendButtonFrame.offsetBy(dx: 1.0, dy: 0.0))
+        transition.updateFrame(node: self.buttonCoverNode, frame: self.sendButtonFrame.offsetBy(dx: 1.0, dy: 1.0))
         
         transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))

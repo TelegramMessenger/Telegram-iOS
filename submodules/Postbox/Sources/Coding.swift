@@ -77,7 +77,7 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
             data.copyBytes(to: self.memory.assumingMemoryBound(to: UInt8.self), count: data.count)
             self.capacity = data.count
             self.length = data.count
-            self.freeWhenDone = false
+            self.freeWhenDone = true
         }
     }
     
@@ -148,7 +148,7 @@ public final class WriteBuffer: MemoryBuffer {
         self.offset = 0
     }
     
-    public func write(_ data: UnsafeRawPointer, offset: Int, length: Int) {
+    public func write(_ data: UnsafeRawPointer, offset: Int = 0, length: Int) {
         if self.offset + length > self.capacity {
             self.capacity = self.offset + length + 256
             if self.length == 0 {
@@ -481,6 +481,22 @@ public final class PostboxEncoder {
             var length: Int32 = Int32(object.length)
             self.buffer.write(&length, offset: 0, length: 4)
             self.buffer.write(object.memory, offset: 0, length: object.length)
+        }
+    }
+    
+    public func encodeDataArray(_ value: [Data], forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.BytesArray.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        for object in value {
+            var length: Int32 = Int32(object.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            object.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                self.buffer.write(bytes, offset: 0, length: Int(length))
+            }
         }
     }
     
@@ -1170,6 +1186,31 @@ public final class PostboxDecoder {
             return array
         } else {
             return []
+        }
+    }
+    
+    public func decodeOptionalDataArrayForKey(_ key: StaticString) -> [Data]? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .BytesArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [Data] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var length: Int32 = 0
+                memcpy(&length, self.buffer.memory + self.offset, 4)
+                array.append(Data(bytes: self.buffer.memory.advanced(by: self.offset + 4), count: Int(length)))
+                self.offset += 4 + Int(length)
+                
+                i += 1
+            }
+            
+            return array
+        } else {
+            return nil
         }
     }
     

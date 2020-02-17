@@ -48,14 +48,16 @@ private enum ShareAuthorizationError {
 public struct ShareRootControllerInitializationData {
     public let appGroupPath: String
     public let apiId: Int32
+    public let apiHash: String
     public let languagesCategory: String
     public let encryptionParameters: (Data, Data)
     public let appVersion: String
     public let bundleData: Data?
     
-    public init(appGroupPath: String, apiId: Int32, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+    public init(appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
         self.appGroupPath = appGroupPath
         self.apiId = apiId
+        self.apiHash = apiHash
         self.languagesCategory = languagesCategory
         self.encryptionParameters = encryptionParameters
         self.appVersion = appVersion
@@ -186,14 +188,24 @@ public class ShareRootControllerImpl {
                 
                 let presentationDataPromise = Promise<PresentationData>()
                 
-                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
+                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
+            }
+            
+            var immediatePeerId: PeerId?
+            if #available(iOS 13.2, *), let sendMessageIntent = self.getExtensionContext()?.intent as? INSendMessageIntent {
+                if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                    let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                    if let peerId = Int64(string) {
+                        immediatePeerId = PeerId(peerId)
+                    }
+                }
             }
             
             let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
@@ -206,24 +218,36 @@ public class ShareRootControllerImpl {
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
-                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> Set<AccountRecordId> in
-                    return Set(transaction.getRecords().map { record in
+                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
+                    let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
+                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+                    return (accountRecords, intentsSettings.account)
                 })
                 |> castError(ShareAuthorizationError.self)
                 |> take(1)
-                |> mapToSignal { primaryAndAccounts, validAccountIds -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
+                |> mapToSignal { primaryAndAccounts, validAccountIdsAndIntentsAccountId -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                     var (maybePrimary, accounts) = primaryAndAccounts
+                    let (validAccountIds, intentsAccountId) = validAccountIdsAndIntentsAccountId
                     for i in (0 ..< accounts.count).reversed() {
                         if !validAccountIds.contains(accounts[i].account.id) {
                             accounts.remove(at: i)
                         }
                     }
                     
+                    if let _ = immediatePeerId, let intentsAccountId = intentsAccountId {
+                        for account in accounts {
+                            if account.peer.id == intentsAccountId {
+                                maybePrimary = account.account.id
+                            }
+                        }
+                    }
+                    
                     guard let primary = maybePrimary, validAccountIds.contains(primary) else {
                         return .fail(.unauthorized)
                     }
+                    
                     guard let info = accounts.first(where: { $0.account.id == primary }) else {
                         return .fail(.unauthorized)
                     }
@@ -235,16 +259,19 @@ public class ShareRootControllerImpl {
             
             let applicationInterface = account
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
-                let limitsConfiguration = account.postbox.transaction { transaction -> LimitsConfiguration in
-                    return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings) in
+                    return (
+                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue,
+                        getContentSettings(transaction: transaction)
+                    )
                 }
-                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfiguration, sharedContext.accountManager.accessChallengeData())
+                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfigurationAndContentSettings, sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> deliverOnMainQueue
                 |> castError(ShareAuthorizationError.self)
-                |> map { sharedData, limitsConfiguration, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
+                |> map { sharedData, limitsConfigurationAndContentSettings, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, tonContext: nil, limitsConfiguration: limitsConfiguration)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account/*, tonContext: nil*/, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1)
                     return (context, data.data, otherAccounts)
                 }
             }
@@ -292,17 +319,7 @@ public class ShareRootControllerImpl {
                         }
                         |> then(.single(.done))
                     }
-                    
-                    var immediatePeerId: PeerId?
-                    if #available(iOS 13.0, *), let sendMessageIntent = self?.getExtensionContext()?.intent as? INSendMessageIntent {
-                        if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
-                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                            if let userId = Int32(string) {
-                                immediatePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            }
-                        }
-                    }
-                    
+                                        
                     let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
                         if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                             let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
@@ -388,7 +405,7 @@ public class ShareRootControllerImpl {
                     return
                 }
                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Share_AuthTitle, text: presentationData.strings.Share_AuthDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_AuthTitle, text: presentationData.strings.Share_AuthDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                 })])
                 strongSelf.mainWindow?.present(controller, on: .root)

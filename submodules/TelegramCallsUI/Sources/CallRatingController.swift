@@ -277,7 +277,7 @@ public func callRatingController(sharedContext: SharedAccountContext, account: A
         dismissImpl?(true)
     })]
     
-    contentNode = CallRatingAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, actions: actions, dismiss: {
+    contentNode = CallRatingAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, actions: actions, dismiss: {
         dismissImpl?(true)
     }, apply: { rating in
         dismissImpl?(true)
@@ -288,7 +288,7 @@ public func callRatingController(sharedContext: SharedAccountContext, account: A
         }
     })
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode!)
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

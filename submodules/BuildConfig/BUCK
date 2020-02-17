@@ -9,7 +9,7 @@ static_library(
     compiler_flags = [
         '-DAPP_CONFIG_API_ID=' + appConfig()["apiId"],
         '-DAPP_CONFIG_API_HASH="' + appConfig()["apiHash"] + '"',
-        '-DAPP_CONFIG_HOCKEYAPP_ID="' + appConfig()["hockeyAppId"] + '"',
+        '-DAPP_CONFIG_APP_CENTER_ID="' + appConfig()["appCenterId"] + '"',
         '-DAPP_CONFIG_IS_INTERNAL_BUILD=' + appConfig()["isInternalBuild"],
         '-DAPP_CONFIG_IS_APPSTORE_BUILD=' + appConfig()["isAppStoreBuild"],
         '-DAPP_CONFIG_APPSTORE_ID=' + appConfig()["appStoreId"],

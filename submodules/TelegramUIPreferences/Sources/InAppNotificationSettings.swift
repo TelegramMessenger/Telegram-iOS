@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import SyncCore
 
 public enum TotalUnreadCountDisplayStyle: Int32 {
     case filtered = 0
@@ -38,7 +39,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var displayNotificationsFromAllAccounts: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.regularChatsAndPrivateGroups], displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.privateChat, .secretChat, .bot, .privateGroup], displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
     }
     
     public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool) {
@@ -58,10 +59,25 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
         self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("cds", orElse: 0)) ?? .filtered
         self.totalUnreadCountDisplayCategory = TotalUnreadCountDisplayCategory(rawValue: decoder.decodeInt32ForKey("totalUnreadCountDisplayCategory", orElse: 1)) ?? .messages
-        if let value = decoder.decodeOptionalInt32ForKey("totalUnreadCountIncludeTags") {
+        if let value = decoder.decodeOptionalInt32ForKey("totalUnreadCountIncludeTags_2") {
             self.totalUnreadCountIncludeTags = PeerSummaryCounterTags(rawValue: value)
+        } else if let value = decoder.decodeOptionalInt32ForKey("totalUnreadCountIncludeTags") {
+            var resultTags: PeerSummaryCounterTags = []
+            for legacyTag in LegacyPeerSummaryCounterTags(rawValue: value) {
+                if legacyTag == .regularChatsAndPrivateGroups {
+                    resultTags.insert(.privateChat)
+                    resultTags.insert(.secretChat)
+                    resultTags.insert(.bot)
+                    resultTags.insert(.privateGroup)
+                } else if legacyTag == .publicGroups {
+                    resultTags.insert(.publicGroup)
+                } else if legacyTag == .channels {
+                    resultTags.insert(.channel)
+                }
+            }
+            self.totalUnreadCountIncludeTags = resultTags
         } else {
-            self.totalUnreadCountIncludeTags = [.regularChatsAndPrivateGroups]
+            self.totalUnreadCountIncludeTags = [.privateChat, .secretChat, .bot, .privateGroup]
         }
         self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
         self.displayNotificationsFromAllAccounts = decoder.decodeInt32ForKey("displayNotificationsFromAllAccounts", orElse: 1) != 0
@@ -73,7 +89,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
         encoder.encodeInt32(self.totalUnreadCountDisplayStyle.rawValue, forKey: "cds")
         encoder.encodeInt32(self.totalUnreadCountDisplayCategory.rawValue, forKey: "totalUnreadCountDisplayCategory")
-        encoder.encodeInt32(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags")
+        encoder.encodeInt32(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags_2")
         encoder.encodeInt32(self.displayNameOnLockscreen ? 1 : 0, forKey: "displayNameOnLockscreen")
         encoder.encodeInt32(self.displayNotificationsFromAllAccounts ? 1 : 0, forKey: "displayNotificationsFromAllAccounts")
     }

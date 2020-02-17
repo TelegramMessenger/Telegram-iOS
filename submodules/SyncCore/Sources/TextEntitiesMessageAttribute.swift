@@ -19,6 +19,7 @@ public enum MessageTextEntityType: Equatable {
     case Strikethrough
     case BlockQuote
     case Underline
+    case BankCard
     case Custom(type: CustomEntityType)
 }
 
@@ -65,6 +66,8 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 self.type = .BlockQuote
             case 15:
                 self.type = .Underline
+            case 16:
+                self.type = .BankCard
             case Int32.max:
                 self.type = .Custom(type: decoder.decodeInt32ForKey("type", orElse: 0))
             default:
@@ -110,6 +113,8 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 encoder.encodeInt32(14, forKey: "_rawValue")
             case .Underline:
                 encoder.encodeInt32(15, forKey: "_rawValue")
+            case .BankCard:
+                encoder.encodeInt32(16, forKey: "_rawValue")
             case let .Custom(type):
                 encoder.encodeInt32(Int32.max, forKey: "_rawValue")
                 encoder.encodeInt32(type, forKey: "type")

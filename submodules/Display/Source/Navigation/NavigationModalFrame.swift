@@ -98,7 +98,7 @@ final class NavigationModalFrame: ASDisplayNode {
         }
     }
     
-    private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {        
+    private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let sideInset: CGFloat = 16.0
         var topInset: CGFloat = 0.0
         if let statusBarHeight = layout.statusBarHeight {
@@ -127,10 +127,10 @@ final class NavigationModalFrame: ASDisplayNode {
         let cornerSideOffset: CGFloat = progress * sideInset + additionalProgress * sideInset
         let cornerTopOffset: CGFloat = progress * topInset + additionalProgress * additionalTopInset
         let cornerBottomOffset: CGFloat = progress * bottomInset
-        transition.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)))
-        transition.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)))
-        transition.updateFrame(node: self.bottomLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: layout.size.height - cornerBottomOffset - cornerSize), size: CGSize(width: cornerSize, height: cornerSize)))
-        transition.updateFrame(node: self.bottomRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: layout.size.height - cornerBottomOffset - cornerSize), size: CGSize(width: cornerSize, height: cornerSize)))
+        transition.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.bottomLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: layout.size.height - cornerBottomOffset - cornerSize), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.bottomRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: layout.size.height - cornerBottomOffset - cornerSize), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
         
         let topShadeOffset: CGFloat = progress * topInset + additionalProgress * additionalTopInset
         let bottomShadeOffset: CGFloat = progress * bottomInset
@@ -138,10 +138,10 @@ final class NavigationModalFrame: ASDisplayNode {
         let rightShadeWidth: CGFloat = progress * sideInset + additionalProgress * sideInset
         let rightShadeOffset: CGFloat = layout.size.width - rightShadeWidth
         
-        transition.updateFrame(node: self.topShade, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: topShadeOffset)))
+        transition.updateFrame(node: self.topShade, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: topShadeOffset)), beginWithCurrentState: true)
         transition.updateFrame(node: self.bottomShade, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomShadeOffset), size: CGSize(width: layout.size.width, height: bottomShadeOffset)))
-        transition.updateFrame(node: self.leftShade, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: leftShadeOffset, height: layout.size.height)))
-        transition.updateFrame(node: self.rightShade, frame: CGRect(origin: CGPoint(x: rightShadeOffset, y: 0.0), size: CGSize(width: rightShadeWidth, height: layout.size.height)), completion: { _ in
+        transition.updateFrame(node: self.leftShade, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: leftShadeOffset, height: layout.size.height)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.rightShade, frame: CGRect(origin: CGPoint(x: rightShadeOffset, y: 0.0), size: CGSize(width: rightShadeWidth, height: layout.size.height)), beginWithCurrentState: true, completion: { _ in
             completion()
         })
     }

@@ -125,8 +125,8 @@ private func encodeText(_ string: String, _ key: Int) -> String {
     return result
 }
 
-public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView) -> Bool {
-    if view.disablesInteractiveTransitionGestureRecognizer {
+public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView, keyboardOnly: Bool = false) -> Bool {
+    if view.disablesInteractiveTransitionGestureRecognizer && !keyboardOnly {
         return true
     }
     if view.disablesInteractiveKeyboardGestureRecognizer {
@@ -136,7 +136,7 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
         return true
     }
     if let superview = view.superview {
-        return doesViewTreeDisableInteractiveTransitionGestureRecognizer(superview)
+        return doesViewTreeDisableInteractiveTransitionGestureRecognizer(superview, keyboardOnly: keyboardOnly)
     }
     return false
 }
@@ -267,6 +267,8 @@ public class Window1 {
     public var previewThemeAccentColor: UIColor = .blue
     public var previewThemeDarkBlur: Bool = false
     
+    private var shouldNotAnimateLikelyKeyboardAutocorrectionSwitch: Bool = false
+    
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)? {
         didSet {
@@ -330,8 +332,17 @@ public class Window1 {
             self?.isInteractionBlocked = value
         }
         
+        let updateOpaqueOverlays: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf._rootController?.displayNode.accessibilityElementsHidden = strongSelf.presentationContext.hasOpaqueOverlay || strongSelf.topPresentationContext.hasOpaqueOverlay
+        }
         self.presentationContext.updateHasOpaqueOverlay = { [weak self] value in
-            self?._rootController?.displayNode.accessibilityElementsHidden = value
+            updateOpaqueOverlays()
+        }
+        self.topPresentationContext.updateHasOpaqueOverlay = { [weak self] value in
+            updateOpaqueOverlays()
         }
         
         self.hostView.present = { [weak self] controller, level, blockInteraction, completion in
@@ -513,7 +524,15 @@ public class Window1 {
                     transitionCurve = .easeInOut
                 }
                 
-                strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: .animated(duration: duration, curve: transitionCurve), overrideTransition: false) }
+                var transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: transitionCurve)
+                
+                if strongSelf.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch, let inputHeight = strongSelf.windowLayout.inputHeight {
+                    if abs(inputHeight - keyboardHeight) <= 44.1 {
+                        transition = .immediate
+                    }
+                }
+                
+                strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: transition, overrideTransition: false) }
             }
         })
         
@@ -706,6 +725,36 @@ public class Window1 {
             if let rootController = self._rootController {
                 if let rootController = rootController as? NavigationController {
                     rootController.statusBarHost = self.statusBarHost
+                    rootController.updateSupportedOrientations = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+                        let orientationToLock: UIInterfaceOrientationMask
+                        if strongSelf.windowLayout.size.width < strongSelf.windowLayout.size.height {
+                            orientationToLock = .portrait
+                        } else {
+                            orientationToLock = .landscape
+                        }
+                        if let _rootController = strongSelf._rootController {
+                            supportedOrientations = supportedOrientations.intersection(_rootController.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+                        }
+                        supportedOrientations = supportedOrientations.intersection(strongSelf.presentationContext.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+                        supportedOrientations = supportedOrientations.intersection(strongSelf.overlayPresentationContext.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+                        
+                        var resolvedOrientations: UIInterfaceOrientationMask
+                        switch strongSelf.windowLayout.metrics.widthClass {
+                        case .regular:
+                            resolvedOrientations = supportedOrientations.regularSize
+                        case .compact:
+                            resolvedOrientations = supportedOrientations.compactSize
+                        }
+                        if resolvedOrientations.isEmpty {
+                            resolvedOrientations = [.portrait]
+                        }
+                        strongSelf.hostView.updateSupportedInterfaceOrientations(resolvedOrientations)
+                    }
                     rootController.keyboardViewManager = self.keyboardViewManager
                     rootController.inCallNavigate = { [weak self] in
                         self?.inCallNavigate?()
@@ -1056,7 +1105,7 @@ public class Window1 {
         if let inputHeight = self.windowLayout.inputHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < self.windowLayout.size.height - inputHeight - (accessoryHeight ?? 0.0) {
             var enableGesture = true
             if let view = self.hostView.containerView.hitTest(location, with: nil) {
-                if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view) {
+                if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view, keyboardOnly: true) {
                     enableGesture = false
                 }
             }
@@ -1173,9 +1222,16 @@ public class Window1 {
         return hidden
     }
     
-    public func forEachViewController(_ f: (ContainableController) -> Bool) {
-        if let navigationController = self._rootController as? NavigationController, let controller = navigationController.topOverlayController {
-            !f(controller)
+    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false) {
+        if let navigationController = self._rootController as? NavigationController {
+            if !excludeNavigationSubControllers {
+                for case let controller as ContainableController in navigationController.viewControllers {
+                    !f(controller)
+                }
+            }
+            if let controller = navigationController.topOverlayController {
+                !f(controller)
+            }
         }
         for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {
@@ -1192,6 +1248,13 @@ public class Window1 {
             if !f(controller) {
                 break
             }
+        }
+    }
+    
+    public func doNotAnimateLikelyKeyboardAutocorrectionSwitch() {
+        self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = true
+        DispatchQueue.main.async {
+            self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = false
         }
     }
 }

@@ -14,7 +14,7 @@ public enum ItemListTextWithLabelItemTextColor {
 }
 
 public final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     public let label: String
     public let text: String
     let style: ItemListStyle
@@ -30,8 +30,8 @@ public final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     
     public let tag: Any?
     
-    public init(theme: PresentationTheme, label: String, text: String, style: ItemListStyle = .plain, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntityTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, label: String, text: String, style: ItemListStyle = .plain, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntityTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+        self.presentationData = presentationData
         self.label = label
         self.text = text
         self.style = style
@@ -89,13 +89,6 @@ public final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
         self.action?()
     }
 }
-
-private let labelFont = Font.regular(14.0)
-private let textFont = Font.regular(17.0)
-private let textBoldFont = Font.medium(17.0)
-private let textItalicFont = Font.italic(17.0)
-private let textBoldItalicFont = Font.semiboldItalic(17.0)
-private let textFixedFont = Font.regular(17.0)
 
 public class ItemListTextWithLabelItemNode: ListViewItemNode {
     let labelNode: TextNode
@@ -173,8 +166,8 @@ public class ItemListTextWithLabelItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
             let insets = itemListNeighborsPlainInsets(neighbors)
@@ -182,39 +175,46 @@ public class ItemListTextWithLabelItemNode: ListViewItemNode {
             let rightInset: CGFloat = 8.0 + params.rightInset
             let separatorHeight = UIScreenPixel
             
+            let labelFont = Font.regular(item.presentationData.fontSize.itemListBaseLabelFontSize)
+            let textFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let textBoldFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
+            let textItalicFont = Font.italic(item.presentationData.fontSize.itemListBaseFontSize)
+            let textBoldItalicFont = Font.semiboldItalic(item.presentationData.fontSize.itemListBaseFontSize)
+            let textFixedFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            
             var leftOffset: CGFloat = 0.0
             var selectionNodeWidthAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             if let selected = item.selected {
-                let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected, false)
+                let (selectionWidth, selectionApply) = selectionNodeLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, selected, false)
                 selectionNodeWidthAndApply = (selectionWidth, selectionApply)
                 leftOffset += selectionWidth - 8.0
             }
             
             let labelColor: UIColor
             switch item.labelColor {
-                case .primary:
-                    labelColor = item.theme.list.itemPrimaryTextColor
-                case .accent:
-                    labelColor = item.theme.list.itemAccentColor
-                case .highlighted:
-                    labelColor = item.theme.list.itemHighlightedColor
+            case .primary:
+                labelColor = item.presentationData.theme.list.itemPrimaryTextColor
+            case .accent:
+                labelColor = item.presentationData.theme.list.itemAccentColor
+            case .highlighted:
+                labelColor = item.presentationData.theme.list.itemHighlightedColor
             }
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: labelColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
             let baseColor: UIColor
             switch item.textColor {
-                case .primary:
-                    baseColor = item.theme.list.itemPrimaryTextColor
-                case .accent:
-                    baseColor = item.theme.list.itemAccentColor
-                case .highlighted:
-                    baseColor = item.theme.list.itemHighlightedColor
+            case .primary:
+                baseColor = item.presentationData.theme.list.itemPrimaryTextColor
+            case .accent:
+                baseColor = item.presentationData.theme.list.itemAccentColor
+            case .highlighted:
+                baseColor = item.presentationData.theme.list.itemHighlightedColor
             }
-            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textFont)
+            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: baseColor, linkColor: item.presentationData.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textFont)
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let contentSize = CGSize(width: params.width, height: textLayout.size.height + 39.0)
+            let contentSize = CGSize(width: params.width, height: textLayout.size.height + labelLayout.size.height + 22.0)
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             return (nodeLayout, { [weak self] animation in
                 if let strongSelf = self {
@@ -233,15 +233,15 @@ public class ItemListTextWithLabelItemNode: ListViewItemNode {
                     if let _ = updatedTheme {
                         switch item.style {
                         case .plain:
-                            strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                            strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                            strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
+                            strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                            strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                            strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
                         case .blocks:
-                            strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                            strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                            strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
+                            strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                            strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                            strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                         }
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = labelApply()
@@ -267,8 +267,9 @@ public class ItemListTextWithLabelItemNode: ListViewItemNode {
                         })
                     }
                     
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 11.0), size: labelLayout.size)
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: textLayout.size)
+                    let labelFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 11.0), size: labelLayout.size)
+                    strongSelf.labelNode.frame = labelFrame
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: labelFrame.maxY + 3.0), size: textLayout.size)
                     
                     let leftInset: CGFloat
                     switch item.style {
@@ -436,7 +437,7 @@ public class ItemListTextWithLabelItemNode: ListViewItemNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.list.itemAccentColor.withAlphaComponent(0.5))
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.5))
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

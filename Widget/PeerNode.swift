@@ -117,24 +117,31 @@ final class PeerView: UIView {
     
     private let tapped: () -> Void
     
-    var primaryColor: UIColor {
-        didSet {
-            self.titleLabel.textColor = self.primaryColor
-        }
-    }
-    
     init(primaryColor: UIColor, accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
-        self.primaryColor = primaryColor
         self.peer = peer
         self.tapped = tapped
         self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize)
         
         self.titleLabel = UILabel()
-        let title = peer.name
+        var title = peer.name
+        if let lastName = peer.lastName, !lastName.isEmpty {
+            title.append("\n")
+            title.append(lastName)
+        }
+        
+        let systemFontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        let fontSize = floor(systemFontSize * 11.0 / 17.0)
+        
         self.titleLabel.text = title
-        self.titleLabel.textColor = primaryColor
-        self.titleLabel.font = UIFont.systemFont(ofSize: 11.0)
+        if #available(iOSApplicationExtension 13.0, *) {
+            self.titleLabel.textColor = UIColor.label
+        } else {
+            self.titleLabel.textColor = primaryColor
+        }
+        self.titleLabel.font = UIFont.systemFont(ofSize: fontSize)
         self.titleLabel.lineBreakMode = .byTruncatingTail
+        self.titleLabel.numberOfLines = 2
+        self.titleLabel.textAlignment = .center
         
         super.init(frame: CGRect())
         

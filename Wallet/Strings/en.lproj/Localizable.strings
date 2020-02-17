@@ -39,7 +39,7 @@
 "Wallet.Receive.CopyInvoiceUrl" = "Copy Invoice URL";
 "Wallet.Receive.ShareAddress" = "Share Wallet Address";
 "Wallet.Receive.ShareInvoiceUrl" = "Share Invoice URL";
-"Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them.";
+"Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them. Note: this link won't work for real Grams.";
 "Wallet.Receive.AmountHeader" = "AMOUNT";
 "Wallet.Receive.AmountText" = "Grams to receive";
 "Wallet.Receive.AmountInfo" = "You can specify the amount and purpose of the payment to save the sender some time.";

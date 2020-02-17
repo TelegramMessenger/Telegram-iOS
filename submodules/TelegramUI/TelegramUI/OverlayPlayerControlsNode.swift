@@ -60,7 +60,7 @@ private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
 private let titleFont = Font.semibold(17.0)
 private let descriptionFont = Font.regular(17.0)
 
-private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, theme: PresentationTheme) -> (NSAttributedString?, NSAttributedString?) {
+private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, presentationData: PresentationData) -> (NSAttributedString?, NSAttributedString?) {
     var titleString: NSAttributedString?
     var descriptionString: NSAttributedString?
     
@@ -69,15 +69,15 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, them
         let subtitleText: String
         switch data {
             case let .music(title, performer, _, _):
-                titleText = title ?? "Unknown Track"
-                subtitleText = performer ?? "Unknown Artist"
+                titleText = title ?? presentationData.strings.MediaPlayer_UnknownTrack
+                subtitleText = performer ?? presentationData.strings.MediaPlayer_UnknownArtist
             case .voice, .instantVideo:
                 titleText = ""
                 subtitleText = ""
         }
         
-        titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.list.itemPrimaryTextColor)
-        descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: theme.list.itemSecondaryTextColor)
+        titleString = NSAttributedString(string: titleText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)
+        descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: presentationData.theme.list.itemSecondaryTextColor)
     }
     
     return (titleString, descriptionString)
@@ -86,7 +86,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, them
 final class OverlayPlayerControlsNode: ASDisplayNode {
     private let accountManager: AccountManager
     private let postbox: Postbox
-    private var theme: PresentationTheme
+    private var presentationData: PresentationData
     
     private let backgroundNode: ASImageNode
     
@@ -142,20 +142,20 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(account: Account, accountManager: AccountManager, theme: PresentationTheme, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>) {
+    init(account: Account, accountManager: AccountManager, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>) {
         self.accountManager = accountManager
         self.postbox = account.postbox
-        self.theme = theme
+        self.presentationData = presentationData
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = generateBackground(theme: theme)
+        self.backgroundNode.image = generateBackground(theme: presentationData.theme)
         
         self.collapseNode = HighlightableButtonNode()
         self.collapseNode.displaysAsynchronously = false
-        self.collapseNode.setImage(generateCollapseIcon(theme: theme), for: [])
+        self.collapseNode.setImage(generateCollapseIcon(theme: presentationData.theme), for: [])
         
         self.albumArtNode = TransformImageNode()
         
@@ -168,15 +168,17 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.descriptionNode.displaysAsynchronously = false
         
         self.shareNode = HighlightableButtonNode()
-        self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: theme.list.itemAccentColor), for: [])
+        self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: presentationData.theme.list.itemAccentColor), for: [])
         
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor, bufferingColor: theme.list.itemAccentColor.withAlphaComponent(0.4)))
-        self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: theme.list.itemSecondaryTextColor)
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemAccentColor, bufferingColor: presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4)))
+        self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: presentationData.theme.list.itemSecondaryTextColor)
         self.leftDurationLabel.displaysAsynchronously = false
-        self.rightDurationLabel = MediaPlayerTimeTextNode(textColor: theme.list.itemSecondaryTextColor)
+        self.leftDurationLabel.keepPreviousValueOnEmptyState = true
+        self.rightDurationLabel = MediaPlayerTimeTextNode(textColor: presentationData.theme.list.itemSecondaryTextColor)
         self.rightDurationLabel.displaysAsynchronously = false
         self.rightDurationLabel.mode = .reversed
         self.rightDurationLabel.alignment = .right
+        self.rightDurationLabel.keepPreviousValueOnEmptyState = true
         
         self.rateButton = HighlightableButtonNode()
         self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
@@ -197,12 +199,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.playPauseButton = IconButtonNode()
         self.playPauseButton.displaysAsynchronously = false
         
-        self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: theme.list.itemPrimaryTextColor)
-        self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: theme.list.itemPrimaryTextColor)
+        self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: presentationData.theme.list.itemPrimaryTextColor)
+        self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: presentationData.theme.list.itemPrimaryTextColor)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = theme.list.itemPlainSeparatorColor
+        self.separatorNode.backgroundColor = presentationData.theme.list.itemPlainSeparatorColor
         
         super.init()
         
@@ -347,14 +349,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 
                 let duration = value.status.duration
-                if duration != strongSelf.currentDuration {
+                if duration != strongSelf.currentDuration && !duration.isZero {
                     strongSelf.currentDuration = duration
                     if let layout = strongSelf.validLayout {
                         strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .immediate)
                     }
                 }
                 
-                strongSelf.rateButton.isHidden = rateButtonIsHidden || strongSelf.currentDuration.isZero
+                strongSelf.rateButton.isHidden = rateButtonIsHidden
             } else {
                 strongSelf.playPauseButton.isEnabled = false
                 strongSelf.backwardButton.isEnabled = false
@@ -411,20 +413,20 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.albumArtNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.albumArtTap(_:))))
     }
     
-    func updateTheme(_ theme: PresentationTheme) {
-        guard self.theme !== theme else {
+    func updatePresentationData(_ presentationData: PresentationData) {
+        guard self.presentationData.theme !== presentationData.theme else {
             return
         }
-        self.theme = theme
+        self.presentationData = presentationData
         
-        self.backgroundNode.image = generateBackground(theme: theme)
-        self.collapseNode.setImage(generateCollapseIcon(theme: theme), for: [])
-        self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: theme.list.itemAccentColor), for: [])
-        self.scrubberNode.updateColors(backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor)
-        self.leftDurationLabel.textColor = theme.list.itemSecondaryTextColor
-        self.rightDurationLabel.textColor = theme.list.itemSecondaryTextColor
-        self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: theme.list.itemPrimaryTextColor)
-        self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: theme.list.itemPrimaryTextColor)
+        self.backgroundNode.image = generateBackground(theme: presentationData.theme)
+        self.collapseNode.setImage(generateCollapseIcon(theme: presentationData.theme), for: [])
+        self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: presentationData.theme.list.itemAccentColor), for: [])
+        self.scrubberNode.updateColors(backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemAccentColor)
+        self.leftDurationLabel.textColor = presentationData.theme.list.itemSecondaryTextColor
+        self.rightDurationLabel.textColor = presentationData.theme.list.itemSecondaryTextColor
+        self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: presentationData.theme.list.itemPrimaryTextColor)
+        self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: presentationData.theme.list.itemPrimaryTextColor)
         if let isPaused = self.currentIsPaused {
             self.updatePlayPauseButton(paused: isPaused)
         }
@@ -437,7 +439,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if let rate = self.currentRate {
             self.updateRateButton(rate)
         }
-        self.separatorNode.backgroundColor = theme.list.itemPlainSeparatorColor
+        self.separatorNode.backgroundColor = presentationData.theme.list.itemPlainSeparatorColor
     }
     
     private func updateLabels(transition: ContainedViewLayoutTransition) {
@@ -454,7 +456,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let infoVerticalOrigin: CGFloat = panelHeight - OverlayPlayerControlsNode.basePanelHeight + 36.0
         
-        let (titleString, descriptionString) = stringsForDisplayData(self.displayData, theme: self.theme)
+        let (titleString, descriptionString) = stringsForDisplayData(self.displayData, presentationData: self.presentationData)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
@@ -487,42 +489,42 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private func updatePlayPauseButton(paused: Bool) {
         if paused {
-            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: self.theme.list.itemPrimaryTextColor)
+            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: self.presentationData.theme.list.itemPrimaryTextColor)
         } else {
-            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: self.theme.list.itemPrimaryTextColor)
+            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: self.presentationData.theme.list.itemPrimaryTextColor)
         }
     }
     
     private func updateOrderButton(_ order: MusicPlaybackSettingsOrder) {
-        let baseColor = self.theme.list.itemSecondaryTextColor
+        let baseColor = self.presentationData.theme.list.itemSecondaryTextColor
         switch order {
             case .regular:
                 self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: baseColor)
             case .reversed:
-                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.theme.list.itemAccentColor)
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.presentationData.theme.list.itemAccentColor)
             case .random:
-                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderRandom"), color: self.theme.list.itemAccentColor)
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderRandom"), color: self.presentationData.theme.list.itemAccentColor)
         }
     }
     
     private func updateLoopButton(_ looping: MusicPlaybackSettingsLooping) {
-        let baseColor = self.theme.list.itemSecondaryTextColor
+        let baseColor = self.presentationData.theme.list.itemSecondaryTextColor
         switch looping {
             case .none:
                 self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: baseColor)
             case .item:
-                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: self.theme.list.itemAccentColor)
+                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: self.presentationData.theme.list.itemAccentColor)
             case .all:
-                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: self.theme.list.itemAccentColor)
+                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: self.presentationData.theme.list.itemAccentColor)
         }
     }
     
     private func updateRateButton(_ baseRate: AudioPlaybackRate) {
         switch baseRate {
             case .x2:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.theme), for: [])
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.presentationData.theme), for: [])
             default:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateInactiveIcon(self.theme), for: [])
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateInactiveIcon(self.presentationData.theme), for: [])
         }
     }
     

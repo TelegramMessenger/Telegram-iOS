@@ -520,6 +520,10 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
     func node() -> ListViewItemHeaderNode {
         return WalletInfoTransactionDateHeaderNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.localTimestamp)
     }
+    
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        
+    }
 }
 
 private let sectionTitleFont = Font.semibold(17.0)

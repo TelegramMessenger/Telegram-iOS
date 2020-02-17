@@ -16,7 +16,7 @@ public enum ItemListCheckboxItemColor {
 }
 
 public class ItemListCheckboxItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let title: String
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
@@ -25,8 +25,8 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    public init(theme: PresentationTheme, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+        self.presentationData = presentationData
         self.title = title
         self.style = style
         self.color = color
@@ -76,8 +76,6 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
         self.action()
     }
 }
-
-private let titleFont = Font.regular(17.0)
 
 public class ItemListCheckboxItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -141,34 +139,36 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
             var leftInset: CGFloat = params.leftInset
             
             switch item.style {
-                case .left:
-                    leftInset += 44.0
-                case .right:
-                    leftInset += 16.0
+            case .left:
+                leftInset += 44.0
+            case .right:
+                leftInset += 16.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: 44.0)
+            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             var updateCheckImage: UIImage?
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
-            if currentItem?.theme !== item.theme || currentItem?.color != item.color {
+            if currentItem?.presentationData.theme !== item.presentationData.theme || currentItem?.color != item.color {
                 switch item.color {
-                    case .accent:
-                        updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
-                    case .secondary:
-                        updateCheckImage = PresentationResourcesItemList.secondaryCheckIconImage(item.theme)
+                case .accent:
+                    updateCheckImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
+                case .secondary:
+                    updateCheckImage = PresentationResourcesItemList.secondaryCheckIconImage(item.presentationData.theme)
                 }
             }
 
@@ -190,20 +190,20 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                     }
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
                     
                     if let image = strongSelf.iconNode.image {
                         switch item.style {
-                            case .left:
-                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
-                            case .right:
-                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        case .left:
+                            strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        case .right:
+                            strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                         }
                     }
                     strongSelf.iconNode.isHidden = !item.checked
@@ -244,7 +244,7 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                         }
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)

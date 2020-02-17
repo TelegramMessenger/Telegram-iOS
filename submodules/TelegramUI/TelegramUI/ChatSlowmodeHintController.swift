@@ -21,10 +21,10 @@ final class ChatSlowmodeHintController: TooltipController {
     
     private var timer: SwiftSignalKit.Timer?
     
-    init(strings: PresentationStrings, slowmodeState: ChatSlowmodeState) {
-        self.strings = strings
+    init(presentationData: PresentationData, slowmodeState: ChatSlowmodeState) {
+        self.strings = presentationData.strings
         self.slowmodeState = slowmodeState
-        super.init(content: .text(timeoutValue(strings: strings, slowmodeState: slowmodeState)), timeout: 2.0, dismissByTapOutside: false, dismissByTapOutsideSource: true)
+        super.init(content: .text(timeoutValue(strings: presentationData.strings, slowmodeState: slowmodeState)), baseFontSize: presentationData.listsFontSize.baseDisplaySize, timeout: 2.0, dismissByTapOutside: false, dismissByTapOutsideSource: true)
     }
     
     required init(coder aDecoder: NSCoder) {

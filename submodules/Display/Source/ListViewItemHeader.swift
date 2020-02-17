@@ -4,6 +4,7 @@ import AsyncDisplayKit
 
 public enum ListViewItemHeaderStickDirection {
     case top
+    case topEdge
     case bottom
 }
 
@@ -15,6 +16,7 @@ public protocol ListViewItemHeader: class {
     var height: CGFloat { get }
     
     func node() -> ListViewItemHeaderNode
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?)
 }
 
 open class ListViewItemHeaderNode: ASDisplayNode {
@@ -24,6 +26,8 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     final private(set) var internalStickLocationDistanceFactor: CGFloat = 0.0
     final var internalStickLocationDistance: CGFloat = 0.0
     private var isFlashingOnScrolling = false
+    
+    var item: ListViewItemHeader?
     
     func updateInternalStickLocationDistanceFactor(_ factor: CGFloat, animated: Bool) {
         self.internalStickLocationDistanceFactor = factor
@@ -46,9 +50,24 @@ open class ListViewItemHeaderNode: ASDisplayNode {
             self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
         }
         
-        super.init()
+        if seeThrough {
+            if (layerBacked) {
+                super.init()
+                self.setLayerBlock({
+                    return CASeeThroughTracingLayer()
+                })
+            } else {
+                super.init()
         
-        self.isLayerBacked = layerBacked
+                self.setViewBlock({
+                    return CASeeThroughTracingView()
+                })
+            }
+        } else {
+            super.init()
+            
+            self.isLayerBacked = layerBacked
+        }
     }
     
     open func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {

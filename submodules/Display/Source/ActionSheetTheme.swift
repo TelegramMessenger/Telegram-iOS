@@ -21,8 +21,9 @@ public final class ActionSheetControllerTheme: Equatable {
     public let switchFrameColor: UIColor
     public let switchContentColor: UIColor
     public let switchHandleColor: UIColor
+    public let baseFontSize: CGFloat
     
-    public init(dimColor: UIColor, backgroundType: ActionSheetControllerThemeBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, controlColor: UIColor, switchFrameColor: UIColor, switchContentColor: UIColor, switchHandleColor: UIColor) {
+    public init(dimColor: UIColor, backgroundType: ActionSheetControllerThemeBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, controlColor: UIColor, switchFrameColor: UIColor, switchContentColor: UIColor, switchHandleColor: UIColor, baseFontSize: CGFloat) {
         self.dimColor = dimColor
         self.backgroundType = backgroundType
         self.itemBackgroundColor = itemBackgroundColor
@@ -37,6 +38,7 @@ public final class ActionSheetControllerTheme: Equatable {
         self.switchFrameColor = switchFrameColor
         self.switchContentColor = switchContentColor
         self.switchHandleColor = switchHandleColor
+        self.baseFontSize = min(26.0, baseFontSize)
     }
     
     public static func ==(lhs: ActionSheetControllerTheme, rhs: ActionSheetControllerTheme) -> Bool {
@@ -80,6 +82,9 @@ public final class ActionSheetControllerTheme: Equatable {
             return false
         }
         if lhs.switchHandleColor != rhs.switchHandleColor {
+            return false
+        }
+        if lhs.baseFontSize != rhs.baseFontSize {
             return false
         }
         return true

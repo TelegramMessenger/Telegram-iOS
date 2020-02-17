@@ -45,7 +45,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         self.activityIndicator.isHidden = true
         
         self.scrollNode = ASScrollNode()
-        self.headerNode = SecureIdAuthHeaderNode(account: context.account, theme: presentationData.theme, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder)
+        self.headerNode = SecureIdAuthHeaderNode(context: context, theme: presentationData.theme, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder)
         self.acceptNode = SecureIdAuthAcceptNode(title: presentationData.strings.Passport_Authorize, theme: presentationData.theme)
         
         super.init()
@@ -727,7 +727,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         }
         
         if let currentValue = currentValue {
-            let controller = ActionSheetController(presentationTheme: self.presentationData.theme)
+            let controller = ActionSheetController(presentationData: self.presentationData)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
             }
@@ -847,7 +847,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 return
             }
             
-            let controller = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+            let controller = ActionSheetController(presentationData: strongSelf.presentationData)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
             }
@@ -916,7 +916,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     ]
                 }
                 
-                let controller = ActionSheetController(presentationTheme: self.presentationData.theme)
+                let controller = ActionSheetController(presentationData: self.presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }
@@ -961,7 +961,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     private func deleteAllValues() {
-        let controller = ActionSheetController(presentationTheme: self.presentationData.theme)
+        let controller = ActionSheetController(presentationData: self.presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

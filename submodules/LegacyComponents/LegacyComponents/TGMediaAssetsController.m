@@ -122,6 +122,7 @@
         pickerController.onlyCrop = strongController.onlyCrop;
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
         pickerController.hasSchedule = strongController.hasSchedule;
+        pickerController.reminder = strongController.reminder;
         pickerController.presentScheduleController = strongController.presentScheduleController;
         [strongController pushViewController:pickerController animated:true];
     };
@@ -212,6 +213,12 @@
 {
     _hasSchedule = hasSchedule;
     self.pickerController.hasSchedule = hasSchedule;
+}
+
+- (void)setReminder:(bool)reminder
+{
+    _reminder = reminder;
+    self.pickerController.reminder = reminder;
 }
 
 - (void)setPresentScheduleController:(void (^)(void (^)(int32_t)))presentScheduleController {

@@ -26,7 +26,7 @@ brew install cmake ant
 
 ```
 mkdir -p $HOME/buck_source
-cd tools/buck
+cd tools/buck-build
 sh ./prepare_buck_source.sh $HOME/buck_source
 ```
 

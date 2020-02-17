@@ -33,8 +33,6 @@ private func measureString(_ string: String) -> String {
     }
 }
 
-private let badgeFont = Font.regular(14.0)
-
 final class ChatListBadgeNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let textNode: TextNode
@@ -63,13 +61,13 @@ final class ChatListBadgeNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (CGSize, UIImage?, ChatListBadgeContent) -> (CGSize, (Bool, Bool) -> Void) {
+    func asyncLayout() -> (CGSize, CGFloat, UIFont, UIImage?, ChatListBadgeContent) -> (CGSize, (Bool, Bool) -> Void) {
         let textLayout = TextNode.asyncLayout(self.textNode)
         let measureTextLayout = TextNode.asyncLayout(self.measureTextNode)
         
         let currentContent = self.content
         
-        return { [weak self] boundingSize, backgroundImage, content in
+        return { [weak self] boundingSize, imageWidth, badgeFont, backgroundImage, content in
             var badgeWidth: CGFloat = 0.0
             
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
@@ -79,14 +77,14 @@ final class ChatListBadgeNode: ASDisplayNode {
                     
                     let (measureLayout, _) = measureTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: measureString(text.string), font: badgeFont, textColor: .black), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: boundingSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     
-                    badgeWidth = max(20.0, measureLayout.size.width + 10.0)
+                    badgeWidth = max(imageWidth, measureLayout.size.width + imageWidth / 2.0)
                 case .mention, .blank:
-                    badgeWidth = 20.0
+                    badgeWidth = imageWidth
                 case .none:
                     badgeWidth = 0.0
             }
             
-            return (CGSize(width: badgeWidth, height: 20.0), { animated, bounce in
+            return (CGSize(width: badgeWidth, height: imageWidth), { animated, bounce in
                 if let strongSelf = self {
                     strongSelf.content = content
                     
@@ -98,7 +96,7 @@ final class ChatListBadgeNode: ASDisplayNode {
                         return
                     }
                     
-                    let badgeWidth = max(20.0, badgeWidth)
+                    let badgeWidth = max(imageWidth, badgeWidth)
                     let previousBadgeWidth = !strongSelf.backgroundNode.frame.width.isZero ? strongSelf.backgroundNode.frame.width : badgeWidth
                     
                     var animateTextNode = false

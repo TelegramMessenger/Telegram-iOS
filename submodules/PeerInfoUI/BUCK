@@ -41,6 +41,7 @@ static_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/MediaResources:MediaResources",
+        "//submodules/LocationResources:LocationResources",
         "//submodules/Geocoding:Geocoding",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LocationUI:LocationUI",
@@ -60,6 +61,10 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/Markdown:Markdown",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/TelegramIntents:TelegramIntents",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
+        "//submodules/StatisticsUI:StatisticsUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

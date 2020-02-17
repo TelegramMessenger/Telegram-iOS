@@ -99,7 +99,7 @@ public func addressNameAvailability(account: Account, domain: AddressNameDomain,
                     return .single(.invalid)
                 }
             case .theme:
-                return account.network.request(Api.functions.account.createTheme(slug: name, title: "", document: .inputDocumentEmpty))
+                return account.network.request(Api.functions.account.createTheme(flags: 0, slug: name, title: "", document: .inputDocumentEmpty, settings: nil))
                 |> map { _ -> AddressNameAvailability in
                     return .available
                 }
@@ -162,7 +162,7 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                 }
             case let .theme(theme):
                 let flags: Int32 = 1 << 0
-                return account.network.request(Api.functions.account.updateTheme(flags: flags, format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: nil, title: nil, document: nil))
+                return account.network.request(Api.functions.account.updateTheme(flags: flags, format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: nil, title: nil, document: nil, settings: nil))
                 |> mapError { _ -> UpdateAddressNameError in
                     return .generic
                 }

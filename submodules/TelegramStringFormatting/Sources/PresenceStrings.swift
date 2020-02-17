@@ -109,12 +109,13 @@ public func stringForMonth(strings: PresentationStrings, month: Int32, ofYear ye
 public enum RelativeTimestampFormatDay {
     case today
     case yesterday
+    case tomorrow
 }
 
 public func stringForUserPresence(strings: PresentationStrings, day: RelativeTimestampFormatDay, dateTimeFormat: PresentationDateTimeFormat, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
-    case .today:
+    case .today, .tomorrow:
         dayString = strings.LastSeen_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
     case .yesterday:
         dayString = strings.LastSeen_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
@@ -125,10 +126,13 @@ public func stringForUserPresence(strings: PresentationStrings, day: RelativeTim
 private func humanReadableStringForTimestamp(strings: PresentationStrings, day: RelativeTimestampFormatDay, dateTimeFormat: PresentationDateTimeFormat, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
-    case .today:
-        dayString = strings.Time_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
-    case .yesterday:
-        dayString = strings.Time_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+        case .today:
+            dayString = strings.Time_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+        case .yesterday:
+            dayString = strings.Time_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+        case .tomorrow:
+            dayString = strings.Time_TomorrowAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+        
     }
     return dayString
 }
@@ -148,12 +152,14 @@ public func humanReadableStringForTimestamp(strings: PresentationStrings, dateTi
     }
     
     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
-    if dayDifference == 0 || dayDifference == -1 {
+    if dayDifference == 0 || dayDifference == -1 || dayDifference == 1 {
         let day: RelativeTimestampFormatDay
         if dayDifference == 0 {
             day = .today
-        } else {
+        } else if dayDifference == -1 {
             day = .yesterday
+        } else {
+            day = .tomorrow
         }
         return humanReadableStringForTimestamp(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
     } else {

@@ -10,8 +10,10 @@ import TelegramPresentationData
 import AccountContext
 import LiveLocationManager
 import TemporaryCachedPeerDataManager
+#if ENABLE_WALLET
 import WalletCore
 import WalletUI
+#endif
 import PhoneNumberFormat
 
 private final class DeviceSpecificContactImportContext {
@@ -106,7 +108,9 @@ public final class AccountContextImpl: AccountContext {
     }
     public let account: Account
     
+    #if ENABLE_WALLET
     public let tonContext: StoredTonContext?
+    #endif
     
     public let fetchManager: FetchManager
     private let prefetchManager: PrefetchManager?
@@ -127,14 +131,22 @@ public final class AccountContextImpl: AccountContext {
         return self._limitsConfiguration.get()
     }
     
+    public var currentContentSettings: Atomic<ContentSettings>
+    private let _contentSettings = Promise<ContentSettings>()
+    public var contentSettings: Signal<ContentSettings, NoError> {
+        return self._contentSettings.get()
+    }
+    
     public var watchManager: WatchManager?
     
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     private var limitsConfigurationDisposable: Disposable?
+    private var contentSettingsDisposable: Disposable?
     
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
     
+    #if ENABLE_WALLET
     public var hasWallets: Signal<Bool, NoError> {
         return WalletStorageInterfaceImpl(postbox: self.account.postbox).getWalletRecords()
         |> map { records in
@@ -157,11 +169,15 @@ public final class AccountContextImpl: AccountContext {
         }
         |> distinctUntilChanged
     }
+    #endif
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration) {
+    public init(sharedContext: SharedAccountContextImpl, account: Account, /*tonContext: StoredTonContext?, */limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, temp: Bool = false)
+    {
         self.sharedContextImpl = sharedContext
         self.account = account
+        #if ENABLE_WALLET
         self.tonContext = tonContext
+        #endif
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -171,7 +187,7 @@ public final class AccountContextImpl: AccountContext {
             self.liveLocationManager = nil
         }
         self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
-        if sharedContext.applicationBindings.isMainApp {
+        if sharedContext.applicationBindings.isMainApp && !temp {
             self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
@@ -195,6 +211,16 @@ public final class AccountContextImpl: AccountContext {
             let _ = currentLimitsConfiguration.swap(value)
         })
         
+        let updatedContentSettings = getContentSettings(postbox: account.postbox)
+        self.currentContentSettings = Atomic(value: contentSettings)
+        self._contentSettings.set(.single(contentSettings) |> then(updatedContentSettings))
+        
+        let currentContentSettings = self.currentContentSettings
+        self.contentSettingsDisposable = (self._contentSettings.get()
+        |> deliverOnMainQueue).start(next: { value in
+            let _ = currentContentSettings.swap(value)
+        })
+        
         let queue = Queue()
         self.deviceSpecificContactImportContexts = QueueLocalObject(queue: queue, generate: {
             return DeviceSpecificContactImportContexts(queue: queue)
@@ -214,6 +240,7 @@ public final class AccountContextImpl: AccountContext {
     deinit {
         self.limitsConfigurationDisposable?.dispose()
         self.managedAppSpecificContactsDisposable?.dispose()
+        self.contentSettingsDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

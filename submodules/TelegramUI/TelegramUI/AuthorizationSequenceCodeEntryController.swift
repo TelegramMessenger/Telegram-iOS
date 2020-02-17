@@ -37,9 +37,9 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
-        self.strings = strings
-        self.theme = theme
+    init(presentationData: PresentationData, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+        self.strings = presentationData.strings
+        self.theme = presentationData.theme
         self.openUrl = openUrl
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
@@ -56,8 +56,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             return false
         }
         self.navigationBar?.backPressed = { [weak self] in
-            self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
-            }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
+            self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Login_CancelPhoneVerificationContinue, action: {
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_CancelPhoneVerificationStop, action: {
                 back()
             })]), in: .window(.root))
         }

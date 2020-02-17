@@ -15,8 +15,9 @@ import SearchUI
 import ItemListPeerItem
 import ContactsPeerItem
 import ChatListSearchItemHeader
+import ItemListUI
 
-enum ChannelMembersSearchMode {
+public enum ChannelMembersSearchMode {
     case searchMembers
     case searchAdmins
     case searchBanned
@@ -138,10 +139,10 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
                     interaction.peerSelected(peer, nil)
                 })
             case let .participant(participant, label, revealActions, revealed, enabled):
@@ -175,7 +176,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                     actionIcon = .add
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: participant.peer), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: revealed), options: options, actionIcon: actionIcon, index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: participant.peer), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: revealed), options: options, actionIcon: actionIcon, index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
                     interaction.peerSelected(participant.peer, participant)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     interaction.setPeerIdWithRevealedOptions(RevealedPeerId(peerId: participant.peer.id, section: self.section), fromPeerId.flatMap({ RevealedPeerId(peerId: $0, section: self.section) }))
@@ -238,10 +239,10 @@ private struct GroupMembersSearchContextState {
     var members: [RenderedChannelParticipant] = []
 }
 
-final class GroupMembersSearchContext {
+public final class GroupMembersSearchContext {
     fileprivate let state = Promise<GroupMembersSearchContextState>()
     
-    init(context: AccountContext, peerId: PeerId) {
+    public init(context: AccountContext, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
         
         let combinedSignal = combineLatest(queue: .mainQueue(), categorySignal(context: context, peerId: peerId, category: .contacts), categorySignal(context: context, peerId: peerId, category: .bots), categorySignal(context: context, peerId: peerId, category: .admins), categorySignal(context: context, peerId: peerId, category: .members))
@@ -259,12 +260,12 @@ final class GroupMembersSearchContext {
     }
 }
 
-private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ChannelMembersSearchContainerTransition {
+private func channelMembersSearchContainerPreparedRecentTransition(from fromEntries: [ChannelMembersSearchEntry], to toEntries: [ChannelMembersSearchEntry], isSearching: Bool, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ChannelMembersSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
     
     return ChannelMembersSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -274,7 +275,7 @@ private struct ChannelMembersSearchContainerState: Equatable {
     var removingParticipantIds = Set<PeerId>()
 }
 
-final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
+public final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     private let mode: ChannelMembersSearchMode
@@ -295,15 +296,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let removeMemberDisposable = MetaDisposable()
     
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PresentationDateTimeFormat)>
+    private let presentationDataPromise: Promise<PresentationData>
     
-    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.dateTimeFormat))
+        self.presentationDataPromise = Promise(self.presentationData)
         
         self.emptyQueryListNode = ListView()
         self.listNode = ListView()
@@ -433,12 +434,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             removeMemberDisposable.set(signal.start())
         })
         
-        let themeAndStringsPromise = self.themeAndStringsPromise
+        let presentationDataPromise = self.presentationDataPromise
         
         let emptyQueryItems: Signal<[ChannelMembersSearchEntry]?, NoError>
         if let searchContext = searchContext {
-            emptyQueryItems = combineLatest(queue: .mainQueue(), statePromise.get(), searchContext.state.get(), context.account.postbox.peerView(id: peerId) |> take(1), themeAndStringsPromise.get())
-            |> map { state, searchState, peerView, themeAndStrings -> [ChannelMembersSearchEntry]? in
+            emptyQueryItems = combineLatest(queue: .mainQueue(), statePromise.get(), searchContext.state.get(), context.account.postbox.peerView(id: peerId) |> take(1), presentationDataPromise.get())
+            |> map { state, searchState, peerView, presentationData -> [ChannelMembersSearchEntry]? in
                 if let channel = peerView.peers[peerId] as? TelegramChannel {
                     var entries: [ChannelMembersSearchEntry] = []
                     
@@ -483,7 +484,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         if case .searchMembers = mode {
                             switch participant.participant {
                                 case .creator:
-                                    label = themeAndStrings.1.Channel_Management_LabelOwner
+                                    label = presentationData.strings.Channel_Management_LabelOwner
                                 default:
                                     break
                             }
@@ -496,15 +497,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         var peerActions: [ParticipantRevealAction] = []
                         if case .searchMembers = mode {
                             if canPromote {
-                                peerActions.append(ParticipantRevealAction(type: .neutral, title: themeAndStrings.1.GroupInfo_ActionPromote, action: .promote))
+                                peerActions.append(ParticipantRevealAction(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: .promote))
                             }
                             if canRestrict {
-                                peerActions.append(ParticipantRevealAction(type: .warning, title: themeAndStrings.1.GroupInfo_ActionRestrict, action: .restrict))
-                                peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
+                                peerActions.append(ParticipantRevealAction(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: .restrict))
+                                peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
                             }
                         }
                         
-                        entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4))
+                        entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat))
                         index += 1
                     }
                     
@@ -617,8 +618,8 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         foundRemotePeers = .single(([], []))
                 }
                 
-                return combineLatest(foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, themeAndStringsPromise.get(), statePromise.get())
-                |> map { foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, themeAndStrings, state -> [ChannelMembersSearchEntry]? in
+                return combineLatest(foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, presentationDataPromise.get(), statePromise.get())
+                |> map { foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, presentationData, state -> [ChannelMembersSearchEntry]? in
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
@@ -640,6 +641,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     var index = 0
                     
                     for participant in foundGroupMembers {
+                        if participant.peer.isDeleted {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection
@@ -689,16 +694,16 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelOwner
+                                    label = presentationData.strings.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             } else if case .searchMembers = mode {
                                 switch participant.participant {
                                     case .creator:
-                                        label = themeAndStrings.1.Channel_Management_LabelOwner
+                                        label = presentationData.strings.Channel_Management_LabelOwner
                                     case let .member(member):
                                         if member.adminInfo != nil {
-                                            label = themeAndStrings.1.Channel_Management_LabelEditor
+                                            label = presentationData.strings.Channel_Management_LabelEditor
                                         }
                                 }
                             }
@@ -710,15 +715,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var peerActions: [ParticipantRevealAction] = []
                             if case .searchMembers = mode {
                                 if canPromote {
-                                    peerActions.append(ParticipantRevealAction(type: .neutral, title: themeAndStrings.1.GroupInfo_ActionPromote, action: .promote))
+                                    peerActions.append(ParticipantRevealAction(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: .promote))
                                 }
                                 if canRestrict {
-                                    peerActions.append(ParticipantRevealAction(type: .warning, title: themeAndStrings.1.GroupInfo_ActionRestrict, action: .restrict))
-                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
+                                    peerActions.append(ParticipantRevealAction(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: .restrict))
+                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
                                 }
                             } else if case .searchAdmins = mode {
                                 if canRestrict {
-                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
+                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
                                 }
                             }
                             
@@ -726,14 +731,14 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 case .searchAdmins:
                                     switch participant.participant {
                                         case .creator:
-                                            label = themeAndStrings.1.Channel_Management_LabelOwner
+                                            label = presentationData.strings.Channel_Management_LabelOwner
                                         case let .member(_, _, adminInfo, _, _):
                                             if let adminInfo = adminInfo {
                                                 if let peer = participant.peers[adminInfo.promotedBy] {
                                                     if peer.id == participant.peer.id {
-                                                        label = themeAndStrings.1.Channel_Management_LabelAdministrator
+                                                        label = presentationData.strings.Channel_Management_LabelAdministrator
                                                     } else {
-                                                        label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
+                                                        label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                                                     }
                                                 }
                                             }
@@ -748,7 +753,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
                                                         }
-                                                        exceptionsString.append(compactStringForGroupPermission(strings: themeAndStrings.1, right: rights))
+                                                        exceptionsString.append(compactStringForGroupPermission(strings: presentationData.strings, right: rights))
                                                     }
                                                 }
                                                 label = exceptionsString
@@ -760,7 +765,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch participant.participant {
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                                label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
+                                                label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                                             }
                                         default:
                                             break
@@ -768,7 +773,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 default:
                                     break
                             }
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -792,12 +797,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelOwner
+                                    label = presentationData.strings.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             }
                             
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: false, enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4, addIcon: addIcon))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: false, enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat, addIcon: addIcon))
                             index += 1
                         }
                     }
@@ -805,7 +810,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     for peer in foundContacts.0 {
                         if !existingPeerIds.contains(peer.id) {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .contacts, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .contacts, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -814,7 +819,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         let peer = foundPeer.peer
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -823,7 +828,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         let peer = foundPeer.peer
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -901,8 +906,8 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     foundRemotePeers = .single(([], []))
                 }
                 
-                return combineLatest(foundGroupMembers, foundMembers, foundRemotePeers, themeAndStringsPromise.get(), statePromise.get())
-                |> map { foundGroupMembers, foundMembers, foundRemotePeers, themeAndStrings, state -> [ChannelMembersSearchEntry]? in
+                return combineLatest(foundGroupMembers, foundMembers, foundRemotePeers, presentationDataPromise.get(), statePromise.get())
+                |> map { foundGroupMembers, foundMembers, foundRemotePeers, presentationData, state -> [ChannelMembersSearchEntry]? in
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
@@ -973,16 +978,16 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelOwner
+                                    label = presentationData.strings.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             } else if case .searchMembers = mode {
                                 switch participant.participant {
                                     case .creator:
-                                        label = themeAndStrings.1.Channel_Management_LabelOwner
+                                        label = presentationData.strings.Channel_Management_LabelOwner
                                     case let .member(member):
                                         if member.adminInfo != nil {
-                                            label = themeAndStrings.1.Channel_Management_LabelEditor
+                                            label = presentationData.strings.Channel_Management_LabelEditor
                                         }
                                 }
                             }
@@ -994,11 +999,11 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var peerActions: [ParticipantRevealAction] = []
                             /*if case .searchMembers = mode {
                                 if canPromote {
-                                    peerActions.append(ParticipantRevealAction(type: .neutral, title: themeAndStrings.1.GroupInfo_ActionPromote, action: .promote))
+                                    peerActions.append(ParticipantRevealAction(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: .promote))
                                 }
                                 if canRestrict {
-                                    peerActions.append(ParticipantRevealAction(type: .warning, title: themeAndStrings.1.GroupInfo_ActionRestrict, action: .restrict))
-                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
+                                    peerActions.append(ParticipantRevealAction(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: .restrict))
+                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
                                 }
                             }*/
                             
@@ -1006,14 +1011,14 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 case .searchAdmins:
                                     switch participant.participant {
                                     case .creator:
-                                        label = themeAndStrings.1.Channel_Management_LabelOwner
+                                        label = presentationData.strings.Channel_Management_LabelOwner
                                     case let .member(_, _, adminInfo, _, _):
                                         if let adminInfo = adminInfo {
                                             if let peer = participant.peers[adminInfo.promotedBy] {
                                                 if peer.id == participant.peer.id {
-                                                    label = themeAndStrings.1.Channel_Management_LabelAdministrator
+                                                    label = presentationData.strings.Channel_Management_LabelAdministrator
                                                 } else {
-                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
+                                                    label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                                                 }
                                             }
                                         }
@@ -1028,7 +1033,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
                                                         }
-                                                        exceptionsString.append(compactStringForGroupPermission(strings: themeAndStrings.1, right: rights))
+                                                        exceptionsString.append(compactStringForGroupPermission(strings: presentationData.strings, right: rights))
                                                     }
                                                 }
                                                 label = exceptionsString
@@ -1040,7 +1045,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch participant.participant {
                                     case let .member(_, _, _, banInfo, _):
                                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                            label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
+                                            label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                                         }
                                     default:
                                         break
@@ -1048,7 +1053,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 default:
                                     break
                             }
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == RevealedPeerId(peerId: participant.peer.id, section: section), enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -1072,12 +1077,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelOwner
+                                    label = presentationData.strings.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             }
                             
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: false, enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4, addIcon: addIcon))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: false, enabled: enabled), section: section, dateTimeFormat: presentationData.dateTimeFormat, addIcon: addIcon))
                             index += 1
                         }
                     }
@@ -1086,7 +1091,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         let peer = foundPeer.peer
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -1095,7 +1100,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         let peer = foundPeer.peer
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -1110,29 +1115,29 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         let previousSearchItems = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
         let previousEmptyQueryItems = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
         
-        self.emptyQueryDisposable.set((combineLatest(emptyQueryItems, self.themeAndStringsPromise.get())
-        |> deliverOnMainQueue).start(next: { [weak self] entries, themeAndStrings in
+        self.emptyQueryDisposable.set((combineLatest(emptyQueryItems, self.presentationDataPromise.get())
+        |> deliverOnMainQueue).start(next: { [weak self] entries, presentationData in
             if let strongSelf = self {
                 let previousEntries = previousEmptyQueryItems.swap(entries)
                 let firstTime = previousEntries == nil
-                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: context.account, theme: themeAndStrings.0, strings: themeAndStrings.1, nameSortOrder: themeAndStrings.2, nameDisplayOrder: themeAndStrings.3, interaction: interaction)
+                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction)
                 strongSelf.enqueueEmptyQueryTransition(transition, firstTime: firstTime)
                 
                 if entries == nil {
                     strongSelf.emptyQueryListNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
                 } else {
-                    strongSelf.emptyQueryListNode.backgroundColor = themeAndStrings.0.chatList.backgroundColor
+                    strongSelf.emptyQueryListNode.backgroundColor = presentationData.theme.chatList.backgroundColor
                 }
             }
         }))
 
-        self.searchDisposable.set((combineLatest(foundItems, self.themeAndStringsPromise.get())
-        |> deliverOnMainQueue).start(next: { [weak self] entries, themeAndStrings in
+        self.searchDisposable.set((combineLatest(foundItems, self.presentationDataPromise.get())
+        |> deliverOnMainQueue).start(next: { [weak self] entries, presentationData in
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 updateActivity(false)
                 let firstTime = previousEntries == nil
-                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: context.account, theme: themeAndStrings.0, strings: themeAndStrings.1, nameSortOrder: themeAndStrings.2, nameDisplayOrder: themeAndStrings.3, interaction: interaction)
+                let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -1165,7 +1170,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.removeMemberDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
     }
     
@@ -1174,7 +1179,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.listNode.backgroundColor = theme.chatList.backgroundColor
     }
     
-    override func searchTextUpdated(text: String) {
+    override public func searchTextUpdated(text: String) {
         if text.isEmpty {
             self.searchQuery.set(.single(nil))
         } else {
@@ -1239,30 +1244,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        break
-                    case .spring:
-                        curve = 7
-                }
-        }
-        
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: nil)
-        }
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
@@ -1270,10 +1255,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         insets.right += layout.safeInsets.right
         
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.emptyQueryListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.emptyQueryListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.emptyQueryListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !hasValidLayout {
             hasValidLayout = true
@@ -1283,7 +1268,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         }
     }
     
-    override func scrollToTop() {
+    override public func scrollToTop() {
         if self.listNode.isHidden {
             self.emptyQueryListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         } else {

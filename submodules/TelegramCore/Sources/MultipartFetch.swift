@@ -385,7 +385,7 @@ private enum MultipartFetchSource {
 private final class MultipartFetchManager {
     let parallelParts: Int
     let defaultPartSize = 128 * 1024
-    let partAlignment = 4 * 1024
+    var partAlignment = 4 * 1024
     
     var resource: TelegramMediaResource
     var resourceReference: MediaResourceReference?
@@ -651,6 +651,7 @@ private final class MultipartFetchManager {
                     case let .switchToCdn(id, token, key, iv, partHashes):
                         switch strongSelf.source {
                             case let .master(location, download):
+                                strongSelf.partAlignment = Int(dataHashLength)
                                 strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download, continueInBackground: strongSelf.continueInBackground))
                                 strongSelf.checkState()
                             case .cdn, .none:

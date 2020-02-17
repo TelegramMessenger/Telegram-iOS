@@ -27,10 +27,14 @@ public enum RequestEditMessageError {
 }
 
 public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false, scheduleTime: Int32? = nil) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
-    return requestEditMessageInternal(account: account, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: false)
+    return requestEditMessage(postbox: account.postbox, network: account.network, stateManager: account.stateManager, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime)
+}
+
+func requestEditMessage(postbox: Postbox, network: Network, stateManager: AccountStateManager, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
+    return requestEditMessageInternal(postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: false)
     |> `catch` { error -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
         if case .invalidReference = error {
-            return requestEditMessageInternal(account: account, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: true)
+            return requestEditMessageInternal(postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime, forceReupload: true)
         } else {
             return .fail(error)
         }
@@ -45,34 +49,34 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
     }
 }
 
-private func requestEditMessageInternal(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?, forceReupload: Bool) -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> {
+private func requestEditMessageInternal(postbox: Postbox, network: Network, stateManager: AccountStateManager, transformOutgoingMessageMedia: TransformOutgoingMessageMedia?, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, scheduleTime: Int32?, forceReupload: Bool) -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> {
     let uploadedMedia: Signal<PendingMessageUploadedContentResult?, NoError>
     switch media {
-        case .keep:
-            uploadedMedia = .single(.progress(0.0))
-            |> then(.single(nil))
-        case let .update(media):
-            let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
-                let augmentedMedia = augmentMediaWithReference(media)
-                return mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveAttribute: nil, messageId: nil, attributes: [])
-            }
-            if let uploadSignal = generateUploadSignal(forceReupload) {
-                uploadedMedia = .single(.progress(0.027))
-                |> then(uploadSignal)
-                |> map { result -> PendingMessageUploadedContentResult? in
-                    switch result {
-                        case let .progress(value):
-                            return .progress(max(value, 0.027))
-                        case let .content(content):
-                            return .content(content)
-                    }
+    case .keep:
+        uploadedMedia = .single(.progress(0.0))
+        |> then(.single(nil))
+    case let .update(media):
+        let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
+            let augmentedMedia = augmentMediaWithReference(media)
+            return mediaContentToUpload(network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveAttribute: nil, messageId: nil, attributes: [])
+        }
+        if let uploadSignal = generateUploadSignal(forceReupload) {
+            uploadedMedia = .single(.progress(0.027))
+            |> then(uploadSignal)
+            |> map { result -> PendingMessageUploadedContentResult? in
+                switch result {
+                    case let .progress(value):
+                        return .progress(max(value, 0.027))
+                    case let .content(content):
+                        return .content(content)
                 }
-                |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
-                    return .single(nil)
-                }
-            } else {
-                uploadedMedia = .single(nil)
             }
+            |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
+                return .single(nil)
+            }
+        } else {
+            uploadedMedia = .single(nil)
+        }
     }
     return uploadedMedia
     |> mapError { _ -> RequestEditMessageInternalError in return .error(.generic) }
@@ -86,7 +90,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                     pendingMediaContent = content.content
             }
         }
-        return account.postbox.transaction { transaction -> (Peer?, Message?, SimpleDictionary<PeerId, Peer>) in
+        return postbox.transaction { transaction -> (Peer?, Message?, SimpleDictionary<PeerId, Peer>) in
             guard let message = transaction.getMessage(messageId) else {
                 return (nil, nil, SimpleDictionary())
             }
@@ -155,7 +159,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                     flags |= Int32(1 << 15)
                 }
                 
-                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime))
+                return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime))
                 |> map { result -> Api.Updates? in
                     return result
                 }
@@ -176,16 +180,58 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                 }
                 |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
                     if let result = result {
-                        return account.postbox.transaction { transaction -> RequestEditMessageResult in
+                        return postbox.transaction { transaction -> RequestEditMessageResult in
                             var toMedia: Media?
                             if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0) }) {
                                 toMedia = message.media.first
                             }
                             
                             if case let .update(fromMedia) = media, let toMedia = toMedia {
-                                applyMediaResourceChanges(from: fromMedia.media, to: toMedia, postbox: account.postbox)
+                                applyMediaResourceChanges(from: fromMedia.media, to: toMedia, postbox: postbox, force: true)
                             }
-                            account.stateManager.addUpdates(result)
+                            
+                            switch result {
+                            case let .updates(updates, users, chats, _, _):
+                                for update in updates {
+                                    switch update {
+                                    case .updateEditMessage(let message, _, _), .updateNewMessage(let message, _, _), .updateEditChannelMessage(let message, _, _), .updateNewChannelMessage(let message, _, _):
+                                        var peers: [Peer] = []
+                                        for chat in chats {
+                                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                                peers.append(groupOrChannel)
+                                            }
+                                        }
+                                        for user in users {
+                                            let telegramUser = TelegramUser(user: user)
+                                            peers.append(telegramUser)
+                                        }
+                                        
+                                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
+                                        
+                                        if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {
+                                            transaction.updateMessage(id, update: { previousMessage in
+                                                var updatedFlags = message.flags
+                                                var updatedLocalTags = message.localTags
+                                                if previousMessage.localTags.contains(.OutgoingLiveLocation) {
+                                                    updatedLocalTags.insert(.OutgoingLiveLocation)
+                                                }
+                                                if previousMessage.flags.contains(.Incoming) {
+                                                    updatedFlags.insert(.Incoming)
+                                                } else {
+                                                    updatedFlags.remove(.Incoming)
+                                                }
+                                                return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
+                                            })
+                                        }
+                                    default:
+                                        break
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                            
+                            stateManager.addUpdates(result)
                             
                             return .done(true)
                         }

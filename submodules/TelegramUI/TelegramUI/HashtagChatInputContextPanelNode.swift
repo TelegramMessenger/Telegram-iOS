@@ -6,9 +6,11 @@ import TelegramCore
 import SyncCore
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import AccountContext
+import ItemListUI
 
 private struct HashtagChatInputContextPanelEntryStableId: Hashable {
     let text: String
@@ -18,25 +20,26 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let theme: PresentationTheme
     let text: String
+    let revealed: Bool
     
     var stableId: HashtagChatInputContextPanelEntryStableId {
         return HashtagChatInputContextPanelEntryStableId(text: self.text)
     }
     
     func withUpdatedTheme(_ theme: PresentationTheme) -> HashtagChatInputContextPanelEntry {
-        return HashtagChatInputContextPanelEntry(index: self.index, theme: theme, text: self.text)
+        return HashtagChatInputContextPanelEntry(index: self.index, theme: theme, text: self.text, revealed: self.revealed)
     }
     
     static func ==(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.text == rhs.text && lhs.theme === rhs.theme
+        return lhs.index == rhs.index && lhs.text == rhs.text && lhs.theme === rhs.theme && lhs.revealed == rhs.revealed
     }
     
     static func <(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
-        return HashtagChatInputPanelItem(theme: self.theme, text: self.text, hashtagSelected: hashtagSelected)
+    func item(account: Account, presentationData: PresentationData, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) -> ListViewItem {
+        return HashtagChatInputPanelItem(presentationData: ItemListPresentationData(presentationData), text: self.text, revealed: self.revealed, setHashtagRevealed: setHashtagRevealed, hashtagSelected: hashtagSelected, removeRequested: removeRequested)
     }
 }
 
@@ -46,12 +49,12 @@ private struct HashtagChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], account: Account, hashtagSelected: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], account: Account, presentationData: PresentationData, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, setHashtagRevealed: setHashtagRevealed, hashtagSelected: hashtagSelected, removeRequested: removeRequested), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, setHashtagRevealed: setHashtagRevealed, hashtagSelected: hashtagSelected, removeRequested: removeRequested), directionHint: nil) }
     
     return HashtagChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -60,10 +63,13 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private let listView: ListView
     private var currentEntries: [HashtagChatInputContextPanelEntry]?
     
+    private var currentResults: [String] = []
+    private var revealedHashtag: String?
+    
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
@@ -71,7 +77,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -80,11 +86,13 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     func updateResults(_ results: [String]) {
+        self.currentResults = results
+        
         var entries: [HashtagChatInputContextPanelEntry] = []
         var index = 0
         var stableIds = Set<HashtagChatInputContextPanelEntryStableId>()
         for text in results {
-            let entry = HashtagChatInputContextPanelEntry(index: index, theme: self.theme, text: text)
+            let entry = HashtagChatInputContextPanelEntry(index: index, theme: self.theme, text: text, revealed: text == self.revealedHashtag)
             if stableIds.contains(entry.stableId) {
                 continue
             }
@@ -97,7 +105,13 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func prepareTransition(from: [HashtagChatInputContextPanelEntry]? , to: [HashtagChatInputContextPanelEntry]) {
         let firstTime = from == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, hashtagSelected: { [weak self] text in
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, presentationData: presentationData, setHashtagRevealed: { [weak self] text in
+            if let strongSelf = self {
+                strongSelf.revealedHashtag = text
+                strongSelf.updateResults(strongSelf.currentResults)
+            }
+        }, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?
@@ -121,6 +135,11 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     }
                     return (textInputState, inputMode)
                 }
+            }
+        }, removeRequested: { [weak self] text in
+            if let strongSelf = self {
+                let _ = removeRecentlyUsedHashtag(postbox: strongSelf.context.account.postbox, string: text).start()
+                strongSelf.revealedHashtag = nil
             }
         })
         self.currentEntries = to
@@ -192,29 +211,8 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-        case .immediate:
-            break
-        case let .animated(animationDuration, animationCurve):
-            duration = animationDuration
-            switch animationCurve {
-                case .easeInOut, .custom:
-                    break
-                case .spring:
-                    curve = 7
-            }
-        }
-        
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
-        
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: listViewCurve)
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve)
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         

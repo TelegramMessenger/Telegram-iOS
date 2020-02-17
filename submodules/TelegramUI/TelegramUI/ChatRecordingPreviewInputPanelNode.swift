@@ -9,6 +9,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import UniversalMediaPlayer
 import AppBundle
+import ContextUI
 
 private func generatePauseIcon(_ theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPause"), color: theme.chat.inputPanel.actionControlForegroundColor)
@@ -37,6 +38,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     private let durationLabel: MediaPlayerTimeTextNode
     
     private let statusDisposable = MetaDisposable()
+    
+    private var gestureRecognizer: ContextGesture?
     
     init(theme: PresentationTheme) {
         self.deleteButton = HighlightableButtonNode()
@@ -112,18 +115,18 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     override func didLoad() {
         super.didLoad()
         
-        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
-        gestureRecognizer.minimumPressDuration = 0.4
+        let gestureRecognizer = ContextGesture(target: nil, action: nil)
         self.sendButton.view.addGestureRecognizer(gestureRecognizer)
-    }
-    
-    @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        if gestureRecognizer.state == .began {
-            self.interfaceInteraction?.displaySendMessageOptions()
+        self.gestureRecognizer = gestureRecognizer
+        gestureRecognizer.activated = { [weak self] gesture in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.interfaceInteraction?.displaySendMessageOptions(strongSelf.sendButton, gesture)
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             var updateWaveform = false
             if self.presentationInterfaceState?.recordedMediaPreview != interfaceState.recordedMediaPreview {

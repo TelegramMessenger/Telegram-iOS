@@ -60,8 +60,7 @@ private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIV
 }
 
 private final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
+    private var presentationData: PresentationData
     private let source: ContextContentSource
     private var items: Signal<[ContextMenuItem], NoError>
     private let beginDismiss: (ContextMenuActionResult) -> Void
@@ -70,6 +69,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let attemptTransitionControllerIntoNavigation: () -> Void
     private let getController: () -> ContextController?
     private weak var gesture: ContextGesture?
+    private var displayTextSelectionTip: Bool
     
     private var didSetItemsReady = false
     let itemsReady = Promise<Bool>()
@@ -108,9 +108,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
-    init(account: Account, controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void, displayTextSelectionTip: Bool) {
+        self.presentationData = presentationData
         self.source = source
         self.items = items
         self.beginDismiss = beginDismiss
@@ -118,6 +117,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.beganAnimatingOut = beganAnimatingOut
         self.attemptTransitionControllerIntoNavigation = attemptTransitionControllerIntoNavigation
         self.gesture = gesture
+        self.displayTextSelectionTip = displayTextSelectionTip
         
         self.getController = { [weak controller] in
             return controller
@@ -126,7 +126,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.effectView = UIVisualEffectView()
         if #available(iOS 9.0, *) {
         } else {
-            if theme.rootController.keyboardColor == .dark {
+            if presentationData.theme.rootController.keyboardColor == .dark {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.effect = UIBlurEffect(style: .light)
@@ -135,7 +135,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = theme.contextMenu.dimColor
+        self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         self.dimNode.alpha = 0.0
         
         self.withoutBlurDimNode = ASDisplayNode()
@@ -159,16 +159,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         var feedbackTap: (() -> Void)?
         
-        self.actionsContainerNode = ContextActionsContainerNode(theme: theme, items: [], getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: [], getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
         }, feedbackTap: {
             feedbackTap?()
-        })
+        }, displayTextSelectionTip: self.displayTextSelectionTip)
         
         if !reactionItems.isEmpty {
-            let reactionContextNode = ReactionContextNode(account: account, theme: theme, items: reactionItems)
+            let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
             self.reactionContextNode = reactionContextNode
         } else {
             self.reactionContextNode = nil
@@ -520,7 +520,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.effectView.effect = makeCustomZoomBlurEffect()
             self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: { [weak self] in
-                //self?.effectView.effect = makeCustomZoomBlurEffect()
             })
         }
         
@@ -531,6 +530,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }, completion: { [weak self] in
                     self?.didCompleteAnimationIn = true
                     self?.hapticFeedback.prepareTap()
+                    self?.actionsContainerNode.animateIn()
                 })
             }
         } else {
@@ -538,6 +538,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.effectView.effect = makeCustomZoomBlurEffect()
             }, completion: { [weak self] _ in
                 self?.didCompleteAnimationIn = true
+                self?.actionsContainerNode.animateIn()
             })
         }
         
@@ -923,7 +924,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func animateOutToReaction(value: String, into targetNode: ASImageNode, hideNode: Bool, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: String, into targetNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.animateOut(result: .default, completion: completion)
             return
@@ -967,13 +968,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.currentItems = items
         
         let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(theme: self.theme, items: items, getController: { [weak self] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: items, getController: { [weak self] in
             return self?.getController()
         }, actionSelected: { [weak self] result in
             self?.beginDismiss(result)
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        })
+        }, displayTextSelectionTip: self.displayTextSelectionTip)
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {
@@ -985,15 +986,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if !self.didSetItemsReady {
             self.didSetItemsReady = true
+            self.displayTextSelectionTip = false
             self.itemsReady.set(.single(true))
         }
     }
     
-    func updateTheme(theme: PresentationTheme) {
-        self.theme = theme
+    func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
         
-        self.dimNode.backgroundColor = theme.contextMenu.dimColor
-        self.actionsContainerNode.updateTheme(theme: theme)
+        self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
+        self.actionsContainerNode.updateTheme(presentationData: presentationData)
         
         if let validLayout = self.validLayout {
             self.updateLayout(layout: validLayout, transition: .immediate, previousActionsContainerNode: nil)
@@ -1365,8 +1367,7 @@ public enum ContextContentSource {
 
 public final class ContextController: ViewController, StandalonePresentableController {
     private let account: Account
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
+    private var presentationData: PresentationData
     private let source: ContextContentSource
     private var items: Signal<[ContextMenuItem], NoError>
     private var reactionItems: [ReactionContextItem]
@@ -1378,6 +1379,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private weak var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private weak var gesture: ContextGesture?
+    private let displayTextSelectionTip: Bool
     
     private var animatedDidAppear = false
     private var wasDismissed = false
@@ -1388,15 +1390,15 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((String) -> Void)?
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, displayTextSelectionTip: Bool = false) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         self.source = source
         self.items = items
         self.reactionItems = reactionItems
         self.recognizer = recognizer
         self.gesture = gesture
+        self.displayTextSelectionTip = displayTextSelectionTip
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1408,7 +1410,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContextControllerNode(account: self.account, controller: self, theme: self.theme, strings: self.strings, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
+        self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
             }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
             guard let strongSelf = self else {
@@ -1430,7 +1432,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             default:
                 break
             }
-        })
+        }, displayTextSelectionTip: self.displayTextSelectionTip)
         
         self.displayNodeDidLoad()
         
@@ -1465,10 +1467,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
         }
     }
     
-    public func updateTheme(theme: PresentationTheme) {
-        self.theme = theme
+    public func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
         if self.isNodeLoaded {
-            self.controllerNode.updateTheme(theme: theme)
+            self.controllerNode.updateTheme(presentationData: presentationData)
         }
     }
     
@@ -1486,7 +1488,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.dismiss(result: .default, completion: completion)
     }
     
-    public func dismissWithReaction(value: String, into targetNode: ASImageNode, hideNode: Bool, completion: (() -> Void)?) {
+    public func dismissWithReaction(value: String, into targetNode: ASDisplayNode, hideNode: Bool, completion: (() -> Void)?) {
         if !self.wasDismissed {
             self.wasDismissed = true
             self.controllerNode.animateOutToReaction(value: value, into: targetNode, hideNode: hideNode, completion: { [weak self] in

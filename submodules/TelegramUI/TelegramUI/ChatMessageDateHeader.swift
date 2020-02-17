@@ -50,9 +50,14 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     func node() -> ListViewItemHeaderNode {
         return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, context: self.context, action: self.action)
     }
+    
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        guard let node = node as? ChatMessageDateHeaderNode, let next = next as? ChatMessageDateHeader else {
+            return
+        }
+        node.updatePresentationData(next.presentationData, context: next.context)
+    }
 }
-
-private let titleFont = Font.medium(13.0)
 
 private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
     switch index {
@@ -93,6 +98,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     private let localTimestamp: Int32
     private var presentationData: ChatPresentationData
     private let context: AccountContext
+    private let text: String
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
@@ -107,7 +113,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
-        self.labelNode.displaysAsynchronously = true
+        self.labelNode.displaysAsynchronously = !presentationData.isPreview
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -118,19 +124,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.stickBackgroundNode.isLayerBacked = true
         self.stickBackgroundNode.displayWithoutProcessing = true
         self.stickBackgroundNode.displaysAsynchronously = false
-        
-        super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
-        
-        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
-        
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
-        
-        self.backgroundNode.image = graphics.dateStaticBackground
-        self.stickBackgroundNode.image = graphics.dateFloatingBackground
-        self.stickBackgroundNode.alpha = 0.0
-        self.backgroundNode.addSubnode(self.stickBackgroundNode)
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.labelNode)
         
         let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
@@ -162,6 +155,22 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
                 text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
             }
         }
+        self.text = text
+        
+        super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
+        
+        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+        
+        self.backgroundNode.image = graphics.dateStaticBackground
+        self.stickBackgroundNode.image = graphics.dateFloatingBackground
+        self.stickBackgroundNode.alpha = 0.0
+        self.backgroundNode.addSubnode(self.stickBackgroundNode)
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.labelNode)
+        
+        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
@@ -178,12 +187,36 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     }
     
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
+        let previousPresentationData = self.presentationData
+        self.presentationData = presentationData
+        
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
+        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        
+        let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
+        let labelLayout = TextNode.asyncLayout(self.labelNode)
+        
+        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = apply()
+        
+        if presentationData.fontSize != previousPresentationData.fontSize {
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
+        }
+
         self.setNeedsLayout()
+    }
+    
+    func updateBackgroundColor(_ color: UIColor) {
+        let chatDateSize: CGFloat = 20.0
+        self.backgroundNode.image = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(color.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {

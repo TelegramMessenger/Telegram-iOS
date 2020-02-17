@@ -246,6 +246,10 @@ private final class WindowRootViewController: UIViewController, UIViewController
             self.previousPreviewingHostView = nil
         }
     }
+    
+    override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        super.present(viewControllerToPresent, animated: flag, completion: completion)
+    }
 }
 
 private final class NativeWindow: UIWindow, WindowHost {

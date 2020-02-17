@@ -21,7 +21,7 @@
 - (void)stopRunning;
 
 - (void)startRecording:(NSURL *)url preset:(TGMediaVideoConversionPreset)preset liveUpload:(bool)liveUpload;
-- (void)stopRecording;
+- (void)stopRecording:(void (^)())completed;
 
 - (CGAffineTransform)transformForOrientation:(AVCaptureVideoOrientation)orientation;
 

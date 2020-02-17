@@ -13,6 +13,7 @@
 @class MTSessionInfo;
 @class MTApiEnvironment;
 @class MTSignal;
+@class MTQueue;
 
 @protocol MTContextChangeListener <NSObject>
 
@@ -21,12 +22,13 @@
 - (void)contextDatacenterAddressSetUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet;
 - (void)contextDatacenterAuthInfoUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo;
 - (void)contextDatacenterAuthTokenUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authToken:(id)authToken;
-- (void)contextDatacenterTransportSchemesUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId;
+- (void)contextDatacenterTransportSchemesUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId shouldReset:(bool)shouldReset;
 - (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId;
 - (void)contextDatacenterPublicKeysUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
 - (MTSignal *)fetchContextDatacenterPublicKeys:(MTContext *)context datacenterId:(NSInteger)datacenterId;
 - (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment;
 - (MTSignal *)isContextNetworkAccessAllowed:(MTContext *)context;
+- (void)contextLoggedOut:(MTContext *)context;
 
 @end
 
@@ -50,6 +52,8 @@
 
 + (int32_t)fixedTimeDifference;
 + (void)setFixedTimeDifference:(int32_t)fixedTimeDifference;
+
++ (MTQueue *)contextQueue;
 
 - (instancetype)initWithSerialization:(id<MTSerialization>)serialization encryptionProvider:(id<EncryptionProvider>)encryptionProvider apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
 
@@ -112,5 +116,7 @@
 - (void)updateApiEnvironment:(MTApiEnvironment *(^)(MTApiEnvironment *))f;
 
 - (void)beginExplicitBackupAddressDiscovery;
+
+- (void)checkIfLoggedOut:(NSInteger)datacenterId;
 
 @end

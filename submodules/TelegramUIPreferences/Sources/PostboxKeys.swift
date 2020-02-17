@@ -6,11 +6,13 @@ import Postbox
 private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case voipDerivedState = 16
     case chatArchiveSettings = 17
+    case chatListFilterSettings = 18
 }
 
 public struct ApplicationSpecificPreferencesKeys {
     public static let voipDerivedState = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voipDerivedState.rawValue)
     public static let chatArchiveSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatArchiveSettings.rawValue)
+    public static let chatListFilterSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatListFilterSettings.rawValue)
 }
 
 private enum ApplicationSpecificSharedDataKeyValues: Int32 {
@@ -60,6 +62,7 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case cachedInstantPages = 1
     case cachedWallpapers = 2
     case mediaPlaybackStoredState = 3
+    case cachedGeocodes = 4
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -67,6 +70,7 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let cachedInstantPages = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedInstantPages.rawValue)
     public static let cachedWallpapers = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedWallpapers.rawValue)
     public static let mediaPlaybackStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.mediaPlaybackStoredState.rawValue)
+    public static let cachedGeocodes = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedGeocodes.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {

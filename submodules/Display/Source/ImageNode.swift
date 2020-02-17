@@ -8,12 +8,12 @@ private let dispatcher = displayLinkDispatcher
 
 public enum ImageCorner: Equatable {
     case Corner(CGFloat)
-    case Tail(CGFloat, Bool)
+    case Tail(CGFloat, UIImage)
     
     public var extendedInsets: CGSize {
         switch self {
             case .Tail:
-                return CGSize(width: 3.0, height: 0.0)
+                return CGSize(width: 4.0, height: 0.0)
             default:
                 return CGSize()
         }
@@ -36,15 +36,6 @@ public enum ImageCorner: Equatable {
                 return radius
         }
     }
-    
-    public func scaledBy(_ scale: CGFloat) -> ImageCorner {
-        switch self {
-            case let .Corner(radius):
-                return .Corner(radius * scale)
-            case let .Tail(radius, enabled):
-                return .Tail(radius * scale, enabled)
-        }
-    }
 }
 
 public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
@@ -56,8 +47,8 @@ public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
                 default:
                     return false
             }
-        case let .Tail(lhsRadius, lhsEnabled):
-            if case let .Tail(rhsRadius, rhsEnabled) = rhs, lhsRadius.isEqual(to: rhsRadius), lhsEnabled == rhsEnabled {
+        case let .Tail(lhsRadius, lhsImage):
+            if case let .Tail(rhsRadius, rhsImage) = rhs, lhsRadius.isEqual(to: rhsRadius), lhsImage === rhsImage {
                 return true
             } else {
                 return false
@@ -123,10 +114,6 @@ public struct ImageCorners: Equatable {
     
     public func withRemovedTails() -> ImageCorners {
         return ImageCorners(topLeft: self.topLeft.withoutTail, topRight: self.topRight.withoutTail, bottomLeft: self.bottomLeft.withoutTail, bottomRight: self.bottomRight.withoutTail)
-    }
-    
-    public func scaledBy(_ scale: CGFloat) -> ImageCorners {
-        return ImageCorners(topLeft: self.topLeft.scaledBy(scale), topRight: self.topRight.scaledBy(scale), bottomLeft: self.bottomLeft.scaledBy(scale), bottomRight: self.bottomRight.scaledBy(scale))
     }
 }
 

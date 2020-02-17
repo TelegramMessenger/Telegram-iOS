@@ -63,10 +63,13 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         }
     }
     
-    public init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
+    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
+    
+    public init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController
+        self.actionPerformed = actionPerformed
         
         self.stickerPack = stickerPack
         
@@ -133,7 +136,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
                 }
             }))
-        })
+        }, actionPerformed: self.actionPerformed)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -163,8 +166,28 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
             }
             
             switch next {
-                case let .result(_, items, _):
+                case let .result(info, items, _):
                     var preloadSignals: [Signal<Bool, NoError>] = []
+                    
+                    if let thumbnail = info.thumbnail {
+                        let signal = Signal<Bool, NoError> { subscriber in
+                            let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
+                            let data = account.postbox.mediaBox.resourceData(thumbnail.resource, option: .incremental(waitUntilFetchStatus: false)).start(next: { data in
+                                if data.complete {
+                                    subscriber.putNext(true)
+                                    subscriber.putCompletion()
+                                } else {
+                                    subscriber.putNext(false)
+                                }
+                            })
+                            return ActionDisposable {
+                                fetched.dispose()
+                                data.dispose()
+                            }
+                        }
+                        preloadSignals.append(signal)
+                    }
+                    
                     let topItems = items.prefix(16)
                     for item in topItems {
                         if let item = item as? StickerPackItem, item.file.isAnimatedSticker {
@@ -242,4 +265,79 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
+}
+
+public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCollectionInfo, items: [ItemCollectionItem]) -> Signal<Bool, NoError> {
+    if let thumbnail = info.thumbnail {
+        let signal = Signal<Bool, NoError> { subscriber in
+            let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
+            let dataDisposable: Disposable
+            if info.flags.contains(.isAnimated) {
+                dataDisposable = chatMessageAnimationData(postbox: account.postbox, resource: thumbnail.resource, width: 80, height: 80, synchronousLoad: false).start(next: { data in
+                    if data.complete {
+                        subscriber.putNext(true)
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(false)
+                    }
+                })
+            } else {
+                dataDisposable = account.postbox.mediaBox.resourceData(thumbnail.resource, option: .incremental(waitUntilFetchStatus: false)).start(next: { data in
+                    if data.complete {
+                        subscriber.putNext(true)
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(false)
+                    }
+                })
+            }
+            return ActionDisposable {
+                fetched.dispose()
+                dataDisposable.dispose()
+            }
+        }
+        return signal
+    }
+    
+    if let item = items.first as? StickerPackItem {
+        if item.file.isAnimatedSticker {
+            let signal = Signal<Bool, NoError> { subscriber in
+                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
+                let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
+                let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, file: item.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                    let hasContent = next._0 != nil || next._1 != nil
+                    subscriber.putNext(hasContent)
+                    if hasContent {
+                        subscriber.putCompletion()
+                    }
+                })
+                return ActionDisposable {
+                    fetched.dispose()
+                    data.dispose()
+                    fetchedRepresentation.dispose()
+                }
+            }
+            return signal
+        } else {
+            let signal = Signal<Bool, NoError> { subscriber in
+                let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
+                let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, file: item.file, small: true, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                    let hasContent = next._0 != nil || next._1 != nil
+                    subscriber.putNext(hasContent)
+                    if hasContent {
+                        subscriber.putCompletion()
+                    }
+                })
+                return ActionDisposable {
+                    data.dispose()
+                    fetchedRepresentation.dispose()
+                }
+            }
+            return signal
+        }
+    }
+    
+    return .single(true)
 }

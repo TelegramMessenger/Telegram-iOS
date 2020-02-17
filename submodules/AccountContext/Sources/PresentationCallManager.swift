@@ -16,6 +16,7 @@ public enum PresentationCallState: Equatable {
     case requesting(Bool)
     case connecting(Data?)
     case active(Double, Int32?, Data)
+    case reconnecting(Double, Int32?, Data)
     case terminating
     case terminated(CallId?, CallSessionTerminationReason?, Bool)
 }

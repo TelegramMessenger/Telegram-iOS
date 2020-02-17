@@ -138,6 +138,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
             
+            let autoNightModeTriggered = context.sharedContext.currentPresentationData.with {$0 }.autoNightModeTriggered
             let accountManager = context.sharedContext.accountManager
             let account = context.account
             let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
@@ -155,8 +156,20 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
                 
                 let _ = (updatePresentationThemeSettingsInteractively(accountManager: accountManager, { current in
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                    themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                    return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    let themeReference: PresentationThemeReference
+                    if autoNightModeTriggered {
+                        themeReference = current.automaticThemeSwitchSetting.theme
+                    } else {
+                        themeReference = current.theme
+                    }
+                    let accentColor = current.themeSpecificAccentColors[themeReference.index]
+                    if let accentColor = accentColor, accentColor.baseColor == .custom {
+                        themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] = wallpaper
+                    } else {
+                        themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] = nil
+                        themeSpecificChatWallpapers[themeReference.index] = wallpaper
+                    }
+                    return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                 })).start()
             }
             

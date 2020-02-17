@@ -10,12 +10,12 @@ import MobileCoreServices
 import DeviceAccess
 import AccountContext
 
-private enum SaveToCameraRollState {
+public enum FetchMediaDataState {
     case progress(Float)
     case data(MediaResourceData)
 }
 
-private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
+public func fetchMediaData(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(FetchMediaDataState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
@@ -46,7 +46,7 @@ private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefe
     }
     
     if let resource = resource {
-        let fetchedData: Signal<SaveToCameraRollState, NoError> = Signal { subscriber in
+        let fetchedData: Signal<FetchMediaDataState, NoError> = Signal { subscriber in
             let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: mediaReference.resourceReference(resource)).start()
             let status = postbox.mediaBox.resourceStatus(resource).start(next: { status in
                 switch status {

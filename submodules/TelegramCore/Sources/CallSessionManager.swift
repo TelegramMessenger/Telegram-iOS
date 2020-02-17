@@ -360,7 +360,7 @@ private final class CallSessionManagerContext {
         }
     }
     
-    func drop(internalId: CallSessionInternalId, reason: DropCallReason) {
+    func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
         if let context = self.contexts[internalId] {
             var dropData: (CallSessionStableId, Int64, DropCallSessionReason)?
             var wasRinging = false
@@ -421,10 +421,21 @@ private final class CallSessionManagerContext {
             
             if let (id, accessHash, reason) = dropData {
                 self.contextIdByStableId.removeValue(forKey: id)
-                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason) |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
+                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason)
+                |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
                             context.state = .terminated(id: id, accessHash: accessHash,  reason: .ended(.hungUp), reportRating: reportRating, sendDebugLogs: sendDebugLogs)
+                            if sendDebugLogs {
+                                let network = strongSelf.network
+                                let _ = (debugLog
+                                |> timeout(5.0, queue: strongSelf.queue, alternate: .single(nil))
+                                |> deliverOnMainQueue).start(next: { debugLog in
+                                    if let debugLog = debugLog {
+                                        let _ = saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
+                                    }
+                                })
+                            }
                             strongSelf.contextUpdated(internalId: internalId)
                             if context.isEmpty {
                                 strongSelf.contexts.removeValue(forKey: internalId)
@@ -443,14 +454,14 @@ private final class CallSessionManagerContext {
     func drop(stableId: CallSessionStableId, reason: DropCallReason) {
         if let internalId = self.contextIdByStableId[stableId] {
             self.contextIdByStableId.removeValue(forKey: stableId)
-            self.drop(internalId: internalId, reason: reason)
+            self.drop(internalId: internalId, reason: reason, debugLog: .single(nil))
         }
     }
     
     func dropAll() {
         let contexts = self.contexts
         for (internalId, _) in contexts {
-            self.drop(internalId: internalId, reason: .hangUp)
+            self.drop(internalId: internalId, reason: .hangUp, debugLog: .single(nil))
         }
     }
     
@@ -463,7 +474,7 @@ private final class CallSessionManagerContext {
                             if case .accepting = context.state {
                                 switch result {
                                     case .failed:
-                                        strongSelf.drop(internalId: internalId, reason: .disconnect)
+                                        strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                                     case let .success(call):
                                         switch call {
                                             case let .waiting(config):
@@ -474,7 +485,7 @@ private final class CallSessionManagerContext {
                                                     context.state = .active(id: id, accessHash: accessHash, beginTimestamp: timestamp, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: connections, maxLayer: maxLayer, allowsP2P: allowsP2P)
                                                     strongSelf.contextUpdated(internalId: internalId)
                                                 } else {
-                                                    strongSelf.drop(internalId: internalId, reason: .disconnect)
+                                                    strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                                                 }
                                         }
                                 }
@@ -502,7 +513,7 @@ private final class CallSessionManagerContext {
                         case let .requested(_, accessHash, a, gA, config, _):
                             let p = config.p.makeData()
                             if !MTCheckIsSafeGAOrB(self.network.encryptionProvider, gA, p) {
-                                self.drop(internalId: internalId, reason: .disconnect)
+                                self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                             }
                             var key = MTExp(self.network.encryptionProvider, gB.makeData(), a, p)!
                             
@@ -528,13 +539,13 @@ private final class CallSessionManagerContext {
                                     if let updatedCall = updatedCall {
                                         strongSelf.updateSession(updatedCall, completion: { _ in })
                                     } else {
-                                        strongSelf.drop(internalId: internalId, reason: .disconnect)
+                                        strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                                     }
                                 }
                             }))
                             self.contextUpdated(internalId: internalId)
                         default:
-                            self.drop(internalId: internalId, reason: .disconnect)
+                            self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                     }
                 } else {
                     assertionFailure()
@@ -610,10 +621,10 @@ private final class CallSessionManagerContext {
                                             self.contextUpdated(internalId: internalId)
                                     }
                                 } else {
-                                    self.drop(internalId: internalId, reason: .disconnect)
+                                    self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                                 }
                             } else {
-                                self.drop(internalId: internalId, reason: .disconnect)
+                                self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
                             }
                         case let .confirming(id, accessHash, key, keyId, keyVisualHash, _):
                             switch callProtocol {
@@ -761,9 +772,9 @@ public final class CallSessionManager {
         }
     }
     
-    public func drop(internalId: CallSessionInternalId, reason: DropCallReason) {
+    public func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
         self.withContext { context in
-            context.drop(internalId: internalId, reason: reason)
+            context.drop(internalId: internalId, reason: reason, debugLog: debugLog)
         }
     }
     

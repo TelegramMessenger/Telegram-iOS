@@ -88,13 +88,14 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.view.clipsToBounds = false
         self.scrollNode.view.delegate = self
         
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), canBegin: { [weak self] in
-            guard let strongSelf = self else {
-                return false
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] in
+            guard let strongSelf = self, !strongSelf.isDismissed else {
+                return []
             }
-            return !strongSelf.isDismissed
+            return .right
         })
         self.panRecognizer = panRecognizer
         if let layout = self.validLayout {
@@ -131,6 +132,16 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         return false
     }
     
+    private func checkInteractiveDismissWithControllers() -> Bool {
+        if let controller = self.container.controllers.last {
+            if !controller.attemptNavigation({
+            }) {
+                return false
+            }
+        }
+        return true
+    }
+    
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
@@ -147,7 +158,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             let progress = translation / self.bounds.width
             let velocity = recognizer.velocity(in: self.view).x
             
-            if velocity > 1000 || progress > 0.2 {
+            if (velocity > 1000 || progress > 0.2) && self.checkInteractiveDismissWithControllers() {
                 self.isDismissed = true
                 self.horizontalDismissOffset = self.bounds.width
                 self.dismissProgress = 1.0
@@ -243,7 +254,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         let duration = Double(min(0.3, velocityFactor))
         let transition: ContainedViewLayoutTransition
         let dismissProgress: CGFloat
-        if velocity.y < -0.5 || progress >= 0.5 {
+        if (velocity.y < -0.5 || progress >= 0.5) && self.checkInteractiveDismissWithControllers() {
             dismissProgress = 1.0
             targetOffset = 0.0
             transition = .animated(duration: duration, curve: .easeInOut)
@@ -300,12 +311,17 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.ignoreScrolling = true
         self.scrollNode.view.isScrollEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0) && self.isInteractiveDimissEnabled
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: self.horizontalDismissOffset ?? 0.0, y: 0.0), size: layout.size))
+        let previousBounds = self.scrollNode.bounds
+        let scrollNodeFrame = CGRect(origin: CGPoint(x: self.horizontalDismissOffset ?? 0.0, y: 0.0), size: layout.size)
+        self.scrollNode.frame = scrollNodeFrame
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: layout.size.height * 2.0)
         if !self.scrollNode.view.isDecelerating && !self.scrollNode.view.isDragging {
             let defaultBounds = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
             if self.scrollNode.bounds != defaultBounds {
                 self.scrollNode.bounds = defaultBounds
+            }
+            if previousBounds.minY != defaultBounds.minY {
+                transition.animateOffsetAdditive(node: self.scrollNode, offset: previousBounds.minY - defaultBounds.minY)
             }
         }
         self.ignoreScrolling = false

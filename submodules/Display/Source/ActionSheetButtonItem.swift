@@ -47,8 +47,8 @@ public class ActionSheetButtonItem: ActionSheetItem {
 public class ActionSheetButtonNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     
-    public static let defaultFont: UIFont = Font.regular(20.0)
-    public static let boldFont: UIFont = Font.medium(20.0)
+    private let defaultFont: UIFont
+    private let boldFont: UIFont
     
     private var item: ActionSheetButtonItem?
     
@@ -58,6 +58,9 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        self.boldFont = Font.medium(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
@@ -113,9 +116,9 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         }
         switch item.font {
             case .default:
-                textFont = ActionSheetButtonNode.defaultFont
+                textFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
             case .bold:
-                textFont = ActionSheetButtonNode.boldFont
+                textFont = Font.medium(floor(theme.baseFontSize * 20.0 / 17.0))
         }
         self.label.attributedText = NSAttributedString(string: item.title, font: textFont, textColor: textColor)
         self.label.isAccessibilityElement = false

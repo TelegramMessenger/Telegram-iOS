@@ -13,7 +13,7 @@ public enum ItemListMultilineTextBaseFont {
 }
 
 public class ItemListMultilineTextItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let text: String
     let enabledEntityTypes: EnabledEntityTypes
     let font: ItemListMultilineTextBaseFont
@@ -27,8 +27,8 @@ public class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     
     public let selectable: Bool
     
-    public init(theme: PresentationTheme, text: String, enabledEntityTypes: EnabledEntityTypes, font: ItemListMultilineTextBaseFont = .default, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, text: String, enabledEntityTypes: EnabledEntityTypes, font: ItemListMultilineTextBaseFont = .default, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+        self.presentationData = presentationData
         self.text = text
         self.enabledEntityTypes = enabledEntityTypes
         self.font = font
@@ -80,12 +80,6 @@ public class ItemListMultilineTextItem: ListViewItem, ItemListItem {
         self.action?()
     }
 }
-
-private let titleFont = Font.regular(17.0)
-private let titleBoldFont = Font.medium(17.0)
-private let titleItalicFont = Font.italic(17.0)
-private let titleBoldItalicFont = Font.semiboldItalic(17.0)
-private let titleFixedFont = Font.regular(17.0)
 
 public class ItemListMultilineTextItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -165,11 +159,11 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
-            let textColor: UIColor = item.theme.list.itemPrimaryTextColor
+            let textColor: UIColor = item.presentationData.theme.list.itemPrimaryTextColor
             
             let leftInset: CGFloat
             let itemBackgroundColor: UIColor
@@ -177,30 +171,33 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
             
             switch item.style {
                 case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
                     leftInset = 16.0 + params.leftInset
                 case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     leftInset = 16.0 + params.rightInset
             }
             
-            var baseFont = titleFont
-            var linkFont = titleFont
-            var boldFont = titleBoldFont
-            var italicFont = titleItalicFont
-            var boldItalicFont = titleBoldItalicFont
+            let fontSize = item.presentationData.fontSize.itemListBaseFontSize
+            
+            var baseFont = Font.regular(fontSize)
+            var linkFont = baseFont
+            var boldFont = Font.medium(fontSize)
+            var italicFont = Font.italic(fontSize)
+            var boldItalicFont = Font.semiboldItalic(fontSize)
+            let titleFixedFont = Font.monospace(fontSize)
             if case .monospace = item.font {
-                baseFont = Font.monospace(17.0)
-                linkFont = Font.monospace(17.0)
-                boldFont = Font.semiboldMonospace(17.0)
-                italicFont = Font.italicMonospace(17.0)
-                boldItalicFont = Font.semiboldItalicMonospace(17.0)
+                baseFont = Font.monospace(fontSize)
+                linkFont = Font.monospace(fontSize)
+                boldFont = Font.semiboldMonospace(fontSize)
+                italicFont = Font.italicMonospace(fontSize)
+                boldItalicFont = Font.semiboldItalicMonospace(fontSize)
             }
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
-            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: titleFont)
+            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont)
             
             let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -231,7 +228,7 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
@@ -289,7 +286,7 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
                                 strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -416,7 +413,7 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.list.itemAccentColor.withAlphaComponent(0.5))
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.5))
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

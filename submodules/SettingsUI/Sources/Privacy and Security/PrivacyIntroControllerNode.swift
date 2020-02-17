@@ -13,6 +13,7 @@ import AuthorizationUI
 private func generateButtonImage(backgroundColor: UIColor, borderColor: UIColor, highlightColor: UIColor?) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 44.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
         
         if let highlightColor = highlightColor {
             context.setFillColor(highlightColor.cgColor)

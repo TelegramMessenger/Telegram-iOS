@@ -4,8 +4,8 @@ import TelegramApi
 
 import SyncCore
 
-extension ReactionsMessageAttribute {
-    /*func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
+/*extension ReactionsMessageAttribute {
+    func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results):
             let min = (flags & (1 << 0)) != 0
@@ -33,8 +33,8 @@ extension ReactionsMessageAttribute {
             }
             return ReactionsMessageAttribute(reactions: reactions)
         }
-    }*/
-}
+    }
+}*/
 
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
     var current: ReactionsMessageAttribute?

@@ -111,6 +111,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)dealloc
 {
+    printf("Camera pipeline dealloc\n");
 	[self destroyCaptureSession];
 }
 
@@ -134,7 +135,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     {
 		_running = false;
 		
-		[self stopRecording];
+		[self stopRecording:^{}];
 		
 		[_captureSession stopRunning];
 		[self captureSessionDidStopRunning];
@@ -285,7 +286,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)captureSessionDidStopRunning
 {
-	[self stopRecording];
+	[self stopRecording:^{}];
 	[self destroyVideoPipeline];
 }
 
@@ -684,20 +685,29 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 	[recorder prepareToRecord];
 }
 
-- (void)stopRecording
+- (void)stopRecording:(void (^)())completed
 {
     [[TGVideoCameraPipeline cameraQueue] dispatch:^
     {
         @synchronized (self)
         {
-            if (_recordingStatus != TGVideoCameraRecordingStatusRecording)
+            if (_recordingStatus != TGVideoCameraRecordingStatusRecording) {
+                if (completed) {
+                    completed();
+                }
                 return;
+            }
             
             [self transitionToRecordingStatus:TGVideoCameraRecordingStatusStoppingRecording error:nil];
         }
         
         _resultDuration = _recorder.videoDuration;
-        [_recorder finishRecording];
+        [_recorder finishRecording:^{
+            __unused __auto_type description = [self description];
+            if (completed) {
+                completed();
+            }
+        }];
     }];
 }
 
@@ -734,6 +744,8 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)movieRecorderDidFinishRecording:(TGVideoCameraMovieRecorder *)__unused recorder
 {
+    printf("movieRecorderDidFinishRecording\n");
+    
 	@synchronized (self)
 	{
 		if (_recordingStatus != TGVideoCameraRecordingStatusStoppingRecording)
@@ -750,6 +762,8 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)transitionToRecordingStatus:(TGVideoCameraRecordingStatus)newStatus error:(NSError *)error
 {
+    printf("transitionToRecordingStatus %d\n", newStatus);
+    
 	TGVideoCameraRecordingStatus oldStatus = _recordingStatus;
 	_recordingStatus = newStatus;
     
@@ -763,12 +777,16 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 		}
 		else
 		{
+            __strong id<TGVideoCameraPipelineDelegate> delegate = _delegate;
 			if ((oldStatus == TGVideoCameraRecordingStatusStartingRecording) && (newStatus == TGVideoCameraRecordingStatusRecording))
-				delegateCallbackBlock = ^{ [_delegate capturePipelineRecordingDidStart:self]; };
+				delegateCallbackBlock = ^{ [delegate capturePipelineRecordingDidStart:self]; };
 			else if ((oldStatus == TGVideoCameraRecordingStatusRecording) && (newStatus == TGVideoCameraRecordingStatusStoppingRecording))
-				delegateCallbackBlock = ^{ [_delegate capturePipelineRecordingWillStop:self]; };
+				delegateCallbackBlock = ^{ [delegate capturePipelineRecordingWillStop:self]; };
 			else if ((oldStatus == TGVideoCameraRecordingStatusStoppingRecording) && (newStatus == TGVideoCameraRecordingStatusIdle))
-				delegateCallbackBlock = ^{ [_delegate capturePipelineRecordingDidStop:self duration:_resultDuration liveUploadData:_liveUploadData thumbnailImage:_recordingThumbnail thumbnails:_thumbnails]; };
+				delegateCallbackBlock = ^{
+                    printf("transitionToRecordingStatus delegateCallbackBlock _delegate == nil = %d\n", (int)(delegate == nil));
+                    [delegate capturePipelineRecordingDidStop:self duration:_resultDuration liveUploadData:_liveUploadData thumbnailImage:_recordingThumbnail thumbnails:_thumbnails];
+                };
 		}
 		
 		if (delegateCallbackBlock != nil)

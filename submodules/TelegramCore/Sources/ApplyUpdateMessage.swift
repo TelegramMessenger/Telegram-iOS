@@ -5,7 +5,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
+func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: Bool) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
         if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
@@ -23,7 +23,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
             postbox.mediaBox.moveResourceData(from: fromPreview.resource.id, to: toPreview.resource.id)
         }
-        if (fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
+        if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
         }
     }
@@ -35,7 +35,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var apiMessage: Api.Message?
         
         for resultMessage in result.messages {
-            if let id = resultMessage.id(namespace: Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+            if let id = resultMessage.id() {
                 if id.peerId == message.id.peerId {
                     apiMessage = resultMessage
                     break
@@ -43,7 +43,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         
-        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+        if let apiMessage = apiMessage, let id = apiMessage.id() {
             messageId = id.id
         } else {
             messageId = result.rawMessageIds.first
@@ -80,7 +80,14 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
-                let namespace = Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud
+                var namespace: MessageId.Namespace = Namespaces.Message.Cloud
+                if let updatedTimestamp = updatedTimestamp {
+                    if message.scheduleTime != nil && message.scheduleTime == updatedTimestamp {
+                        namespace = Namespaces.Message.ScheduledCloud
+                    }
+                } else if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                    namespace = Namespaces.Message.ScheduledCloud
+                }
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
             } else {
                 updatedId = currentMessage.id
@@ -114,6 +121,15 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                     updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
                 }
                 
+                if Namespaces.Message.allScheduled.contains(message.id.namespace) && updatedId.namespace == Namespaces.Message.Cloud {
+                    for i in 0 ..< updatedAttributes.count {
+                        if updatedAttributes[i] is OutgoingScheduleInfoMessageAttribute {
+                            updatedAttributes.remove(at: i)
+                            break
+                        }
+                    }
+                }
+                
                 attributes = updatedAttributes
                 text = currentMessage.text
                 
@@ -136,11 +152,11 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
             
             if let fromMedia = currentMessage.media.first, let toMedia = media.first {
-                applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
             }
             
             if forwardInfo == nil {
-                inner: for media in message.media {
+                inner: for media in media {
                     if let file = media as? TelegramMediaFile {
                         for attribute in file.attributes {
                             switch attribute {
@@ -215,7 +231,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         let updatedRawMessageIds = result.updatedRawMessageIds
         
         var namespace = Namespaces.Message.Cloud
-        if let message = messages.first, Namespaces.Message.allScheduled.contains(message.id.namespace) {
+        if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
             namespace = Namespaces.Message.ScheduledCloud
         }
         
@@ -225,7 +241,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 resultMessages[id] = resultMessage
             }
         }
-        
+
         var mapping: [(Message, MessageIndex, StoreMessage)] = []
         
         for message in messages {
@@ -295,7 +311,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 }
                 
                 if let fromMedia = currentMessage.media.first, let toMedia = media.first {
-                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
                 }
                 
                 if storeForwardInfo == nil {

@@ -16,8 +16,9 @@
 
 @property (nonatomic, readonly) bool tempAuth;
 @property (nonatomic, weak) id<MTDatacenterAuthActionDelegate> delegate;
+@property (nonatomic, copy) void (^completedWithResult)(bool);
 
-- (instancetype)initWithTempAuth:(bool)tempAuth tempAuthKeyType:(MTDatacenterAuthTempKeyType)tempAuthKeyType;
+- (instancetype)initWithTempAuth:(bool)tempAuth tempAuthKeyType:(MTDatacenterAuthTempKeyType)tempAuthKeyType bindKey:(MTDatacenterAuthKey *)bindKey;
 
 - (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId isCdn:(bool)isCdn;
 - (void)cancel;

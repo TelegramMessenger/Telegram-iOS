@@ -12,7 +12,11 @@ import MtProtoKitDynamic
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+#if ENABLE_WALLET
 import WalletUrl
+#endif
+
+private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
 
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
@@ -174,15 +178,34 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents[0] == "bg" {
                     let component = pathComponents[1]
                     let parameter: WallpaperUrlParameter
-                    if component.count == 6, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
+                    if [6, 8].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
+                    } else if [13, 15, 17].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                        var rotation: Int32?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "rotation" {
+                                        rotation = Int32(value)
+                                    }
+                                }
+                            }
+                        }
+                        let components = component.components(separatedBy: "-")
+                        if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
+                            parameter = .gradient(topColor, bottomColor, rotation)
+                        } else {
+                            return nil
+                        }
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?
-                        var color: UIColor?
+                        var topColor: UIColor?
+                        var bottomColor: UIColor?
+                        var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
-                                if let value = queryItem.value{
+                                if let value = queryItem.value {
                                     if queryItem.name == "mode" {
                                         for option in value.components(separatedBy: "+") {
                                             switch option.lowercased() {
@@ -195,14 +218,24 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                             }
                                         }
                                     } else if queryItem.name == "bg_color" {
-                                        color = UIColor(hexString: value)
+                                        if [6, 8].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: value) {
+                                            topColor = color
+                                        } else if [13, 15, 17].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                                            let components = value.components(separatedBy: "-")
+                                            if components.count == 2, let topColorValue = UIColor(hexString: components[0]), let bottomColorValue = UIColor(hexString: components[1]) {
+                                                topColor = topColorValue
+                                                bottomColor = bottomColorValue
+                                            }
+                                        }
                                     } else if queryItem.name == "intensity" {
                                         intensity = Int32(value)
+                                    } else if queryItem.name == "rotation" {
+                                        rotation = Int32(value)
                                     }
                                 }
                             }
                         }
-                        parameter = .slug(component, options, color, intensity)
+                        parameter = .slug(component, options, topColor, bottomColor, intensity, rotation)
                     }
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
@@ -317,7 +350,6 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
 
 public func isTelegramMeLink(_ url: String) -> Bool {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -331,7 +363,6 @@ public func isTelegramMeLink(_ url: String) -> Bool {
 
 public func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?)? {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -351,9 +382,29 @@ public func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username
     return nil
 }
 
+public func parseStickerPackUrl(_ url: String) -> String? {
+    let schemes = ["http://", "https://", ""]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .stickerPack(name) = internalUrl {
+                    return name
+                }
+            }
+        }
+    }
+    if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
+        if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .stickerPack(name) = internalUrl {
+            return name
+        }
+    }
+    
+    return nil
+}
+
 public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -374,13 +425,14 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
 }
 
 public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+    #if ENABLE_WALLET
     if url.hasPrefix("ton://") {
         if let url = URL(string: url), let parsedUrl = parseWalletUrl(url) {
             return .single(.wallet(address: parsedUrl.address, amount: parsedUrl.amount, comment: parsedUrl.comment))
         }
     }
+    #endif
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"

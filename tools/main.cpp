@@ -175,12 +175,15 @@ static void writeDataToFile(std::vector<uint8_t> const &data, std::string const 
 
 static std::vector<uint8_t> stripSwiftSymbols(std::string const &file) {
     std::string command;
-    command += "xcrun strip -ST -o /dev/stdout \"";
+
+    command += "xcrun bitcode_strip \"";
     command += file;
-    command += "\" 2> /dev/null";
-    
+    command += "\" -r -o \"";
+    command += file;
+    command += ".stripped\"";
+
     uint8_t buffer[128];
-    std::vector<uint8_t> result;
+
     FILE *pipe = popen(command.c_str(), "r");
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
@@ -190,7 +193,59 @@ static std::vector<uint8_t> stripSwiftSymbols(std::string const &file) {
         if (readBytes <= 0) {
             break;
         }
+    }
+    pclose(pipe);
+
+    command = "";
+    command += "codesign --remove-signature \"";
+    command += file;
+    command += ".stripped\"";
+
+    pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (true) {
+        size_t readBytes = fread(buffer, 1, 128, pipe);
+        if (readBytes <= 0) {
+            break;
+        }
+    }
+    pclose(pipe);
+
+    command = "";
+    command += "xcrun strip -ST -o /dev/stdout \"";
+    command += file;
+    command += ".stripped\" 2> /dev/null";
+    
+    std::vector<uint8_t> result;
+    pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (true) {
+        size_t readBytes = fread(buffer, 1, 128, pipe);
+        if (readBytes <= 0) {
+            break;
+        }
         result.insert(result.end(), buffer, buffer + readBytes);
+    }
+    pclose(pipe);
+
+    command = "";
+    command += "rm \"";
+    command += file;
+    command += ".stripped\"";
+
+    pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (true) {
+        size_t readBytes = fread(buffer, 1, 128, pipe);
+        if (readBytes <= 0) {
+            break;
+        }
     }
     pclose(pipe);
     

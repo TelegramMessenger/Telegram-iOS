@@ -4,7 +4,7 @@ import TelegramApi
 
 import SyncCore
 
-extension PeerReference {
+public extension PeerReference {
     var id: PeerId {
         switch self {
         case let .user(id, _):
@@ -15,7 +15,9 @@ extension PeerReference {
             return PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
         }
     }
-    
+}
+
+extension PeerReference {    
     var inputPeer: Api.InputPeer {
         switch self {
         case let .user(id, accessHash):

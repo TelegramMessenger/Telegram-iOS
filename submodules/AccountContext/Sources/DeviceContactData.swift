@@ -261,8 +261,9 @@ public final class DeviceContactExtendedData: Equatable {
     public let birthdayDate: Date?
     public let socialProfiles: [DeviceContactSocialProfileData]
     public let instantMessagingProfiles: [DeviceContactInstantMessagingProfileData]
+    public let note: String
      
-    public init(basicData: DeviceContactBasicData, middleName: String, prefix: String, suffix: String, organization: String, jobTitle: String, department: String, emailAddresses: [DeviceContactEmailAddressData], urls: [DeviceContactUrlData], addresses: [DeviceContactAddressData], birthdayDate: Date?, socialProfiles: [DeviceContactSocialProfileData], instantMessagingProfiles: [DeviceContactInstantMessagingProfileData]) {
+    public init(basicData: DeviceContactBasicData, middleName: String, prefix: String, suffix: String, organization: String, jobTitle: String, department: String, emailAddresses: [DeviceContactEmailAddressData], urls: [DeviceContactUrlData], addresses: [DeviceContactAddressData], birthdayDate: Date?, socialProfiles: [DeviceContactSocialProfileData], instantMessagingProfiles: [DeviceContactInstantMessagingProfileData], note: String) {
         self.basicData = basicData
         self.middleName = middleName
         self.prefix = prefix
@@ -276,6 +277,7 @@ public final class DeviceContactExtendedData: Equatable {
         self.birthdayDate = birthdayDate
         self.socialProfiles = socialProfiles
         self.instantMessagingProfiles = instantMessagingProfiles
+        self.note = note
     }
     
     public static func ==(lhs: DeviceContactExtendedData, rhs: DeviceContactExtendedData) -> Bool {
@@ -316,6 +318,9 @@ public final class DeviceContactExtendedData: Equatable {
             return false
         }
         if lhs.instantMessagingProfiles != rhs.instantMessagingProfiles {
+            return false
+        }
+        if lhs.note != rhs.note {
             return false
         }
         return true
@@ -420,7 +425,7 @@ public extension DeviceContactExtendedData {
         }
         
         let basicData = DeviceContactBasicData(firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
-        self.init(basicData: basicData, middleName: contact.middleName, prefix: contact.namePrefix, suffix: contact.nameSuffix, organization: contact.organizationName, jobTitle: contact.jobTitle, department: contact.departmentName, emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: birthdayDate, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
+        self.init(basicData: basicData, middleName: contact.middleName, prefix: contact.namePrefix, suffix: contact.nameSuffix, organization: contact.organizationName, jobTitle: contact.jobTitle, department: contact.departmentName, emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: birthdayDate, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: "")
     }
     
     var isPrimitive: Bool {
@@ -454,6 +459,9 @@ public extension DeviceContactExtendedData {
         if !self.instantMessagingProfiles.isEmpty {
             return false
         }
+        if !self.note.isEmpty {
+            return false
+        }
         return true
     }
 }
@@ -467,7 +475,7 @@ public extension DeviceContactExtendedData {
         if let phone = user.phone, !phone.isEmpty {
             phoneNumbers.append(DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phone))
         }
-        self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+        self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
     }
 }
 
@@ -490,5 +498,42 @@ extension DeviceContactAddressData {
             dictionary["ZIP"] = self.postcode
         }
         return dictionary
+    }
+    
+    public var string: String {
+        var array: [String] = []
+        if !self.street1.isEmpty {
+            array.append(self.street1)
+        }
+        if !self.city.isEmpty {
+            array.append(self.city)
+        }
+        if !self.state.isEmpty {
+            array.append(self.state)
+        }
+        if !self.country.isEmpty {
+            array.append(self.country)
+        }
+        if !self.postcode.isEmpty {
+            array.append(self.postcode)
+        }
+        return array.joined(separator: " ")
+    }
+    
+    public var displayString: String {
+        var array: [String] = []
+        if !self.street1.isEmpty {
+            array.append(self.street1)
+        }
+        if !self.city.isEmpty {
+            array.append(self.city)
+        }
+        if !self.state.isEmpty {
+            array.append(self.state)
+        }
+        if !self.country.isEmpty {
+            array.append(self.country)
+        }
+        return array.joined(separator: ", ")
     }
 }

@@ -15,35 +15,7 @@ import PresentationDataUtils
 import AccountContext
 import SearchBarNode
 import SearchUI
-
-private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
-    switch lhs {
-        case .builtin:
-            if case .builtin = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .color(color):
-            if case .color(color) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .image(representations, _):
-            if case .image(representations, _) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .file(_, _, _, _, _, _, lhsSlug, _, lhsSettings):
-            if case let .file(_, _, _, _, _, _, rhsSlug, _, rhsSettings) = rhs, lhsSlug == rhsSlug, lhsSettings.color == rhsSettings.color && lhsSettings.intensity == rhsSettings.intensity {
-                return true
-            } else {
-                return false
-            }
-    }
-}
+import WallpaperResources
 
 struct ThemeGridControllerNodeState: Equatable {
     let editing: Bool
@@ -102,15 +74,19 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
             case .builtin:
                 return 0
             case let .color(color):
-                return (Int64(1) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
+                return (Int64(1) << 32) | Int64(bitPattern: UInt64(color))
+            case let .gradient(topColor, bottomColor, _):
+                var hash: UInt32 = topColor
+                hash = hash &* 31 &+ bottomColor
+                return (Int64(2) << 32) | Int64(hash)
             case let .file(id, _, _, _, _, _, _, _, settings):
                 var hash: Int = id.hashValue
                 hash = hash &* 31 &+ (settings.color?.hashValue ?? 0)
                 hash = hash &* 31 &+ (settings.intensity?.hashValue ?? 0)
-                return (Int64(2) << 32) | Int64(hash)
+                return (Int64(3) << 32) | Int64(hash)
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
-                    return (Int64(3) << 32) | Int64(largest.resource.id.hashValue)
+                    return (Int64(4) << 32) | Int64(largest.resource.id.hashValue)
                 } else {
                     return 0
                 }
@@ -266,21 +242,21 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.colorItemNode = ItemListActionItemNode()
-        self.colorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+        self.colorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
             presentColors()
         })
         self.galleryItemNode = ItemListActionItemNode()
-        self.galleryItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+        self.galleryItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
             presentGallery()
         })
         self.descriptionItemNode = ItemListTextItemNode()
-        self.descriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
+        self.descriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
         self.resetItemNode = ItemListActionItemNode()
-        self.resetItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+        self.resetItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
             resetWallpapers()
         })
         self.resetDescriptionItemNode = ItemListTextItemNode()
-        self.resetDescriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
+        self.resetDescriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
         
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
@@ -376,13 +352,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
             var isSelectedEditable = true
             if case .builtin = presentationData.chatWallpaper {
                 isSelectedEditable = false
-            } else if areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
+            } else if presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
                 isSelectedEditable = false
             }
             entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: isSelectedEditable, isSelected: true), at: 0)
             
             var defaultWallpaper: TelegramWallpaper?
-            if !areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
+            if !presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
                 if case .builtin = presentationData.theme.chat.defaultWallpaper {
                 } else {
                     defaultWallpaper = presentationData.theme.chat.defaultWallpaper
@@ -407,12 +383,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (file.isPattern && file.settings.color == nil) {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (wallpaper.isPattern && file.settings.color == nil) {
                     continue
                 }
-                let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
+                let selected = presentationData.chatWallpaper.isBasicallyEqual(to: wallpaper)
                 var isDefault = false
-                if let defaultWallpaper = defaultWallpaper, areWallpapersEqual(defaultWallpaper, wallpaper) {
+                if let defaultWallpaper = defaultWallpaper, defaultWallpaper.isBasicallyEqual(to: wallpaper) {
                     isDefault = true
                 }
                 var isEditable = true
@@ -531,17 +507,17 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
-        self.colorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+        self.colorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentColors()
         })
-        self.galleryItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+        self.galleryItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentGallery()
         })
-        self.descriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
-        self.resetItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+        self.descriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
+        self.resetItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.resetWallpapers()
         })
-        self.resetDescriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
+        self.resetDescriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
         
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)

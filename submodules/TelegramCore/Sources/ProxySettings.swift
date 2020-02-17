@@ -4,9 +4,9 @@ import SwiftSignalKit
 import MtProtoKit
 import SyncCore
 
-public func updateProxySettingsInteractively(accountManager: AccountManager, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
-    return accountManager.transaction { transaction -> Void in
-        updateProxySettingsInteractively(transaction: transaction, f)
+public func updateProxySettingsInteractively(accountManager: AccountManager, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Bool, NoError> {
+    return accountManager.transaction { transaction -> Bool in
+        return updateProxySettingsInteractively(transaction: transaction, f)
     }
 }
 
@@ -21,10 +21,13 @@ extension ProxyServerSettings {
     }
 }
 
-public func updateProxySettingsInteractively(transaction: AccountManagerModifier, _ f: @escaping (ProxySettings) -> ProxySettings) {
+public func updateProxySettingsInteractively(transaction: AccountManagerModifier, _ f: @escaping (ProxySettings) -> ProxySettings) -> Bool {
+    var hasChanges = false
     transaction.updateSharedData(SharedDataKeys.proxySettings, { current in
         let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
         let updated = f(previous)
+        hasChanges = previous != updated
         return updated
     })
+    return hasChanges
 }

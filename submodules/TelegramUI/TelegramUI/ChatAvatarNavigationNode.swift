@@ -32,6 +32,13 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     let avatarNode: AvatarNode
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    var contextActionIsEnabled: Bool = true {
+        didSet {
+            if self.contextActionIsEnabled != oldValue {
+                self.containerNode.isGestureEnabled = self.contextActionIsEnabled
+            }
+        }
+    }
     
     weak var chatController: ChatControllerImpl? {
         didSet {
@@ -40,6 +47,8 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             }
         }
     }
+    
+    var tapped: (() -> Void)?
     
     override init() {
         self.containerNode = ContextControllerSourceNode()
@@ -60,6 +69,12 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             }
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
+        
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0)).offsetBy(dx: 10.0, dy: 1.0)
+        self.avatarNode.frame = self.containerNode.bounds
+        
+        /*self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))
+        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))*/
     }
     
     override func didLoad() {
@@ -67,30 +82,28 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         self.view.isOpaque = false
         (self.view as? ChatAvatarNavigationNodeView)?.targetNode = self
         (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController
+        
+        /*let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:)))
+        self.avatarNode.view.addGestureRecognizer(tapRecognizer)*/
+    }
+    
+    @objc private func avatarTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .tap:
+                    self.tapped?()
+                default:
+                    break
+                }
+            }
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        if constrainedSize.height.isLessThanOrEqualTo(32.0) {
-            return CGSize(width: 26.0, height: 26.0)
-        } else {
-            return CGSize(width: 37.0, height: 37.0)
-        }
+        return CGSize(width: 37.0, height: 37.0)
     }
     
     func onLayout() {
-        let bounds = self.bounds
-        if self.bounds.size.height.isLessThanOrEqualTo(26.0) {
-            if !self.avatarNode.bounds.size.equalTo(bounds.size) {
-                self.avatarNode.font = smallFont
-            }
-            self.containerNode.frame = bounds.offsetBy(dx: 8.0, dy: 0.0)
-            self.avatarNode.frame = bounds
-        } else {
-            if !self.avatarNode.bounds.size.equalTo(bounds.size) {
-                self.avatarNode.font = normalFont
-            }
-            self.containerNode.frame = bounds.offsetBy(dx: 10.0, dy: 1.0)
-            self.avatarNode.frame = bounds
-        }
     }
 }

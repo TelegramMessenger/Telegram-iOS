@@ -82,6 +82,10 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
         super.init(layerBacked: layerBacked, dynamicBounce: dynamicBounce, rotated: rotated, seeThrough: seeThrough)
     }
     
+    open var controlsContainer: ASDisplayNode {
+        return self
+    }
+    
     override open func didLoad() {
         super.didLoad()
         
@@ -310,7 +314,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
                 revealNode.updateRevealOffset(offset: 0.0, sideInset: leftInset, transition: .immediate)
             }
             
-            self.addSubnode(revealNode)
+            self.controlsContainer.addSubnode(revealNode)
         }
     }
     
@@ -332,7 +336,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
                 revealNode.updateRevealOffset(offset: 0.0, sideInset: -rightInset, transition: .immediate)
             }
             
-            self.addSubnode(revealNode)
+            self.controlsContainer.addSubnode(revealNode)
         }
     }
     
@@ -491,5 +495,9 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
             self.hapticFeedback = HapticFeedback()
         }
         self.hapticFeedback?.impact(.medium)
+    }
+    
+    override open func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+        super.animateFrameTransition(progress, currentValue)   
     }
 }

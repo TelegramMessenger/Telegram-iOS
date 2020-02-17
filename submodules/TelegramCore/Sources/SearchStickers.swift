@@ -222,7 +222,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
 }
 
 public struct FoundStickerSets {
-    public let infos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)]
+    public var infos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)]
     public let entries: [ItemCollectionViewEntry]
     public init(infos: [(ItemCollectionId, ItemCollectionInfo, ItemCollectionItem?, Bool)] = [], entries: [ItemCollectionViewEntry] = []) {
         self.infos = infos

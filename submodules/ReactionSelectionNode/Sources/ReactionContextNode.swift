@@ -377,14 +377,12 @@ public final class ReactionContextNode: ASDisplayNode {
         }
     }
     
-    public func animateOutToReaction(value: String, targetNode: ASImageNode, hideNode: Bool, completion: @escaping () -> Void) {
+    public func animateOutToReaction(value: String, targetNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
         for itemNode in self.itemNodes {
             switch itemNode.reaction {
             case let .reaction(itemValue, _, _):
                 if itemValue == value {
-                    if let snapshotView = itemNode.view.snapshotContentTree(keepTransform: true) {
-                        let targetSnapshotView = UIImageView()
-                        targetSnapshotView.image = targetNode.image
+                    if let snapshotView = itemNode.view.snapshotContentTree(keepTransform: true), let targetSnapshotView = targetNode.view.snapshotContentTree() {
                         targetSnapshotView.frame = self.view.convert(targetNode.bounds, from: targetNode.view)
                         itemNode.isHidden = true
                         self.view.addSubview(targetSnapshotView)

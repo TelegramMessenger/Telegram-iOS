@@ -3,7 +3,6 @@
 #import <LegacyComponents/LegacyComponents.h>
 
 #import <LegacyComponents/TGModernButton.h>
-//#import "TGModernConversationInputMicButton.h"
 #import <LegacyComponents/TGVideoMessageScrubber.h>
 #import <SSignalKit/SSignalKit.h>
 
@@ -41,6 +40,7 @@ static CGRect viewFrame(UIView *view)
     
     TGModernButton *_deleteButton;
     TGModernButton *_sendButton;
+    UILongPressGestureRecognizer *_longPressGestureRecognizer;
     
     int32_t _slowmodeTimestamp;
     UIView * (^_generateSlowmodeView)(void);
@@ -373,6 +373,11 @@ static CGRect viewFrame(UIView *view)
     [_sendButton setImage:_assets.sendImage forState:UIControlStateNormal];
     _sendButton.adjustsImageWhenHighlighted = false;
     [_sendButton addTarget:self action:@selector(sendButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+    
+    _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(doneButtonLongPressed:)];
+    _longPressGestureRecognizer.minimumPressDuration = 0.4;
+    [_sendButton addGestureRecognizer:_longPressGestureRecognizer];
+    
     [self addSubview:_sendButton];
     
     if (_slowmodeTimestamp != 0) {
@@ -487,7 +492,16 @@ static CGRect viewFrame(UIView *view)
             _sendButton.userInteractionEnabled = true;
         }
     }
-        
+}
+
+- (void)doneButtonLongPressed:(UILongPressGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan)
+    {
+        if (self.sendLongPressed != nil) {
+            self.sendLongPressed();
+        }
+    }
 }
 
 - (void)cancelPressed

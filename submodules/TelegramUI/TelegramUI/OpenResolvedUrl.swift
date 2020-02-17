@@ -17,6 +17,7 @@ import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
 import SettingsUI
+import UrlHandling
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -34,7 +35,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
@@ -46,7 +47,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 present(textAlertController(context: context, title: nil, text: presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
         case .inaccessiblePeer:
-            present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
@@ -88,16 +89,51 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
-            let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
-            controller.sendSticker = sendSticker
-            present(controller, nil)
+            if false {
+                var mainStickerPack: StickerPackReference?
+                var stickerPacks: [StickerPackReference] = []
+                if let message = contentContext as? Message {
+                    let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
+                    if let matches = dataDetector?.matches(in: message.text, options: [], range: NSRange(message.text.startIndex ..< message.text.endIndex, in: message.text)) {
+                        for match in matches {
+                            guard let stringRange = Range(match.range, in: message.text) else {
+                                continue
+                            }
+                            let urlText = String(message.text[stringRange])
+                            if let resultName = parseStickerPackUrl(urlText) {
+                                stickerPacks.append(.name(resultName))
+                                if resultName == name {
+                                    mainStickerPack = .name(resultName)
+                                }
+                            }
+                        }
+                        if mainStickerPack == nil {
+                            mainStickerPack = .name(name)
+                            stickerPacks.insert(.name(name), at: 0)
+                        }
+                    } else {
+                        mainStickerPack = .name(name)
+                        stickerPacks = [.name(name)]
+                    }
+                } else {
+                    mainStickerPack = .name(name)
+                    stickerPacks = [.name(name)]
+                }
+                if let mainStickerPack = mainStickerPack, !stickerPacks.isEmpty {
+                    let controller = StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, sendSticker: sendSticker)
+                    present(controller, nil)
+                }
+            } else {
+                let controller = StickerPackScreen(context: context, mainStickerPack: .name(name), stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker)
+                present(controller, nil)
+            }
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
         case let .join(link):
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                 openPeer(peerId, .chat(textInputState: nil, subject: nil))
-            }), nil)
+            }, parentNavigationController: navigationController), nil)
         case let .localization(identifier):
             dismissInput()
             present(LanguageLinkPreviewController(context: context, identifier: identifier), nil)
@@ -213,24 +249,30 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?
-            var color: UIColor?
+            var topColor: UIColor?
+            var bottomColor: UIColor?
             var intensity: Int32?
+            var rotation: Int32?
             switch parameter {
-                case let .slug(slug, wallpaperOptions, patternColor, patternIntensity):
-                    signal = getWallpaper(account: context.account, slug: slug)
+                case let .slug(slug, wallpaperOptions, firstColor, secondColor, intensityValue, rotationValue):
+                    signal = getWallpaper(network: context.account.network, slug: slug)
                     options = wallpaperOptions
-                    color = patternColor
-                    intensity = patternIntensity
+                    topColor = firstColor
+                    bottomColor = secondColor
+                    intensity = intensityValue
+                    rotation = rotationValue
                     controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
-                    signal = .single(.color(Int32(color.rgb)))
+                    signal = .single(.color(color.argb))
+                case let .gradient(topColor, bottomColor, rotation):
+                    signal = .single(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings()))
             }
             
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, color, intensity, nil))
+                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, topColor, bottomColor, intensity, rotation, nil))
                 present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
@@ -239,12 +281,13 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .theme(slug):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let signal = getTheme(account: context.account, slug: slug)
-            |> mapToSignal { themeInfo -> Signal<(Data, TelegramTheme), GetThemeError> in
-                return Signal<(Data, TelegramTheme), GetThemeError> { subscriber in
+            |> mapToSignal { themeInfo -> Signal<(Data?, TelegramThemeSettings?, TelegramTheme), GetThemeError> in
+                return Signal<(Data?, TelegramThemeSettings?, TelegramTheme), GetThemeError> { subscriber in
                     let disposables = DisposableSet()
-                    let resource = themeInfo.file?.resource
-                    
-                    if let resource = resource {
+                    if let settings = themeInfo.settings {
+                        subscriber.putNext((nil, settings, themeInfo))
+                        subscriber.putCompletion()
+                    } else if let resource = themeInfo.file?.resource {
                         disposables.add(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: resource)).start())
                         
                         let maybeFetched = context.sharedContext.accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
@@ -267,7 +310,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                    
                         disposables.add(maybeFetched.start(next: { data in
                             if let data = data {
-                                subscriber.putNext((data, themeInfo))
+                                subscriber.putNext((data, nil, themeInfo))
                                 subscriber.putCompletion()
                             }
                         }))
@@ -278,8 +321,6 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     return disposables
                 }
             }
-            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-            present(controller, nil)
             
             var cancelImpl: (() -> Void)?
             let progressSignal = Signal<Never, NoError> { subscriber in
@@ -307,14 +348,19 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     progressDisposable.dispose()
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak controller] dataAndTheme in
-                controller?.dismiss()
-                
-                if let theme = makePresentationTheme(data: dataAndTheme.0) {
-                    let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
-                    navigationController?.pushViewController(previewController)
+            |> deliverOnMainQueue).start(next: { dataAndTheme in
+                if let data = dataAndTheme.0 {
+                    if let theme = makePresentationTheme(data: data) {
+                        let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
+                        navigationController?.pushViewController(previewController)
+                    }
+                } else if let settings = dataAndTheme.1 {
+                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper) {
+                        let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
+                        navigationController?.pushViewController(previewController)
+                    }
                 }
-            }, error: { [weak controller] error in
+            }, error: { error in
                 let errorText: String
                 switch error {
                     case .generic, .slugInvalid:
@@ -323,13 +369,60 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         errorText = presentationData.strings.Theme_Unsupported
                 }
                 present(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                controller?.dismiss()
             }))
             dismissInput()
+        #if ENABLE_WALLET
         case let .wallet(address, amount, comment):
             dismissInput()
             context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
                 navigationController?.pushViewController(c)
+            }
+        #endif
+        case let .settings(section):
+            dismissInput()
+            switch section {
+                case .theme:
+                    if let navigationController = navigationController {
+                        let controller = themeSettingsController(context: context)
+                        controller.navigationPresentation = .modal
+                        
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is ThemeSettingsController) }
+                        controllers.append(controller)
+                        
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                case .devices:
+                    if let navigationController = navigationController {
+                        let activeSessions = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
+                            let activeSessionsContext = ActiveSessionsContext(account: context.account)
+                            let webSessionsContext = WebSessionsContext(account: context.account)
+                            let otherSessionCount = activeSessionsContext.state
+                            |> map { state -> Int in
+                                return state.sessions.filter({ !$0.isCurrent }).count
+                            }
+                            |> distinctUntilChanged
+                            
+                            return otherSessionCount
+                            |> map { value in
+                                return (activeSessionsContext, value, webSessionsContext)
+                            }
+                        }
+                        
+                        let _ = (activeSessions
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { activeSessionsContext, count, webSessionsContext in
+                            let controller = recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false)
+                            controller.navigationPresentation = .modal
+                            
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is RecentSessionsController) }
+                            controllers.append(controller)
+                            
+                            navigationController.setViewControllers(controllers, animated: true)
+                        })
+                    }
+                    break
             }
     }
 }

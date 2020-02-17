@@ -28,7 +28,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     private var needsSearchResultsTooltip = true
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics, Bool)?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -39,7 +39,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                         strongSelf.displayActivity = value
                         strongSelf.activityIndicator.isHidden = !value
                         if let interfaceState = strongSelf.presentationInterfaceState, let validLayout = strongSelf.validLayout {
-                            strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, maxHeight: validLayout.3, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.4)
+                            strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, maxHeight: validLayout.3, isSecondary: validLayout.5, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.4)
                         }
                     }
                 }))
@@ -125,8 +125,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics, isSecondary)
         
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme

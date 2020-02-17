@@ -56,6 +56,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.theme = theme
         self.strings = strings
         
+        let peerFont = Font.regular(floor(theme.baseFontSize * 14.0 / 17.0))
+        
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isAccessibilityElement = false
         
@@ -74,13 +76,13 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.accessibilityArea)
         
         if chatPeer.id == context.account.peerId {
-            self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
         } else {
             var overrideImage: AvatarNodeImageOverride?
             if chatPeer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
         }
         
         var attributedText: NSAttributedString?
@@ -88,9 +90,9 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         case .clearCache, .clearCacheSuggestion:
             switch action {
             case .clearCache:
-                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: Font.regular(14.0), textColor: theme.primaryTextColor)
+                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: peerFont, textColor: theme.primaryTextColor)
             case .clearCacheSuggestion:
-                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: Font.regular(14.0), textColor: theme.primaryTextColor)
+                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: peerFont, textColor: theme.primaryTextColor)
             default:
                 break
             }
@@ -115,9 +117,9 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 break
             }
             if let text = text {
-                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
+                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: peerFont, textColor: theme.primaryTextColor))
                 for (_, range) in text.1 {
-                    formattedAttributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                    formattedAttributedText.addAttribute(.font, value: peerFont, range: range)
                 }
                 attributedText = formattedAttributedText
             }

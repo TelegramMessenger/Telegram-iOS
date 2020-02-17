@@ -12,9 +12,6 @@ import LocalizedPeerData
 import PhotoResources
 import TelegramStringFormatting
 
-private let titleFont = Font.medium(14.0)
-private let textFont = Font.regular(14.0)
-
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
     case standalone
@@ -54,8 +51,12 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let previousMediaReference = maybeNode?.previousMediaReference
         
         return { presentationData, strings, context, type, message, constrainedSize in
+            let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
+            let titleFont = Font.medium(fontSize)
+            let textFont = Font.regular(fontSize)
+            
             let titleString = message.effectiveAuthor?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
-            let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
+            let (textString, isMedia) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
             
             let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor
@@ -75,7 +76,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
                     
-                    let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                    let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
                     lineImage = graphics.chatServiceVerticalLineImage
                     textColor = titleColor
             }
@@ -110,10 +111,26 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
+            var imageTextInset: CGFloat = 0.0
+            if let _ = imageDimensions {
+                imageTextInset += floor(presentationData.fontSize.baseDisplaySize * 32.0 / 17.0)
+            }
+            
+            let maximumTextWidth = max(0.0, constrainedSize.width - imageTextInset)
+            
+            let contrainedTextSize = CGSize(width: maximumTextWidth, height: constrainedSize.height)
+            
+            let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
+            
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            
+            let imageSide = titleLayout.size.height + textLayout.size.height - 16.0
+            
             var applyImage: (() -> TransformImageNode)?
             if let imageDimensions = imageDimensions {
-                leftInset += 32.0
-                let boundingSize = CGSize(width: 30.0, height: 30.0)
+                let boundingSize = CGSize(width: imageSide, height: imageSide)
+                leftInset += imageSide + 2.0
                 var radius: CGFloat = 2.0
                 var imageSize = imageDimensions.aspectFilled(boundingSize)
                 if hasRoundImage {
@@ -143,15 +160,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
             }
-            
-            let maximumTextWidth = max(0.0, constrainedSize.width - leftInset)
-            
-            let contrainedTextSize = CGSize(width: maximumTextWidth, height: constrainedSize.height)
-            
-            let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
-            
-            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
             
             let size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right) + leftInset, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
             
@@ -190,7 +198,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }
-                    imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 30.0, height: 30.0))
+                    imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 4.0 + UIScreenPixel), size: CGSize(width: imageSide, height: imageSide))
                     
                     if let updateImageSignal = updateImageSignal {
                         imageNode.setSignal(updateImageSignal)

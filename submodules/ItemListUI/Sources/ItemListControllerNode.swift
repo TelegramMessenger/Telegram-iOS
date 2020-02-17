@@ -8,6 +8,10 @@ import SyncCore
 import TelegramPresentationData
 import MergeLists
 
+public protocol ItemListHeaderItemNode: class {
+    func updateTheme(theme: PresentationTheme)
+}
+
 public typealias ItemListSectionId = Int32
 
 public protocol ItemListNodeAnyEntry {
@@ -15,7 +19,7 @@ public protocol ItemListNodeAnyEntry {
     var tag: ItemListItemTag? { get }
     func isLessThan(_ rhs: ItemListNodeAnyEntry) -> Bool
     func isEqual(_ rhs: ItemListNodeAnyEntry) -> Bool
-    func item(_ arguments: Any) -> ListViewItem
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem
 }
 
 public protocol ItemListNodeEntry: Comparable, Identifiable, ItemListNodeAnyEntry {
@@ -46,18 +50,18 @@ private struct ItemListNodeEntryTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedItemListNodeEntryTransition(from fromEntries: [ItemListNodeAnyEntry], to toEntries: [ItemListNodeAnyEntry], arguments: Any) -> ItemListNodeEntryTransition {
+private func preparedItemListNodeEntryTransition(from fromEntries: [ItemListNodeAnyEntry], to toEntries: [ItemListNodeAnyEntry], presentationData: ItemListPresentationData, arguments: Any, presentationDataUpdated: Bool) -> ItemListNodeEntryTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, isLess: { lhs, rhs in
         return lhs.isLessThan(rhs)
     }, isEqual: { lhs, rhs in
         return lhs.isEqual(rhs)
     }, getId: { value in
         return value.anyId
-    })
+    }, allUpdated: presentationDataUpdated)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
     
     return ItemListNodeEntryTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -85,6 +89,7 @@ private struct ItemListNodeTransition {
 }
 
 public final class ItemListNodeState {
+    let presentationData: ItemListPresentationData
     let entries: [ItemListNodeAnyEntry]
     let style: ItemListStyle
     let emptyStateItem: ItemListControllerEmptyStateItem?
@@ -96,7 +101,8 @@ public final class ItemListNodeState {
     let ensureVisibleItemTag: ItemListItemTag?
     let initialScrollToItem: ListViewScrollToItem?
     
-    public init<T: ItemListNodeEntry>(entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+    public init<T: ItemListNodeEntry>(presentationData: ItemListPresentationData, entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+        self.presentationData = presentationData
         self.entries = entries.map { $0 }
         self.style = style
         self.emptyStateItem = emptyStateItem
@@ -215,7 +221,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var searchActivated: ((Bool) -> Void)?
-    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)?
+    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Signal<Bool, NoError>)?
     public var reorderCompleted: (([ItemListNodeAnyEntry]) -> Void)?
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
@@ -226,7 +232,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     var alwaysSynchronous = false
     
-    public init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState, Any)), NoError>) {
+    public init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
         self.navigationBar = navigationBar
         self.updateNavigationOffset = updateNavigationOffset
         
@@ -267,7 +273,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.listNode.reorderItem = { [weak self] fromIndex, toIndex, opaqueTransactionState in
             if let strongSelf = self, let reorderEntry = strongSelf.reorderEntry, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
                 if fromIndex >= 0 && fromIndex < mergedEntries.count && toIndex >= 0 && toIndex < mergedEntries.count {
-                    reorderEntry(fromIndex, toIndex, mergedEntries)
+                    return reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
             }
             return .single(false)
@@ -298,7 +304,8 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let previousState = Atomic<ItemListNodeState?>(value: nil)
-        self.transitionDisposable.set(((state |> map { theme, stateAndArguments -> ItemListNodeTransition in
+        self.transitionDisposable.set(((state
+        |> map { presentationData, stateAndArguments -> ItemListNodeTransition in
             let (state, arguments) = stateAndArguments
             if state.entries.count > 1 {
                 for i in 1 ..< state.entries.count {
@@ -306,7 +313,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             let previous = previousState.swap(state)
-            let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, arguments: arguments)
+            let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, presentationData: presentationData, arguments: arguments, presentationDataUpdated: previous?.presentationData != presentationData)
             var updatedStyle: ItemListStyle?
             if previous?.style != state.style {
                 updatedStyle = state.style
@@ -317,8 +324,9 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 scrollToItem = state.initialScrollToItem
             }
             
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
-        }) |> deliverOnMainQueue).start(next: { [weak self] transition in
+            return ItemListNodeTransition(theme: presentationData.theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
+        })
+        |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
             }
@@ -365,31 +373,10 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        break
-                    case .spring:
-                        curve = 7
-                }
-        }
-        
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
-        
+    open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        insets.bottom = max(insets.bottom, additionalInsets.bottom)
         
         var addedInsets: UIEdgeInsets?
         if layout.size.width > 480.0 {
@@ -416,10 +403,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: insets.left, height: layout.size.height)
         self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: 0.0, width: insets.right, height: layout.size.height)
@@ -433,6 +422,9 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let searchNode = self.searchNode {
+            var layout = layout
+            layout = layout.addedInsets(insets: additionalInsets)
+            
             searchNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
@@ -479,6 +471,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
+                
+                self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ItemListHeaderItemNode {
+                        itemHeaderNode.updateTheme(theme: transition.theme)
+                    }
+                })
             }
             
             if let updateStyle = transition.updateStyle {
@@ -513,9 +511,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
             } else if transition.crossfade {
+                options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateCrossfade)
             } else {
                 options.insert(.Synchronous)
+                options.insert(.PreferSynchronousResourceLoading)
                 options.insert(.PreferSynchronousDrawing)
             }
             if self.alwaysSynchronous {
@@ -567,7 +568,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let validLayout = self.validLayout {
                             updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
-                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
+                        self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
                         updatedNode.activate()
                     }
                 } else {
@@ -667,7 +668,6 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     emptyStateNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak emptyStateNode] _ in
                         emptyStateNode?.removeFromSupernode()
                     })
-                    self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     self.emptyStateNode = nil
                 }
             }
@@ -700,6 +700,11 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let searchNode = self.searchNode {
+            if !self.navigationBar.isHidden && self.navigationBar.supernode != nil {
+                if let result = self.navigationBar.hitTest(self.view.convert(point, to: self.navigationBar.view), with: event) {
+                    return result
+                }
+            }
             if let result = searchNode.hitTest(point, with: event) {
                 return result
             }

@@ -22,6 +22,7 @@ protocol WebEmbedImplementation {
 public enum WebEmbedType {
     case youtube(videoId: String, timestamp: Int)
     case vimeo(videoId: String, timestamp: Int)
+    case twitch(url: String)
     case iframe(url: String)
     
     public var supportsSeeking: Bool {
@@ -37,6 +38,10 @@ public enum WebEmbedType {
 public func webEmbedType(content: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) -> WebEmbedType {
     if let (videoId, timestamp) = extractYoutubeVideoIdAndTimestamp(url: content.url) {
         return .youtube(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
+    } else if let (videoId, timestamp) = extractVimeoVideoIdAndTimestamp(url: content.url) {
+        return .vimeo(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
+    } else if let embedUrl = content.embedUrl, isTwitchVideoUrl(embedUrl) {
+        return .twitch(url: embedUrl)
     } else {
         return .iframe(url: content.embedUrl ?? content.url)
     }
@@ -48,6 +53,8 @@ func webEmbedImplementation(for type: WebEmbedType) -> WebEmbedImplementation {
             return YoutubeEmbedImplementation(videoId: videoId, timestamp: timestamp)
         case let .vimeo(videoId, timestamp):
             return VimeoEmbedImplementation(videoId: videoId, timestamp: timestamp)
+        case let .twitch(url):
+            return TwitchEmbedImplementation(url: url)
         case let .iframe(url):
             return GenericEmbedImplementation(url: url)
     }

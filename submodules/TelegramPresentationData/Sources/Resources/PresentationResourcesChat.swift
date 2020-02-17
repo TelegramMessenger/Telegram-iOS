@@ -69,18 +69,17 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, gradientBubbles: Bool) -> PrincipalThemeEssentialGraphics {
+    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
-        let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
-        return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper, gradientBubbles: gradientBubbles)
+        return theme.object(PresentationResourceParameterKey.chatPrincipalThemeEssentialGraphics(hasWallpaper: hasWallpaper, bubbleCorners: bubbleCorners), { theme in
+            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper, bubbleCorners: bubbleCorners)
         }) as! PrincipalThemeEssentialGraphics
     }
     
-    public static func additionalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeAdditionalGraphics {
-        let key: PresentationResourceKey = wallpaper.isBuiltin ? PresentationResourceKey.chatPrincipalThemeAdditionalGraphicsWithDefaultWallpaper : PresentationResourceKey.chatPrincipalThemeAdditionalGraphicsWithCustomWallpaper
-        return theme.object(key.rawValue, { theme in
-            return PrincipalThemeAdditionalGraphics(theme.chat, wallpaper: wallpaper)
+    public static func additionalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) -> PrincipalThemeAdditionalGraphics {
+        let key: PresentationResourceParameterKey = .chatPrincipalThemeAdditionalGraphics(isCustomWallpaper: !wallpaper.isBuiltin, bubbleCorners: bubbleCorners)
+        return theme.object(key, { theme in
+            return PrincipalThemeAdditionalGraphics(theme.chat, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
         }) as! PrincipalThemeAdditionalGraphics
     }
     
@@ -251,7 +250,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelAddPackButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelAddPackButtonImage.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.inputPanel.panelControlAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+            return generateStretchableFilledCircleImage(diameter: 28.0, color: theme.chat.inputPanel.panelControlAccentColor, strokeColor: nil, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     
@@ -644,23 +643,6 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatBubbleMapPinImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleMapPinImage.rawValue, { theme in
-            return generateImage(CGSize(width: 62.0, height: 74.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                if let shadowImage = UIImage(bundleImageName: "Chat/Message/LocationPinShadow"), let cgImage = shadowImage.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(), size: shadowImage.size))
-                }
-                if let backgroundImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinBackground"), color: theme.list.itemAccentColor), let cgImage = backgroundImage.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(), size: backgroundImage.size))
-                }
-                if let foregroundImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinForeground"), color: theme.list.plainBackgroundColor), let cgImage = foregroundImage.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: 15.0, y: 26.0), size: foregroundImage.size))
-                }
-            })
-        })
-    }
-    
     public static func chatInputSearchPanelUpImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputSearchPanelUpImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/UpButton"), color: theme.chat.inputPanel.panelControlAccentColor)
@@ -927,6 +909,50 @@ public struct PresentationResourcesChat {
     public static func groupInfoMembersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.groupInfoMembersIcon.rawValue, { _ in
             return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
+        })
+    }
+    
+    public static func chatOutgoingFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatOutgoingFullCheck(size), { _ in
+            return generateCheckImage(partial: false, color: theme.chat.message.outgoingCheckColor, width: size)
+        })
+    }
+    
+    public static func chatOutgoingPartialCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatOutgoingPartialCheck(size), { _ in
+            return generateCheckImage(partial: true, color: theme.chat.message.outgoingCheckColor, width: size)
+        })
+    }
+    
+    public static func chatMediaFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMediaFullCheck(size), { _ in
+            return generateCheckImage(partial: false, color: .white, width: size)
+        })
+    }
+    
+    public static func chatMediaPartialCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMediaPartialCheck(size), { _ in
+            return generateCheckImage(partial: true, color: .white, width: size)
+        })
+    }
+    
+    public static func chatFreeFullCheck(_ theme: PresentationTheme, size: CGFloat, isDefaultWallpaper: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatFreeFullCheck(size, isDefaultWallpaper), { _ in
+            let color = isDefaultWallpaper ? theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText : theme.chat.serviceMessage.components.withCustomWallpaper.primaryText
+            return generateCheckImage(partial: false, color: color, width: size)
+        })
+    }
+    
+    public static func chatFreePartialCheck(_ theme: PresentationTheme, size: CGFloat, isDefaultWallpaper: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatFreePartialCheck(size, isDefaultWallpaper), { _ in
+            let color = isDefaultWallpaper ? theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText : theme.chat.serviceMessage.components.withCustomWallpaper.primaryText
+            return generateCheckImage(partial: true, color: color, width: size)
+        })
+    }
+    
+    public static func chatBubbleMediaCorner(_ theme: PresentationTheme, incoming: Bool, mainRadius: CGFloat, inset: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatBubbleMediaCorner(incoming: incoming, mainRadius: mainRadius, inset: inset), { _ in
+            return mediaBubbleCornerImage(incoming: incoming, radius: mainRadius, inset: inset)
         })
     }
 }

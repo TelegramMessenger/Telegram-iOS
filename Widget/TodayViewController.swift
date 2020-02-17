@@ -20,15 +20,6 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        if #available(iOSApplicationExtension 13.0, *) {
-            switch self.traitCollection.userInterfaceStyle {
-            case .dark:
-                self.primaryColor = .white
-            default:
-                break
-            }
-        }
-        
         let appBundleIdentifier = Bundle.main.bundleIdentifier!
         guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
@@ -54,10 +45,16 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             presentationData = WidgetPresentationData(applicationLockedString: "Unlock the app to use widget")
         }
         
+        let fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
             let appLockedLabel = UILabel()
-            appLockedLabel.textColor = self.primaryColor
-            appLockedLabel.font = UIFont.systemFont(ofSize: 16.0)
+            if #available(iOSApplicationExtension 13.0, *) {
+                appLockedLabel.textColor = UIColor.label
+            } else {
+                appLockedLabel.textColor = self.primaryColor
+            }
+            appLockedLabel.font = UIFont.systemFont(ofSize: fontSize)
             appLockedLabel.text = presentationData.applicationLockedString
             appLockedLabel.sizeToFit()
             self.appLockedLabel = appLockedLabel
@@ -74,21 +71,6 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
             self.setWidgetData(widgetData: widgetData)
-        }
-    }
-    
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        if #available(iOSApplicationExtension 13.0, *) {
-            switch self.traitCollection.userInterfaceStyle {
-            case .dark:
-                self.primaryColor = .white
-            default:
-                self.primaryColor = .black
-            }
-        }
-        self.appLockedLabel?.textColor = self.primaryColor
-        for view in self.peerViews {
-            view.primaryColor = self.primaryColor
         }
     }
     
@@ -171,7 +153,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         offset = floor(spacing / 2.0)
         for i in 0 ..< peerFrames.count {
             let peerView = self.peerViews[i]
-            peerView.frame = CGRect(origin: CGPoint(x: offset, y: 20.0), size: peerFrames[i].size)
+            peerView.frame = CGRect(origin: CGPoint(x: offset, y: 16.0), size: peerFrames[i].size)
             peerView.updateLayout(size: peerFrames[i].size)
             offset += peerFrames[i].width + spacing
         }
