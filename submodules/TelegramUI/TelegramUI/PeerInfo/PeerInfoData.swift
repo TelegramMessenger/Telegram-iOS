@@ -728,12 +728,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var displayLeave = !channel.flags.contains(.isCreator)
         switch channel.info {
         case .broadcast:
-            if let cachedData = cachedData as? CachedChannelData {
-                if cachedData.linkedDiscussionPeerId != nil {
-                    displayLeave = false
-                    result.append(.discussion)
-                }
-            }
+            displayLeave = true
         case .group:
             displayLeave = false
             if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
