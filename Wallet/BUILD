@@ -100,7 +100,7 @@ swift_library(
 
 ios_application(
     name = "Wallet",
-    bundle_id = "org.ton.TonWallet-iOS",
+    bundle_id = "{wallet_bundle_id}",
     families = ["iphone", "ipad"],
     minimum_os_version = "9.0",
     provisioning_profile = "Wallet.mobileprovision",
