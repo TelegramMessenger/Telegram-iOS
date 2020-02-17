@@ -228,7 +228,6 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var items: [PeerInfoAvatarListItem] = []
     private var itemNodes: [WrappedMediaResourceId: PeerInfoAvatarListItemNode] = [:]
     private var stripNodes: [ASImageNode] = []
-    private let inactiveStripImage: UIImage
     private let activeStripImage: UIImage
     private var appliedStripNodeCurrentIndex: Int?
     private var currentIndex: Int = 0
@@ -305,7 +304,6 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         self.stripContainerNode = ASDisplayNode()
         self.contentNode.addSubnode(self.stripContainerNode)
-        self.inactiveStripImage = generateSmallHorizontalStretchableFilledCircleImage(diameter: 2.0, color: UIColor(white: 1.0, alpha: 0.2))!
         self.activeStripImage = generateSmallHorizontalStretchableFilledCircleImage(diameter: 2.0, color: .white)!
         
         self.highlightContainerNode = ASDisplayNode()
@@ -411,13 +409,17 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 if strongSelf.leftHighlightNode.alpha != leftAlpha {
                     strongSelf.leftHighlightNode.alpha = leftAlpha
                     if leftAlpha.isZero {
-                        strongSelf.leftHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                        strongSelf.leftHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, timingFunction: kCAMediaTimingFunctionSpring)
+                    } else {
+                        strongSelf.leftHighlightNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
                     }
                 }
                 if strongSelf.rightHighlightNode.alpha != rightAlpha {
                     strongSelf.rightHighlightNode.alpha = rightAlpha
                     if rightAlpha.isZero {
-                        strongSelf.rightHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                        strongSelf.rightHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, timingFunction: kCAMediaTimingFunctionSpring)
+                    } else {
+                        strongSelf.rightHighlightNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
                     }
                 }
             }
@@ -609,10 +611,9 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     let stripNode = ASImageNode()
                     stripNode.displaysAsynchronously = false
                     stripNode.displayWithoutProcessing = true
-                    if stripNodes.count == self.currentIndex {
-                        stripNode.image = self.activeStripImage
-                    } else {
-                        stripNode.image = self.inactiveStripImage
+                    stripNode.image = self.activeStripImage
+                    if stripNodes.count != self.currentIndex {
+                        stripNode.alpha = 0.2
                     }
                     self.stripNodes.append(stripNode)
                     self.stripContainerNode.addSubnode(stripNode)
@@ -627,12 +628,16 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if self.appliedStripNodeCurrentIndex != self.currentIndex {
             if let appliedStripNodeCurrentIndex = self.appliedStripNodeCurrentIndex {
                 if appliedStripNodeCurrentIndex >= 0 && appliedStripNodeCurrentIndex < self.stripNodes.count {
-                    self.stripNodes[appliedStripNodeCurrentIndex].image = self.inactiveStripImage
+                    let previousAlpha = self.stripNodes[appliedStripNodeCurrentIndex].alpha
+                    self.stripNodes[appliedStripNodeCurrentIndex].alpha = 0.2
+                    if previousAlpha == 1.0 {
+                        self.stripNodes[appliedStripNodeCurrentIndex].layer.animateAlpha(from: 1.0, to: 0.2, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
                 }
             }
             self.appliedStripNodeCurrentIndex = self.currentIndex
             if self.currentIndex >= 0 && self.currentIndex < self.stripNodes.count {
-                self.stripNodes[self.currentIndex].image = self.activeStripImage
+                self.stripNodes[self.currentIndex].alpha = 1.0
             }
         }
         if hadOneStripNode && self.stripNodes.count > 1 {
@@ -1221,6 +1226,10 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         self.requestUpdateHeight = requestUpdateHeight
         
         self.textNode = EditableTextNode()
+        self.textNode.clipsToBounds = false
+        self.textNode.textView.clipsToBounds = false
+        self.textNode.textContainerInset = UIEdgeInsets()
+        
         self.textNodeContainer = ASDisplayNode()
         self.measureTextNode = ImmediateTextNode()
         self.measureTextNode.maximumNumberOfLines = 0
@@ -1273,6 +1282,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             let textColor = presentationData.theme.list.itemPrimaryTextColor
+            
             self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: textColor]
             
             self.textNode.clipsToBounds = true
@@ -1301,7 +1311,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         }
         let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
         self.measureTextNode.attributedText = attributedMeasureText
-        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
+        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
         self.currentMeasuredHeight = measureTextSize.height
         
         let height = measureTextSize.height + 22.0
@@ -1358,7 +1368,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
             }
             let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
             self.measureTextNode.attributedText = attributedMeasureText
-            let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16 * 2.0, height: .greatestFiniteMagnitude))
+            let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
             if let currentMeasuredHeight = self.currentMeasuredHeight, abs(measureTextSize.height - currentMeasuredHeight) > 0.1 {
                 self.requestUpdateHeight()
             }

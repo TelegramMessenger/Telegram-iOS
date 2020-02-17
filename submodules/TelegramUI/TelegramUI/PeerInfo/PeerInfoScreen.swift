@@ -2230,11 +2230,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             self?.openDeletePeer()
                         }))
                     } else {
-                        if case .member = channel.participationStatus {
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: { [weak self] in
-                                dismissAction()
-                                self?.openLeavePeer()
-                            }))
+                        if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat).contains(.leave) {
+                            if case .member = channel.participationStatus {
+                                items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: { [weak self] in
+                                    dismissAction()
+                                    self?.openLeavePeer()
+                                }))
+                            }
                         }
                     }
                 case .group:
@@ -4174,6 +4176,9 @@ public final class PeerInfoScreen: ViewController {
                 return nil
             }
             if strongSelf.navigationItem.leftBarButtonItem != nil {
+                return nil
+            }
+            if other.item?.leftBarButtonItem != nil {
                 return nil
             }
             if strongSelf.controllerNode.scrollNode.view.contentOffset.y > .ulpOfOne {

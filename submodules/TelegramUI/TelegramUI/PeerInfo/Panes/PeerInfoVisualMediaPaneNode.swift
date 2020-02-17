@@ -600,6 +600,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             let startTime = CACurrentMediaTime()
             var currentOffset = self.scrollNode.view.contentOffset
             let decelerationRate: CGFloat = 0.998
+            self.scrollViewDidEndDragging(self.scrollNode.view, willDecelerate: true)
             self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -618,13 +619,19 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     currentVelocity = 0.0
                 }
                 
+                var didEnd = false
                 if abs(currentVelocity) < 0.1 {
                     strongSelf.decelerationAnimator?.isPaused = true
                     strongSelf.decelerationAnimator = nil
+                    didEnd = true
                 }
                 var contentOffset = strongSelf.scrollNode.view.contentOffset
                 contentOffset.y = floorToScreenPixels(currentOffset.y)
                 strongSelf.scrollNode.view.setContentOffset(contentOffset, animated: false)
+                strongSelf.scrollViewDidScroll(strongSelf.scrollNode.view)
+                if didEnd {
+                    strongSelf.scrollViewDidEndDecelerating(strongSelf.scrollNode.view)
+                }
             })
             self.decelerationAnimator?.isPaused = false
         }

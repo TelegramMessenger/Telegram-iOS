@@ -2361,7 +2361,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     if let item = self.item, let forwardInfo = item.message.forwardInfo {
                         if let sourceMessageId = forwardInfo.sourceMessageId {
                             if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
-                                if case .member = channel.participationStatus {
+                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                } else if case .member = channel.participationStatus {
                                 } else {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
                                     return true
