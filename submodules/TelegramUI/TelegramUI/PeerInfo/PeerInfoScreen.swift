@@ -1041,6 +1041,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let isOpenedFromChat: Bool
     private let callMessages: [Message]
     
+    private let isMediaOnly: Bool
+    
     private var presentationData: PresentationData
     
     let scrollNode: ASScrollNode
@@ -1101,6 +1103,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.nearbyPeer = nearbyPeer
         self.callMessages = callMessages
+        self.isMediaOnly = context.account.peerId == peerId
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
@@ -1558,6 +1561,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.paneContainerNode)
         self.addSubnode(self.headerNode)
+        self.scrollNode.view.isScrollEnabled = !self.isMediaOnly
         
         self.paneContainerNode.chatControllerInteraction = self.chatInterfaceInteraction
         self.paneContainerNode.openPeerContextAction = { [weak self] peer, node, gesture in
@@ -2194,7 +2198,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }))
                 }
                 
-                if user.botInfo == nil && !user.flags.contains(.isSupport) {
+                if self.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_StartSecretChat, color: .accent, action: { [weak self] in
                         dismissAction()
                         self?.openStartSecretChat()
@@ -2266,6 +2270,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.openAddMember()
         case .search:
             self.openChatWithMessageSearch()
+        case .leave:
+            self.openLeavePeer()
         }
     }
     
@@ -3661,98 +3667,104 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var contentHeight: CGFloat = 0.0
         
-        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, contentOffset: self.scrollNode.view.contentOffset.y, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
+        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: headerHeight))
         if additive {
             transition.updateFrameAdditive(node: self.headerNode, frame: headerFrame)
         } else {
             transition.updateFrame(node: self.headerNode, frame: headerFrame)
         }
-        contentHeight += headerHeight
-        contentHeight += sectionSpacing
+        if !self.isMediaOnly {
+            contentHeight += headerHeight
+            contentHeight += sectionSpacing
+        } else {
+            contentHeight += navigationHeight
+        }
         
         var validRegularSections: [AnyHashable] = []
-        for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages) {
-            validRegularSections.append(sectionId)
-            
-            let sectionNode: PeerInfoScreenItemSectionContainerNode
-            if let current = self.regularSections[sectionId] {
-                sectionNode = current
-            } else {
-                sectionNode = PeerInfoScreenItemSectionContainerNode()
-                self.regularSections[sectionId] = sectionNode
-                self.scrollNode.addSubnode(sectionNode)
-            }
-            
-            let sectionHeight = sectionNode.update(width: layout.size.width, presentationData: self.presentationData, items: sectionItems, transition: transition)
-            let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
-            if additive {
-                transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
-            } else {
-                transition.updateFrame(node: sectionNode, frame: sectionFrame)
-            }
-            
-            transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 0.0 : 1.0)
-            if !sectionHeight.isZero && !self.state.isEditing {
-                contentHeight += sectionHeight
-                contentHeight += sectionSpacing
-            }
-        }
-        var removeRegularSections: [AnyHashable] = []
-        for (sectionId, sectionNode) in self.regularSections {
-            if !validRegularSections.contains(sectionId) {
-                removeRegularSections.append(sectionId)
-            }
-        }
-        for sectionId in removeRegularSections {
-            if let sectionNode = self.regularSections.removeValue(forKey: sectionId) {
-                sectionNode.removeFromSupernode()
-            }
-        }
-        
-        var validEditingSections: [AnyHashable] = []
-        for (sectionId, sectionItems) in editingItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction) {
-            validEditingSections.append(sectionId)
-            
-            var wasAdded = false
-            let sectionNode: PeerInfoScreenItemSectionContainerNode
-            if let current = self.editingSections[sectionId] {
-                sectionNode = current
-            } else {
-                wasAdded = true
-                sectionNode = PeerInfoScreenItemSectionContainerNode()
-                self.editingSections[sectionId] = sectionNode
-                self.scrollNode.addSubnode(sectionNode)
-            }
-            
-            let sectionHeight = sectionNode.update(width: layout.size.width, presentationData: self.presentationData, items: sectionItems, transition: transition)
-            let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
-            
-            if wasAdded {
-                sectionNode.frame = sectionFrame
-                sectionNode.alpha = self.state.isEditing ? 1.0 : 0.0
-            } else {
+        if !self.isMediaOnly {
+            for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages) {
+                validRegularSections.append(sectionId)
+                
+                let sectionNode: PeerInfoScreenItemSectionContainerNode
+                if let current = self.regularSections[sectionId] {
+                    sectionNode = current
+                } else {
+                    sectionNode = PeerInfoScreenItemSectionContainerNode()
+                    self.regularSections[sectionId] = sectionNode
+                    self.scrollNode.addSubnode(sectionNode)
+                }
+                
+                let sectionHeight = sectionNode.update(width: layout.size.width, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
                 if additive {
                     transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
                 } else {
                     transition.updateFrame(node: sectionNode, frame: sectionFrame)
                 }
-                transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 1.0 : 0.0)
+                
+                transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 0.0 : 1.0)
+                if !sectionHeight.isZero && !self.state.isEditing {
+                    contentHeight += sectionHeight
+                    contentHeight += sectionSpacing
+                }
             }
-            if !sectionHeight.isZero && self.state.isEditing {
-                contentHeight += sectionHeight
-                contentHeight += sectionSpacing
+            var removeRegularSections: [AnyHashable] = []
+            for (sectionId, sectionNode) in self.regularSections {
+                if !validRegularSections.contains(sectionId) {
+                    removeRegularSections.append(sectionId)
+                }
             }
-        }
-        var removeEditingSections: [AnyHashable] = []
-        for (sectionId, sectionNode) in self.editingSections {
-            if !validEditingSections.contains(sectionId) {
-                removeEditingSections.append(sectionId)
+            for sectionId in removeRegularSections {
+                if let sectionNode = self.regularSections.removeValue(forKey: sectionId) {
+                    sectionNode.removeFromSupernode()
+                }
             }
-        }
-        for sectionId in removeEditingSections {
-            if let sectionNode = self.editingSections.removeValue(forKey: sectionId) {
-                sectionNode.removeFromSupernode()
+            
+            var validEditingSections: [AnyHashable] = []
+            for (sectionId, sectionItems) in editingItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction) {
+                validEditingSections.append(sectionId)
+                
+                var wasAdded = false
+                let sectionNode: PeerInfoScreenItemSectionContainerNode
+                if let current = self.editingSections[sectionId] {
+                    sectionNode = current
+                } else {
+                    wasAdded = true
+                    sectionNode = PeerInfoScreenItemSectionContainerNode()
+                    self.editingSections[sectionId] = sectionNode
+                    self.scrollNode.addSubnode(sectionNode)
+                }
+                
+                let sectionHeight = sectionNode.update(width: layout.size.width, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
+                
+                if wasAdded {
+                    sectionNode.frame = sectionFrame
+                    sectionNode.alpha = self.state.isEditing ? 1.0 : 0.0
+                } else {
+                    if additive {
+                        transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
+                    } else {
+                        transition.updateFrame(node: sectionNode, frame: sectionFrame)
+                    }
+                    transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 1.0 : 0.0)
+                }
+                if !sectionHeight.isZero && self.state.isEditing {
+                    contentHeight += sectionHeight
+                    contentHeight += sectionSpacing
+                }
+            }
+            var removeEditingSections: [AnyHashable] = []
+            for (sectionId, sectionNode) in self.editingSections {
+                if !validEditingSections.contains(sectionId) {
+                    removeEditingSections.append(sectionId)
+                }
+            }
+            for sectionId in removeEditingSections {
+                if let sectionNode = self.editingSections.removeValue(forKey: sectionId) {
+                    sectionNode.removeFromSupernode()
+                }
             }
         }
         
@@ -3888,7 +3900,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         if let (layout, navigationHeight) = self.validLayout {
             if !additive {
-                self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, contentOffset: offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
+                self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0

@@ -5331,6 +5331,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.ButtonMore" = "More";
 "PeerInfo.ButtonAddMember" = "Add Members";
 "PeerInfo.ButtonSearch" = "Search";
+"PeerInfo.ButtonLeave" = "Leave";
 
 "PeerInfo.PaneMedia" = "Media";
 "PeerInfo.PaneFiles" = "Files";

@@ -317,6 +317,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     guard let user = view.peers[userPeerId] as? TelegramUser else {
                         return .none
                     }
+                    if user.id == context.account.peerId {
+                        return .none
+                    }
                     if user.isDeleted {
                         return .none
                     }
@@ -467,16 +470,81 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 )
             }
         case let .group(groupId):
-            let status = context.account.viewTracker.peerView(groupId, updateData: false)
-            |> map { peerView -> PeerInfoStatusData? in
-                guard let channel = peerView.peers[groupId] as? TelegramChannel else {
-                    return PeerInfoStatusData(text: strings.Group_Status, isActivity: false)
+            var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                onlineMemberCount = context.account.viewTracker.peerView(groupId, updateData: false)
+                |> map { view -> Bool? in
+                    if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            return nil
+                        } else if let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
+                            return true
+                        } else {
+                            return false
+                        }
+                    } else {
+                        return false
+                    }
                 }
-                if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount != 0 {
-                    return PeerInfoStatusData(text: strings.Conversation_StatusMembers(memberCount), isActivity: false)
-                } else {
-                    return PeerInfoStatusData(text: strings.Group_Status, isActivity: false)
+                |> distinctUntilChanged
+                |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+                    if let isLarge = isLarge {
+                        if isLarge {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map(Optional.init)
+                        } else {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map(Optional.init)
+                        }
+                    } else {
+                        return .single(nil)
+                    }
                 }
+            }
+            
+            let status = combineLatest(queue: .mainQueue(),
+                context.account.viewTracker.peerView(groupId, updateData: false),
+                onlineMemberCount
+            )
+            |> map { peerView, onlineMemberCount -> PeerInfoStatusData? in
+                if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
+                    if let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
+                        var string = ""
+                        
+                        string.append("\(strings.Conversation_StatusMembers(Int32(memberCount))), ")
+                        string.append(strings.Conversation_StatusOnline(Int32(onlineMemberCount)))
+                        return PeerInfoStatusData(text: string, isActivity: false)
+                    } else if memberCount > 0 {
+                        return PeerInfoStatusData(text: strings.Conversation_StatusMembers(Int32(memberCount)), isActivity: false)
+                    }
+                } else if let group = peerView.peers[groupId] as? TelegramGroup, let cachedGroupData = peerView.cachedData as? CachedGroupData {
+                    var onlineCount = 0
+                    if let participants = cachedGroupData.participants {
+                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                        for participant in participants.participants {
+                            if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
+                                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                switch relativeStatus {
+                                case .online:
+                                    onlineCount += 1
+                                default:
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if onlineCount > 1 {
+                        var string = ""
+                        
+                        string.append("\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ")
+                        string.append(strings.Conversation_StatusOnline(Int32(onlineCount)))
+                        return PeerInfoStatusData(text: string, isActivity: false)
+                    } else {
+                        return PeerInfoStatusData(text: strings.Conversation_StatusMembers(Int32(group.participantCount)), isActivity: false)
+                    }
+                }
+                
+                return PeerInfoStatusData(text: strings.Group_Status, isActivity: false)
             }
             |> distinctUntilChanged
             
@@ -657,14 +725,17 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         result.append(.more)
     } else if let channel = peer as? TelegramChannel {
+        var displayLeave = true
         switch channel.info {
         case .broadcast:
             if let cachedData = cachedData as? CachedChannelData {
                 if cachedData.linkedDiscussionPeerId != nil {
+                    displayLeave = false
                     result.append(.discussion)
                 }
             }
         case .group:
+            displayLeave = false
             if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                 result.append(.addMember)
             }
@@ -672,6 +743,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         
         result.append(.mute)
         result.append(.search)
+        if displayLeave {
+            result.append(.leave)
+        }
         result.append(.more)
     } else if let group = peer as? TelegramGroup {
         var canEditGroupInfo = false

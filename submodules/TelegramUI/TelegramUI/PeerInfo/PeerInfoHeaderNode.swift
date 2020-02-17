@@ -22,6 +22,7 @@ enum PeerInfoHeaderButtonKey: Hashable {
     case more
     case addMember
     case search
+    case leave
 }
 
 enum PeerInfoHeaderButtonIcon {
@@ -32,6 +33,7 @@ enum PeerInfoHeaderButtonIcon {
     case more
     case addMember
     case search
+    case leave
 }
 
 final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
@@ -108,6 +110,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     imageName = "Peer Info/ButtonAddMember"
                 case .search:
                     imageName = "Peer Info/ButtonSearch"
+                case .leave:
+                    imageName = "Peer Info/ButtonLeave"
                 }
                 if let image = UIImage(bundleImageName: imageName) {
                     let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
@@ -1726,7 +1730,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if let peer = peer {
-            titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            if peer.id == self.context.account.peerId {
+                titleString = NSAttributedString(string: presentationData.strings.Conversation_SavedMessages, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            } else {
+                titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            }
             
             if let statusData = statusData {
                 let subtitleColor: UIColor
@@ -1797,7 +1805,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             subtitleFrame = CGRect(origin: CGPoint(x: floor((width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
         }
         
-        let titleLockOffset: CGFloat = 7.0 + (subtitleSize.height.isZero ? 8.0 : 0.0)
+        let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
+        
+        let titleLockOffset: CGFloat = 7.0 + singleTitleLockOffset
         let titleMaxLockOffset: CGFloat = 7.0
         let titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
         let titleOffset = -min(titleCollapseOffset, contentOffset)
@@ -2098,6 +2108,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case .search:
                 buttonText = presentationData.strings.PeerInfo_ButtonSearch
                 buttonIcon = .search
+            case .leave:
+                buttonText = presentationData.strings.PeerInfo_ButtonLeave
+                buttonIcon = .leave
             }
             buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isExpanded: self.isAvatarExpanded, presentationData: presentationData, transition: buttonTransition)
             transition.updateSublayerTransformScaleAdditive(node: buttonNode, scale: buttonsScale)
@@ -2108,20 +2121,24 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             buttonsAlphaTransition.updateAlpha(node: buttonNode, alpha: buttonsAlpha)
             
             let hiddenWhileExpanded: Bool
-            if self.isOpenedFromChat {
-                switch buttonKey {
-                case .message, .search:
-                    hiddenWhileExpanded = true
-                default:
-                    hiddenWhileExpanded = false
+            if buttonKeys.count > 3 {
+                if self.isOpenedFromChat {
+                    switch buttonKey {
+                    case .message, .search:
+                        hiddenWhileExpanded = true
+                    default:
+                        hiddenWhileExpanded = false
+                    }
+                } else {
+                    switch buttonKey {
+                    case .mute, .search:
+                        hiddenWhileExpanded = true
+                    default:
+                        hiddenWhileExpanded = false
+                    }
                 }
             } else {
-                switch buttonKey {
-                case .mute, .search:
-                    hiddenWhileExpanded = true
-                default:
-                    hiddenWhileExpanded = false
-                }
+                hiddenWhileExpanded = false
             }
             
             if self.isAvatarExpanded, hiddenWhileExpanded {
