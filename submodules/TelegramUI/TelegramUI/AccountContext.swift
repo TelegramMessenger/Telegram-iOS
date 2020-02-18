@@ -120,6 +120,7 @@ public final class AccountContextImpl: AccountContext {
     public let downloadedMediaStoreManager: DownloadedMediaStoreManager
     
     public let liveLocationManager: LiveLocationManager?
+    public let peersNearbyManager: PeersNearbyManager?
     public let wallpaperUploadManager: WallpaperUploadManager?
     private let themeUpdateManager: ThemeUpdateManager?
     
@@ -195,6 +196,12 @@ public final class AccountContextImpl: AccountContext {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
             self.themeUpdateManager = nil
+        }
+        
+        if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {
+            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, locationManager: locationManager)
+        } else {
+            self.peersNearbyManager = nil
         }
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])

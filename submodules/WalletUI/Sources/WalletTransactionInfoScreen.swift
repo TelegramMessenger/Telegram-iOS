@@ -153,11 +153,7 @@ final class WalletTransactionInfoScreen: ViewController {
     private var walletStateDisposable: Disposable?
     private var combinedState: CombinedWalletState?
     private var reloadingState = false
-    
-    private var previousScreenBrightness: CGFloat?
-    private var displayLinkAnimator: DisplayLinkAnimator?
-    private let idleTimerExtensionDisposable: Disposable
-    
+        
     public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, walletState: Signal<(CombinedWalletState, Bool), NoError>, enableDebugActions: Bool) {
         self.context = context
         self.walletInfo = walletInfo
@@ -168,9 +164,7 @@ final class WalletTransactionInfoScreen: ViewController {
         
         let defaultTheme = self.presentationData.theme.navigationBar
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
-        
-        self.idleTimerExtensionDisposable = context.idleTimerExtension()
-        
+                
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -193,7 +187,6 @@ final class WalletTransactionInfoScreen: ViewController {
     }
     
     deinit {
-        self.idleTimerExtensionDisposable.dispose()
         self.walletStateDisposable?.dispose()
     }
     

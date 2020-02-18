@@ -565,6 +565,7 @@ public protocol AccountContext: class {
     #endif
     
     var liveLocationManager: LiveLocationManager? { get }
+    var peersNearbyManager: PeersNearbyManager? { get }
     var fetchManager: FetchManager { get }
     var downloadedMediaStoreManager: DownloadedMediaStoreManager { get }
     var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }

@@ -25,7 +25,7 @@ public enum PeerNearbyVisibilityUpdate {
     case invisible
 }
 
-public func peersNearbyUpdateVisibility(account: Account, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
+public func updatePeersNearbyVisibility(account: Account, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0
     var geoPoint: Api.InputGeoPoint
     var selfExpires: Int32?
@@ -61,8 +61,12 @@ public func peersNearbyUpdateVisibility(account: Account, update: PeerNearbyVisi
         
     return account.network.request(Api.functions.contacts.getLocated(flags: flags, geoPoint: geoPoint, selfExpires: selfExpires))
     |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-        return .single(nil)
+    |> `catch` { error -> Signal<Api.Updates?, NoError> in
+        if error.errorCode == 406 {
+            return .single(nil)
+        } else {
+            return .single(nil)
+        }
     }
     |> mapToSignal { updates -> Signal<Void, NoError> in
         if let updates = updates {
