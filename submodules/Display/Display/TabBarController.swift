@@ -269,6 +269,7 @@ open class TabBarController: ViewController {
             currentController.navigationItem.setTarget(self.navigationItem)
             displayNavigationBar = currentController.displayNavigationBar
             self.navigationBar?.setContentNode(currentController.navigationBar?.contentNode, animated: false)
+            self.navigationBar?.setSecondaryContentNode(currentController.navigationBar?.secondaryContentNode)
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
             self.statusBar.statusBarStyle = currentController.statusBar.statusBarStyle
         } else {
@@ -278,14 +279,21 @@ open class TabBarController: ViewController {
             self.navigationItem.titleView = nil
             self.navigationItem.backBarButtonItem = nil
             self.navigationBar?.setContentNode(nil, animated: false)
+            self.navigationBar?.setSecondaryContentNode(nil)
             displayNavigationBar = false
         }
         if self.displayNavigationBar != displayNavigationBar {
             self.setDisplayNavigationBar(displayNavigationBar)
         }
         
-        if let validLayout = self.validLayout {
-            self.containerLayoutUpdated(validLayout, transition: .immediate)
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .immediate)
+        }
+    }
+    
+    public func updateLayout() {
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .immediate)
         }
     }
     

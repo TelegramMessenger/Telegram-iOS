@@ -184,13 +184,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
             
-            let editingOffset: CGFloat = 0.0
+            var editingOffset: CGFloat = 0.0
             var reorderInset: CGFloat = 0.0
             
             if item.editing.editing && item.canBeReordered {
-                /*let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
+                let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0*/
+                editingOffset = sizeAndApply.0
                 
                 let reorderSizeAndApply = reorderControlLayout(item.presentationData.theme)
                 reorderControlSizeAndApply = reorderSizeAndApply

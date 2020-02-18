@@ -59,7 +59,7 @@ final class ChatListControllerNode: ASDisplayNode {
     
     private(set) var searchDisplayController: SearchDisplayController?
     
-    private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
+    private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((Peer, Bool) -> Void)?
@@ -102,8 +102,8 @@ final class ChatListControllerNode: ASDisplayNode {
                         let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
                         strongSelf.chatListEmptyNode = chatListEmptyNode
                         strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
-                        if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
+                        if let (layout, navigationHeight, visualNavigationHeight, cleanNavigationBarHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
                         }
                         strongSelf.isEmptyUpdated?(true)
                     }
@@ -114,9 +114,7 @@ final class ChatListControllerNode: ASDisplayNode {
                 default:
                     if let chatListEmptyNode = strongSelf.chatListEmptyNode {
                         strongSelf.chatListEmptyNode = nil
-                        chatListEmptyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak chatListEmptyNode] _ in
-                            chatListEmptyNode?.removeFromSupernode()
-                        })
+                        chatListEmptyNode.removeFromSupernode()
                     }
             }
             switch isEmptyState {
@@ -125,8 +123,8 @@ final class ChatListControllerNode: ASDisplayNode {
                         let chatListEmptyIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemSecondaryTextColor, 22.0, 1.0, false))
                         strongSelf.chatListEmptyIndicator = chatListEmptyIndicator
                         strongSelf.insertSubnode(chatListEmptyIndicator, belowSubnode: strongSelf.chatListNode)
-                        if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
+                        if let (layout, navigationHeight, visualNavigationHeight, cleanNavigationBarHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
                         }
                     }
                 default:
@@ -160,8 +158,8 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = (layout, navigationBarHeight, visualNavigationHeight)
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
@@ -233,12 +231,12 @@ final class ChatListControllerNode: ASDisplayNode {
         }
         
         if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: transition)
         }
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
-        guard let (containerLayout, navigationBarHeight, _) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
+        guard let (containerLayout, navigationBarHeight, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         
@@ -262,7 +260,7 @@ final class ChatListControllerNode: ASDisplayNode {
         })
         self.chatListNode.accessibilityElementsHidden = true
         
-        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
             if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
                 if isSearchBar {

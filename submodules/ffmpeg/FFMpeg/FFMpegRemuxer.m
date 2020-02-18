@@ -1,10 +1,63 @@
 #import "FFMpegRemuxer.h"
 
+#import "FFMpegAVIOContext.h"
+
 #include "libavutil/timestamp.h"
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 
 #define MOV_TIMESCALE 1000
+
+@interface FFMpegRemuxerContext : NSObject {
+    @public
+    int _fd;
+    int64_t _offset;
+}
+
+@end
+
+@implementation FFMpegRemuxerContext
+
+- (instancetype)initWithFileName:(NSString *)fileName {
+    self = [super init];
+    if (self != nil) {
+        _fd = open(fileName.UTF8String, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    }
+    return self;
+}
+
+- (void)dealloc {
+    if (_fd > 0) {
+        close(_fd);
+    }
+}
+
+@end
+
+static int readPacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
+    FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
+    context->_offset += length;
+    printf("read %lld bytes (offset is now %lld)\n", length, context->_offset);
+    return read(context->_fd, buffer, length);
+}
+
+static int writePacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
+    FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
+    context->_offset += length;
+    printf("write %lld bytes (offset is now %lld)\n", length, context->_offset);
+    return write(context->_fd, buffer, length);
+}
+
+static int64_t seekImpl(void * _Nullable opaque, int64_t offset, int whence) {
+    FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
+    printf("seek to %lld\n", offset);
+    if (whence == FFMPEG_AVSEEK_SIZE) {
+        return 0;
+    } else {
+        context->_offset = offset;
+        return lseek(context->_fd, offset, SEEK_SET);
+    }
+}
 
 @implementation FFMpegRemuxer
 
@@ -21,6 +74,9 @@
     in_filename  = [path UTF8String];
     out_filename = [outPath UTF8String];
     
+    //FFMpegRemuxerContext *outputContext = [[FFMpegRemuxerContext alloc] initWithFileName:outPath];
+    //FFMpegAVIOContext *outputIoContext = [[FFMpegAVIOContext alloc] initWithBufferSize:1024 opaqueContext:(__bridge void *)outputContext readPacket:&readPacketImpl writePacket:&writePacketImpl seek:&seekImpl];
+    
     if ((ret = avformat_open_input(&input_format_context, in_filename, av_find_input_format("mov"), NULL)) < 0) {
         fprintf(stderr, "Could not open input file '%s'", in_filename);
         goto end;
@@ -31,6 +87,11 @@
     }
     
     avformat_alloc_output_context2(&output_format_context, NULL, NULL, out_filename);
+    //output_format_context = avformat_alloc_context();
+    //output_format_context->pb = outputIoContext.impl;
+    //output_format_context->flags |= AVFMT_FLAG_CUSTOM_IO;
+    //output_format_context->oformat = av_guess_format("mp4", NULL, NULL);
+    
     if (!output_format_context) {
         fprintf(stderr, "Could not create output context\n");
         ret = AVERROR_UNKNOWN;
@@ -103,7 +164,7 @@
         // https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API/Transcoding_assets_for_MSE
         av_dict_set(&opts, "movflags", "dash+faststart+global_sidx+skip_trailer", 0);
         if (maxTrackLength > 0) {
-            av_dict_set_int(&opts, "custom_maxTrackLength", maxTrackLength, 0);
+            //av_dict_set_int(&opts, "custom_maxTrackLength", maxTrackLength, 0);
         }
     }
     // https://ffmpeg.org/doxygen/trunk/group__lavf__encoding.html#ga18b7b10bb5b94c4842de18166bc677cb
@@ -144,8 +205,9 @@
 end:
     avformat_close_input(&input_format_context);
     /* close output */
-    if (output_format_context && !(output_format_context->oformat->flags & AVFMT_NOFILE))
+    if (output_format_context && !(output_format_context->oformat->flags & AVFMT_NOFILE)) {
         avio_closep(&output_format_context->pb);
+    }
     avformat_free_context(output_format_context);
     av_freep(&streams_list);
     if (ret < 0 && ret != AVERROR_EOF) {

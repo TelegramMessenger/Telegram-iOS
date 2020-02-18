@@ -44,6 +44,7 @@ struct ChatListNodeViewTransition {
     let options: ListViewDeleteAndInsertOptions
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
+    let adjustScrollToFirstItem: Bool
 }
 
 enum ChatListNodeViewScrollPosition {
@@ -176,11 +177,12 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             fromEmptyView = true
         }
         
+        var adjustScrollToFirstItem = false
         if !previewing && !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 1 {
-            scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+            adjustScrollToFirstItem = true
         }
         
-        subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange))
+        subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, adjustScrollToFirstItem: adjustScrollToFirstItem))
         subscriber.putCompletion()
         
         return EmptyDisposable
