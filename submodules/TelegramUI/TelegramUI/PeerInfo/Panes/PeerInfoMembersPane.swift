@@ -84,7 +84,7 @@ private struct PeerMembersListEntry: Comparable, Identifiable {
         }, removePeer: { _ in
         }, contextAction: nil/*{ node, gesture in
             openPeerContextAction(peer, node, gesture)
-        }*/, hasTopStripe: false, noInsets: true)
+         }*/, hasTopStripe: false, noInsets: true, disableInteractiveTransitionIfNecessary: true)
     }
 }
 
