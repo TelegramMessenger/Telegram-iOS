@@ -109,40 +109,37 @@ openssl_libs = [
     "libcrypto.a",
 ]
 
-archs = ["arm64", "armv7", "x86_64"]
-
-rules = [
-    genrule(
-        name = "openssl_build_" + arch,
-        srcs = [
-            "build-openssl.sh",
-            "openssl-1.1.1d.tar.gz",
-            "patch-conf.patch",
-            "patch-include.patch",
-        ],
-        cmd_bash =
-            "mkdir -p $(RULEDIR)/{} && cp $(SRCS) $(RULEDIR)/{}/ && sh $(RULEDIR)/{}/build-openssl.sh $(RULEDIR)/{} $(RULEDIR)/{} ".format(arch, arch, arch, arch, arch) + arch + "\n" +
-            ("\n".join(["cp \"$(RULEDIR)/{}/build/arm64/include/openssl/{}\" \"$(location :{})\"\n".format(arch, x, x) for x in openssl_headers]) if arch == "arm64" else "") +
-            "\n".join([
-                "cp \"$(RULEDIR)/{}/build/{}/lib/{}\" \"$(location :{})\"\n".format(arch, arch, x, arch + "_" + x) for x in openssl_libs
-            ]),
-        outs =
-            (openssl_headers if arch == "arm64" else []) +
-            [arch + "_" + x for x in openssl_libs],
-        visibility = [
-            "//visibility:public",
-        ]
-    ) for arch in archs
-]
-
 genrule(
-    name = "openssl_fat_libraries",
-    srcs = [":" + arch + "_" + openssl_libs[0] for arch in archs],
-    cmd_bash = "xcrun lipo {} -output {} -create".format(" ".join(["$(location :" + arch + "_" + openssl_libs[0] + ")" for arch in archs]), "$(location " + openssl_libs[0] + ")"),
-    outs = openssl_libs,
+    name = "openssl_build",
+    srcs = [
+        "build-openssl.sh",
+        "openssl-1.1.1d.tar.gz",
+        "patch-conf.patch",
+        "patch-include.patch",
+    ],
+    cmd_bash =
+        """
+        if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
+            BUILD_ARCH="armv7"
+        elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
+            BUILD_ARCH="arm64"
+        elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
+            BUILD_ARCH="x86_64"
+        else
+            echo "Unsupported architecture $(TARGET_CPU)"
+        fi
+        """ + "\n" +
+        "mkdir -p $(RULEDIR)/$$BUILD_ARCH && cp $(SRCS) $(RULEDIR)/$$BUILD_ARCH/ && sh $(RULEDIR)/$$BUILD_ARCH/build-openssl.sh $(RULEDIR)/$$BUILD_ARCH $(RULEDIR)/$$BUILD_ARCH $$BUILD_ARCH" + "\n" +
+        "\n".join([
+            "cp \"$(RULEDIR)/$$BUILD_ARCH/build/arm64/include/openssl/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_headers
+        ]) +
+        "\n".join([
+            "cp \"$(RULEDIR)/$$BUILD_ARCH/build/$$BUILD_ARCH/lib/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_libs
+        ]),
+    outs = openssl_headers + openssl_libs,
     visibility = [
         "//visibility:public",
-    ],
+    ]
 )
 
 genrule(

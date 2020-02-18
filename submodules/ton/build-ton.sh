@@ -6,6 +6,7 @@ set -e
 OUT_DIR="$(pwd)/$1"
 SOURCE_DIR="$(pwd)/$2"
 openssl_base_path="$(pwd)/$3"
+arch="$4"
 
 if [ -z "$openssl_base_path" ]; then
   echo "Usage: sh build-ton.sh path/to/openssl"
@@ -25,52 +26,44 @@ mkdir -p "$OUT_DIR"
 mkdir -p "$OUT_DIR/build"
 cd "$OUT_DIR/build"
 
-platforms="iOS"
-for platform in $platforms; do
-  openssl_path="$openssl_base_path"
-  echo "OpenSSL path = ${openssl_path}"
-  openssl_crypto_library="${openssl_path}/lib/libcrypto.a"
-  openssl_ssl_library="${openssl_path}/lib/libssl.a"
-  options="$options -DOPENSSL_FOUND=1"
-  options="$options -DOPENSSL_CRYPTO_LIBRARY=${openssl_crypto_library}"
-  options="$options -DOPENSSL_INCLUDE_DIR=${openssl_path}/include"
-  options="$options -DOPENSSL_LIBRARIES=${openssl_crypto_library}"
-  options="$options -DCMAKE_BUILD_TYPE=Release"
-  if [[ $skip_build = "" ]]; then
-    simulators="0 1"
-  else
-    simulators=""
-  fi
-  for simulator in $simulators;
-  do
-    build="build-${platform}"
-    install="install-${platform}"
-    if [[ $simulator = "1" ]]; then
-      build="${build}-simulator"
-      install="${install}-simulator"
-      ios_platform="SIMULATOR"
-    else
-      ios_platform="OS"
-    fi
-    echo "Platform = ${platform} Simulator = ${simulator}"
-    echo $ios_platform
-    rm -rf $build
-    mkdir -p $build
-    mkdir -p $install
-    cd $build
-    cmake $td_path $options -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DIOS_PLATFORM=${ios_platform} -DTON_ARCH= -DCMAKE_INSTALL_PREFIX=../${install}
-    CORE_COUNT=`sysctl -n hw.logicalcpu`
-    make -j$CORE_COUNT install || exit
-    cd ..
-  done
-  mkdir -p $platform
+openssl_path="$openssl_base_path"
+echo "OpenSSL path = ${openssl_path}"
+openssl_crypto_library="${openssl_path}/lib/libcrypto.a"
+openssl_ssl_library="${openssl_path}/lib/libssl.a"
+options="$options -DOPENSSL_FOUND=1"
+options="$options -DOPENSSL_CRYPTO_LIBRARY=${openssl_crypto_library}"
+options="$options -DOPENSSL_INCLUDE_DIR=${openssl_path}/include"
+options="$options -DOPENSSL_LIBRARIES=${openssl_crypto_library}"
+options="$options -DCMAKE_BUILD_TYPE=Release"
 
-  mkdir -p "out"
-  cp -r "install-iOS/include" "out/"
-  mkdir -p "out/lib"
+build="build-${arch}"
+install="install-${arch}"
 
-  for f in install-iOS/lib/*.a; do
-    lib_name=$(basename "$f")
-    lipo -create "install-iOS/lib/$lib_name" "install-iOS-simulator/lib/$lib_name" -o "out/lib/$lib_name"
-  done
+if [ "$arch" == "armv7" ]; then
+  ios_platform="OSV7"
+elif [ "$arch" == "arm64" ]; then
+  ios_platform="OS64"
+elif [ "$arch" == "x86_64" ]; then
+  ios_platform="SIMULATOR"
+else
+  echo "Unsupported architecture $arch"
+  exit 1
+fi
+
+rm -rf $build
+mkdir -p $build
+mkdir -p $install
+cd $build
+cmake $td_path $options -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DIOS_PLATFORM=${ios_platform} -DTON_ARCH= -DCMAKE_INSTALL_PREFIX=../${install}
+CORE_COUNT=`sysctl -n hw.logicalcpu`
+make -j$CORE_COUNT install || exit
+cd ..
+
+mkdir -p "out"
+cp -r "$install/include" "out/"
+mkdir -p "out/lib"
+
+for f in $install/lib/*.a; do
+  lib_name=$(basename "$f")
+  cp "$install/lib/$lib_name" "out/lib/$lib_name"
 done

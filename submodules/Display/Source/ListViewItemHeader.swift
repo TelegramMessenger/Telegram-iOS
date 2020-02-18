@@ -50,24 +50,9 @@ open class ListViewItemHeaderNode: ASDisplayNode {
             self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
         }
         
-        if seeThrough {
-            if (layerBacked) {
-                super.init()
-                self.setLayerBlock({
-                    return CASeeThroughTracingLayer()
-                })
-            } else {
-                super.init()
-        
-                self.setViewBlock({
-                    return CASeeThroughTracingView()
-                })
-            }
-        } else {
-            super.init()
+        super.init()
             
-            self.isLayerBacked = layerBacked
-        }
+        self.isLayerBacked = layerBacked
     }
     
     open func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {

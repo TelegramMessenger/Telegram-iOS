@@ -48,6 +48,16 @@ genrule(
     """
     set -ex
 
+    if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
+        BUILD_ARCH="armv7"
+    elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
+        BUILD_ARCH="arm64"
+    elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
+        BUILD_ARCH="x86_64"
+    else
+        echo "Unsupported architecture $(TARGET_CPU)"
+    fi
+
     cp $(location :build-ton.sh) "$(RULEDIR)/"
     cp $(location :iOS.cmake) "$(RULEDIR)/"
     tar -xzf $(location tonlib-src.tar.gz) -C "$(RULEDIR)/"
@@ -60,7 +70,7 @@ genrule(
     done
     mkdir -p "$(RULEDIR)/Public/ton"
 
-    sh $(RULEDIR)/build-ton.sh "$(RULEDIR)" "$(RULEDIR)" "$(RULEDIR)/openssl_headers"
+    sh $(RULEDIR)/build-ton.sh "$(RULEDIR)" "$(RULEDIR)" "$(RULEDIR)/openssl_headers" $$BUILD_ARCH
     """ +
     "\n".join([
         "cp -f \"$(RULEDIR)/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers

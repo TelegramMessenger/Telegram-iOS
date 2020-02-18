@@ -19,7 +19,7 @@ objc_library(
     copts = [
         '-DAPP_CONFIG_API_ID=0',
         '-DAPP_CONFIG_API_HASH="1"',
-        '-DAPP_CONFIG_HOCKEYAPP_ID="1"',
+        '-DAPP_CONFIG_APP_CENTER_ID="1"',
         '-DAPP_CONFIG_IS_INTERNAL_BUILD=false',
         '-DAPP_CONFIG_IS_APPSTORE_BUILD=true',
         '-DAPP_CONFIG_APPSTORE_ID=0',
