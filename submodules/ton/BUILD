@@ -38,7 +38,7 @@ ton_lib_names = [
 genrule(
     name = "ton_build",
     srcs = [
-        "build-ton.sh",
+        "build-ton-bazel.sh",
         "iOS.cmake",
         "tonlib-src.tar.gz",
         "//submodules/openssl:openssl_include",
@@ -58,7 +58,7 @@ genrule(
         echo "Unsupported architecture $(TARGET_CPU)"
     fi
 
-    cp $(location :build-ton.sh) "$(RULEDIR)/"
+    cp $(location :build-ton-bazel.sh) "$(RULEDIR)/"
     cp $(location :iOS.cmake) "$(RULEDIR)/"
     tar -xzf $(location tonlib-src.tar.gz) -C "$(RULEDIR)/"
 
@@ -70,7 +70,7 @@ genrule(
     done
     mkdir -p "$(RULEDIR)/Public/ton"
 
-    sh $(RULEDIR)/build-ton.sh "$(RULEDIR)" "$(RULEDIR)" "$(RULEDIR)/openssl_headers" $$BUILD_ARCH
+    sh $(RULEDIR)/build-ton-bazel.sh "$(RULEDIR)" "$(RULEDIR)" "$(RULEDIR)/openssl_headers" $$BUILD_ARCH
     """ +
     "\n".join([
         "cp -f \"$(RULEDIR)/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers

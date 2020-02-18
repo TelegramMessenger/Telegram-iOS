@@ -112,7 +112,7 @@ openssl_libs = [
 genrule(
     name = "openssl_build",
     srcs = [
-        "build-openssl.sh",
+        "build-openssl-bazel.sh",
         "openssl-1.1.1d.tar.gz",
         "patch-conf.patch",
         "patch-include.patch",
@@ -129,9 +129,9 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
         """ + "\n" +
-        "mkdir -p $(RULEDIR)/$$BUILD_ARCH && cp $(SRCS) $(RULEDIR)/$$BUILD_ARCH/ && sh $(RULEDIR)/$$BUILD_ARCH/build-openssl.sh $(RULEDIR)/$$BUILD_ARCH $(RULEDIR)/$$BUILD_ARCH $$BUILD_ARCH" + "\n" +
+        "mkdir -p $(RULEDIR)/$$BUILD_ARCH && cp $(SRCS) $(RULEDIR)/$$BUILD_ARCH/ && sh $(RULEDIR)/$$BUILD_ARCH/build-openssl-bazel.sh $(RULEDIR)/$$BUILD_ARCH $(RULEDIR)/$$BUILD_ARCH $$BUILD_ARCH" + "\n" +
         "\n".join([
-            "cp \"$(RULEDIR)/$$BUILD_ARCH/build/arm64/include/openssl/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_headers
+            "cp \"$(RULEDIR)/$$BUILD_ARCH/build/$$BUILD_ARCH/include/openssl/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_headers
         ]) +
         "\n".join([
             "cp \"$(RULEDIR)/$$BUILD_ARCH/build/$$BUILD_ARCH/lib/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_libs

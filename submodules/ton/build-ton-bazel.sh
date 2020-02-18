@@ -20,7 +20,7 @@ fi
 
 ARCHIVE_PATH="$SOURCE_DIR/tonlib.zip"
 td_path="$SOURCE_DIR/tonlib-src"
-TOOLCHAIN="$SOURCE_DIR/iOS.cmake"
+TOOLCHAIN="$SOURCE_DIR/iOS-bazel.cmake"
 
 mkdir -p "$OUT_DIR"
 mkdir -p "$OUT_DIR/build"

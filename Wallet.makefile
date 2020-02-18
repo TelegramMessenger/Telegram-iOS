@@ -12,7 +12,7 @@ WALLET_BUCK_OPTIONS=\
 	--config custom.distributionProvisioningProfileApp="${WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP}" \
 	--config custom.apiId="${API_ID}" \
 	--config custom.apiHash="${API_HASH}" \
-	--config custom.hockeyAppId="${HOCKEYAPP_ID}" \
+	--config custom.appCenterId="${HOCKEYAPP_ID}" \
 	--config custom.isInternalBuild="${IS_INTERNAL_BUILD}" \
 	--config custom.isAppStoreBuild="${IS_APPSTORE_BUILD}" \
 	--config custom.appStoreId="${APPSTORE_ID}" \
@@ -38,6 +38,7 @@ build_wallet: check_env
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/Display:Display#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/Display:Display#shared,iphoneos-arm64,iphoneos-armv7 \
+    --verbose 7 \
 	${WALLET_BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 wallet_package:
