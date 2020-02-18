@@ -140,7 +140,7 @@ public struct ChatListFilter: PostboxCoding, Equatable {
     }
 }
 
-/*extension ChatListFilter {
+extension ChatListFilter {
     init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
         case let .dialogFilter(flags, id, title, includePeers):
@@ -179,13 +179,13 @@ public struct ChatListFilter: PostboxCoding, Equatable {
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         })
     }
-}*/
+}
 
 public enum RequestUpdateChatListFilterError {
     case generic
 }
 
-/*public func requestUpdateChatListFilter(account: Account, id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
+public func requestUpdateChatListFilter(account: Account, id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
     return account.postbox.transaction { transaction -> Api.DialogFilter? in
         return filter?.apiFilter(transaction: transaction)
     }
@@ -270,6 +270,8 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
 }
 
 func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    return .complete()
+    
     return requestChatListFilters(postbox: postbox, network: network)
     |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
         return .complete()
@@ -376,4 +378,4 @@ public func updateChatListFilterSettingsInteractively(postbox: Postbox, _ f: @es
         return result ?? .default
     }
 }
-*/
+

@@ -442,6 +442,9 @@
         SSubscriber *subscriber = context.subscriber;
         [context.videoProcessor startWithTimeRange:context.timeRange progressBlock:^(CGFloat progress)
         {
+#if DEBUG
+            printf("Video progress: %f\n", progress);
+#endif
             [subscriber putNext:@(progress)];
         } completionBlock:^
         {
@@ -1032,7 +1035,11 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     
     NSDictionary *codecSettings = @
     {
+#if DEBUG
+    AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 500),
+#else
     AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 1000),
+#endif
     AVVideoCleanApertureKey: videoCleanApertureSettings,
     AVVideoPixelAspectRatioKey: videoAspectRatioSettings
     };

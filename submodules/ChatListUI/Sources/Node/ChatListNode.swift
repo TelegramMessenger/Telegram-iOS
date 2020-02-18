@@ -13,6 +13,7 @@ import TelegramNotices
 import ContactsPeerItem
 import ContextUI
 import ItemListUI
+import SearchUI
 
 public enum ChatListNodeMode {
     case chatList
@@ -27,6 +28,7 @@ struct ChatListNodeListViewTransition {
     let options: ListViewDeleteAndInsertOptions
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
+    let adjustScrollToFirstItem: Bool
 }
 
 final class ChatListHighlightedLocation {
@@ -281,7 +283,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
 }
 
 private func mappedChatListNodeViewListTransition(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, transition: ChatListNodeViewTransition) -> ChatListNodeListViewTransition {
-    return ChatListNodeListViewTransition(chatListView: transition.chatListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
+    return ChatListNodeListViewTransition(chatListView: transition.chatListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, adjustScrollToFirstItem: transition.adjustScrollToFirstItem)
 }
 
 private final class ChatListOpaqueTransactionState {
@@ -366,7 +368,17 @@ public final class ChatListNode: ListView {
     }
     
     private var currentLocation: ChatListNodeLocation?
-    let chatListFilter: ChatListFilter?
+    var chatListFilter: ChatListFilter? {
+        didSet {
+            self.chatListFilterValue.set(.single(self.chatListFilter))
+            
+            if self.chatListFilter != oldValue {
+                if let currentLocation = self.currentLocation {
+                    self.setChatListLocation(.initial(count: 50, filter: self.chatListFilter))
+                }
+            }
+        }
+    }
     private let chatListFilterValue = Promise<ChatListFilter?>()
     var chatListFilterSignal: Signal<ChatListFilter?, NoError> {
         return self.chatListFilterValue.get()
@@ -431,6 +443,8 @@ public final class ChatListNode: ListView {
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.verticalScrollIndicatorFollowsOverscroll = true
         
+        self.keepMinimalScrollHeightWithTopInset = navigationBarSearchContentHeight
+        
         let nodeInteraction = ChatListNodeInteraction(activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
@@ -489,6 +503,10 @@ public final class ChatListNode: ListView {
                 }
             })
         }, setPeerMuted: { [weak self] peerId, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setCurrentRemovingPeerId(peerId)
             let _ = (togglePeerMuted(account: context.account, peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
@@ -496,6 +514,7 @@ public final class ChatListNode: ListView {
                     state.peerIdWithRevealedOptions = nil
                     return state
                 }
+                self?.setCurrentRemovingPeerId(nil)
             })
         }, deletePeer: { [weak self] peerId in
             self?.deletePeerChat?(peerId)
@@ -505,7 +524,7 @@ public final class ChatListNode: ListView {
             guard let context = context else {
                 return
             }
-                        
+            self?.setCurrentRemovingPeerId(peerId)
             let _ = (togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
@@ -513,6 +532,7 @@ public final class ChatListNode: ListView {
                     state.peerIdWithRevealedOptions = nil
                     return state
                 }
+                self?.setCurrentRemovingPeerId(nil)
             })
         }, toggleArchivedFolderHiddenByDefault: { [weak self] in
             self?.toggleArchivedFolderHiddenByDefault?()
@@ -1279,7 +1299,19 @@ public final class ChatListNode: ListView {
                 options.insert(.PreferSynchronousDrawing)
             }
             
-            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatListOpaqueTransactionState(chatListView: transition.chatListView), completion: completion)
+            var scrollToItem = transition.scrollToItem
+            if transition.adjustScrollToFirstItem {
+                var offset: CGFloat = 0.0
+                switch self.visibleContentOffset() {
+                case let .known(value) where abs(value) < .ulpOfOne:
+                    offset = 0.0
+                default:
+                    offset = -navigationBarSearchContentHeight
+                }
+                scrollToItem = ListViewScrollToItem(index: 0, position: .top(offset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+            }
+            
+            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatListOpaqueTransactionState(chatListView: transition.chatListView), completion: completion)
         }
     }
     

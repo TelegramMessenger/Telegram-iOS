@@ -304,6 +304,123 @@ private final class FilterItemNode: ASDisplayNode, AbstractTabBarChatListFilterI
     }
 }
 
+func chatListFilterItems(context: AccountContext) -> Signal<[(ChatListFilter, Int)], NoError> {
+    let preferencesKey: PostboxViewKey = .preferences(keys: [PreferencesKeys.chatListFilters])
+    return context.account.postbox.combinedView(keys: [preferencesKey])
+    |> map { combinedView -> [ChatListFilter] in
+        if let filtersState = (combinedView.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState {
+            return filtersState.filters
+        } else {
+            return []
+        }
+    }
+    |> distinctUntilChanged
+    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
+        var unreadCountItems: [UnreadMessageCountsItem] = []
+        unreadCountItems.append(.total(nil))
+        var additionalPeerIds = Set<PeerId>()
+        for filter in filters {
+            additionalPeerIds.formUnion(filter.includePeers)
+        }
+        if !additionalPeerIds.isEmpty {
+            for peerId in additionalPeerIds {
+                unreadCountItems.append(.peer(peerId))
+            }
+        }
+        let unreadKey: PostboxViewKey = .unreadCounts(items: unreadCountItems)
+        var keys: [PostboxViewKey] = []
+        keys.append(unreadKey)
+        for peerId in additionalPeerIds {
+            keys.append(.basicPeer(peerId))
+        }
+        
+        return context.account.postbox.combinedView(keys: keys)
+        |> map { view -> [(ChatListFilter, Int)] in
+            guard let unreadCounts = view.views[unreadKey] as? UnreadMessageCountsView else {
+                return []
+            }
+            
+            var result: [(ChatListFilter, Int)] = []
+            
+            var peerTagAndCount: [PeerId: (PeerSummaryCounterTags, Int)] = [:]
+            
+            var totalState: ChatListTotalUnreadState?
+            for entry in unreadCounts.entries {
+                switch entry {
+                case let .total(_, totalStateValue):
+                    totalState = totalStateValue
+                case let .peer(peerId, state):
+                    if let state = state, state.isUnread {
+                        if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer {
+                            let tag = context.account.postbox.seedConfiguration.peerSummaryCounterTags(peer)
+                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings, case .muted = notificationSettings.muteState {
+                                peerTagAndCount[peerId] = (tag, 0)
+                            } else {
+                                var peerCount = Int(state.count)
+                                if state.isUnread {
+                                    peerCount = max(1, peerCount)
+                                }
+                                peerTagAndCount[peerId] = (tag, peerCount)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            var totalUnreadChatCount = 0
+            if let totalState = totalState {
+                for (_, counters) in totalState.filteredCounters {
+                    totalUnreadChatCount += Int(counters.chatCount)
+                }
+            }
+            
+            var shouldUpdateLayout = false
+            for filter in filters {
+                var tags: [PeerSummaryCounterTags] = []
+                if filter.categories.contains(.privateChats) {
+                    tags.append(.privateChat)
+                }
+                if filter.categories.contains(.secretChats) {
+                    tags.append(.secretChat)
+                }
+                if filter.categories.contains(.privateGroups) {
+                    tags.append(.privateGroup)
+                }
+                if filter.categories.contains(.bots) {
+                    tags.append(.bot)
+                }
+                if filter.categories.contains(.publicGroups) {
+                    tags.append(.publicGroup)
+                }
+                if filter.categories.contains(.channels) {
+                    tags.append(.channel)
+                }
+                    
+                var count = 0
+                if let totalState = totalState {
+                    for tag in tags {
+                        if let value = totalState.filteredCounters[tag] {
+                            count += Int(value.chatCount)
+                        }
+                    }
+                }
+                for peerId in filter.includePeers {
+                    if let (tag, peerCount) = peerTagAndCount[peerId] {
+                        if !tags.contains(tag) {
+                            if peerCount != 0 {
+                                count += 1
+                            }
+                        }
+                    }
+                }
+                result.append((filter, count))
+            }
+            
+            return result
+        }
+    }
+}
+
 private final class TabBarChatListFilterControllerNode: ViewControllerTracingNode {
     private let presentationData: PresentationData
     private let cancel: () -> Void
