@@ -1190,14 +1190,14 @@ open class NavigationBar: ASDisplayNode {
     }
     
     override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.bounds.contains(point) {
+        /*if self.bounds.contains(point) {
             if self.backButtonNode.supernode != nil && !self.backButtonNode.isHidden {
                 let effectiveBackButtonRect = CGRect(origin: CGPoint(), size: CGSize(width: self.backButtonNode.frame.maxX + 20.0, height: self.bounds.height))
                 if effectiveBackButtonRect.contains(point) {
                     return self.backButtonNode.internalHitTest(self.view.convert(point, to: self.backButtonNode.view), with: event)
                 }
             }
-        }
+        }*/
         
         guard let result = super.hitTest(point, with: event) else {
             return nil

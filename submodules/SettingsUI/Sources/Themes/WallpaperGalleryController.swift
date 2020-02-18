@@ -297,7 +297,7 @@ public class WallpaperGalleryController: ViewController {
         var i: Int = 0
         var updateItems: [GalleryPagerUpdateItem] = []
         for entry in entries {
-            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, entry: entry, arguments: arguments, source: self.source))
+            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source))
             updateItems.append(item)
             i += 1
         }
@@ -660,7 +660,7 @@ public class WallpaperGalleryController: ViewController {
                 colors = true
             }
             
-            self.galleryNode.pager.replaceItems(self.entries.map({ WallpaperGalleryItem(context: self.context, entry: $0, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source) }), centralItemIndex: self.centralEntryIndex)
+            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source) }), centralItemIndex: self.centralEntryIndex)
             
             if let initialOptions = self.initialOptions, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.options = initialOptions

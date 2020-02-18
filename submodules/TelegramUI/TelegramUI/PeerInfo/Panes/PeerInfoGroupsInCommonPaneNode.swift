@@ -133,8 +133,18 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        
+        var scrollToItem: ListViewScrollToItem?
+        if isScrollingLockedAtTop {
+            switch self.listNode.visibleContentOffset() {
+            case .known(0.0):
+                break
+            default:
+                scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: duration), directionHint: .Up)
+            }
+        }
 
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
@@ -192,6 +202,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         if velocity > 0.0 {
             self.listNode.transferVelocity(velocity)
         }
+    }
+    
+    func cancelPreviewGestures() {
     }
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {

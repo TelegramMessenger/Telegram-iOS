@@ -684,7 +684,7 @@ class WebSearchControllerNode: ASDisplayNode {
                     var entries: [WebSearchGalleryEntry] = []
                     var centralIndex: Int = 0
                     for i in 0 ..< results.count {
-                        entries.append(WebSearchGalleryEntry(result: results[i]))
+                        entries.append(WebSearchGalleryEntry(index: entries.count, result: results[i]))
                         if results[i] == currentResult {
                             centralIndex = i
                         }

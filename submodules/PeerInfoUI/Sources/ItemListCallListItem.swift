@@ -11,22 +11,24 @@ import ItemListUI
 import PresentationDataUtils
 import TelegramStringFormatting
 
-class ItemListCallListItem: ListViewItem, ItemListItem {
+public class ItemListCallListItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let messages: [Message]
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
+    let displayDecorations: Bool
     
-    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.messages = messages
         self.sectionId = sectionId
         self.style = style
+        self.displayDecorations = displayDecorations
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListCallListItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -42,7 +44,7 @@ class ItemListCallListItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListCallListItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -97,7 +99,7 @@ private func stringForCallType(message: Message, strings: PresentationStrings) -
     return string
 }
 
-class ItemListCallListItemNode: ListViewItemNode {
+public class ItemListCallListItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -109,11 +111,11 @@ class ItemListCallListItemNode: ListViewItemNode {
     
     private var item: ItemListCallListItem?
     
-    override var canBeSelected: Bool {
+    override public var canBeSelected: Bool {
         return false
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
@@ -138,7 +140,7 @@ class ItemListCallListItemNode: ListViewItemNode {
         self.addSubnode(self.accessibilityArea)
     }
     
-    func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
@@ -185,7 +187,7 @@ class ItemListCallListItemNode: ListViewItemNode {
             
             let contentSize: CGSize
             var contentHeight: CGFloat = 0.0
-            let insets: UIEdgeInsets
+            var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
@@ -193,14 +195,18 @@ class ItemListCallListItemNode: ListViewItemNode {
             let leftInset = 16.0 + params.leftInset
             
             switch item.style {
-                case .plain:
-                    itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                    insets = itemListNeighborsPlainInsets(neighbors)
-                case .blocks:
-                    itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                insets = itemListNeighborsPlainInsets(neighbors)
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                insets = itemListNeighborsGroupedInsets(neighbors)
+            }
+            
+            if !item.displayDecorations {
+                insets = UIEdgeInsets()
             }
             
             let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
@@ -277,8 +283,10 @@ class ItemListCallListItemNode: ListViewItemNode {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
-                            strongSelf.topStripeNode.isHidden = false
+                            strongSelf.topStripeNode.isHidden = !item.displayDecorations
                         }
+                        strongSelf.bottomStripeNode.isHidden = !item.displayDecorations
+                        strongSelf.backgroundNode.isHidden = !item.displayDecorations
                         let bottomStripeInset: CGFloat
                         switch neighbors.bottom {
                         case .sameSection(false):
@@ -311,15 +319,15 @@ class ItemListCallListItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

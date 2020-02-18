@@ -16,6 +16,7 @@ protocol PeerInfoPaneNode: ASDisplayNode {
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func transferVelocity(_ velocity: CGFloat)
+    func cancelPreviewGestures()
     func findLoadedMessage(id: MessageId) -> Message?
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
     func addToTransitionSurface(view: UIView)
@@ -26,6 +27,7 @@ protocol PeerInfoPaneNode: ASDisplayNode {
 final class PeerInfoPaneWrapper {
     let key: PeerInfoPaneKey
     let node: PeerInfoPaneNode
+    var isAnimatingOut: Bool = false
     private var appliedParams: (CGSize, CGFloat, CGFloat, CGFloat, Bool, PresentationData)?
     
     init(key: PeerInfoPaneKey, node: PeerInfoPaneNode) {
@@ -114,6 +116,10 @@ struct PeerInfoPaneSpecifier: Equatable {
     var title: String
 }
 
+private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
+    return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
+}
+
 final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
     private let scrollNode: ASScrollNode
     private var paneNodes: [PeerInfoPaneKey: PeerInfoPaneTabsContainerPaneNode] = [:]
@@ -148,7 +154,7 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
         self.scrollNode.addSubnode(self.selectedLineNode)
     }
     
-    func update(size: CGSize, presentationData: PresentationData, paneList: [PeerInfoPaneSpecifier], selectedPane: PeerInfoPaneKey?, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, presentationData: PresentationData, paneList: [PeerInfoPaneSpecifier], selectedPane: PeerInfoPaneKey?, transitionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
         
         let focusOnSelectedPane = self.currentParams?.1 != selectedPane
@@ -192,8 +198,8 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
         
         var tabSizes: [(CGSize, PeerInfoPaneTabsContainerPaneNode, Bool)] = []
         var totalRawTabSize: CGFloat = 0.0
+        var selectionFrames: [CGRect] = []
         
-        var selectedFrame: CGRect?
         for specifier in paneList {
             guard let paneNode = self.paneNodes[specifier.key] else {
                 continue
@@ -208,8 +214,8 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             totalRawTabSize += paneNodeSize.width
         }
         
-        let spacing: CGFloat = 32.0
-        if tabSizes.count == 1 {
+        let minSpacing: CGFloat = 10.0
+        if tabSizes.count <= 1 {
             for i in 0 ..< tabSizes.count {
                 let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
                 let leftOffset: CGFloat = 16.0
@@ -226,36 +232,63 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
                 paneNode.updateArea(size: paneFrame.size, sideInset: areaSideInset)
                 paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -areaSideInset, bottom: 0.0, right: -areaSideInset)
                 
-                if paneList[i].key == selectedPane {
-                    selectedFrame = paneFrame
-                }
+                selectionFrames.append(paneFrame)
             }
             self.scrollNode.view.contentSize = CGSize(width: size.width, height: size.height)
-        } else if totalRawTabSize + CGFloat(tabSizes.count + 1) * spacing <= size.width {
+        } else if totalRawTabSize + CGFloat(tabSizes.count + 1) * minSpacing <= size.width {
             let availableSpace = size.width
             let availableSpacing = availableSpace - totalRawTabSize
             let perTabSpacing = floor(availableSpacing / CGFloat(tabSizes.count + 1))
             
-            var leftOffset = perTabSpacing
-            for i in 0 ..< tabSizes.count {
-                let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
-                
-                let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
-                if wasAdded {
-                    paneNode.frame = paneFrame
-                    paneNode.alpha = 0.0
-                    transition.updateAlpha(node: paneNode, alpha: 1.0)
-                } else {
-                    transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
+            let normalizedPerTabWidth = floor(availableSpace / CGFloat(tabSizes.count))
+            var maxSpacing: CGFloat = 0.0
+            var minSpacing: CGFloat = .greatestFiniteMagnitude
+            for i in 0 ..< tabSizes.count - 1 {
+                let distanceToNextBoundary = (normalizedPerTabWidth - tabSizes[i].0.width) / 2.0
+                let nextDistanceToBoundary = (normalizedPerTabWidth - tabSizes[i + 1].0.width) / 2.0
+                let distance = nextDistanceToBoundary + distanceToNextBoundary
+                maxSpacing = max(distance, maxSpacing)
+                minSpacing = min(distance, minSpacing)
+            }
+            
+            if minSpacing >= 100.0 || (maxSpacing / minSpacing) < 0.2 {
+                for i in 0 ..< tabSizes.count {
+                    let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
+                    
+                    let paneFrame = CGRect(origin: CGPoint(x: CGFloat(i) * normalizedPerTabWidth + floor((normalizedPerTabWidth - paneNodeSize.width) / 2.0), y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
+                    if wasAdded {
+                        paneNode.frame = paneFrame
+                        paneNode.alpha = 0.0
+                        transition.updateAlpha(node: paneNode, alpha: 1.0)
+                    } else {
+                        transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
+                    }
+                    let areaSideInset = floor((normalizedPerTabWidth - paneNodeSize.width) / 2.0)
+                    paneNode.updateArea(size: paneFrame.size, sideInset: areaSideInset)
+                    paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -areaSideInset, bottom: 0.0, right: -areaSideInset)
+                    
+                    selectionFrames.append(paneFrame)
                 }
-                let areaSideInset = floor(perTabSpacing / 2.0)
-                paneNode.updateArea(size: paneFrame.size, sideInset: areaSideInset)
-                paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -areaSideInset, bottom: 0.0, right: -areaSideInset)
-                
-                leftOffset += paneNodeSize.width + perTabSpacing
-                
-                if paneList[i].key == selectedPane {
-                    selectedFrame = paneFrame
+            } else {
+                var leftOffset = perTabSpacing
+                for i in 0 ..< tabSizes.count {
+                    let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
+                    
+                    let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
+                    if wasAdded {
+                        paneNode.frame = paneFrame
+                        paneNode.alpha = 0.0
+                        transition.updateAlpha(node: paneNode, alpha: 1.0)
+                    } else {
+                        transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
+                    }
+                    let areaSideInset = floor(perTabSpacing / 2.0)
+                    paneNode.updateArea(size: paneFrame.size, sideInset: areaSideInset)
+                    paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -areaSideInset, bottom: 0.0, right: -areaSideInset)
+                    
+                    leftOffset += paneNodeSize.width + perTabSpacing
+                    
+                    selectionFrames.append(paneFrame)
                 }
             }
             self.scrollNode.view.contentSize = CGSize(width: size.width, height: size.height)
@@ -272,14 +305,29 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
                 } else {
                     transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
                 }
-                paneNode.updateArea(size: paneFrame.size, sideInset: spacing)
-                paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -spacing, bottom: 0.0, right: -spacing)
-                if paneList[i].key == selectedPane {
-                    selectedFrame = paneFrame
-                }
-                leftOffset += paneNodeSize.width + spacing
+                paneNode.updateArea(size: paneFrame.size, sideInset: minSpacing)
+                paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -minSpacing, bottom: 0.0, right: -minSpacing)
+                
+                selectionFrames.append(paneFrame)
+                
+                leftOffset += paneNodeSize.width + minSpacing
             }
-            self.scrollNode.view.contentSize = CGSize(width: leftOffset - spacing + sideInset, height: size.height)
+            self.scrollNode.view.contentSize = CGSize(width: leftOffset - minSpacing + sideInset, height: size.height)
+        }
+        
+        var selectedFrame: CGRect?
+        if let selectedPane = selectedPane, let currentIndex = paneList.index(where: { $0.key == selectedPane }) {
+            if currentIndex != 0 && transitionFraction > 0.0 {
+                let currentFrame = selectionFrames[currentIndex]
+                let previousFrame = selectionFrames[currentIndex - 1]
+                selectedFrame = interpolateFrame(from: currentFrame, to: previousFrame, t: abs(transitionFraction))
+            } else if currentIndex != paneList.count - 1 && transitionFraction < 0.0 {
+                let currentFrame = selectionFrames[currentIndex]
+                let previousFrame = selectionFrames[currentIndex + 1]
+                selectedFrame = interpolateFrame(from: currentFrame, to: previousFrame, t: abs(transitionFraction))
+            } else {
+                selectedFrame = selectionFrames[currentIndex]
+            }
         }
         
         if let selectedFrame = selectedFrame {
@@ -313,7 +361,60 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
     }
 }
 
-final class PeerInfoPaneContainerNode: ASDisplayNode {
+private final class PeerInfoPendingPane {
+    let pane: PeerInfoPaneWrapper
+    private var disposable: Disposable?
+    var isReady: Bool = false
+    
+    init(
+        context: AccountContext,
+        chatControllerInteraction: ChatControllerInteraction,
+        data: PeerInfoScreenData,
+        openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void,
+        requestPerformPeerMemberAction: @escaping (PeerInfoMember, PeerMembersListAction) -> Void,
+        peerId: PeerId,
+        key: PeerInfoPaneKey,
+        hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void
+    ) {
+        let paneNode: PeerInfoPaneNode
+        switch key {
+        case .media:
+            paneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId)
+        case .files:
+            paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .file)
+        case .links:
+            paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .webPage)
+        case .voice:
+            paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .voiceOrInstantVideo)
+        case .music:
+            paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .music)
+        case .groupsInCommon:
+            paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
+        case .members:
+            if case let .longList(membersContext) = data.members {
+                paneNode = PeerInfoMembersPaneNode(context: context, peerId: peerId, membersContext: membersContext, action: { member, action in
+                    requestPerformPeerMemberAction(member, action)
+                })
+            } else {
+                preconditionFailure()
+            }
+        }
+        
+        self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
+        self.disposable = (paneNode.isReady
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            self?.isReady = true
+            hasBecomeReady(key)
+        })
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+}
+
+final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: PeerId
     
@@ -326,11 +427,22 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
     var didSetIsReady = false
     
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?)?
-    private(set) var currentPaneKey: PeerInfoPaneKey?
-    private(set) var currentPane: PeerInfoPaneWrapper?
     
-    private var currentCandidatePaneKey: PeerInfoPaneKey?
-    private var candidatePane: (PeerInfoPaneWrapper, Disposable, Bool)?
+    private(set) var currentPaneKey: PeerInfoPaneKey?
+    var pendingSwitchToPaneKey: PeerInfoPaneKey?
+    
+    var currentPane: PeerInfoPaneWrapper? {
+        if let currentPaneKey = self.currentPaneKey {
+            return self.currentPanes[currentPaneKey]
+        } else {
+            return nil
+        }
+    }
+    
+    private var currentPanes: [PeerInfoPaneKey: PeerInfoPaneWrapper] = [:]
+    private var pendingPanes: [PeerInfoPaneKey: PeerInfoPendingPane] = [:]
+    
+    private var transitionFraction: CGFloat = 0.0
     
     var selectionPanelNode: PeerInfoSelectionPanelNode?
     
@@ -338,7 +450,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
     var openPeerContextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     var requestPerformPeerMemberAction: ((PeerInfoMember, PeerMembersListAction) -> Void)?
     
-    var currentPaneUpdated: (() -> Void)?
+    var currentPaneUpdated: ((Bool) -> Void)?
     var requestExpandTabs: (() -> Bool)?
     
     private var currentAvailablePanes: [PeerInfoPaneKey]?
@@ -376,14 +488,103 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
                 }
                 return
             }
-            if strongSelf.currentCandidatePaneKey == key {
-                return
+            if strongSelf.currentPanes[key] != nil {
+                strongSelf.currentPaneKey = key
+                
+                if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                    strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.4, curve: .spring))
+                    
+                    strongSelf.currentPaneUpdated?(true)
+                }
+            } else if strongSelf.pendingSwitchToPaneKey != key {
+                strongSelf.pendingSwitchToPaneKey = key
+                
+                if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                    strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.4, curve: .spring))
+                }
             }
-            strongSelf.currentCandidatePaneKey = key
-            
-            if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
-                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .immediate)
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] in
+            guard let strongSelf = self, let currentPaneKey = strongSelf.currentPaneKey, let availablePanes = strongSelf.currentParams?.data?.availablePanes, let index = availablePanes.index(of: currentPaneKey) else {
+                return []
             }
+            if index == 0 {
+                return .left
+            }
+            return [.left, .right]
+        })
+        panRecognizer.delegate = self
+        panRecognizer.delaysTouchesBegan = false
+        panRecognizer.cancelsTouchesInView = true
+        self.view.addGestureRecognizer(panRecognizer)
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
+        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .changed:
+            if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = self.currentParams, let availablePanes = data?.availablePanes, availablePanes.count > 1, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.index(of: currentPaneKey) {
+                let translation = recognizer.translation(in: self.view)
+                var transitionFraction = translation.x / size.width
+                if currentIndex <= 0 {
+                    transitionFraction = min(0.0, transitionFraction)
+                }
+                if currentIndex >= availablePanes.count - 1 {
+                    transitionFraction = max(0.0, transitionFraction)
+                }
+                self.transitionFraction = transitionFraction
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .immediate)
+            }
+        case .cancelled, .ended:
+            if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = self.currentParams, let availablePanes = data?.availablePanes, availablePanes.count > 1, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.index(of: currentPaneKey) {
+                let translation = recognizer.translation(in: self.view)
+                let velocity = recognizer.velocity(in: self.view)
+                var directionIsToRight: Bool?
+                if abs(velocity.x) > 10.0 {
+                    directionIsToRight = velocity.x < 0.0
+                } else {
+                    if abs(translation.x) > size.width / 2.0 {
+                        directionIsToRight = translation.x > size.width / 2.0
+                    }
+                }
+                var updated = false
+                if let directionIsToRight = directionIsToRight {
+                    var updatedIndex = currentIndex
+                    if directionIsToRight {
+                        updatedIndex = min(updatedIndex + 1, availablePanes.count - 1)
+                    } else {
+                        updatedIndex = max(updatedIndex - 1, 0)
+                    }
+                    let switchToKey = availablePanes[updatedIndex]
+                    if switchToKey != self.currentPaneKey && self.currentPanes[switchToKey] != nil{
+                        self.currentPaneKey = switchToKey
+                        updated = true
+                    }
+                }
+                self.transitionFraction = 0.0
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.35, curve: .spring))
+                self.currentPaneUpdated?(false)
+            }
+        default:
+            break
         }
     }
     
@@ -408,14 +609,20 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
     }
     
     func updateSelectedMessageIds(_ selectedMessageIds: Set<MessageId>?, animated: Bool) {
-        self.currentPane?.node.updateSelectedMessages(animated: animated)
-        self.candidatePane?.0.node.updateSelectedMessages(animated: animated)
+        for (_, pane) in self.currentPanes {
+            pane.node.updateSelectedMessages(animated: animated)
+        }
+        for (_, pane) in self.pendingPanes {
+            pane.pane.node.updateSelectedMessages(animated: animated)
+        }
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?, transition: ContainedViewLayoutTransition) {
         let previousAvailablePanes = self.currentAvailablePanes ?? []
         let availablePanes = data?.availablePanes ?? []
         self.currentAvailablePanes = availablePanes
+        
+        let previousCurrentPaneKey = self.currentPaneKey
         
         if let currentPaneKey = self.currentPaneKey, !availablePanes.contains(currentPaneKey) {
             var nextCandidatePaneKey: PeerInfoPaneKey?
@@ -431,25 +638,21 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
             }
             
             if let nextCandidatePaneKey = nextCandidatePaneKey {
-                if self.currentCandidatePaneKey != nextCandidatePaneKey {
-                    self.currentCandidatePaneKey = nextCandidatePaneKey
-                }
+                self.pendingSwitchToPaneKey = nextCandidatePaneKey
             } else {
-                self.currentCandidatePaneKey = nil
-                if let (_, disposable, _) = self.candidatePane {
-                    disposable.dispose()
-                    self.candidatePane = nil
-                }
-                if let currentPane = self.currentPane {
-                    self.currentPane = nil
-                    currentPane.node.removeFromSupernode()
-                }
+                self.currentPaneKey = nil
+                self.pendingSwitchToPaneKey = nil
             }
         } else if self.currentPaneKey == nil {
-            self.currentCandidatePaneKey = availablePanes.first
+            self.pendingSwitchToPaneKey = availablePanes.first
         }
         
-        let previousCurrentPaneKey = self.currentPaneKey
+        let currentIndex: Int?
+        if let currentPaneKey = self.currentPaneKey {
+            currentIndex = availablePanes.index(of: currentPaneKey)
+        } else {
+            currentIndex = nil
+        }
         
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data)
         
@@ -469,138 +672,197 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
         
         let paneFrame = CGRect(origin: CGPoint(x: 0.0, y: tabsHeight), size: CGSize(width: size.width, height: size.height - tabsHeight))
         
-        if let currentCandidatePaneKey = self.currentCandidatePaneKey {
-            if self.candidatePane?.0.key != currentCandidatePaneKey {
-                self.candidatePane?.1.dispose()
-                
-                let paneNode: PeerInfoPaneNode
-                switch currentCandidatePaneKey {
-                case .media:
-                    paneNode = PeerInfoVisualMediaPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId)
-                case .files:
-                    paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .file)
-                case .links:
-                    paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .webPage)
-                case .voice:
-                    paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .voiceOrInstantVideo)
-                case .music:
-                    paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .music)
-                case .groupsInCommon:
-                    paneNode = PeerInfoGroupsInCommonPaneNode(context: self.context, peerId: self.peerId, chatControllerInteraction: self.chatControllerInteraction!, openPeerContextAction: self.openPeerContextAction!, groupsInCommonContext: data!.groupsInCommon!)
-                case .members:
-                    if case let .longList(membersContext) = data?.members {
-                        paneNode = PeerInfoMembersPaneNode(context: self.context, peerId: self.peerId, membersContext: membersContext, action: { [weak self] member, action in
-                            self?.requestPerformPeerMemberAction?(member, action)
-                        })
-                    } else {
-                        preconditionFailure()
-                    }
+        var visiblePaneIndices: [Int] = []
+        var requiredPendingKeys: [PeerInfoPaneKey] = []
+        if let currentIndex = currentIndex {
+            if currentIndex != 0 {
+                visiblePaneIndices.append(currentIndex - 1)
+            }
+            visiblePaneIndices.append(currentIndex)
+            if currentIndex != availablePanes.count - 1 {
+                visiblePaneIndices.append(currentIndex + 1)
+            }
+        
+            for index in visiblePaneIndices {
+                let indexOffset = CGFloat(index - currentIndex)
+                let key = availablePanes[index]
+                if self.currentPanes[key] == nil && self.pendingPanes[key] == nil {
+                    requiredPendingKeys.append(key)
                 }
-                
-                let disposable = MetaDisposable()
-                self.candidatePane = (PeerInfoPaneWrapper(key: currentCandidatePaneKey, node: paneNode), disposable, false)
-                
-                var shouldReLayout = false
-                disposable.set((paneNode.isReady
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let (candidatePane, disposable, _) = strongSelf.candidatePane {
-                        strongSelf.candidatePane = (candidatePane, disposable, true)
-                        
-                        if shouldReLayout {
-                            if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
-                                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: strongSelf.currentPane != nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
-                            }
-                        }
-                    }
-                }))
-                shouldReLayout = true
+            }
+        }
+        if let pendingSwitchToPaneKey = self.pendingSwitchToPaneKey {
+            if self.currentPanes[pendingSwitchToPaneKey] == nil && self.pendingPanes[pendingSwitchToPaneKey] == nil {
+                if !requiredPendingKeys.contains(pendingSwitchToPaneKey) {
+                    requiredPendingKeys.append(pendingSwitchToPaneKey)
+                }
             }
         }
         
-        if let (candidatePane, _, isReady) = self.candidatePane, isReady {
-            let previousPane = self.currentPane
-            self.candidatePane = nil
-            self.currentPaneKey = candidatePane.key
-            self.currentCandidatePaneKey = nil
-            self.currentPane = candidatePane
-            
-            if let selectionPanelNode = self.selectionPanelNode {
-                self.insertSubnode(candidatePane.node, belowSubnode: selectionPanelNode)
-            } else {
-                self.addSubnode(candidatePane.node)
+        for key in requiredPendingKeys {
+            if self.pendingPanes[key] == nil {
+                var leftScope = false
+                let pane = PeerInfoPendingPane(
+                    context: self.context,
+                    chatControllerInteraction: self.chatControllerInteraction!,
+                    data: data!,
+                    openPeerContextAction: { [weak self] peer, node, gesture in
+                        self?.openPeerContextAction?(peer, node, gesture)
+                    },
+                    requestPerformPeerMemberAction: { [weak self] member, action in
+                        self?.requestPerformPeerMemberAction?(member, action)
+                    },
+                    peerId: self.peerId,
+                    key: key,
+                    hasBecomeReady: { [weak self] key in
+                        let apply: () -> Void = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                                var transition: ContainedViewLayoutTransition = .immediate
+                                if strongSelf.pendingSwitchToPaneKey == key && strongSelf.currentPaneKey != nil {
+                                    transition = .animated(duration: 0.4, curve: .spring)
+                                }
+                                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: transition)
+                            }
+                        }
+                        if leftScope {
+                            apply()
+                        }
+                    }
+                )
+                self.pendingPanes[key] = pane
+                pane.pane.node.frame = paneFrame
+                pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: .immediate)
+                leftScope = true
             }
-            candidatePane.node.frame = paneFrame
-            candidatePane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: max(0.0, visibleHeight - paneFrame.minY), isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: .immediate)
-            
-            if let previousPane = previousPane {
-                let directionToRight: Bool
-                if let previousIndex = availablePanes.index(of: previousPane.key), let updatedIndex = availablePanes.index(of: candidatePane.key) {
-                    directionToRight = previousIndex < updatedIndex
-                } else {
-                    directionToRight = false
-                }
-                
-                let offset: CGFloat = directionToRight ? previousPane.node.bounds.width : -previousPane.node.bounds.width
-                
-                transition.animatePositionAdditive(node: candidatePane.node, offset: CGPoint(x: offset, y: 0.0))
-                let previousNode = previousPane.node
-                transition.updateFrame(node: previousNode, frame: paneFrame.offsetBy(dx: -offset, dy: 0.0), completion: { [weak previousNode] _ in
-                    previousNode?.removeFromSupernode()
-                })
-            }
-        } else if let currentPane = self.currentPane {
-            let paneWasAdded = currentPane.node.supernode == nil
-            if paneWasAdded {
-                self.addSubnode(currentPane.node)
-            }
-            
-            let paneTransition: ContainedViewLayoutTransition = paneWasAdded ? .immediate : transition
-            paneTransition.updateFrame(node: currentPane.node, frame: paneFrame)
-            currentPane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
         }
+        
+        for (key, pane) in self.pendingPanes {
+            pane.pane.node.frame = paneFrame
+            pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: self.currentPaneKey == nil, transition: .immediate)
+            
+            if pane.isReady {
+                self.pendingPanes.removeValue(forKey: key)
+                self.currentPanes[key] = pane.pane
+            }
+        }
+        
+        var paneDefaultTransition = transition
+        var previousPaneKey: PeerInfoPaneKey?
+        var paneSwitchAnimationOffset: CGFloat = 0.0
+        
+        var updatedCurrentIndex = currentIndex
+        var animatePaneTransitionOffset: CGFloat?
+        if let pendingSwitchToPaneKey = self.pendingSwitchToPaneKey, let pane = self.currentPanes[pendingSwitchToPaneKey] {
+            self.pendingSwitchToPaneKey = nil
+            previousPaneKey = self.currentPaneKey
+            self.currentPaneKey = pendingSwitchToPaneKey
+            updatedCurrentIndex = availablePanes.index(of: pendingSwitchToPaneKey)
+            if let previousPaneKey = previousPaneKey, let previousIndex = availablePanes.index(of: previousPaneKey), let updatedCurrentIndex = updatedCurrentIndex {
+                if updatedCurrentIndex < previousIndex {
+                    paneSwitchAnimationOffset = -size.width
+                } else {
+                    paneSwitchAnimationOffset = size.width
+                }
+            }
+            
+            paneDefaultTransition = .immediate
+        }
+        
+        for (key, pane) in self.currentPanes {
+            if let index = availablePanes.index(of: key), let updatedCurrentIndex = updatedCurrentIndex {
+                var paneWasAdded = false
+                if pane.node.supernode == nil {
+                    self.addSubnode(pane.node)
+                    paneWasAdded = true
+                }
+                let indexOffset = CGFloat(index - updatedCurrentIndex)
+                
+                let paneTransition: ContainedViewLayoutTransition = paneWasAdded ? .immediate : paneDefaultTransition
+                let adjustedFrame = paneFrame.offsetBy(dx: size.width * self.transitionFraction + indexOffset * size.width, dy: 0.0)
+                
+                let paneCompletion: () -> Void = { [weak self, weak pane] in
+                    guard let strongSelf = self, let pane = pane else {
+                        return
+                    }
+                    pane.isAnimatingOut = false
+                    if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                        if let availablePanes = data?.availablePanes, let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.index(of: currentPaneKey), let paneIndex = availablePanes.index(of: key), abs(paneIndex - currentIndex) <= 1 {
+                        } else {
+                            if let pane = strongSelf.currentPanes.removeValue(forKey: key) {
+                                //print("remove \(key)")
+                                pane.node.removeFromSupernode()
+                            }
+                        }
+                    }
+                }
+                if let previousPaneKey = previousPaneKey, key == previousPaneKey {
+                    pane.node.frame = adjustedFrame
+                    let isAnimatingOut = pane.isAnimatingOut
+                    pane.isAnimatingOut = true
+                    transition.animateFrame(node: pane.node, from: paneFrame, to: paneFrame.offsetBy(dx: -paneSwitchAnimationOffset, dy: 0.0), completion: isAnimatingOut ? nil : { _ in
+                        paneCompletion()
+                    })
+                } else if let previousPaneKey = previousPaneKey, key == self.currentPaneKey {
+                    pane.node.frame = adjustedFrame
+                    let isAnimatingOut = pane.isAnimatingOut
+                    pane.isAnimatingOut = true
+                    transition.animatePositionAdditive(node: pane.node, offset: CGPoint(x: paneSwitchAnimationOffset, y: 0.0), completion: isAnimatingOut ? nil : {
+                        paneCompletion()
+                    })
+                } else {
+                    let isAnimatingOut = pane.isAnimatingOut
+                    pane.isAnimatingOut = true
+                    paneTransition.updateFrame(node: pane.node, frame: adjustedFrame, completion: isAnimatingOut ? nil :  { _ in
+                        paneCompletion()
+                    })
+                }
+                pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+            }
+        }
+        
+        //print("currentPanes: \(self.currentPanes.map { $0.0 })")
         
         transition.updateFrame(node: self.tabsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: tabsHeight)))
         self.tabsContainerNode.update(size: CGSize(width: size.width, height: tabsHeight), presentationData: presentationData, paneList: availablePanes.map { key in
             let title: String
             switch key {
             case .media:
-                title = "Media"
+                title = presentationData.strings.PeerInfo_PaneMedia
             case .files:
-                title = "Files"
+                title = presentationData.strings.PeerInfo_PaneFiles
             case .links:
-                title = "Links"
+                title = presentationData.strings.PeerInfo_PaneLinks
             case .voice:
-                title = "Voice Messages"
+                title = presentationData.strings.PeerInfo_PaneVoice
             case .music:
-                title = "Audio"
+                title = presentationData.strings.PeerInfo_PaneAudio
             case .groupsInCommon:
-                title = "Groups"
+                title = presentationData.strings.PeerInfo_PaneGroups
             case .members:
-                title = "Members"
+                title = presentationData.strings.PeerInfo_PaneMembers
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
-        }, selectedPane: self.currentPaneKey, transition: transition)
+        }, selectedPane: self.currentPaneKey, transitionFraction: self.transitionFraction, transition: transition)
         
-        if let (candidatePane, _, _) = self.candidatePane {
+        for (_, pane) in self.pendingPanes {
             let paneTransition: ContainedViewLayoutTransition = .immediate
-            paneTransition.updateFrame(node: candidatePane.node, frame: paneFrame)
-            candidatePane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: paneTransition)
+            paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
+            pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: paneTransition)
         }
         if !self.didSetIsReady && data != nil {
-            if let currentPane = self.currentPane {
+            if let currentPaneKey = self.currentPaneKey, let currentPane = self.currentPanes[currentPaneKey] {
                 self.didSetIsReady = true
                 self.isReady.set(currentPane.node.isReady)
-            } else if self.candidatePane == nil {
+            } else if self.pendingSwitchToPaneKey == nil {
                 self.didSetIsReady = true
                 self.isReady.set(.single(true))
             }
         }
         if let previousCurrentPaneKey = previousCurrentPaneKey, self.currentPaneKey != previousCurrentPaneKey {
-            self.currentPaneUpdated?()
+            self.currentPaneUpdated?(true)
         }
     }
 }

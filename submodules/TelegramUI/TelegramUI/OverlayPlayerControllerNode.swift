@@ -150,7 +150,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .voiceOrInstantVideo
         }
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: .message(initialMessageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed))
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: .message(initialMessageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed, displayHeaders: .none))
         
         super.init()
         
@@ -480,7 +480,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .voiceOrInstantVideo
         }
         
-        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, subject: .message(messageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed))
+        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, subject: .message(messageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none))
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true
         historyNode.updateFloatingHeaderOffset = { [weak self] offset, _ in

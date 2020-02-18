@@ -42,22 +42,28 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.entry.id
+    }
+    
     let context: AccountContext
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
+    let sourceHasRoundCorners: Bool
     let delete: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceHasRoundCorners: Bool, delete: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
         self.entry = entry
+        self.sourceHasRoundCorners = sourceHasRoundCorners
         self.delete = delete
     }
     
     func node() -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer)
+        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceHasRoundCorners: self.sourceHasRoundCorners)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
@@ -85,7 +91,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         switch self.entry {
             case let .topImage(representations, _):
                 content = representations
-            case let .image(_, representations, _, _, _, _):
+            case let .image(_, _, representations, _, _, _, _):
                 content = representations
         }
         
@@ -96,6 +102,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private let peer: Peer
+    private let sourceHasRoundCorners: Bool
     
     private var entry: AvatarGalleryEntry?
     
@@ -110,9 +117,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData, peer: Peer) {
+    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
         self.context = context
         self.peer = peer
+        self.sourceHasRoundCorners = sourceHasRoundCorners
         
         self.imageNode = TransformImageNode()
         self.footerContentNode = AvatarGalleryItemFooterContentNode(context: context, presentationData: presentationData)
@@ -175,7 +183,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch entry {
                     case let .topImage(topRepresentations, _):
                         representations = topRepresentations
-                    case let .image(_, imageRepresentations, _, _, _, _):
+                    case let .image(_, _, imageRepresentations, _, _, _, _):
                         representations = imageRepresentations
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
@@ -235,10 +243,44 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
+        let scaledLocalImageViewBounds = self.imageNode.view.bounds
         
-        let copyView = node.2().0!
+        let copyViewContents = node.2().0!
+        let copyView = UIView()
+        copyView.addSubview(copyViewContents)
+        copyViewContents.frame = CGRect(origin: CGPoint(x: (transformedSelfFrame.width - copyViewContents.frame.width) / 2.0, y: (transformedSelfFrame.height - copyViewContents.frame.height) / 2.0), size: copyViewContents.frame.size)
+        copyView.layer.sublayerTransform = CATransform3DMakeScale(transformedSelfFrame.width / copyViewContents.frame.width, transformedSelfFrame.height / copyViewContents.frame.height, 1.0)
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        let surfaceCopyViewContents = node.2().0!
+        let surfaceCopyView = UIView()
+        surfaceCopyView.addSubview(surfaceCopyViewContents)
+        
+        addToTransitionSurface(surfaceCopyView)
+        
+        var transformedSurfaceFrame: CGRect?
+        var transformedSurfaceFinalFrame: CGRect?
+        if let contentSurface = surfaceCopyView.superview {
+            transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
+            transformedSurfaceFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
+        }
+        
+        if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceFinalFrame = transformedSurfaceFinalFrame {
+            surfaceCopyViewContents.frame = CGRect(origin: CGPoint(x: (transformedSurfaceFrame.width - surfaceCopyViewContents.frame.width) / 2.0, y: (transformedSurfaceFrame.height - surfaceCopyViewContents.frame.height) / 2.0), size: surfaceCopyViewContents.frame.size)
+            surfaceCopyView.layer.sublayerTransform = CATransform3DMakeScale(transformedSurfaceFrame.width / surfaceCopyViewContents.frame.width, transformedSurfaceFrame.height / surfaceCopyViewContents.frame.height, 1.0)
+            surfaceCopyView.frame = transformedSurfaceFrame
+            
+            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), to: CGPoint(x: transformedSurfaceFinalFrame.midX, y: transformedSurfaceFinalFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            let scale = CGSize(width: transformedSurfaceFinalFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceFrame.size.height / transformedSelfFrame.size.height)
+            surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
+            
+            surfaceCopyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak surfaceCopyView] _ in
+                surfaceCopyView?.removeFromSuperview()
+            })
+        }
+        
+        if self.sourceHasRoundCorners {
+            self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        }
         copyView.frame = transformedSelfFrame
         
         copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak copyView] _ in
@@ -259,11 +301,13 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.imageNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.imageNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.imageNode.clipsToBounds = true
-        self.imageNode.layer.animate(from: (self.imageNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
-            if value {
-                self?.imageNode.clipsToBounds = false
-            }
-        })
+        if self.sourceHasRoundCorners {
+            self.imageNode.layer.animate(from: (self.imageNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+                if value {
+                    self?.imageNode.clipsToBounds = false
+                }
+            })
+        }
         
         self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         self.statusNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
@@ -279,20 +323,49 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
+        var surfaceCopyCompleted = false
         
         let copyView = node.2().0!
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        if self.sourceHasRoundCorners {
+            self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        }
         copyView.frame = transformedSelfFrame
         
-        let intermediateCompletion = { [weak copyView] in
+        let surfaceCopyView = node.2().0!
+        if !self.sourceHasRoundCorners {
+            addToTransitionSurface(surfaceCopyView)
+        }
+        
+        var transformedSurfaceFrame: CGRect?
+        var transformedSurfaceCopyViewInitialFrame: CGRect?
+        if let contentSurface = surfaceCopyView.superview {
+            transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
+            transformedSurfaceCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
+        }
+        
+        let durationFactor = 1.0
+        
+        let intermediateCompletion = { [weak copyView, weak surfaceCopyView] in
             if positionCompleted && boundsCompleted && copyCompleted {
                 copyView?.removeFromSuperview()
+                surfaceCopyView?.removeFromSuperview()
                 completion()
             }
         }
         
-        let durationFactor = 1.0
+        if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceCopyViewInitialFrame = transformedSurfaceCopyViewInitialFrame {
+            surfaceCopyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1 * durationFactor, removeOnCompletion: false)
+            
+            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceCopyViewInitialFrame.midX, y: transformedSurfaceCopyViewInitialFrame.midY), to: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            let scale = CGSize(width: transformedSurfaceCopyViewInitialFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceCopyViewInitialFrame.size.height / transformedSurfaceFrame.size.height)
+            surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
+                surfaceCopyCompleted = true
+                intermediateCompletion()
+            })
+        } else {
+            surfaceCopyCompleted = true
+        }
         
         copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1 * durationFactor, removeOnCompletion: false)
         
@@ -319,7 +392,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.imageNode.clipsToBounds = true
-        self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        if self.sourceHasRoundCorners {
+            self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        }
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
@@ -343,7 +418,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     switch entry {
                         case let .topImage(topRepresentations, _):
                             representations = topRepresentations
-                        case let .image(_, imageRepresentations, _, _, _, _):
+                        case let .image(_, _, imageRepresentations, _, _, _, _):
                             representations = imageRepresentations
                     }
                     

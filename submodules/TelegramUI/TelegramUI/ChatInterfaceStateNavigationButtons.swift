@@ -73,15 +73,15 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
     }
     
     if presentationInterfaceState.isScheduledMessages {
-        return nil
+        return chatInfoNavigationButton
     }
     
     if case .standard(true) = presentationInterfaceState.mode {
-        return nil
+        return chatInfoNavigationButton
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
             if presentationInterfaceState.isScheduledMessages {
-                return nil
+                return chatInfoNavigationButton
             } else {
                 let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
                 buttonItem.accessibilityLabel = strings.Conversation_Search

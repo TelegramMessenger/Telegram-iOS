@@ -31,7 +31,7 @@ struct SecureIdDocumentGalleryEntry: Equatable {
     }
     
     func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, delete: @escaping (TelegramMediaResource) -> Void) -> GalleryItem {
-        return SecureIdDocumentGalleryItem(context: context, theme: theme, strings: strings, secureIdContext: secureIdContext, resource: self.resource, caption: self.error, location: self.location, delete: {
+        return SecureIdDocumentGalleryItem(context: context, theme: theme, strings: strings, secureIdContext: secureIdContext, itemId: self.index, resource: self.resource, caption: self.error, location: self.location, delete: {
             delete(self.resource)
         })
     }

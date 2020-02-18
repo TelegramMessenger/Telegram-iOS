@@ -59,7 +59,8 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             var highlight = true
             if let peer = peer {
                 if let channel = peer as? TelegramChannel, channel.username == nil {
-                    if case .member = channel.participationStatus {
+                    if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                    } else if case .member = channel.participationStatus {
                     } else {
                         highlight = false
                     }

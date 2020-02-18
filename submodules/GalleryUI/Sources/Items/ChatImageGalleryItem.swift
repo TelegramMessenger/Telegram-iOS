@@ -79,6 +79,10 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class ChatImageGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.message.stableId
+    }
+    
     let context: AccountContext
     let presentationData: PresentationData
     let message: Message

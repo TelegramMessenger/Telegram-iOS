@@ -44,7 +44,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.selectedMessages = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
-        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false))
+        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast))
         
         super.init()
         
@@ -77,6 +77,14 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         self.listNode.updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve))
+        if isScrollingLockedAtTop {
+            switch self.listNode.visibleContentOffset() {
+            case .known(0.0), .none:
+                break
+            default:
+                self.listNode.scrollToEndOfHistory()
+            }
+        }
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
     }
     
@@ -96,6 +104,9 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         if velocity > 0.0 {
             self.listNode.transferVelocity(velocity)
         }
+    }
+    
+    func cancelPreviewGestures() {
     }
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {

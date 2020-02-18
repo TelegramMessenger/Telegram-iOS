@@ -366,7 +366,23 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         let filledRange: ClosedRange<MessageId.Id>
-                        let ids = messages.compactMap({ $0.id()?.id })
+                        let ids = storeMessages.compactMap { message -> MessageId.Id? in
+                            switch message.id {
+                            case let .Id(id):
+                                switch space {
+                                case let .tag(tag):
+                                    if !message.tags.contains(tag) {
+                                        return nil
+                                    } else {
+                                        return id.id
+                                    }
+                                case .everywhere:
+                                    return id.id
+                                }
+                            case .Partial:
+                                return nil
+                            }
+                        }
                         if ids.count == 0 || implicitelyFillHole {
                             filledRange = minMaxRange
                         } else {

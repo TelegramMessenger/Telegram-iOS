@@ -59,7 +59,9 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
         let disposable = combineLatest(postbox.chatListHolesView(), topRootHole).start(next: { view, topRootHoleView in
             var additionalLatestHole: ChatListHole?
             if let topRootHole = topRootHoleView.views[topRootHoleKey] as? AllChatListHolesView {
-                //additionalLatestHole = topRootHole.latestHole
+                #if os(macOS)
+                additionalLatestHole = topRootHole.latestHole
+                #endif
             }
             
             let (removed, added, addedAdditionalLatestHole) = state.with { state in

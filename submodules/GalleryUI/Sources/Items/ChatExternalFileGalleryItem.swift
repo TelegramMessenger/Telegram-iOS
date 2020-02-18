@@ -13,6 +13,10 @@ import RadialStatusNode
 import ShareController
 
 class ChatExternalFileGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.message.stableId
+    }
+    
     let context: AccountContext
     let presentationData: PresentationData
     let message: Message

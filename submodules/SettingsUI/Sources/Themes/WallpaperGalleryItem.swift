@@ -32,13 +32,20 @@ struct WallpaperGalleryItemArguments {
 }
 
 class WallpaperGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.index
+    }
+    
+    let index: Int
+    
     let context: AccountContext
     let entry: WallpaperGalleryEntry
     let arguments: WallpaperGalleryItemArguments
     let source: WallpaperListSource
     
-    init(context: AccountContext, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
+    init(context: AccountContext, index: Int, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
         self.context = context
+        self.index = index
         self.entry = entry
         self.arguments = arguments
         self.source = source

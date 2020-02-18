@@ -929,7 +929,12 @@ public class TextNode: ASDisplayNode {
                     let coreTextLine: CTLine
                     let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
                     
-                    if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(constrainedSize.width) {
+                    var lineConstrainedSize = constrainedSize
+                    if bottomCutoutEnabled {
+                        lineConstrainedSize.width -= bottomCutoutSize.width
+                    }
+                    
+                    if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(lineConstrainedSize.width) {
                         coreTextLine = originalLine
                     } else {
                         var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
@@ -939,7 +944,7 @@ public class TextNode: ASDisplayNode {
                         let truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
                         let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
                         
-                        coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(constrainedSize.width), truncationType, truncationToken) ?? truncationToken
+                        coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(lineConstrainedSize.width), truncationType, truncationToken) ?? truncationToken
                         truncated = true
                     }
                     
@@ -956,7 +961,7 @@ public class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    let lineWidth = min(constrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
+                    let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
                     let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                     layoutSize.height += fontLineHeight + fontLineSpacing
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
@@ -1032,7 +1037,7 @@ public class TextNode: ASDisplayNode {
             if !lines.isEmpty && bottomCutoutEnabled {
                 let proposedWidth = lines[lines.count - 1].frame.width + bottomCutoutSize.width
                 if proposedWidth > layoutSize.width {
-                    if proposedWidth < constrainedSize.width {
+                    if proposedWidth <= constrainedSize.width + .ulpOfOne {
                         layoutSize.width = proposedWidth
                     } else {
                         layoutSize.height += bottomCutoutSize.height

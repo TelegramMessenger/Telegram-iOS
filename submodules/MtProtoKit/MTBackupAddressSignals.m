@@ -227,6 +227,8 @@ static NSString *makeRandomPadding() {
 + (MTSignal *)fetchConfigFromAddress:(MTBackupDatacenterAddress *)address currentContext:(MTContext *)currentContext {
     MTApiEnvironment *apiEnvironment = [currentContext.apiEnvironment copy];
     
+    apiEnvironment = [apiEnvironment withUpdatedSocksProxySettings:nil];
+    
     NSMutableDictionary *datacenterAddressOverrides = [[NSMutableDictionary alloc] init];
     
     datacenterAddressOverrides[@(address.datacenterId)] = [[MTDatacenterAddress alloc] initWithIp:address.ip port:(uint16_t)address.port preferForMedia:false restrictToTcp:false cdn:false preferForProxy:false secret:address.secret];
