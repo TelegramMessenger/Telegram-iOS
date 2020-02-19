@@ -59,3 +59,5 @@ bazel-telegram-ios/*
 bazel-testlogs
 bazel-testlogs/*
 */*.swp
+build-input/data
+build-input/data/*

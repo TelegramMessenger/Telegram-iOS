@@ -1,6 +1,5 @@
 load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_framework")
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 version_info_plist_source = """
 echo \
@@ -16,13 +15,6 @@ echo \
 '</plist>' \
 > "$@"
 """.format("1.0", "30")
-
-
-string_flag(
-    name = "wallet_bundle_id",
-    build_setting_default = "",
-    visibility = ["//visibility:public"],
-)
 
 genrule(
     name = "VersionInfoPlist",
