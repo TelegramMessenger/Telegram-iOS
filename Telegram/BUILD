@@ -118,11 +118,13 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/WalletUI:WalletUI",
+        "//submodules/WebsiteType:WebsiteType",
+        "//submodules/MtProtoKit:MtProtoKit",
     ],
 )
 
 additional_info_plist = telegram_info_plist(
-    name = "AdditionalInfo.plist",
+    name = "AdditionalInfoPlist",
     app_name = "Telegram",
     url_scheme = "tg",
     bundle_id_define = "telegram_bundle_id",
@@ -130,21 +132,15 @@ additional_info_plist = telegram_info_plist(
     build_number_define = "telegram_build_number",
 )
 
-provisioning_profile = file_from_define(
-    name = "TelegramProvisioningProfile",
-    extension = "mobileprovision",
-    define_name = "telegram_provisioning_profile",
-)
-
 ios_application(
     name = "Telegram",
     bundle_id = "{telegram_bundle_id}",
     families = ["iphone", "ipad"],
     minimum_os_version = "9.0",
-    provisioning_profile = ":TelegramProvisioningProfile",
+    provisioning_profile = "//build-input/data/provisioning-profiles:App.mobileprovision",
     infoplists = [
         "Info.plist",
-        ":AdditionalInfo.plist",
+        ":AdditionalInfoPlist",
     ],
     frameworks = [
         #":AsyncDisplayKitFramework",

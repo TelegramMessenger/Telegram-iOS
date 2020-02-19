@@ -43,7 +43,6 @@ def _telegram_info_plist(ctx):
                 <string>{app_name}.compatibility</string>
                 <key>CFBundleURLSchemes</key>
                 <array>
-                    <string>tg</string>
                     <string>{url_scheme}</string>
                 </array>
             </dict>
