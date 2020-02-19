@@ -58,4 +58,4 @@ bazel-telegram-ios
 bazel-telegram-ios/*
 bazel-testlogs
 bazel-testlogs/*
-
+build-input/data/*
