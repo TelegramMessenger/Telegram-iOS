@@ -53,13 +53,13 @@ resource_dependencies = [
     "//submodules/PasswordSetupUI:PasswordSetupUIResources",
     "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
     "//submodules/OverlayStatusController:OverlayStatusControllerResources",
-    "//:AppResources",
-    "//:AppStringResources",
-    "//:InfoPlistStringResources",
-    "//:AppIntentVocabularyResources",
-    "//:Icons",
-    "//:AdditionalIcons",
-    "//:LaunchScreen",
+    ":AppResources",
+    ":AppStringResources",
+    ":InfoPlistStringResources",
+    ":AppIntentVocabularyResources",
+    ":Icons",
+    ":AdditionalIcons",
+    ":LaunchScreen",
 ]
 
 build_phase_scripts = [
@@ -129,7 +129,6 @@ apple_resource(
 apple_library(
     name = "AppLibrary",
     visibility = [
-        "//:",
         "//...",
     ],
     configs = library_configs(),
@@ -146,7 +145,6 @@ apple_library(
 apple_binary(
     name = "AppBinary",
     visibility = [
-        "//:",
         "//...",
     ],
     configs = app_binary_configs(),
@@ -163,7 +161,7 @@ apple_binary(
 apple_bundle(
     name = "Telegram",
     visibility = [
-        "//:",
+        "//Telegram:...",
     ],
     extension = "app",
     binary = ":AppBinary",
@@ -527,7 +525,7 @@ apple_bundle(
     name = "WatchApp",
     binary = ":WatchAppBinary",
     visibility = [
-        "//:",
+        "//Telegram:...",
     ],
     extension = "app",
     info_plist = "Watch/App/Info.plist",

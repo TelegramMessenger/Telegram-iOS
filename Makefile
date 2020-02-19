@@ -42,8 +42,8 @@ BUCK_OPTIONS=\
 
 build_arm64: check_env
 	$(BUCK) build \
-	//:AppPackage#iphoneos-arm64 \
-	//:Telegram#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:AppPackage#iphoneos-arm64 \
+	//Telegram:Telegram#dwarf-and-dsym,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-arm64 \
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -62,18 +62,18 @@ build_arm64: check_env
 	//submodules/Display:Display#shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-arm64 \
-	//:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
-	//:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
+	//Telegram:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
 	${BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 build_debug_arm64: check_env
 	$(BUCK) build \
-	//:AppPackage#iphoneos-arm64 \
-	//:Telegram#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:AppPackage#iphoneos-arm64 \
+	//Telegram:Telegram#dwarf-and-dsym,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-arm64 \
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -92,12 +92,12 @@ build_debug_arm64: check_env
 	//submodules/Display:Display#shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-arm64 \
-	//:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
-	//:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
+	//Telegram:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 build_wallet_debug_arm64: check_env
@@ -116,8 +116,8 @@ build_wallet_debug_arm64: check_env
 
 build_debug_armv7: check_env
 	$(BUCK) build \
-	//:AppPackage#iphoneos-armv7 \
-	//:Telegram#dwarf-and-dsym,iphoneos-armv7 \
+	//Telegram:AppPackage#iphoneos-armv7 \
+	//Telegram:Telegram#dwarf-and-dsym,iphoneos-armv7 \
 	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-armv7 \
 	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-armv7 \
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-armv7 \
@@ -136,18 +136,18 @@ build_debug_armv7: check_env
 	//submodules/Display:Display#shared,iphoneos-armv7 \
 	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-armv7 \
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-armv7 \
-	//:WatchAppExtension#dwarf-and-dsym,watchos-armv7_32,watchos-armv7k \
-	//:ShareExtension#dwarf-and-dsym,iphoneos-armv7 \
-    //:WidgetExtension#dwarf-and-dsym,iphoneos-armv7 \
-    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-armv7 \
-    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-armv7 \
-    //:IntentsExtension#dwarf-and-dsym,iphoneos-armv7 \
+	//Telegram:WatchAppExtension#dwarf-and-dsym,watchos-armv7_32,watchos-armv7k \
+	//Telegram:ShareExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //Telegram:WidgetExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //Telegram:NotificationContentExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //Telegram:NotificationServiceExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-armv7 \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 build: check_env
 	$(BUCK) build \
-	//:AppPackage#iphoneos-arm64,iphoneos-armv7 \
-	//:Telegram#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
+	//Telegram:AppPackage#iphoneos-arm64,iphoneos-armv7 \
+	//Telegram:Telegram#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
@@ -166,12 +166,12 @@ build: check_env
 	//submodules/Display:Display#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-arm64,iphoneos-armv7 \
-	//:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
-	//:ShareExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
-    //:WidgetExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
-    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
-    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
-    //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
+	//Telegram:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
+	//Telegram:ShareExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
+    //Telegram:WidgetExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
+    //Telegram:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
+    //Telegram:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
+    //Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-arm64,iphoneos-armv7 \
 	${BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 package_arm64:
@@ -290,8 +290,8 @@ app_debug_armv7: build_debug_armv7 package_debug_armv7
 
 build_buckdebug: check_env
 	BUCK_DEBUG_MODE=1 $(BUCK) build \
-	//:AppPackage#iphoneos-arm64 \
-	//:Telegram#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:AppPackage#iphoneos-arm64 \
+	//Telegram:Telegram#dwarf-and-dsym,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-arm64 \
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -310,12 +310,12 @@ build_buckdebug: check_env
 	//submodules/Display:Display#shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-arm64 \
-	//:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
-	//:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
+	//Telegram:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
+    //Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
     --verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
 build_buckdebug_one: check_env
@@ -330,8 +330,8 @@ build_verbose_one: check_env
 
 build_verbose: check_env
 	$(BUCK) build \
-	//:AppPackage#iphoneos-arm64 \
-	//:Telegram#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:AppPackage#iphoneos-arm64 \
+	//Telegram:Telegram#dwarf-and-dsym,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-arm64 \
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -350,16 +350,16 @@ build_verbose: check_env
 	//submodules/Display:Display#shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-arm64 \
-	//:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
-	//:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
-	//:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
-	//:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
-	//:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
-	//:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
+	//Telegram:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
 	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 deps: check_env
-	$(BUCK) query "deps(//:AppPackage)" --dot  \
+	$(BUCK) query "deps(//Telegram:AppPackage)" --dot  \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
 build_openssl: check_env
@@ -381,15 +381,15 @@ clean: kill_xcode
 	sh clean.sh
 
 project: check_env kill_xcode
-	$(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	$(BUCK) project //Telegram:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Telegram_Buck.xcworkspace
 
 project_opt: check_env kill_xcode
-	$(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS}
+	$(BUCK) project //Telegram:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS}
 	open Telegram_Buck.xcworkspace
 
 project_buckdebug: check_env kill_xcode
-	BUCK_DEBUG_MODE=1 $(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	BUCK_DEBUG_MODE=1 $(BUCK) project //Telegram:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Telegram_Buck.xcworkspace
 
 temp_project: check_env kill_xcode

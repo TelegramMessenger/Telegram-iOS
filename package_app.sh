@@ -278,7 +278,7 @@ APP_PLIST="$APP_PATH/Info.plist"
 if [ "$APP_TYPE" == "wallet" ]; then
 	APP_BINARY_TARGET="//Wallet:Wallet"
 else
-	APP_BINARY_TARGET="//:Telegram"
+	APP_BINARY_TARGET="//Telegram:Telegram"
 fi
 
 echo "Repacking frameworks..."
