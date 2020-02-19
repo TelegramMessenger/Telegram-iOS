@@ -9,7 +9,7 @@ static_library(
         "Source/UIKitRuntimeUtils/*.h",
     ]),
     deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
     ],
     frameworks = [

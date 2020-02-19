@@ -455,7 +455,7 @@ final class SharedApplicationContext {
             }
         }
         
-        ASDisableLogging()
+        //ASDisableLogging()
         
         initializeLegacyComponents(application: application, currentSizeClassGetter: {
             return UIUserInterfaceSizeClass.compact

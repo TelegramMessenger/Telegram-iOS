@@ -1,4 +1,31 @@
 import UIKit
+import UIKitRuntimeUtils
+
+public extension UIView {
+    static func animationDurationFactor() -> Double {
+        return animationDurationFactorImpl()
+    }
+}
+
+public func makeSpringAnimation(_ keyPath: String) -> CABasicAnimation {
+    return makeSpringAnimationImpl(keyPath)
+}
+
+public func makeSpringBounceAnimation(_ keyPath: String, _ initialVelocity: CGFloat, _ damping: CGFloat) -> CABasicAnimation {
+    return makeSpringBounceAnimationImpl(keyPath, initialVelocity, damping)
+}
+
+public func springAnimationValueAt(_ animation: CABasicAnimation, _ t: CGFloat) -> CGFloat {
+    return springAnimationValueAtImpl(animation, t)
+}
+
+public func makeCustomZoomBlurEffect() -> UIBlurEffect? {
+    return makeCustomZoomBlurEffectImpl()
+}
+
+public func applySmoothRoundedCorners(_ layer: CALayer) {
+    applySmoothRoundedCornersImpl(layer)
+}
 
 public func dumpViews(_ view: UIView) {
     dumpViews(view, indent: "")

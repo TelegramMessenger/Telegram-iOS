@@ -3,21 +3,15 @@
 #import <objc/runtime.h>
 
 #if TARGET_IPHONE_SIMULATOR
-UIKIT_EXTERN float UIAnimationDragCoefficient(); // UIKit private drag coeffient, use judiciously
+UIKIT_EXTERN float UIAnimationDragCoefficient();
 #endif
 
-@implementation UIView (AnimationUtils)
-
-+ (double)animationDurationFactor
-{
+double animationDurationFactorImpl() {
 #if TARGET_IPHONE_SIMULATOR
     return (double)UIAnimationDragCoefficient();
-#endif
-    
+#endif   
     return 1.0f;
 }
-
-@end
 
 @interface CASpringAnimation ()
 
@@ -54,7 +48,7 @@ UIKIT_EXTERN float UIAnimationDragCoefficient(); // UIKit private drag coeffient
 
 @end
 
-CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath) {
+CABasicAnimation * _Nonnull makeSpringAnimationImpl(NSString * _Nonnull keyPath) {
     CASpringAnimation *springAnimation = [CASpringAnimation animationWithKeyPath:keyPath];
     springAnimation.mass = 3.0f;
     springAnimation.stiffness = 1000.0f;
@@ -64,7 +58,7 @@ CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath) {
     return springAnimation;
 }
 
-CABasicAnimation * _Nonnull makeSpringBounceAnimation(NSString * _Nonnull keyPath, CGFloat initialVelocity, CGFloat damping) {
+CABasicAnimation * _Nonnull makeSpringBounceAnimationImpl(NSString * _Nonnull keyPath, CGFloat initialVelocity, CGFloat damping) {
     CASpringAnimation *springAnimation = [CASpringAnimation animationWithKeyPath:keyPath];
     springAnimation.mass = 5.0f;
     springAnimation.stiffness = 900.0f;
@@ -84,7 +78,7 @@ CABasicAnimation * _Nonnull makeSpringBounceAnimation(NSString * _Nonnull keyPat
     return springAnimation;
 }
 
-CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t) {
+CGFloat springAnimationValueAtImpl(CABasicAnimation * _Nonnull animation, CGFloat t) {
     return [(CASpringAnimation *)animation valueAt:t];
 }
 
@@ -109,9 +103,6 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
 + (id)effectWithStyle:(long long)arg1;
 
 @end
-
-void testZoomBlurEffect(UIVisualEffect *effect) {
-}
 
 static NSString *encodeText(NSString *string, int key) {
     NSMutableString *result = [[NSMutableString alloc] init];
@@ -168,7 +159,7 @@ static void setBoolField(CustomBlurEffect *object, NSString *name, BOOL value) {
     [inv invoke];
 }
 
-UIBlurEffect *makeCustomZoomBlurEffect() {
+UIBlurEffect *makeCustomZoomBlurEffectImpl() {
     if (@available(iOS 11.0, *)) {
         NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
         CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
@@ -193,7 +184,7 @@ UIBlurEffect *makeCustomZoomBlurEffect() {
     }
 }
 
-void applySmoothRoundedCorners(CALayer * _Nonnull layer) {
+void applySmoothRoundedCornersImpl(CALayer * _Nonnull layer) {
     if (@available(iOS 11.0, *)) {
         setBoolField(layer, encodeText(@"tfuDpoujovpvtDpsofst;", -1), true);
     }

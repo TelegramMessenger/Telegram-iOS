@@ -788,6 +788,8 @@ open class NavigationBar: ASDisplayNode {
             self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
             
             self.badgeNode.updateTheme(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
+            
+            self.requestLayout()
         }
     }
     

@@ -16,6 +16,30 @@ public class ImmediateTextNode: TextNode {
     public var textShadowColor: UIColor?
     public var textStroke: (UIColor, CGFloat)?
     public var cutout: TextNodeCutout?
+
+    public var truncationMode: NSLineBreakMode {
+        get {
+            switch self.truncationType {
+            case .start:
+                return .byTruncatingHead
+            case .middle:
+                return .byTruncatingMiddle
+            case .end:
+                return .byTruncatingTail
+            }
+        } set(value) {
+            switch value {
+            case .byTruncatingHead:
+                self.truncationType = .start
+            case .byTruncatingMiddle:
+                self.truncationType = .middle
+            case .byTruncatingTail:
+                self.truncationType = .end
+            default:
+                self.truncationType = .end
+            }
+        }
+    }
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -155,5 +179,11 @@ public class ImmediateTextNode: TextNode {
             default:
                 break
         }
+    }
+}
+
+public class ASTextNode: ImmediateTextNode {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        return self.updateLayout(constrainedSize)
     }
 }

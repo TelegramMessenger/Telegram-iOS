@@ -7,8 +7,8 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/Display:Display",
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
     ],
     visibility = [
         "//visibility:public",
