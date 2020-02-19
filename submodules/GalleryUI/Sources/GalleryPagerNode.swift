@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 
+private let edgeWidth: CGFloat = 44.0
+
 private let leftFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
     context.clear(bounds)
@@ -154,11 +156,11 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             
             var highlightedSide: Bool?
             if let point = point {
-                if point.x < size.width * 1.0 / 5.0 {
+                if point.x < edgeWidth && strongSelf.canGoToPreviousItem() {
                     if strongSelf.items.count > 1 {
                         highlightedSide = false
                     }
-                } else {
+                } else if point.x > size.width - edgeWidth && strongSelf.canGoToNextItem() {
                     if strongSelf.items.count > 1 {
                         highlightedSide = true
                     }
@@ -207,9 +209,9 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 if case .tap = gesture {
                     let size = self.bounds.size
-                    if location.x < size.width * 1.0 / 5.0 && self.canGoToPreviousItem() {
+                    if location.x < edgeWidth && self.canGoToPreviousItem() {
                         self.goToPreviousItem()
-                    } else if self.canGoToNextItem() {
+                    } else if location.x > size.width - edgeWidth && self.canGoToNextItem() {
                         self.goToNextItem()
                     }
                 }
