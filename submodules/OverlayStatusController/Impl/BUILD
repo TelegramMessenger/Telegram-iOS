@@ -11,8 +11,6 @@ objc_library(
     includes = [
         "Sources",
     ],
-    deps = [
-    ],
     visibility = [
         "//visibility:public",
     ],

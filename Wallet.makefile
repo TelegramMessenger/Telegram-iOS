@@ -16,7 +16,8 @@ WALLET_BUCK_OPTIONS=\
 	--config custom.isInternalBuild="${IS_INTERNAL_BUILD}" \
 	--config custom.isAppStoreBuild="${IS_APPSTORE_BUILD}" \
 	--config custom.appStoreId="${APPSTORE_ID}" \
-	--config custom.appSpecificUrlScheme="${APP_SPECIFIC_URL_SCHEME}"
+	--config custom.appSpecificUrlScheme="${APP_SPECIFIC_URL_SCHEME}" \
+	--config buildfile.name=BUCK
 
 BAZEL=$(shell which bazel)
 
@@ -38,7 +39,16 @@ build_wallet: check_env
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/Display:Display#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/Display:Display#shared,iphoneos-arm64,iphoneos-armv7 \
-    --verbose 7 \
+	${WALLET_BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
+
+build_debug: check_env
+	$(BUCK) build \
+	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/AsyncDisplayKit:AsyncDisplayKit#shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/Display:Display#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/Display:Display#shared,iphoneos-arm64,iphoneos-armv7 \
 	${WALLET_BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 wallet_package:

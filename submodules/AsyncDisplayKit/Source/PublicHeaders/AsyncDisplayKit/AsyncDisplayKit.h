@@ -61,3 +61,5 @@
 #import <AsyncDisplayKit/NSArray+Diffing.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 #import <AsyncDisplayKit/UIResponder+AsyncDisplayKit.h>
+
+#import <AsyncDisplayKit/_ASCoreAnimationExtras.h>

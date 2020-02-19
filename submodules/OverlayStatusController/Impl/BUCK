@@ -1,16 +1,15 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
 static_library(
-    name = "SSignalKit",
+    name = "OverlayStatusControllerImpl",
     srcs = glob([
-        "Source/SSignalKit/*.m",
+        "Sources/**/*.m",
     ]),
     exported_headers = glob([
-    	"Source/SSignalKit/*.h",
+        "Sources/**/*.h",
     ]),
-    deps = [
-    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
     ],
 )

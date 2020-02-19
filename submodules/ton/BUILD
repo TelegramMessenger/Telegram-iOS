@@ -39,7 +39,7 @@ genrule(
     name = "ton_build",
     srcs = [
         "build-ton-bazel.sh",
-        "iOS.cmake",
+        "iOS-bazel.cmake",
         "tonlib-src.tar.gz",
         "//submodules/openssl:openssl_include",
         "//submodules/openssl:libcrypto.a",
@@ -59,7 +59,7 @@ genrule(
     fi
 
     cp $(location :build-ton-bazel.sh) "$(RULEDIR)/"
-    cp $(location :iOS.cmake) "$(RULEDIR)/"
+    cp $(location :iOS-bazel.cmake) "$(RULEDIR)/"
     tar -xzf $(location tonlib-src.tar.gz) -C "$(RULEDIR)/"
 
     mkdir -p "$(RULEDIR)/openssl_headers/include/openssl"
