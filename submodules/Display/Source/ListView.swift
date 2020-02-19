@@ -169,6 +169,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
+    public final var keepMinimalScrollHeightWithTopInset: CGFloat?
+    
     public final var stackFromBottom: Bool = false
     public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
     public final var limitHitTestToNodes: Bool = false
@@ -987,6 +989,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
+        if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset {
+            completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
+            bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
+        }
+        
         var transition: ContainedViewLayoutTransition = .immediate
         if let updateSizeAndInsets = updateSizeAndInsets {
             if !updateSizeAndInsets.duration.isZero && !isExperimentalSnapToScrollToItem {
@@ -1382,6 +1389,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if topItemFound && bottomItemFound {
                 for itemNode in self.itemNodes {
                     completeHeight += itemNode.apparentBounds.height
+                }
+                
+                if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset {
+                    completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
+                    bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
                 }
                 
                 if self.stackFromBottom {

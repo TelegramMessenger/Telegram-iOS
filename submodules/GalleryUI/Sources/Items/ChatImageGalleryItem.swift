@@ -164,7 +164,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
-    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>()
+    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>(nil)
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode

@@ -5,6 +5,32 @@ import Display
 import SwiftSignalKit
 import Postbox
 
+private let leftFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
+    let bounds = CGRect(origin: CGPoint(), size: size)
+    context.clear(bounds)
+    
+    let gradientColors = [UIColor.black.withAlphaComponent(0.35).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor] as CFArray
+    
+    var locations: [CGFloat] = [0.0, 1.0]
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 64.0, y: 0.0), options: CGGradientDrawingOptions())
+})
+
+private let rightFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
+    let bounds = CGRect(origin: CGPoint(), size: size)
+    context.clear(bounds)
+    
+    let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.35).cgColor] as CFArray
+    
+    var locations: [CGFloat] = [0.0, 1.0]
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 64.0, y: 0.0), options: CGGradientDrawingOptions())
+})
+
 public struct GalleryPagerInsertItem {
     public let index: Int
     public let item: GalleryItem
@@ -43,10 +69,15 @@ public struct GalleryPagerTransaction {
     }
 }
 
-public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
+public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let pageGap: CGFloat
     
     private let scrollView: UIScrollView
+    
+    private let leftFadeNode: ASImageNode
+    private let rightFadeNode: ASImageNode
+    
+    private var pressGestureRecognizer: UILongPressGestureRecognizer?
     
     public private(set) var items: [GalleryItem] = []
     private var itemNodes: [GalleryItemNode] = []
@@ -78,6 +109,16 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
         
+        self.leftFadeNode = ASImageNode()
+        self.leftFadeNode.contentMode = .scaleToFill
+        self.leftFadeNode.image = leftFadeImage
+        self.leftFadeNode.alpha = 0.0
+        
+        self.rightFadeNode = ASImageNode()
+        self.rightFadeNode.contentMode = .scaleToFill
+        self.rightFadeNode.image = rightFadeImage
+        self.rightFadeNode.alpha = 0.0
+        
         super.init()
         
         self.scrollView.showsVerticalScrollIndicator = false
@@ -90,6 +131,55 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollView.scrollsToTop = false
         self.scrollView.delaysContentTouches = false
         self.view.addSubview(self.scrollView)
+        
+        self.addSubnode(self.leftFadeNode)
+        self.addSubnode(self.rightFadeNode)
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.pressGesture(_:)))
+        gestureRecognizer.delegate = self
+        gestureRecognizer.minimumPressDuration = 0.01
+        self.view.addGestureRecognizer(gestureRecognizer)
+        self.pressGestureRecognizer = gestureRecognizer
+    }
+    
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+    
+    @objc private func pressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        let edgeWidth: CGFloat = 44.0
+        let location = gestureRecognizer.location(in: gestureRecognizer.view)
+        switch gestureRecognizer.state {
+            case .began:
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.07, curve: .easeInOut)
+                if location.x < edgeWidth && self.canGoToPreviousItem() {
+                    transition.updateAlpha(node: self.leftFadeNode, alpha: 1.0)
+                } else if location.x > self.frame.width - edgeWidth && self.canGoToNextItem() {
+                    transition.updateAlpha(node: self.rightFadeNode, alpha: 1.0)
+                }
+            case .ended:
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
+                if location.x < edgeWidth && self.canGoToPreviousItem() {
+                    transition.updateAlpha(node: self.leftFadeNode, alpha: 0.0)
+                    self.goToPreviousItem()
+                } else if location.x > self.frame.width - edgeWidth && self.canGoToNextItem() {
+                    transition.updateAlpha(node: self.rightFadeNode, alpha: 0.0)
+                    self.goToNextItem()
+                }
+            case .cancelled:
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
+                if location.x < edgeWidth {
+                    transition.updateAlpha(node: self.leftFadeNode, alpha: 0.0)
+                } else if location.x > self.frame.width - edgeWidth {
+                    transition.updateAlpha(node: self.rightFadeNode, alpha: 0.0)
+                }
+            default:
+                break
+        }
     }
     
     public var isScrollEnabled: Bool {
@@ -134,6 +224,10 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             
             transition.animatePosition(node: centralItemNode, from: centralItemNode.position.offsetBy(dx: -updatedCentralPoint.x + centralPoint.x, dy: -updatedCentralPoint.y + centralPoint.y))
         }
+        
+        let fadeWidth = min(72.0, layout.size.width * 0.2)
+        self.leftFadeNode.frame = CGRect(x: 0.0, y: 0.0, width: fadeWidth, height: layout.size.height)
+        self.rightFadeNode.frame = CGRect(x: layout.size.width - fadeWidth, y: 0.0, width: fadeWidth, height: layout.size.height)
     }
     
     public func ready() -> Signal<Void, NoError> {
@@ -247,35 +341,37 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    private func canGoToPreviousItem() -> Bool {
+        if let index = self.centralItemIndex, index > 0 {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    private func canGoToNextItem() -> Bool {
+        if let index = self.centralItemIndex, index < self.items.count - 1 {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    private func goToPreviousItem() {
+        if let index = self.centralItemIndex, index > 0 {
+            self.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index - 1))
+        }
+    }
+    
+    private func goToNextItem() {
+        if let index = self.centralItemIndex, index < self.items.count - 1 {
+            self.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index + 1))
+        }
+    }
+    
     private func makeNodeForItem(at index: Int) -> GalleryItemNode {
         let node = self.items[index].node()
         node.toggleControlsVisibility = self.toggleControlsVisibility
-        node.goToPreviousItem = { [weak self] in
-            if let strongSelf = self {
-                if let index = strongSelf.centralItemIndex, index > 0 {
-                    strongSelf.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index - 1))
-                }
-            }
-        }
-        node.goToNextItem = { [weak self] in
-            if let strongSelf = self {
-                if let index = strongSelf.centralItemIndex, index < strongSelf.items.count - 1 {
-                    strongSelf.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index + 1))
-                }
-            }
-        }
-        node.canGoToPreviousItem = { [weak self] in
-            if let strongSelf = self, let index = strongSelf.centralItemIndex, index > 0 {
-                return true
-            }
-            return false
-        }
-        node.canGoToNextItem = { [weak self] in
-            if let strongSelf = self, let index = strongSelf.centralItemIndex, index < strongSelf.items.count - 1 {
-                return true
-            }
-            return false
-        }
         node.dismiss = self.dismiss
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss

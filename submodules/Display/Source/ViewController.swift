@@ -213,6 +213,21 @@ public enum ViewControllerNavigationPresentation {
         }
     }
     
+    open var cleanNavigationHeight: CGFloat {
+        if let navigationBar = self.navigationBar {
+            var height = navigationBar.frame.maxY
+            if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
+                height += contentNode.nominalHeight - contentNode.height
+            }
+            if navigationBar.secondaryContentNode != nil {
+                //height -= 46.0
+            }
+            return height
+        } else {
+            return 0.0
+        }
+    }
+    
     open var visualNavigationInsetHeight: CGFloat {
         if let navigationBar = self.navigationBar {
             let height = navigationBar.frame.maxY
@@ -224,6 +239,8 @@ public enum ViewControllerNavigationPresentation {
             return 0.0
         }
     }
+    
+    public var additionalNavigationBarHeight: CGFloat = 0.0
     
     private let _ready = Promise<Bool>(true)
     open var ready: Promise<Bool> {
@@ -338,7 +355,7 @@ public enum ViewControllerNavigationPresentation {
     
     private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        let defaultNavigationBarHeight: CGFloat
+        var defaultNavigationBarHeight: CGFloat
         if self._presentedInModal {
             defaultNavigationBarHeight = 56.0
         } else {
@@ -353,9 +370,6 @@ public enum ViewControllerNavigationPresentation {
             navigationBarOffset = 0.0
         }
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: navigationBarHeight))
-        if layout.statusBarHeight == nil {
-            //navigationBarFrame.size.height = (self.navigationBar?.contentHeight ?? 44.0) + 20.0
-        }
         
         if !self.displayNavigationBar {
             navigationBarFrame.origin.y = -navigationBarFrame.size.height
@@ -368,7 +382,7 @@ public enum ViewControllerNavigationPresentation {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, additionalHeight: 0.0, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
                 navigationBar.layer.cancelAnimationsRecursive(key: "position")

@@ -105,7 +105,7 @@ enum NavigationPreviousAction: Equatable {
 open class NavigationBar: ASDisplayNode {
     private var presentationData: NavigationBarPresentationData
     
-    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, CGFloat, Bool)?
     private var requestedLayout: Bool = false
     var requestContainerLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -124,6 +124,7 @@ open class NavigationBar: ASDisplayNode {
     private let clippingNode: ASDisplayNode
     
     public private(set) var contentNode: NavigationBarContentNode?
+    public private(set) var secondaryContentNode: ASDisplayNode?
     
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
@@ -800,16 +801,22 @@ open class NavigationBar: ASDisplayNode {
         
         if let validLayout = self.validLayout, self.requestedLayout {
             self.requestedLayout = false
-            self.updateLayout(size: validLayout.0, defaultHeight: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, transition: .immediate)
+            self.updateLayout(size: validLayout.0, defaultHeight: validLayout.1, additionalHeight: validLayout.2, leftInset: validLayout.3, rightInset: validLayout.4, appearsHidden: validLayout.5, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, defaultHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, transition: ContainedViewLayoutTransition) {
         if self.layoutSuspended {
             return
         }
         
-        self.validLayout = (size, defaultHeight, leftInset, rightInset)
+        self.validLayout = (size, defaultHeight, additionalHeight, leftInset, rightInset, appearsHidden)
+        
+        if let secondaryContentNode = self.secondaryContentNode {
+            transition.updateAlpha(node: secondaryContentNode, alpha: appearsHidden ? 0.0 : 1.0)
+        }
+        
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? 46.0 : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -817,14 +824,19 @@ open class NavigationBar: ASDisplayNode {
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: size))
         var expansionHeight: CGFloat = 0.0
         if let contentNode = self.contentNode {
-            let contentNodeFrame: CGRect
+            var contentNodeFrame: CGRect
             switch contentNode.mode {
-                case .replacement:
-                    expansionHeight = contentNode.height - defaultHeight
-                    contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
-                case .expansion:
-                    expansionHeight = contentNode.height
-                    contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - expansionHeight), size: CGSize(width: size.width, height: expansionHeight))
+            case .replacement:
+                expansionHeight = contentNode.height - defaultHeight
+                contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
+            case .expansion:
+                expansionHeight = contentNode.height
+                contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - expansionHeight - apparentAdditionalHeight), size: CGSize(width: size.width, height: expansionHeight))
+                if appearsHidden {
+                    if self.secondaryContentNode != nil {
+                        contentNodeFrame.origin.y += 46.0
+                    }
+                }
             }
             transition.updateFrame(node: contentNode, frame: contentNodeFrame)
             contentNode.updateLayout(size: contentNodeFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
@@ -832,8 +844,8 @@ open class NavigationBar: ASDisplayNode {
         
         transition.updateFrame(node: self.stripeNode, frame: CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel))
         
-        let nominalHeight: CGFloat = defaultHeight
-        let contentVerticalOrigin = size.height - nominalHeight - expansionHeight
+        let nominalHeight: CGFloat = defaultHeight - additionalHeight
+        let contentVerticalOrigin = size.height - nominalHeight - expansionHeight - additionalHeight - apparentAdditionalHeight
         
         var leftTitleInset: CGFloat = leftInset + 1.0
         var rightTitleInset: CGFloat = rightInset + 1.0
@@ -1033,7 +1045,7 @@ open class NavigationBar: ASDisplayNode {
             let node = NavigationButtonNode()
             node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
-            if let (size, defaultHeight, _, _) = self.validLayout {
+            if let (size, defaultHeight, _, _, _, _) = self.validLayout {
                 node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
                 node.frame = self.backButtonNode.frame
             }
@@ -1056,7 +1068,7 @@ open class NavigationBar: ASDisplayNode {
             }
             node.updateItems(items)
             node.color = accentColor
-            if let (size, defaultHeight, _, _) = self.validLayout {
+            if let (size, defaultHeight, _, _, _, _) = self.validLayout {
                 node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
                 node.frame = self.backButtonNode.frame
             }
@@ -1101,16 +1113,23 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public func contentHeight(defaultHeight: CGFloat) -> CGFloat {
+        var result: CGFloat = 0.0
         if let contentNode = self.contentNode {
             switch contentNode.mode {
-                case .expansion:
-                    return defaultHeight + contentNode.height
-                case .replacement:
-                    return contentNode.height
+            case .expansion:
+                result += defaultHeight + contentNode.height
+            case .replacement:
+                result += contentNode.height
             }
         } else {
-            return defaultHeight
+            result += defaultHeight
         }
+        
+        if let _ = self.secondaryContentNode {
+            result += 46.0
+        }
+        
+        return result
     }
     
     public func setContentNode(_ contentNode: NavigationBarContentNode?, animated: Bool) {
@@ -1158,6 +1177,18 @@ open class NavigationBar: ASDisplayNode {
                 if animated {
                     self.clippingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
+            }
+        }
+    }
+    
+    public func setSecondaryContentNode(_ secondatryContentNode: ASDisplayNode?) {
+        if self.secondaryContentNode !== secondatryContentNode {
+            if let previous = self.secondaryContentNode {
+                previous.removeFromSupernode()
+            }
+            self.secondaryContentNode = secondatryContentNode
+            if let secondaryContentNode = secondatryContentNode {
+                self.clippingNode.addSubnode(secondaryContentNode)
             }
         }
     }

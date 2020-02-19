@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import SyncCore
 
 private final class ManagedChatListHolesState {
     private var holeDisposables: [ChatListHolesEntry: Disposable] = [:]
@@ -53,15 +54,17 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
     return Signal { _ in
         let state = Atomic(value: ManagedChatListHolesState())
         
-        let topRootHoleKey = PostboxViewKey.allChatListHoles(.root)
-        let topRootHole = postbox.combinedView(keys: [topRootHoleKey])
+        let topRootHoleKey: PostboxViewKey = .allChatListHoles(.root)
+        let filtersKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.chatListFilters]))
+        let combinedView = postbox.combinedView(keys: [topRootHoleKey, filtersKey])
         
-        let disposable = combineLatest(postbox.chatListHolesView(), topRootHole).start(next: { view, topRootHoleView in
+        let disposable = combineLatest(postbox.chatListHolesView(), combinedView).start(next: { view, combinedView in
             var additionalLatestHole: ChatListHole?
-            if let topRootHole = topRootHoleView.views[topRootHoleKey] as? AllChatListHolesView {
-                #if os(macOS)
-                additionalLatestHole = topRootHole.latestHole
-                #endif
+            
+            if let preferencesView = combinedView.views[filtersKey] as? PreferencesView, let filtersState = preferencesView.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState, !filtersState.filters.isEmpty {
+                if let topRootHole = combinedView.views[topRootHoleKey] as? AllChatListHolesView {
+                    additionalLatestHole = topRootHole.latestHole
+                }
             }
             
             let (removed, added, addedAdditionalLatestHole) = state.with { state in

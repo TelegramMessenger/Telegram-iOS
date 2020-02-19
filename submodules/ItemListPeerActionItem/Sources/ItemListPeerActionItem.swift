@@ -165,7 +165,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                 case .generic:
                     verticalInset = 11.0
                     verticalOffset = 0.0
-                    leftInset = 59.0 + params.leftInset
+                    leftInset = (item.icon == nil ? 16.0 : 59.0) + params.leftInset
                 case .peerList:
                     verticalInset = 14.0
                     verticalOffset = 0.0
