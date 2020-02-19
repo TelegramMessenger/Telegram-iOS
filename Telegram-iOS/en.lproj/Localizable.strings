@@ -5344,3 +5344,5 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.AddToContacts" = "Add to Contacts";
 
 "PeerInfo.BioExpand" = "more";
+
+"External.OpenIn" = "Open in %@";

@@ -274,15 +274,7 @@ private final class NavigationButtonItemNode: ASTextNode {
             }
             
             if shouldChangeHighlight {
-                if let imageNode = self.imageNode {
-                    let previousAlpha = self.imageRippleNode.alpha
-                    self.imageRippleNode.alpha = highlighted ? 1.0 : 0.0
-                    if !highlighted {
-                        self.imageRippleNode.layer.animateAlpha(from: previousAlpha, to: self.imageRippleNode.alpha, duration: 0.25)
-                    }
-                } else {
-                    self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
-                }
+                self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
                 self.highlightChanged(highlighted)
             }
         }

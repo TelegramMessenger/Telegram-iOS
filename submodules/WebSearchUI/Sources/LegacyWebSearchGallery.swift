@@ -278,7 +278,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
         |> mapToSignal { value -> Signal<UIImage, NoError> in
             let thumbnailData = value._0
             let fullSizeData = value._1
-            let fullSizeComplete = value._2
+            let fullSizeComplete = value._3
             
             if fullSizeComplete, let data = fullSizeData, let image = UIImage(data: data) {
                 return .single(image)

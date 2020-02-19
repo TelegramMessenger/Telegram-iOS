@@ -207,14 +207,14 @@ public final class NotificationViewControllerImpl {
             let mediaBoxPath = accountsPath + "/" + accountRecordIdPathName(AccountRecordId(rawValue: accountIdValue)) + "/postbox/media"
             
             if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxPath + "/\(largestRepresentation.resource.id.uniqueId)"), options: .mappedRead) {
-                self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single(Tuple(nil, data, true)))
-                    |> map { $0.1 })
+                self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single(Tuple(nil, data, .full, true)))
+                |> map { $0.2 })
                 return
             }
             
             if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxPath + "/\(thumbnailRepresentation.resource.id.uniqueId)"), options: .mappedRead) {
-                self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single(Tuple(data, nil, false)))
-                    |> map { $0.1 })
+                self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single(Tuple(data, nil, .medium, false)))
+                |> map { $0.2 })
             }
             
             guard let sharedAccountContext = sharedAccountContext else {
