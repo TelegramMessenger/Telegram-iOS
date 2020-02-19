@@ -231,7 +231,22 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
+                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError> = chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: self.context.account.postbox, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: false), synchronousLoad: false)
+                |> map { [weak self] _, quality, generate -> (TransformImageArguments) -> DrawingContext? in
+                    Queue.mainQueue().async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        switch quality {
+                        case .medium, .full:
+                            strongSelf.statusNodeContainer.isHidden = true
+                        case .none, .blurred:
+                            strongSelf.statusNodeContainer.isHidden = false
+                        }
+                    }
+                    return generate
+                }
+                self.imageNode.setSignal(signal)
                 self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
                 
                 self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: imageReference.resourceReference(largestSize.resource)).start())
@@ -401,7 +416,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         
         if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceFinalFrame = transformedSurfaceFinalFrame {
-            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak surfaceCopyView] _ in
+            surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), to: CGPoint(x: transformedSurfaceFinalFrame.midX, y: transformedSurfaceFinalFrame.midY), duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak surfaceCopyView] _ in
                 surfaceCopyView?.removeFromSuperview()
             })
             let scale = CGSize(width: transformedSurfaceFinalFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceFinalFrame.size.height / transformedSurfaceFrame.size.height)
