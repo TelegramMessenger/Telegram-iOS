@@ -1,0 +1,24 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "TelegramAnimatedStickerNode",
+    module_name = "TelegramAnimatedStickerNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/MediaResources:MediaResources",
+        "//submodules/Tuples:Tuples",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/YuvConversion:YuvConversion",
+        "//submodules/GZip:GZip",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

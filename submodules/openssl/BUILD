@@ -128,13 +128,18 @@ genrule(
         else
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
+        BUILD_DIR="$(RULEDIR)/$$BUILD_ARCH"
+        rm -rf "$$BUILD_DIR"
+        mkdir -p "$$BUILD_DIR"
         """ + "\n" +
-        "mkdir -p $(RULEDIR)/$$BUILD_ARCH && cp $(SRCS) $(RULEDIR)/$$BUILD_ARCH/ && sh $(RULEDIR)/$$BUILD_ARCH/build-openssl-bazel.sh $(RULEDIR)/$$BUILD_ARCH $(RULEDIR)/$$BUILD_ARCH $$BUILD_ARCH" + "\n" +
+        "mkdir -p $$BUILD_DIR" + "\n" +
+        "cp $(SRCS) $$BUILD_DIR/" + "\n" +
+        "sh $$BUILD_DIR/build-openssl-bazel.sh $$BUILD_DIR $$BUILD_DIR $$BUILD_ARCH" + "\n" +
         "\n".join([
-            "cp \"$(RULEDIR)/$$BUILD_ARCH/build/$$BUILD_ARCH/include/openssl/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_headers
+            "cp \"$$BUILD_DIR/build/$$BUILD_ARCH/include/openssl/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_headers
         ]) +
         "\n".join([
-            "cp \"$(RULEDIR)/$$BUILD_ARCH/build/$$BUILD_ARCH/lib/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_libs
+            "cp \"$$BUILD_DIR/build/$$BUILD_ARCH/lib/{}\" \"$(location :{})\"\n".format(x, x) for x in openssl_libs
         ]),
     outs = openssl_headers + openssl_libs,
     visibility = [

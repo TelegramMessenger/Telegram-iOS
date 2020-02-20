@@ -4,14 +4,7 @@ static_library(
     name = "TelegramVoip",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/**/*.m",
     ]),
-    headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/TelegramVoip.h"]),
-    exported_headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/TelegramVoip.h"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/TelegramCore:TelegramCore#shared",

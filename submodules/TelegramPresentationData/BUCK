@@ -4,14 +4,7 @@ static_library(
     name = "TelegramPresentationData",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/*.m",
     ]),
-    headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/TelegramPresentationData.h"]),
-    exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/TelegramPresentationData.h"]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
@@ -22,6 +15,7 @@ static_library(
         "//submodules/MediaResources:MediaResources",
         "//submodules/AppBundle:AppBundle",
         "//submodules/StringPluralization:StringPluralization",
+        "//submodules/Sunrise:Sunrise",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

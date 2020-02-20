@@ -1,4 +1,4 @@
-#import "DeviceProximityManager.h"
+#import <DeviceProximity/DeviceProximityManager.h>
 
 #import <UIKit/UIKit.h>
 

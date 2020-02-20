@@ -4,13 +4,6 @@ static_library(
     name = "PhoneNumberFormat",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/**/*.m",
-    ]),
-    headers = glob([
-        "Sources/**/*.h",
-    ]),
-    exported_headers = glob([
-        "Sources/**/*.h",
     ]),
     deps = [
         "//submodules/libphonenumber:libphonenumber",

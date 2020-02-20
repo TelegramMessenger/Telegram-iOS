@@ -1,4 +1,4 @@
-#import "TGMimeTypeMap.h"
+#import <MimeTypes/TGMimeTypeMap.h>
 
 static NSDictionary *mimeToExtensionMap = nil;
 static NSDictionary *extensionToMimeMap = nil;

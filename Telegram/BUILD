@@ -123,6 +123,7 @@ swift_library(
         "//submodules/Postbox:Postbox",
         "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
+        "//submodules/AccountContext:AccountContext",
     ],
 )
 
