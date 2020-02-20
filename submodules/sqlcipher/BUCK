@@ -12,18 +12,12 @@ static_library(
     srcs = glob([
         "Sources/*.c",
     ]),
-    headers = [
-	    "Sources/sqlcipher_config.h",
-    	"Sources/sqlite3.h",
-		"Sources/sqlite3ext.h",
-    ],
-    exported_headers = [
-    	"Sources/sqlcipher_config.h",
-    	"Sources/sqlite3.h",
-		"Sources/sqlite3ext.h",
-    ],
-    deps = [
-    ],
+    headers = glob([
+	    "Sources/*.h",
+    ]),
+    exported_headers = glob([
+    	"PublicHeaders/**/*.h",
+    ]),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],

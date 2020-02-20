@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public final class CachedResolvedByNamePeer: PostboxCoding {

@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {

@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
-
+import CryptoUtils
 import SyncCore
 import EncryptionProvider
 

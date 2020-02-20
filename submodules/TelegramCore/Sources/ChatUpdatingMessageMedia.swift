@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import SyncCore
-import TelegramCore
 
 public final class ChatUpdatingMessageMedia: Equatable {
     public let text: String

@@ -1,4 +1,4 @@
-#import "Crc32.h"
+#import <Crc32/Crc32.h>
 
 #import <zlib.h>
 

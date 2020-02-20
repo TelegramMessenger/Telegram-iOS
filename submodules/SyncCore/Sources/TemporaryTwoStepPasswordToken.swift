@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public struct TemporaryTwoStepPasswordToken: PostboxCoding, Equatable {

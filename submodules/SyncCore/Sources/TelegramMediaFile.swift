@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 private let typeFileName: Int32 = 0

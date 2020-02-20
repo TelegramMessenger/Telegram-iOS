@@ -6,10 +6,10 @@ static_library(
         "Sources/**/*.m",
     ]),
     headers = glob([
-        "Sources/**/*.h",
+        "PublicHeaders/**/*.h",
     ]),
     exported_headers = glob([
-        "Sources/**/*.h",
+        "PublicHeaders/**/*.h",
     ]),
     deps = [
     ],

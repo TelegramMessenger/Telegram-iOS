@@ -120,6 +120,9 @@ swift_library(
         "//submodules/WalletUI:WalletUI",
         "//submodules/WebsiteType:WebsiteType",
         "//submodules/MtProtoKit:MtProtoKit",
+        "//submodules/Postbox:Postbox",
+        "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramCore:TelegramCore",
     ],
 )
 

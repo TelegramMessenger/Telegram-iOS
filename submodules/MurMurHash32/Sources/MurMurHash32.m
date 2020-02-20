@@ -1,4 +1,4 @@
-#import "MurMurHash32.h"
+#import <MurMurHash32/MurMurHash32.h>
 
 #include <stdlib.h>
 #include <string.h>

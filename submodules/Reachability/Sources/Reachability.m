@@ -14,7 +14,7 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 
-#import "Reachability.h"
+#import <Reachability/Reachability.h>
 
 #import <pthread.h>
 #import <libkern/OSAtomic.h>
