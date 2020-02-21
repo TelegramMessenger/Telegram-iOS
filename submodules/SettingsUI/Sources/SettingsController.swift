@@ -803,9 +803,9 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
                 strongSelf.addAccount?()
                 f(.dismissWithoutContent)
             })))
+            
+            items.append(.separator)
         }
-        
-        items.append(.separator)
         
         func accountIconSignal(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
             let iconSignal: Signal<UIImage?, NoError>
