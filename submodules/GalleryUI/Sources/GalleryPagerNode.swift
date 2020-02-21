@@ -145,7 +145,13 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.delegate = self
         self.tapRecognizer = recognizer
-        recognizer.tapActionAtPoint = { _ in
+        recognizer.tapActionAtPoint = { [weak self] point in
+            guard let strongSelf = self else {
+                return .fail
+            }
+            if let result = strongSelf.hitTest(point, with: nil), let node = result.asyncdisplaykit_node as? ASButtonNode {
+                return .fail
+            }
             return .keepWithSingleTap
         }
         recognizer.highlight = { [weak self] point in
