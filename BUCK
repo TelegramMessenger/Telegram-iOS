@@ -402,6 +402,7 @@ apple_binary(
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/AppLockState:AppLockState",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
