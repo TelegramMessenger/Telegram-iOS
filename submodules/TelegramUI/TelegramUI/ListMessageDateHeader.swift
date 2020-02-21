@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import SyncCore
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -15,6 +16,9 @@ private let timezoneOffset: Int32 = {
 }()
 
 func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
+    if timestamp == scheduleWhenOnlineTimestamp {
+        return Int64(timestamp)
+    }
     var time: time_t = time_t(timestamp + timezoneOffset)
     var timeinfo: tm = tm()
     localtime_r(&time, &timeinfo)
