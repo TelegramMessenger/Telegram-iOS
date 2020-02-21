@@ -728,12 +728,20 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         var displayLeave = !channel.flags.contains(.isCreator)
         switch channel.info {
         case .broadcast:
-            displayLeave = true
+            if !channel.flags.contains(.isCreator) {
+                displayLeave = true
+            }
         case .group:
             displayLeave = false
             if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                 result.append(.addMember)
             }
+        }
+        switch channel.participationStatus {
+        case .member:
+            break
+        default:
+            displayLeave = false
         }
         
         result.append(.mute)
@@ -741,7 +749,15 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if displayLeave {
             result.append(.leave)
         }
-        result.append(.more)
+        var displayMore = true
+        if displayLeave && !channel.flags.contains(.isCreator) {
+            if let adminRights = channel.adminRights, !adminRights.isEmpty {
+                displayMore = false
+            }
+        }
+        if displayMore {
+            result.append(.more)
+        }
     } else if let group = peer as? TelegramGroup {
         var canEditGroupInfo = false
         var canEditMembers = false
