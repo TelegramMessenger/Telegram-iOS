@@ -149,6 +149,24 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             guard let strongSelf = self else {
                 return .fail
             }
+            
+            let size = strongSelf.bounds
+            
+            var highlightedSide: Bool?
+            if point.x < edgeWidth && strongSelf.canGoToPreviousItem() {
+                if strongSelf.items.count > 1 {
+                    highlightedSide = false
+                }
+            } else if point.x > size.width - edgeWidth && strongSelf.canGoToNextItem() {
+                if strongSelf.items.count > 1 {
+                    highlightedSide = true
+                }
+            }
+            
+            if highlightedSide == nil {
+                return .fail
+            }
+            
             if let result = strongSelf.hitTest(point, with: nil), let node = result.asyncdisplaykit_node as? ASButtonNode {
                 return .fail
             }
