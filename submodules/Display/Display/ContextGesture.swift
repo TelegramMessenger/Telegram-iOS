@@ -208,8 +208,9 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         super.touchesCancelled(touches, with: event)
         
         if let touch = touches.first, !self.currentProgress.isZero, self.isValidated {
+            let previousProgress = self.currentProgress
             self.currentProgress = 0.0
-            self.activationProgress?(0.0, .ended(self.currentProgress))
+            self.activationProgress?(0.0, .ended(previousProgress))
         }
         
         self.delayTimer?.invalidate()
@@ -220,8 +221,9 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     
     public func cancel() {
         if !self.currentProgress.isZero, self.isValidated {
+            let previousProgress = self.currentProgress
             self.currentProgress = 0.0
-            self.activationProgress?(0.0, .ended(self.currentProgress))
+            self.activationProgress?(0.0, .ended(previousProgress))
             
             self.delayTimer?.invalidate()
             self.animator?.invalidate()

@@ -731,7 +731,10 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         itemHighlightedBackgroundColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
         primaryColor: UIColor(rgb: 0x000000, alpha: 1.0),
         secondaryColor: UIColor(rgb: 0x000000, alpha: 0.8),
-        destructiveColor: UIColor(rgb: 0xff3b30)
+        destructiveColor: UIColor(rgb: 0xff3b30),
+        badgeFillColor: UIColor(rgb: 0xff3b30),
+        badgeForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        extractedContentTintColor: .white
     )
     
     let inAppNotification = PresentationThemeInAppNotification(

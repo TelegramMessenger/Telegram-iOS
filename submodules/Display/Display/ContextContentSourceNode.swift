@@ -6,7 +6,7 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
     public let contentNode: ContextExtractedContentNode
     public var contentRect: CGRect = CGRect()
     public var isExtractedToContextPreview: Bool = false
-    public var willUpdateIsExtractedToContextPreview: ((Bool) -> Void)?
+    public var willUpdateIsExtractedToContextPreview: ((Bool, ContainedViewLayoutTransition) -> Void)?
     public var isExtractedToContextPreviewUpdated: ((Bool) -> Void)?
     public var updateAbsoluteRect: ((CGRect, CGSize) -> Void)?
     public var applyAbsoluteOffset: ((CGFloat, ContainedViewLayoutTransitionCurve, Double) -> Void)?
@@ -26,12 +26,12 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
 public final class ContextExtractedContentNode: ASDisplayNode {
 }
 
-final class ContextControllerContentNode: ASDisplayNode {
-    let sourceNode: ASDisplayNode
-    let controller: ViewController
+public final class ContextControllerContentNode: ASDisplayNode {
+    public let sourceNode: ASDisplayNode
+    public let controller: ViewController
     private let tapped: () -> Void
     
-    init(sourceNode: ASDisplayNode, controller: ViewController, tapped: @escaping () -> Void) {
+    public init(sourceNode: ASDisplayNode, controller: ViewController, tapped: @escaping () -> Void) {
         self.sourceNode = sourceNode
         self.controller = controller
         self.tapped = tapped
@@ -41,7 +41,7 @@ final class ContextControllerContentNode: ASDisplayNode {
         self.addSubnode(controller.displayNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
@@ -53,12 +53,12 @@ final class ContextControllerContentNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.controller.displayNode, frame: CGRect(origin: CGPoint(), size: size))
     }
 }
 
-enum ContextContentNode {
-    case extracted(ContextExtractedContentContainingNode)
+public enum ContextContentNode {
+    case extracted(node: ContextExtractedContentContainingNode, keepInPlace: Bool)
     case controller(ContextControllerContentNode)
 }

@@ -145,6 +145,8 @@ public struct ChatListNodeState: Equatable {
 private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
+            case .HeaderEntry:
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd, hasFailedMessages):
                 switch mode {
                     case .chatList:
@@ -278,6 +280,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peers: peers, message: message, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
+            case .HeaderEntry:
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
         }
     }
 }
@@ -321,6 +325,11 @@ public enum ChatListNodeScrollPosition {
 public enum ChatListNodeEmptyState: Equatable {
     case notEmpty(containsChats: Bool)
     case empty(isLoading: Bool)
+}
+
+enum ChatListNodePaneSwitchAnimationDirection {
+    case left
+    case right
 }
 
 public final class ChatListNode: ListView {
@@ -367,8 +376,9 @@ public final class ChatListNode: ListView {
         return self.statePromise.get()
     }
     
+    var paneSwitchAnimation: (ChatListNodePaneSwitchAnimationDirection, ContainedViewLayoutTransition)?
     private var currentLocation: ChatListNodeLocation?
-    var chatListFilter: ChatListFilter? {
+    private(set) var chatListFilter: ChatListFilter? {
         didSet {
             self.chatListFilterValue.set(.single(self.chatListFilter))
             
@@ -379,9 +389,16 @@ public final class ChatListNode: ListView {
             }
         }
     }
+    private let updatedFilterDisposable = MetaDisposable()
     private let chatListFilterValue = Promise<ChatListFilter?>()
     var chatListFilterSignal: Signal<ChatListFilter?, NoError> {
         return self.chatListFilterValue.get()
+    }
+    private var hasUpdatedAppliedChatListFilterValueOnce = false
+    private var currentAppliedChatListFilterValue: ChatListFilter?
+    private let appliedChatListFilterValue = Promise<ChatListFilter?>()
+    var appliedChatListFilterSignal: Signal<ChatListFilter?, NoError> {
+        return self.appliedChatListFilterValue.get()
     }
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
     private let chatListDisposable = MetaDisposable()
@@ -413,7 +430,7 @@ public final class ChatListNode: ListView {
         }
     }
     
-    public var isEmptyUpdated: ((ChatListNodeEmptyState) -> Void)?
+    var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ChatListNodePaneSwitchAnimationDirection?, ContainedViewLayoutTransition) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmptyState?
     
     public var addedVisibleChatsWithPeerIds: (([PeerId]) -> Void)?
@@ -1138,11 +1155,50 @@ public final class ChatListNode: ListView {
                 }
             }
         }
+        
+        self.resetFilter()
     }
     
     deinit {
         self.chatListDisposable.dispose()
         self.activityStatusesDisposable?.dispose()
+        self.updatedFilterDisposable.dispose()
+    }
+    
+    func updateFilter(_ filter: ChatListFilter?) {
+        if filter?.id != self.chatListFilter?.id {
+            self.chatListFilter = filter
+            self.resetFilter()
+        }
+    }
+    
+    private func resetFilter() {
+        if let chatListFilter = chatListFilter {
+            let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.chatListFilters]))
+            self.updatedFilterDisposable.set((context.account.postbox.combinedView(keys: [preferencesKey])
+            |> map { view -> ChatListFilter? in
+                guard let preferencesView = view.views[preferencesKey] as? PreferencesView else {
+                    return nil
+                }
+                let filersState = preferencesView.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
+                for filter in filersState.filters {
+                    if filter.id == chatListFilter.id {
+                        return filter
+                    }
+                }
+                return nil
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] updatedFilter in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.chatListFilter != updatedFilter {
+                    strongSelf.chatListFilter = updatedFilter
+                }
+            }))
+        } else {
+            self.updatedFilterDisposable.set(nil)
+        }
     }
     
     public func updateThemeAndStrings(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
@@ -1200,6 +1256,13 @@ public final class ChatListNode: ListView {
         if let (transition, completion) = self.enqueuedTransition {
             self.enqueuedTransition = nil
             
+            let paneSwitchCopyView: UIView?
+            if let (direction, transition) = self.paneSwitchAnimation, let copyView = self.view.snapshotContentTree(unhide: false, keepTransform: true) {
+                paneSwitchCopyView = copyView
+            } else {
+               paneSwitchCopyView = nil
+            }
+            
             let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
                 if let strongSelf = self {
                     strongSelf.chatListView = transition.chatListView
@@ -1241,9 +1304,16 @@ public final class ChatListNode: ListView {
                     if transition.chatListView.filteredEntries.isEmpty {
                         isEmpty = true
                     } else {
-                        if transition.chatListView.filteredEntries.count == 1 {
-                            if case .GroupReferenceEntry = transition.chatListView.filteredEntries[0] {
-                                isEmpty = true
+                        if transition.chatListView.filteredEntries.count <= 2 {
+                            isEmpty = true
+                            loop: for entry in transition.chatListView.filteredEntries {
+                                switch entry {
+                                case .GroupReferenceEntry, .HeaderEntry:
+                                    break
+                                default:
+                                    isEmpty = false
+                                    break loop
+                                }
                             }
                         }
                     }
@@ -1260,15 +1330,11 @@ public final class ChatListNode: ListView {
                                 case .GroupReferenceEntry, .HoleEntry, .PeerEntry:
                                     containsChats = true
                                     break loop
-                                case .ArchiveIntro:
+                                case .ArchiveIntro, .HeaderEntry:
                                     break
                             }
                         }
                         isEmptyState = .notEmpty(containsChats: containsChats)
-                    }
-                    if strongSelf.currentIsEmptyState != isEmptyState {
-                        strongSelf.currentIsEmptyState = isEmptyState
-                        strongSelf.isEmptyUpdated?(isEmptyState)
                     }
                     
                     var insertedPeerIds: [PeerId] = []
@@ -1284,6 +1350,36 @@ public final class ChatListNode: ListView {
                     }
                     if !insertedPeerIds.isEmpty {
                         strongSelf.addedVisibleChatsWithPeerIds?(insertedPeerIds)
+                    }
+                    
+                    var isEmptyUpdate: (ChatListNodePaneSwitchAnimationDirection?, ContainedViewLayoutTransition) = (nil, .immediate)
+                    if let (direction, transition) = strongSelf.paneSwitchAnimation {
+                        strongSelf.paneSwitchAnimation = nil
+                        if let copyView = paneSwitchCopyView {
+                            let offset: CGFloat
+                            switch direction {
+                            case .left:
+                                offset = -strongSelf.bounds.width
+                            case .right:
+                                offset = strongSelf.bounds.width
+                            }
+                            copyView.frame = strongSelf.bounds.offsetBy(dx: offset, dy: 0.0)
+                            strongSelf.view.addSubview(copyView)
+                            transition.animateHorizontalOffsetAdditive(node: strongSelf, offset: offset, completion: { [weak copyView] in
+                                copyView?.removeFromSuperview()
+                            })
+                            isEmptyUpdate = (direction, transition)
+                        }
+                    }
+                    
+                    if strongSelf.currentIsEmptyState != isEmptyState {
+                        strongSelf.currentIsEmptyState = isEmptyState
+                        strongSelf.isEmptyUpdated?(isEmptyState, transition.chatListView.filter != nil, isEmptyUpdate.0, isEmptyUpdate.1)
+                    }
+                    
+                    if !strongSelf.hasUpdatedAppliedChatListFilterValueOnce || transition.chatListView.filter != strongSelf.currentAppliedChatListFilterValue {
+                        strongSelf.currentAppliedChatListFilterValue = transition.chatListView.filter
+                        strongSelf.appliedChatListFilterValue.set(.single(transition.chatListView.filter))
                     }
                     
                     completion()

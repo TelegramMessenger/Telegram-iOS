@@ -1629,19 +1629,28 @@ extension PresentationThemeContextMenu: Codable {
         case primary
         case secondary
         case destructive
+        case badgeFill
+        case badgeForeground
+        case extractedTint
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(dimColor: try decodeColor(values, .dim),
-                  backgroundColor: try decodeColor(values, .background),
-                  itemSeparatorColor: try decodeColor(values, .itemSeparator),
-                  sectionSeparatorColor: try decodeColor(values, .sectionSeparator),
-                  itemBackgroundColor: try decodeColor(values, .itemBg),
-                  itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
-                  primaryColor: try decodeColor(values, .primary),
-                  secondaryColor: try decodeColor(values, .secondary),
-                  destructiveColor: try decodeColor(values, .destructive)
+        let destructiveColor = try decodeColor(values, .destructive)
+        let backgroundColor = try decodeColor(values, .background)
+        self.init(
+            dimColor: try decodeColor(values, .dim),
+            backgroundColor: backgroundColor,
+            itemSeparatorColor: try decodeColor(values, .itemSeparator),
+            sectionSeparatorColor: try decodeColor(values, .sectionSeparator),
+            itemBackgroundColor: try decodeColor(values, .itemBg),
+            itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
+            primaryColor: try decodeColor(values, .primary),
+            secondaryColor: try decodeColor(values, .secondary),
+            destructiveColor: destructiveColor,
+            badgeFillColor: (try? decodeColor(values, .badgeFill)) ?? destructiveColor,
+            badgeForegroundColor: (try? decodeColor(values, .badgeForeground)) ?? backgroundColor,
+            extractedContentTintColor: (try? decodeColor(values, .extractedTint)) ?? backgroundColor
         )
     }
     

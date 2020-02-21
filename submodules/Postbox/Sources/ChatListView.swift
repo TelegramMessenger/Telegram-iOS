@@ -318,7 +318,7 @@ final class MutableChatListView {
         self.count = count
         self.summaryComponents = summaryComponents
         self.additionalItemEntries = []
-        if case .root = groupId {
+        if case .root = groupId, self.filterPredicate == nil {
             let itemIds = postbox.additionalChatListItemsTable.get()
             self.additionalItemIds = Set(itemIds)
             for peerId in itemIds {
@@ -336,7 +336,7 @@ final class MutableChatListView {
     
     private func reloadGroups(postbox: Postbox) {
         self.groupEntries.removeAll()
-        if case .root = self.groupId {
+        if case .root = self.groupId, self.filterPredicate == nil {
             for groupId in postbox.chatListTable.existingGroups() {
                 var foundIndices: [(ChatListIndex, MessageIndex)] = []
                 var unpinnedCount = 0
@@ -456,7 +456,7 @@ final class MutableChatListView {
             }
         }
         
-        if case .root = self.groupId {
+        if case .root = self.groupId, self.filterPredicate == nil {
             var invalidatedGroups = false
             for (groupId, groupOperations) in operations {
                 if case .group = groupId, !groupOperations.isEmpty {

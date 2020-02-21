@@ -304,7 +304,7 @@ private final class FilterItemNode: ASDisplayNode, AbstractTabBarChatListFilterI
     }
 }
 
-func chatListFilterItems(context: AccountContext) -> Signal<[(ChatListFilter, Int)], NoError> {
+func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int)]), NoError> {
     let preferencesKey: PostboxViewKey = .preferences(keys: [PreferencesKeys.chatListFilters])
     return context.account.postbox.combinedView(keys: [preferencesKey])
     |> map { combinedView -> [ChatListFilter] in
@@ -315,7 +315,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<[(ChatListFilter, In
         }
     }
     |> distinctUntilChanged
-    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
+    |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int)]), NoError> in
         var unreadCountItems: [UnreadMessageCountsItem] = []
         unreadCountItems.append(.total(nil))
         var additionalPeerIds = Set<PeerId>()
@@ -334,10 +334,25 @@ func chatListFilterItems(context: AccountContext) -> Signal<[(ChatListFilter, In
             keys.append(.basicPeer(peerId))
         }
         
-        return context.account.postbox.combinedView(keys: keys)
-        |> map { view -> [(ChatListFilter, Int)] in
+        return combineLatest(queue: context.account.postbox.queue,
+            context.account.postbox.combinedView(keys: keys),
+            context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        )
+        |> map { view, sharedData -> (Int, [(ChatListFilter, Int)]) in
             guard let unreadCounts = view.views[unreadKey] as? UnreadMessageCountsView else {
-                return []
+                return (0, [])
+            }
+            
+            let inAppSettings: InAppNotificationSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+                inAppSettings = value
+            } else {
+                inAppSettings = .defaultSettings
+            }
+            let type: RenderedTotalUnreadCountType
+            switch inAppSettings.totalUnreadCountDisplayStyle {
+                case .filtered:
+                    type = .filtered
             }
             
             var result: [(ChatListFilter, Int)] = []
@@ -367,11 +382,9 @@ func chatListFilterItems(context: AccountContext) -> Signal<[(ChatListFilter, In
                 }
             }
             
-            var totalUnreadChatCount = 0
+            var totalBadge = 0
             if let totalState = totalState {
-                for (_, counters) in totalState.filteredCounters {
-                    totalUnreadChatCount += Int(counters.chatCount)
-                }
+                totalBadge = Int(totalState.count(for: inAppSettings.totalUnreadCountDisplayStyle.category, in: inAppSettings.totalUnreadCountDisplayCategory.statsType, with: inAppSettings.totalUnreadCountIncludeTags))
             }
             
             var shouldUpdateLayout = false
@@ -416,7 +429,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<[(ChatListFilter, In
                 result.append((filter, count))
             }
             
-            return result
+            return (totalBadge, result)
         }
     }
 }
