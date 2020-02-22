@@ -4,7 +4,7 @@ import Postbox
 import CoreMedia
 import TelegramCore
 import SyncCore
-import FFMpeg
+import FFMpegBinding
 
 private struct StreamContext {
     let index: Int

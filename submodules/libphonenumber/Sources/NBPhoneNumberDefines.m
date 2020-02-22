@@ -1,4 +1,4 @@
-#import "NBPhoneNumberDefines.h"
+#import <libphonenumber/NBPhoneNumberDefines.h>
 
 NSString * const NB_UNKNOWN_REGION = @"ZZ";
 NSString * const NB_NON_BREAKING_SPACE = @"\u00a0";

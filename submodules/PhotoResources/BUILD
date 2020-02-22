@@ -19,7 +19,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/MediaResources:MediaResources",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/WebP:WebPImage",
+        "//submodules/WebPBinding:WebPBinding",
         "//submodules/AppBundle:AppBundle",
     ],
     visibility = [

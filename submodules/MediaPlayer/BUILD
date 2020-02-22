@@ -14,7 +14,7 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramAudio:TelegramAudio",
-        "//submodules/FFMpeg:FFMpeg",
+        "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/RingBuffer:RingBuffer",
     ],
     visibility = [

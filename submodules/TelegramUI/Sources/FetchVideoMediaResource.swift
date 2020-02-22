@@ -5,7 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 import SyncCore
 import LegacyComponents
-import FFMpeg
+import FFMpegBinding
 import LocalMediaResources
 
 private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {

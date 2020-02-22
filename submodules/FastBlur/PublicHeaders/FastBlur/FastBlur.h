@@ -3,6 +3,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import <FastBlur/ApplyScreenshotEffect.h>
+
 void imageFastBlur(int imageWidth, int imageHeight, int imageStride, void * _Nonnull pixels);
 void telegramFastBlurMore(int imageWidth, int imageHeight, int imageStride, void * _Nonnull pixels);
 void stickerThumbnailAlphaBlur(int imageWidth, int imageHeight, int imageStride, void * _Nonnull pixels);

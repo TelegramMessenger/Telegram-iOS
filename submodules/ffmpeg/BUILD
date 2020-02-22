@@ -111,11 +111,13 @@ ffmpeg_libs = [
     "libswresample.a",
 ]
 
+source_files = glob([
+    "Sources/**/*",
+], exclude = ["Sources/**/.*"])
+
 filegroup(
     name = "FFMpegSources",
-    srcs = glob([
-        "Sources/**/*",
-    ], exclude = ["Sources/**/.*"]),
+    srcs = source_files,
 )
 
 genrule(
@@ -123,11 +125,17 @@ genrule(
     srcs = [
         ":FFMpegSources",
     ],
-    cmd_bash = """
+    cmd_bash =
+    """
+        SOURCE_PATH="submodules/ffmpeg/Sources/FFMpeg"
+
         BUILD_DIR="$(RULEDIR)/build"
-        #rm -rf "$$BUILD_DIR"
+        rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
         YASM_DIR="$$BUILD_DIR/yasm"
+        rm -rf "$$YASM_DIR"
+        mkdir -p "$$YASM_DIR"
+        tar -xf "$(location //third-party/yasm:yasm.tar)" -C "$$YASM_DIR"
 
         if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
             BUILD_ARCH="armv7"
@@ -139,9 +147,15 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
 
-        PATH="$$PATH:$$YASM_DIR" "$(location :FFMpegSources)/build-ffmpeg.sh" release "$$BUILD_ARCH" "$$BUILD_DIR" "$(location :FFMpegSources)"
-    """,
-    outs = ffmpeg_header_paths + ffmpeg_libs,
+        PATH="$$PATH:$$YASM_DIR" "$$SOURCE_PATH/build-ffmpeg.sh" release "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH"
+    """ + "\n" + "\n".join([
+        "cp \"$$BUILD_DIR/FFmpeg-iOS/include/{header_path}\" \"$(location Public/ffmpeg/{header_path})\"".format(header_path = header_path) for header_path in ffmpeg_header_paths
+    ]) + "\n" + "\n".join([
+        "cp \"$$BUILD_DIR/FFmpeg-iOS/lib/{lib}\" \"$(location {lib})\"".format(lib = lib) for lib in ffmpeg_libs
+    ]),
+    outs = [
+        "Public/ffmpeg/{}".format(header_path) for header_path in ffmpeg_header_paths
+    ] + ffmpeg_libs,
     tools = [
         "//third-party/yasm:yasm.tar",
     ],
@@ -156,77 +170,23 @@ cc_library(
 )
 
 objc_library(
-    name = "FFMpeg",
-    module_name = "FFMpeg",
+    name = "ffmpeg",
+    module_name = "ffmpeg",
     enable_modules = True,
-    srcs = glob([
-        "FFMpeg/*.m",
-        "FFMpeg/*.h",
-    ]),
-    #hdrs = ["Public/FFMpeg/" + x for x in openssl_headers],
+    hdrs = ["Public/ffmpeg/" + x for x in ffmpeg_header_paths],
     includes = [
-        "Public",
+        "Public/ffmpeg",
+    ],
+    sdk_dylibs = [
+        "libbz2",
+        "libiconv",
+        "z",
     ],
     deps = [
         ":ffmpeg_lib",
+        "//submodules/Opus:opus",
     ],
     visibility = [
         "//visibility:public",
     ]
 )
-
-"""apple_library(
-    name = "libffmpeg",
-    visibility = [
-        "//submodules/ffmpeg:FFMpeg"
-    ],
-    header_namespace = "ffmpeg",
-    exported_headers = ffmpeg_header_targets,
-    linker_flags = [
-        "-L$(location :libffmpeg_build)/FFmpeg-iOS/lib",
-        "-lavutil",
-        "-lavcodec",
-        "-lavformat",
-        "-lswresample",
-        "-lbz2",
-        "-liconv",
-        "-lz",
-    ],
-    exported_linker_flags = [
-        "-L$(location :libffmpeg_build)/FFmpeg-iOS/lib",
-        "-lavutil",
-        "-lavcodec",
-        "-lavformat",
-        "-lswresample",
-        "-lbz2",
-        "-liconv",
-        "-lz",
-    ],
-    deps = [
-        ":libffmpeg_build",
-        "//submodules/Opus:opus",
-    ],
-)
-
-static_library(
-    name = "FFMpeg",
-    srcs = glob([
-        "FFMpeg/*.m",
-    ]),
-    headers = ffmpeg_header_targets,
-    exported_headers = glob([
-        "FFMpeg/*.h",
-    ]),
-    deps = [
-        ":libffmpeg_build",
-        ":libffmpeg",
-        "//submodules/Opus:opus",
-    ],
-    frameworks = [
-        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
-        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
-        "$SDKROOT/System/Library/Frameworks/CoreMedia.framework",
-        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
-    ],
-)
-"""

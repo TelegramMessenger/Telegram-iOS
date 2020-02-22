@@ -7,9 +7,9 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-    	"//submodules/Postbox:Postbox#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
-        "//submodules/SyncCore:SyncCore#shared",
+    	"//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/SyncCore:SyncCore",
         "//submodules/StickerResources:StickerResources",
         "//submodules/MediaResources:MediaResources",
         "//submodules/Tuples:Tuples",

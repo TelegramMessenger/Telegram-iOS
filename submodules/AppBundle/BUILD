@@ -4,14 +4,18 @@ objc_library(
     module_name = "AppBundle",
     enable_modules = True,
     srcs = glob([
-        "Source/AppBundle/*.m",
+        "Sources/**/*.m",
+        "Sources/**/*.h",
     ]),
     hdrs = glob([
-        "Source/AppBundle/*.h",
+        "PublicHeaders/**/*.h",
     ]),
+    includes = [
+       "PublicHeaders", 
+    ],
     sdk_frameworks = [
-      "Foundation",
-      "UIKit",
+        "Foundation",
+        "UIKit",
     ],
     visibility = [
         "//visibility:public",

@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import FFMpeg
+import FFMpegBinding
 
 public final class FFMpegMediaFrameSourceContextHelpers {
     public static let registerFFMpegGlobals: Void = {

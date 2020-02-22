@@ -87,7 +87,7 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/WalletUI:WalletUI",
-        "//submodules/ffmpeg:FFMpeg",
+        "//submodules/FFMpegBinding:FFMpegBinding",
     ],
 )
 

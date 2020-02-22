@@ -124,6 +124,8 @@ swift_library(
         "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/lottie-ios:Lottie",
+        "//submodules/ChatListUI:ChatListUI",
     ],
 )
 

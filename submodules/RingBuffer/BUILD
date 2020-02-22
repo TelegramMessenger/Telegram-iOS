@@ -1,8 +1,8 @@
 
 objc_library(
-    name = "Crc32",
+    name = "RingBuffer",
     enable_modules = True,
-    module_name = "Crc32",
+    module_name = "RingBuffer",
     srcs = glob([
         "Sources/*.m",
     ]),

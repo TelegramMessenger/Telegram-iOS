@@ -9,6 +9,7 @@ import AddressBook
 import Display
 import TelegramUIPreferences
 import AppBundle
+import Sunrise
 
 public struct PresentationDateTimeFormat: Equatable {
     public let timeFormat: PresentationTimeFormat

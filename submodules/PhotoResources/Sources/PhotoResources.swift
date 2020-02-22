@@ -7,16 +7,13 @@ import AVFoundation
 import ImageIO
 import TelegramCore
 import SyncCore
-#if BUCK
-import WebPImage
-#else
-import WebP
-#endif
+import WebPBinding
 import TelegramUIPreferences
 import MediaResources
 import AccountContext
 import Tuples
 import ImageBlur
+import FastBlur
 import TinyThumbnail
 import ImageTransparency
 import AppBundle

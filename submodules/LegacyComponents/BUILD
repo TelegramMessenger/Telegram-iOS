@@ -1,0 +1,44 @@
+
+filegroup(
+    name = "LegacyComponentsResources",
+    srcs = glob([
+        "LegacyComponentsResources.bundle/**/*",
+    ], exclude = ["Resources/LegacyComponentsResources.bundle/**/.*"]),
+)
+
+objc_library(
+    name = "LegacyComponents",
+    enable_modules = True,
+    module_name = "LegacyComponents",
+    srcs = glob([
+        "Sources/*.m",
+        "Sources/*.mm",
+        "Sources/*.c",
+        "Sources/*.cpp",
+    ]),
+    hdrs = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    copts = [
+        "-Isubmodules/LegacyComponents/PublicHeaders/LegacyComponents",
+    ],
+    includes = [
+        "PublicHeaders",
+    ],
+    deps = [
+        "//submodules/SSignalKit/SSignalKit:SSignalKit",
+        "//submodules/AppBundle:AppBundle",
+    ],
+    sdk_frameworks = [
+        "Foundation",
+        "UIKIt",
+        "QuickLook",
+        "CoreMotion",
+    ],
+    weak_sdk_frameworks = [
+        "Vision",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

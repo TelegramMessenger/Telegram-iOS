@@ -85,9 +85,8 @@ for ARCH in $ARCHS
 do
 	for LIB_NAME in $LIB_NAMES
 	do
-		LIB="$SCRATCH/$ARCH/$LIB_NAME/$LIB_NAME.a"
-		if [ -e "$LIB" ]
-		then
+		LIB="$THIN/$ARCH/lib/$LIB_NAME.a"
+		if [ -f "$LIB" ]; then
 			LIB_DATE=`crc32 "$LIB"`
 			LIBS_HASH="$LIBS_HASH $ARCH/$LIB:$LIB_DATE"
 		fi
@@ -117,12 +116,10 @@ then
 		exit 1
 	fi
 
-	CWD="$BUILD_DIR"
 	for ARCH in $ARCHS
 	do
 		echo "building $ARCH..."
 		mkdir -p "$SCRATCH/$ARCH"
-		cd "$SCRATCH/$ARCH"
 
 		LIBOPUS_PATH="$SOURCE_DIR/libopus"
 
@@ -181,7 +178,6 @@ then
 
 		CORE_COUNT=`sysctl -n hw.logicalcpu`
 		make -j$CORE_COUNT install $EXPORT || exit 1
-		cd "$CWD"
 	done
 fi
 
@@ -190,9 +186,8 @@ for ARCH in $ARCHS
 do
 	for LIB_NAME in $LIB_NAMES
 	do
-		LIB="$SCRATCH/$ARCH/$LIB_NAME/$LIB_NAME.a"
-		if [ -e "$LIB" ]
-		then
+		LIB="$THIN/$ARCH/lib/$LIB_NAME.a"
+		if [ -f "$LIB" ]; then
 			LIB_DATE=`crc32 "$LIB"`
 			UPDATED_LIBS_HASH="$UPDATED_LIBS_HASH $ARCH/$LIB:$LIB_DATE"
 		fi
@@ -210,20 +205,17 @@ fi
 
 if [ "$LIPO" ]
 then
-	echo "building fat binaries..."
+	echo "building fat binaries in $FAT"
 	mkdir -p "$FAT"/lib
 	set - $ARCHS
-	CWD="$BUILD_DIR"
-	cd "$THIN/$1/lib"
-	for LIB in *.a
+	for LIB in "$THIN/$1/lib/"*.a
 	do
-		cd "$CWD"
-		echo lipo -create `find "$THIN" -name "$LIB"` -output "$FAT/lib/$LIB" 1>&2
-		LIPO_INPUT=`find "$THIN" -name "$LIB"`
-		lipo -create $LIPO_INPUT -output "$FAT/lib/$LIB" || exit 1
+		LIB_NAME="$(basename $LIB)"
+		echo "LIPO_INPUT command find \"$THIN\" -name \"$LIB_NAME\""
+		LIPO_INPUT=`find "$THIN" -name "$LIB_NAME"`
+		lipo -create $LIPO_INPUT -output "$FAT/lib/$LIB_NAME" || exit 1
 	done
 
-	cd "$CWD"
 	cp -rf "$THIN/$1/include" "$FAT"
 fi
 
