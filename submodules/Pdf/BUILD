@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
+    deps = [
+    	"//submodules/Display:Display",
+    ],
     visibility = [
         "//visibility:public",
     ],

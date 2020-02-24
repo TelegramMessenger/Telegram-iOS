@@ -15,8 +15,6 @@ static_library(
     ], exclude = ["Sources/WatchBridgeAudio.h"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/SSignalKit/SSignalKit:SSignalKit",
-        "//submodules/OpusBinding:OpusBinding",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

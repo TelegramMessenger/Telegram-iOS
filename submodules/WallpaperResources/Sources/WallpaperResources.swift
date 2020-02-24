@@ -7,6 +7,7 @@ import TelegramCore
 import SyncCore
 import MediaResources
 import ImageBlur
+import FastBlur
 import TinyThumbnail
 import PhotoResources
 import LocalMediaResources

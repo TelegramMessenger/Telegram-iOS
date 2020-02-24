@@ -9,6 +9,7 @@ import TelegramPresentationData
 import PasscodeUI
 import TelegramUIPreferences
 import ImageBlur
+import FastBlur
 import AppLockState
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState, isApplicationActive: Bool) -> Bool {

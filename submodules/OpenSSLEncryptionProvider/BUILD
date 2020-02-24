@@ -1,14 +1,26 @@
+
 objc_library(
     name = "OpenSSLEncryptionProvider",
+    enable_modules = True,
+    module_name = "OpenSSLEncryptionProvider",
     srcs = glob([
         "Sources/**/*.m",
-    ]),
-    hdrs = glob([
         "Sources/**/*.h",
     ]),
+    hdrs = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    includes = [
+        "PublicHeaders",
+    ],
     deps = [
         "//submodules/EncryptionProvider:EncryptionProvider",
         "//submodules/openssl:openssl",
     ],
-    visibility = ["//visibility:public"],
+    sdk_frameworks = [
+        "Foundation",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
 )

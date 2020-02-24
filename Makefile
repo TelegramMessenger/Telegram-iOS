@@ -39,6 +39,7 @@ BUCK_OPTIONS=\
 	--config custom.developmentProvisioningProfileWatchExtension="${DEVELOPMENT_PROVISIONING_PROFILE_WATCH_EXTENSION}" \
 	--config custom.distributionProvisioningProfileWatchExtension="${DISTRIBUTION_PROVISIONING_PROFILE_WATCH_EXTENSION}"
 
+BAZEL=$(shell which bazel)
 
 build_arm64: check_env
 	$(BUCK) build \
@@ -395,3 +396,6 @@ project_buckdebug: check_env kill_xcode
 temp_project: check_env kill_xcode
 	$(BUCK) project //Temp:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Temp/Telegram_Buck.xcworkspace
+
+tulsi_project:
+	${HOME}/Applications/Tulsi.app/Contents/MacOS/Tulsi -- --verbose --genconfig Telegram/Telegram.tulsiproj:Default --bazel "${BAZEL}" --build-options ${BAZEL_OPTIONS} --startup-options ${BAZEL_OPTIONS}

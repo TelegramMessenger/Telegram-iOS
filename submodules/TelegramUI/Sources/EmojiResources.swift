@@ -5,11 +5,7 @@ import TelegramCore
 import SyncCore
 import SwiftSignalKit
 import Display
-#if BUCK
-import WebPImage
-#else
-import WebP
-#endif
+import WebPBinding
 import MediaResources
 import Emoji
 import AppBundle

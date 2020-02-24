@@ -4,14 +4,11 @@ import TelegramCore
 import SyncCore
 import SwiftSignalKit
 import Postbox
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import TelegramUIPreferences
 import LegacyComponents
 import TelegramNotices
+import LegacyDataImportImpl
 
 @objc(TGPresentationState) private final class TGPresentationState: NSObject, NSCoding {
     let pallete: Int32

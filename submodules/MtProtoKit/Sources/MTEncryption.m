@@ -769,7 +769,7 @@ static NSData *decrypt_TL_data(id<EncryptionProvider> provider, unsigned char bu
     if ([context modExpInto:y a:x b:rsaKeyE mod:rsaKeyN]) {
         NSData *yBytes = [context getBin:y];
         unsigned l = 256 - (unsigned)yBytes.length;
-        memset(bytes, 0, l);
+        assert(l >= 0);
         
         [yBytes getBytes:bytes + l length:256 - l];
         
@@ -781,7 +781,7 @@ static NSData *decrypt_TL_data(id<EncryptionProvider> provider, unsigned char bu
         NSData *keyBytes = [[NSData alloc] initWithBytes:bytes length:32];
         
         NSMutableData *decryptedBytes = [[NSMutableData alloc] initWithLength:encryptedBytes.length];
-        MyAesCbcDecrypt(encryptedBytes.bytes, encryptedBytes.length, decryptedBytes.mutableBytes, keyBytes.bytes, keyBytes.length, iv.mutableBytes);
+        MyAesCbcDecrypt(encryptedBytes.bytes, (int)encryptedBytes.length, decryptedBytes.mutableBytes, keyBytes.bytes, (int)keyBytes.length, iv.mutableBytes);
         
         if (decryptedBytes == nil) {
             return nil;

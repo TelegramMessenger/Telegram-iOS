@@ -2,11 +2,7 @@ import UIKit
 import SwiftSignalKit
 import LegacyComponents
 import Display
-#if BUCK
-import WebPImage
-#else
-import WebP
-#endif
+import WebPBinding
 
 private func scaleImage(_ image: UIImage, size: CGSize, boundiingSize: CGSize) -> UIImage? {
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {

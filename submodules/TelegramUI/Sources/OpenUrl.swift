@@ -5,11 +5,7 @@ import TelegramCore
 import SyncCore
 import Postbox
 import SwiftSignalKit
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext

@@ -13,16 +13,18 @@ genrule(
     
     pushd "$$BUILD_DIR/cmake-3.16.0"
 
+    export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+
     core_count="`sysctl -n hw.logicalcpu`"
     ./bootstrap --parallel=$$core_count -- -DCMAKE_BUILD_TYPE:STRING=Release
     make -j $$core_count
 
     popd
 
-    cp "$$BUILD_DIR/cmake-3.16.0/bin/cmake" "$(location cmake.bin)"
+    tar -cf "$(location cmake.tar)" -C "$$BUILD_DIR/cmake-3.16.0" .
 """,
     outs = [
-        "cmake.bin",
+        "cmake.tar",
     ],
     visibility = [
         "//visibility:public",

@@ -132,7 +132,8 @@ public final class TextNodeLayout: NSObject {
     fileprivate let truncationType: CTLineTruncationType
     fileprivate let backgroundColor: UIColor?
     fileprivate let constrainedSize: CGSize
-    fileprivate let alignment: NSTextAlignment
+    fileprivate let explicitAlignment: NSTextAlignment
+    fileprivate let resolvedAlignment: NSTextAlignment
     fileprivate let lineSpacing: CGFloat
     fileprivate let cutout: TextNodeCutout?
     fileprivate let insets: UIEdgeInsets
@@ -147,12 +148,13 @@ public final class TextNodeLayout: NSObject {
     fileprivate let textStroke: (UIColor, CGFloat)?
     public let hasRTL: Bool
     
-    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?) {
+    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?) {
         self.attributedString = attributedString
         self.maximumNumberOfLines = maximumNumberOfLines
         self.truncationType = truncationType
         self.constrainedSize = constrainedSize
-        self.alignment = alignment
+        self.explicitAlignment = explicitAlignment
+        self.resolvedAlignment = resolvedAlignment
         self.lineSpacing = lineSpacing
         self.cutout = cutout
         self.insets = insets
@@ -240,7 +242,7 @@ public final class TextNodeLayout: NSObject {
                 for line in self.lines {
                     lineIndex += 1
                     var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
-                    switch self.alignment {
+                    switch self.resolvedAlignment {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
@@ -308,7 +310,7 @@ public final class TextNodeLayout: NSObject {
             for line in self.lines {
                 lineIndex += 1
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
-                switch self.alignment {
+                switch self.resolvedAlignment {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
@@ -383,7 +385,7 @@ public final class TextNodeLayout: NSObject {
             for line in self.lines {
                 lineIndex += 1
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
-                switch self.alignment {
+                switch self.resolvedAlignment {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
@@ -823,17 +825,26 @@ public class TextNode: ASDisplayNode {
     
     private class func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?) -> TextNodeLayout {
         if let attributedString = attributedString {
+            
             let stringLength = attributedString.length
             
             let font: CTFont
+            let resolvedAlignment: NSTextAlignment
+            
             if stringLength != 0 {
                 if let stringFont = attributedString.attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) {
                     font = stringFont as! CTFont
                 } else {
                     font = defaultFont
                 }
+                if let paragraphStyle = attributedString.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
+                    resolvedAlignment = paragraphStyle.alignment
+                } else {
+                    resolvedAlignment = alignment
+                }
             } else {
                 font = defaultFont
+                resolvedAlignment = alignment
             }
             
             let fontAscent = CTFontGetAscent(font)
@@ -847,7 +858,7 @@ public class TextNode: ASDisplayNode {
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
             if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke)
+                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke)
             }
             
             let typesetter = maybeTypesetter!
@@ -1056,9 +1067,9 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke)
         } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke)
         }
     }
     
@@ -1110,7 +1121,7 @@ public class TextNode: ASDisplayNode {
             let textPosition = context.textPosition
             context.textMatrix = CGAffineTransform(scaleX: 1.0, y: -1.0)
             
-            let alignment = layout.alignment
+            let alignment = layout.resolvedAlignment
             let offset = CGPoint(x: layout.insets.left, y: layout.insets.top)
             
             for i in 0 ..< layout.lines.count {
@@ -1187,7 +1198,7 @@ public class TextNode: ASDisplayNode {
             let layout: TextNodeLayout
             
             var updated = false
-            if let existingLayout = existingLayout, existingLayout.constrainedSize == arguments.constrainedSize && existingLayout.maximumNumberOfLines == arguments.maximumNumberOfLines && existingLayout.truncationType == arguments.truncationType && existingLayout.cutout == arguments.cutout && existingLayout.alignment == arguments.alignment && existingLayout.lineSpacing.isEqual(to: arguments.lineSpacing) {
+            if let existingLayout = existingLayout, existingLayout.constrainedSize == arguments.constrainedSize && existingLayout.maximumNumberOfLines == arguments.maximumNumberOfLines && existingLayout.truncationType == arguments.truncationType && existingLayout.cutout == arguments.cutout && existingLayout.explicitAlignment == arguments.alignment && existingLayout.lineSpacing.isEqual(to: arguments.lineSpacing) {
                 let stringMatch: Bool
                 
                 var colorMatch: Bool = true

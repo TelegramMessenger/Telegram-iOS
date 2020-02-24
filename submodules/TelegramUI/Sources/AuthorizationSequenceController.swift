@@ -6,11 +6,7 @@ import Postbox
 import TelegramCore
 import SyncCore
 import SwiftSignalKit
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import MessageUI
 import CoreTelephony
 import TelegramPresentationData

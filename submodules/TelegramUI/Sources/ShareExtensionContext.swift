@@ -11,6 +11,7 @@ import ShareController
 import LegacyUI
 import PeerInfoUI
 import ShareItems
+import ShareItemsImpl
 import SettingsUI
 import OpenSSLEncryptionProvider
 import AppLock

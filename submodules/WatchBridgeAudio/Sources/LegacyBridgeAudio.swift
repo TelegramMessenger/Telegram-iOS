@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import WatchBridgeAudioImpl
 
 public func legacyDecodeOpusAudio(path: String, outputPath: String) -> Signal<String, NoError> {
     return Signal { subscriber in

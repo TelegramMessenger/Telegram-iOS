@@ -534,6 +534,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.controllerInteraction?.addContact(phoneNumber)
                 }
             }, storeMediaPlaybackState: { [weak self] messageId, timestamp in
+                guard let strongSelf = self else {
+                    return
+                }
                 var storedState: MediaPlaybackStoredState?
                 if let timestamp = timestamp {
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
@@ -1615,7 +1618,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let resultPoll = resultPoll else {
                         return
                     }
-                    guard let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
+                    guard let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
                         return
                     }
                     
@@ -3387,7 +3390,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                let editingMessage = strongSelf.editingMessage
                 let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                 var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -3461,7 +3463,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.searchResultsController = nil
             }
         }, openSearchResults: { [weak self] in
-            if let strongSelf = self, let searchData = strongSelf.presentationInterfaceState.search, let results = searchData.resultsState {
+            if let strongSelf = self, let searchData = strongSelf.presentationInterfaceState.search, let _ = searchData.resultsState {
                 if let controller = strongSelf.searchResultsController {
                     strongSelf.chatDisplayNode.dismissInput()
                     if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
@@ -4193,9 +4195,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     disposables.set((signal
                     |> deliverOnMainQueue).start(error: { _ in
-                        guard let _ = self else {
-                            return
-                        }
                     }, completed: {
                         guard let strongSelf = self else {
                             return
@@ -4684,13 +4683,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
-            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                //self.registerForPreviewing(with: self, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
-                if case .peer = self.chatLocation, let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
-                    //self.registerForPreviewing(with: self, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
-                }
-            }
-            
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 let dropInteraction = UIDropInteraction(delegate: self)
                 self.chatDisplayNode.view.addInteraction(dropInteraction)
@@ -5563,8 +5555,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                                 var signal = clearCachedMediaResources(account: strongSelf.context.account, mediaResourceIds: clearResourceIds)
                                 
-                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
-                                
                                 var cancelImpl: (() -> Void)?
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 let progressSignal = Signal<Never, NoError> { subscriber in
@@ -5593,7 +5583,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
-                                    if let strongSelf = self, let layout = strongSelf.validLayout {
+                                    if let strongSelf = self, let _ = strongSelf.validLayout {
                                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: true, action: { _ in return false }), in: .current)
                                     }
                                 }))
@@ -6723,7 +6713,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.completed
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
@@ -6774,7 +6763,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.completed
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let messageIndices = results.messages.map({ $0.index }).sorted()
@@ -7671,7 +7659,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
             }
             var displayUrl = rawDisplayUrl
-            displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
+            displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
             self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
                 openImpl()
             })]), in: .window(.root))
@@ -8412,7 +8400,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }
-        if let (node, contentBounds, get) = selectedNode {
+        if let (node, _, get) = selectedNode {
             return ({ [weak self] view in
                 guard let strongSelf = self else {
                     return

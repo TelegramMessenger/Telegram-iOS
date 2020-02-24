@@ -2400,4 +2400,8 @@ private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
             }
         }
     }
+    
+    func testMethod() {
+        
+    }
 }

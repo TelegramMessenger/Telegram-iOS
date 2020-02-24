@@ -3,17 +3,14 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import SyncCore
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import Display
 import AccountContext
 import Pdf
 import LocalMediaResources
 import AVFoundation
 import LegacyComponents
+import ShareItemsImpl
 
 public enum UnpreparedShareItemContent {
     case contact(DeviceContactExtendedData)

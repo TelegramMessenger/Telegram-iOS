@@ -8,11 +8,7 @@ import ImageIO
 import MobileCoreServices
 import Display
 import AVFoundation
-#if BUCK
-import WebPImage
-#else
-import WebP
-#endif
+import WebPBinding
 import Lottie
 import MediaResources
 import PhotoResources

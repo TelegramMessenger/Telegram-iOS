@@ -26,6 +26,8 @@ public class ImmediateTextNode: TextNode {
                 return .byTruncatingMiddle
             case .end:
                 return .byTruncatingTail
+            @unknown default:
+                return .byTruncatingTail
             }
         } set(value) {
             switch value {

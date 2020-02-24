@@ -271,6 +271,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
+        self.noticeNode.maximumNumberOfLines = 0
         self.noticeNode.isUserInteractionEnabled = true
         self.noticeNode.displaysAsynchronously = false
         self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)

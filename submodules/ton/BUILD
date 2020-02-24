@@ -48,6 +48,16 @@ genrule(
     """
     set -ex
 
+    core_count="`sysctl -n hw.logicalcpu`"
+    BUILD_DIR="$(RULEDIR)/build"
+    rm -rf "$$BUILD_DIR"
+    mkdir -p "$$BUILD_DIR"
+
+    CMAKE_DIR="$$(pwd)/$$BUILD_DIR/cmake"
+    rm -rf "$$CMAKE_DIR"
+    mkdir -p "$$CMAKE_DIR"
+    tar -xf "$(location //third-party/cmake:cmake.tar)" -C "$$CMAKE_DIR"
+
     if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
         BUILD_ARCH="armv7"
     elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
@@ -58,29 +68,32 @@ genrule(
         echo "Unsupported architecture $(TARGET_CPU)"
     fi
 
-    cp $(location :build-ton-bazel.sh) "$(RULEDIR)/"
-    cp $(location :iOS-bazel.cmake) "$(RULEDIR)/"
-    tar -xzf $(location tonlib-src.tar.gz) -C "$(RULEDIR)/"
+    cp $(location :build-ton-bazel.sh) "$$BUILD_DIR/"
+    cp $(location :iOS-bazel.cmake) "$$BUILD_DIR/"
+    tar -xzf $(location tonlib-src.tar.gz) -C "$$BUILD_DIR/"
 
-    mkdir -p "$(RULEDIR)/openssl_headers/include/openssl"
-    mkdir -p "$(RULEDIR)/openssl_headers/lib"
-    cp -f "$(location //submodules/openssl:libcrypto.a)" "$(RULEDIR)/openssl_headers/lib/"
+    mkdir -p "$$BUILD_DIR/openssl_headers/include/openssl"
+    mkdir -p "$$BUILD_DIR/openssl_headers/lib"
+    cp -f "$(location //submodules/openssl:libcrypto.a)" "$$BUILD_DIR/openssl_headers/lib/"
     for f in $(locations //submodules/openssl:openssl_include); do
-        cp -f "$$f" "$(RULEDIR)/openssl_headers/include/openssl/"
+        cp -f "$$f" "$$BUILD_DIR/openssl_headers/include/openssl/"
     done
-    mkdir -p "$(RULEDIR)/Public/ton"
+    mkdir -p "$$BUILD_DIR/Public/ton"
 
-    sh $(RULEDIR)/build-ton-bazel.sh "$(RULEDIR)" "$(RULEDIR)" "$(RULEDIR)/openssl_headers" $$BUILD_ARCH
+    PATH="$$PATH:$$CMAKE_DIR/bin" sh $$BUILD_DIR/build-ton-bazel.sh "$$BUILD_DIR" "$$BUILD_DIR" "$$BUILD_DIR/openssl_headers" $$BUILD_ARCH
     """ +
     "\n".join([
-        "cp -f \"$(RULEDIR)/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers
+        "cp -f \"$$BUILD_DIR/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers
     ]) +
     "\n" +
     "\n".join([
-        "cp -f \"$(RULEDIR)/build/out/lib/lib{}.a\" \"$(location Public/ton/lib/lib{}.a)\"".format(lib, lib) for lib in ton_lib_names
+        "cp -f \"$$BUILD_DIR/build/out/lib/lib{}.a\" \"$(location Public/ton/lib/lib{}.a)\"".format(lib, lib) for lib in ton_lib_names
     ]),
     outs = ["Public/ton/include/" + x for x in ton_headers] +
     ["Public/ton/lib/lib{}.a".format(x) for x in ton_lib_names],
+    tools = [
+        "//third-party/cmake:cmake.tar",
+    ],
     visibility = [
         "//visibility:public",
     ]

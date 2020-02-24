@@ -162,7 +162,7 @@ void MyAesIgeDecrypt(const void *inBytes, int length, void *outBytes, const void
 }
 
 void MyAesCbcDecrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
-    int outLength = 0;
+    size_t outLength = 0;
     CCCryptorStatus status = CCCrypt(kCCDecrypt, kCCAlgorithmAES128, 0, key, keyLength, iv, inBytes, length, outBytes, length, &outLength);
     assert(status == kCCSuccess);
     assert(outLength == length);

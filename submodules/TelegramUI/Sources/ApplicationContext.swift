@@ -19,6 +19,7 @@ import LegacyUI
 import TelegramPermissionsUI
 import PasscodeUI
 import ImageBlur
+import FastBlur
 import WatchBridge
 import SettingsUI
 import AppLock

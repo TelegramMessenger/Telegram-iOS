@@ -4,7 +4,8 @@ objc_library(
     enable_modules = True,
     module_name = "Crc32",
     srcs = glob([
-        "Sources/*.m",
+        "Sources/**/*.m",
+        "Sources/**/*.h",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -13,7 +14,7 @@ objc_library(
         "PublicHeaders",
     ],
     sdk_frameworks = [
-      "Foundation",
+        "Foundation",
     ],
     visibility = [
         "//visibility:public",

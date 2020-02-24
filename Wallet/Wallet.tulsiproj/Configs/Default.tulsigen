@@ -9,7 +9,7 @@
   ],
   "optionSet" : {
     "BazelBuildOptionsDebug" : {
-      "p" : "$(inherited) --features=swift.use_global_module_cache --features=swift.swift.no_generated_header --spawn_strategy=standalone  --strategy=SwiftCompile=standalone"
+      "p" : "$(inherited) --features=swift.use_global_module_cache --features=swift.swift.no_generated_header --spawn_strategy=standalone  --strategy=SwiftCompile=standalone --define=wallet_bundle_id=org.ton.TonWallet-iOS"
     },
     "BazelBuildOptionsRelease" : {
       "p" : "$(inherited)"
