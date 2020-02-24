@@ -14,8 +14,10 @@ public final class TabBarControllerTheme {
     public let tabBarBadgeBackgroundColor: UIColor
     public let tabBarBadgeStrokeColor: UIColor
     public let tabBarBadgeTextColor: UIColor
+    public let tabBarExtractedIconColor: UIColor
+    public let tabBarExtractedTextColor: UIColor
 
-    public init(backgroundColor: UIColor, tabBarBackgroundColor: UIColor, tabBarSeparatorColor: UIColor, tabBarIconColor: UIColor, tabBarSelectedIconColor: UIColor, tabBarTextColor: UIColor, tabBarSelectedTextColor: UIColor, tabBarBadgeBackgroundColor: UIColor, tabBarBadgeStrokeColor: UIColor, tabBarBadgeTextColor: UIColor) {
+    public init(backgroundColor: UIColor, tabBarBackgroundColor: UIColor, tabBarSeparatorColor: UIColor, tabBarIconColor: UIColor, tabBarSelectedIconColor: UIColor, tabBarTextColor: UIColor, tabBarSelectedTextColor: UIColor, tabBarBadgeBackgroundColor: UIColor, tabBarBadgeStrokeColor: UIColor, tabBarBadgeTextColor: UIColor, tabBarExtractedIconColor: UIColor, tabBarExtractedTextColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.tabBarBackgroundColor = tabBarBackgroundColor
         self.tabBarSeparatorColor = tabBarSeparatorColor
@@ -26,6 +28,8 @@ public final class TabBarControllerTheme {
         self.tabBarBadgeBackgroundColor = tabBarBadgeBackgroundColor
         self.tabBarBadgeStrokeColor = tabBarBadgeStrokeColor
         self.tabBarBadgeTextColor = tabBarBadgeTextColor
+        self.tabBarExtractedIconColor = tabBarExtractedIconColor
+        self.tabBarExtractedTextColor = tabBarExtractedTextColor
     }
 }
 
@@ -229,6 +233,13 @@ open class TabBarController: ViewController {
                     }
                 }))
             }
+        }, contextAction: { [weak self] index, node, gesture in
+            guard let strongSelf = self else {
+                return
+            }
+            if index >= 0 && index < strongSelf.controllers.count {
+                strongSelf.controllers[index].tabBarItemContextAction(sourceNode: node, gesture: gesture)
+            }
         }, toolbarActionSelected: { [weak self] action in
             self?.currentController?.toolbarActionSelected(action: action)
         })
@@ -367,7 +378,7 @@ open class TabBarController: ViewController {
             }
         }
         self.controllers = controllers
-        self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ $0.tabBarItem })
+        self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ TabBarNodeItem(item: $0.tabBarItem, hasContext: $0.hasTabBarItemContextAction) })
         
         let signals = combineLatest(self.controllers.map({ $0.tabBarItem }).map { tabBarItem -> Signal<Bool, NoError> in
             if let tabBarItem = tabBarItem, tabBarItem.image == nil {

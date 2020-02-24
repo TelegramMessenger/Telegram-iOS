@@ -328,12 +328,14 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animateHorizontalOffsetAdditive(node: ASDisplayNode, offset: CGFloat) {
+    func animateHorizontalOffsetAdditive(node: ASDisplayNode, offset: CGFloat, completion: (() -> Void)? = nil) {
         switch self {
             case .immediate:
                 break
             case let .animated(duration, curve):
-                node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
+                node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { _ in
+                    completion?()
+                })
         }
     }
     

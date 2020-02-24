@@ -16,10 +16,9 @@ private let timezoneOffset: Int32 = {
 }()
 
 func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
-    if timestamp == scheduleWhenOnlineTimestamp {
-        return Int64(timestamp)
-    }
-    var time: time_t = time_t(timestamp + timezoneOffset)
+    var unclippedValue: Int64 = min(Int64(Int32.max), Int64(timestamp) + Int64(timezoneOffset))
+    
+    var time: time_t = time_t(Int32(clamping: unclippedValue))
     var timeinfo: tm = tm()
     localtime_r(&time, &timeinfo)
     

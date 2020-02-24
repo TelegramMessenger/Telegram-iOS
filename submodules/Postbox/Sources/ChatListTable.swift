@@ -245,12 +245,31 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId) -> [PeerId] {
+    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?) -> [PeerId] {
         var result: [PeerId] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
             let (_, _, messageIndex, _) = extractKey(key)
             if let state = postbox.readStateTable.getCombinedState(messageIndex.id.peerId), state.isUnread {
-                result.append(messageIndex.id.peerId)
+                
+                let passFilter: Bool
+                if let filterPredicate = filterPredicate {
+                    if let peer = postbox.peerTable.get(messageIndex.id.peerId) {
+                        let isUnread = postbox.readStateTable.getCombinedState(messageIndex.id.peerId)?.isUnread ?? false
+                        if filterPredicate(peer, postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId), isUnread) {
+                            passFilter = true
+                        } else {
+                            passFilter = false
+                        }
+                    } else {
+                        passFilter = false
+                    }
+                } else {
+                    passFilter = true
+                }
+                
+                if passFilter {
+                    result.append(messageIndex.id.peerId)
+                }
             }
             return true
         }, limit: 0)

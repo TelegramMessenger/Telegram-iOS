@@ -5,6 +5,8 @@ import ContextUI
 import Postbox
 
 final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    
     private weak var chatNode: ChatControllerNode?
     private let message: Message
     

@@ -303,10 +303,10 @@ public final class Transaction {
         return self.postbox?.chatListTable.getPeerChatListIndex(peerId: peerId)
     }
     
-    public func getUnreadChatListPeerIds(groupId: PeerGroupId) -> [PeerId] {
+    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?) -> [PeerId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, groupId: groupId)
+            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, groupId: groupId, filterPredicate: filterPredicate)
         } else {
             return []
         }
@@ -1053,7 +1053,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 }
 
 public final class Postbox {
-    private let queue: Queue
+    public let queue: Queue
     public let seedConfiguration: SeedConfiguration
     private let basePath: String
     let valueBox: SqliteValueBox

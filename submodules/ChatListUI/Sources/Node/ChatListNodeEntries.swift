@@ -6,6 +6,7 @@ import TelegramPresentationData
 import MergeLists
 
 enum ChatListNodeEntryId: Hashable {
+    case Header
     case Hole(Int64)
     case PeerId(Int64)
     case GroupId(PeerGroupId)
@@ -13,6 +14,7 @@ enum ChatListNodeEntryId: Hashable {
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
+    case HeaderEntry
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, hasFailedMessages: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
     case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
@@ -20,27 +22,31 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     
     var sortIndex: ChatListIndex {
         switch self {
-            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                return index
-            case let .HoleEntry(hole, _):
-                return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
-                return index
-            case .ArchiveIntro:
-                return ChatListIndex.absoluteUpperBound
+        case .HeaderEntry:
+            return ChatListIndex.absoluteUpperBound
+        case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            return index
+        case let .HoleEntry(hole, _):
+            return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
+        case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
+            return index
+        case .ArchiveIntro:
+            return ChatListIndex.absoluteUpperBound.successor
         }
     }
     
     var stableId: ChatListNodeEntryId {
         switch self {
-            case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                return .PeerId(index.messageIndex.id.peerId.toInt64())
-            case let .HoleEntry(hole, _):
-                return .Hole(Int64(hole.index.id.id))
-            case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
-                return .GroupId(groupId)
-            case .ArchiveIntro:
-                return .ArchiveIntro
+        case .HeaderEntry:
+            return .Header
+        case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            return .PeerId(index.messageIndex.id.peerId.toInt64())
+        case let .HoleEntry(hole, _):
+            return .Hole(Int64(hole.index.id.id))
+        case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
+            return .GroupId(groupId)
+        case .ArchiveIntro:
+            return .ArchiveIntro
         }
     }
     
@@ -50,6 +56,12 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     
     static func ==(lhs: ChatListNodeEntry, rhs: ChatListNodeEntry) -> Bool {
         switch lhs {
+            case .HeaderEntry:
+                if case .HeaderEntry = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .PeerEntry(lhsIndex, lhsPresentationData, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsPresence, lhsSummaryInfo, lhsEditing, lhsHasRevealControls, lhsSelected, lhsInputActivities, lhsAd, lhsHasFailedMessages):
                 switch rhs {
                     case let .PeerEntry(rhsIndex, rhsPresentationData, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsPresence, rhsSummaryInfo, rhsEditing, rhsHasRevealControls, rhsSelected, rhsInputActivities, rhsAd, rhsHasFailedMessages):
@@ -273,6 +285,8 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             if displayArchiveIntro {
                 result.append(.ArchiveIntro(presentationData: state.presentationData))
             }
+            
+            result.append(.HeaderEntry)
         }
     }
 

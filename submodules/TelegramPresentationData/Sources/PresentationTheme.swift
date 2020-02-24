@@ -261,8 +261,11 @@ public final class PresentationThemeContextMenu {
     public let primaryColor: UIColor
     public let secondaryColor: UIColor
     public let destructiveColor: UIColor
+    public let badgeFillColor: UIColor
+    public let badgeForegroundColor: UIColor
+    public let extractedContentTintColor: UIColor
     
-    init(dimColor: UIColor, backgroundColor: UIColor, itemSeparatorColor: UIColor, sectionSeparatorColor: UIColor, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, destructiveColor: UIColor) {
+    init(dimColor: UIColor, backgroundColor: UIColor, itemSeparatorColor: UIColor, sectionSeparatorColor: UIColor, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, destructiveColor: UIColor, badgeFillColor: UIColor, badgeForegroundColor: UIColor, extractedContentTintColor: UIColor) {
         self.dimColor = dimColor
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
@@ -272,10 +275,13 @@ public final class PresentationThemeContextMenu {
         self.primaryColor = primaryColor
         self.secondaryColor = secondaryColor
         self.destructiveColor = destructiveColor
+        self.badgeFillColor = badgeFillColor
+        self.badgeForegroundColor = badgeForegroundColor
+        self.extractedContentTintColor = extractedContentTintColor
     }
     
     public func withUpdated(dimColor: UIColor? = nil, backgroundColor: UIColor? = nil, itemSeparatorColor: UIColor? = nil, sectionSeparatorColor: UIColor? = nil, itemBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, primaryColor: UIColor? = nil, secondaryColor: UIColor? = nil, destructiveColor: UIColor? = nil) -> PresentationThemeContextMenu {
-        return PresentationThemeContextMenu(dimColor: dimColor ?? self.dimColor, backgroundColor: backgroundColor ?? self.backgroundColor, itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor, sectionSeparatorColor: sectionSeparatorColor ?? self.sectionSeparatorColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, primaryColor: primaryColor ?? self.primaryColor, secondaryColor: secondaryColor ?? self.secondaryColor, destructiveColor: destructiveColor ?? self.destructiveColor)
+        return PresentationThemeContextMenu(dimColor: dimColor ?? self.dimColor, backgroundColor: backgroundColor ?? self.backgroundColor, itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor, sectionSeparatorColor: sectionSeparatorColor ?? self.sectionSeparatorColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, primaryColor: primaryColor ?? self.primaryColor, secondaryColor: secondaryColor ?? self.secondaryColor, destructiveColor: destructiveColor ?? self.destructiveColor, badgeFillColor: self.badgeFillColor, badgeForegroundColor: self.badgeForegroundColor, extractedContentTintColor: self.extractedContentTintColor)
     }
 }
 

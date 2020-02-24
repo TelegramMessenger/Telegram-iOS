@@ -630,6 +630,11 @@ public enum ViewControllerNavigationPresentation {
     
     open func toolbarActionSelected(action: ToolbarActionOption) {
     }
+    
+    open var hasTabBarItemContextAction: Bool = false
+    
+    open func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
+    }
 }
 
 func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {

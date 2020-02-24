@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import SwiftSignalKit
 
 enum ContextActionSibling {
     case none
@@ -19,7 +20,11 @@ final class ContextActionNode: ASDisplayNode {
     private let textNode: ImmediateTextNode
     private let statusNode: ImmediateTextNode?
     private let iconNode: ASImageNode
+    private let badgeBackgroundNode: ASImageNode
+    private let badgeTextNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
+    
+    private var iconDisposable: Disposable?
     
     init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.action = action
@@ -72,7 +77,22 @@ final class ContextActionNode: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.isUserInteractionEnabled = false
-        self.iconNode.image = action.icon(presentationData.theme)
+        if action.iconSource == nil {
+            self.iconNode.image = action.icon(presentationData.theme)
+        }
+        
+        self.badgeBackgroundNode = ASImageNode()
+        self.badgeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.contextMenu.badgeFillColor)
+        self.badgeBackgroundNode.isAccessibilityElement = false
+        self.badgeBackgroundNode.displaysAsynchronously = false
+        self.badgeBackgroundNode.displayWithoutProcessing = true
+        self.badgeBackgroundNode.isUserInteractionEnabled = false
+        
+        self.badgeTextNode = ImmediateTextNode()
+        self.badgeTextNode.attributedText = NSAttributedString(string: action.badge, font: Font.regular(14.0), textColor: presentationData.theme.contextMenu.badgeForegroundColor)
+        self.badgeTextNode.isAccessibilityElement = false
+        self.badgeTextNode.isUserInteractionEnabled = false
+        self.badgeTextNode.displaysAsynchronously = false
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.isAccessibilityElement = true
@@ -85,6 +105,8 @@ final class ContextActionNode: ASDisplayNode {
         self.addSubnode(self.textNode)
         self.statusNode.flatMap(self.addSubnode)
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.badgeTextNode)
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highligted in
@@ -99,6 +121,20 @@ final class ContextActionNode: ASDisplayNode {
             }
         }
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        
+        if let iconSource = action.iconSource {
+            self.iconDisposable = (iconSource.signal
+            |> deliverOnMainQueue).start(next: { [weak self] image in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.iconNode.image = image
+            })
+        }
+    }
+    
+    deinit {
+        self.iconDisposable?.dispose()
     }
     
     func updateLayout(constrainedWidth: CGFloat, previous: ContextActionSibling, next: ContextActionSibling) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
@@ -106,7 +142,12 @@ final class ContextActionNode: ASDisplayNode {
         let iconSideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 12.0
         
-        let iconSize = self.iconNode.image.flatMap({ $0.size }) ?? CGSize()
+        let iconSize: CGSize
+        if let iconSource = self.action.iconSource {
+            iconSize = iconSource.size
+        } else {
+            iconSize = self.iconNode.image.flatMap({ $0.size }) ?? CGSize()
+        }
         
         let standardIconWidth: CGFloat = 32.0
         var rightTextInset: CGFloat = sideInset
@@ -114,16 +155,35 @@ final class ContextActionNode: ASDisplayNode {
             rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset + sideInset
         }
         
-        let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))
-        let statusSize = self.statusNode?.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude)) ?? CGSize()
+        let badgeTextSize = self.badgeTextNode.updateLayout(CGSize(width: constrainedWidth, height: .greatestFiniteMagnitude))
+        let badgeInset: CGFloat = 4.0
+        
+        let badgeSize: CGSize
+        let badgeWidthSpace: CGFloat
+        let badgeSpacing: CGFloat = 10.0
+        if badgeTextSize.width.isZero {
+            badgeSize = CGSize()
+            badgeWidthSpace = 0.0
+        } else {
+            badgeSize = CGSize(width: max(18.0, badgeTextSize.width + badgeInset * 2.0), height: 18.0)
+            badgeWidthSpace = badgeSize.width + badgeSpacing
+        }
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset - badgeWidthSpace, height: .greatestFiniteMagnitude))
+        let statusSize = self.statusNode?.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset - badgeWidthSpace, height: .greatestFiniteMagnitude)) ?? CGSize()
         
         if !statusSize.width.isZero, let statusNode = self.statusNode {
             let verticalSpacing: CGFloat = 2.0
             let combinedTextHeight = textSize.height + verticalSpacing + statusSize.height
             return (CGSize(width: max(textSize.width, statusSize.width) + sideInset + rightTextInset, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
                 let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
-                transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize))
+                let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
+                transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
                 transition.updateFrameAdditive(node: statusNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin + verticalSpacing + textSize.height), size: textSize))
+                
+                let badgeFrame = CGRect(origin: CGPoint(x: textFrame.maxX + badgeSpacing, y: floor((size.height - badgeSize.height) / 2.0)), size: badgeSize)
+                transition.updateFrame(node: self.badgeBackgroundNode, frame: badgeFrame)
+                transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: badgeFrame.minX + floorToScreenPixels((badgeFrame.width - badgeTextSize.width) / 2.0), y: badgeFrame.minY + floor((badgeFrame.height - badgeTextSize.height) / 2.0)), size: badgeTextSize))
                 
                 if !iconSize.width.isZero {
                     transition.updateFrameAdditive(node: self.iconNode, frame: CGRect(origin: CGPoint(x: size.width - standardIconWidth - iconSideInset + floor((standardIconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
@@ -136,11 +196,16 @@ final class ContextActionNode: ASDisplayNode {
         } else {
             return (CGSize(width: textSize.width + sideInset + rightTextInset, height: verticalInset * 2.0 + textSize.height), { size, transition in
                 let verticalOrigin = floor((size.height - textSize.height) / 2.0)
-                transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize))
+                let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
+                transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
                 
                 if !iconSize.width.isZero {
                     transition.updateFrameAdditive(node: self.iconNode, frame: CGRect(origin: CGPoint(x: size.width - standardIconWidth - iconSideInset + floor((standardIconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
                 }
+                
+                let badgeFrame = CGRect(origin: CGPoint(x: textFrame.maxX + badgeSpacing, y: floor((size.height - badgeSize.height) / 2.0)), size: badgeSize)
+                transition.updateFrame(node: self.badgeBackgroundNode, frame: badgeFrame)
+                transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: badgeFrame.minX + floorToScreenPixels((badgeFrame.width - badgeTextSize.width) / 2.0), y: badgeFrame.minY + floor((badgeFrame.height - badgeTextSize.height) / 2.0)), size: badgeTextSize))
                 
                 transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
                 transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
@@ -172,7 +237,12 @@ final class ContextActionNode: ASDisplayNode {
             break
         }
         
-        self.iconNode.image = self.action.icon(presentationData.theme)
+        if self.action.iconSource == nil {
+            self.iconNode.image = self.action.icon(presentationData.theme)
+        }
+        
+        self.badgeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.contextMenu.badgeFillColor)
+        self.badgeTextNode.attributedText = NSAttributedString(string: self.badgeTextNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: presentationData.theme.contextMenu.badgeForegroundColor)
     }
     
     @objc private func buttonPressed() {

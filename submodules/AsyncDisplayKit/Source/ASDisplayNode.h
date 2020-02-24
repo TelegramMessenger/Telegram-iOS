@@ -983,4 +983,8 @@ typedef NS_ENUM(NSInteger, ASLayoutEngineType) {
 
 @end
 
+@interface UIView (ASDisplayNodeInternal)
+@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
+@end
+
 NS_ASSUME_NONNULL_END

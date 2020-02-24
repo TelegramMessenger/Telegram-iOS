@@ -146,20 +146,6 @@
     }
     [self.view addSubview:_effectView];
     
-    /*
-     let contextMenu = PresentationThemeContextMenu(
-         dimColor: UIColor(rgb: 0x000a26, alpha: 0.2),
-         backgroundColor: UIColor(rgb: 0xf9f9f9, alpha: 0.78),
-         itemSeparatorColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
-         sectionSeparatorColor: UIColor(rgb: 0x8a8a8a, alpha: 0.2),
-         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
-         itemHighlightedBackgroundColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
-         primaryColor: UIColor(rgb: 0x000000, alpha: 1.0),
-         secondaryColor: UIColor(rgb: 0x000000, alpha: 0.8),
-         destructiveColor: UIColor(rgb: 0xff3b30)
-     )
-     */
-    
     _containerView = [[UIView alloc] init];
     if (_isDark) {
         _containerView.backgroundColor = UIColorRGB(0x1f1f1f);

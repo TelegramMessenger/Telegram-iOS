@@ -43,6 +43,8 @@ static_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

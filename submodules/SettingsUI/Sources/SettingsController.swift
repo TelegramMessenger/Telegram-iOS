@@ -722,7 +722,7 @@ public protocol SettingsController: class {
     func updateContext(context: AccountContext)
 }
 
-private final class SettingsControllerImpl: ItemListController, SettingsController, TabBarContainedController {
+private final class SettingsControllerImpl: ItemListController, SettingsController {
     let sharedContext: SharedAccountContext
     let contextValue: Promise<AccountContext>
     var accountsAndPeersValue: ((Account, Peer)?, [(Account, Peer, Int32)])?
@@ -730,8 +730,6 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
     
     var switchToAccount: ((AccountRecordId) -> Void)?
     var addAccount: (() -> Void)?
-    
-    weak var switchController: TabBarAccountSwitchController?
     
     override var navigationBarRequiresEntireLayoutUpdate: Bool {
         return false
@@ -751,6 +749,8 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         
         super.init(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: updatedPresentationData |> map(ItemListPresentationData.init(_:)), state: state, tabBarItem: tabBarItem)
         
+        self.hasTabBarItemContextAction = true
+        
         self.accountsAndPeersDisposable = (accountsAndPeers
         |> deliverOnMainQueue).start(next: { [weak self] value in
             self?.accountsAndPeersValue = value
@@ -769,7 +769,7 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         //self.contextValue.set(.single(context))
     }
     
-    func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
+    /*func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
         guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
             return
         }
@@ -778,11 +778,98 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         }, addAccount: { [weak self] in
             self?.addAccount?()
         }, sourceNodes: sourceNodes)
-        self.switchController = controller
         self.sharedContext.mainWindow?.present(controller, on: .root)
     }
     
     func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate) {
+    }*/
+    
+    override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
+        guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
+            return
+        }
+        
+        let presentationData = self.sharedContext.currentPresentationData.with { $0 }
+        let strings = presentationData.strings
+        
+        var items: [ContextMenuItem] = []
+        if other.count + 1 < maximumNumberOfAccounts {
+            items.append(.action(ContextMenuActionItem(text: strings.Settings_AddAccount, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.addAccount?()
+                f(.dismissWithoutContent)
+            })))
+            
+            items.append(.separator)
+        }
+        
+        func accountIconSignal(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
+            let iconSignal: Signal<UIImage?, NoError>
+            if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, inset: 0.0, emptyColor: nil, synchronousLoad: false) {
+                iconSignal = signal
+                |> map { imageVersions -> UIImage? in
+                    return imageVersions?.0
+                }
+            } else {
+                let peerId = peer.id
+                let displayLetters = peer.displayLetters
+                iconSignal = Signal { subscriber in
+                    let image = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarFont, letters: displayLetters, peerId: peerId)
+                    })?.withRenderingMode(.alwaysOriginal)
+                    
+                    subscriber.putNext(image)
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+            }
+            return iconSignal
+        }
+        
+        let avatarSize = CGSize(width: 28.0, height: 28.0)
+        
+        items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: primary.0, peer: primary.1, size: avatarSize)), action: { _, f in
+            f(.default)
+        })))
+        
+        for account in other {
+            let id = account.0.id
+            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? "\(account.2)" : "", icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.switchToAccount?(id)
+                f(.dismissWithoutContent)
+            })))
+        }
+        
+        let controller = ContextController(account: primary.0, presentationData: presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(items), reactionItems: [], recognizer: nil, gesture: gesture)
+        self.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+}
+
+private final class SettingsTabBarContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = true
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
 
@@ -1798,10 +1885,10 @@ private func accountContextMenuItems(context: AccountContext, logout: @escaping 
     return context.account.postbox.transaction { transaction -> [ContextMenuItem] in
         var items: [ContextMenuItem] = []
         
-        if !transaction.getUnreadChatListPeerIds(groupId: .root).isEmpty {
+        if !transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil).isEmpty {
             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 let _ = (context.account.postbox.transaction { transaction in
-                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: .root)
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: .root, filterPredicate: nil)
                 }
                 |> deliverOnMainQueue).start(completed: {
                     f(.default)

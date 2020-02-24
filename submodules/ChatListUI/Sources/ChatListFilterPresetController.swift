@@ -371,7 +371,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
-        let rightNavigationButton = ItemListNavigationButton(content: .text("Create"), style: .bold, enabled: state.isComplete, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text(currentPreset == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             let state = stateValue.with { $0 }
             let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, includePeers: state.additionallyIncludePeers)
             let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
