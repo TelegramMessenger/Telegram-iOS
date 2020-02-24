@@ -235,7 +235,9 @@ final class ChatListControllerNode: ASDisplayNode {
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
-        }, peerContextAction: self.peerContextAction), cancel: { [weak self] in
+        }, peerContextAction: self.peerContextAction, present: { [weak self] c in
+            self?.controller?.present(c, in: .window(.root))
+        }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }

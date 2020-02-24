@@ -204,6 +204,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             default:
                 gesture?.cancel()
             }
+        }, present: { _ in
         })
         interaction.searchTextHighightState = searchQuery
         self.interaction = interaction
