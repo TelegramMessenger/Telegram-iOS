@@ -194,7 +194,7 @@ class TwoAxisLinesChartController: BaseLinesChartController {
         self.setupChartCollection(chartsCollection: initialChartCollection, animated: true, isZoomed: false)
     }
     
-    override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool) {
         cancelChartInteraction()
         
         let horizontalRange = ClosedRange(uncheckedBounds:
@@ -205,8 +205,8 @@ class TwoAxisLinesChartController: BaseLinesChartController {
         updateChartRangeTitle(animated: true)
         
         updateMainChartHorizontalRange(range: horizontalRange, animated: false)
-        updateHorizontalLimists(horizontalRange: horizontalRange, animated: true)
-        updateVerticalLimitsAndRange(horizontalRange: horizontalRange, animated: true)
+        updateHorizontalLimists(horizontalRange: horizontalRange, animated: animated)
+        updateVerticalLimitsAndRange(horizontalRange: horizontalRange, animated: animated)
     }
     
     func updateMainChartHorizontalRange(range: ClosedRange<CGFloat>, animated: Bool) {

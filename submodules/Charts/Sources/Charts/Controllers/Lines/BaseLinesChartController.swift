@@ -25,9 +25,9 @@ class BaseLinesChartController: BaseChartController {
     
     func setupChartCollection(chartsCollection: ChartsCollection, animated: Bool, isZoomed: Bool) {
         if animated {
-            TimeInterval.setDefaultSuration(.expandAnimationDuration)
+            TimeInterval.setDefaultDuration(.expandAnimationDuration)
             DispatchQueue.main.asyncAfter(deadline: .now() + .expandAnimationDuration) {
-                TimeInterval.setDefaultSuration(.osXDuration)
+                TimeInterval.setDefaultDuration(.osXDuration)
             }
         }
         
@@ -39,7 +39,7 @@ class BaseLinesChartController: BaseChartController {
         updateChartRangeTitle(animated: animated)
     }
     
-    func updateChartRangeTitle(animated: Bool) {
+    override func updateChartRangeTitle(animated: Bool) {
         let fromDate = Date(timeIntervalSince1970: TimeInterval(zoomedChartRange.lowerBound) + .hour)
         let toDate = Date(timeIntervalSince1970: TimeInterval(zoomedChartRange.upperBound))
         if Calendar.utc.startOfDay(for: fromDate) == Calendar.utc.startOfDay(for: toDate) {
@@ -64,7 +64,7 @@ class BaseLinesChartController: BaseChartController {
         isChartInteractionBegun = false
     }
     
-    override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool) {
         
     }
     

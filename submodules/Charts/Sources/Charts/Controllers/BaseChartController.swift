@@ -74,7 +74,7 @@ class BaseChartController: ColorModeContainer {
     init(chartsCollection: ChartsCollection) {
         self.initialChartsCollection = chartsCollection
     }
-        
+     
     var mainChartRenderers: [ChartViewRenderer] {
         fatalError("Abstract")
     }
@@ -128,7 +128,11 @@ class BaseChartController: ColorModeContainer {
         fatalError("Abstract")
     }
     
-    func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    func updateChartRangeTitle(animated: Bool) {
+    
+    }
+    
+    func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         fatalError("Abstract")
     }
     

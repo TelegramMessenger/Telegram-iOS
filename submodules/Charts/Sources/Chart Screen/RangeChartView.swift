@@ -42,7 +42,8 @@ class RangeChartView: UIControl {
     private let cropFrameView = UIImageView()
     
     private var selectedMarker: Marker?
-    private var selectedMarkerHorizontalOffet: CGFloat = 0
+    private var selectedMarkerHorizontalOffset: CGFloat = 0
+    private var selectedMarkerInitialLocation: CGPoint?
     private var isBoundCropHighlighted: Bool = false
     private var isRangePagingEnabled: Bool = false
 
@@ -137,18 +138,22 @@ class RangeChartView: UIControl {
         
         if abs(locationInView(for: upperBound) - point.x + Constants.markerSelectionRange / 2) < Constants.markerSelectionRange {
             selectedMarker = .upper
-            selectedMarkerHorizontalOffet = point.x - locationInView(for: upperBound)
+            selectedMarkerHorizontalOffset = point.x - locationInView(for: upperBound)
+            selectedMarkerInitialLocation = point
             isBoundCropHighlighted = true
         } else if abs(locationInView(for: lowerBound) - point.x - Constants.markerSelectionRange / 2) < Constants.markerSelectionRange {
             selectedMarker = .lower
-            selectedMarkerHorizontalOffet = point.x - locationInView(for: lowerBound)
+            selectedMarkerHorizontalOffset = point.x - locationInView(for: lowerBound)
+            selectedMarkerInitialLocation = point
             isBoundCropHighlighted = true
         } else if point.x > locationInView(for: lowerBound) && point.x < locationInView(for: upperBound) {
             selectedMarker = .center
-            selectedMarkerHorizontalOffet = point.x - locationInView(for: lowerBound)
+            selectedMarkerHorizontalOffset = point.x - locationInView(for: lowerBound)
+            selectedMarkerInitialLocation = point
             isBoundCropHighlighted = true
         } else {
             selectedMarker = nil
+            selectedMarkerInitialLocation = nil
             return
         }
         
@@ -160,9 +165,13 @@ class RangeChartView: UIControl {
         guard let selectedMarker = selectedMarker else { return }
         guard let point = touches.first?.location(in: self) else { return }
         
-        let horizontalPosition = point.x - selectedMarkerHorizontalOffet
+        let horizontalPosition = point.x - selectedMarkerHorizontalOffset
         let fraction = fractionFor(offsetX: horizontalPosition)
         updateMarkerOffset(selectedMarker, fraction: fraction)
+        
+        if let initialPosition = selectedMarkerInitialLocation, abs(initialPosition.x - point.x) > 3.0 {
+            self._isTracking = true
+        }
         
         sendActions(for: .valueChanged)
     }
@@ -175,11 +184,12 @@ class RangeChartView: UIControl {
         }
         guard let point = touches.first?.location(in: self) else { return }
         
-        let horizontalPosition = point.x - selectedMarkerHorizontalOffet
+        let horizontalPosition = point.x - selectedMarkerHorizontalOffset
         let fraction = fractionFor(offsetX: horizontalPosition)
         updateMarkerOffset(selectedMarker, fraction: fraction)
         
         self.selectedMarker = nil
+        self.selectedMarkerInitialLocation = nil
         self.isBoundCropHighlighted = false
         if bounds.contains(point) {
             sendActions(for: .touchUpInside)
@@ -187,12 +197,21 @@ class RangeChartView: UIControl {
             sendActions(for: .touchUpOutside)
         }
         rangeDidChangeClosure?(lowerBound...upperBound)
+        
+        self._isTracking = false
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.selectedMarker = nil
+        self.selectedMarkerInitialLocation = nil
         self.isBoundCropHighlighted = false
+        self._isTracking = false
         sendActions(for: .touchCancel)
+    }
+    
+    private var _isTracking: Bool = false
+    override var isTracking: Bool {
+        return self._isTracking
     }
 }
 

@@ -84,9 +84,9 @@ class DailyBarsChartController: BaseChartController {
     
     func switchToChart(chartsCollection: ChartsCollection, isZoomed: Bool, animated: Bool) {
         if animated {
-            TimeInterval.setDefaultSuration(.expandAnimationDuration)
+            TimeInterval.setDefaultDuration(.expandAnimationDuration)
             DispatchQueue.main.asyncAfter(deadline: .now() + .expandAnimationDuration) {
-                TimeInterval.setDefaultSuration(.osXDuration)
+                TimeInterval.setDefaultDuration(.osXDuration)
             }
         }
         
@@ -225,7 +225,7 @@ class DailyBarsChartController: BaseChartController {
         switchToChart(chartsCollection: barsController.chartsCollection, isZoomed: false, animated: true)
     }
     
-    override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool) {
         if isZoomed {
             return linesController.chartRangeFractionDidUpdated(rangeFraction)
         } else {

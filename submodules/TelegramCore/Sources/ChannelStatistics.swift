@@ -16,7 +16,7 @@ public struct ChannelStatsValue: Equatable {
 }
 
 public struct ChannelStatsPercentValue: Equatable {
-    public let fraction: Double
+    public let value: Double
     public let total: Double
 }
 
@@ -133,8 +133,7 @@ public struct ChannelStatsContextState: Equatable {
 }
 
 private func requestStats(network: Network, datacenterId: Int32, peer: Peer, dark: Bool = false) -> Signal<ChannelStats?, NoError> {
-    return .never()
-    /*guard let inputChannel = apiInputChannel(peer) else {
+    guard let inputChannel = apiInputChannel(peer) else {
         return .never()
     }
     
@@ -160,12 +159,11 @@ private func requestStats(network: Network, datacenterId: Int32, peer: Peer, dar
     }
     |> `catch` { _ -> Signal<ChannelStats?, NoError> in
         return .single(nil)
-    }*/
+    }
 }
 
 private func requestGraph(network: Network, datacenterId: Int32, token: String) -> Signal<ChannelStatsGraph?, NoError> {
-    return .never()
-    /*let signal: Signal<Api.StatsGraph, MTRpcError>
+    let signal: Signal<Api.StatsGraph, MTRpcError>
     if network.datacenterId != datacenterId {
         signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
         |> castError(MTRpcError.self)
@@ -182,7 +180,7 @@ private func requestGraph(network: Network, datacenterId: Int32, token: String) 
     }
     |> `catch` { _ -> Signal<ChannelStatsGraph?, NoError> in
         return .single(nil)
-    }*/
+    }
 }
 
 private final class ChannelStatsContextImpl {
@@ -363,7 +361,7 @@ public final class ChannelStatsContext {
     }
 }
 
-/*extension ChannelStatsGraph {
+extension ChannelStatsGraph {
     init(apiStatsGraph: Api.StatsGraph) {
         switch apiStatsGraph {
             case let .statsGraph(json):
@@ -411,7 +409,7 @@ extension ChannelStatsPercentValue {
     init(apiPercentValue: Api.StatsPercentValue) {
         switch apiPercentValue {
             case let .statsPercentValue(part, total):
-                self = ChannelStatsPercentValue(fraction: part, total: total)
+                self = ChannelStatsPercentValue(value: part, total: total)
         }
     }
 }
@@ -424,4 +422,3 @@ extension ChannelStats {
         }
     }
 }
-*/

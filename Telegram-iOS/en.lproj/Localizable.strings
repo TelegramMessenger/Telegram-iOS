@@ -5346,3 +5346,14 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.BioExpand" = "more";
 
 "External.OpenIn" = "Open in %@";
+
+"Stats.Overview" = "OVERVIEW";
+"Stats.Followers" = "Followers";
+"Stats.EnabledNotifications" = "Enabled Notifications";
+"Stats.ViewsPerPost" = "Views Per Post";
+"Stats.SharesPerPost" = "Shares Per Post";
+
+"Stats.GrowthTitle" = "GROWTH";
+"Stats.FollowersTitle" = "FOLLOWERS";
+"Stats.NotificationsTitle" = "NOTIFICATIONS";
+"Stats.InteractionsTitle" = "INTERACTIONS";

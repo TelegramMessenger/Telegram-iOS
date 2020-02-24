@@ -19,7 +19,6 @@ class ChartStackSection: UIView, ColorModeContainer {
     var sectionContainerView: UIView
     var separators: [UIView] = []
     
-    var headerLabel: UILabel!
     var titleLabel: UILabel!
     var backButton: UIButton!
     
@@ -30,7 +29,6 @@ class ChartStackSection: UIView, ColorModeContainer {
         chartView = ChartView()
         rangeView = RangeChartView()
         visibilityView = ChartVisibilityView()
-        headerLabel = UILabel()
         titleLabel = UILabel()
         backButton = UIButton()
         
@@ -40,9 +38,10 @@ class ChartStackSection: UIView, ColorModeContainer {
         sectionContainerView.addSubview(chartView)
         sectionContainerView.addSubview(rangeView)
         sectionContainerView.addSubview(visibilityView)
+        sectionContainerView.addSubview(titleLabel)
         
-        headerLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .bold)
+        titleLabel.textAlignment = .center
         visibilityView.clipsToBounds = true
         backButton.isExclusiveTouch = true
                 
@@ -56,7 +55,6 @@ class ChartStackSection: UIView, ColorModeContainer {
     override func awakeFromNib() {
         super.awakeFromNib()
         
-        headerLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .bold)
         visibilityView.clipsToBounds = true
         backButton.isExclusiveTouch = true
@@ -95,7 +93,6 @@ class ChartStackSection: UIView, ColorModeContainer {
         }
         
         self.titleLabel.setTextColor(colorMode.chartTitleColor, animated: animated && titleLabel.isVisibleInWindow)
-        self.headerLabel.setTextColor(colorMode.sectionTitleColor, animated: animated && headerLabel.isVisibleInWindow)
     }
     
     @IBAction func didTapBackButton() {
@@ -130,6 +127,7 @@ class ChartStackSection: UIView, ColorModeContainer {
         super.layoutSubviews()
         
         let bounds = self.bounds
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: CGSize(width: bounds.width, height: 48.0))
         self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 350.0))
         self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 250.0))
         self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 48.0))
@@ -138,7 +136,6 @@ class ChartStackSection: UIView, ColorModeContainer {
     
     func setup(controller: BaseChartController, title: String) {
         self.controller = controller
-        self.headerLabel.text = title
         
         // Chart
         chartView.renderers = controller.mainChartRenderers
@@ -195,5 +192,10 @@ class ChartStackSection: UIView, ColorModeContainer {
         
         controller.initializeChart()
         updateToolViews(animated: false)
+        
+        TimeInterval.animationDurationMultipler = 0.0001
+        rangeView.setRange(0.75...1.0, animated: false)
+        controller.updateChartRange(0.75...1.0)
+        TimeInterval.animationDurationMultipler = 1.0
     }
 }
