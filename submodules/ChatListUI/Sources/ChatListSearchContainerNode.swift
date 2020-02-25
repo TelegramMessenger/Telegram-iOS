@@ -627,7 +627,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private let filter: ChatListNodePeersFilter
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController) -> Void) {
         self.context = context
         self.filter = filter
         self.dimNode = ASDisplayNode()
@@ -1043,6 +1043,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             case .groupReference:
                 gesture?.cancel()
             }
+        }, present: { [weak self] c in
+            present(c)
         })
         self.interaction = interaction
         
@@ -1390,8 +1392,24 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     private func clearRecentSearch() {
-        let _ = (clearRecentlySearchedPeers(postbox: self.context.account.postbox)
-        |> deliverOnMainQueue).start()
+        let presentationData = self.presentationData
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.WebSearch_RecentSectionClear, color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                
+                guard let strongSelf = self else {
+                    return
+                }
+                let _ = (clearRecentlySearchedPeers(postbox: strongSelf.context.account.postbox)
+                |> deliverOnMainQueue).start()
+            })
+        ]), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        self.interaction?.present(actionSheet)
     }
     
     override public func scrollToTop() {

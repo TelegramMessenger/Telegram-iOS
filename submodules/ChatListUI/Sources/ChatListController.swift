@@ -652,6 +652,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
+        self.chatListDisplayNode.chatListNode.present = { [weak self] c in
+            if let strongSelf = self {
+                self?.present(c, in: .window(.root))
+            }
+        }
+        
         self.chatListDisplayNode.chatListNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
             guard let strongSelf = self else {
                 return
