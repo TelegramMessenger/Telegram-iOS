@@ -30,7 +30,7 @@ public struct ChannelStatsNamedValue: Equatable {
 public enum ChannelStatsGraph: Equatable {
     case OnDemand(token: String)
     case Failed(error: String)
-    case Loaded(data: String)
+    case Loaded(data: String, zoomToken: String?)
 }
 
 public final class ChannelStats: Equatable {
@@ -39,24 +39,24 @@ public final class ChannelStats: Equatable {
     public let viewsPerPost: ChannelStatsValue
     public let sharesPerPost: ChannelStatsValue
     public let enabledNotifications: ChannelStatsPercentValue
-    public let viewsBySource: [ChannelStatsNamedValue]
-    public let newFollowersBySource: [ChannelStatsNamedValue]
-    public let languages: [ChannelStatsNamedValue]
+    public let viewsBySourceGraph: ChannelStatsGraph
+    public let newFollowersBySourceGraph: ChannelStatsGraph
+    public let languagesGraph: ChannelStatsGraph
     public let growthGraph: ChannelStatsGraph
     public let followersGraph: ChannelStatsGraph
     public let muteGraph: ChannelStatsGraph
     public let topHoursGraph: ChannelStatsGraph
     public let interactionsGraph: ChannelStatsGraph
         
-    public init(period: ChannelStatsDateRange, followers: ChannelStatsValue, viewsPerPost: ChannelStatsValue, sharesPerPost: ChannelStatsValue, enabledNotifications: ChannelStatsPercentValue, viewsBySource: [ChannelStatsNamedValue], newFollowersBySource: [ChannelStatsNamedValue], languages: [ChannelStatsNamedValue], growthGraph: ChannelStatsGraph, followersGraph: ChannelStatsGraph, muteGraph: ChannelStatsGraph, topHoursGraph: ChannelStatsGraph, interactionsGraph: ChannelStatsGraph) {
+    public init(period: ChannelStatsDateRange, followers: ChannelStatsValue, viewsPerPost: ChannelStatsValue, sharesPerPost: ChannelStatsValue, enabledNotifications: ChannelStatsPercentValue, viewsBySourceGraph: ChannelStatsGraph, newFollowersBySourceGraph: ChannelStatsGraph, languagesGraph: ChannelStatsGraph, growthGraph: ChannelStatsGraph, followersGraph: ChannelStatsGraph, muteGraph: ChannelStatsGraph, topHoursGraph: ChannelStatsGraph, interactionsGraph: ChannelStatsGraph) {
         self.period = period
         self.followers = followers
         self.viewsPerPost = viewsPerPost
         self.sharesPerPost = sharesPerPost
         self.enabledNotifications = enabledNotifications
-        self.viewsBySource = viewsBySource
-        self.newFollowersBySource = newFollowersBySource
-        self.languages = languages
+        self.viewsBySourceGraph = viewsBySourceGraph
+        self.newFollowersBySourceGraph = newFollowersBySourceGraph
+        self.languagesGraph = languagesGraph
         self.growthGraph = growthGraph
         self.followersGraph = followersGraph
         self.muteGraph = muteGraph
@@ -80,13 +80,13 @@ public final class ChannelStats: Equatable {
         if lhs.enabledNotifications != rhs.enabledNotifications {
             return false
         }
-        if lhs.viewsBySource != rhs.viewsBySource {
+        if lhs.viewsBySourceGraph != rhs.viewsBySourceGraph {
             return false
         }
-        if lhs.newFollowersBySource != rhs.newFollowersBySource {
+        if lhs.newFollowersBySourceGraph != rhs.newFollowersBySourceGraph {
             return false
         }
-        if lhs.languages != rhs.languages {
+        if lhs.languagesGraph != rhs.languagesGraph {
             return false
         }
         if lhs.growthGraph != rhs.growthGraph {
@@ -108,23 +108,23 @@ public final class ChannelStats: Equatable {
     }
     
     public func withUpdatedGrowthGraph(_ growthGraph: ChannelStatsGraph) -> ChannelStats {
-        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySource: self.viewsBySource, newFollowersBySource: self.newFollowersBySource, languages: self.languages, growthGraph: growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
     }
     
     public func withUpdatedFollowersGraph(_ followersGraph: ChannelStatsGraph) -> ChannelStats {
-        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySource: self.viewsBySource, newFollowersBySource: self.newFollowersBySource, languages: self.languages, growthGraph: self.growthGraph, followersGraph: followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
     }
     
     public func withUpdatedMuteGraph(_ muteGraph: ChannelStatsGraph) -> ChannelStats {
-        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySource: self.viewsBySource, newFollowersBySource: self.newFollowersBySource, languages: self.languages, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
     }
     
     public func withUpdatedTopHoursGraph(_ viewsByHourGraph: ChannelStatsGraph) -> ChannelStats {
-        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySource: self.viewsBySource, newFollowersBySource: self.newFollowersBySource, languages: self.languages, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: viewsByHourGraph, interactionsGraph: self.interactionsGraph)
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: viewsByHourGraph, interactionsGraph: self.interactionsGraph)
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: ChannelStatsGraph) -> ChannelStats {
-        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySource: self.viewsBySource, newFollowersBySource: self.newFollowersBySource, languages: self.languages, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: interactionsGraph)
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: interactionsGraph)
     }
 }
 
@@ -180,10 +180,10 @@ private func requestGraph(network: Network, datacenterId: Int32, token: String) 
         signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
         |> castError(MTRpcError.self)
         |> mapToSignal { worker in
-            return worker.request(Api.functions.stats.loadAsyncGraph(token: token))
+            return worker.request(Api.functions.stats.loadAsyncGraph(flags: 0, token: token, x: nil))
         }
     } else {
-        signal = network.request(Api.functions.stats.loadAsyncGraph(token: token))
+        signal = network.request(Api.functions.stats.loadAsyncGraph(flags: 0, token: token, x: nil))
     }
     
     return signal
@@ -377,9 +377,9 @@ public final class ChannelStatsContext {
 extension ChannelStatsGraph {
     init(apiStatsGraph: Api.StatsGraph) {
         switch apiStatsGraph {
-            case let .statsGraph(json):
+            case let .statsGraph(_, json, zoomToken):
                 if case let .dataJSON(string) = json {
-                    self = .Loaded(data: string)
+                    self = .Loaded(data: string, zoomToken: zoomToken)
                 } else {
                     self = .Failed(error: "")
                 }
@@ -409,14 +409,6 @@ extension ChannelStatsValue {
     }
 }
 
-extension ChannelStatsNamedValue {
-    init(apiStatsRowAbsValueAndPrev: Api.StatsRowAbsValueAndPrev) {
-        switch apiStatsRowAbsValueAndPrev {
-            case let .statsRowAbsValueAndPrev(id, title, shortTitle, values):
-                self = ChannelStatsNamedValue(id: id, title: title, shortTitle: shortTitle, value: ChannelStatsValue(apiStatsAbsValueAndPrev: values))
-        }
-    }
-}
 
 extension ChannelStatsPercentValue {
     init(apiPercentValue: Api.StatsPercentValue) {
@@ -430,8 +422,8 @@ extension ChannelStatsPercentValue {
 extension ChannelStats {
     convenience init(apiBroadcastStats: Api.stats.BroadcastStats) {
         switch apiBroadcastStats {
-            case let .broadcastStats(period, followers, viewsPerPost, sharesPerPost, enabledNotifications, viewsBySource, newFollowersBySource, languages, growthGraph, followersGraph, muteGraph, topHoursGraph, interactionsGraph):
-                self.init(period: ChannelStatsDateRange(apiStatsDateRangeDays: period), followers: ChannelStatsValue(apiStatsAbsValueAndPrev: followers), viewsPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: viewsPerPost), sharesPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: sharesPerPost), enabledNotifications: ChannelStatsPercentValue(apiPercentValue: enabledNotifications), viewsBySource: viewsBySource.map { ChannelStatsNamedValue(apiStatsRowAbsValueAndPrev: $0) }, newFollowersBySource: newFollowersBySource.map { ChannelStatsNamedValue(apiStatsRowAbsValueAndPrev: $0) }, languages: languages.map { ChannelStatsNamedValue(apiStatsRowAbsValueAndPrev: $0) }, growthGraph: ChannelStatsGraph(apiStatsGraph: growthGraph), followersGraph: ChannelStatsGraph(apiStatsGraph: followersGraph), muteGraph: ChannelStatsGraph(apiStatsGraph: muteGraph), topHoursGraph: ChannelStatsGraph(apiStatsGraph: topHoursGraph), interactionsGraph: ChannelStatsGraph(apiStatsGraph: interactionsGraph))
+        case let .broadcastStats(period, followers, viewsPerPost, sharesPerPost, enabledNotifications, growthGraph, followersGraph, muteGraph, topHoursGraph, interactionsGraph, viewsBySourceGraph, newFollowersBySourceGraph, languagesGraph, recentMessageInteractions):
+                self.init(period: ChannelStatsDateRange(apiStatsDateRangeDays: period), followers: ChannelStatsValue(apiStatsAbsValueAndPrev: followers), viewsPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: viewsPerPost), sharesPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: sharesPerPost), enabledNotifications: ChannelStatsPercentValue(apiPercentValue: enabledNotifications), viewsBySourceGraph: ChannelStatsGraph(apiStatsGraph: viewsBySourceGraph), newFollowersBySourceGraph: ChannelStatsGraph(apiStatsGraph: newFollowersBySourceGraph), languagesGraph: ChannelStatsGraph(apiStatsGraph: languagesGraph), growthGraph: ChannelStatsGraph(apiStatsGraph: growthGraph), followersGraph: ChannelStatsGraph(apiStatsGraph: followersGraph), muteGraph: ChannelStatsGraph(apiStatsGraph: muteGraph), topHoursGraph: ChannelStatsGraph(apiStatsGraph: topHoursGraph), interactionsGraph: ChannelStatsGraph(apiStatsGraph: interactionsGraph))
         }
     }
 }
