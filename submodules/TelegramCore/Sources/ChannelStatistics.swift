@@ -126,6 +126,15 @@ public final class ChannelStats: Equatable {
     public func withUpdatedInteractionsGraph(_ interactionsGraph: ChannelStatsGraph) -> ChannelStats {
         return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: interactionsGraph)
     }
+    public func withUpdatedViewsBySourceGraph(_ viewsBySourceGraph: ChannelStatsGraph) -> ChannelStats {
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: viewsBySourceGraph, newFollowersBySourceGraph: self.newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
+    }
+    public func withUpdatedNewFollowersBySourceGraph(_ newFollowersBySourceGraph: ChannelStatsGraph) -> ChannelStats {
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: newFollowersBySourceGraph, languagesGraph: self.languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
+    }
+    public func withUpdatedLanguageGraph(_ languagesGraph: ChannelStatsGraph) -> ChannelStats {
+        return ChannelStats(period: self.period, followers: self.followers, viewsPerPost: self.viewsPerPost, sharesPerPost: self.sharesPerPost, enabledNotifications: self.enabledNotifications, viewsBySourceGraph: self.viewsBySourceGraph, newFollowersBySourceGraph: newFollowersBySourceGraph, languagesGraph: languagesGraph, growthGraph: self.growthGraph, followersGraph: self.followersGraph, muteGraph: self.muteGraph, topHoursGraph: self.topHoursGraph, interactionsGraph: self.interactionsGraph)
+    }
 }
 
 public struct ChannelStatsContextState: Equatable {
@@ -320,6 +329,49 @@ private final class ChannelStatsContextImpl {
             }), forKey: token)
         }
     }
+    
+    func loadViewsBySourceGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.viewsBySourceGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+                |> deliverOnMainQueue).start(next: { [weak self] graph in
+                    if let strongSelf = self, let graph = graph {
+                        strongSelf._state = ChannelStatsContextState(stats: strongSelf._state.stats?.withUpdatedViewsBySourceGraph(graph))
+                        strongSelf._statePromise.set(.single(strongSelf._state))
+                    }
+                }), forKey: token)
+        }
+    }
+    func loadNewFollowersBySourceGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.newFollowersBySourceGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+                |> deliverOnMainQueue).start(next: { [weak self] graph in
+                    if let strongSelf = self, let graph = graph {
+                        strongSelf._state = ChannelStatsContextState(stats: strongSelf._state.stats?.withUpdatedNewFollowersBySourceGraph(graph))
+                        strongSelf._statePromise.set(.single(strongSelf._state))
+                    }
+                }), forKey: token)
+        }
+    }
+    func loadLanguageGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.languagesGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+                |> deliverOnMainQueue).start(next: { [weak self] graph in
+                    if let strongSelf = self, let graph = graph {
+                        strongSelf._state = ChannelStatsContextState(stats: strongSelf._state.stats?.withUpdatedLanguageGraph(graph))
+                        strongSelf._statePromise.set(.single(strongSelf._state))
+                    }
+                }), forKey: token)
+        }
+    }
 }
 
 public final class ChannelStatsContext {
@@ -370,6 +422,21 @@ public final class ChannelStatsContext {
     public func loadInteractionsGraph() {
         self.impl.with { impl in
             impl.loadInteractionsGraph()
+        }
+    }
+    public func loadViewsBySourceGraph() {
+        self.impl.with { impl in
+            impl.loadViewsBySourceGraph()
+        }
+    }
+    public func loadNewFollowersBySourceGraph() {
+        self.impl.with { impl in
+            impl.loadNewFollowersBySourceGraph()
+        }
+    }
+    public func loadLanguageGraph() {
+        self.impl.with { impl in
+            impl.loadLanguageGraph()
         }
     }
 }
