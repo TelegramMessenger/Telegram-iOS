@@ -13,7 +13,7 @@ public protocol ChartViewRenderer: class {
     func render(context: CGContext, bounds: CGRect, chartFrame: CGRect)
 }
 
-class ChartView: UIView {
+class ChartView: UIControl {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
@@ -63,11 +63,18 @@ class ChartView: UIView {
     var userDidSelectCoordinateClosure: ((CGPoint) -> Void)?
     var userDidDeselectCoordinateClosure: (() -> Void)?
     
+    private var _isTracking: Bool = false
+    private var touchInitialLocation: CGPoint?
+    override var isTracking: Bool {
+        return self._isTracking
+    }
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let point = touches.first?.location(in: self) {
             let fractionPoint = CGPoint(x: (point.x - chartFrame.origin.x) / chartFrame.width,
                                         y: (point.y - chartFrame.origin.y) / chartFrame.height)
             userDidSelectCoordinateClosure?(fractionPoint)
+            self.touchInitialLocation = point
         }
     }
     
@@ -76,15 +83,23 @@ class ChartView: UIView {
             let fractionPoint = CGPoint(x: (point.x - chartFrame.origin.x) / chartFrame.width,
                                         y: (point.y - chartFrame.origin.y) / chartFrame.height)
             userDidSelectCoordinateClosure?(fractionPoint)
+            
+            if let initialPosition = self.touchInitialLocation, abs(initialPosition.x - point.x) > 3.0 {
+                self._isTracking = true
+            }
         }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         userDidDeselectCoordinateClosure?()
+        self.touchInitialLocation = nil
+        self._isTracking = false
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         userDidDeselectCoordinateClosure?()
+        self.touchInitialLocation = nil
+        self._isTracking = false
     }
     
     // MARK: Details View

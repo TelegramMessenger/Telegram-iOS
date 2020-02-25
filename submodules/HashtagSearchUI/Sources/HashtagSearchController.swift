@@ -71,6 +71,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, toggleArchivedFolderHiddenByDefault: {
         }, activateChatPreview: { _, _, gesture in
             gesture?.cancel()
+        }, present: { _ in
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)

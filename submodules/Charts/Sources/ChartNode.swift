@@ -23,12 +23,19 @@ public final class ChartNode: ASDisplayNode {
         self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
+    @objc private func nop() {
+    }
+    
     public func setup(_ data: String, bar: Bool = false) {
+        var bar = bar
+        if data.contains("bar") {
+            bar = true
+        }
         if let data = data.data(using: .utf8) {
             ChartsDataManager().readChart(data: data, extraCopiesCount: 0, sync: true, success: { [weak self] collection in
                 let controller: BaseChartController
                 if bar {
-                    controller = DailyBarsChartController(chartsCollection: collection)
+                    controller = TwoAxisLinesChartController(chartsCollection: collection)
                 } else {
                     controller = GeneralLinesChartController(chartsCollection: collection)
                 }

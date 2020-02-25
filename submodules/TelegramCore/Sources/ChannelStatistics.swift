@@ -16,7 +16,7 @@ public struct ChannelStatsValue: Equatable {
 }
 
 public struct ChannelStatsPercentValue: Equatable {
-    public let fraction: Double
+    public let value: Double
     public let total: Double
 }
 
@@ -422,7 +422,7 @@ extension ChannelStatsPercentValue {
     init(apiPercentValue: Api.StatsPercentValue) {
         switch apiPercentValue {
             case let .statsPercentValue(part, total):
-                self = ChannelStatsPercentValue(fraction: part, total: total)
+                self = ChannelStatsPercentValue(value: part, total: total)
         }
     }
 }
@@ -435,4 +435,3 @@ extension ChannelStats {
         }
     }
 }
-

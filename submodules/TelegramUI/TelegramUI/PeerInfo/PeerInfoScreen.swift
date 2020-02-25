@@ -36,6 +36,7 @@ import LocationResources
 import LocationUI
 import Geocoding
 import TextFormat
+import StatisticsUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -2215,6 +2216,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             } else if let channel = peer as? TelegramChannel {
+                if let cachedData = self.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_Stats, color: .accent, action: { [weak self] in
+                        dismissAction()
+                        self?.openStats()
+                    }))
+                }
+                
                 var canReport = true
                 if channel.isVerified {
                     canReport = false
@@ -2689,6 +2697,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
             }
         })
+    }
+    
+    private func openStats() {
+        guard let controller = self.controller, let data = self.data, let peer = data.peer, let cachedData = data.cachedData else {
+            return
+        }
+        self.view.endEditing(true)
+        
+        controller.push(channelStatsController(context: self.context, peer: peer, cachedPeerData: cachedData))
     }
     
     private func openReport(user: Bool) {
