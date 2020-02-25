@@ -132,40 +132,50 @@ public struct ChannelStatsContextState: Equatable {
     public var stats: ChannelStats?
 }
 
-private func requestStats(network: Network, datacenterId: Int32, peer: Peer, dark: Bool = false) -> Signal<ChannelStats?, NoError> {
-    return .never()
-    /*guard let inputChannel = apiInputChannel(peer) else {
-        return .never()
-    }
+private func requestStats(network: Network, postbox: Postbox, datacenterId: Int32, peerId: PeerId, dark: Bool = false) -> Signal<ChannelStats?, NoError> {
+    //return .never()
     
-    var flags: Int32 = 0
-    if dark {
-        flags |= (1 << 1)
-    }
-    
-    let signal: Signal<Api.stats.BroadcastStats, MTRpcError>
-    if network.datacenterId != datacenterId {
-        signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
-        |> castError(MTRpcError.self)
-        |> mapToSignal { worker in
-            return worker.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
+    return postbox.transaction { transaction -> Api.InputChannel? in
+        if let peer = transaction.getPeer(peerId) {
+            return apiInputChannel(peer)
+        } else {
+            return nil
         }
-    } else {
-        signal = network.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
+    } |> mapToSignal { inputChannel -> Signal<ChannelStats?, NoError> in
+        guard let inputChannel = inputChannel else {
+            return .complete()
+        }
+        
+        var flags: Int32 = 0
+        if dark {
+            flags |= (1 << 1)
+        }
+        
+        let signal: Signal<Api.stats.BroadcastStats, MTRpcError>
+        if network.datacenterId != datacenterId {
+            signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
+                |> castError(MTRpcError.self)
+                |> mapToSignal { worker in
+                    return worker.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
+            }
+        } else {
+            signal = network.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
+        }
+        
+        return signal
+            |> map { result -> ChannelStats? in
+                return ChannelStats(apiBroadcastStats: result)
+            }
+            |> `catch` { error -> Signal<ChannelStats?, NoError> in
+                return .single(nil)
+        }
     }
     
-    return signal
-    |> map { result -> ChannelStats? in
-        return ChannelStats(apiBroadcastStats: result)
-    }
-    |> `catch` { _ -> Signal<ChannelStats?, NoError> in
-        return .single(nil)
-    }*/
+    
 }
 
 private func requestGraph(network: Network, datacenterId: Int32, token: String) -> Signal<ChannelStatsGraph?, NoError> {
-    return .never()
-    /*let signal: Signal<Api.StatsGraph, MTRpcError>
+    let signal: Signal<Api.StatsGraph, MTRpcError>
     if network.datacenterId != datacenterId {
         signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
         |> castError(MTRpcError.self)
@@ -182,12 +192,13 @@ private func requestGraph(network: Network, datacenterId: Int32, token: String) 
     }
     |> `catch` { _ -> Signal<ChannelStatsGraph?, NoError> in
         return .single(nil)
-    }*/
+    }
 }
 
 private final class ChannelStatsContextImpl {
     private let network: Network
-    private let peer: Peer
+    private let postbox: Postbox
+    private let peerId: PeerId
     private let datacenterId: Int32
     
     private var _state: ChannelStatsContextState {
@@ -205,11 +216,11 @@ private final class ChannelStatsContextImpl {
     private let disposable = MetaDisposable()
     private let disposables = DisposableDict<String>()
     
-    init(network: Network, datacenterId: Int32, peer: Peer) {
+    init(network: Network, postbox: Postbox, datacenterId: Int32, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
-        
+        self.postbox = postbox
         self.network = network
-        self.peer = peer
+        self.peerId = peerId
         self.datacenterId = datacenterId
         self._state = ChannelStatsContextState(stats: nil)
         self._statePromise.set(.single(self._state))
@@ -226,7 +237,7 @@ private final class ChannelStatsContextImpl {
     private func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestStats(network: self.network, datacenterId: self.datacenterId, peer: self.peer)
+        self.disposable.set((requestStats(network: self.network, postbox: self.postbox, datacenterId: self.datacenterId, peerId: self.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] stats in
             if let strongSelf = self {
                 strongSelf._state = ChannelStatsContextState(stats: stats)
@@ -326,9 +337,9 @@ public final class ChannelStatsContext {
         }
     }
     
-    public init(network: Network, datacenterId: Int32, peer: Peer) {
+    public init(network: Network, postbox: Postbox, datacenterId: Int32, peerId: PeerId) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return ChannelStatsContextImpl(network: network, datacenterId: datacenterId, peer: peer)
+            return ChannelStatsContextImpl(network: network, postbox: postbox, datacenterId: datacenterId, peerId: peerId)
         })
     }
     
@@ -363,7 +374,7 @@ public final class ChannelStatsContext {
     }
 }
 
-/*extension ChannelStatsGraph {
+extension ChannelStatsGraph {
     init(apiStatsGraph: Api.StatsGraph) {
         switch apiStatsGraph {
             case let .statsGraph(json):
@@ -424,4 +435,4 @@ extension ChannelStats {
         }
     }
 }
-*/
+
