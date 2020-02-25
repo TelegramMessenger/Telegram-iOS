@@ -12044,7 +12044,7 @@ public extension Api {
     public enum StatsGraph: TypeConstructorDescription {
         case statsGraphAsync(token: String)
         case statsGraphError(error: String)
-        case statsGraph(json: Api.DataJSON)
+        case statsGraph(flags: Int32, json: Api.DataJSON, zoomToken: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -12060,11 +12060,13 @@ public extension Api {
                     }
                     serializeString(error, buffer: buffer, boxed: false)
                     break
-                case .statsGraph(let json):
+                case .statsGraph(let flags, let json, let zoomToken):
                     if boxed {
-                        buffer.appendInt32(-1057809608)
+                        buffer.appendInt32(-1901828938)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     json.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(zoomToken!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -12075,8 +12077,8 @@ public extension Api {
                 return ("statsGraphAsync", [("token", token)])
                 case .statsGraphError(let error):
                 return ("statsGraphError", [("error", error)])
-                case .statsGraph(let json):
-                return ("statsGraph", [("json", json)])
+                case .statsGraph(let flags, let json, let zoomToken):
+                return ("statsGraph", [("flags", flags), ("json", json), ("zoomToken", zoomToken)])
     }
     }
     
@@ -12103,13 +12105,19 @@ public extension Api {
             }
         }
         public static func parse_statsGraph(_ reader: BufferReader) -> StatsGraph? {
-            var _1: Api.DataJSON?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DataJSON?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
+                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraph(json: _1!)
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StatsGraph.statsGraph(flags: _1!, json: _2!, zoomToken: _3)
             }
             else {
                 return nil
@@ -14972,6 +14980,48 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.PaymentCharge.paymentCharge(id: _1!, providerChargeId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum MessageInteractionCounters: TypeConstructorDescription {
+        case messageInteractionCounters(msgId: Int32, views: Int32, forwards: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageInteractionCounters(let msgId, let views, let forwards):
+                    if boxed {
+                        buffer.appendInt32(-1387279939)
+                    }
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(views, buffer: buffer, boxed: false)
+                    serializeInt32(forwards, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageInteractionCounters(let msgId, let views, let forwards):
+                return ("messageInteractionCounters", [("msgId", msgId), ("views", views), ("forwards", forwards)])
+    }
+    }
+    
+        public static func parse_messageInteractionCounters(_ reader: BufferReader) -> MessageInteractionCounters? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageInteractionCounters.messageInteractionCounters(msgId: _1!, views: _2!, forwards: _3!)
             }
             else {
                 return nil
@@ -21258,54 +21308,6 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.UserProfilePhoto.userProfilePhoto(photoId: _1!, photoSmall: _2!, photoBig: _3!, dcId: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum StatsRowAbsValueAndPrev: TypeConstructorDescription {
-        case statsRowAbsValueAndPrev(id: String, title: String, shortTitle: String, values: Api.StatsAbsValueAndPrev)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsRowAbsValueAndPrev(let id, let title, let shortTitle, let values):
-                    if boxed {
-                        buffer.appendInt32(-581804346)
-                    }
-                    serializeString(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(shortTitle, buffer: buffer, boxed: false)
-                    values.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsRowAbsValueAndPrev(let id, let title, let shortTitle, let values):
-                return ("statsRowAbsValueAndPrev", [("id", id), ("title", title), ("shortTitle", shortTitle), ("values", values)])
-    }
-    }
-    
-        public static func parse_statsRowAbsValueAndPrev(_ reader: BufferReader) -> StatsRowAbsValueAndPrev? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.StatsRowAbsValueAndPrev.statsRowAbsValueAndPrev(id: _1!, title: _2!, shortTitle: _3!, values: _4!)
             }
             else {
                 return nil
