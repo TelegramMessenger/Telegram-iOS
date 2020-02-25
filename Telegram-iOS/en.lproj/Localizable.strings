@@ -5363,3 +5363,6 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.FollowersTitle" = "FOLLOWERS";
 "Stats.NotificationsTitle" = "NOTIFICATIONS";
 "Stats.InteractionsTitle" = "INTERACTIONS";
+"Stats.ViewsBySourceTitle" = "VIEWS BY SOURCE";
+"Stats.FollowersBySourceTitle" = "FOLLOWERS BY SOURCE";
+"Stats.LanguagesTitle" = "LANGUAGES";

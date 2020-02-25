@@ -418,7 +418,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
     dict[1244130093] = { return Api.StatsGraph.parse_statsGraphAsync($0) }
     dict[-1092839390] = { return Api.StatsGraph.parse_statsGraphError($0) }
-    dict[-1057809608] = { return Api.StatsGraph.parse_statsGraph($0) }
+    dict[-1901828938] = { return Api.StatsGraph.parse_statsGraph($0) }
     dict[-1036572727] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
     dict[878078826] = { return Api.PageTableCell.parse_pageTableCell($0) }
     dict[-1626209256] = { return Api.ChatBannedRights.parse_chatBannedRights($0) }
@@ -529,7 +529,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1837345356] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
-    dict[205195937] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
+    dict[-1387279939] = { return Api.MessageInteractionCounters.parse_messageInteractionCounters($0) }
+    dict[821185690] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-484987010] = { return Api.Updates.parse_updatesTooLong($0) }
     dict[-1857044719] = { return Api.Updates.parse_updateShortMessage($0) }
     dict[377562760] = { return Api.Updates.parse_updateShortChatMessage($0) }
@@ -775,7 +776,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[-1531132162] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
-    dict[-581804346] = { return Api.StatsRowAbsValueAndPrev.parse_statsRowAbsValueAndPrev($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-264117680] = { return Api.ChatOnlines.parse_chatOnlines($0) }
     dict[488313413] = { return Api.InputAppEvent.parse_inputAppEvent($0) }
@@ -1225,6 +1225,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentCharge:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageInteractionCounters:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.stats.BroadcastStats:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Updates:
@@ -1412,8 +1414,6 @@ public struct Api {
             case let _1 as Api.payments.SavedInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.updates.ChannelDifference:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.StatsRowAbsValueAndPrev:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
                 _1.serialize(buffer, boxed)

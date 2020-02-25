@@ -13,12 +13,16 @@ import Charts
 class StatsGraphItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let graph: ChannelStatsGraph
+    let type: ChartType
+    let height: CGFloat
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, height: CGFloat = 0.0, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
+        self.type = type
+        self.height = height
         self.sectionId = sectionId
         self.style = style
     }
@@ -115,12 +119,12 @@ class StatsGraphItemNode: ListViewItemNode {
                 case .plain:
                     itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 340.0)
+                    contentSize = CGSize(width: params.width, height: 350.0 + item.height)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 340.0)
+                    contentSize = CGSize(width: params.width, height: 350.0 + item.height)
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
@@ -173,7 +177,7 @@ class StatsGraphItemNode: ListViewItemNode {
                             bottomStripeInset = 0.0
                         }
                         
-                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: -10.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 350.0))
+                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 400.0))
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
@@ -182,7 +186,9 @@ class StatsGraphItemNode: ListViewItemNode {
                     
                     if let updatedGraph = updatedGraph, case let .Loaded(data) = updatedGraph {
                         var data = data.replacingOccurrences(of: "step", with: "bar")
-                        strongSelf.chartNode.setup(data)
+                        strongSelf.chartNode.setup(data, type: item.type, getDetailsData: { date, completion in
+                            
+                        })
                     }
                 }
             })

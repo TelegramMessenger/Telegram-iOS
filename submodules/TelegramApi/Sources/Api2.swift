@@ -539,47 +539,40 @@ public struct payments {
 public extension Api {
 public struct stats {
     public enum BroadcastStats: TypeConstructorDescription {
-        case broadcastStats(period: Api.StatsDateRangeDays, followers: Api.StatsAbsValueAndPrev, viewsPerPost: Api.StatsAbsValueAndPrev, sharesPerPost: Api.StatsAbsValueAndPrev, enabledNotifications: Api.StatsPercentValue, viewsBySource: [Api.StatsRowAbsValueAndPrev], newFollowersBySource: [Api.StatsRowAbsValueAndPrev], languages: [Api.StatsRowAbsValueAndPrev], growthGraph: Api.StatsGraph, followersGraph: Api.StatsGraph, muteGraph: Api.StatsGraph, topHoursGraph: Api.StatsGraph, interactionsGraph: Api.StatsGraph)
+        case broadcastStats(period: Api.StatsDateRangeDays, followers: Api.StatsAbsValueAndPrev, viewsPerPost: Api.StatsAbsValueAndPrev, sharesPerPost: Api.StatsAbsValueAndPrev, enabledNotifications: Api.StatsPercentValue, growthGraph: Api.StatsGraph, followersGraph: Api.StatsGraph, muteGraph: Api.StatsGraph, topHoursGraph: Api.StatsGraph, interactionsGraph: Api.StatsGraph, viewsBySourceGraph: Api.StatsGraph, newFollowersBySourceGraph: Api.StatsGraph, languagesGraph: Api.StatsGraph, recentMessageInteractions: [Api.MessageInteractionCounters])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .broadcastStats(let period, let followers, let viewsPerPost, let sharesPerPost, let enabledNotifications, let viewsBySource, let newFollowersBySource, let languages, let growthGraph, let followersGraph, let muteGraph, let topHoursGraph, let interactionsGraph):
+                case .broadcastStats(let period, let followers, let viewsPerPost, let sharesPerPost, let enabledNotifications, let growthGraph, let followersGraph, let muteGraph, let topHoursGraph, let interactionsGraph, let viewsBySourceGraph, let newFollowersBySourceGraph, let languagesGraph, let recentMessageInteractions):
                     if boxed {
-                        buffer.appendInt32(205195937)
+                        buffer.appendInt32(821185690)
                     }
                     period.serialize(buffer, true)
                     followers.serialize(buffer, true)
                     viewsPerPost.serialize(buffer, true)
                     sharesPerPost.serialize(buffer, true)
                     enabledNotifications.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(viewsBySource.count))
-                    for item in viewsBySource {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newFollowersBySource.count))
-                    for item in newFollowersBySource {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(languages.count))
-                    for item in languages {
-                        item.serialize(buffer, true)
-                    }
                     growthGraph.serialize(buffer, true)
                     followersGraph.serialize(buffer, true)
                     muteGraph.serialize(buffer, true)
                     topHoursGraph.serialize(buffer, true)
                     interactionsGraph.serialize(buffer, true)
+                    viewsBySourceGraph.serialize(buffer, true)
+                    newFollowersBySourceGraph.serialize(buffer, true)
+                    languagesGraph.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentMessageInteractions.count))
+                    for item in recentMessageInteractions {
+                        item.serialize(buffer, true)
+                    }
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .broadcastStats(let period, let followers, let viewsPerPost, let sharesPerPost, let enabledNotifications, let viewsBySource, let newFollowersBySource, let languages, let growthGraph, let followersGraph, let muteGraph, let topHoursGraph, let interactionsGraph):
-                return ("broadcastStats", [("period", period), ("followers", followers), ("viewsPerPost", viewsPerPost), ("sharesPerPost", sharesPerPost), ("enabledNotifications", enabledNotifications), ("viewsBySource", viewsBySource), ("newFollowersBySource", newFollowersBySource), ("languages", languages), ("growthGraph", growthGraph), ("followersGraph", followersGraph), ("muteGraph", muteGraph), ("topHoursGraph", topHoursGraph), ("interactionsGraph", interactionsGraph)])
+                case .broadcastStats(let period, let followers, let viewsPerPost, let sharesPerPost, let enabledNotifications, let growthGraph, let followersGraph, let muteGraph, let topHoursGraph, let interactionsGraph, let viewsBySourceGraph, let newFollowersBySourceGraph, let languagesGraph, let recentMessageInteractions):
+                return ("broadcastStats", [("period", period), ("followers", followers), ("viewsPerPost", viewsPerPost), ("sharesPerPost", sharesPerPost), ("enabledNotifications", enabledNotifications), ("growthGraph", growthGraph), ("followersGraph", followersGraph), ("muteGraph", muteGraph), ("topHoursGraph", topHoursGraph), ("interactionsGraph", interactionsGraph), ("viewsBySourceGraph", viewsBySourceGraph), ("newFollowersBySourceGraph", newFollowersBySourceGraph), ("languagesGraph", languagesGraph), ("recentMessageInteractions", recentMessageInteractions)])
     }
     }
     
@@ -604,17 +597,17 @@ public struct stats {
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.StatsPercentValue
             }
-            var _6: [Api.StatsRowAbsValueAndPrev]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsRowAbsValueAndPrev.self)
+            var _6: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
-            var _7: [Api.StatsRowAbsValueAndPrev]?
-            if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsRowAbsValueAndPrev.self)
+            var _7: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
-            var _8: [Api.StatsRowAbsValueAndPrev]?
-            if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsRowAbsValueAndPrev.self)
+            var _8: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
             var _9: Api.StatsGraph?
             if let signature = reader.readInt32() {
@@ -636,6 +629,10 @@ public struct stats {
             if let signature = reader.readInt32() {
                 _13 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
+            var _14: [Api.MessageInteractionCounters]?
+            if let _ = reader.readInt32() {
+                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageInteractionCounters.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -649,8 +646,9 @@ public struct stats {
             let _c11 = _11 != nil
             let _c12 = _12 != nil
             let _c13 = _13 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
-                return Api.stats.BroadcastStats.broadcastStats(period: _1!, followers: _2!, viewsPerPost: _3!, sharesPerPost: _4!, enabledNotifications: _5!, viewsBySource: _6!, newFollowersBySource: _7!, languages: _8!, growthGraph: _9!, followersGraph: _10!, muteGraph: _11!, topHoursGraph: _12!, interactionsGraph: _13!)
+            let _c14 = _14 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
+                return Api.stats.BroadcastStats.broadcastStats(period: _1!, followers: _2!, viewsPerPost: _3!, sharesPerPost: _4!, enabledNotifications: _5!, growthGraph: _6!, followersGraph: _7!, muteGraph: _8!, topHoursGraph: _9!, interactionsGraph: _10!, viewsBySourceGraph: _11!, newFollowersBySourceGraph: _12!, languagesGraph: _13!, recentMessageInteractions: _14!)
             }
             else {
                 return nil
