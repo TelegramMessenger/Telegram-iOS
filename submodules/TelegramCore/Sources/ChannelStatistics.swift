@@ -168,10 +168,10 @@ private func requestGraph(network: Network, datacenterId: Int32, token: String) 
         signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
         |> castError(MTRpcError.self)
         |> mapToSignal { worker in
-            return worker.request(Api.functions.stats.loadAsyncGraph(token: token))
+            return worker.request(Api.functions.stats.loadAsyncGraph(flags: 0, token: token, x: nil))
         }
     } else {
-        signal = network.request(Api.functions.stats.loadAsyncGraph(token: token))
+        signal = network.request(Api.functions.stats.loadAsyncGraph(flags: 0, token: token, x: nil))
     }
     
     return signal
@@ -364,7 +364,7 @@ public final class ChannelStatsContext {
 extension ChannelStatsGraph {
     init(apiStatsGraph: Api.StatsGraph) {
         switch apiStatsGraph {
-            case let .statsGraph(json):
+            case let .statsGraph(_, json, _):
                 if case let .dataJSON(string) = json {
                     self = .Loaded(data: string)
                 } else {
@@ -396,14 +396,14 @@ extension ChannelStatsValue {
     }
 }
 
-extension ChannelStatsNamedValue {
+/*extension ChannelStatsNamedValue {
     init(apiStatsRowAbsValueAndPrev: Api.StatsRowAbsValueAndPrev) {
         switch apiStatsRowAbsValueAndPrev {
             case let .statsRowAbsValueAndPrev(id, title, shortTitle, values):
                 self = ChannelStatsNamedValue(id: id, title: title, shortTitle: shortTitle, value: ChannelStatsValue(apiStatsAbsValueAndPrev: values))
         }
     }
-}
+}*/
 
 extension ChannelStatsPercentValue {
     init(apiPercentValue: Api.StatsPercentValue) {
@@ -416,9 +416,10 @@ extension ChannelStatsPercentValue {
 
 extension ChannelStats {
     convenience init(apiBroadcastStats: Api.stats.BroadcastStats) {
-        switch apiBroadcastStats {
+        preconditionFailure()
+        /*switch apiBroadcastStats {
             case let .broadcastStats(period, followers, viewsPerPost, sharesPerPost, enabledNotifications, viewsBySource, newFollowersBySource, languages, growthGraph, followersGraph, muteGraph, topHoursGraph, interactionsGraph):
                 self.init(period: ChannelStatsDateRange(apiStatsDateRangeDays: period), followers: ChannelStatsValue(apiStatsAbsValueAndPrev: followers), viewsPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: viewsPerPost), sharesPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: sharesPerPost), enabledNotifications: ChannelStatsPercentValue(apiPercentValue: enabledNotifications), viewsBySource: viewsBySource.map { ChannelStatsNamedValue(apiStatsRowAbsValueAndPrev: $0) }, newFollowersBySource: newFollowersBySource.map { ChannelStatsNamedValue(apiStatsRowAbsValueAndPrev: $0) }, languages: languages.map { ChannelStatsNamedValue(apiStatsRowAbsValueAndPrev: $0) }, growthGraph: ChannelStatsGraph(apiStatsGraph: growthGraph), followersGraph: ChannelStatsGraph(apiStatsGraph: followersGraph), muteGraph: ChannelStatsGraph(apiStatsGraph: muteGraph), topHoursGraph: ChannelStatsGraph(apiStatsGraph: topHoursGraph), interactionsGraph: ChannelStatsGraph(apiStatsGraph: interactionsGraph))
-        }
+        }*/
     }
 }

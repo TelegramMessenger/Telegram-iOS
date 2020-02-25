@@ -245,6 +245,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
+//TODO:localization
 private func chatListFilterPresetControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetControllerState, peers: [RenderedPeer]) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
@@ -272,6 +273,41 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     entries.append(.additionalPeerInfo("These chats will always be included in the list."))
     
     return entries
+}
+
+func chatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter) -> ViewController {
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: true), options: []))
+    controller.navigationPresentation = .modal
+    let _ = (controller.result
+    |> take(1)
+    |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
+        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
+            var settings = settings
+            for i in 0 ..< settings.filters.count {
+                if settings.filters[i].id == filter.id {
+                    let previousIncludePeers = settings.filters[i].includePeers
+                    
+                    var chatPeerIds: [PeerId] = []
+                    for peerId in peerIds {
+                        switch peerId {
+                        case let .peer(id):
+                            chatPeerIds.append(id)
+                        default:
+                            break
+                        }
+                    }
+                    settings.filters[i].includePeers = chatPeerIds + previousIncludePeers.filter { peerId in
+                        return !chatPeerIds.contains(peerId)
+                    }
+                }
+            }
+            return settings
+        })
+        |> deliverOnMainQueue).start(next: { settings in
+            controller?.dismiss()
+        })
+    })
+    return controller
 }
 
 func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilter?, updated: @escaping ([ChatListFilter]) -> Void) -> ViewController {
@@ -302,7 +338,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             updateState(f)
         },
         openAddPeer: {
-            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true), options: []))
+            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: true), options: []))
             addPeerDisposable.set((controller.result
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
@@ -313,7 +349,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                         switch peerId {
                         case let .peer(id):
                             if !state.additionallyIncludePeers.contains(id) {
-                                state.additionallyIncludePeers.append(id)
+                                state.additionallyIncludePeers.insert(id, at: 0)
                             }
                         default:
                             break

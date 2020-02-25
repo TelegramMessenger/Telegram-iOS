@@ -29,12 +29,9 @@ struct ChatListNodeViewUpdate {
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
 
-func chatListFilterPredicate(filter: ChatListFilter) -> (Peer, PeerNotificationSettings?, Bool) -> Bool {
+func chatListFilterPredicate(filter: ChatListFilter) -> ChatListFilterPredicate {
     let includePeers = Set(filter.includePeers)
-    return { peer, notificationSettings, isUnread in
-        if includePeers.contains(peer.id) {
-            return true
-        }
+    return ChatListFilterPredicate(includePeerIds: includePeers, include: { peer, notificationSettings, isUnread in
         if filter.excludeRead {
             if !isUnread {
                 return false
@@ -96,11 +93,11 @@ func chatListFilterPredicate(filter: ChatListFilter) -> (Peer, PeerNotificationS
             }
         }
         return true
-    }
+    })
 }
 
 func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
-    let filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)? = location.filter.flatMap(chatListFilterPredicate)
+    let filterPredicate: ChatListFilterPredicate? = location.filter.flatMap(chatListFilterPredicate)
     
     switch location {
         case let .initial(count, _):

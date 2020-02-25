@@ -290,7 +290,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         
         removePeerDisposable.set(applyPeers.start())
     }, addPeer: {
-        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true), options: []))
+        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: false), options: []))
         addPeerDisposable.set((controller.result
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller] peerIds in

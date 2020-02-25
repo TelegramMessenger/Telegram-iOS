@@ -245,7 +245,7 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?) -> [PeerId] {
+    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
         var result: [PeerId] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
             let (_, _, messageIndex, _) = extractKey(key)
@@ -255,7 +255,7 @@ final class ChatListTable: Table {
                 if let filterPredicate = filterPredicate {
                     if let peer = postbox.peerTable.get(messageIndex.id.peerId) {
                         let isUnread = postbox.readStateTable.getCombinedState(messageIndex.id.peerId)?.isUnread ?? false
-                        if filterPredicate(peer, postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId), isUnread) {
+                        if filterPredicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId), isUnread: isUnread) {
                             passFilter = true
                         } else {
                             passFilter = false
@@ -662,6 +662,19 @@ final class ChatListTable: Table {
             let key = self.key(groupId: groupId, index: index, type: .message)
             if let value = self.valueBox.get(self.table, key: key) {
                 return readEntry(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value)
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    func getEntry(peerId: PeerId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> ChatListIntermediateEntry? {
+        if let (peerGroupId, index) = self.getPeerChatListIndex(peerId: peerId) {
+            let key = self.key(groupId: peerGroupId, index: index, type: .message)
+            if let value = self.valueBox.get(self.table, key: key) {
+                return readEntry(groupId: peerGroupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value)
             } else {
                 return nil
             }

@@ -356,7 +356,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
         |> take(1)
         |> deliverOnMainQueue).start(next: { members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
-            let contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: false, searchGroups: false), options: [], filters: [.excludeSelf, .disable(disabledIds)]))
+            let contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: [], filters: [.excludeSelf, .disable(disabledIds)]))
             
             addMembersDisposable.set((contactsController.result
             |> deliverOnMainQueue

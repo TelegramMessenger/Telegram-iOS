@@ -495,12 +495,15 @@ class TabBarNode: ASDisplayNode {
                 let nodeSize = node.textImageNode.image?.size ?? CGSize()
                 
                 let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - nodeSize.width / 2.0)
+                let horizontalHitTestInset = distanceBetweenNodes / 2.0 - nodeSize.width / 2.0
                 let nodeFrame = CGRect(origin: CGPoint(x: originX, y: 3.0), size: nodeSize)
                 transition.updateFrame(node: node, frame: nodeFrame)
                 node.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.extractedContainerNode.contentNode.frame = node.extractedContainerNode.bounds
                 node.extractedContainerNode.contentRect = node.extractedContainerNode.bounds
                 node.containerNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                node.hitTestSlop = UIEdgeInsets(top: -3.0, left: -horizontalHitTestInset, bottom: -3.0, right: -horizontalHitTestInset)
+                node.containerNode.hitTestSlop = UIEdgeInsets(top: -3.0, left: -horizontalHitTestInset, bottom: -3.0, right: -horizontalHitTestInset)
                 node.imageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.textImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.contextImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)

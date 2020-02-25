@@ -191,11 +191,19 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                                 status = .presence(presence, dateTimeFormat)
                             } else if let group = peer as? TelegramGroup {
                                 status = .custom(strings.Conversation_StatusMembers(Int32(group.participantCount)))
-                            } else if let _ = peer as? TelegramChannel {
-                                if let participantCount = participantCount, participantCount != 0 {
-                                    status = .custom(strings.Conversation_StatusMembers(participantCount))
+                            } else if let channel = peer as? TelegramChannel {
+                                if case .group = channel.info {
+                                    if let participantCount = participantCount, participantCount != 0 {
+                                        status = .custom(strings.Conversation_StatusMembers(participantCount))
+                                    } else {
+                                        status = .custom(strings.Group_Status)
+                                    }
                                 } else {
-                                    status = .custom(strings.Group_Status)
+                                    if let participantCount = participantCount, participantCount != 0 {
+                                        status = .custom(strings.Conversation_StatusSubscribers(participantCount))
+                                    } else {
+                                        status = .custom(strings.Channel_Status)
+                                    }
                                 }
                             } else {
                                 status = .none
@@ -666,7 +674,7 @@ private struct ContactsListNodeTransition {
 public enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(options: [ContactListAdditionalOption], includeChatList: Bool)
-    case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool)
+    case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool, searchChannels: Bool)
     
     public var sortOrder: ContactsSortOrder? {
         switch self {
@@ -909,7 +917,7 @@ public final class ContactListNode: ASDisplayNode {
                 includeChatList = natural.includeChatList
             }
             
-            if case let .search(query, searchChatList, searchDeviceContacts, searchGroups) = presentation {
+            if case let .search(query, searchChatList, searchDeviceContacts, searchGroups, searchChannels) = presentation {
                 return query
                 |> mapToSignal { query in
                     let foundLocalContacts: Signal<([FoundPeer], [PeerId: PeerPresence]), NoError>
@@ -919,13 +927,15 @@ public final class ContactListNode: ASDisplayNode {
                         |> mapToSignal { peers -> Signal<([FoundPeer], [PeerId: PeerPresence]), NoError> in
                             var resultPeers: [FoundPeer] = []
                             for peer in peers {
-                                if searchGroups {
+                                if searchGroups || searchChannels {
                                     let mainPeer = peer.chatMainPeer
                                     if let _ = mainPeer as? TelegramUser {
                                     } else if let _ = mainPeer as? TelegramGroup {
                                     } else if let channel = mainPeer as? TelegramChannel {
                                         if case .broadcast = channel.info {
-                                            continue
+                                            if !searchChannels {
+                                                continue
+                                            }
                                         }
                                     } else {
                                         continue
@@ -1010,14 +1020,14 @@ public final class ContactListNode: ASDisplayNode {
                                 let matches: Bool
                                 if peer.peer is TelegramUser {
                                     matches = true
-                                } else if searchGroups {
-                                    if peer.peer is TelegramGroup {
+                                } else if searchGroups || searchChannels {
+                                    if peer.peer is TelegramGroup && searchGroups {
                                         matches = true
                                     } else if let channel = peer.peer as? TelegramChannel {
                                         if case .group = channel.info {
-                                            matches = true
+                                            matches = searchGroups
                                         } else {
-                                            matches = false
+                                            matches = searchChannels
                                         }
                                     } else {
                                         matches = false
@@ -1040,14 +1050,14 @@ public final class ContactListNode: ASDisplayNode {
                                 let matches: Bool
                                 if peer.peer is TelegramUser {
                                     matches = true
-                                } else if searchGroups {
+                                } else if searchGroups || searchChannels {
                                     if peer.peer is TelegramGroup {
-                                        matches = true
+                                        matches = searchGroups
                                     } else if let channel = peer.peer as? TelegramChannel {
                                         if case .group = channel.info {
-                                            matches = true
+                                            matches = searchGroups
                                         } else {
-                                            matches = false
+                                            matches = searchChannels
                                         }
                                     } else {
                                         matches = false

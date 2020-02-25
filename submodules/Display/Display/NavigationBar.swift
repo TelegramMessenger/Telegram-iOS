@@ -103,6 +103,10 @@ enum NavigationPreviousAction: Equatable {
 }
 
 open class NavigationBar: ASDisplayNode {
+    public static var defaultSecondaryContentHeight: CGFloat {
+        return 38.0
+    }
+    
     private var presentationData: NavigationBarPresentationData
     
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, CGFloat, Bool)?
@@ -817,7 +821,7 @@ open class NavigationBar: ASDisplayNode {
             transition.updateAlpha(node: secondaryContentNode, alpha: appearsHidden ? 0.0 : 1.0)
         }
         
-        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? 46.0 : 0.0
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -835,7 +839,7 @@ open class NavigationBar: ASDisplayNode {
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - expansionHeight - apparentAdditionalHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
-                        contentNodeFrame.origin.y += 46.0
+                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
                     }
                 }
             }
@@ -1128,7 +1132,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let _ = self.secondaryContentNode {
-            result += 46.0
+            result += NavigationBar.defaultSecondaryContentHeight
         }
         
         return result
