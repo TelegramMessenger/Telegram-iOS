@@ -219,9 +219,6 @@ public enum ViewControllerNavigationPresentation {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
                 height += contentNode.nominalHeight - contentNode.height
             }
-            if navigationBar.secondaryContentNode != nil {
-                //height -= 46.0
-            }
             return height
         } else {
             return 0.0

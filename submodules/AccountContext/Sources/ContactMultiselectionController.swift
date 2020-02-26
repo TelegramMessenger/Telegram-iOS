@@ -5,7 +5,7 @@ import Postbox
 
 public enum ContactMultiselectionControllerMode {
     case groupCreation
-    case peerSelection(searchChatList: Bool, searchGroups: Bool)
+    case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation
 }
 
