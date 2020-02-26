@@ -6,6 +6,7 @@ import TelegramPresentationData
 import AnimatedStickerNode
 import AppBundle
 import SolidRoundedButtonNode
+import ActivityIndicator
 
 final class ChatListEmptyNodeContainer: ASDisplayNode {
     private var currentNode: ChatListEmptyNode?
@@ -42,10 +43,10 @@ final class ChatListEmptyNodeContainer: ASDisplayNode {
     
     func update(state: ChatListNodeEmptyState, isFilter: Bool, direction: ChatListNodePaneSwitchAnimationDirection?, transition: ContainedViewLayoutTransition) {
         switch state {
-        case .empty:
+        case let .empty(isLoading):
             if let direction = direction {
                 let previousNode = self.currentNode
-                let currentNode = ChatListEmptyNode(isFilter: isFilter, theme: self.theme, strings: self.strings, action: { [weak self] in
+                let currentNode = ChatListEmptyNode(isFilter: isFilter, isLoading: isLoading, theme: self.theme, strings: self.strings, action: { [weak self] in
                     self?.action?()
                 })
                 self.currentNode = currentNode
@@ -73,7 +74,7 @@ final class ChatListEmptyNodeContainer: ASDisplayNode {
                 }
             } else {
                 if let previousNode = self.currentNode, previousNode.isFilter != isFilter {
-                    let currentNode = ChatListEmptyNode(isFilter: isFilter, theme: self.theme, strings: self.strings, action: { [weak self] in
+                    let currentNode = ChatListEmptyNode(isFilter: isFilter, isLoading: isLoading, theme: self.theme, strings: self.strings, action: { [weak self] in
                         self?.action?()
                     })
                     self.currentNode = currentNode
@@ -82,9 +83,15 @@ final class ChatListEmptyNodeContainer: ASDisplayNode {
                         currentNode.updateLayout(size: size, transition: .immediate)
                     }
                     self.addSubnode(currentNode)
-                    previousNode.removeFromSupernode()
-                } else if self.currentNode == nil {
-                    let currentNode = ChatListEmptyNode(isFilter: isFilter, theme: self.theme, strings: self.strings, action: { [weak self] in
+                    currentNode.alpha = 0.0
+                    transition.updateAlpha(node: currentNode, alpha: 1.0)
+                    transition.updateAlpha(node: previousNode, alpha: 0.0, completion: { [weak previousNode] _ in
+                        previousNode?.removeFromSupernode()
+                    })
+                } else if let currentNode = self.currentNode {
+                    currentNode.updateIsLoading(isLoading)
+                } else {
+                    let currentNode = ChatListEmptyNode(isFilter: isFilter, isLoading: isLoading, theme: self.theme, strings: self.strings, action: { [weak self] in
                         self?.action?()
                     })
                     self.currentNode = currentNode
@@ -93,6 +100,8 @@ final class ChatListEmptyNodeContainer: ASDisplayNode {
                         currentNode.updateLayout(size: size, transition: .immediate)
                     }
                     self.addSubnode(currentNode)
+                    currentNode.alpha = 0.0
+                    transition.updateAlpha(node: currentNode, alpha: 1.0)
                 }
             }
         case .notEmpty:
@@ -115,7 +124,9 @@ final class ChatListEmptyNodeContainer: ASDisplayNode {
                         previousNode.removeFromSupernode()
                     }
                 } else {
-                    previousNode.removeFromSupernode()
+                    transition.updateAlpha(node: previousNode, alpha: 0.0, completion: { [weak previousNode] _ in
+                        previousNode?.removeFromSupernode()
+                    })
                 }
             }
         }
@@ -131,16 +142,19 @@ final class ChatListEmptyNodeContainer: ASDisplayNode {
 
 final class ChatListEmptyNode: ASDisplayNode {
     let isFilter: Bool
+    private(set) var isLoading: Bool
     private let textNode: ImmediateTextNode
     private let animationNode: AnimatedStickerNode
     private let buttonNode: SolidRoundedButtonNode
+    private let activityIndicator: ActivityIndicator
     
     private var animationSize: CGSize = CGSize()
     
     private var validLayout: CGSize?
     
-    init(isFilter: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
+    init(isFilter: Bool, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
         self.isFilter = isFilter
+        self.isLoading = isLoading
         
         self.animationNode = AnimatedStickerNode()
         
@@ -152,6 +166,8 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.textNode.lineSpacing = 0.1
         
         self.buttonNode = SolidRoundedButtonNode(title: isFilter ? strings.ChatList_EmptyChatListEditFilter : strings.ChatList_EmptyChatListNewMessage, theme: SolidRoundedButtonTheme(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+        
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 22.0, 1.0, false))
         
         super.init()
         
@@ -175,6 +191,11 @@ final class ChatListEmptyNode: ASDisplayNode {
             action()
         }
         
+        self.animationNode.isHidden = self.isLoading
+        self.textNode.isHidden = self.isLoading
+        self.buttonNode.isHidden = self.isLoading
+        self.activityIndicator.isHidden = !self.isLoading
+        
         self.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
@@ -184,13 +205,29 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor))
         
+        self.activityIndicator.type = .custom(theme.list.itemAccentColor, 22.0, 1.0, false)
+        
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: .immediate)
         }
     }
     
+    func updateIsLoading(_ isLoading: Bool) {
+        if self.isLoading == isLoading {
+            return
+        }
+        self.isLoading = isLoading
+        self.animationNode.isHidden = self.isLoading
+        self.textNode.isHidden = self.isLoading
+        self.buttonNode.isHidden = self.isLoading
+        self.activityIndicator.isHidden = !self.isLoading
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
+        
+        let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
         
         let animationSpacing: CGFloat = 10.0
         let buttonSpacing: CGFloat = 24.0

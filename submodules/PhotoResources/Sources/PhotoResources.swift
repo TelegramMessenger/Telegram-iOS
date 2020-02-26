@@ -2152,34 +2152,16 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
-                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 350.0, height: 350.0))
                 
-                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                let thumbnailContextSize = thumbnailSize.aspectFilled(initialThumbnailContextFittingSize)
                 let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
                 thumbnailContext.withFlippedContext { c in
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
-                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
-                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
-                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
-                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
-                }
-                
-                if false, thumbnailContextFittingSize.width > thumbnailContextSize.width {
-                    let additionalContextSize = thumbnailContextFittingSize
-                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
-                    additionalBlurContext.withFlippedContext { c in
-                        c.interpolationQuality = .default
-                        if let image = thumbnailContext.generateImage()?.cgImage {
-                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
-                        }
-                    }
-                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
-                    blurredThumbnailImage = additionalBlurContext.generateImage()
-                } else {
-                    blurredThumbnailImage = thumbnailContext.generateImage()
-                }
+                blurredThumbnailImage = thumbnailContext.generateImage()
             }
             
             if let blurredThumbnailImage = blurredThumbnailImage, fullSizeImage == nil {

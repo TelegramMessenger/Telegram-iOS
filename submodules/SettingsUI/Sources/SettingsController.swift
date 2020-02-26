@@ -803,8 +803,6 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
                 strongSelf.addAccount?()
                 f(.dismissWithoutContent)
             })))
-            
-            items.append(.separator)
         }
         
         func accountIconSignal(account: Account, peer: Peer, size: CGSize) -> Signal<UIImage?, NoError> {
@@ -836,6 +834,10 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: primary.0, peer: primary.1, size: avatarSize)), action: { _, f in
             f(.default)
         })))
+        
+        if !other.isEmpty {
+            items.append(.separator)
+        }
         
         for account in other {
             let id = account.0.id

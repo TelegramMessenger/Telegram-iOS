@@ -14,15 +14,13 @@ import ItemListPeerActionItem
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext
     
-    let toggleEnableTabs: (Bool) -> Void
     let openPreset: (ChatListFilter) -> Void
     let addNew: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
     let removePreset: (Int32) -> Void
     
-    init(context: AccountContext, toggleEnableTabs: @escaping (Bool) -> Void, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
+    init(context: AccountContext, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
         self.context = context
-        self.toggleEnableTabs = toggleEnableTabs
         self.openPreset = openPreset
         self.addNew = addNew
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
@@ -31,7 +29,6 @@ private final class ChatListFilterPresetListControllerArguments {
 }
 
 private enum ChatListFilterPresetListSection: Int32 {
-    case tabs
     case list
 }
 
@@ -48,8 +45,6 @@ private func stringForUserCount(_ peers: [PeerId: SelectivePrivacyPeer], strings
 }
 
 private enum ChatListFilterPresetListEntryStableId: Hashable {
-    case displayTabs
-    case displayTabsFooter
     case listHeader
     case preset(Int32)
     case addItem
@@ -57,8 +52,6 @@ private enum ChatListFilterPresetListEntryStableId: Hashable {
 }
 
 private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
-    case displayTabs(String, Bool)
-    case displayTabsFooter(String)
     case listHeader(String)
     case preset(index: Int, title: String?, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool)
     case addItem(text: String, isEditing: Bool)
@@ -66,8 +59,6 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .displayTabs, .displayTabsFooter:
-            return ChatListFilterPresetListSection.tabs.rawValue
         case .listHeader, .preset, .addItem, .listFooter:
             return ChatListFilterPresetListSection.list.rawValue
         }
@@ -75,10 +66,6 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     
     var sortId: Int {
         switch self {
-        case .displayTabs:
-            return 0
-        case .displayTabsFooter:
-            return 1
         case .listHeader:
             return 2
         case let .preset(preset):
@@ -92,10 +79,6 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     
     var stableId: ChatListFilterPresetListEntryStableId {
         switch self {
-        case .displayTabs:
-            return .displayTabs
-        case .displayTabsFooter:
-            return .displayTabsFooter
         case .listHeader:
             return .listHeader
         case let .preset(preset):
@@ -114,12 +97,6 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChatListFilterPresetListControllerArguments
         switch self {
-        case let .displayTabs(title, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.toggleEnableTabs(value)
-            })
-        case let .displayTabsFooter(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .listHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
         case let .preset(index, title, preset, canBeReordered, canBeDeleted, isEditing):
@@ -147,15 +124,14 @@ private struct ChatListFilterPresetListControllerState: Equatable {
 
 private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filtersState: ChatListFiltersState, settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
-    
-    entries.append(.displayTabs("Show Tabs", settings.displayTabs))
-    entries.append(.displayTabsFooter("Display filter tabs on the main screen for quick switching."))
 
     entries.append(.listHeader("FILTERS"))
     for preset in filtersState.filters {
         entries.append(.preset(index: entries.count, title: preset.title, preset: preset, canBeReordered: filtersState.filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
     }
-    entries.append(.addItem(text: "Create New Filter", isEditing: state.isEditing))
+    if filtersState.filters.count < 10 {
+        entries.append(.addItem(text: "Create New Filter", isEditing: state.isEditing))
+    }
     entries.append(.listFooter("Tap \"Edit\" to change the order or delete filters."))
     
     return entries
@@ -173,15 +149,7 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
-    let arguments = ChatListFilterPresetListControllerArguments(context: context, toggleEnableTabs: { value in
-        let _ = context.account.postbox.transaction({ transaction -> Void in
-            let _ = updateChatListFilterSettings(transaction: transaction, { settings in
-                var settings = settings
-                settings.displayTabs = value
-                return settings
-            })
-        }).start()
-    }, openPreset: { preset in
+    let arguments = ChatListFilterPresetListControllerArguments(context: context, openPreset: { preset in
         pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: updated))
     }, addNew: {
         pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: updated))

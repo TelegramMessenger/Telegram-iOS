@@ -132,6 +132,11 @@ private final class ItemNode: ASDisplayNode {
         self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
         self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(), size: size)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -sideInset, bottom: 0.0, right: -sideInset)
+        self.extractedContainerNode.hitTestSlop = self.hitTestSlop
+        self.extractedContainerNode.contentNode.hitTestSlop = self.hitTestSlop
+        self.containerNode.hitTestSlop = self.hitTestSlop
     }
     
     func animateBadgeIn() {
@@ -254,6 +259,11 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     
     func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         let focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
+        var previousSelectedAbsFrame: CGRect?
+        let previousScrollBounds = self.scrollNode.bounds
+        if let currentSelectedFilter = self.currentParams?.selectedFilter, let itemNode = self.itemNodes[currentSelectedFilter] {
+            previousSelectedAbsFrame = itemNode.frame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
+        }
         
         if self.currentParams?.presentationData.theme !== presentationData.theme {
             self.selectedLineNode.image = generateImage(CGSize(width: 7.0, height: 4.0), rotatedContext: { size, context in
@@ -421,6 +431,16 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                     let contentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, floor(selectedFrame.midX - self.scrollNode.bounds.width / 2.0)))
                     transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size))
                 }
+            } else if !wasAdded, let previousSelectedAbsFrame = previousSelectedAbsFrame {
+                let contentOffsetX: CGFloat
+                if previousScrollBounds.minX.isZero {
+                    contentOffsetX = 0.0
+                } else if previousScrollBounds.maxX == previousScrollBounds.width {
+                    contentOffsetX = self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width
+                } else {
+                    contentOffsetX = selectedFrame.midX - previousSelectedAbsFrame.midX
+                }
+                transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size))
             }
         } else {
             self.selectedLineNode.isHidden = true

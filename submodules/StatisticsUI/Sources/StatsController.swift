@@ -13,6 +13,7 @@ import PresentationDataUtils
 import AccountContext
 import PresentationDataUtils
 import AppBundle
+import Charts
 
 private final class StatsArguments {
     init() {
@@ -36,28 +37,28 @@ private enum StatsEntry: ItemListNodeEntry {
     case overview(PresentationTheme, ChannelStats)
     
     case growthTitle(PresentationTheme, String)
-    case growthGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case growthGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     case followersTitle(PresentationTheme, String)
-    case followersGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case followersGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
      
     case notificationsTitle(PresentationTheme, String)
-    case notificationsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case notificationsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     case viewsByHourTitle(PresentationTheme, String)
-    case viewsByHourGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case viewsByHourGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     case postInteractionsTitle(PresentationTheme, String)
-    case postInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case postInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     case viewsBySourceTitle(PresentationTheme, String)
-    case viewsBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case viewsBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     case followersBySourceTitle(PresentationTheme, String)
-    case followersBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case followersBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     case languagesTitle(PresentationTheme, String)
-    case languagesGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph)
+    case languagesGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
     
     var section: ItemListSectionId {
         switch self {
@@ -143,8 +144,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .growthGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .growthGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .growthGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .growthGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -155,8 +156,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .followersGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .followersGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .followersGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .followersGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -167,8 +168,8 @@ private enum StatsEntry: ItemListNodeEntry {
                   } else {
                       return false
                   }
-            case let .notificationsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .notificationsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .notificationsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .notificationsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -179,8 +180,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .viewsByHourGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .viewsByHourGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .viewsByHourGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .viewsByHourGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -191,8 +192,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
             }
-            case let .postInteractionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .postInteractionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .postInteractionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .postInteractionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -203,8 +204,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .viewsBySourceGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .viewsBySourceGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .viewsBySourceGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .viewsBySourceGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -215,8 +216,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .followersBySourceGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .followersBySourceGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .followersBySourceGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .followersBySourceGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -227,8 +228,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .languagesGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph):
-                if case let .languagesGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph {
+            case let .languagesGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .languagesGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -254,15 +255,22 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(theme, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
-            case let .growthGraph(theme, strings, dateTimeFormat, graph),
-                 let .followersGraph(theme, strings, dateTimeFormat, graph),
-                 let .notificationsGraph(theme, strings, dateTimeFormat, graph),
-                 let .viewsByHourGraph(theme, strings, dateTimeFormat, graph),
-                 let .postInteractionsGraph(theme, strings, dateTimeFormat, graph),
-                 let .viewsBySourceGraph(theme, strings, dateTimeFormat, graph),
-                 let .followersBySourceGraph(theme, strings, dateTimeFormat, graph),
-                 let .languagesGraph(theme, strings, dateTimeFormat, graph):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, sectionId: self.section, style: .blocks)
+            case let .growthGraph(theme, strings, dateTimeFormat, graph, type):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .followersGraph(theme, strings, dateTimeFormat, graph, type):
+                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .notificationsGraph(theme, strings, dateTimeFormat, graph, type):
+                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .viewsByHourGraph(theme, strings, dateTimeFormat, graph, type):
+                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .postInteractionsGraph(theme, strings, dateTimeFormat, graph, type):
+                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .viewsBySourceGraph(theme, strings, dateTimeFormat, graph, type):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
+            case let .followersBySourceGraph(theme, strings, dateTimeFormat, graph, type):
+                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
+            case let .languagesGraph(theme, strings, dateTimeFormat, graph, type):
+                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 100.0, sectionId: self.section, style: .blocks)
         }
     }
 }
@@ -275,16 +283,25 @@ private func statsControllerEntries(data: ChannelStats?, presentationData: Prese
         entries.append(.overview(presentationData.theme, data))
     
         entries.append(.growthTitle(presentationData.theme, presentationData.strings.Stats_GrowthTitle))
-        entries.append(.growthGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.growthGraph))
+        entries.append(.growthGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.growthGraph, .lines))
         
         entries.append(.followersTitle(presentationData.theme, presentationData.strings.Stats_FollowersTitle))
-        entries.append(.followersGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.followersGraph))
+        entries.append(.followersGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.followersGraph, .lines))
         
         entries.append(.notificationsTitle(presentationData.theme, presentationData.strings.Stats_NotificationsTitle))
-        entries.append(.notificationsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.muteGraph))
+        entries.append(.notificationsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.muteGraph, .lines))
         
         entries.append(.postInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InteractionsTitle))
-        entries.append(.postInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph))
+        entries.append(.postInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, .twoAxis))
+        
+        entries.append(.viewsBySourceTitle(presentationData.theme, presentationData.strings.Stats_ViewsBySourceTitle))
+        entries.append(.viewsBySourceGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.viewsBySourceGraph, .bars))
+        
+        entries.append(.followersBySourceTitle(presentationData.theme, presentationData.strings.Stats_FollowersBySourceTitle))
+        entries.append(.followersBySourceGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.newFollowersBySourceGraph, .bars))
+        
+        entries.append(.languagesTitle(presentationData.theme, presentationData.strings.Stats_LanguagesTitle))
+        entries.append(.languagesGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.languagesGraph, .pie))
     }
     
     return entries
@@ -306,7 +323,7 @@ public func channelStatsController(context: AccountContext, peer: Peer, cachedPe
         datacenterId = cachedData.statsDatacenterId
     }
         
-    let statsContext = ChannelStatsContext(network: context.account.network, datacenterId: datacenterId, peer: peer)
+    let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peer.id)
     let dataSignal: Signal<ChannelStats?, NoError> = statsContext.state
     |> map { state in
         return state.stats
@@ -314,6 +331,9 @@ public func channelStatsController(context: AccountContext, peer: Peer, cachedPe
         if let w = statsContext, let a = a {
             if case .OnDemand = a.interactionsGraph {
                 w.loadInteractionsGraph()
+                w.loadNewFollowersBySourceGraph()
+                w.loadViewsBySourceGraph()
+                w.loadLanguagesGraph()
             }
         }
     })
