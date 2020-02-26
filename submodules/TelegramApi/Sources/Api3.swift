@@ -3964,11 +3964,13 @@ public extension Api {
                     })
                 }
             
-                public static func loadAsyncGraph(token: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
+                public static func loadAsyncGraph(flags: Int32, token: String, x: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1749505346)
+                    buffer.appendInt32(1646092192)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(token, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stats.loadAsyncGraph", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsGraph? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(x!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stats.loadAsyncGraph", parameters: [("flags", flags), ("token", token), ("x", x)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsGraph? in
                         let reader = BufferReader(buffer)
                         var result: Api.StatsGraph?
                         if let signature = reader.readInt32() {

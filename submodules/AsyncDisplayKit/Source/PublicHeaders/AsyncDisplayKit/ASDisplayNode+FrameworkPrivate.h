@@ -317,12 +317,4 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 - (NSArray *)accessibilityElements;
 @end;
 
-@interface UIView (ASDisplayNodeInternal)
-@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
-@end
-
-@interface CALayer (ASDisplayNodeInternal)
-@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
-@end
-
 NS_ASSUME_NONNULL_END

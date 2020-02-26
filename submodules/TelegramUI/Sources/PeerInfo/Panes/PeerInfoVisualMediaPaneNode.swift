@@ -495,7 +495,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.canCancelContentTouches = true
-        self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.view.showsVerticalScrollIndicator = true
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }

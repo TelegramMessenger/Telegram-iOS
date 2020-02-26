@@ -17,10 +17,10 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
     return context.account.postbox.transaction { [weak chatListController] transaction -> [ContextMenuItem] in
         var items: [ContextMenuItem] = []
         
-        if !transaction.getUnreadChatListPeerIds(groupId: groupId).isEmpty {
+        if !transaction.getUnreadChatListPeerIds(groupId: groupId, filterPredicate: nil).isEmpty {
             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] _, f in
                 let _ = (context.account.postbox.transaction { transaction in
-                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId)
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId, filterPredicate: nil)
                 }
                 |> deliverOnMainQueue).start(completed: {
                     f(.default)

@@ -775,7 +775,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     effectiveRootModalDismissProgress = topModalIsFlat ? 1.0 : topModalDismissProgress
                     visibleRootModalDismissProgress = effectiveRootModalDismissProgress
                     additionalModalFrameProgress = 0.0
-                } else if visibleModalCount == 2 {
+                } else if visibleModalCount >= 2 {
                     effectiveRootModalDismissProgress = 0.0
                     visibleRootModalDismissProgress = topModalDismissProgress
                     additionalModalFrameProgress = 1.0 - topModalDismissProgress

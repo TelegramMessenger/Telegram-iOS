@@ -270,8 +270,6 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
 }
 
 func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
-    return .complete()
-    
     return requestChatListFilters(postbox: postbox, network: network)
     |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
         return .complete()

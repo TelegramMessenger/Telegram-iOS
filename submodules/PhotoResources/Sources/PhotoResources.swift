@@ -27,16 +27,16 @@ public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> Telegr
     return photo.representationForDisplayAtSize(PixelDimensions(width: 1280, height: 1280))
 }
 
-public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, tryAdditionalRepresentations: Bool = false, synchronousLoad: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, tryAdditionalRepresentations: Bool = false, synchronousLoad: Bool = false) -> Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError> {
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(PixelDimensions(width: Int32(fullRepresentationSize.width), height: Int32(fullRepresentationSize.height))) {
         let maybeFullSize = postbox.mediaBox.resourceData(largestRepresentation.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
         
         let signal = maybeFullSize
         |> take(1)
-        |> mapToSignal { maybeData -> Signal<Tuple3<Data?, Data?, Bool>, NoError> in
+        |> mapToSignal { maybeData -> Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError> in
             if maybeData.complete {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-                return .single(Tuple(nil, loadedData, true))
+                return .single(Tuple(nil, loadedData, .full, true))
             } else {
                 let decodedThumbnailData = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
                 let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
@@ -47,13 +47,20 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
                 }
                 let fetchedFullSize = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image)
                 
-                let anyThumbnail: [Signal<MediaResourceData, NoError>]
+                let anyThumbnail: [Signal<(MediaResourceData, ChatMessagePhotoQuality), NoError>]
                 if tryAdditionalRepresentations {
                     anyThumbnail = photoReference.media.representations.filter({ representation in
                         return representation != largestRepresentation
-                    }).map({ representation -> Signal<MediaResourceData, NoError> in
+                    }).map({ representation -> Signal<(MediaResourceData, ChatMessagePhotoQuality), NoError> in
                         return postbox.mediaBox.resourceData(representation.resource)
                         |> take(1)
+                        |> map { data -> (MediaResourceData, ChatMessagePhotoQuality) in
+                            if representation.dimensions.width > 200 || representation.dimensions.height > 200 {
+                                return (data, .medium)
+                            } else {
+                                return (data, .blurred)
+                            }
+                        }
                     })
                 } else {
                     anyThumbnail = []
@@ -78,13 +85,16 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
                 }
                 
                 let thumbnail = combineLatest(anyThumbnail)
-                |> mapToSignal { thumbnails -> Signal<Data?, NoError> in
-                    for thumbnail in thumbnails {
+                |> mapToSignal { thumbnails -> Signal<(Data, ChatMessagePhotoQuality)?, NoError> in
+                    for (thumbnail, quality) in thumbnails {
                         if thumbnail.size != 0, let data = try? Data(contentsOf: URL(fileURLWithPath: thumbnail.path), options: []) {
-                            return .single(data)
+                            return .single((data, quality))
                         }
                     }
                     return mainThumbnail
+                    |> map { data -> (Data, ChatMessagePhotoQuality)? in
+                        return data.flatMap { ($0, .blurred) }
+                    }
                 }
                 
                 let fullSizeData: Signal<Tuple2<Data?, Bool>, NoError>
@@ -110,13 +120,13 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
                 
                 return thumbnail
                 |> mapToSignal { thumbnailData in
-                    if let thumbnailData = thumbnailData {
+                    if let (thumbnailData, thumbnailQuality) = thumbnailData {
                         return fullSizeData
                         |> map { value in
-                            return Tuple(thumbnailData, value._0, value._1)
+                            return Tuple(thumbnailData, value._0, value._1 ? .full : thumbnailQuality, value._1)
                         }
                     } else {
-                        return .single(Tuple(thumbnailData, nil, false))
+                        return .single(Tuple(nil, nil, .none, false))
                     }
                 }
             }
@@ -405,7 +415,7 @@ public func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReferenc
     |> map { value -> UIImage? in
         let thumbnailData = value._0
         let fullSizeData = value._1
-        let fullSizeComplete = value._2
+        let fullSizeComplete = value._3
         if let fullSizeData = fullSizeData {
             if fullSizeComplete {
                 return UIImage(data: fullSizeData)?.precomposed()
@@ -420,20 +430,28 @@ public func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReferenc
 
 public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad)
-    |> map { _, generate in
+    |> map { _, _, generate in
         return generate
     }
 }
 
-public func chatMessagePhotoInternal(photoData: Signal<Tuple3<Data?, Data?, Bool>, NoError>, synchronousLoad: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public enum ChatMessagePhotoQuality {
+    case none
+    case blurred
+    case medium
+    case full
+}
+
+public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError>, synchronousLoad: Bool = false) -> Signal<(() -> CGSize?, ChatMessagePhotoQuality, (TransformImageArguments) -> DrawingContext?), NoError> {
     return photoData
     |> map { value in
         let thumbnailData = value._0
         let fullSizeData = value._1
-        let fullSizeComplete = value._2
+        let quality = value._2
+        let fullSizeComplete = value._3
         return ({
             return nil
-        }, { arguments in
+        }, quality, { arguments in
             let drawingRect = arguments.drawingRect
             var fittedSize = arguments.imageSize
             if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
@@ -853,7 +871,7 @@ public func chatSecretPhoto(account: Account, photoReference: ImageMediaReferenc
     |> map { value in
         let thumbnailData = value._0
         let fullSizeData = value._1
-        let fullSizeComplete = value._2
+        let fullSizeComplete = value._3
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
@@ -1114,7 +1132,7 @@ public func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaRe
     |> map { value in
         let thumbnailData = value._0
         let fullSizeData = value._1
-        let fullSizeComplete = value._2
+        let fullSizeComplete = value._3
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
@@ -1275,7 +1293,7 @@ public func internalMediaGridMessageVideo(postbox: Postbox, videoReference: File
         |> map { value -> Tuple3<Data?, Tuple2<Data, String>?, Bool> in
             let thumbnailData = value._0
             let fullSizeData = value._1
-            let fullSizeComplete = value._2
+            let fullSizeComplete = value._3
             return Tuple(thumbnailData, fullSizeData.flatMap({ Tuple($0, "") }), fullSizeComplete)
         }
     } else {
@@ -2131,34 +2149,16 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
-                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 350.0, height: 350.0))
                 
-                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                let thumbnailContextSize = thumbnailSize.aspectFilled(initialThumbnailContextFittingSize)
                 let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
                 thumbnailContext.withFlippedContext { c in
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
-                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
-                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
-                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
-                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
-                }
-                
-                if false, thumbnailContextFittingSize.width > thumbnailContextSize.width {
-                    let additionalContextSize = thumbnailContextFittingSize
-                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
-                    additionalBlurContext.withFlippedContext { c in
-                        c.interpolationQuality = .default
-                        if let image = thumbnailContext.generateImage()?.cgImage {
-                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
-                        }
-                    }
-                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
-                    blurredThumbnailImage = additionalBlurContext.generateImage()
-                } else {
-                    blurredThumbnailImage = thumbnailContext.generateImage()
-                }
+                blurredThumbnailImage = thumbnailContext.generateImage()
             }
             
             if let blurredThumbnailImage = blurredThumbnailImage, fullSizeImage == nil {

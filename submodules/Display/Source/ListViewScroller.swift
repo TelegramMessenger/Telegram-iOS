@@ -28,6 +28,11 @@ public final class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
                     return gestureRecognizer.numberOfTouches < 2
                 }
             }
+            
+            if let view = gestureRecognizer.view?.hitTest(gestureRecognizer.location(in: gestureRecognizer.view), with: nil) as? UIControl {
+                return !view.isTracking
+            }
+            
             return true
         } else {
             return true

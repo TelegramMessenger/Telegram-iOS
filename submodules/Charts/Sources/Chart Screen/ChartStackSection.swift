@@ -19,7 +19,6 @@ class ChartStackSection: UIView, ColorModeContainer {
     var sectionContainerView: UIView
     var separators: [UIView] = []
     
-    var headerLabel: UILabel!
     var titleLabel: UILabel!
     var backButton: UIButton!
     
@@ -30,7 +29,6 @@ class ChartStackSection: UIView, ColorModeContainer {
         chartView = ChartView()
         rangeView = RangeChartView()
         visibilityView = ChartVisibilityView()
-        headerLabel = UILabel()
         titleLabel = UILabel()
         backButton = UIButton()
         
@@ -40,12 +38,19 @@ class ChartStackSection: UIView, ColorModeContainer {
         sectionContainerView.addSubview(chartView)
         sectionContainerView.addSubview(rangeView)
         sectionContainerView.addSubview(visibilityView)
+        sectionContainerView.addSubview(titleLabel)
+        sectionContainerView.addSubview(backButton)
         
-        headerLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .bold)
+        titleLabel.textAlignment = .center
         visibilityView.clipsToBounds = true
         backButton.isExclusiveTouch = true
-                
+        
+        backButton.addTarget(self, action: #selector(self.didTapBackButton), for: .touchUpInside)
+        backButton.setTitle("Zoom Out", for: .normal)
+        backButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .regular)
+        backButton.setTitleColor(UIColor(rgb: 0x007ee5), for: .normal)
+        
         backButton.setVisible(false, animated: false)
     }
     
@@ -56,7 +61,6 @@ class ChartStackSection: UIView, ColorModeContainer {
     override func awakeFromNib() {
         super.awakeFromNib()
         
-        headerLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .bold)
         visibilityView.clipsToBounds = true
         backButton.isExclusiveTouch = true
@@ -95,10 +99,9 @@ class ChartStackSection: UIView, ColorModeContainer {
         }
         
         self.titleLabel.setTextColor(colorMode.chartTitleColor, animated: animated && titleLabel.isVisibleInWindow)
-        self.headerLabel.setTextColor(colorMode.sectionTitleColor, animated: animated && headerLabel.isVisibleInWindow)
     }
     
-    @IBAction func didTapBackButton() {
+    @objc private func didTapBackButton() {
         controller.didTapZoomOut()
     }
     
@@ -130,15 +133,16 @@ class ChartStackSection: UIView, ColorModeContainer {
         super.layoutSubviews()
         
         let bounds = self.bounds
-        self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 350.0))
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: backButton.alpha > 0.0 ? 36.0 : 0.0, y: 5.0), size: CGSize(width: bounds.width, height: 28.0))
+        self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 400.0))
         self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 250.0))
-        self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 48.0))
-        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: 308.0), size: CGSize(width: bounds.width, height: 122.0))
+        self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 42.0))
+        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: 308.0), size: CGSize(width: bounds.width, height: 222.0))
+        self.backButton.frame = CGRect(x: 0.0, y: 0.0, width: 96.0, height: 38.0)
     }
     
     func setup(controller: BaseChartController, title: String) {
         self.controller = controller
-        self.headerLabel.text = title
         
         // Chart
         chartView.renderers = controller.mainChartRenderers
@@ -167,6 +171,7 @@ class ChartStackSection: UIView, ColorModeContainer {
             self.titleLabel.setText(title, animated: animated)
         }
         controller.setBackButtonVisibilityClosure = { [unowned self] visible, animated in
+            self.setNeedsLayout()
             self.setBackButtonVisible(visible, animated: animated)
         }
         controller.refreshChartToolsClosure = { [unowned self] animated in
@@ -184,7 +189,7 @@ class ChartStackSection: UIView, ColorModeContainer {
         controller.chartRangeUpdatedClosure = { [unowned self] (range, animated) in
             self.rangeView.setRange(range, animated: animated)
         }
-        controller.chartRangePagingClosure = {  [unowned self] (isEnabled, pageSize) in
+        controller.chartRangePagingClosure = { [unowned self] (isEnabled, pageSize) in
             self.rangeView.setRangePaging(enabled: isEnabled, minimumSize: pageSize)
         }
         
@@ -195,5 +200,10 @@ class ChartStackSection: UIView, ColorModeContainer {
         
         controller.initializeChart()
         updateToolViews(animated: false)
+        
+        rangeView.setRange(0.8...1.0, animated: false)
+        TimeInterval.animationDurationMultipler = 0.00001
+        controller.updateChartRange(0.8...1.0, animated: false)
+        TimeInterval.animationDurationMultipler = 1.0
     }
 }

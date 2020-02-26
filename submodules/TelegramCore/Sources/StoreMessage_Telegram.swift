@@ -342,8 +342,8 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 }
                 return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0), nil)
             }
-        case .messageMediaDice:
-            break
+        case let .messageMediaDice(value):
+            return (TelegramMediaDice(value: value), nil)
         }
     }
     

@@ -219,9 +219,6 @@ public enum ViewControllerNavigationPresentation {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
                 height += contentNode.nominalHeight - contentNode.height
             }
-            if navigationBar.secondaryContentNode != nil {
-                //height -= 46.0
-            }
             return height
         } else {
             return 0.0
@@ -626,6 +623,11 @@ public enum ViewControllerNavigationPresentation {
     }
     
     open func toolbarActionSelected(action: ToolbarActionOption) {
+    }
+    
+    open var hasTabBarItemContextAction: Bool = false
+    
+    open func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
     }
 }
 

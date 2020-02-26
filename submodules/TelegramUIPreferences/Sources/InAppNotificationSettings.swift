@@ -6,7 +6,7 @@ import SyncCore
 public enum TotalUnreadCountDisplayStyle: Int32 {
     case filtered = 0
     
-    var category: ChatListTotalUnreadStateCategory {
+    public var category: ChatListTotalUnreadStateCategory {
         switch self {
             case .filtered:
                 return .filtered
@@ -18,7 +18,7 @@ public enum TotalUnreadCountDisplayCategory: Int32 {
     case chats = 0
     case messages = 1
     
-    var statsType: ChatListTotalUnreadStateStats {
+    public var statsType: ChatListTotalUnreadStateStats {
         switch self {
             case .chats:
                 return .chats

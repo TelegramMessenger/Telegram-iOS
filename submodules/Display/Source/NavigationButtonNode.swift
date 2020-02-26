@@ -65,6 +65,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             if let value = value {
                 if self.imageNode == nil {
                     let imageNode = ASImageNode()
+                    imageNode.displayWithoutProcessing = true
                     imageNode.displaysAsynchronously = false
                     self.imageNode = imageNode
                     if false, value.size == CGSize(width: 30.0, height: 30.0) {
@@ -279,9 +280,16 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
     }
     
-    public var isEnabled: Bool = true {
-        didSet(value) {
-            self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+    public override var isEnabled: Bool {
+        get {
+            return super.isEnabled
+        }
+        set(value) {
+            if self.isEnabled != value {
+                super.isEnabled = value
+                
+                self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            }
         }
     }
 }

@@ -38,6 +38,7 @@ struct ChartDetailsViewModel {
 class ChartDetailsView: UIControl {
     let titleLabel = UILabel()
     let arrowView = UIImageView()
+    let activityIndicator = UIActivityIndicatorView()
     
     var prefixViews: [UILabel] = []
     var labelsViews: [UILabel] = []
@@ -45,11 +46,7 @@ class ChartDetailsView: UIControl {
 
     private var viewModel: ChartDetailsViewModel?
     private var colorMode: ColorMode = .day
-    
-    static func fromNib() -> ChartDetailsView {
-        return Bundle.main.loadNibNamed("ChartDetailsView", owner: nil, options: nil)?.first as! ChartDetailsView
-    }
-    
+        
     override init(frame: CGRect) {
         super.init(frame: frame)
         

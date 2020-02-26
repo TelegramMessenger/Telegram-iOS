@@ -49,6 +49,23 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     private(set) var gesture: UIGestureRecognizer?
     private var currentHighlightedActionNode: ContextActionNode?
     
+    var panSelectionGestureEnabled: Bool = true {
+        didSet {
+            if self.panSelectionGestureEnabled != oldValue, let gesture = self.gesture {
+                gesture.isEnabled = self.panSelectionGestureEnabled
+                
+                self.itemNodes.forEach({ itemNode in
+                    switch itemNode {
+                    case let .action(actionNode):
+                        actionNode.isUserInteractionEnabled = !self.panSelectionGestureEnabled
+                    default:
+                        break
+                    }
+                })
+            }
+        }
+    }
+    
     init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void) {
         self.presentationData = presentationData
         self.feedbackTap = feedbackTap
@@ -120,6 +137,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             }
         }
         self.view.addGestureRecognizer(gesture)
+        gesture.isEnabled = self.panSelectionGestureEnabled
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -374,6 +392,14 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
 final class ContextActionsContainerNode: ASDisplayNode {
     private let actionsNode: InnerActionsContainerNode
     private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
+    
+    var panSelectionGestureEnabled: Bool = true {
+        didSet {
+            if self.panSelectionGestureEnabled != oldValue {
+                self.actionsNode.panSelectionGestureEnabled = self.panSelectionGestureEnabled
+            }
+        }
+    }
     
     init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool) {
         self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap)

@@ -985,4 +985,8 @@ typedef NS_ENUM(NSInteger, ASLayoutEngineType) {
 
 #define ASScopedLockSelfOrToRoot() ASLockScopeSelf()
 
+@interface UIView (ASDisplayNodeInternal)
+@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
+@end
+
 NS_ASSUME_NONNULL_END

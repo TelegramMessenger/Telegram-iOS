@@ -1665,7 +1665,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         }
                     }))
                 } else {
-                    contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: false, searchGroups: false), options: options, filters: [.excludeSelf, .disable(recentIds)]))
+                    contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: options, filters: [.excludeSelf, .disable(recentIds)]))
                 }
                 
                 confirmationImpl = { [weak contactsController] peerId in

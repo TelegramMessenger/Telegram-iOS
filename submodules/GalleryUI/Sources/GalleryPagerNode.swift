@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 
+private let edgeWidth: CGFloat = 44.0
+
 private let leftFadeImage = generateImage(CGSize(width: 64.0, height: 1.0), opaque: false, rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
     context.clear(bounds)
@@ -76,8 +78,9 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     
     private let leftFadeNode: ASImageNode
     private let rightFadeNode: ASImageNode
+    private var highlightedSide: Bool?
     
-    private var pressGestureRecognizer: UILongPressGestureRecognizer?
+    private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
     public private(set) var items: [GalleryItem] = []
     private var itemNodes: [GalleryItemNode] = []
@@ -139,46 +142,106 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public override func didLoad() {
         super.didLoad()
         
-        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.pressGesture(_:)))
-        gestureRecognizer.delegate = self
-        gestureRecognizer.minimumPressDuration = 0.01
-        self.view.addGestureRecognizer(gestureRecognizer)
-        self.pressGestureRecognizer = gestureRecognizer
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.delegate = self
+        self.tapRecognizer = recognizer
+        recognizer.tapActionAtPoint = { [weak self] point in
+            guard let strongSelf = self else {
+                return .fail
+            }
+            
+            let size = strongSelf.bounds
+            
+            var highlightedSide: Bool?
+            if point.x < edgeWidth && strongSelf.canGoToPreviousItem() {
+                if strongSelf.items.count > 1 {
+                    highlightedSide = false
+                }
+            } else if point.x > size.width - edgeWidth && strongSelf.canGoToNextItem() {
+                if strongSelf.items.count > 1 {
+                    highlightedSide = true
+                }
+            }
+            
+            if highlightedSide == nil {
+                return .fail
+            }
+            
+            if let result = strongSelf.hitTest(point, with: nil), let node = result.asyncdisplaykit_node as? ASButtonNode {
+                return .fail
+            }
+            return .keepWithSingleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            guard let strongSelf = self else {
+                return
+            }
+            let size = strongSelf.bounds
+            
+            var highlightedSide: Bool?
+            if let point = point {
+                if point.x < edgeWidth && strongSelf.canGoToPreviousItem() {
+                    if strongSelf.items.count > 1 {
+                        highlightedSide = false
+                    }
+                } else if point.x > size.width - edgeWidth && strongSelf.canGoToNextItem() {
+                    if strongSelf.items.count > 1 {
+                        highlightedSide = true
+                    }
+                }
+            }
+            if strongSelf.highlightedSide != highlightedSide {
+                strongSelf.highlightedSide = highlightedSide
+                
+                let leftAlpha: CGFloat
+                let rightAlpha: CGFloat
+                if let highlightedSide = highlightedSide {
+                    leftAlpha = highlightedSide ? 0.0 : 1.0
+                    rightAlpha = highlightedSide ? 1.0 : 0.0
+                } else {
+                    leftAlpha = 0.0
+                    rightAlpha = 0.0
+                }
+                if strongSelf.leftFadeNode.alpha != leftAlpha {
+                    strongSelf.leftFadeNode.alpha = leftAlpha
+                    if leftAlpha.isZero {
+                        strongSelf.leftFadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, timingFunction: kCAMediaTimingFunctionSpring)
+                    } else {
+                        strongSelf.leftFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
+                    }
+                }
+                if strongSelf.rightFadeNode.alpha != rightAlpha {
+                    strongSelf.rightFadeNode.alpha = rightAlpha
+                    if rightAlpha.isZero {
+                        strongSelf.rightFadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, timingFunction: kCAMediaTimingFunctionSpring)
+                    } else {
+                        strongSelf.rightFadeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
+                    }
+                }
+            }
+        }
+        self.view.addGestureRecognizer(recognizer)
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
     
-    @objc private func pressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        let edgeWidth: CGFloat = 44.0
-        let location = gestureRecognizer.location(in: gestureRecognizer.view)
-        switch gestureRecognizer.state {
-            case .began:
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.07, curve: .easeInOut)
-                if location.x < edgeWidth && self.canGoToPreviousItem() {
-                    transition.updateAlpha(node: self.leftFadeNode, alpha: 1.0)
-                } else if location.x > self.frame.width - edgeWidth && self.canGoToNextItem() {
-                    transition.updateAlpha(node: self.rightFadeNode, alpha: 1.0)
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                if case .tap = gesture {
+                    let size = self.bounds.size
+                    if location.x < edgeWidth && self.canGoToPreviousItem() {
+                        self.goToPreviousItem()
+                    } else if location.x > size.width - edgeWidth && self.canGoToNextItem() {
+                        self.goToNextItem()
+                    }
                 }
-            case .ended:
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
-                if location.x < edgeWidth && self.canGoToPreviousItem() {
-                    transition.updateAlpha(node: self.leftFadeNode, alpha: 0.0)
-                    self.goToPreviousItem()
-                } else if location.x > self.frame.width - edgeWidth && self.canGoToNextItem() {
-                    transition.updateAlpha(node: self.rightFadeNode, alpha: 0.0)
-                    self.goToNextItem()
-                }
-            case .cancelled:
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
-                if location.x < edgeWidth {
-                    transition.updateAlpha(node: self.leftFadeNode, alpha: 0.0)
-                } else if location.x > self.frame.width - edgeWidth {
-                    transition.updateAlpha(node: self.rightFadeNode, alpha: 0.0)
-                }
-            default:
-                break
+            }
+        default:
+            break
         }
     }
     

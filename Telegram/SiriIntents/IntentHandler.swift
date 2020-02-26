@@ -7,6 +7,7 @@ import SwiftSignalKit
 import BuildConfig
 import Contacts
 import OpenSSLEncryptionProvider
+import AppLockState
 
 private var accountCache: Account?
 
@@ -57,6 +58,8 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     private let resolvePersonsDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
     
+    private var appGroupUrl: URL?
+    
     override init() {
         super.init()
         
@@ -78,6 +81,8 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         guard let appGroupUrl = maybeAppGroupUrl else {
             return
         }
+        
+        self.appGroupUrl = appGroupUrl
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
@@ -179,6 +184,14 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     private func resolve(persons: [INPerson]?, with completion: @escaping ([ResolveResult]) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                completion([.skip])
+                return
+            }
+        }
+        
         let account = self.accountPromise.get()
         guard let initialPersons = persons, !initialPersons.isEmpty else {
             completion([.needsValue])
@@ -278,6 +291,14 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     
     @available(iOSApplicationExtension 11.0, *)
     public func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                completion([INSendMessageRecipientResolutionResult.notRequired()])
+                return
+            }
+        }
+        
         if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
             let account = self.accountPromise.get()
             
@@ -321,6 +342,13 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     public func resolveContent(for intent: INSendMessageIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                completion(INStringResolutionResult.notRequired())
+                return
+            }
+        }
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             completion(INStringResolutionResult.notRequired())
             return
@@ -333,6 +361,15 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     public func confirm(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
+                let response = INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
         let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             let response = INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
@@ -344,6 +381,16 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     public func handle(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
+                let response = INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
+        
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
@@ -394,6 +441,16 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     public func handle(intent: INSearchForMessagesIntent, completion: @escaping (INSearchForMessagesIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchForMessagesIntent.self))
+                let response = INSearchForMessagesIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
+        
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
         |> castError(IntentHandlingError.self)
@@ -455,6 +512,16 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     public func handle(intent: INSetMessageAttributeIntent, completion: @escaping (INSetMessageAttributeIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSetMessageAttributeIntent.self))
+                let response = INSetMessageAttributeIntentResponse(code: .failure, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
+        
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
@@ -514,6 +581,14 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     // MARK: - INStartAudioCallIntentHandling
     
     public func resolveContacts(for intent: INStartAudioCallIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                completion([INPersonResolutionResult.notRequired()])
+                return
+            }
+        }
+        
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             completion([INPersonResolutionResult.notRequired()])
             return
@@ -529,6 +604,16 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     public func handle(intent: INStartAudioCallIntent, completion: @escaping (INStartAudioCallIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INStartAudioCallIntent.self))
+                let response = INStartAudioCallIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
+        
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
@@ -572,6 +657,16 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }*/
     
     public func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
+                let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
+        
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
         |> castError(IntentHandlingError.self)

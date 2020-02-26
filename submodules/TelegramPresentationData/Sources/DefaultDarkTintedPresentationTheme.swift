@@ -769,7 +769,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         itemHighlightedBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.15),
         primaryColor: UIColor(rgb: 0xffffff, alpha: 1.0),
         secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.8),
-        destructiveColor: UIColor(rgb: 0xff6767)
+        destructiveColor: UIColor(rgb: 0xff6767),
+        badgeFillColor: UIColor(rgb: 0xff6767),
+        badgeForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        extractedContentTintColor: rootNavigationBar.backgroundColor.withAlphaComponent(0.78)
     )
 
     let inAppNotification = PresentationThemeInAppNotification(

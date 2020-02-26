@@ -58,7 +58,7 @@ extension ChartsCollection {
             switch type {
             case .axix:
                 axixValuesToSetup = try column.dropFirst().map { Date(timeIntervalSince1970: try Convert.doubleFrom($0) / 1000) }
-            case .chart, .bar, .area:
+            case .chart, .bar, .area, .step:
                 guard let colorString = colors[columnId],
                     let color = UIColor(hexString: colorString) else {
                         throw ChartsError.generalConversion("Unable to get color name from: \(colors) - \(columnId)")
@@ -76,7 +76,7 @@ extension ChartsCollection {
         guard axixValuesToSetup.isEmpty == false,
             chartToSetup.isEmpty == false,
             chartToSetup.firstIndex(where: { $0.values.count != axixValuesToSetup.count }) == nil else {
-                throw ChartsError.generalConversion("Saniazing: Invalid number of items: \(axixValuesToSetup), \(chartToSetup)")
+                throw ChartsError.generalConversion("Sanitazing: Invalid number of items: \(axixValuesToSetup), \(chartToSetup)")
         }
         self.axisValues = axixValuesToSetup
         self.chartValues = chartToSetup
@@ -88,4 +88,5 @@ private enum ColumnType: String {
     case chart = "line"
     case area = "area"
     case bar = "bar"
+    case step = "step"
 }

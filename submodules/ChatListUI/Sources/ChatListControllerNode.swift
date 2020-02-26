@@ -47,7 +47,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private let groupId: PeerGroupId
     private var presentationData: PresentationData
     
-    private var chatListEmptyNode: ChatListEmptyNode?
+    private var chatListEmptyNodeContainer: ChatListEmptyNodeContainer
     private var chatListEmptyIndicator: ActivityIndicator?
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
@@ -69,6 +69,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     var dismissSelf: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
+    var emptyListAction: (() -> Void)?
 
     let debugListView = ListView()
     
@@ -77,6 +78,7 @@ final class ChatListControllerNode: ASDisplayNode {
         self.groupId = groupId
         self.presentationData = presentationData
         
+        self.chatListEmptyNodeContainer = ChatListEmptyNodeContainer(theme: presentationData.theme, strings: presentationData.strings)
         self.chatListNode = ChatListNode(context: context, groupId: groupId, chatListFilter: filter, previewing: previewing, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         self.controller = controller
@@ -90,49 +92,31 @@ final class ChatListControllerNode: ASDisplayNode {
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.chatListNode)
-        self.chatListNode.isEmptyUpdated = { [weak self] isEmptyState in
+        self.addSubnode(self.chatListEmptyNodeContainer)
+        self.chatListNode.isEmptyUpdated = { [weak self] isEmptyState, isFilter, transitionDirection, transition in
             guard let strongSelf = self else {
                 return
             }
             switch isEmptyState {
-                case .empty(false):
-                    if case .group = strongSelf.groupId {
-                        strongSelf.dismissSelf?()
-                    } else if strongSelf.chatListEmptyNode == nil {
-                        let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
-                        strongSelf.chatListEmptyNode = chatListEmptyNode
-                        strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
-                        if let (layout, navigationHeight, visualNavigationHeight, cleanNavigationBarHeight) = strongSelf.containerLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
-                        }
-                        strongSelf.isEmptyUpdated?(true)
-                    }
-                case .notEmpty(false):
-                    if case .group = strongSelf.groupId {
-                        strongSelf.dismissSelf?()
-                    }
-                default:
-                    if let chatListEmptyNode = strongSelf.chatListEmptyNode {
-                        strongSelf.chatListEmptyNode = nil
-                        chatListEmptyNode.removeFromSupernode()
-                    }
+            case .empty(false):
+                if case .group = strongSelf.groupId {
+                    strongSelf.dismissSelf?()
+                } else {
+                    strongSelf.chatListEmptyNodeContainer.update(state: isEmptyState, isFilter: isFilter, direction: transitionDirection, transition: transition)
+                }
+            case .notEmpty(false):
+                if case .group = strongSelf.groupId {
+                    strongSelf.dismissSelf?()
+                } else {
+                    strongSelf.chatListEmptyNodeContainer.update(state: isEmptyState, isFilter: isFilter, direction: transitionDirection, transition: transition)
+                }
+            default:
+                strongSelf.chatListEmptyNodeContainer.update(state: isEmptyState, isFilter: isFilter, direction: transitionDirection, transition: transition)
             }
-            switch isEmptyState {
-                case .empty(true):
-                    if strongSelf.chatListEmptyIndicator == nil {
-                        let chatListEmptyIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemSecondaryTextColor, 22.0, 1.0, false))
-                        strongSelf.chatListEmptyIndicator = chatListEmptyIndicator
-                        strongSelf.insertSubnode(chatListEmptyIndicator, belowSubnode: strongSelf.chatListNode)
-                        if let (layout, navigationHeight, visualNavigationHeight, cleanNavigationBarHeight) = strongSelf.containerLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
-                        }
-                    }
-                default:
-                    if let chatListEmptyIndicator = strongSelf.chatListEmptyIndicator {
-                        strongSelf.chatListEmptyIndicator = nil
-                        chatListEmptyIndicator.removeFromSupernode()
-                    }
-            }
+        }
+        
+        self.chatListEmptyNodeContainer.action = { [weak self] in
+            self?.emptyListAction?()
         }
         
         self.addSubnode(self.debugListView)
@@ -151,7 +135,7 @@ final class ChatListControllerNode: ASDisplayNode {
         
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         self.searchDisplayController?.updatePresentationData(presentationData)
-        self.chatListEmptyNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.chatListEmptyNodeContainer.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         if let toolbarNode = self.toolbarNode {
             toolbarNode.updateTheme(TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
@@ -219,11 +203,9 @@ final class ChatListControllerNode: ASDisplayNode {
         self.chatListNode.visualInsets = UIEdgeInsets(top: visualNavigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
         self.chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         
-        if let chatListEmptyNode = self.chatListEmptyNode {
-            let emptySize = CGSize(width: updateSizeAndInsets.size.width, height: updateSizeAndInsets.size.height - updateSizeAndInsets.insets.top - updateSizeAndInsets.insets.bottom)
-            transition.updateFrame(node: chatListEmptyNode, frame: CGRect(origin: CGPoint(x: 0.0, y: updateSizeAndInsets.insets.top), size: emptySize))
-            chatListEmptyNode.updateLayout(size: emptySize, transition: transition)
-        }
+        let emptySize = CGSize(width: updateSizeAndInsets.size.width, height: updateSizeAndInsets.size.height - updateSizeAndInsets.insets.top - updateSizeAndInsets.insets.bottom)
+        transition.updateFrame(node: self.chatListEmptyNodeContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: updateSizeAndInsets.insets.top), size: emptySize))
+        self.chatListEmptyNodeContainer.updateLayout(size: emptySize, transition: transition)
         
         if let chatListEmptyIndicator = self.chatListEmptyIndicator {
             let indicatorSize = chatListEmptyIndicator.measure(CGSize(width: 100.0, height: 100.0))
@@ -253,7 +235,9 @@ final class ChatListControllerNode: ASDisplayNode {
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
-        }, peerContextAction: self.peerContextAction), cancel: { [weak self] in
+        }, peerContextAction: self.peerContextAction, present: { [weak self] c in
+            self?.controller?.present(c, in: .window(.root))
+        }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }

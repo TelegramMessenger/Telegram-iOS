@@ -534,9 +534,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.controllerInteraction?.addContact(phoneNumber)
                 }
             }, storeMediaPlaybackState: { [weak self] messageId, timestamp in
-                guard let strongSelf = self else {
-                    return
-                }
                 var storedState: MediaPlaybackStoredState?
                 if let timestamp = timestamp {
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
@@ -1365,32 +1362,61 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        let _ = (getBankCardInfo(account: strongSelf.context.account, cardNumber: number)
-                        |> deliverOnMainQueue).start(next: { [weak self] info in
-                            if let strongSelf = self, let info = info {
-                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                                var items: [ActionSheetItem] = []
-                                items.append(ActionSheetTextItem(title: info.title))
-                                for url in info.urls {
-                                    items.append(ActionSheetButtonItem(title: url.title, color: .accent, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                        if let strongSelf = self {
-                                            strongSelf.controllerInteraction?.openUrl(url.url, false, false, message)
-                                        }
-                                    }))
-                                }
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    UIPasteboard.general.string = number
-                                }))
-                                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                    })
-                                ])])
-                                strongSelf.present(actionSheet, in: .window(.root))
-                            }
-                        })
+//                        var signal = getBankCardInfo(account: strongSelf.context.account, cardNumber: number)
+//                        
+//                        var cancelImpl: (() -> Void)?
+//                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+//                        let progressSignal = Signal<Never, NoError> { subscriber in
+//                            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+//                                cancelImpl?()
+//                            }))
+//                            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+//                            return ActionDisposable { [weak controller] in
+//                                Queue.mainQueue().async() {
+//                                    controller?.dismiss()
+//                                }
+//                            }
+//                        }
+//                        |> runOn(Queue.mainQueue())
+//                        |> delay(0.15, queue: Queue.mainQueue())
+//                        let progressDisposable = progressSignal.start()
+//                        
+//                        signal = signal
+//                        |> afterDisposed {
+//                            Queue.mainQueue().async {
+//                                progressDisposable.dispose()
+//                            }
+//                        }
+//                        cancelImpl = {
+//                            disposable.set(nil)
+//                        }
+//                        disposable.set((signal
+//                        |> deliverOnMainQueue).start(next: { [weak self] info in
+//                            if let strongSelf = self, let info = info {
+//                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+//                                var items: [ActionSheetItem] = []
+//                                items.append(ActionSheetTextItem(title: info.title))
+//                                for url in info.urls {
+//                                    items.append(ActionSheetButtonItem(title: url.title, color: .accent, action: { [weak actionSheet] in
+//                                        actionSheet?.dismissAnimated()
+//                                        if let strongSelf = self {
+//                                            strongSelf.controllerInteraction?.openUrl(url.url, false, false, message)
+//                                        }
+//                                    }))
+//                                }
+//                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+//                                    actionSheet?.dismissAnimated()
+//                                    UIPasteboard.general.string = number
+//                                }))
+//                                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+//                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+//                                        actionSheet?.dismissAnimated()
+//                                    })
+//                                ])])
+//                                strongSelf.present(actionSheet, in: .window(.root))
+//                            }
+//                        }))
+                        
                         strongSelf.chatDisplayNode.dismissInput()
                 }
             }
@@ -1618,7 +1644,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let resultPoll = resultPoll else {
                         return
                     }
-                    guard let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
+                    guard let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
                         return
                     }
                     
@@ -3390,6 +3416,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
+                let editingMessage = strongSelf.editingMessage
                 let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                 var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -6713,6 +6740,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
+                            let complete = results.completed
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
@@ -6763,6 +6791,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
+                            let complete = results.completed
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let messageIndices = results.messages.map({ $0.index }).sorted()

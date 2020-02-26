@@ -90,24 +90,63 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
 private let badgeFont = Font.regular(13.0)
 
 private final class TabBarItemNode: ASDisplayNode {
+    let extractedContainerNode: ContextExtractedContentContainingNode
+    let containerNode: ContextControllerSourceNode
     let imageNode: ASImageNode
     let textImageNode: ASImageNode
+    let contextImageNode: ASImageNode
+    let contextTextImageNode: ASImageNode
     var contentWidth: CGFloat?
     
     override init() {
+        self.extractedContainerNode = ContextExtractedContentContainingNode()
+        self.containerNode = ContextControllerSourceNode()
+        
         self.imageNode = ASImageNode()
+        self.imageNode.isUserInteractionEnabled = false
+        self.imageNode.displayWithoutProcessing = true
         self.imageNode.displaysAsynchronously = false
         self.imageNode.isAccessibilityElement = false
         self.textImageNode = ASImageNode()
+        self.textImageNode.isUserInteractionEnabled = false
+        self.textImageNode.displayWithoutProcessing = true
         self.textImageNode.displaysAsynchronously = false
         self.textImageNode.isAccessibilityElement = false
+        
+        self.contextImageNode = ASImageNode()
+        self.contextImageNode.isUserInteractionEnabled = false
+        self.contextImageNode.displayWithoutProcessing = true
+        self.contextImageNode.displaysAsynchronously = false
+        self.contextImageNode.isAccessibilityElement = false
+        self.contextImageNode.alpha = 0.0
+        self.contextTextImageNode = ASImageNode()
+        self.contextTextImageNode.isUserInteractionEnabled = false
+        self.contextTextImageNode.displayWithoutProcessing = true
+        self.contextTextImageNode.displaysAsynchronously = false
+        self.contextTextImageNode.isAccessibilityElement = false
+        self.contextTextImageNode.alpha = 0.0
         
         super.init()
         
         self.isAccessibilityElement = true
         
-        self.addSubnode(self.textImageNode)
-        self.addSubnode(self.imageNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.textImageNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.imageNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.contextTextImageNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.contextImageNode)
+        self.containerNode.addSubnode(self.extractedContainerNode)
+        self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
+        self.addSubnode(self.containerNode)
+        
+        self.extractedContainerNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self else {
+                return
+            }
+            transition.updateAlpha(node: strongSelf.imageNode, alpha: isExtracted ? 0.0 : 1.0)
+            transition.updateAlpha(node: strongSelf.textImageNode, alpha: isExtracted ? 0.0 : 1.0)
+            transition.updateAlpha(node: strongSelf.contextImageNode, alpha: isExtracted ? 1.0 : 0.0)
+            transition.updateAlpha(node: strongSelf.contextTextImageNode, alpha: isExtracted ? 1.0 : 0.0)
+        }
     }
 }
 
@@ -135,8 +174,8 @@ private final class TabBarNodeContainer {
     var selectedImageValue: UIImage?
     var appliedSelectedImageValue: UIImage?
     
-    init(item: UITabBarItem, imageNode: TabBarItemNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void) {
-        self.item = item
+    init(item: TabBarNodeItem, imageNode: TabBarItemNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void, contextAction: @escaping (ContextExtractedContentContainingNode, ContextGesture) -> Void) {
+        self.item = item.item
         
         self.imageNode = imageNode
         self.imageNode.isAccessibilityElement = true
@@ -148,6 +187,7 @@ private final class TabBarNodeContainer {
         
         self.badgeBackgroundNode = ASImageNode()
         self.badgeBackgroundNode.isUserInteractionEnabled = false
+        self.badgeBackgroundNode.displayWithoutProcessing = true
         self.badgeBackgroundNode.displaysAsynchronously = false
         self.badgeBackgroundNode.isAccessibilityElement = false
         
@@ -160,25 +200,33 @@ private final class TabBarNodeContainer {
         self.badgeContainerNode.addSubnode(self.badgeBackgroundNode)
         self.badgeContainerNode.addSubnode(self.badgeTextNode)
         
-        self.badgeValue = item.badgeValue ?? ""
-        self.updateBadgeListenerIndex = UITabBarItem_addSetBadgeListener(item, { value in
+        self.badgeValue = item.item.badgeValue ?? ""
+        self.updateBadgeListenerIndex = UITabBarItem_addSetBadgeListener(item.item, { value in
             updateBadge(value ?? "")
         })
         
-        self.titleValue = item.title
-        self.updateTitleListenerIndex = item.addSetTitleListener { value, animated in
+        self.titleValue = item.item.title
+        self.updateTitleListenerIndex = item.item.addSetTitleListener { value, animated in
             updateTitle(value ?? "", animated)
         }
         
-        self.imageValue = item.image
-        self.updateImageListenerIndex = item.addSetImageListener { value in
+        self.imageValue = item.item.image
+        self.updateImageListenerIndex = item.item.addSetImageListener { value in
             updateImage(value)
         }
         
-        self.selectedImageValue = item.selectedImage
-        self.updateSelectedImageListenerIndex = item.addSetSelectedImageListener { value in
+        self.selectedImageValue = item.item.selectedImage
+        self.updateSelectedImageListenerIndex = item.item.addSetSelectedImageListener { value in
             updateSelectedImage(value)
         }
+        
+        imageNode.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self else {
+                return
+            }
+            contextAction(strongSelf.imageNode.extractedContainerNode, gesture)
+        }
+        imageNode.containerNode.isGestureEnabled = item.hasContext
     }
     
     deinit {
@@ -189,8 +237,18 @@ private final class TabBarNodeContainer {
     }
 }
 
+final class TabBarNodeItem {
+    let item: UITabBarItem
+    let hasContext: Bool
+    
+    init(item: UITabBarItem, hasContext: Bool) {
+        self.item = item
+        self.hasContext = hasContext
+    }
+}
+
 class TabBarNode: ASDisplayNode {
-    var tabBarItems: [UITabBarItem] = [] {
+    var tabBarItems: [TabBarNodeItem] = [] {
         didSet {
             self.reloadTabBarItems()
         }
@@ -211,6 +269,7 @@ class TabBarNode: ASDisplayNode {
     }
     
     private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
+    private let contextAction: (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void
     
     private var theme: TabBarControllerTheme
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -222,8 +281,11 @@ class TabBarNode: ASDisplayNode {
     let separatorNode: ASDisplayNode
     private var tabBarNodeContainers: [TabBarNodeContainer] = []
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void) {
+    private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void) {
         self.itemSelected = itemSelected
+        self.contextAction = contextAction
         self.theme = theme
         
         self.separatorNode = ASDisplayNode()
@@ -246,11 +308,25 @@ class TabBarNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(TabBarTapRecognizer(tap: { [weak self] point in
-            self?.tapped(at: point, longTap: false)
-        }, longTap: { [weak self] point in
-            self?.tapped(at: point, longTap: true)
-        }))
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .keepWithSingleTap
+        }
+        self.tapRecognizer = recognizer
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                if case .tap = gesture {
+                    self.tapped(at: location, longTap: false)
+                }
+            }
+        default:
+            break
+        }
     }
     
     func updateTheme(_ theme: TabBarControllerTheme) {
@@ -287,7 +363,6 @@ class TabBarNode: ASDisplayNode {
     private func reloadTabBarItems() {
         for node in self.tabBarNodeContainers {
             node.imageNode.removeFromSupernode()
-            node.badgeContainerNode.removeFromSupernode()
         }
         
         self.centered = self.theme.tabBarTextColor == .clear
@@ -296,7 +371,6 @@ class TabBarNode: ASDisplayNode {
         for i in 0 ..< self.tabBarItems.count {
             let item = self.tabBarItems[i]
             let node = TabBarItemNode()
-            node.isUserInteractionEnabled = false
             let container = TabBarNodeContainer(item: item, imageNode: node, updateBadge: { [weak self] value in
                 self?.updateNodeBadge(i, value: value)
             }, updateTitle: { [weak self] _, _ in
@@ -305,29 +379,29 @@ class TabBarNode: ASDisplayNode {
                 self?.updateNodeImage(i, layout: true)
             }, updateSelectedImage: { [weak self] _ in
                 self?.updateNodeImage(i, layout: true)
+            }, contextAction: { [weak self] node, gesture in
+                self?.tapRecognizer?.cancel()
+                self?.contextAction(i, node, gesture)
             })
             if let selectedIndex = self.selectedIndex, selectedIndex == i {
-                let (textImage, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
-                let (image, imageContentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
+                let (textImage, contentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
+                let (image, imageContentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
                 node.textImageNode.image = textImage
                 node.imageNode.image = image
-                node.accessibilityLabel = item.title
+                node.accessibilityLabel = item.item.title
                 node.contentWidth = max(contentWidth, imageContentWidth)
             } else {
-                let (textImage, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
-                let (image, imageContentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
+                let (textImage, contentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
+                let (image, imageContentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
                 node.textImageNode.image = textImage
-                node.accessibilityLabel = item.title
+                node.accessibilityLabel = item.item.title
                 node.imageNode.image = image
                 node.contentWidth = max(contentWidth, imageContentWidth)
             }
             container.badgeBackgroundNode.image = self.badgeImage
+            node.extractedContainerNode.contentNode.addSubnode(container.badgeContainerNode)
             tabBarNodeContainers.append(container)
             self.addSubnode(node)
-        }
-        
-        for container in tabBarNodeContainers {
-            self.addSubnode(container.badgeContainerNode)
         }
         
         self.tabBarNodeContainers = tabBarNodeContainers
@@ -345,18 +419,26 @@ class TabBarNode: ASDisplayNode {
             let previousImageSize = node.imageNode.image?.size ?? CGSize()
             let previousTextImageSize = node.textImageNode.image?.size ?? CGSize()
             if let selectedIndex = self.selectedIndex, selectedIndex == index {
-                let (textImage, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
-                let (image, imageContentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
+                let (textImage, contentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
+                let (image, imageContentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
+                let (contextTextImage, _) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarExtractedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
+                let (contextImage, _) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarExtractedIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
                 node.textImageNode.image = textImage
-                node.accessibilityLabel = item.title
+                node.accessibilityLabel = item.item.title
                 node.imageNode.image = image
+                node.contextTextImageNode.image = contextTextImage
+                node.contextImageNode.image = contextImage
                 node.contentWidth = max(contentWidth, imageContentWidth)
             } else {
-                let (textImage, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
-                let (image, imageContentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
+                let (textImage, contentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
+                let (image, imageContentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
+                let (contextTextImage, _) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarExtractedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
+                let (contextImage, _) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarExtractedIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
                 node.textImageNode.image = textImage
-                node.accessibilityLabel = item.title
+                node.accessibilityLabel = item.item.title
                 node.imageNode.image = image
+                node.contextTextImageNode.image = contextTextImage
+                node.contextImageNode.image = contextImage
                 node.contentWidth = max(contentWidth, imageContentWidth)
             }
             
@@ -414,10 +496,19 @@ class TabBarNode: ASDisplayNode {
                 let nodeSize = node.textImageNode.image?.size ?? CGSize()
                 
                 let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - nodeSize.width / 2.0)
+                let horizontalHitTestInset = distanceBetweenNodes / 2.0 - nodeSize.width / 2.0
                 let nodeFrame = CGRect(origin: CGPoint(x: originX, y: 3.0), size: nodeSize)
                 transition.updateFrame(node: node, frame: nodeFrame)
+                node.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                node.extractedContainerNode.contentNode.frame = node.extractedContainerNode.bounds
+                node.extractedContainerNode.contentRect = node.extractedContainerNode.bounds
+                node.containerNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                node.hitTestSlop = UIEdgeInsets(top: -3.0, left: -horizontalHitTestInset, bottom: -3.0, right: -horizontalHitTestInset)
+                node.containerNode.hitTestSlop = UIEdgeInsets(top: -3.0, left: -horizontalHitTestInset, bottom: -3.0, right: -horizontalHitTestInset)
                 node.imageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.textImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                node.contextImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                node.contextTextImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 
                 if container.badgeValue != container.appliedBadgeValue {
                     container.appliedBadgeValue = container.badgeValue
@@ -438,10 +529,10 @@ class TabBarNode: ASDisplayNode {
                     let backgroundSize = CGSize(width: hasSingleLetterValue ? 18.0 : max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
                     let backgroundFrame: CGRect
                     if horizontal {
-                        backgroundFrame = CGRect(origin: CGPoint(x: originX + 15.0, y: 3.0), size: backgroundSize)
+                        backgroundFrame = CGRect(origin: CGPoint(x: 15.0, y: 0.0), size: backgroundSize)
                     } else {
-                        let contentWidth: CGFloat = 25.0 //node.contentWidth ?? node.frame.width
-                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) + contentWidth - backgroundSize.width - 5.0, y: self.centered ? 9.0 : 2.0), size: backgroundSize)
+                        let contentWidth: CGFloat = 25.0
+                        backgroundFrame = CGRect(origin: CGPoint(x: floor(node.frame.width / 2.0) + contentWidth - backgroundSize.width - 5.0, y: self.centered ? 6.0 : -1.0), size: backgroundSize)
                     }
                     transition.updateFrame(node: container.badgeContainerNode, frame: backgroundFrame)
                     container.badgeBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)

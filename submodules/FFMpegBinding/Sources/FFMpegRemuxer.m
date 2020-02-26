@@ -214,6 +214,9 @@ end:
         fprintf(stderr, "Error occurred: %s\n", av_err2str(ret));
         return false;
     }
+    
+    printf("Remuxed video into %s\n", outPath.UTF8String);
+    
     return true;
 }
 
