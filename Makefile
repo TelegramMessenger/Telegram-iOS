@@ -2,8 +2,10 @@
 
 include Utils.makefile
 
+APP_VERSION="5.15.1"
+
 BUCK_OPTIONS=\
-	--config custom.appVersion="5.15.1" \
+	--config custom.appVersion="${APP_VERSION}" \
 	--config custom.developmentCodeSignIdentity="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
 	--config custom.distributionCodeSignIdentity="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
 	--config custom.developmentTeam="${DEVELOPMENT_TEAM}" \
@@ -40,6 +42,12 @@ BUCK_OPTIONS=\
 	--config custom.distributionProvisioningProfileWatchExtension="${DISTRIBUTION_PROVISIONING_PROFILE_WATCH_EXTENSION}"
 
 BAZEL=$(shell which bazel)
+
+ifneq ($(BAZEL_CACHE_DIR),)
+	export BAZEL_CACHE_OPTIONS=\
+		--disk_cache="${BAZEL_CACHE_DIR}"
+endif
+	
 
 build_arm64: check_env
 	$(BUCK) build \
@@ -397,5 +405,31 @@ temp_project: check_env kill_xcode
 	$(BUCK) project //Temp:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Temp/Telegram_Buck.xcworkspace
 
-tulsi_project:
-	${HOME}/Applications/Tulsi.app/Contents/MacOS/Tulsi -- --verbose --genconfig Telegram/Telegram.tulsiproj:Default --bazel "${BAZEL}" --build-options ${BAZEL_OPTIONS} --startup-options ${BAZEL_OPTIONS}
+bazel_app_debug_arm64:
+	APP_VERSION="${APP_VERSION}" \
+	build-system/prepare-build.sh distribution
+	"${BAZEL}" build Telegram/Telegram \
+	-c dbg \
+	--ios_multi_cpus=arm64 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--verbose_failures \
+	-s
+
+bazel_app_arm64:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/prepare-build.sh distribution
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_OPTIONS} \
+	-c opt \
+	--ios_multi_cpus=arm64 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--objc_enable_binary_stripping=true \
+	--features=dead_strip \
+	--apple_generate_dsym \
+	--output_groups=+dsyms \
+	--verbose_failures
+
+bazel_project: kill_xcode
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/generate-xcode-project.sh

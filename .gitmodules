@@ -11,3 +11,6 @@
 [submodule "build-system/bazel-rules/apple_support"]
 	path = build-system/bazel-rules/apple_support
 	url = https://github.com/bazelbuild/apple_support.git
+[submodule "submodules/TgVoip/libtgvoip"]
+	path = submodules/TgVoip/libtgvoip
+	url = https://github.com/telegramdesktop/libtgvoip.git

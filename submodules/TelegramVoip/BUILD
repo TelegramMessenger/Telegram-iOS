@@ -12,7 +12,7 @@ swift_library(
         "//submodules/SyncCore:SyncCore",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/libtgvoip:libtgvoip",
+        "//submodules/TgVoip:TgVoip",
     ],
     visibility = [
         "//visibility:public",

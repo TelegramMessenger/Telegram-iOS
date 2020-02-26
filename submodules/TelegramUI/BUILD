@@ -35,7 +35,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/LegacyComponents:LegacyComponents",
-        "//submodules/libtgvoip:libtgvoip",
+        "//submodules/TgVoip:TgVoip",
         "//submodules/lottie-ios:Lottie",
         "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/WebPBinding:WebPBinding",

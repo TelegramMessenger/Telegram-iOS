@@ -16,8 +16,8 @@ load("@build_bazel_rules_swift//swift:swift.bzl",
     "swift_library",
 )
 
-load("//build-system:info_plist_fragment.bzl",
-    "info_plist_fragment",
+load("//build-system:plist_fragment.bzl",
+    "plist_fragment",
 )
 
 load(
@@ -25,6 +25,7 @@ load(
     "telegram_build_number",
     "telegram_version",
     "telegram_bundle_id",
+    "telegram_aps_environment",
 )
 
 filegroup(
@@ -119,8 +120,9 @@ swift_library(
     ],
 )
 
-additional_info_plist = info_plist_fragment(
+plist_fragment(
     name = "AdditionalInfoPlist",
+    extension = "plist",
     template =
     """
     <key>CFBundleShortVersionString</key>
@@ -164,6 +166,63 @@ additional_info_plist = info_plist_fragment(
         telegram_version = telegram_version,
         telegram_build_number = telegram_build_number,
         telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
+official_apple_pay_merchants = [
+    "merchant.ph.telegra.Telegraph",
+    "merchant.yandex.ph.telegra.Telegraph",
+    "merchant.sberbank.ph.telegra.Telegraph",
+    "merchant.sberbank.test.ph.telegra.Telegraph",
+    "merchant.privatbank.test.telergramios",
+    "merchant.privatbank.prod.telergram",
+    "merchant.telegram.tranzzo.test",
+]
+
+apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else ""
+
+apple_pay_merchants_fragment = "" if apple_pay_merchants == "" else """
+<key>com.apple.developer.in-app-payments</key>
+<array>
+""" + "\n".join([
+"    <string>{}</string>".format(merchant_id) for merchant_id in apple_pay_merchants
+]) + "\n" + """
+</array>
+"""
+
+telegram_entitlements_template = """
+    <key>com.apple.developer.icloud-services</key>
+    <array>
+        <string>CloudKit</string>
+        <string>CloudDocuments</string>
+    </array>
+    <key>com.apple.developer.icloud-container-identifiers</key>
+    <array>
+        <string>iCloud.{telegram_bundle_id}</string>
+    </array>
+    <key>aps-environment</key>
+    <string>{telegram_aps_environment}</string>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+        <string>applinks:telegram.me</string>
+        <string>applinks:t.me</string>
+    </array>
+    <key>com.apple.developer.siri</key>
+    <true/>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.{telegram_bundle_id}</string>
+    </array>
+    <key>com.apple.developer.pushkit.unrestricted-voip</key>
+    <true/>
+""" + apple_pay_merchants_fragment
+
+plist_fragment(
+    name = "TelegramEntitlements",
+    extension = "entitlements",
+    template = telegram_entitlements_template.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_aps_environment = telegram_aps_environment,
     )
 )
 
@@ -223,8 +282,9 @@ objc_library(
     ],
 )
 
-info_plist_fragment(
+plist_fragment(
     name = "WatchVersionInfoPlist",
+    extension = "plist",
     template =
     """
     <key>CFBundleShortVersionString</key>
@@ -237,8 +297,9 @@ info_plist_fragment(
     )
 )
 
-info_plist_fragment(
+plist_fragment(
     name = "WatchAppNameInfoPlist",
+    extension = "plist",
     template =
     """
     <key>CFBundleDisplayName</key>
@@ -246,8 +307,9 @@ info_plist_fragment(
     """
 )
 
-info_plist_fragment(
+plist_fragment(
     name = "WatchExtensionNSExtensionInfoPlist",
+    extension = "plist",
     template =
     """
     <key>NSExtension</key>
@@ -265,8 +327,9 @@ info_plist_fragment(
     )
 )
 
-info_plist_fragment(
+plist_fragment(
     name = "WatchAppCompanionInfoPlist",
+    extension = "plist",
     template =
     """
     <key>WKCompanionAppBundleIdentifier</key>
@@ -336,7 +399,7 @@ ios_application(
     families = ["iphone", "ipad"],
     minimum_os_version = "9.0",
     provisioning_profile = "//build-input/data/provisioning-profiles:Telegram.mobileprovision",
-    entitlements = "Telegram-iOS/Telegram-iOS-Hockeyapp.entitlements",
+    entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
         "Info.plist",
         ":AdditionalInfoPlist",

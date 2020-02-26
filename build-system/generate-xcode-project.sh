@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/sh
 
 set -e
 
@@ -28,46 +28,23 @@ for VARIABLE_NAME in ${EXPECTED_VARIABLES[@]}; do
 		MISSING_VARIABLES="1"
 	fi
 done
-
 if [ "$MISSING_VARIABLES" == "1" ]; then
 	exit 1
 fi
-
-VARIABLES_DIRECTORY="build-input/data"
-mkdir -p "$VARIABLES_DIRECTORY"
-VARIABLES_PATH="$VARIABLES_DIRECTORY/variables.bzl"
-rm -f "$VARIABLES_PATH"
 
 GEN_DIRECTORY="build-input/gen/project"
 rm -rf "$GEN_DIRECTORY"
 mkdir -p "$GEN_DIRECTORY"
 
-echo "telegram_build_number = \"$BUILD_NUMBER\"" >> "$VARIABLES_PATH"
-echo "telegram_version = \"$APP_VERSION\"" >> "$VARIABLES_PATH"
-echo "telegram_bundle_id = \"$BUNDLE_ID\"" >> "$VARIABLES_PATH"	
-echo "telegram_api_id = \"$API_ID\"" >> "$VARIABLES_PATH"
-echo "telegram_api_hash = \"$API_HASH\"" >> "$VARIABLES_PATH"
-echo "telegram_app_center_id = \"$APP_CENTER_ID\"" >> "$VARIABLES_PATH"
-echo "telegram_is_internal_build = \"$IS_INTERNAL_BUILD\"" >> "$VARIABLES_PATH"
-echo "telegram_is_appstore_build = \"$IS_APPSTORE_BUILD\"" >> "$VARIABLES_PATH"
-echo "telegram_appstore_id = \"$APPSTORE_ID\"" >> "$VARIABLES_PATH"
-echo "telegram_app_specific_url_scheme = \"$APP_SPECIFIC_URL_SCHEME\"" >> "$VARIABLES_PATH"
-
 BAZEL_OPTIONS=(\
 	--features=swift.use_global_module_cache \
 	--spawn_strategy=standalone \
 	--strategy=SwiftCompile=standalone \
-	--define=telegram_build_number="$BUILD_NUMBER" \
-	--define=telegram_version="$APP_VERSION" \
-	--define=telegram_bundle_id="$BUNDLE_ID" \
-	--define=telegram_api_id="$API_ID" \
-	--define=telegram_api_hash="$API_HASH" \
-	--define=telegram_app_center_id="$APP_CENTER_ID" \
-	--define=telegram_is_internal_build="$IS_INTERNAL_BUILD" \
-	--define=telegram_is_appstore_build="$IS_APPSTORE_BUILD" \
-	--define=telegram_appstore_id="$APPSTORE_ID" \
-	--define=telegram_app_specific_url_scheme="$APP_SPECIFIC_URL_SCHEME" \
 )
+set -x
+if [ "$BAZEL_CACHE_DIR" != "" ]; then
+	BAZEL_OPTIONS=("${BAZEL_OPTIONS[@]}" --disk_cache="$(echo $BAZEL_CACHE_DIR | sed -e 's/[\/&]/\\&/g')")
+fi 
 
 $HOME/Applications/Tulsi.app/Contents/MacOS/Tulsi -- \
 	--verbose \

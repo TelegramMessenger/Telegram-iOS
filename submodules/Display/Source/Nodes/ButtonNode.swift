@@ -279,4 +279,6 @@ open class ASButtonNode: ASControlNode {
         self.backgroundImageNode.frame = CGRect(origin: CGPoint(), size: size)
         self.highlightedBackgroundImageNode.frame = CGRect(origin: CGPoint(), size: size)
     }
+
+    func f2() {print("test5")  }
 }
