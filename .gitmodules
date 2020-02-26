@@ -14,3 +14,6 @@
 [submodule "submodules/TgVoip/libtgvoip"]
 	path = submodules/TgVoip/libtgvoip
 	url = https://github.com/telegramdesktop/libtgvoip.git
+[submodule "build-system/tulsi"]
+	path = build-system/tulsi
+	url = https://github.com/ali-fareed/tulsi.git

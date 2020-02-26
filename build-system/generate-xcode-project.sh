@@ -36,6 +36,17 @@ GEN_DIRECTORY="build-input/gen/project"
 rm -rf "$GEN_DIRECTORY"
 mkdir -p "$GEN_DIRECTORY"
 
+pushd "build-system/tulsi"
+"$BAZEL" build //:tulsi --xcode_version=$(cat "build-system/xcode_version")
+popd
+
+TULSI_DIRECTORY="build-input/gen/project"
+TULSI_APP="build-input/gen/project/Tulsi.app"
+TULSI="$TULSI_APP/Contents/MacOS/Tulsi"
+mkdir -p "$TULSI_DIRECTORY"
+
+unzip -oq "build-system/tulsi/bazel-bin/tulsi.zip" -d "$TULSI_DIRECTORY"
+
 CORE_COUNT=$(sysctl -n hw.logicalcpu)
 CORE_COUNT_MINUS_ONE=$(expr ${CORE_COUNT} \- 1)
 
@@ -51,7 +62,7 @@ if [ "$BAZEL_CACHE_DIR" != "" ]; then
 	BAZEL_OPTIONS=("${BAZEL_OPTIONS[@]}" --disk_cache="$(echo $BAZEL_CACHE_DIR | sed -e 's/[\/&]/\\&/g')")
 fi 
 
-$HOME/Applications/Tulsi.app/Contents/MacOS/Tulsi -- \
+"$TULSI" -- \
 	--verbose \
 	--create-tulsiproj Telegram \
 	--workspaceroot ./ \
@@ -68,7 +79,7 @@ done
 
 sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"Telegram\/...", "submodules\/..."/' "$GEN_DIRECTORY/Telegram.tulsiproj/Configs/Telegram.tulsigen"
 
-${HOME}/Applications/Tulsi.app/Contents/MacOS/Tulsi -- \
+"$TULSI" -- \
 	--verbose \
 	--genconfig "$GEN_DIRECTORY/Telegram.tulsiproj:Telegram" \
 	--bazel "$BAZEL" \

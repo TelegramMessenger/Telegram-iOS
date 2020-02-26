@@ -281,5 +281,6 @@ open class ASButtonNode: ASControlNode {
     }
 
     func f2() {
+    
     }
 }

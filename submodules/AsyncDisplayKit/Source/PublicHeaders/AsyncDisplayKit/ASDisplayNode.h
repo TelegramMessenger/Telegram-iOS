@@ -989,4 +989,8 @@ typedef NS_ENUM(NSInteger, ASLayoutEngineType) {
 @property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
 @end
 
+@interface CALayer (ASDisplayNodeInternal)
+@property (nullable, weak) ASDisplayNode *asyncdisplaykit_node;
+@end
+
 NS_ASSUME_NONNULL_END
