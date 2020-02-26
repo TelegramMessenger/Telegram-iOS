@@ -23,7 +23,18 @@ public struct ChannelStatsPercentValue: Equatable {
 public enum ChannelStatsGraph: Equatable {
     case OnDemand(token: String)
     case Failed(error: String)
-    case Loaded(data: String)
+    case Loaded(token: String?, data: String)
+    
+    var token: String? {
+        switch self {
+            case let .OnDemand(token):
+                return token
+            case let .Loaded(token, data):
+                return token
+            default:
+                return nil
+        }
+    }
 }
 
 public final class ChannelStats: Equatable {
@@ -367,6 +378,14 @@ private final class ChannelStatsContextImpl {
             }), forKey: token)
         }
     }
+    
+    func loadDetailedGraph(_ graph: ChannelStatsGraph, x: Int64) -> Signal<ChannelStatsGraph?, NoError> {
+        if let token = graph.token {
+            return requestGraph(network: self.network, datacenterId: self.datacenterId, token: token, x: x)
+        } else {
+            return .single(nil)
+        }
+    }
 }
 
 public final class ChannelStatsContext {
@@ -437,14 +456,26 @@ public final class ChannelStatsContext {
             impl.loadLanguagesGraph()
         }
     }
+    
+    public func loadDetailedGraph(_ graph: ChannelStatsGraph, x: Int64) -> Signal<ChannelStatsGraph?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.loadDetailedGraph(graph, x: x).start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
 }
 
 extension ChannelStatsGraph {
     init(apiStatsGraph: Api.StatsGraph) {
         switch apiStatsGraph {
-            case let .statsGraph(_, json, _):
+            case let .statsGraph(_, json, zoomToken):
                 if case let .dataJSON(string) = json {
-                    self = .Loaded(data: string)
+                    self = .Loaded(token: zoomToken, data: string)
                 } else {
                     self = .Failed(error: "")
                 }

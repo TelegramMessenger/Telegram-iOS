@@ -8,6 +8,7 @@ import SyncCore
 import MapKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
@@ -15,8 +16,11 @@ import PresentationDataUtils
 import AppBundle
 import Charts
 
-private final class StatsArguments {
-    init() {
+private final class StatsControllerArguments {
+    let loadDetailedGraph: (ChannelStatsGraph, Int64) -> Signal<ChannelStatsGraph?, NoError>
+    
+    init(loadDetailedGraph: @escaping (ChannelStatsGraph, Int64) -> Signal<ChannelStatsGraph?, NoError>) {
+        self.loadDetailedGraph = loadDetailedGraph
     }
 }
 
@@ -33,7 +37,7 @@ private enum StatsSection: Int32 {
 }
 
 private enum StatsEntry: ItemListNodeEntry {
-    case overviewHeader(PresentationTheme, String)
+    case overviewHeader(PresentationTheme, String, String)
     case overview(PresentationTheme, ChannelStats)
     
     case growthTitle(PresentationTheme, String)
@@ -126,8 +130,8 @@ private enum StatsEntry: ItemListNodeEntry {
     
     static func ==(lhs: StatsEntry, rhs: StatsEntry) -> Bool {
         switch lhs {
-            case let .overviewHeader(lhsTheme, lhsText):
-                if case let .overviewHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .overviewHeader(lhsTheme, lhsText, lhsDates):
+                if case let .overviewHeader(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
                 } else {
                     return false
@@ -242,9 +246,11 @@ private enum StatsEntry: ItemListNodeEntry {
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
+        let arguments = arguments as! StatsControllerArguments
         switch self {
-            case let .overviewHeader(theme, text),
-                 let .growthTitle(theme, text),
+            case let .overviewHeader(theme, text, dates):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
+            case let .growthTitle(theme, text),
                  let .followersTitle(theme, text),
                  let .notificationsTitle(theme, text),
                  let .viewsByHourTitle(theme, text),
@@ -258,19 +264,21 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .growthGraph(theme, strings, dateTimeFormat, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
             case let .followersGraph(theme, strings, dateTimeFormat, graph, type):
-                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
             case let .notificationsGraph(theme, strings, dateTimeFormat, graph, type):
-                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
             case let .viewsByHourGraph(theme, strings, dateTimeFormat, graph, type):
-                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
             case let .postInteractionsGraph(theme, strings, dateTimeFormat, graph, type):
-                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
+                    let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970))
+                }, sectionId: self.section, style: .blocks)
             case let .viewsBySourceGraph(theme, strings, dateTimeFormat, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
             case let .followersBySourceGraph(theme, strings, dateTimeFormat, graph, type):
-                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
             case let .languagesGraph(theme, strings, dateTimeFormat, graph, type):
-                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 100.0, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 100.0, sectionId: self.section, style: .blocks)
         }
     }
 }
@@ -279,7 +287,10 @@ private func statsControllerEntries(data: ChannelStats?, presentationData: Prese
     var entries: [StatsEntry] = []
     
     if let data = data {
-        entries.append(.overviewHeader(presentationData.theme, presentationData.strings.Stats_Overview))
+        let minDate = stringForDate(timestamp: data.period.minDate, strings: presentationData.strings)
+        let maxDate = stringForDate(timestamp: data.period.maxDate, strings: presentationData.strings)
+        
+        entries.append(.overviewHeader(presentationData.theme, presentationData.strings.Stats_Overview, "\(minDate) – \(maxDate)"))
         entries.append(.overview(presentationData.theme, data))
     
         entries.append(.growthTitle(presentationData.theme, presentationData.strings.Stats_GrowthTitle))
@@ -339,7 +350,9 @@ public func channelStatsController(context: AccountContext, peer: Peer, cachedPe
     })
     dataPromise.set(.single(nil) |> then(dataSignal))
     
-    let arguments = StatsArguments()
+    let arguments = StatsControllerArguments(loadDetailedGraph: { graph, x -> Signal<ChannelStatsGraph?, NoError> in
+        return statsContext.loadDetailedGraph(graph, x: x)
+    })
     
     let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get())
     |> deliverOnMainQueue

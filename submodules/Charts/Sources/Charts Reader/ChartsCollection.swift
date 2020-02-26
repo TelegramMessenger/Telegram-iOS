@@ -58,7 +58,7 @@ extension ChartsCollection {
             switch type {
             case .axix:
                 axixValuesToSetup = try column.dropFirst().map { Date(timeIntervalSince1970: try Convert.doubleFrom($0) / 1000) }
-            case .chart, .bar, .area:
+            case .chart, .bar, .area, .step:
                 guard let colorString = colors[columnId],
                     let color = UIColor(hexString: colorString) else {
                         throw ChartsError.generalConversion("Unable to get color name from: \(colors) - \(columnId)")
@@ -88,4 +88,5 @@ private enum ColumnType: String {
     case chart = "line"
     case area = "area"
     case bar = "bar"
+    case step = "step"
 }

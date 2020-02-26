@@ -15,14 +15,16 @@ class StatsGraphItem: ListViewItem, ItemListItem {
     let graph: ChannelStatsGraph
     let type: ChartType
     let height: CGFloat
+    let getDetailsData: ((Date, (String?) -> Void) -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, height: CGFloat = 0.0, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, height: CGFloat = 0.0, getDetailsData: ((Date, (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
         self.height = height
+        self.getDetailsData = getDetailsData
         self.sectionId = sectionId
         self.style = style
     }
@@ -184,10 +186,11 @@ class StatsGraphItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    if let updatedGraph = updatedGraph, case let .Loaded(data) = updatedGraph {
-                        var data = data.replacingOccurrences(of: "step", with: "bar")
-                        strongSelf.chartNode.setup(data, type: item.type, getDetailsData: { date, completion in
-                            
+                    if let updatedGraph = updatedGraph, case let .Loaded(_, data) = updatedGraph {
+                        strongSelf.chartNode.setup(data, type: item.type, getDetailsData: { [weak self] date, completion in
+                            if let strongSelf = self, let item = strongSelf.item {
+                                item.getDetailsData?(date, completion)
+                            }
                         })
                     }
                 }

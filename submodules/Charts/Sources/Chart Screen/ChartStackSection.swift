@@ -189,7 +189,7 @@ class ChartStackSection: UIView, ColorModeContainer {
         controller.chartRangeUpdatedClosure = { [unowned self] (range, animated) in
             self.rangeView.setRange(range, animated: animated)
         }
-        controller.chartRangePagingClosure = {  [unowned self] (isEnabled, pageSize) in
+        controller.chartRangePagingClosure = { [unowned self] (isEnabled, pageSize) in
             self.rangeView.setRangePaging(enabled: isEnabled, minimumSize: pageSize)
         }
         
