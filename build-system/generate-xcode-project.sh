@@ -36,12 +36,17 @@ GEN_DIRECTORY="build-input/gen/project"
 rm -rf "$GEN_DIRECTORY"
 mkdir -p "$GEN_DIRECTORY"
 
+CORE_COUNT=$(sysctl -n hw.logicalcpu)
+CORE_COUNT_MINUS_ONE=$(expr ${CORE_COUNT} \- 1)
+
 BAZEL_OPTIONS=(\
 	--features=swift.use_global_module_cache \
 	--spawn_strategy=standalone \
 	--strategy=SwiftCompile=standalone \
+	--features=swift.enable_batch_mode \
+	--swiftcopt=-j${CORE_COUNT_MINUS_ONE} \
 )
-set -x
+
 if [ "$BAZEL_CACHE_DIR" != "" ]; then
 	BAZEL_OPTIONS=("${BAZEL_OPTIONS[@]}" --disk_cache="$(echo $BAZEL_CACHE_DIR | sed -e 's/[\/&]/\\&/g')")
 fi 

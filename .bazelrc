@@ -4,19 +4,6 @@ build --cxxopt='-std=c++14'
 build --copt='-w'
 build --swiftcopt='-Xcc'
 build --swiftcopt='-w'
-build --features=swift.enable_batch_mode
-build --features=swift.use_global_module_cache
-build --features=swift.cacheable_swiftmodules
 build --spawn_strategy=local
-
-#build --swiftcopt=-wmo
-#build --swiftcopt='-num-threads'
-#build --swiftcopt='16'
-build --swiftcopt=-j14
-#build --jobs 16
-
-#build --remote_executor=grpc://localhost:8980
-#build --spawn_strategy=remote
-#build --strategy=SwiftCompile=worker
-#build --strategy=SwiftCompile=remote
 build --strategy=SwiftCompile=local
+

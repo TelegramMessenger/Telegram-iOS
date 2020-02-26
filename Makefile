@@ -3,6 +3,8 @@
 include Utils.makefile
 
 APP_VERSION="5.15.1"
+CORE_COUNT=$(shell sysctl -n hw.logicalcpu)
+CORE_COUNT_MINUS_ONE=$(shell expr ${CORE_COUNT} \- 1)
 
 BUCK_OPTIONS=\
 	--config custom.appVersion="${APP_VERSION}" \
@@ -44,10 +46,21 @@ BUCK_OPTIONS=\
 BAZEL=$(shell which bazel)
 
 ifneq ($(BAZEL_CACHE_DIR),)
-	export BAZEL_CACHE_OPTIONS=\
+	export BAZEL_CACHE_FLAGS=\
 		--disk_cache="${BAZEL_CACHE_DIR}"
 endif
+
+BAZEL_COMMON_FLAGS=\
+	--features=swift.use_global_module_cache \
 	
+BAZEL_DEBUG_FLAGS=\
+	--features=swift.enable_batch_mode \
+	--swiftcopt=-j${CORE_COUNT_MINUS_ONE} \
+
+BAZEL_OPT_FLAGS=\
+	--swiftcopt=-whole-module-optimization \
+	--swiftcopt='-num-threads' --swiftcopt='16' \
+
 
 build_arm64: check_env
 	$(BUCK) build \
@@ -408,18 +421,17 @@ temp_project: check_env kill_xcode
 bazel_app_debug_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	build-system/prepare-build.sh distribution
-	"${BAZEL}" build Telegram/Telegram \
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} \
 	-c dbg \
 	--ios_multi_cpus=arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--verbose_failures \
-	-s
+	--verbose_failures
 
 bazel_app_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	build-system/prepare-build.sh distribution
-	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_OPTIONS} \
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
 	-c opt \
 	--ios_multi_cpus=arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
