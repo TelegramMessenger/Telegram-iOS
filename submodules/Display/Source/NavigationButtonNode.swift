@@ -280,14 +280,9 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
     }
     
-    public override var isEnabled: Bool {
-        get {
-            return super.isEnabled
-        }
-        set(value) {
-            if self.isEnabled != value {
-                super.isEnabled = value
-                
+    public var isEnabled: Bool = true {
+        didSet {
+            if self.isEnabled != oldValue {
                 self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
