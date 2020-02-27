@@ -93,7 +93,11 @@ extension ChatListFilterPeerCategories {
     }
 }
 
-public struct ChatListFilter: PostboxCoding, Equatable {
+public final class ChatListFilter: PostboxCoding, Equatable {
+    public static func == (lhs: ChatListFilter, rhs: ChatListFilter) -> Bool {
+        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.categories == rhs.categories && lhs.excludeMuted == rhs.excludeMuted && lhs.includePeers == rhs.includePeers
+    }
+    
     public var id: Int32
     public var title: String?
     public var categories: ChatListFilterPeerCategories
@@ -141,7 +145,7 @@ public struct ChatListFilter: PostboxCoding, Equatable {
 }
 
 extension ChatListFilter {
-    init(apiFilter: Api.DialogFilter) {
+    convenience init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
         case let .dialogFilter(flags, id, title, includePeers):
             self.init(
@@ -330,9 +334,13 @@ public func replaceRemoteChatListFilters(account: Account) -> Signal<Never, NoEr
     }
 }
 
-public struct ChatListFiltersState: PreferencesEntry, Equatable {
+public final class ChatListFiltersState: PreferencesEntry, Equatable {
+    public static func == (lhs: ChatListFiltersState, rhs: ChatListFiltersState) -> Bool {
+        return lhs.filters == rhs.filters && lhs.filters == rhs.filters
+    }
+    
     public var filters: [ChatListFilter]
-    public var remoteFilters: [ChatListFilter]?
+    internal var remoteFilters: [ChatListFilter]?
     
     public static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
     
@@ -368,7 +376,7 @@ public func updateChatListFilterSettingsInteractively(postbox: Postbox, _ f: @es
     return postbox.transaction { transaction -> ChatListFiltersState in
         var result: ChatListFiltersState?
         transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
-            var settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
+            let settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
             let updated = f(settings)
             result = updated
             return updated
