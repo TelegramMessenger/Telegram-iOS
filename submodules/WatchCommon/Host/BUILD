@@ -11,7 +11,7 @@ objc_library(
         "PublicHeaders/**/*.h",
     ]),
     copts = [
-        "-Isubmodules/WatchCommon/Host/PublicHeaders/WatchCommon",
+        "-I{}/PublicHeaders/WatchCommon".format(package_name()),
     ],
     includes = [
         "PublicHeaders",

@@ -19,9 +19,9 @@ objc_library(
         "PublicHeaders",
     ],
     copts = [
-        "-Isubmodules/RMIntro/{}".format(directory) for directory in unique_directories(private_headers)
+        "-I{}/{}".format(package_name(), directory) for directory in unique_directories(private_headers)
     ] + [
-        "-Isubmodules/RMIntro/PublicHeaders/RMIntro",
+        "-I{}/PublicHeaders/RMIntro".format(package_name()),
     ],
     deps = [
         "//submodules/LegacyComponents:LegacyComponents",

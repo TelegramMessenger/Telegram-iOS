@@ -14,7 +14,7 @@ objc_library(
         "PublicHeaders",
     ],
     copts = [
-        "-Isubmodules/Stripe/PublicHeaders/Stripe",
+        "-I{}/PublicHeaders/Stripe".format(package_name()),
     ],
     sdk_frameworks = [
         "Foundation",

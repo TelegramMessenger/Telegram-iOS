@@ -15,9 +15,9 @@ objc_library(
         "PublicHeaders",
     ],
     copts = [
-        "-Isubmodules/OpusBinding/Sources",
-        "-Isubmodules/OpusBinding/Sources/opusfile",
-        "-Isubmodules/OpusBinding/PublicHeaders/OpusBinding",
+        "-I{}/Sources".format(package_name()),
+        "-I{}/Sources/opusfile".format(package_name()),
+        "-I{}/PublicHeaders/OpusBinding".format(package_name()),
     ],
     deps = [
         "//submodules/Opus:opus",

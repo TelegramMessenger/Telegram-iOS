@@ -14,9 +14,9 @@ objc_library(
         "lottie-ios/**/*.m",
     ]) + private_headers,
     copts = [
-        "-Isubmodules/lottie-ios/{}".format(directory) for directory in unique_directories(private_headers)
+        "-I{}/{}".format(package_name(), directory) for directory in unique_directories(private_headers)
     ] + [
-        "-Isubmodules/lottie-ios/lottie-ios/Classes/PublicHeaders/Lottie",
+        "-I{}/lottie-ios/Classes/PublicHeaders/Lottie".format(package_name()),
     ],
     hdrs = glob([
         "lottie-ios/Classes/PublicHeaders/**/*.h",

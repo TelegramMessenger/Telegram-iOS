@@ -20,7 +20,7 @@ objc_library(
         "PublicHeaders/**/*.h",
     ]),
     copts = [
-        "-Isubmodules/LegacyComponents/PublicHeaders/LegacyComponents",
+        "-I{}/PublicHeaders/LegacyComponents".format(package_name()),
     ],
     includes = [
         "PublicHeaders",

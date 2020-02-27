@@ -24,11 +24,11 @@ objc_library(
     copts = [
         "-Dpixman_region_selfcheck(x)=1",
         "-DLOTTIE_DISABLE_ARM_NEON=1",
-        "-Isubmodules/rlottie",
-        "-Isubmodules/rlottie/rlottie/inc",
-        "-Isubmodules/rlottie/rlottie/src/vector",
-        "-Isubmodules/rlottie/rlottie/src/vector/pixman",
-        "-Isubmodules/rlottie/rlottie/src/vector/freetype",
+        "-I{}".format(package_name()),
+        "-I{}/rlottie/inc".format(package_name()),
+        "-I{}/rlottie/src/vector".format(package_name()),
+        "-I{}/rlottie/src/vector/pixman".format(package_name()),
+        "-I{}/rlottie/src/vector/freetype".format(package_name()),
     ],
     deps = [
     ],

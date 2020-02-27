@@ -43,9 +43,9 @@ objc_library(
         "PublicHeaders/**/*.h",
     ]),
     copts = [
-        "-Isubmodules/TgVoip/PublicHeaders/TgVoip",
-        "-Isubmodules/TgVoip/libtgvoip",
-        "-Isubmodules/TgVoip/libtgvoip/webrtc_dsp",
+        "-I{}/PublicHeaders/TgVoip".format(package_name()),
+        "-I{}/libtgvoip".format(package_name()),
+        "-I{}/libtgvoip/webrtc_dsp".format(package_name()),
         "-DTGVOIP_USE_INSTALLED_OPUS",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": copts_arm,
