@@ -38,18 +38,23 @@ public struct InteractiveTransitionGestureRecognizerDirections: OptionSet {
         self.rawValue = rawValue
     }
     
-    public static let left = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 0)
-    public static let right = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 1)
+    public static let leftEdge = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 2)
+    public static let rightEdge = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 3)
+    public static let leftCenter = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 0)
+    public static let rightCenter = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 1)
+    
+    public static let left: InteractiveTransitionGestureRecognizerDirections = [.leftEdge, .leftCenter]
+    public static let right: InteractiveTransitionGestureRecognizerDirections = [.rightEdge, .rightCenter]
 }
 
 public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
-    private let allowedDirections: () -> InteractiveTransitionGestureRecognizerDirections
+    private let allowedDirections: (CGPoint) -> InteractiveTransitionGestureRecognizerDirections
     
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
     private var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
     
-    public init(target: Any?, action: Selector?, allowedDirections: @escaping () -> InteractiveTransitionGestureRecognizerDirections) {
+    public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections) {
         self.allowedDirections = allowedDirections
         
         super.init(target: target, action: action)
@@ -65,37 +70,50 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        self.currentAllowedDirections = self.allowedDirections()
-        if self.currentAllowedDirections.isEmpty {
+        let touch = touches.first!
+        let point = touch.location(in: self.view)
+        
+        var allowedDirections = self.allowedDirections(point)
+        if allowedDirections.isEmpty {
             self.state = .failed
             return
         }
         
         super.touchesBegan(touches, with: event)
         
-        let touch = touches.first!
-        self.firstLocation = touch.location(in: self.view)
+        self.firstLocation = point
         
         if let target = self.view?.hitTest(self.firstLocation, with: event) {
             if hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target)) {
-                self.state = .cancelled
+                allowedDirections.remove(.leftCenter)
+                allowedDirections.remove(.rightCenter)
             }
+        }
+        
+        if allowedDirections.isEmpty {
+            self.state = .failed
+        } else {
+            self.currentAllowedDirections = allowedDirections
         }
     }
     
     override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
-        let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
+        let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
         let absTranslationX: CGFloat = abs(translation.x)
         let absTranslationY: CGFloat = abs(translation.y)
         
+        let size = self.view?.bounds.size ?? CGSize()
+        
         if !self.validatedGesture {
-            if self.currentAllowedDirections.contains(.right) && self.firstLocation.x < 16.0 {
+            if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < 16.0 {
                 self.validatedGesture = true
-            } else if !self.currentAllowedDirections.contains(.left) && translation.x < 0.0 {
+            } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - 16.0 {
+                self.validatedGesture = true
+            } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
                 self.state = .failed
-            } else if !self.currentAllowedDirections.contains(.right) && translation.x > 0.0 {
+            } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
                 self.state = .failed
             } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                 self.state = .failed
@@ -104,7 +122,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
             }
         }
         
-        if validatedGesture {
+        if self.validatedGesture {
             super.touchesMoved(touches, with: event)
         }
     }

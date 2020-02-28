@@ -641,6 +641,25 @@ final class ChatListTable: Table {
         return entries
     }
     
+    func countWithPredicate(groupId: PeerGroupId, predicate: (PeerId) -> Bool) -> Int {
+        var result = 0
+        self.valueBox.filteredRange(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
+            let (_, _, messageIndex, type) = extractKey(key)
+            
+            if type == ChatListEntryType.message.rawValue {
+                if predicate(messageIndex.id.peerId) {
+                    result += 1
+                    return .accept
+                } else {
+                    return .skip
+                }
+            } else {
+                return .skip
+            }
+        }, limit: 10000)
+        return result
+    }
+    
     func getStandalone(peerId: PeerId, messageHistoryTable: MessageHistoryTable) -> ChatListIntermediateEntry? {
         let index = self.indexTable.get(peerId: peerId)
         switch index.inclusion {

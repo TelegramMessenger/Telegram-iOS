@@ -85,7 +85,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.segmentedControlNode = nil
         }
        
-        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: filter, isSelecting: false), theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         super.init()
         
@@ -99,8 +99,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self?.requestActivateSearch?()
         }
         
-        self.chatListNode.peerSelected = { [weak self] peerId, _, _ in
-            self?.requestOpenPeer?(peerId)
+        self.chatListNode.peerSelected = { [weak self] peer, _, _ in
+            self?.requestOpenPeer?(peer.id)
         }
         
         self.chatListNode.disabledPeerSelected = { [weak self] peer in

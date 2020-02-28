@@ -91,6 +91,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
         
         let recognizer = ItemListRevealOptionsGestureRecognizer(target: self, action: #selector(self.revealGesture(_:)))
         self.recognizer = recognizer
+        recognizer.delegate = self
         recognizer.allowAnyDirection = self.allowAnyDirection
         self.view.addGestureRecognizer(recognizer)
         

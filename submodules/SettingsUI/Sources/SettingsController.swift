@@ -114,6 +114,7 @@ private final class SettingsItemArguments {
     let openPhoneNumberChange: () -> Void
     let accountContextAction: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
     let openDevices: () -> Void
+    let openFilters: () -> Void
     
     init(
         sharedContext: SharedAccountContext,
@@ -147,7 +148,8 @@ private final class SettingsItemArguments {
         keepPhone: @escaping () -> Void,
         openPhoneNumberChange: @escaping () -> Void,
         accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
-        openDevices: @escaping () -> Void
+        openDevices: @escaping () -> Void,
+        openFilters: @escaping () -> Void
     ) {
         self.sharedContext = sharedContext
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -181,6 +183,7 @@ private final class SettingsItemArguments {
         self.openPhoneNumberChange = openPhoneNumberChange
         self.accountContextAction = accountContextAction
         self.openDevices = openDevices
+        self.openFilters = openFilters
     }
 }
 
@@ -211,6 +214,8 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     
     case devices(PresentationTheme, UIImage?, String, String)
     
+    case filters(PresentationTheme, UIImage?, String, String)
+    
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
@@ -240,7 +245,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return SettingsSection.accounts.rawValue
         case .proxy:
             return SettingsSection.proxy.rawValue
-        case .devices:
+        case .devices, .filters:
             return SettingsSection.media.rawValue
         case .savedMessages, .recentCalls, .stickers:
             return SettingsSection.media.rawValue
@@ -285,30 +290,32 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return 1006
         case .devices:
             return 1007
-        case .notificationsAndSounds:
+        case .filters:
             return 1008
-        case .privacyAndSecurity:
+        case .notificationsAndSounds:
             return 1009
-        case .dataAndStorage:
+        case .privacyAndSecurity:
             return 1010
-        case .themes:
+        case .dataAndStorage:
             return 1011
-        case .language:
+        case .themes:
             return 1012
-        case .contentStickers:
+        case .language:
             return 1013
+        case .contentStickers:
+            return 1014
         #if ENABLE_WALLET
         case .wallet:
-            return 1014
+            return 1015
         #endif
         case .passport:
-            return 1015
-        case .watch:
             return 1016
-        case .askAQuestion:
+        case .watch:
             return 1017
-        case .faq:
+        case .askAQuestion:
             return 1018
+        case .faq:
+            return 1019
         }
     }
     
@@ -402,6 +409,12 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 }
             case let .devices(lhsTheme, lhsImage, lhsText, lhsValue):
                 if case let .devices(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .filters(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .filters(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -567,6 +580,10 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openDevices()
                 })
+            case let .filters(theme, image, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openFilters()
+                })
             case let .savedMessages(theme, image, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSavedMessages()
@@ -635,7 +652,7 @@ private struct SettingsState: Equatable {
     var isSearching: Bool
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool, otherSessionCount: Int, enableQRLogin: Bool) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool, otherSessionCount: Int, enableQRLogin: Bool, enableFilters: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -687,6 +704,10 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount + 1)"))
         } else {
             entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? "" : "\(otherSessionCount + 1)"))
+        }
+        if enableFilters {
+            //TODO:localize
+            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed(), "Chat Filters", ""))
         }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
@@ -925,6 +946,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let privacySettings = Promise<AccountPrivacySettings?>(nil)
     
     let enableQRLogin = Promise<Bool>()
+    let enableFilters = Promise<Bool>()
 
     let openFaq: (Promise<ResolvedUrl>, String?) -> Void = { resolvedUrl, customAnchor in
         let _ = (contextValue.get()
@@ -1221,17 +1243,27 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             gesture?.cancel()
         }
     }, openDevices: {
-        let _ = (combineLatest(queue: .mainQueue(),
-            activeSessionsContextAndCount.get(),
-            enableQRLogin.get()
-        )
-        |> take(1)).start(next: { activeSessionsContextAndCount, enableQRLogin in
-            let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
-            if count == 0 && enableQRLogin {
-                pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
-            } else {
-                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
-            }
+        let _ = (contextValue.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { context in
+            let _ = (combineLatest(queue: .mainQueue(),
+                activeSessionsContextAndCount.get(),
+                enableQRLogin.get()
+            )
+            |> take(1)).start(next: { activeSessionsContextAndCount, enableQRLogin in
+                let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
+                if count == 0 && enableQRLogin {
+                    pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
+                } else {
+                    pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
+                }
+            })
+        })
+    }, openFilters: {
+        let _ = (contextValue.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(chatListFilterPresetListController(context: context, updated: { _ in }))
         })
     })
     
@@ -1496,7 +1528,21 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     enableQRLogin.set(enableQRLoginSignal)
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get())
+    let enableFiltersSignal = contextValue.get()
+    |> mapToSignal { context -> Signal<Bool, NoError> in
+        return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> Bool in
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+                return false
+            }
+            let configuration = ChatListFilteringConfiguration(appConfiguration: appConfiguration)
+            return configuration.isEnabled
+        }
+        |> distinctUntilChanged
+    }
+    enableFilters.set(enableFiltersSignal)
+    
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get(), enableFilters.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let otherSessionCount = activeSessionsContextAndCount.1
 
@@ -1536,8 +1582,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             pushControllerImpl?(c)
         }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet, activeSessionsContext: activeSessionsContextAndCountSignal |> map { $0.0 } |> distinctUntilChanged(isEqual: { $0 === $1 }), webSessionsContext: activeSessionsContextAndCountSignal |> map { $0.2 } |> distinctUntilChanged(isEqual: { $0 === $1 }))
         
-        let (hasWallet, hasPassport, hasWatchApp, enableQRLogin) = hasWalletPassportAndWatch
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount, enableQRLogin: enableQRLogin), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
+        let (hasWallet, hasPassport, hasWatchApp, enableQRLogin, enableFilters) = hasWalletPassportAndWatch
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount, enableQRLogin: enableQRLogin, enableFilters: enableFilters), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }

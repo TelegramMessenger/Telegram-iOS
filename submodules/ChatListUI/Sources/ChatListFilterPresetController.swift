@@ -18,13 +18,15 @@ private final class ChatListFilterPresetControllerArguments {
     let openAddPeer: () -> Void
     let deleteAdditionalPeer: (PeerId) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
+    let focusOnName: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void, openAddPeer: @escaping () -> Void, deleteAdditionalPeer: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+    init(context: AccountContext, updateState: @escaping ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void, openAddPeer: @escaping () -> Void, deleteAdditionalPeer: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, focusOnName: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.openAddPeer = openAddPeer
         self.deleteAdditionalPeer = deleteAdditionalPeer
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
+        self.focusOnName = focusOnName
     }
 }
 
@@ -168,13 +170,15 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         case let .nameHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .name(placeholder, value):
-            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), sectionId: self.section, textUpdated: { value in
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), clearType: .always, sectionId: self.section, textUpdated: { value in
                 arguments.updateState { current in
                     var state = current
                     state.name = value
                     return state
                 }
-            }, action: {})
+            }, action: {}, cleared: {
+                arguments.focusOnName()
+            })
         case let .typesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .filterPrivateChats(title, value):
@@ -276,7 +280,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
 }
 
 func chatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter) -> ViewController {
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: true), options: []))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection, options: []))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -285,7 +289,7 @@ func chatListFilterAddChatsController(context: AccountContext, filter: ChatListF
             var settings = settings
             for i in 0 ..< settings.filters.count {
                 if settings.filters[i].id == filter.id {
-                    let previousIncludePeers = settings.filters[i].includePeers
+                    let previousIncludePeers = settings.filters[i].data.includePeers
                     
                     var chatPeerIds: [PeerId] = []
                     for peerId in peerIds {
@@ -296,7 +300,7 @@ func chatListFilterAddChatsController(context: AccountContext, filter: ChatListF
                             break
                         }
                     }
-                    settings.filters[i].includePeers = chatPeerIds + previousIncludePeers.filter { peerId in
+                    settings.filters[i].data.includePeers = chatPeerIds + previousIncludePeers.filter { peerId in
                         return !chatPeerIds.contains(peerId)
                     }
                 }
@@ -305,6 +309,8 @@ func chatListFilterAddChatsController(context: AccountContext, filter: ChatListF
         })
         |> deliverOnMainQueue).start(next: { settings in
             controller?.dismiss()
+            
+            let _ = replaceRemoteChatListFilters(account: context.account).start()
         })
     })
     return controller
@@ -317,7 +323,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     } else {
         initialName = "New Filter"
     }
-    let initialState = ChatListFilterPresetControllerState(name: initialName, includeCategories: currentPreset?.categories ?? .all, excludeMuted: currentPreset?.excludeMuted ?? false, excludeRead: currentPreset?.excludeRead ?? false, additionallyIncludePeers: currentPreset?.includePeers ?? [])
+    let initialState = ChatListFilterPresetControllerState(name: initialName, includeCategories: currentPreset?.data.categories ?? .all, excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, additionallyIncludePeers: currentPreset?.data.includePeers ?? [])
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void = { f in
@@ -331,6 +337,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
+    var focusOnNameImpl: (() -> Void)?
     
     let arguments = ChatListFilterPresetControllerArguments(
         context: context,
@@ -338,7 +345,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             updateState(f)
         },
         openAddPeer: {
-            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: true), options: []))
+            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection, options: []))
             addPeerDisposable.set((controller.result
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
@@ -377,6 +384,9 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 }
                 return state
             }
+        },
+        focusOnName: {
+            focusOnNameImpl?()
         }
     )
     
@@ -409,7 +419,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(currentPreset == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             let state = stateValue.with { $0 }
-            let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, includePeers: state.additionallyIncludePeers)
+            let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, includePeers: state.additionallyIncludePeers))
             let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
                 var preset = preset
                 if currentPreset == nil {
@@ -435,6 +445,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             |> deliverOnMainQueue).start(next: { settings in
                 updated(settings.filters)
                 dismissImpl?()
+                
+                let _ = replaceRemoteChatListFilters(account: context.account).start()
             })
         })
         
@@ -454,6 +466,16 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     }
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()
+    }
+    focusOnNameImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+                itemNode.focus()
+            }
+        }
     }
     
     return controller
