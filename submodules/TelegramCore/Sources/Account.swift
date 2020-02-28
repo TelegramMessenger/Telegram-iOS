@@ -901,7 +901,7 @@ public class Account {
         self.supplementary = supplementary
         
         self.peerInputActivityManager = PeerInputActivityManager()
-        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, addUpdates: { [weak self] updates in
+        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
         self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in

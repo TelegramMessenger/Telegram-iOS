@@ -38,6 +38,9 @@ public func requestStickerSet(postbox: Postbox, network: Network, reference: Sti
         case .animatedEmoji:
             collectionId = nil
             input = .inputStickerSetAnimatedEmoji
+        case .dice:
+            collectionId = nil
+            input = .inputStickerSetDice
     }
     
     let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, NoError> = { collectionId in

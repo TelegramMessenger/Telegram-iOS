@@ -76,6 +76,20 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                         } else {
                             return (.fetching, true, nil)
                         }
+                    case .dice:
+                        let namespace = Namespaces.ItemCollection.CloudDice
+                        let id: ItemCollectionId.Id = 0
+                        if let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
+                            previousHash = cached.hash
+                            let current: CachedStickerPackResult = .result(info, cached.items, false)
+                            if cached.hash != info.hash {
+                                return (current, true, previousHash)
+                            } else {
+                                return (current, true, previousHash)
+                            }
+                        } else {
+                            return (.fetching, true, nil)
+                        }
                 }
             }
             |> mapToSignal { result, loadRemote, previousHash in
@@ -148,6 +162,18 @@ func cachedStickerPack(transaction: Transaction, reference: StickerPackReference
             if let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
                 return (info, cached.items, false)
             }
+        case .dice:
+            let namespace = Namespaces.ItemCollection.CloudDice
+            let id: ItemCollectionId.Id = 0
+            if let currentInfo = transaction.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: namespace, id: id)) as? StickerPackCollectionInfo {
+                let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: namespace, id: id))
+                if !items.isEmpty {
+                    return (currentInfo, items, true)
+                }
+            }
+            if let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
+                return (info, cached.items, false)
+        }
     }
     return nil
 }

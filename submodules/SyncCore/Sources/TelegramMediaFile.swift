@@ -12,6 +12,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
     case animatedEmoji
+    case dice
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -21,6 +22,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 self = .name(decoder.decodeStringForKey("n", orElse: ""))
             case 2:
                 self = .animatedEmoji
+            case 3:
+                self = .dice
             default:
                 self = .name("")
                 assertionFailure()
@@ -38,6 +41,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 encoder.encodeString(name, forKey: "n")
             case .animatedEmoji:
                 encoder.encodeInt32(2, forKey: "r")
+            case .dice:
+                encoder.encodeInt32(3, forKey: "r")
         }
     }
     
@@ -57,6 +62,12 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 }
             case .animatedEmoji:
                 if case .animatedEmoji = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .dice:
+                if case .dice = rhs {
                     return true
                 } else {
                     return false
