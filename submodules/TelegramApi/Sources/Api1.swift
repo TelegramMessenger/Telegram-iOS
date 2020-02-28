@@ -14600,25 +14600,30 @@ public extension Api {
     
     }
     public enum PhoneCallProtocol: TypeConstructorDescription {
-        case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32)
+        case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32, libraryVersions: [String])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .phoneCallProtocol(let flags, let minLayer, let maxLayer):
+                case .phoneCallProtocol(let flags, let minLayer, let maxLayer, let libraryVersions):
                     if boxed {
-                        buffer.appendInt32(-1564789301)
+                        buffer.appendInt32(-58224696)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(minLayer, buffer: buffer, boxed: false)
                     serializeInt32(maxLayer, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(libraryVersions.count))
+                    for item in libraryVersions {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .phoneCallProtocol(let flags, let minLayer, let maxLayer):
-                return ("phoneCallProtocol", [("flags", flags), ("minLayer", minLayer), ("maxLayer", maxLayer)])
+                case .phoneCallProtocol(let flags, let minLayer, let maxLayer, let libraryVersions):
+                return ("phoneCallProtocol", [("flags", flags), ("minLayer", minLayer), ("maxLayer", maxLayer), ("libraryVersions", libraryVersions)])
     }
     }
     
@@ -14629,11 +14634,16 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: [String]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.PhoneCallProtocol.phoneCallProtocol(flags: _1!, minLayer: _2!, maxLayer: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PhoneCallProtocol.phoneCallProtocol(flags: _1!, minLayer: _2!, maxLayer: _3!, libraryVersions: _4!)
             }
             else {
                 return nil
@@ -16258,6 +16268,7 @@ public extension Api {
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetShortName(shortName: String)
         case inputStickerSetAnimatedEmoji
+        case inputStickerSetDice
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -16286,6 +16297,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputStickerSetDice:
+                    if boxed {
+                        buffer.appendInt32(2044861011)
+                    }
+                    
+                    break
     }
     }
     
@@ -16299,6 +16316,8 @@ public extension Api {
                 return ("inputStickerSetShortName", [("shortName", shortName)])
                 case .inputStickerSetAnimatedEmoji:
                 return ("inputStickerSetAnimatedEmoji", [])
+                case .inputStickerSetDice:
+                return ("inputStickerSetDice", [])
     }
     }
     
@@ -16332,6 +16351,9 @@ public extension Api {
         }
         public static func parse_inputStickerSetAnimatedEmoji(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetAnimatedEmoji
+        }
+        public static func parse_inputStickerSetDice(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetDice
         }
     
     }
