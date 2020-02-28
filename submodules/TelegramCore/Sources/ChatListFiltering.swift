@@ -93,13 +93,10 @@ extension ChatListFilterPeerCategories {
     }
 }
 
-public final class ChatListFilter: PostboxCoding, Equatable {
-    public static func == (lhs: ChatListFilter, rhs: ChatListFilter) -> Bool {
-        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.categories == rhs.categories && lhs.excludeMuted == rhs.excludeMuted && lhs.includePeers == rhs.includePeers
-    }
+public struct ChatListFilter: PostboxCoding, Equatable {
     
     public var id: Int32
-    public var title: String?
+    public var title: String
     public var categories: ChatListFilterPeerCategories
     public var excludeMuted: Bool
     public var excludeRead: Bool
@@ -107,7 +104,7 @@ public final class ChatListFilter: PostboxCoding, Equatable {
     
     public init(
         id: Int32,
-        title: String?,
+        title: String,
         categories: ChatListFilterPeerCategories,
         excludeMuted: Bool,
         excludeRead: Bool,
@@ -123,7 +120,7 @@ public final class ChatListFilter: PostboxCoding, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.id = decoder.decodeInt32ForKey("id", orElse: 0)
-        self.title = decoder.decodeOptionalStringForKey("title")
+        self.title = decoder.decodeStringForKey("title", orElse: "Filter")
         self.categories = ChatListFilterPeerCategories(rawValue: decoder.decodeInt32ForKey("categories", orElse: 0))
         self.excludeMuted = decoder.decodeInt32ForKey("excludeMuted", orElse: 0) != 0
         self.excludeRead = decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0
@@ -132,11 +129,7 @@ public final class ChatListFilter: PostboxCoding, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.id, forKey: "id")
-        if let title = self.title {
-            encoder.encodeString(title, forKey: "title")
-        } else {
-            encoder.encodeNil(forKey: "title")
-        }
+        encoder.encodeString(title, forKey: "title")
         encoder.encodeInt32(self.categories.rawValue, forKey: "categories")
         encoder.encodeInt32(self.excludeMuted ? 1 : 0, forKey: "excludeMuted")
         encoder.encodeInt32(self.excludeRead ? 1 : 0, forKey: "excludeRead")
@@ -145,12 +138,12 @@ public final class ChatListFilter: PostboxCoding, Equatable {
 }
 
 extension ChatListFilter {
-    convenience init(apiFilter: Api.DialogFilter) {
+    init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
         case let .dialogFilter(flags, id, title, includePeers):
             self.init(
                 id: id,
-                title: title.isEmpty ? nil : title,
+                title: title,
                 categories: ChatListFilterPeerCategories(apiFlags: flags),
                 excludeMuted: (flags & (1 << 11)) != 0,
                 excludeRead: (flags & (1 << 12)) != 0,
@@ -179,7 +172,7 @@ extension ChatListFilter {
             flags |= 1 << 12
         }
         flags |= self.categories.apiFlags
-        return .dialogFilter(flags: flags, id: self.id, title: self.title ?? "", includePeers: self.includePeers.compactMap { peerId -> Api.InputPeer? in
+        return .dialogFilter(flags: flags, id: self.id, title: self.title, includePeers: self.includePeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         })
     }
@@ -200,10 +193,10 @@ public func requestUpdateChatListFilter(account: Account, id: Int32, filter: Cha
             flags |= 1 << 0
         }
         return account.network.request(Api.functions.messages.updateDialogFilter(flags: flags, id: id, filter: inputFilter))
-        |> mapError { _ -> RequestUpdateChatListFilterError in
+        |> mapError { error -> RequestUpdateChatListFilterError in
             return .generic
         }
-        |> mapToSignal { _ -> Signal<Never, RequestUpdateChatListFilterError> in
+        |> mapToSignal { result -> Signal<Never, RequestUpdateChatListFilterError> in
             return .complete()
         }
     }
@@ -334,11 +327,7 @@ public func replaceRemoteChatListFilters(account: Account) -> Signal<Never, NoEr
     }
 }
 
-public final class ChatListFiltersState: PreferencesEntry, Equatable {
-    public static func == (lhs: ChatListFiltersState, rhs: ChatListFiltersState) -> Bool {
-        return lhs.filters == rhs.filters && lhs.filters == rhs.filters
-    }
-    
+public struct ChatListFiltersState: PreferencesEntry, Equatable {
     public var filters: [ChatListFilter]
     internal var remoteFilters: [ChatListFilter]?
     
