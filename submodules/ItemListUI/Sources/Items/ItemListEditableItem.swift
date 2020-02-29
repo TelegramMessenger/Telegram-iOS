@@ -101,6 +101,16 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
         self.view.addGestureRecognizer(tapRecognizer)
         
         self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
+        
+        self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            if !strongSelf.revealOffset.isZero {
+                return true
+            }
+            return false
+        }
     }
     
     open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption])) {

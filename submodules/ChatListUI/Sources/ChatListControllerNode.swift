@@ -267,13 +267,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             guard let strongSelf = self, let index = strongSelf.availableFilters.index(where: { $0.id == strongSelf.selectedId }) else {
                 return []
             }
-            var directions: InteractiveTransitionGestureRecognizerDirections = [.left, .right]
+            var directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
             if strongSelf.availableFilters.count > 1 {
                 if index == 0 {
-                    directions.remove(.right)
+                    directions.remove(.rightCenter)
                 }
                 if index == strongSelf.availableFilters.count - 1 {
-                    directions.remove(.left)
+                    directions.remove(.leftCenter)
                 }
             } else {
                 directions = []
@@ -358,7 +358,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 self.disableItemNodeOperationsWhileAnimating = true
                 self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: transition)
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition)
-                transition.updateBounds(node: self, bounds: self.bounds, force: true, completion: { [weak self] _ in
+                /*transition.updateBounds(node: self, bounds: self.bounds, force: true, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
@@ -366,7 +366,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight) = strongSelf.validLayout {
                         strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
                     }
-                })
+                })*/
+                DispatchQueue.main.async {
+                    self.disableItemNodeOperationsWhileAnimating = false
+                    if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight) = self.validLayout {
+                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
+                    }
+                }
             }
         default:
             break

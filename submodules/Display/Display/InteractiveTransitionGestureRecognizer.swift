@@ -1,16 +1,23 @@
 import Foundation
 import UIKit
 
-private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Bool {
-    if view.disablesInteractiveTransitionGestureRecognizer {
-        return true
-    }
+private enum HorizontalGestures {
+    case none
+    case some
+    case strict
+}
+
+private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> HorizontalGestures {
     if let disablesInteractiveTransitionGestureRecognizerNow = view.disablesInteractiveTransitionGestureRecognizerNow, disablesInteractiveTransitionGestureRecognizerNow() {
-        return true
+        return .strict
+    }
+    
+    if view.disablesInteractiveTransitionGestureRecognizer {
+        return .some
     }
     
     if let point = point, let test = view.interactiveTransitionGestureRecognizerTest, test(point) {
-        return true
+        return .some
     }
     
     if let view = view as? ListViewBackingView {
@@ -20,14 +27,14 @@ private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Bool {
         let term2: Double = abs(angle + Double.pi / 2.0)
         let term3: Double = abs(angle - Double.pi * 3.0 / 2.0)
         if term1 < 0.001 || term2 < 0.001 || term3 < 0.001 {
-            return true
+            return .some
         }
     }
     
     if let superview = view.superview {
         return hasHorizontalGestures(superview, point: point != nil ? view.convert(point!, to: superview) : nil)
     } else {
-        return false
+        return .none
     }
 }
 
@@ -84,9 +91,17 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         self.firstLocation = point
         
         if let target = self.view?.hitTest(self.firstLocation, with: event) {
-            if hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target)) {
-                allowedDirections.remove(.leftCenter)
-                allowedDirections.remove(.rightCenter)
+            let horizontalGestures = hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target))
+            switch horizontalGestures {
+            case .some, .strict:
+                if case .strict = horizontalGestures {
+                    allowedDirections = []
+                } else if allowedDirections.contains(.leftEdge) || allowedDirections.contains(.rightEdge) {
+                    allowedDirections.remove(.leftCenter)
+                    allowedDirections.remove(.rightCenter)
+                }
+            case .none:
+                break
             }
         }
         
@@ -105,11 +120,21 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         let absTranslationY: CGFloat = abs(translation.y)
         
         let size = self.view?.bounds.size ?? CGSize()
+        let edgeWidth: CGFloat = 20.0
         
         if !self.validatedGesture {
-            if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < 16.0 {
+            if self.firstLocation.x < edgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
+                self.state = .failed
+                return
+            }
+            if self.firstLocation.x > size.width - edgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
+                self.state = .failed
+                return
+            }
+            
+            if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < edgeWidth {
                 self.validatedGesture = true
-            } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - 16.0 {
+            } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - edgeWidth {
                 self.validatedGesture = true
             } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
                 self.state = .failed
