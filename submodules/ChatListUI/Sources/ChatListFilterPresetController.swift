@@ -212,7 +212,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         case let .additionalPeersHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .addAdditionalPeer(title):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(presentationData.theme), title: title, alwaysPlain: false, sectionId: self.section, height: .peerList, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(presentationData.theme), title: title, alwaysPlain: false, sectionId: self.section, height: .peerList, editing: false, action: {
                 arguments.openAddPeer()
             })
         case let .additionalPeer(title, peer, isRevealed):
