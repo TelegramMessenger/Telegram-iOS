@@ -262,7 +262,7 @@ func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId) -> Signa
     }
 }
 
-func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, ignoreGroupInCommon: PeerId?) -> Signal<PeerInfoScreenData, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
         switch inputData {
@@ -401,7 +401,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
-                        availablePanes?.append(.groupsInCommon)
+                        if ignoreGroupInCommon != nil && cachedData.commonGroupCount == 1 {
+                        } else {
+                            availablePanes?.append(.groupsInCommon)
+                        }
                     }
                 }
                 

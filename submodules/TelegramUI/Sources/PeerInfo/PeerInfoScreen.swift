@@ -489,7 +489,7 @@ private final class PeerInfoInteraction {
     let editingOpenStickerPackSetup: () -> Void
     let openLocation: () -> Void
     let editingOpenSetupLocation: () -> Void
-    let openPeerInfo: (Peer) -> Void
+    let openPeerInfo: (Peer, Bool) -> Void
     let performMemberAction: (PeerInfoMember, PeerInfoMemberAction) -> Void
     let openPeerInfoContextMenu: (PeerInfoContextSubject, ASDisplayNode) -> Void
     let performBioLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
@@ -519,7 +519,7 @@ private final class PeerInfoInteraction {
         editingOpenStickerPackSetup: @escaping () -> Void,
         openLocation: @escaping () -> Void,
         editingOpenSetupLocation: @escaping () -> Void,
-        openPeerInfo: @escaping (Peer) -> Void,
+        openPeerInfo: @escaping (Peer, Bool) -> Void,
         performMemberAction: @escaping (PeerInfoMember, PeerInfoMemberAction) -> Void,
         openPeerInfoContextMenu: @escaping (PeerInfoContextSubject, ASDisplayNode) -> Void,
         performBioLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void,
@@ -755,7 +755,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             items[.peerMembers]!.append(PeerInfoScreenMemberItem(id: member.id, context: context, enclosingPeer: peer, member: member, action: isAccountPeer ? nil : { action in
                 switch action {
                 case .open:
-                    interaction.openPeerInfo(member.peer)
+                    interaction.openPeerInfo(member.peer, true)
                 case .promote:
                     interaction.performMemberAction(member, .promote)
                 case .restrict:
@@ -1096,7 +1096,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message]) {
+    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message], ignoreGroupInCommon: PeerId?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -1181,8 +1181,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             editingOpenSetupLocation: { [weak self] in
                 self?.editingOpenSetupLocation()
             },
-            openPeerInfo: { [weak self] peer in
-                self?.openPeerInfo(peer: peer)
+            openPeerInfo: { [weak self] peer, isMember in
+                self?.openPeerInfo(peer: peer, isMember: isMember)
             },
             performMemberAction: { [weak self] member, action in
                 self?.performMemberAction(member: member, action: action)
@@ -1637,7 +1637,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             switch action {
             case .open:
-                strongSelf.openPeerInfo(peer: member.peer)
+                strongSelf.openPeerInfo(peer: member.peer, isMember: true)
             case .promote:
                 strongSelf.performMemberAction(member: member, action: .promote)
             case .restrict:
@@ -1919,7 +1919,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         }
         
-        self.dataDisposable = (peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
+        self.dataDisposable = (peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, ignoreGroupInCommon: ignoreGroupInCommon)
         |> deliverOnMainQueue).start(next: { [weak self] data in
             guard let strongSelf = self else {
                 return
@@ -2891,8 +2891,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.push(locationController)
     }
     
-    private func openPeerInfo(peer: Peer) {
-        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+    private func openPeerInfo(peer: Peer, isMember: Bool) {
+        var mode: PeerInfoControllerMode = .generic
+        if isMember {
+            mode = .group(self.peerId)
+        }
+        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false) {
             (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
         }
     }
@@ -4167,6 +4171,7 @@ public final class PeerInfoScreen: ViewController {
     private let isOpenedFromChat: Bool
     private let nearbyPeer: Bool
     private let callMessages: [Message]
+    private let ignoreGroupInCommon: PeerId?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -4182,13 +4187,14 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message]) {
+    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message], ignoreGroupInCommon: PeerId? = nil) {
         self.context = context
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
         self.nearbyPeer = nearbyPeer
         self.callMessages = callMessages
+        self.ignoreGroupInCommon = ignoreGroupInCommon
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -4259,7 +4265,7 @@ public final class PeerInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages, ignoreGroupInCommon: self.ignoreGroupInCommon)
         
         self._ready.set(self.controllerNode.ready.get())
         

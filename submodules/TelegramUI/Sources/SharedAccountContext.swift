@@ -1259,6 +1259,7 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
     } else if peer is TelegramUser {
         var nearbyPeer = false
         var callMessages: [Message] = []
+        var ignoreGroupInCommon: PeerId?
         switch mode {
         case .nearbyPeer:
             nearbyPeer = true
@@ -1266,8 +1267,10 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
             callMessages = messages
         case .generic:
             break
+        case let .group(id):
+            ignoreGroupInCommon = id
         }
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeer: nearbyPeer, callMessages: callMessages)
+        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeer: nearbyPeer, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
     } else if peer is TelegramSecretChat {
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeer: false, callMessages: [])
     }

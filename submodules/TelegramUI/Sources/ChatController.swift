@@ -7172,7 +7172,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             if let peerId = peerId {
                 switch self.chatLocation {
-                    case .peer:
+                    case let .peer(selfPeerId):
                         switch navigation {
                             case .info:
                                 let peerSignal: Signal<Peer?, NoError>
@@ -7183,7 +7183,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, let peer = peer {
-                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: false) {
+                                        var mode: PeerInfoControllerMode = .generic
+                                        if let _ = fromMessage {
+                                            mode = .group(selfPeerId)
+                                        }
+                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: false) {
                                             strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                         }
                                     }
