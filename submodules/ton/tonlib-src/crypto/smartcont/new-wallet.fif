@@ -15,8 +15,8 @@ def? $2 { @' $2 } { "new-wallet" } cond constant file-base
 
 // Create new simple wallet
 <{ SETCP0 DUP IFNOTRET // return if recv_internal
-   DUP 85143 INT EQUAL IFJMP:<{ // "seqno" get-method
-     DROP c4 PUSHCTR CTOS 32 PLDU  // cnt
+   DUP 85143 INT EQUAL OVER 78748 INT EQUAL OR IFJMP:<{ // "seqno" and "get_public_key" get-methods
+     1 INT AND c4 PUSHCTR CTOS 32 LDU 256 PLDU CONDSEL  // cnt or pubk
    }>
    INC 32 THROWIF  // fail unless recv_external
    512 INT LDSLICEX DUP 32 PLDU   // sign cs cnt

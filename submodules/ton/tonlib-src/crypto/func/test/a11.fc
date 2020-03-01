@@ -1,0 +1,28 @@
+_ f(slice ds, int total_weight, int elect_at, cell frozen, int total_stakes, int cnt, cell credits, cell vdict, int elect) {
+  return (ds, elect, credits);
+}
+
+_ g(slice ds, int total_weight, int elect_at, cell frozen, int total_stakes, int cnt, cell credits, int elect) {
+  return (ds, elect, credits);
+}
+
+_ h(slice ds, int total_weight, int elect_at, cell frozen, int total_stakes, cell credits, int elect) {
+  return (ds, elect, credits);
+}
+
+_ h2(slice ds, int total_weight, int elect_at, cell frozen, int total_stakes, cell credits, int elect) {
+  return (ds, credits, elect);
+}
+
+_ h3(int pubkey, int adnl_addr, int stake, int tot_weight, tuple vinfo) {
+  return (pubkey, tot_weight, stake, vinfo);
+}
+
+_ z(int a, int b) {
+  return (b, 0, a);
+}
+
+_ z2(int a, int b) {
+  return (0, a, b);
+}
+

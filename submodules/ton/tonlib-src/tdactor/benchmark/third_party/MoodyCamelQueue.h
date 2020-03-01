@@ -269,17 +269,17 @@ static inline thread_id_t thread_id() {
 namespace moodycamel {
 namespace details {
 #if defined(__GNUC__)
-inline bool likely(bool x) {
+static inline bool(likely)(bool x) {
   return __builtin_expect((x), true);
 }
-inline bool unlikely(bool x) {
+static inline bool(unlikely)(bool x) {
   return __builtin_expect((x), false);
 }
 #else
-inline bool likely(bool x) {
+static inline bool(likely)(bool x) {
   return x;
 }
-inline bool unlikely(bool x) {
+static inline bool(unlikely)(bool x) {
   return x;
 }
 #endif
@@ -300,8 +300,8 @@ struct const_numeric_max {
                              : static_cast<T>(-1);
 };
 
-#if defined(__GNUC__) && !defined(__clang__)
-typedef ::max_align_t std_max_align_t;  // GCC forgot to add it to std:: for a while
+#if defined(__GLIBCXX__)
+typedef ::max_align_t std_max_align_t;  // libstdc++ forgot to add it to std:: for a while
 #else
 typedef std::max_align_t std_max_align_t;  // Others (e.g. MSVC) insist it can *only* be accessed via std::
 #endif
@@ -377,8 +377,8 @@ struct ConcurrentQueueDefaultTraits {
   static const size_t MAX_SUBQUEUE_SIZE = details::const_numeric_max<size_t>::value;
 
 #ifndef MCDBGQ_USE_RELACY
-// Memory allocation can be customized if needed.
-// malloc should return nullptr on failure, and handle alignment like std::malloc.
+  // Memory allocation can be customized if needed.
+  // malloc should return nullptr on failure, and handle alignment like std::malloc.
 #if defined(malloc) || defined(free)
   // Gah, this is 2015, stop defining macros that break standard code already!
   // Work around malloc/free being special macros:
@@ -1140,7 +1140,7 @@ class ConcurrentQueue {
     // If there was at least one non-empty queue but it appears empty at the time
     // we try to dequeue from it, we need to make sure every queue's been tried
     if (nonEmptyCount > 0) {
-      if (details::likely(best->dequeue(item))) {
+      if ((details::likely)(best->dequeue(item))) {
         return true;
       }
       for (auto ptr = producerListTail.load(std::memory_order_acquire); ptr != nullptr; ptr = ptr->next_prod()) {
@@ -1335,7 +1335,10 @@ class ConcurrentQueue {
  private:
   friend struct ProducerToken;
   friend struct ConsumerToken;
+  struct ExplicitProducer;
   friend struct ExplicitProducer;
+  struct ImplicitProducer;
+  friend struct ImplicitProducer;
   friend class ConcurrentQueueTests;
 
   enum AllocationMode { CanAlloc, CannotAlloc };
@@ -1380,7 +1383,7 @@ class ConcurrentQueue {
     }
     auto prodCount = producerCount.load(std::memory_order_relaxed);
     auto globalOffset = globalExplicitConsumerOffset.load(std::memory_order_relaxed);
-    if (details::unlikely(token.desiredProducer == nullptr)) {
+    if ((details::unlikely)(token.desiredProducer == nullptr)) {
       // Aha, first time we're dequeueing anything.
       // Figure out our local position
       // Note: offset is from start, not end, but we're traversing from end -- subtract from count first
@@ -1442,7 +1445,7 @@ class ConcurrentQueue {
     FreeList& operator=(FreeList const&) MOODYCAMEL_DELETE_FUNCTION;
 
     inline void add(N* node) {
-#if MCDBGQ_NOLOCKFREE_FREELIST
+#ifdef MCDBGQ_NOLOCKFREE_FREELIST
       debug::DebugLock lock(mutex);
 #endif
       // We know that the should-be-on-freelist bit is 0 at this point, so it's safe to
@@ -1455,7 +1458,7 @@ class ConcurrentQueue {
     }
 
     inline N* try_get() {
-#if MCDBGQ_NOLOCKFREE_FREELIST
+#ifdef MCDBGQ_NOLOCKFREE_FREELIST
       debug::DebugLock lock(mutex);
 #endif
       auto head = freeListHead.load(std::memory_order_acquire);
@@ -1529,7 +1532,7 @@ class ConcurrentQueue {
     static const std::uint32_t REFS_MASK = 0x7FFFFFFF;
     static const std::uint32_t SHOULD_BE_ON_FREELIST = 0x80000000;
 
-#if MCDBGQ_NOLOCKFREE_FREELIST
+#ifdef MCDBGQ_NOLOCKFREE_FREELIST
     debug::DebugMutex mutex;
 #endif
   };
@@ -1548,7 +1551,7 @@ class ConcurrentQueue {
         , freeListNext(nullptr)
         , shouldBeOnFreeList(false)
         , dynamicallyAllocated(true) {
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
       owner = nullptr;
 #endif
     }
@@ -1679,14 +1682,14 @@ class ConcurrentQueue {
     std::atomic<bool> shouldBeOnFreeList;
     bool dynamicallyAllocated;  // Perhaps a better name for this would be 'isNotPartOfInitialBlockPool'
 
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
     void* owner;
 #endif
   };
   static_assert(std::alignment_of<Block>::value >= std::alignment_of<details::max_align_t>::value,
                 "Internal error: Blocks must be at least as aligned as the type they are wrapping");
 
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
  public:
   struct MemStats;
 
@@ -1756,7 +1759,7 @@ class ConcurrentQueue {
     ConcurrentQueue* parent;
 
    protected:
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
     friend struct MemStats;
 #endif
   };
@@ -1902,7 +1905,7 @@ class ConcurrentQueue {
           if (newBlock == nullptr) {
             return false;
           }
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
           newBlock->owner = this;
 #endif
           newBlock->ConcurrentQueue::Block::template reset_empty<explicit_context>();
@@ -1916,7 +1919,7 @@ class ConcurrentQueue {
           ++pr_blockIndexSlotsUsed;
         }
 
-        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new (nullptr) T(std::forward<U>(element)))) {
+        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new ((T*)nullptr) T(std::forward<U>(element)))) {
           // The constructor may throw. We want the element not to appear in the queue in
           // that case (without corrupting the queue):
           MOODYCAMEL_TRY {
@@ -1941,7 +1944,7 @@ class ConcurrentQueue {
         blockIndex.load(std::memory_order_relaxed)->front.store(pr_blockIndexFront, std::memory_order_release);
         pr_blockIndexFront = (pr_blockIndexFront + 1) & (pr_blockIndexSize - 1);
 
-        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new (nullptr) T(std::forward<U>(element)))) {
+        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new ((T*)nullptr) T(std::forward<U>(element)))) {
           this->tailIndex.store(newTailIndex, std::memory_order_release);
           return true;
         }
@@ -1985,13 +1988,14 @@ class ConcurrentQueue {
         // incremented after dequeueOptimisticCount -- this is enforced in the `else` block below), and since we now
         // have a version of dequeueOptimisticCount that is at least as recent as overcommit (due to the release upon
         // incrementing dequeueOvercommit and the acquire above that synchronizes with it), overcommit <= myDequeueCount.
-        assert(overcommit <= myDequeueCount);
+        // However, we can't assert this since both dequeueOptimisticCount and dequeueOvercommit may (independently)
+        // overflow; in such a case, though, the logic still holds since the difference between the two is maintained.
 
         // Note that we reload tail here in case it changed; it will be the same value as before or greater, since
         // this load is sequenced after (happens after) the earlier load above. This is supported by read-read
         // coherency (as defined in the standard), explained here: http://en.cppreference.com/w/cpp/atomic/memory_order
         tail = this->tailIndex.load(std::memory_order_acquire);
-        if (details::likely(details::circular_less_than<index_t>(myDequeueCount - overcommit, tail))) {
+        if ((details::likely)(details::circular_less_than<index_t>(myDequeueCount - overcommit, tail))) {
           // Guaranteed to be at least one element to dequeue!
 
           // Get the index. Note that since there's guaranteed to be at least one element, this
@@ -2033,10 +2037,10 @@ class ConcurrentQueue {
               }
             } guard = {block, index};
 
-            element = std::move(el);
+            element = std::move(el);  // NOLINT
           } else {
-            element = std::move(el);
-            el.~T();
+            element = std::move(el);  // NOLINT
+            el.~T();                  // NOLINT
             block->ConcurrentQueue::Block::template set_empty<explicit_context>(index);
           }
 
@@ -2119,7 +2123,7 @@ class ConcurrentQueue {
             return false;
           }
 
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
           newBlock->owner = this;
 #endif
           newBlock->ConcurrentQueue::Block::template set_all_empty<explicit_context>();
@@ -2151,7 +2155,8 @@ class ConcurrentQueue {
           block = block->next;
         }
 
-        if (MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst), new (nullptr) T(details::deref_noexcept(itemFirst)))) {
+        if (MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst),
+                                     new ((T*)nullptr) T(details::deref_noexcept(itemFirst)))) {
           blockIndex.load(std::memory_order_relaxed)
               ->front.store((pr_blockIndexFront - 1) & (pr_blockIndexSize - 1), std::memory_order_release);
         }
@@ -2172,7 +2177,8 @@ class ConcurrentQueue {
         if (details::circular_less_than<index_t>(newTailIndex, stopIndex)) {
           stopIndex = newTailIndex;
         }
-        if (MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst), new (nullptr) T(details::deref_noexcept(itemFirst)))) {
+        if (MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst),
+                                     new ((T*)nullptr) T(details::deref_noexcept(itemFirst)))) {
           while (currentTailIndex != stopIndex) {
             new ((*this->tailBlock)[currentTailIndex++]) T(*itemFirst++);
           }
@@ -2186,9 +2192,10 @@ class ConcurrentQueue {
               // may only define a (noexcept) move constructor, and so calls to the
               // cctor will not compile, even if they are in an if branch that will never
               // be executed
-              new ((*this->tailBlock)[currentTailIndex]) T(
-                  details::nomove_if<(bool)!MOODYCAMEL_NOEXCEPT_CTOR(
-                      T, decltype(*itemFirst), new (nullptr) T(details::deref_noexcept(itemFirst)))>::eval(*itemFirst));
+              new ((*this->tailBlock)[currentTailIndex])
+                  T(details::nomove_if<(bool)!MOODYCAMEL_NOEXCEPT_CTOR(
+                        T, decltype(*itemFirst),
+                        new ((T*)nullptr) T(details::deref_noexcept(itemFirst)))>::eval(*itemFirst));
               ++currentTailIndex;
               ++itemFirst;
             }
@@ -2236,7 +2243,7 @@ class ConcurrentQueue {
         this->tailBlock = this->tailBlock->next;
       }
 
-      if (!MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst), new (nullptr) T(details::deref_noexcept(itemFirst))) &&
+      if (!MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst), new ((T*)nullptr) T(details::deref_noexcept(itemFirst))) &&
           firstAllocatedBlock != nullptr) {
         blockIndex.load(std::memory_order_relaxed)
             ->front.store((pr_blockIndexFront - 1) & (pr_blockIndexSize - 1), std::memory_order_release);
@@ -2257,7 +2264,7 @@ class ConcurrentQueue {
         std::atomic_thread_fence(std::memory_order_acquire);
 
         auto myDequeueCount = this->dequeueOptimisticCount.fetch_add(desiredCount, std::memory_order_relaxed);
-        assert(overcommit <= myDequeueCount);
+        ;
 
         tail = this->tailIndex.load(std::memory_order_acquire);
         auto actualCount = static_cast<size_t>(tail - (myDequeueCount - overcommit));
@@ -2418,7 +2425,7 @@ class ConcurrentQueue {
    private:
 #endif
 
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
     friend struct MemStats;
 #endif
   };
@@ -2500,7 +2507,7 @@ class ConcurrentQueue {
              (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head))) {
           return false;
         }
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
         debug::DebugLock lock(mutex);
 #endif
         // Find out where we'll be inserting this block in the block index
@@ -2516,12 +2523,12 @@ class ConcurrentQueue {
           idxEntry->value.store(nullptr, std::memory_order_relaxed);
           return false;
         }
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
         newBlock->owner = this;
 #endif
         newBlock->ConcurrentQueue::Block::template reset_empty<implicit_context>();
 
-        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new (nullptr) T(std::forward<U>(element)))) {
+        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new ((T*)nullptr) T(std::forward<U>(element)))) {
           // May throw, try to insert now before we publish the fact that we have this new block
           MOODYCAMEL_TRY {
             new ((*newBlock)[currentTailIndex]) T(std::forward<U>(element));
@@ -2539,7 +2546,7 @@ class ConcurrentQueue {
 
         this->tailBlock = newBlock;
 
-        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new (nullptr) T(std::forward<U>(element)))) {
+        if (!MOODYCAMEL_NOEXCEPT_CTOR(T, U, new ((T*)nullptr) T(std::forward<U>(element)))) {
           this->tailIndex.store(newTailIndex, std::memory_order_release);
           return true;
         }
@@ -2562,9 +2569,8 @@ class ConcurrentQueue {
         std::atomic_thread_fence(std::memory_order_acquire);
 
         index_t myDequeueCount = this->dequeueOptimisticCount.fetch_add(1, std::memory_order_relaxed);
-        assert(overcommit <= myDequeueCount);
         tail = this->tailIndex.load(std::memory_order_acquire);
-        if (details::likely(details::circular_less_than<index_t>(myDequeueCount - overcommit, tail))) {
+        if ((details::likely)(details::circular_less_than<index_t>(myDequeueCount - overcommit, tail))) {
           index_t index = this->headIndex.fetch_add(1, std::memory_order_acq_rel);
 
           // Determine which block the element is in
@@ -2575,7 +2581,7 @@ class ConcurrentQueue {
           auto& el = *((*block)[index]);
 
           if (!MOODYCAMEL_NOEXCEPT_ASSIGN(T, T&&, element = std::move(el))) {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
             // Note: Acquiring the mutex with every dequeue instead of only when a block
             // is released is very sub-optimal, but it is, after all, purely debug code.
             debug::DebugLock lock(producer->mutex);
@@ -2595,14 +2601,14 @@ class ConcurrentQueue {
               }
             } guard = {block, index, entry, this->parent};
 
-            element = std::move(el);
+            element = std::move(el);  // NOLINT
           } else {
-            element = std::move(el);
-            el.~T();
+            element = std::move(el);  // NOLINT
+            el.~T();                  // NOLINT
 
             if (block->ConcurrentQueue::Block::template set_empty<implicit_context>(index)) {
               {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
                 debug::DebugLock lock(mutex);
 #endif
                 // Add the block back into the global free pool (and remove from block index)
@@ -2642,7 +2648,7 @@ class ConcurrentQueue {
                              ((startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1));
       index_t currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1);
       if (blockBaseDiff > 0) {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
         debug::DebugLock lock(mutex);
 #endif
         do {
@@ -2679,7 +2685,7 @@ class ConcurrentQueue {
             return false;
           }
 
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
           newBlock->owner = this;
 #endif
           newBlock->ConcurrentQueue::Block::template reset_empty<implicit_context>();
@@ -2714,16 +2720,18 @@ class ConcurrentQueue {
         if (details::circular_less_than<index_t>(newTailIndex, stopIndex)) {
           stopIndex = newTailIndex;
         }
-        if (MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst), new (nullptr) T(details::deref_noexcept(itemFirst)))) {
+        if (MOODYCAMEL_NOEXCEPT_CTOR(T, decltype(*itemFirst),
+                                     new ((T*)nullptr) T(details::deref_noexcept(itemFirst)))) {
           while (currentTailIndex != stopIndex) {
             new ((*this->tailBlock)[currentTailIndex++]) T(*itemFirst++);
           }
         } else {
           MOODYCAMEL_TRY {
             while (currentTailIndex != stopIndex) {
-              new ((*this->tailBlock)[currentTailIndex]) T(
-                  details::nomove_if<(bool)!MOODYCAMEL_NOEXCEPT_CTOR(
-                      T, decltype(*itemFirst), new (nullptr) T(details::deref_noexcept(itemFirst)))>::eval(*itemFirst));
+              new ((*this->tailBlock)[currentTailIndex])
+                  T(details::nomove_if<(bool)!MOODYCAMEL_NOEXCEPT_CTOR(
+                        T, decltype(*itemFirst),
+                        new ((T*)nullptr) T(details::deref_noexcept(itemFirst)))>::eval(*itemFirst));
               ++currentTailIndex;
               ++itemFirst;
             }
@@ -2788,7 +2796,6 @@ class ConcurrentQueue {
         std::atomic_thread_fence(std::memory_order_acquire);
 
         auto myDequeueCount = this->dequeueOptimisticCount.fetch_add(desiredCount, std::memory_order_relaxed);
-        assert(overcommit <= myDequeueCount);
 
         tail = this->tailIndex.load(std::memory_order_acquire);
         auto actualCount = static_cast<size_t>(tail - (myDequeueCount - overcommit));
@@ -2843,7 +2850,7 @@ class ConcurrentQueue {
 
                   if (block->ConcurrentQueue::Block::template set_many_empty<implicit_context>(
                           blockStartIndex, static_cast<size_t>(endIndex - blockStartIndex))) {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
                     debug::DebugLock lock(mutex);
 #endif
                     entry->value.store(nullptr, std::memory_order_relaxed);
@@ -2865,7 +2872,7 @@ class ConcurrentQueue {
             if (block->ConcurrentQueue::Block::template set_many_empty<implicit_context>(
                     blockStartIndex, static_cast<size_t>(endIndex - blockStartIndex))) {
               {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
                 debug::DebugLock lock(mutex);
 #endif
                 // Note that the set_many_empty above did a release, meaning that anybody who acquires the block
@@ -2945,7 +2952,7 @@ class ConcurrentQueue {
     }
 
     inline size_t get_block_index_index_for_index(index_t index, BlockIndexHeader*& localBlockIndex) const {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
       debug::DebugLock lock(mutex);
 #endif
       index &= ~static_cast<index_t>(BLOCK_SIZE - 1);
@@ -3026,10 +3033,10 @@ class ConcurrentQueue {
    private:
 #endif
 
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
     mutable debug::DebugMutex mutex;
 #endif
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
     friend struct MemStats;
 #endif
   };
@@ -3065,7 +3072,7 @@ class ConcurrentQueue {
   }
 
   inline void add_block_to_free_list(Block* block) {
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
     block->owner = nullptr;
 #endif
     freeList.add(block);
@@ -3103,7 +3110,7 @@ class ConcurrentQueue {
     return nullptr;
   }
 
-#if MCDBGQ_TRACKMEM
+#ifdef MCDBGQ_TRACKMEM
  public:
   struct MemStats {
     size_t allocatedBlocks;
@@ -3221,7 +3228,7 @@ class ConcurrentQueue {
   }
 
   ProducerBase* recycle_or_create_producer(bool isExplicit, bool& recycled) {
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
     debug::DebugLock lock(implicitProdMutex);
 #endif
     // Try to re-use one first
@@ -3386,7 +3393,7 @@ class ConcurrentQueue {
 
     // Code and algorithm adapted from http://preshing.com/20130605/the-worlds-simplest-lock-free-hash-table
 
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
     debug::DebugLock lock(implicitProdMutex);
 #endif
 
@@ -3443,6 +3450,7 @@ class ConcurrentQueue {
     // Insert!
     auto newCount = 1 + implicitProducerHashCount.fetch_add(1, std::memory_order_relaxed);
     while (true) {
+      // NOLINTNEXTLINE(clang-analyzer-core.NullDereference)
       if (newCount >= (mainHash->capacity >> 1) &&
           !implicitProducerHashResizeInProgress.test_and_set(std::memory_order_acquire)) {
         // We've acquired the resize lock, try to allocate a bigger hash table.
@@ -3538,8 +3546,8 @@ class ConcurrentQueue {
     // Remove from thread exit listeners
     details::ThreadExitNotifier::unsubscribe(&producer->threadExitListener);
 
-// Remove from hash
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
+    // Remove from hash
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
     debug::DebugLock lock(implicitProdMutex);
 #endif
     auto hash = implicitProducerHash.load(std::memory_order_acquire);
@@ -3650,7 +3658,7 @@ class ConcurrentQueue {
   std::atomic<std::uint32_t> nextExplicitConsumerId;
   std::atomic<std::uint32_t> globalExplicitConsumerOffset;
 
-#if MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
+#ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODHASH
   debug::DebugMutex implicitProdMutex;
 #endif
 

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "tl_writer_jni_cpp.h"
 
@@ -24,8 +24,10 @@
 namespace td {
 
 bool TD_TL_writer_jni_cpp::is_built_in_simple_type(const std::string &name) const {
+  assert(name != "function");
   return name == "Bool" || name == "Int32" || name == "Int53" || name == "Int64" || name == "Double" ||
-         name == "String" || name == "Bytes" || name == "SecureString" || name == "SecureBytes";
+         name == "String" || name == "Bytes" || name == "SecureString" || name == "SecureBytes" || name == "Function" ||
+         name == "Object";
 }
 
 bool TD_TL_writer_jni_cpp::is_built_in_complex_type(const std::string &name) const {
@@ -197,6 +199,7 @@ std::string TD_TL_writer_jni_cpp::gen_type_fetch(const std::string &field_name, 
     const tl::tl_tree_type *child = static_cast<const tl::tl_tree_type *>(tree_type->children[0]);
     res = gen_vector_fetch(field_name, child, vars, parser_type);
   } else {
+    assert(gen_main_class_name(tree_type->type) != "function");
     if (field_name == "") {
       return gen_main_class_name(tree_type->type) + "::fetch(env, p)";
     }

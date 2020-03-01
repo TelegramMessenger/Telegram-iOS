@@ -14,12 +14,13 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/stack.hpp"
 #include "vm/continuation.h"
 #include "vm/box.hpp"
 #include "vm/atom.h"
+#include "vm/vmstate.h"
 
 namespace td {
 template class td::Cnt<std::string>;
@@ -45,6 +46,18 @@ const char* get_exception_msg(Excno exc_no) {
   }
 }
 
+bool StackEntry::is_list(const StackEntry* se) {
+  Ref<Tuple> tuple;
+  while (!se->empty()) {
+    tuple = se->as_tuple_range(2, 2);
+    if (tuple.is_null()) {
+      return false;
+    }
+    se = &tuple->at(1);
+  }
+  return true;
+}
+
 static const char HEX_digits[] = "0123456789ABCDEF";
 
 std::string str_to_hex(std::string data, std::string prefix) {
@@ -59,6 +72,12 @@ std::string str_to_hex(std::string data, std::string prefix) {
 std::string StackEntry::to_string() const {
   std::ostringstream os;
   dump(os);
+  return std::move(os).str();
+}
+
+std::string StackEntry::to_lisp_string() const {
+  std::ostringstream os;
+  print_list(os);
   return std::move(os).str();
 }
 
@@ -130,6 +149,12 @@ void StackEntry::print_list(std::ostream& os) const {
       break;
     case t_tuple: {
       const auto& tuple = *static_cast<Ref<Tuple>>(ref);
+      if (is_list()) {
+        os << '(';
+        tuple[0].print_list(os);
+        print_list_tail(os, &tuple[1]);
+        break;
+      }
       auto n = tuple.size();
       if (!n) {
         os << "[]";
@@ -137,7 +162,7 @@ void StackEntry::print_list(std::ostream& os) const {
         os << "[";
         tuple[0].print_list(os);
         os << "]";
-      } else if (n != 2) {
+      } else {
         os << "[";
         unsigned c = 0;
         for (const auto& entry : tuple) {
@@ -147,10 +172,6 @@ void StackEntry::print_list(std::ostream& os) const {
           entry.print_list(os);
         }
         os << ']';
-      } else {
-        os << '(';
-        tuple[0].print_list(os);
-        tuple[1].print_list_tail(os);
       }
       break;
     }
@@ -159,26 +180,40 @@ void StackEntry::print_list(std::ostream& os) const {
   }
 }
 
-void StackEntry::print_list_tail(std::ostream& os) const {
-  switch (tp) {
-    case t_null:
-      os << ')';
-      break;
-    case t_tuple: {
-      const auto& tuple = *static_cast<Ref<Tuple>>(ref);
-      if (tuple.size() == 2) {
-        os << ' ';
-        tuple[0].print_list(os);
-        tuple[1].print_list_tail(os);
-        break;
-      }
-    }
-    // fall through
-    default:
+void StackEntry::print_list_tail(std::ostream& os, const StackEntry* se) {
+  Ref<Tuple> tuple;
+  while (!se->empty()) {
+    tuple = se->as_tuple_range(2, 2);
+    if (tuple.is_null()) {
       os << " . ";
-      print_list(os);
-      os << ')';
+      se->print_list(os);
+      break;
+    }
+    os << ' ';
+    tuple->at(0).print_list(os);
+    se = &tuple->at(1);
   }
+  os << ')';
+}
+
+StackEntry StackEntry::make_list(std::vector<StackEntry>&& elems) {
+  StackEntry tail;
+  std::size_t n = elems.size();
+  while (n > 0) {
+    --n;
+    tail = StackEntry{vm::make_tuple_ref(std::move(elems[n]), tail)};
+  }
+  return tail;
+}
+
+StackEntry StackEntry::make_list(const std::vector<StackEntry>& elems) {
+  StackEntry tail;
+  std::size_t n = elems.size();
+  while (n > 0) {
+    --n;
+    tail = StackEntry{vm::make_tuple_ref(elems[n], tail)};
+  }
+  return tail;
 }
 
 StackEntry::StackEntry(Ref<Stack> stack_ref) : ref(std::move(stack_ref)), tp(t_stack) {
@@ -521,7 +556,7 @@ void Stack::push_int_quiet(td::RefInt256 val, bool quiet) {
     if (!quiet) {
       throw VmError{Excno::int_ov};
     } else if (val->is_valid()) {
-      push(td::RefInt256{true});
+      push(td::make_refint());
       return;
     }
   }
@@ -557,7 +592,7 @@ void Stack::push_builder(Ref<CellBuilder> cb) {
 }
 
 void Stack::push_smallint(long long val) {
-  push(td::RefInt256{true, val});
+  push(td::make_refint(val));
 }
 
 void Stack::push_bool(bool val) {
@@ -611,13 +646,21 @@ Ref<Stack> Stack::split_top(unsigned top_cnt, unsigned drop_cnt) {
   return new_stk;
 }
 
-void Stack::dump(std::ostream& os, bool cr) const {
+void Stack::dump(std::ostream& os, int mode) const {
   os << " [ ";
-  for (const auto& x : stack) {
-    os << x.to_string() << ' ';
+  if (mode & 2) {
+    for (const auto& x : stack) {
+      x.print_list(os);
+      os << ' ';
+    }
+  } else {
+    for (const auto& x : stack) {
+      x.dump(os);
+      os << ' ';
+    }
   }
   os << "] ";
-  if (cr) {
+  if (mode & 1) {
     os << std::endl;
   }
 }
@@ -627,6 +670,254 @@ void Stack::push_cellslice(Ref<CellSlice> cs) {
 
 void Stack::push_maybe_cellslice(Ref<CellSlice> cs) {
   push_maybe(std::move(cs));
+}
+
+/*
+ *
+ *   SERIALIZE/DESERIALIZE STACK VALUES
+ *
+ */
+
+bool StackEntry::serialize(vm::CellBuilder& cb, int mode) const {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
+  switch (tp) {
+    case t_null:
+      return cb.store_long_bool(0, 8);  // vm_stk_null#00 = VmStackValue;
+    case t_int: {
+      auto val = as_int();
+      if (!val->is_valid()) {
+        // vm_stk_nan#02ff = VmStackValue;
+        return cb.store_long_bool(0x02ff, 16);
+      } else if (!(mode & 1) && val->signed_fits_bits(64)) {
+        // vm_stk_tinyint#01 value:int64 = VmStackValue;
+        return cb.store_long_bool(1, 8) && cb.store_int256_bool(std::move(val), 64);
+      } else {
+        // vm_stk_int#0201_ value:int257 = VmStackValue;
+        return cb.store_long_bool(0x0200 / 2, 15) && cb.store_int256_bool(std::move(val), 257);
+      }
+    }
+    case t_cell:
+      // vm_stk_cell#03 cell:^Cell = VmStackValue;
+      return cb.store_long_bool(3, 8) && cb.store_ref_bool(as_cell());
+    case t_slice: {
+      // _ cell:^Cell st_bits:(## 10) end_bits:(## 10) { st_bits <= end_bits }
+      // st_ref:(#<= 4) end_ref:(#<= 4) { st_ref <= end_ref } = VmCellSlice;
+      const auto& cs = *static_cast<Ref<CellSlice>>(ref);
+      return ((mode & 0x1000) || cb.store_long_bool(4, 8))             // vm_stk_slice#04 _:VmCellSlice = VmStackValue;
+             && cb.store_ref_bool(cs.get_base_cell())                  // _ cell:^Cell
+             && cb.store_long_bool(cs.cur_pos(), 10)                   // st_bits:(## 10)
+             && cb.store_long_bool(cs.cur_pos() + cs.size(), 10)       // end_bits:(## 10)
+             && cb.store_long_bool(cs.cur_ref(), 3)                    // st_ref:(#<= 4)
+             && cb.store_long_bool(cs.cur_ref() + cs.size_refs(), 3);  // end_ref:(#<= 4)
+    }
+    case t_builder:
+      // vm_stk_builder#05 cell:^Cell = VmStackValue;
+      return cb.store_long_bool(5, 8) && cb.store_ref_bool(as_builder()->finalize_copy());
+    case t_vmcont:
+      // vm_stk_cont#06 cont:VmCont = VmStackValue;
+      return !(mode & 2) && cb.store_long_bool(6, 8) && as_cont()->serialize(cb);
+    case t_tuple: {
+      const auto& tuple = *static_cast<Ref<Tuple>>(ref);
+      auto n = tuple.size();
+      // vm_stk_tuple#07 len:(## 16) data:(VmTuple len) = VmStackValue;
+      Ref<Cell> head, tail;
+      vm::CellBuilder cb2;
+      for (std::size_t i = 0; i < n; i++) {
+        std::swap(head, tail);
+        if (i > 1 &&
+            !(cb2.store_ref_bool(std::move(tail)) && cb2.store_ref_bool(std::move(head)) && cb2.finalize_to(head))) {
+          return false;
+        }
+        if (!(tuple[i].serialize(cb2, mode) && cb2.finalize_to(tail))) {
+          return false;
+        }
+      }
+      return cb.store_long_bool(7, 8) && cb.store_long_bool(n, 16) && (head.is_null() || cb.store_ref_bool(head)) &&
+             (tail.is_null() || cb.store_ref_bool(tail));
+    }
+    default:
+      return false;
+  }
+}
+
+bool StackEntry::deserialize(CellSlice& cs, int mode) {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
+  clear();
+  int t = (mode & 0xf000) ? ((mode >> 12) & 15) : (int)cs.prefetch_ulong(8);
+  switch (t) {
+    case 0:
+      // vm_stk_null#00 = VmStackValue;
+      return cs.advance(8);
+    case 1: {
+      // vm_stk_tinyint#01 value:int64 = VmStackValue;
+      td::RefInt256 val;
+      return !(mode & 1) && cs.advance(8) && cs.fetch_int256_to(64, val) && set_int(std::move(val));
+    }
+    case 2: {
+      t = (int)cs.prefetch_ulong(16) & 0x1ff;
+      if (t == 0xff) {
+        // vm_stk_nan#02ff = VmStackValue;
+        return cs.advance(16) && set_int(td::make_refint());
+      } else {
+        // vm_stk_int#0201_ value:int257 = VmStackValue;
+        td::RefInt256 val;
+        return cs.fetch_ulong(15) == 0x0200 / 2 && cs.fetch_int256_to(257, val) && set_int(std::move(val));
+      }
+    }
+    case 3: {
+      // vm_stk_cell#03 cell:^Cell = VmStackValue;
+      return cs.have_refs() && cs.advance(8) && set(t_cell, cs.fetch_ref());
+    }
+    case 4: {
+      // _ cell:^Cell st_bits:(## 10) end_bits:(## 10) { st_bits <= end_bits }
+      //   st_ref:(#<= 4) end_ref:(#<= 4) { st_ref <= end_ref } = VmCellSlice;
+      // vm_stk_slice#04 _:VmCellSlice = VmStackValue;
+      unsigned st_bits, end_bits, st_ref, end_ref;
+      Ref<Cell> cell;
+      Ref<CellSlice> csr;
+      return ((mode & 0xf000) || cs.advance(8))                          // vm_stk_slice#04
+             && cs.fetch_ref_to(cell)                                    // cell:^Cell
+             && cs.fetch_uint_to(10, st_bits)                            // st_bits:(## 10)
+             && cs.fetch_uint_to(10, end_bits)                           // end_bits:(## 10)
+             && st_bits <= end_bits                                      // { st_bits <= end_bits }
+             && cs.fetch_uint_to(3, st_ref)                              // st_ref:(#<= 4)
+             && cs.fetch_uint_to(3, end_ref)                             // end_ref:(#<= 4)
+             && st_ref <= end_ref && end_ref <= 4                        // { st_ref <= end_ref }
+             && (csr = load_cell_slice_ref(std::move(cell))).not_null()  // load cell slice
+             && csr->have(end_bits, end_ref) &&
+             csr.write().skip_last(csr->size() - end_bits, csr->size_refs() - end_ref) &&
+             csr.write().skip_first(st_bits, st_ref) && set(t_slice, std::move(csr));
+    }
+    case 5: {
+      // vm_stk_builder#05 cell:^Cell = VmStackValue;
+      Ref<Cell> cell;
+      Ref<CellSlice> csr;
+      Ref<CellBuilder> cb{true};
+      return cs.advance(8) && cs.fetch_ref_to(cell) && (csr = load_cell_slice_ref(std::move(cell))).not_null() &&
+             cb.write().append_cellslice_bool(std::move(csr)) && set(t_builder, std::move(cb));
+    }
+    case 6: {
+      // vm_stk_cont#06 cont:VmCont = VmStackValue;
+      Ref<Continuation> cont;
+      return !(mode & 2) && cs.advance(8) && Continuation::deserialize_to(cs, cont, mode) &&
+             set(t_vmcont, std::move(cont));
+    }
+    case 7: {
+      // vm_stk_tuple#07 len:(## 16) data:(VmTuple len) = VmStackValue;
+      int n;
+      if (!(cs.advance(8) && cs.fetch_uint_to(16, n))) {
+        return false;
+      }
+      Ref<Tuple> tuple{true, n};
+      auto& t = tuple.write();
+      if (n > 1) {
+        Ref<Cell> head, tail;
+        n--;
+        if (!(cs.fetch_ref_to(head) && cs.fetch_ref_to(tail) && t[n].deserialize(std::move(tail), mode))) {
+          return false;
+        }
+        vm::CellSlice cs2;
+        while (--n > 0) {
+          if (!(cs2.load(std::move(head)) && cs2.fetch_ref_to(head) && cs2.fetch_ref_to(tail) && cs2.empty_ext() &&
+                t[n].deserialize(std::move(tail), mode))) {
+            return false;
+          }
+        }
+        if (!t[0].deserialize(std::move(head), mode)) {
+          return false;
+        }
+      } else if (n == 1) {
+        return cs.have_refs() && t[0].deserialize(cs.fetch_ref(), mode) && set(t_tuple, std::move(tuple));
+      }
+      return set(t_tuple, std::move(tuple));
+    }
+    default:
+      return false;
+  }
+}
+
+bool StackEntry::deserialize(Ref<Cell> cell, int mode) {
+  if (cell.is_null()) {
+    clear();
+    return false;
+  }
+  CellSlice cs = load_cell_slice(std::move(cell));
+  return deserialize(cs, mode) && cs.empty_ext();
+}
+
+bool Stack::serialize(vm::CellBuilder& cb, int mode) const {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
+  // vm_stack#_ depth:(## 24) stack:(VmStackList depth) = VmStack;
+  unsigned n = depth();
+  if (!cb.store_ulong_rchk_bool(n, 24)) {  // vm_stack#_ depth:(## 24)
+    return false;
+  }
+  if (!n) {
+    return true;
+  }
+  vm::CellBuilder cb2;
+  Ref<vm::Cell> rest = cb2.finalize();  // vm_stk_nil#_ = VmStackList 0;
+  for (unsigned i = 0; i < n - 1; i++) {
+    // vm_stk_cons#_ {n:#} rest:^(VmStackList n) tos:VmStackValue = VmStackList (n + 1);
+    if (!(cb2.store_ref_bool(std::move(rest)) && stack[i].serialize(cb2, mode) && cb2.finalize_to(rest))) {
+      return false;
+    }
+  }
+  return cb.store_ref_bool(std::move(rest)) && stack[n - 1].serialize(cb, mode);
+}
+
+bool Stack::deserialize(vm::CellSlice& cs, int mode) {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
+  clear();
+  // vm_stack#_ depth:(## 24) stack:(VmStackList depth) = VmStack;
+  int n;
+  if (!cs.fetch_uint_to(24, n)) {
+    return false;
+  }
+  if (!n) {
+    return true;
+  }
+  stack.resize(n);
+  Ref<Cell> rest;
+  if (!(cs.fetch_ref_to(rest) && stack[n - 1].deserialize(cs, mode))) {
+    clear();
+    return false;
+  }
+  for (int i = n - 2; i >= 0; --i) {
+    // vm_stk_cons#_ {n:#} rest:^(VmStackList n) tos:VmStackValue = VmStackList (n + 1);
+    vm::CellSlice cs2 = load_cell_slice(std::move(rest));
+    if (!(cs2.fetch_ref_to(rest) && stack[i].deserialize(cs2, mode) && cs2.empty_ext())) {
+      clear();
+      return false;
+    }
+  }
+  if (!load_cell_slice(std::move(rest)).empty_ext()) {
+    clear();
+    return false;
+  }
+  return true;
+}
+
+bool Stack::deserialize_to(vm::CellSlice& cs, Ref<Stack>& stack, int mode) {
+  stack = Ref<Stack>{true};
+  if (stack.unique_write().deserialize(cs, mode)) {
+    return true;
+  } else {
+    stack.clear();
+    return false;
+  }
 }
 
 }  // namespace vm

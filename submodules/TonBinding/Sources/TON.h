@@ -39,15 +39,43 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@protocol TONTransactionMessageContents <NSObject>
+
+@end
+
+@interface TONTransactionMessageContentsRawData : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull data;
+
+- (instancetype)initWithData:(NSData * _Nonnull)data;
+
+@end
+
+@interface TONTransactionMessageContentsPlainText : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) NSString * _Nonnull text;
+
+- (instancetype)initWithText:(NSString * _Nonnull)text;
+
+@end
+
+@interface TONTransactionMessageContentsEncryptedText : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull data;
+
+- (instancetype)initWithData:(NSData * _Nonnull)data;
+
+@end
+
 @interface TONTransactionMessage : NSObject
 
 @property (nonatomic, readonly) int64_t value;
 @property (nonatomic, strong, readonly) NSString * _Nonnull source;
 @property (nonatomic, strong, readonly) NSString * _Nonnull destination;
-@property (nonatomic, strong, readonly) NSString * _Nonnull textMessage;
+@property (nonatomic, strong, readonly) id<TONTransactionMessageContents> _Nonnull contents;
 @property (nonatomic, strong, readonly) NSData * _Nonnull bodyHash;
 
-- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage bodyHash:(NSData * _Nonnull)bodyHash;
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination contents:(id<TONTransactionMessageContents> _Nonnull)contents bodyHash:(NSData * _Nonnull)bodyHash;
 
 @end
 
@@ -87,10 +115,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TONSendGramsQueryFees : NSObject
 
-@property (nonatomic, strong, readonly) TONFees *sourceFees;
-@property (nonatomic, strong, readonly) TONFees *destinationFees;
+@property (nonatomic, strong, readonly) TONFees * _Nonnull sourceFees;
+@property (nonatomic, strong, readonly) NSArray<TONFees *> * _Nonnull destinationFees;
 
-- (instancetype)initWithSourceFees:(TONFees *)sourceFees destinationFees:(TONFees *)destinationFees;
+- (instancetype)initWithSourceFees:(TONFees * _Nonnull)sourceFees destinationFees:(NSArray<TONFees *> * _Nonnull)destinationFees;
 
 @end
 

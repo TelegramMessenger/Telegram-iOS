@@ -1,0 +1,115 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+
+"dns-msg-body.boc" =: savefile
+
+begin-options
+     " <auto-dns-addr> [-o<savefile-boc>] (add|update|prolong) <subdomain> <expire-in-sec> ... " +cr +tab
+    +"Creates the internal message body containing a request to automatic DNS smart contract <auto-dns-addr> created by new-auto-dns.fif, "
+    +"to be sent later with a suitable payment from a wallet to <auto-dns-addr>, and saves it into <savefile-boc> ('" savefile $+ +"' by default). "
+    +"The operation to be performed is one of" +cr +tab
+    +"add <subdomain> <expire-in-sec> { owner <smc-addr> | cat <cat-id> (smc <smc-addr> | next <next-resolver-smc-addr> | adnl <adnl-addr> | text <string>) }" +cr +tab
+    +"update <subdomain> <expire-in-sec> { owner <smc-addr> | cat <cat-id> (smc <smc-addr> | next <next-resolver-smc-addr> | adnl <adnl-addr> | text <string>) }" +cr +tab
+    +"prolong <subdomain> <expire-in-sec>"
+    disable-digit-options generic-help-setopt
+  "o" "--output" { =: savefile } short-long-option-arg
+    "Sets output file for generated initialization message ('" savefile $+ +"' by default)" option-help
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# 4 < ' usage if
+4 :$1..n
+
+$1 true parse-load-address =: bounce 2=: dest-addr
+$2 dup =: main-op-name atom =: main-op
+$3 dup =: subdomain $len 127 > abort"subdomain name too long"
+$4 parse-int dup 30 1<< < { now + } if =: expire-at
+
+{ $* @ dup null? { second $@ ! } { drop } cond } : @skip
+{ $* @ null? } : @end?
+{ $* @ uncons $* ! } : @next
+{ @next drop } 4 times
+
+main-op dup `add eq? over `update eq? or swap `prolong eq? or
+{ "unknown main operation '" main-op-name $+ +"'; one of 'add', 'update' or 'prolong' expected" abort } ifnot
+main-op `prolong eq? not =: need-params
+
+$# 4 > need-params <> abort"extra parameters, or no parameters for chosen main operation"
+
+variable Values  dictnew Values !
+// ( i c -- )
+{ over 0= abort"category cannot be zero"
+  <b swap ref, swap Values @ 16 b>idict!+ not abort"duplicate category id"
+  Values !
+} : register-value  
+
+{ @end? abort"category number expected" @next (number) 1 <> abort"category must be integer"
+  dup 16 fits not abort"category does not fit into 16 bit integer"
+  dup 0= abort"category must be non-zero"
+} : parse-cat-num
+{ @end? abort"smart contract address expected" 
+  @next false parse-load-address drop
+} : cl-parse-smc-addr
+{ @end? abort"adnl address expected"
+  @next parse-adnl-addr
+} : cl-parse-adnl-addr
+{ <b x{9fd3} s, -rot Addr, 0 8 u, b> } : serialize-smc-addr
+{ <b x{ba93} s, -rot Addr, b> } : serialize-next-resolver
+{ <b x{ad01} s, swap 256 u, 0 8 u, b> } : serialize-adnl-addr
+{ <b x{1eda01} s, over $len 8 u, swap $, b> } : serialize-text
+{ @end? abort"subdomain record value expected" @next
+  dup "smc" $= { drop cl-parse-smc-addr serialize-smc-addr } {
+  dup "next" $= { drop cl-parse-smc-addr serialize-next-resolver } {
+  dup "adnl" $= { drop cl-parse-adnl-addr serialize-adnl-addr } {
+  dup "text" $= { drop @next serialize-text } {
+    "unknown record type "' swap $+ +"'" abort
+  } cond } cond } cond } cond
+} : parse-value
+{ @next dup "owner" $= { drop -2 cl-parse-smc-addr serialize-smc-addr } {
+  dup "cat" $= { drop parse-cat-num parse-value } {
+    "unknown action '" swap $+ +"'" abort
+  } cond } cond
+  register-value
+} : parse-action
+{ { @end? not } { parse-action } while } : parse-actions
+parse-actions
+
+// ( S -- S1 .. Sn n )
+{ 1 swap { dup "." $pos dup 0>= } { $| 1 $| nip rot 1+ swap } while drop swap
+} : split-by-dots
+// ( S -- s )
+{ dup $len dup 0= abort"subdomain cannot be empty" 126 > abort"subdomain too long"
+  dup 0 chr $pos 1+ abort"subdomain contains null characters"
+  split-by-dots <b {  // ... S b
+    swap dup $len 0= abort"empty subdomain component" $, 0 8 u,
+  } rot times b> <s
+} : subdomain>s
+
+main-op ( _( `add 0x72656764 ) _( `update 0x75706464 ) _( `prolong 0x70726f6c ) )
+assq-val not abort"unknown main operation"
+=: op-id 
+
+."Automatic DNS smart contract address = " dest-addr 2dup .addr cr 6 .Addr cr
+
+."Action: " main-op .l subdomain type space expire-at . cr
+."Operation code: 0x" op-id 8 0X. cr
+."Value: "
+Values @ dup null? { drop ."(none)" } { <s csr. } cond cr
+
+<b op-id 32 u, expire-at 32 u, Values @ dict, b> =: actions-builder
+
+// create an internal message
+now 32 << actions-builder hashu 32 1<<1- and + =: query_id
+<b op-id 32 i, query_id 64 u,
+   subdomain subdomain>s tuck sbits 8 / 7 i, swap s,
+   main-op `prolong eq? { Values @ ref, } ifnot
+   expire-at 32 u, b>
+dup ."Internal message body is: " <s csr. cr
+2 boc+>B dup Bx. cr
+."Query_id is " query_id dup . ."= 0x" X. cr
+savefile tuck B>file
+."(Saved to file " type .")" cr

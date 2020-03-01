@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "func.h"
 
@@ -29,6 +29,7 @@ namespace funC {
 void CodeBlob::simplify_var_types() {
   for (TmpVar& var : vars) {
     TypeExpr::remove_indirect(var.v_type);
+    var.v_type->recompute_width();
   }
 }
 
@@ -354,7 +355,9 @@ bool Op::compute_used_vars(const CodeBlob& code, bool edit) {
     case _IntConst:
     case _GlobVar:
     case _Call:
-    case _CallInd: {
+    case _CallInd:
+    case _Tuple:
+    case _UnTuple: {
       // left = EXEC right;
       if (!next_var_info.count_used(left) && is_pure()) {
         // all variables in `left` are not needed
@@ -364,6 +367,13 @@ bool Op::compute_used_vars(const CodeBlob& code, bool edit) {
         return std_compute_used_vars(true);
       }
       return std_compute_used_vars();
+    }
+    case _SetGlob: {
+      // GLOB = right
+      if (right.empty() && edit) {
+        disable();
+      }
+      return std_compute_used_vars(right.empty());
     }
     case _Let: {
       // left = right
@@ -431,26 +441,25 @@ bool Op::compute_used_vars(const CodeBlob& code, bool edit) {
     }
     case _While: {
       // while (block0 || left) block1;
-      // ... { block0 left block1 } block0 left next
-      VarDescrList after_cond_first{next_var_info};
-      after_cond_first += left;
-      code.compute_used_code_vars(block0, after_cond_first, false);
-      VarDescrList new_var_info{block0->var_info};
+      // ... block0 left { block1 block0 left } next
+      VarDescrList new_var_info{next_var_info};
       bool changes = false;
       do {
-        code.compute_used_code_vars(block1, block0->var_info, changes);
-        VarDescrList after_cond{block1->var_info};
+        VarDescrList after_cond{new_var_info};
         after_cond += left;
         code.compute_used_code_vars(block0, after_cond, changes);
+        code.compute_used_code_vars(block1, block0->var_info, changes);
         std::size_t n = new_var_info.size();
-        new_var_info += block0->var_info;
+        new_var_info += block1->var_info;
         new_var_info.clear_last();
         if (changes) {
           break;
         }
         changes = (new_var_info.size() == n);
       } while (changes <= edit);
-      return set_var_info(std::move(new_var_info));
+      new_var_info += left;
+      code.compute_used_code_vars(block0, new_var_info, edit);
+      return set_var_info(block0->var_info);
     }
     case _Until: {
       // until (block0 || left);
@@ -532,8 +541,11 @@ bool prune_unreachable(std::unique_ptr<Op>& ops) {
   switch (op.cl) {
     case Op::_IntConst:
     case Op::_GlobVar:
+    case Op::_SetGlob:
     case Op::_Call:
     case Op::_CallInd:
+    case Op::_Tuple:
+    case Op::_UnTuple:
     case Op::_Import:
       reach = true;
       break;
@@ -695,7 +707,6 @@ VarDescrList Op::fwd_analyze(VarDescrList values) {
       values.add_newval(left[0]).set_const(int_const);
       break;
     }
-    case _GlobVar:
     case _Call: {
       prepare_args(values);
       auto func = dynamic_cast<const SymValAsmFunc*>(fun_ref->value);
@@ -718,12 +729,17 @@ VarDescrList Op::fwd_analyze(VarDescrList values) {
       }
       break;
     }
+    case _Tuple:
+    case _UnTuple:
+    case _GlobVar:
     case _CallInd: {
       for (var_idx_t i : left) {
         values.add_newval(i);
       }
       break;
     }
+    case _SetGlob:
+      break;
     case _Let: {
       std::vector<VarDescr> old_val;
       assert(left.size() == right.size());
@@ -833,6 +849,9 @@ bool Op::mark_noreturn() {
     case _Import:
     case _IntConst:
     case _Let:
+    case _Tuple:
+    case _UnTuple:
+    case _SetGlob:
     case _GlobVar:
     case _CallInd:
     case _Call:

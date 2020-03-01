@@ -15,7 +15,7 @@
   throw_unless(33, msg_seqno == stored_seqno);
   throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
   accept_message();
-  cs~touch_slice();
+  cs~touch();
   if (cs.slice_refs()) {
     var mode = cs~load_uint(8);
     send_raw_message(cs~load_ref(), mode);

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "func.h"
 
@@ -45,6 +45,12 @@ void TypeExpr::compute_width() {
       }
       if (maxw > w_inf) {
         maxw = w_inf;
+      }
+      break;
+    case te_Tuple:
+      minw = maxw = 1;
+      for (TypeExpr* arg : args) {
+        arg->compute_width();
       }
       break;
     case te_Indirect:
@@ -81,6 +87,14 @@ bool TypeExpr::recompute_width() {
       }
       if (maxw > max) {
         maxw = max;
+      }
+      return true;
+    }
+    case te_Tuple: {
+      for (TypeExpr* arg : args) {
+        if (arg->minw > 1 || arg->maxw < 1 || arg->minw > arg->maxw) {
+          return false;
+        }
       }
       return true;
     }
@@ -233,7 +247,9 @@ std::ostream& TypeExpr::print(std::ostream& os, int lex_level) {
       }
     }
     case te_Tensor: {
-      os << "(";
+      if (lex_level > -127) {
+        os << "(";
+      }
       auto c = args.size();
       if (c) {
         for (const auto& x : args) {
@@ -243,7 +259,25 @@ std::ostream& TypeExpr::print(std::ostream& os, int lex_level) {
           }
         }
       }
-      return os << ")";
+      if (lex_level > -127) {
+        os << ")";
+      }
+      return os;
+    }
+    case te_Tuple: {
+      os << "[";
+      auto c = args.size();
+      if (c == 1 && args[0]->constr == te_Tensor) {
+        args[0]->print(os, -127);
+      } else if (c) {
+        for (const auto& x : args) {
+          x->print(os);
+          if (--c) {
+            os << ", ";
+          }
+        }
+      }
+      return os << "]";
     }
     case te_Map: {
       assert(args.size() == 2);
@@ -312,7 +346,7 @@ void check_update_widths(TypeExpr* te1, TypeExpr* te2) {
   check_width_compat(te1, te2);
   te1->minw = te2->minw = std::max(te1->minw, te2->minw);
   te1->maxw = te2->maxw = std::min(te1->maxw, te2->maxw);
-  assert(te1->minw <= te2->minw);
+  assert(te1->minw <= te1->maxw);
 }
 
 void unify(TypeExpr*& te1, TypeExpr*& te2) {

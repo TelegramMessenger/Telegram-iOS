@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "block/block.h"
 #include "vm/boc.h"
@@ -98,7 +98,7 @@ void test1() {
 
   block::tlb::ShardIdent::Record shard_id;
   for (int i = 0; i < 3; i++) {
-    std::cout << "ShardIdent.validate() = " << block::tlb::t_ShardIdent.validate(csl) << std::endl;
+    std::cout << "ShardIdent.validate() = " << block::tlb::t_ShardIdent.validate_upto(1024, csl) << std::endl;
     csl.print_rec(std::cerr);
     csl.dump(std::cerr, 7);
     std::cout << "ShardIdent.unpack() = " << block::tlb::t_ShardIdent.unpack(csl, shard_id) << std::endl;
@@ -107,9 +107,9 @@ void test1() {
                 << " shard_prefix:" << shard_id.shard_prefix << std::endl;
     }
   }
-  std::cout << "ShardIdent.skip_validate() = " << block::tlb::t_ShardIdent.validate_skip(csl) << std::endl;
-  std::cout << "ShardIdent.skip_validate() = " << block::tlb::t_ShardIdent.validate_skip(csl) << std::endl;
-  std::cout << "ShardIdent.skip_validate() = " << block::tlb::t_ShardIdent.validate_skip(csl) << std::endl;
+  std::cout << "ShardIdent.skip_validate() = " << block::tlb::t_ShardIdent.validate_skip_upto(1024, csl) << std::endl;
+  std::cout << "ShardIdent.skip_validate() = " << block::tlb::t_ShardIdent.validate_skip_upto(1024, csl) << std::endl;
+  std::cout << "ShardIdent.skip_validate() = " << block::tlb::t_ShardIdent.validate_skip_upto(1024, csl) << std::endl;
   using namespace td::literals;
   std::cout << "Grams.store_intval(239) = " << block::tlb::t_Grams.store_integer_value(cb, "239"_i256) << std::endl;
   std::cout << "Grams.store_intval(17239) = " << block::tlb::t_Grams.store_integer_value(cb, "17239"_i256) << std::endl;
@@ -120,13 +120,13 @@ void test1() {
   std::cout << "Grams.store_intval(666) = " << block::tlb::t_Grams.store_integer_value(cb, "666"_i256) << std::endl;
   std::cout << cb << std::endl;
   cs2 = td::Ref<vm::CellSlice>{true, cb.finalize()};
-  std::cout << "Grams.validate(cs) = " << block::tlb::t_Grams.validate(*cs) << std::endl;
-  std::cout << "Grams.validate(cs2) = " << block::tlb::t_Grams.validate(*cs2) << std::endl;
+  std::cout << "Grams.validate(cs) = " << block::tlb::t_Grams.validate_upto(1024, *cs) << std::endl;
+  std::cout << "Grams.validate(cs2) = " << block::tlb::t_Grams.validate_upto(1024, *cs2) << std::endl;
   //
   block::gen::SplitMergeInfo::Record data;
   block::gen::Grams::Record data2;
-  std::cout << "block::gen::Grams.validate(cs) = " << block::gen::t_Grams.validate(*cs) << std::endl;
-  std::cout << "block::gen::Grams.validate(cs2) = " << block::gen::t_Grams.validate(*cs2) << std::endl;
+  std::cout << "block::gen::Grams.validate(cs) = " << block::gen::t_Grams.validate_upto(1024, *cs) << std::endl;
+  std::cout << "block::gen::Grams.validate(cs2) = " << block::gen::t_Grams.validate_upto(1024, *cs2) << std::endl;
   std::cout << "[cs = " << cs << "]" << std::endl;
   bool ok = tlb::csr_unpack_inexact(cs, data);
   std::cout << "block::gen::SplitMergeInfo.unpack(cs, data) = " << ok << std::endl;
@@ -182,29 +182,38 @@ void test1() {
 }
 
 void test2(vm::CellSlice& cs) {
-  std::cout << "Bool.validate() = " << block::tlb::t_Bool.validate(cs) << std::endl;
-  std::cout << "UInt16.validate() = " << block::tlb::t_uint16.validate(cs) << std::endl;
-  std::cout << "HashmapE(32,UInt16).validate() = " << block::tlb::HashmapE(32, block::tlb::t_uint16).validate(cs)
-            << std::endl;
+  std::cout << "Bool.validate() = " << block::tlb::t_Bool.validate_upto(1024, cs) << std::endl;
+  std::cout << "UInt16.validate() = " << block::tlb::t_uint16.validate_upto(1024, cs) << std::endl;
+  std::cout << "HashmapE(32,UInt16).validate() = "
+            << block::tlb::HashmapE(32, block::tlb::t_uint16).validate_upto(1024, cs) << std::endl;
   std::cout << "block::gen::HashmapE(32,UInt16).validate() = "
-            << block::gen::HashmapE{32, block::gen::t_uint16}.validate(cs) << std::endl;
+            << block::gen::HashmapE{32, block::gen::t_uint16}.validate_upto(1024, cs) << std::endl;
 }
 
 void usage() {
-  std::cout << "usage: test-block [-S][<boc-file>]\n\tor test-block -h\n\tDumps specified blockchain block or state "
-               "from <boc-file>, or runs some tests\n\t-S\tDump a blockchain state\n";
+  std::cout << "usage: dump-block [-t<typename>][-S][<boc-file>]\n\tor dump-block -h\n\tDumps specified blockchain "
+               "block or state "
+               "from <boc-file>, or runs some tests\n\t-S\tDump a blockchain state instead of a block\n";
   std::exit(2);
 }
 
 int main(int argc, char* const argv[]) {
   int i;
   int new_verbosity_level = VERBOSITY_NAME(INFO);
-  bool dump_state = false;
+  const char* tname = nullptr;
+  const tlb::TLB* type = &block::gen::t_Block;
   auto zerostate = std::make_unique<block::ZerostateInfo>();
-  while ((i = getopt(argc, argv, "Shv:")) != -1) {
+  while ((i = getopt(argc, argv, "CSt:hv:")) != -1) {
     switch (i) {
+      case 'C':
+        type = &block::gen::t_VmCont;
+        break;
       case 'S':
-        dump_state = true;
+        type = &block::gen::t_ShardStateUnsplit;
+        break;
+      case 't':
+        tname = optarg;
+        type = nullptr;
         break;
       case 'v':
         new_verbosity_level = VERBOSITY_NAME(FATAL) + (verbosity = td::to_integer<int>(td::Slice(optarg)));
@@ -230,12 +239,18 @@ int main(int argc, char* const argv[]) {
         vm::CellSlice cs{vm::NoVm(), boc};
         cs.print_rec(std::cout);
         std::cout << std::endl;
-        auto& type = dump_state ? (const tlb::TLB&)block::gen::t_ShardStateUnsplit : block::gen::t_Block;
-        std::string type_name = dump_state ? "ShardState" : "Block";
-        type.print_ref(std::cout, boc);
+        if (!type) {
+          tlb::TypenameLookup dict(block::gen::register_simple_types);
+          type = dict.lookup(tname);
+          if (!type) {
+            std::cerr << "unknown TL-B type " << tname << std::endl;
+            std::exit(3);
+          }
+        }
+        type->print_ref(std::cout, boc);
         std::cout << std::endl;
-        bool ok = type.validate_ref(boc);
-        std::cout << "(" << (ok ? "" : "in") << "valid " << type_name << ")" << std::endl;
+        bool ok = type->validate_ref(1048576, boc);
+        std::cout << "(" << (ok ? "" : "in") << "valid " << *type << ")" << std::endl;
       }
     }
     if (!done) {

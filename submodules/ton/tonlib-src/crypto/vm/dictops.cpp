@@ -14,14 +14,14 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <functional>
 #include "vm/log.h"
 #include "vm/opctable.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
 #include "vm/excno.hpp"
+#include "vm/vm.h"
 #include "common/bigint.hpp"
 #include "common/refint.h"
 #include "vm/dictops.h"
@@ -210,7 +210,7 @@ int exec_dict_get(VmState* st, unsigned args) {
   BitSlice key;
   unsigned char buffer[Dictionary::max_key_bytes];
   if (args & 4) {
-    key = dict.integer_key(stack.pop_int(), n, !(args & 2), buffer, true);
+    key = dict.integer_key(stack.pop_int_finite(), n, !(args & 2), buffer, true);
     if (!key.is_valid()) {
       stack.push_smallint(0);
       return 0;
@@ -250,7 +250,7 @@ int exec_dict_get_optref(VmState* st, unsigned args) {
   BitSlice key;
   unsigned char buffer[Dictionary::max_key_bytes];
   if (args & 2) {
-    key = dict.integer_key(stack.pop_int(), n, !(args & 1), buffer, true);
+    key = dict.integer_key(stack.pop_int_finite(), n, !(args & 1), buffer, true);
     if (!key.is_valid()) {
       stack.push_null();
       return 0;
@@ -377,7 +377,7 @@ int exec_dict_delete(VmState* st, unsigned args) {
   BitSlice key;
   unsigned char buffer[Dictionary::max_key_bytes];
   if (args & 2) {
-    key = dict.integer_key(stack.pop_int(), n, !(args & 1), buffer);
+    key = dict.integer_key(stack.pop_int_finite(), n, !(args & 1), buffer);
     if (!key.is_valid()) {
       push_dict(stack, std::move(dict));
       stack.push_smallint(0);
@@ -404,7 +404,7 @@ int exec_dict_deleteget(VmState* st, unsigned args) {
   BitSlice key;
   unsigned char buffer[Dictionary::max_key_bytes];
   if (args & 4) {
-    key = dict.integer_key(stack.pop_int(), n, !(args & 2), buffer);
+    key = dict.integer_key(stack.pop_int_finite(), n, !(args & 2), buffer);
     if (!key.is_valid()) {
       push_dict(stack, std::move(dict));
       stack.push_smallint(0);
@@ -588,23 +588,29 @@ int exec_pfx_dict_delete(VmState* st) {
 
 int exec_dict_get_exec(VmState* st, unsigned args) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute DICT" << (args & 1 ? 'U' : 'I') << "GET" << (args & 2 ? "EXEC\n" : "JMP\n");
+  VM_LOG(st) << "execute DICT" << (args & 1 ? 'U' : 'I') << "GET" << (args & 2 ? "EXEC" : "JMP")
+             << (args & 4 ? "Z" : "");
   stack.check_underflow(3);
   int n = stack.pop_smallint_range(Dictionary::max_key_bits);
   Dictionary dict{stack.pop_maybe_cell(), n};
   unsigned char buffer[Dictionary::max_key_bytes];
-  dict.integer_key_simple(stack.pop_int(), n, !(args & 1), td::BitPtr{buffer});
-  auto value = dict.lookup(td::BitPtr{buffer}, n);
-  if (value.not_null()) {
-    Ref<OrdCont> cont{true, std::move(value), st->get_cp()};
-    return (args & 2) ? st->call(std::move(cont)) : st->jump(std::move(cont));
-  } else {
-    return 0;
+  auto idx = stack.pop_int_finite();
+  if (dict.integer_key_simple(idx, n, !(args & 1), td::BitPtr{buffer}, true)) {
+    auto value = dict.lookup(td::BitPtr{buffer}, n);
+    if (value.not_null()) {
+      Ref<OrdCont> cont{true, std::move(value), st->get_cp()};
+      return (args & 2) ? st->call(std::move(cont)) : st->jump(std::move(cont));
+    }
   }
+  // key not found or out of range
+  if (args & 4) {
+    stack.push_int(std::move(idx));
+  }
+  return 0;
 }
 
 std::string dump_dict_get_exec(CellSlice& cs, unsigned args) {
-  return std::string{"DICT"} + (args & 1 ? 'U' : 'I') + "GET" + (args & 2 ? "EXEC" : "JMP");
+  return std::string{"DICT"} + (args & 1 ? 'U' : 'I') + "GET" + (args & 2 ? "EXEC" : "JMP") + (args & 4 ? "Z" : "");
 }
 
 int exec_push_const_dict(VmState* st, CellSlice& cs, unsigned args, int pfx_bits) {
@@ -720,7 +726,7 @@ int exec_subdict_get(VmState* st, unsigned args) {
   BitSlice key;
   unsigned char buffer[Dictionary::max_key_bytes];
   if (args & 2) {
-    key = dict.integer_key(stack.pop_int(), k, !(args & 1), buffer, true);
+    key = dict.integer_key(stack.pop_int_finite(), k, !(args & 1), buffer, true);
   } else {
     key = stack.pop_cellslice()->prefetch_bits(k);
   }
@@ -805,7 +811,8 @@ void register_dictionary_ops(OpcodeTable& cp0) {
                                       exec_const_pfx_dict_switch, compute_len_push_const_dict))
       .insert(OpcodeInstr::mkfixedrange(0xf4b1, 0xf4b4, 16, 3, std::bind(dump_subdictop2, _2, "GET"), exec_subdict_get))
       .insert(
-          OpcodeInstr::mkfixedrange(0xf4b5, 0xf4b8, 16, 3, std::bind(dump_subdictop2, _2, "RPGET"), exec_subdict_get));
+          OpcodeInstr::mkfixedrange(0xf4b5, 0xf4b8, 16, 3, std::bind(dump_subdictop2, _2, "RPGET"), exec_subdict_get))
+      .insert(OpcodeInstr::mkfixed(0xf4bc >> 2, 14, 2, dump_dict_get_exec, exec_dict_get_exec));
 }
 
 }  // namespace vm

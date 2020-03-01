@@ -65,6 +65,9 @@ bool downcast_call(Object &obj, const T &func) {
     case liteServer_partialBlockProof::ID:
       func(static_cast<liteServer_partialBlockProof &>(obj));
       return true;
+    case liteServer_runMethodResult::ID:
+      func(static_cast<liteServer_runMethodResult &>(obj));
+      return true;
     case liteServer_sendMsgStatus::ID:
       func(static_cast<liteServer_sendMsgStatus &>(obj));
       return true;
@@ -88,6 +91,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case liteServer_transactionList::ID:
       func(static_cast<liteServer_transactionList &>(obj));
+      return true;
+    case liteServer_validatorStats::ID:
+      func(static_cast<liteServer_validatorStats &>(obj));
       return true;
     case liteServer_version::ID:
       func(static_cast<liteServer_version &>(obj));
@@ -160,6 +166,9 @@ bool downcast_call(Function &obj, const T &func) {
     case liteServer_getTransactions::ID:
       func(static_cast<liteServer_getTransactions &>(obj));
       return true;
+    case liteServer_getValidatorStats::ID:
+      func(static_cast<liteServer_getValidatorStats &>(obj));
+      return true;
     case liteServer_getVersion::ID:
       func(static_cast<liteServer_getVersion &>(obj));
       return true;
@@ -174,6 +183,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case liteServer_queryPrefix::ID:
       func(static_cast<liteServer_queryPrefix &>(obj));
+      return true;
+    case liteServer_runSmcMethod::ID:
+      func(static_cast<liteServer_runSmcMethod &>(obj));
       return true;
     case liteServer_sendMessage::ID:
       func(static_cast<liteServer_sendMessage &>(obj));

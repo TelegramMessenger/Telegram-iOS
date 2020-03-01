@@ -1,0 +1,146 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+
+60 =: timeout   // external message expires in 60 seconds
+"dns-query.boc" =: savefile
+
+begin-options
+     " <filename-base> <contract-id> [-t<timeout>] [-o<savefile-boc>] <op> [<op2>...]" +cr +tab
+    +"Creates a request to managed DNS smart contract created by new-manual-dns.fif, with private key loaded from file <filename-base>.pk "
+    +"and address from <filename-base>-dns<contract-id>.addr, and saves it into <savefile-boc> ('" savefile $+ +"' by default)"
+    +cr +"<op> is an operation description, one of" +cr +tab
+    +"add <subdomain> cat <cat-id> (smc <smc-addr> | next <next-resolver-smc-addr> | adnl <adnl-addr> | text <string>)" +cr +tab
+    +"delete <subdomain> cat <cat-id>" +cr +tab
+    +"drop <subdomain>" 
+    disable-digit-options generic-help-setopt
+  "t" "--timeout" { parse-int =: timeout } short-long-option-arg
+    "Sets expiration timeout in seconds (" timeout (.) $+ +" by default)" option-help
+  "o" "--output" { =: savefile } short-long-option-arg
+    "Sets output file for generated initialization message ('" savefile $+ +"' by default)" option-help
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# 2 < ' usage if
+2 :$1..n
+
+$1 =: file-base
+$2 parse-int dup =: contract-id 32 fits ' usage ifnot
+{ contract-id (.) $+ } : +contractid
+
+{ $* @ dup null? { second $@ ! } { drop } cond } : @skip
+{ $* @ null? } : @end?
+{ $* @ uncons $* ! } : @next
+@next @next 2drop
+
+variable Actions
+{ Actions @ cons Actions ! } : register-action
+
+{ @end? abort"subdomain name expected" @next dup $len 127 > abort"subdomain name too long"
+} : parse-domain
+{ @end? abort"category number expected" @next (number) 1 <> abort"category must be integer"
+  dup 16 fits not abort"category does not fit into 16 bit integer"
+  dup 0= abort"category must be non-zero"
+} : parse-cat-num
+{ @end? abort"`cat` expected" @next "cat" $= not abort"`cat` expected" parse-cat-num
+} : parse-cat
+{ @end? abort"smart contract address expected" 
+  @next false parse-load-address drop triple
+} : cl-parse-smc-addr
+{ @end? abort"adnl address expected"
+  `adnl @next parse-adnl-addr pair
+} : cl-parse-adnl-addr
+{ @end? abort"subdomain record value expected" @next
+  dup "smc" $= { drop `smc cl-parse-smc-addr } {
+  dup "next" $= { drop `next cl-parse-smc-addr } {
+  dup "adnl" $= { drop cl-parse-adnl-addr } {
+  dup "text" $= { drop `text @next pair } {
+    "unknown record type "' swap $+ +"'" abort
+  } cond } cond } cond } cond
+} : parse-value
+{ ."Loading new code BoC from " dup type cr
+  file>B B>boc
+} : load-new-code-from
+{ @next dup "add" $= { drop `add parse-domain parse-cat parse-value 4 tuple register-action } {
+  dup "delete" $= { drop `delete parse-domain parse-cat triple register-action } {
+  dup "drop" $= { drop `drop parse-domain pair register-action } {
+  dup "upgrade" $= { drop `upgrade @next load-new-code-from pair register-action } {
+    "unknown action '" swap $+ +"'" abort
+  } cond } cond } cond } cond
+} : parse-action
+{ { @end? not } { parse-action } while } : parse-actions
+parse-actions
+
+file-base +".pk" load-keypair nip constant wallet_pk
+file-base +"-dns" +contractid +".addr" load-address
+2dup 2constant smc_addr
+."Managed manual DNS smart contract address = " 2dup .addr cr 6 .Addr cr
+
+."Actions: " Actions @ list-reverse .l cr
+
+// ( S -- S1 .. Sn n )
+{ 1 swap { dup "." $pos dup 0>= } { $| 1 $| nip rot 1+ swap } while drop swap
+} : split-by-dots
+// ( S -- s )
+{ dup $len dup 0= abort"subdomain cannot be empty" 126 > abort"subdomain too long"
+  dup 0 chr $pos 1+ abort"subdomain contains null characters"
+  split-by-dots <b {  // ... S b
+    swap dup $len 0= abort"empty subdomain component" $, 0 8 u,
+  } rot times b> <s
+} : subdomain>s
+// ( b V -- b' )
+{ dup first
+  dup `smc eq? { drop untriple 2swap drop x{9fd3} s, -rot Addr, 0 8 u, } {
+  dup `next eq? { drop untriple 2swap drop x{ba93} s, -rot Addr, } {
+  dup `adnl eq? { drop second swap x{ad01} s, swap 256 u, 0 8 u, } {
+  dup `text eq? { drop second swap x{1eda01} s, over $len 8 u, swap $, } { 
+    abort"unknown value type"
+  } cond } cond } cond } cond
+} : value,
+{ subdomain>s dup sbits 3 >> 
+  dup 63 > { drop s>c dict, } { rot swap 7 u, swap s, } cond
+} : subdomain,
+// ( A -- b )
+{ dup first
+  dup `add eq? {
+    drop 4 untuple <b swap value, b> -rot
+    <b 11 6 u, swap 16 i, swap subdomain,
+    swap dict, nip } {
+  dup `delete eq? {
+    drop untriple rot drop
+    <b 12 6 u, swap 16 i, swap subdomain, } {
+  dup `drop eq? {
+    drop second <b 22 6 u, swap subdomain, } {
+  dup `upgrade eq? {
+    drop second <b 9 6 u, swap ref, } {
+  abort"unknown action type"
+  } cond } cond } cond } cond
+} : action>b
+// ( -- b )
+{ Actions @ dup null? { drop <b 0 6 u, b> } {
+  uncons swap action>b { over null? not } {
+    b> swap uncons swap action>b rot ref,
+  } while nip } cond
+} : serialize-actions
+serialize-actions
+dup brembits 888 < { b> <b 0 6 u, swap ref, } if
+dup =: actions-builder b>
+."Serialized actions are " <s csr. cr
+
+// create a message
+// create external message
+now timeout + 32 << actions-builder b> hashu 32 1<<1- and + =: query_id
+<b contract-id 32 i, query_id 64 u, actions-builder b+ b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint
+<b b{1000100} s, smc_addr addr, 0 Gram, b{00} s,
+   swap B, swap <s s, b>
+dup ."resulting external message: " <s csr. cr
+2 boc+>B dup Bx. cr
+."Query_id is " query_id dup . ."= 0x" X. cr
+."Query expires in " timeout . ."seconds" cr
+savefile tuck B>file
+."(Saved to file " type .")" cr

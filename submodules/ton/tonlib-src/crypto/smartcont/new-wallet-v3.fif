@@ -2,23 +2,24 @@
 "TonUtil.fif" include
 "Asm.fif" include
 
-{ ."usage: " @' $0 type ." <workchain-id> <wallet-id> [<filename-base>]" cr
+{ ."usage: " $0 type ." <workchain-id> <wallet-id> [<filename-base>]" cr
   ."Creates a new advanced wallet with unique 32-bit identifier <wallet-id> in specified workchain, with private key saved to or loaded from <filename-base>.pk" cr
   ."('new-wallet.pk' by default)" cr 1 halt
 } : usage
 $# 2- -2 and ' usage if
 
+3 :$1..n
 $1 parse-workchain-id =: wc    // set workchain id from command line argument
 $2 parse-int =: subwallet-id
-def? $3 { @' $3 } { "new-wallet" } cond constant file-base
+$3 "new-wallet" replace-if-null =: file-base
 
 ."Creating new advanced v3 wallet in workchain " wc . cr
 ."with unique wallet id " subwallet-id . cr
 
 // Create new advanced wallet; code adapted from `auto/wallet3-code.fif`
 <{ SETCP0 DUP IFNOTRET // return if recv_internal
-   DUP 85143 INT EQUAL IFJMP:<{ // "seqno" get-method
-     DROP c4 PUSHCTR CTOS 32 PLDU  // cnt
+   DUP 85143 INT EQUAL OVER 78748 INT EQUAL OR IFJMP:<{ // "seqno" and "get_public_key" get-methods
+     1 INT AND c4 PUSHCTR CTOS 32 LDU 32 LDU NIP 256 PLDU CONDSEL  // cnt or pubk
    }>
    INC 32 THROWIF	// fail unless recv_external
    9 PUSHPOW2 LDSLICEX DUP 32 LDU 32 LDU 32 LDU 	//  signature in_msg subwallet_id valid_until msg_seqno cs

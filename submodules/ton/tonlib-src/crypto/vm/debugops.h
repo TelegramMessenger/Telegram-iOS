@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -25,5 +25,6 @@ class OpcodeTable;
 extern bool vm_debug_enabled;
 
 void register_debug_ops(OpcodeTable& cp0);
+void set_debug_enabled(bool enable_debug);
 
 }  // namespace vm

@@ -1,0 +1,477 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/dns-manual-code.fc` 
+PROGRAM{
+  DECLPROC pfxdict_set_ref
+  DECLPROC pfxdict_get_ref
+  DECLPROC load_data
+  DECLPROC store_data
+  DECLPROC recv_internal
+  1666 DECLMETHOD after_code_upgrade
+  DECLPROC process_op
+  DECLPROC process_ops
+  DECLPROC recv_external
+  111475 DECLMETHOD get_contract_id
+  78748 DECLMETHOD get_public_key
+  123660 DECLMETHOD dnsresolve
+  pfxdict_set_ref PROC:<{
+    //  dict key_len key value
+    NEWC	//  dict key_len key value _6
+    STOPTREF	//  dict key_len key _7
+    ENDC	//  dict key_len key _8
+    CTOS	//  dict key_len key _9
+    s1 s3 s3 XCHG3	//  _9 key dict key_len
+    PFXDICTSET	//  dict _5
+    33 THROWIFNOT
+  }>
+  pfxdict_get_ref PROCREF:<{
+    //  dict key_len key
+    -ROT	//  key dict key_len
+    PFXDICTGETQ
+    NULLSWAPIFNOT2	//  pfx val tail succ
+    DUP	//  pfx val tail succ succ
+    IF:<{	//  pfx val tail succ
+      s0 s2 XCHG	//  pfx succ tail val
+      LDOPTREF	//  pfx succ tail _18 _17
+      DROP	//  pfx succ tail _9
+    }>ELSE<{	//  pfx val tail succ
+      s2 POP	//  pfx succ tail
+      PUSHNULL	//  pfx succ tail _9
+    }>	//  pfx succ tail res
+    s0 s2 XCHG	//  pfx res tail succ
+  }>
+  load_data PROCREF:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    32 LDU	//  _4 cs
+    64 LDU	//  _4 _7 cs
+    256 LDU	//  _4 _7 _10 cs
+    LDDICT	//  _4 _7 _10 _13 cs
+    LDDICT	//  res res res res res cs
+    ENDS
+  }>
+  store_data PROC:<{
+    //  contract_id last_cleaned public_key root old_queries
+    s0 s4 XCHG
+    NEWC	//  old_queries last_cleaned public_key root contract_id _5
+    32 STU	//  old_queries last_cleaned public_key root _7
+    s1 s3 XCHG	//  old_queries root public_key last_cleaned _7
+    64 STU	//  old_queries root public_key _9
+    256 STU	//  old_queries root _11
+    STDICT	//  old_queries _12
+    STDICT	//  _13
+    ENDC	//  _14
+    c4 POP
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_cell in_msg
+    3 BLKDROP	// 
+  }>
+  after_code_upgrade PROC:<{
+    //  root ops old_code
+    3 BLKDROP	// 
+  }>
+  process_op PROCREF:<{
+    //  root ops
+    6 LDU	//  root op ops
+    OVER	//  root op ops op
+    10 LESSINT	//  root op ops _7
+    IFJMP:<{	//  root op ops
+      OVER	//  root op ops op
+      IFNOTJMP:<{	//  root op ops
+        NIP	//  root ops
+      }>	//  root op ops
+      OVER	//  root op ops op
+      1 EQINT	//  root op ops _9
+      IFJMP:<{	//  root op ops
+        NIP	//  root ops
+        8 LDU	//  root mode ops
+        LDREF	//  root mode _14 ops
+        s0 s2 XCHG	//  root ops _14 mode
+        SENDRAWMSG
+      }>	//  root op ops
+      SWAP	//  root ops op
+      9 EQINT	//  root ops _18
+      IFJMP:<{	//  root ops
+        LDREF	//  root new_code ops
+        OVER	//  root new_code ops new_code
+        SETCODE
+        c3 PUSH	//  root new_code ops old_code
+        s0 s2 XCHG	//  root old_code ops new_code
+        CTOS	//  root old_code ops _25
+        BLESS	//  root old_code ops _26
+        c3 POP
+        s2 s(-1) s1 PU2XC	//  root ops root ops old_code
+        after_code_upgrade CALLDICT
+        0 THROW
+      }>	//  root ops
+      45 THROW
+    }>	//  root op ops
+    0 PUSHINT	//  root op ops cat=0
+    s2 PUSH	//  root op ops cat=0 op
+    20 LESSINT	//  root op ops cat=0 _36
+    IF:<{	//  root op ops cat=0
+      DROP	//  root op ops
+      16 LDI	//  root op cat ops
+      SWAP	//  root op ops cat
+    }>	//  root op ops cat
+    PUSHNULL	//  root op ops cat name
+    PUSHNULL	//  root op ops cat name cat_table
+    s4 PUSH	//  root op ops cat name cat_table op
+    30 LESSINT	//  root op ops cat name cat_table _45
+    IF:<{	//  root op ops cat name cat_table
+      NIP	//  root op ops cat cat_table
+      s0 s2 XCHG	//  root op cat_table cat ops
+      1 LDU	//  root op cat_table cat _47 ops
+      SWAP	//  root op cat_table cat ops _47
+      1 EQINT	//  root op cat_table cat ops is_name_ref
+      IF:<{	//  root op cat_table cat ops
+        LDREF	//  root op cat_table cat _52 ops
+        SWAP	//  root op cat_table cat ops _52
+        CTOS	//  root op cat_table cat ops name
+      }>ELSE<{	//  root op cat_table cat ops
+        6 LDU	//  root op cat_table cat _56 ops
+        SWAP	//  root op cat_table cat ops _56
+        3 LSHIFT#	//  root op cat_table cat ops name_len
+        LDSLICEX	//  root op cat_table cat name ops
+        SWAP	//  root op cat_table cat ops name
+      }>
+      DUP	//  root op cat_table cat ops name name
+      SBITS	//  root op cat_table cat ops name _64
+      15 GTINT	//  root op cat_table cat ops name _66
+      38 THROWIFNOT
+      DUP
+      8 PUSHINT	//  root op cat_table cat ops name name _69=8
+      SDCUTLAST	//  root op cat_table cat ops name _70
+      8 PLDU	//  root op cat_table cat ops name name_last_byte
+      40 THROWIF
+      0 PUSHINT	//  root op cat_table cat ops name zeros=0
+      s1 s1 PUSH2	//  root op cat_table cat ops name zeros=0 cname cname
+      SBITS	//  root op cat_table cat ops name zeros=0 cname _78
+      3 RSHIFTC#	//  root op cat_table cat ops name zeros=0 cname _80
+      REPEAT:<{	//  root op cat_table cat ops name zeros cname
+        8 LDU	//  root op cat_table cat ops name zeros c cname
+        SWAP	//  root op cat_table cat ops name zeros cname c
+        0 EQINT	//  root op cat_table cat ops name zeros cname _86
+        s1 s2 XCHG	//  root op cat_table cat ops name cname zeros _86
+        SUB	//  root op cat_table cat ops name cname zeros
+        SWAP	//  root op cat_table cat ops name zeros cname
+      }>
+      DROP	//  root op cat_table cat ops name zeros
+      NEWC	//  root op cat_table cat ops name zeros _88
+      7 STU	//  root op cat_table cat ops name _90
+      SWAP	//  root op cat_table cat ops _90 name
+      STSLICER	//  root op cat_table cat ops _91
+      ENDC	//  root op cat_table cat ops _92
+      CTOS	//  root op cat_table cat ops name
+      s0 s3 XCHG2	//  root op ops cat name cat_table
+    }>	//  root op ops cat name cat_table
+    s4 PUSH	//  root op ops cat name cat_table op
+    20 LESSINT	//  root op ops cat name cat_table _95
+    IF:<{	//  root op ops cat name cat_table
+      s5 PUSH
+      10 PUSHPOW2DEC
+      s3 PUSH	//  root op ops cat name cat_table root _100=1023 name
+      pfxdict_get_ref INLINECALLDICT	//  root op ops cat name cat_table _168 _169 _170 _171
+      s3 POP	//  root op ops cat name cat_table succ val tail
+      s0 s2 XCHG	//  root op ops cat name cat_table tail val succ
+      IF:<{	//  root op ops cat name cat_table tail val
+        s2 POP	//  root op ops cat name val tail
+        SEMPTY	//  root op ops cat name val _103
+        35 THROWIFNOT	//  root op ops cat name cat_table
+      }>ELSE<{
+        2DROP	//  root op ops cat name cat_table
+      }>
+    }>	//  root op ops cat name cat_table
+    s4 PUSH	//  root op ops cat name cat_table op
+    11 EQINT	//  root op ops cat name cat_table _106
+    IFJMP:<{	//  root op ops cat name cat_table
+      s4 POP	//  root cat_table ops cat name
+      s0 s2 XCHG	//  root cat_table name cat ops
+      LDOPTREF	//  root cat_table name cat new_value ops
+      s2 s4 XCHG2
+      16 PUSHINT	//  root ops name new_value cat cat_table _111=16
+      DICTISETGETOPTREF	//  root ops name _174 _175
+      DROP	//  root ops name cat_table
+      s2 s3 XCHG
+      10 PUSHPOW2DEC
+      -ROT	//  ops root _114=1023 name cat_table
+      pfxdict_set_ref CALLDICT	//  ops root
+      SWAP	//  root ops
+    }>	//  root op ops cat name cat_table
+    s4 PUSH	//  root op ops cat name cat_table op
+    12 EQINT	//  root op ops cat name cat_table _117
+    IFJMP:<{	//  root op ops cat name cat_table
+      s4 POP	//  root cat_table ops cat name
+      s0 s3 XCHG
+      16 PUSHINT	//  root name ops cat cat_table _119=16
+      DICTIDEL	//  root name ops cat_table _118
+      IF:<{	//  root name ops cat_table
+        s2 s3 XCHG
+        10 PUSHPOW2DEC
+        s0 s4 s4 XCHG3	//  ops root _122=1023 name cat_table
+        pfxdict_set_ref CALLDICT	//  ops root
+        SWAP	//  root ops
+      }>ELSE<{
+        DROP
+        NIP	//  root ops
+      }>
+    }>	//  root op ops cat name cat_table
+    DROP
+    NIP	//  root op ops name
+    s2 PUSH	//  root op ops name op
+    21 EQINT	//  root op ops name _125
+    IFJMP:<{	//  root op ops name
+      s2 POP	//  root name ops
+      LDOPTREF	//  root name new_cat_table ops
+      s2 s3 XCHG
+      10 PUSHPOW2DEC
+      s4 s2 XCHG2	//  ops root _130=1023 name new_cat_table
+      pfxdict_set_ref CALLDICT	//  ops root
+      SWAP	//  root ops
+    }>	//  root op ops name
+    s2 PUSH	//  root op ops name op
+    22 EQINT	//  root op ops name _133
+    IFJMP:<{	//  root op ops name
+      s2 POP	//  root name ops
+      s0 s2 XCHG
+      10 PUSHPOW2DEC	//  ops name root _135=1023
+      PFXDICTDEL	//  ops _180 _181
+      DROP	//  ops root
+      SWAP	//  root ops
+    }>	//  root op ops name
+    DROP
+    s2 POP	//  ops op
+    DUP	//  ops op op
+    31 EQINT	//  ops op _138
+    IFJMP:<{	//  ops op
+      DROP	//  ops
+      LDOPTREF	//  new_tree_root ops
+    }>	//  ops op
+    32 EQINT	//  ops _143
+    IFJMP:<{	//  ops
+      PUSHNULL	//  ops _144
+      SWAP	//  _144 ops
+    }>	//  ops
+    44 THROW
+    PUSHNULL	//  ops _147
+    SWAP	//  _147 ops
+  }>
+  process_ops PROCREF:<{
+    //  root ops
+    FALSE	//  root ops stop
+    -ROT	//  stop root ops
+    UNTIL:<{
+      process_op INLINECALLDICT	//  stop root ops
+      DUP	//  stop root ops ops
+      SDEMPTY	//  stop root ops _9
+      IF:<{	//  stop root ops
+        DUP	//  stop root ops ops
+        SREFS	//  stop root ops _10
+        IF:<{	//  stop root ops
+          LDREF	//  stop root _18 _17
+          DROP	//  stop root _11
+          CTOS	//  stop root ops
+        }>ELSE<{	//  stop root ops
+          TRUE
+          s3 POP	//  stop root ops
+        }>
+      }>	//  stop root ops
+      s2 PUSH	//  stop root ops stop
+    }>	//  stop root ops
+    DROP
+    NIP	//  root
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    load_data INLINECALLDICT	//  in_msg contract_id last_cleaned public_key root old_queries
+    s0 s5 XCHG
+    9 PUSHPOW2	//  old_queries contract_id last_cleaned public_key root in_msg _9=512
+    LDSLICEX	//  old_queries contract_id last_cleaned public_key root signature in_msg
+    DUP	//  old_queries contract_id last_cleaned public_key root signature in_msg in_msg
+    HASHSU	//  old_queries contract_id last_cleaned public_key root signature in_msg shash
+    SWAP	//  old_queries contract_id last_cleaned public_key root signature shash in_msg
+    32 LDU	//  old_queries contract_id last_cleaned public_key root signature shash _15 in_msg
+    64 LDU	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg
+    NOW	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg _22
+    32 LSHIFT#	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg bound
+    s2 s0 PUSH2	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg bound query_id bound
+    LESS	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg bound _26
+    35 THROWIF
+    s2 s10 PUSH2
+    64 PUSHINT	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg bound query_id old_queries _30=64
+    DICTUGET
+    NULLSWAPIFNOT	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg bound _84 _85
+    NIP	//  old_queries contract_id last_cleaned public_key root signature shash query_contract query_id in_msg bound found?
+    32 THROWIF
+    s9 s3 PUXC	//  old_queries contract_id last_cleaned public_key root signature shash bound query_id in_msg contract_id query_contract
+    EQUAL	//  old_queries contract_id last_cleaned public_key root signature shash bound query_id in_msg _35
+    34 THROWIFNOT
+    s3 s4 s6 XC2PU	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound shash signature public_key
+    CHKSIGNU	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound _38
+    35 THROWIFNOT
+    ACCEPT
+    s2 PUSH	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound in_msg
+    6 PLDU	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound op
+    51 EQINT	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound _45
+    IF:<{	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound
+      s4 POP	//  old_queries contract_id last_cleaned bound root in_msg query_id
+      SWAP
+      6 PUSHINT	//  old_queries contract_id last_cleaned bound root query_id in_msg _47=6
+      SDSKIPFIRST	//  old_queries contract_id last_cleaned bound root query_id in_msg
+      256 LDU	//  old_queries contract_id last_cleaned bound root query_id _87 _86
+      DROP	//  old_queries contract_id last_cleaned bound root query_id public_key
+    }>ELSE<{	//  old_queries contract_id last_cleaned public_key root in_msg query_id bound
+      2SWAP	//  old_queries contract_id last_cleaned public_key query_id bound root in_msg
+      process_ops INLINECALLDICT	//  old_queries contract_id last_cleaned public_key query_id bound root
+      s0 s0 s3 XCHG3	//  old_queries contract_id last_cleaned bound root query_id public_key
+    }>
+    s0 s3 XCHG
+    38 PUSHPOW2	//  old_queries contract_id last_cleaned public_key root query_id bound _55
+    SUB	//  old_queries contract_id last_cleaned public_key root query_id bound
+    NEWC	//  old_queries contract_id last_cleaned public_key root query_id bound _58
+    s0 s0 s7 XCHG3
+    64 PUSHINT	//  bound contract_id last_cleaned public_key root _58 query_id old_queries _59=64
+    DICTUSETB	//  bound contract_id last_cleaned public_key root old_queries
+    UNTIL:<{
+      DUP
+      64 PUSHINT	//  bound contract_id last_cleaned public_key root old_queries old_queries _66=64
+      DICTUREMMIN
+      NULLSWAPIFNOT2	//  bound contract_id last_cleaned public_key root old_queries _88 _90 _89 _91
+      1 2 BLKDROP2	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f
+      DUP	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f f
+      IF:<{	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f
+        DROP	//  bound contract_id last_cleaned public_key root old_queries old_queries' i
+        s0 s7 PUSH2	//  bound contract_id last_cleaned public_key root old_queries old_queries' i i bound
+        LESS	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f
+      }>	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f
+      DUP	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f f
+      IF:<{	//  bound contract_id last_cleaned public_key root old_queries old_queries' i f
+        s3 POP
+        s5 POP	//  bound contract_id last_cleaned public_key root f old_queries
+        SWAP	//  bound contract_id last_cleaned public_key root old_queries f
+      }>ELSE<{
+        2 1 BLKDROP2	//  bound contract_id last_cleaned public_key root old_queries f
+      }>
+      NOT	//  bound contract_id last_cleaned public_key root old_queries _71
+    }>	//  bound contract_id last_cleaned public_key root old_queries
+    1 5 BLKDROP2	//  contract_id last_cleaned public_key root old_queries
+    store_data CALLDICT
+  }>
+  get_contract_id PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
+  }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    96 LDU	//  _11 _10
+    NIP	//  cs
+    256 PLDU	//  _9
+  }>
+  dnsresolve PROC:<{
+    //  subdomain category
+    OVER	//  subdomain category subdomain
+    SBITS	//  subdomain category bits
+    DUP	//  subdomain category bits bits
+    IFNOTJMP:<{	//  subdomain category bits
+      3 BLKDROP	// 
+      0 PUSHINT	//  _4=0
+      PUSHNULL	//  _4=0 _5
+    }>	//  subdomain category bits
+    DUP
+    7 PUSHINT	//  subdomain category bits bits _7=7
+    AND	//  subdomain category bits _8
+    30 THROWIF
+    s2 PUSH
+    8 PUSHINT	//  subdomain category bits subdomain _11=8
+    SDCUTLAST	//  subdomain category bits _12
+    8 PLDU	//  subdomain category bits name_last_byte
+    IF:<{	//  subdomain category bits
+      0 PUSHINT	//  subdomain category bits _15=0
+      NEWC	//  subdomain category bits _15=0 _16
+      s0 s4 XCHG2	//  _15=0 category bits _16 subdomain
+      STSLICER	//  _15=0 category bits _17
+      s1 s3 XCHG	//  bits category _15=0 _17
+      8 STU	//  bits category _19
+      ENDC	//  bits category _20
+      CTOS	//  bits category subdomain
+      s0 s2 XCHG	//  subdomain category bits
+      8 ADDCONST	//  subdomain category bits
+    }>	//  subdomain category bits
+    DUP	//  subdomain category bits bits
+    8 EQINT	//  subdomain category bits _25
+    IFJMP:<{	//  subdomain category bits
+      3 BLKDROP	// 
+      0 PUSHINT	//  _26=0
+      PUSHNULL	//  _26=0 _27
+    }>	//  subdomain category bits
+    load_data INLINECALLDICT	//  subdomain category bits _80 _81 _82 _83 _84
+    s1 s4 XCHG
+    4 BLKDROP	//  subdomain category bits root
+    s3 PUSH	//  subdomain category bits root cname
+    0 PUSHINT	//  subdomain category bits root cname zeros=0
+    s0 s3 XCHG	//  subdomain category zeros=0 root cname bits
+    3 RSHIFT#	//  subdomain category zeros=0 root cname _38
+    REPEAT:<{	//  subdomain category zeros root cname
+      8 LDU	//  subdomain category zeros root c cname
+      SWAP	//  subdomain category zeros root cname c
+      0 EQINT	//  subdomain category zeros root cname _44
+      s1 s3 XCHG	//  subdomain category cname root zeros _44
+      SUB	//  subdomain category cname root zeros
+      s0 s2 XCHG	//  subdomain category zeros root cname
+    }>
+    DUP	//  subdomain category zeros root cname pfx
+    PUSHNULL	//  subdomain category zeros root tail pfx val
+    UNTIL:<{
+      3 BLKDROP	//  subdomain category zeros root
+      OVER
+      NEWC	//  subdomain category zeros root zeros _51
+      7 STU	//  subdomain category zeros root _53
+      s4 PUSH	//  subdomain category zeros root _53 subdomain
+      STSLICER	//  subdomain category zeros root _54
+      ENDC	//  subdomain category zeros root _55
+      CTOS	//  subdomain category zeros root pfxname
+      10 PUSHPOW2DEC	//  subdomain category zeros root pfxname _58=1023
+      s2 PUSH
+      s0 s2 XCHG	//  subdomain category zeros root root _58=1023 pfxname
+      pfxdict_get_ref INLINECALLDICT	//  subdomain category zeros root pfx val tail succ
+      s0 s5 XCHG	//  subdomain category succ root pfx val tail zeros
+      DEC	//  subdomain category succ root pfx val tail _61
+      s1 s5 XCHG	//  subdomain category tail root pfx val succ _61
+      XOR	//  subdomain category tail root pfx val zeros
+      DUP	//  subdomain category tail root pfx val zeros zeros
+      1 LESSINT	//  subdomain category tail root pfx val zeros _64
+      s1 s5 XCHG
+      s3 s3 s0 XCHG3	//  subdomain category zeros root tail pfx val _64
+    }>	//  subdomain category zeros root tail pfx val
+    s3 POP
+    s5 POP	//  pfx category zeros val tail
+    s2 PUSH	//  pfx category zeros val tail zeros
+    IFNOTJMP:<{	//  pfx category zeros val tail
+      5 BLKDROP	// 
+      0 PUSHINT	//  _65=0
+      PUSHNULL	//  _65=0 _66
+    }>	//  pfx category zeros val tail
+    1 2 BLKDROP2	//  pfx category val tail
+    SEMPTY	//  pfx category val _68
+    IFNOT:<{	//  pfx category val
+      -1 PUSHINT
+      s2 POP	//  pfx category=-1 val
+    }>	//  pfx category val
+    s0 s2 XCHG	//  val category pfx
+    SBITS	//  val category _71
+    -7 ADDCONST	//  cat_table category pfx_bits
+    OVER	//  cat_table category pfx_bits category
+    0 EQINT	//  cat_table category pfx_bits _76
+    IFJMP:<{	//  cat_table category pfx_bits
+      NIP	//  cat_table pfx_bits
+      SWAP	//  pfx_bits cat_table
+    }>	//  cat_table category pfx_bits
+    s0 s2 XCHG
+    16 PUSHINT	//  pfx_bits category cat_table _78=16
+    DICTIGETOPTREF	//  pfx_bits cat_found
+  }>
+}END>c

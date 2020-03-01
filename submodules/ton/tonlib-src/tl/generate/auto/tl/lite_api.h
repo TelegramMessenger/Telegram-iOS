@@ -84,6 +84,8 @@ class liteServer_masterchainInfoExt;
 
 class liteServer_partialBlockProof;
 
+class liteServer_runMethodResult;
+
 class liteServer_sendMsgStatus;
 
 class liteServer_shardInfo;
@@ -99,6 +101,8 @@ class liteServer_transactionId3;
 class liteServer_transactionInfo;
 
 class liteServer_transactionList;
+
+class liteServer_validatorStats;
 
 class liteServer_version;
 
@@ -581,6 +585,38 @@ class liteServer_partialBlockProof final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class liteServer_runMethodResult final : public Object {
+ public:
+  std::int32_t mode_;
+  object_ptr<tonNode_blockIdExt> id_;
+  object_ptr<tonNode_blockIdExt> shardblk_;
+  td::BufferSlice shard_proof_;
+  td::BufferSlice proof_;
+  td::BufferSlice state_proof_;
+  td::BufferSlice init_c7_;
+  td::BufferSlice lib_extras_;
+  std::int32_t exit_code_;
+  td::BufferSlice result_;
+  enum Flags : std::int32_t {SHARD_PROOF_MASK = 1, PROOF_MASK = 1, STATE_PROOF_MASK = 2, INIT_C7_MASK = 8, LIB_EXTRAS_MASK = 16, RESULT_MASK = 4};
+
+  liteServer_runMethodResult();
+
+  liteServer_runMethodResult(std::int32_t mode_, object_ptr<tonNode_blockIdExt> &&id_, object_ptr<tonNode_blockIdExt> &&shardblk_, td::BufferSlice &&shard_proof_, td::BufferSlice &&proof_, td::BufferSlice &&state_proof_, td::BufferSlice &&init_c7_, td::BufferSlice &&lib_extras_, std::int32_t exit_code_, td::BufferSlice &&result_);
+
+  static const std::int32_t ID = -1550163605;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<liteServer_runMethodResult> fetch(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class liteServer_sendMsgStatus final : public Object {
  public:
   std::int32_t status_;
@@ -777,6 +813,33 @@ class liteServer_transactionList final : public Object {
   static object_ptr<liteServer_transactionList> fetch(td::TlParser &p);
 
   explicit liteServer_transactionList(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class liteServer_validatorStats final : public Object {
+ public:
+  std::int32_t mode_;
+  object_ptr<tonNode_blockIdExt> id_;
+  std::int32_t count_;
+  bool complete_;
+  td::BufferSlice state_proof_;
+  td::BufferSlice data_proof_;
+
+  liteServer_validatorStats();
+
+  liteServer_validatorStats(std::int32_t mode_, object_ptr<tonNode_blockIdExt> &&id_, std::int32_t count_, bool complete_, td::BufferSlice &&state_proof_, td::BufferSlice &&data_proof_);
+
+  static const std::int32_t ID = -1174956328;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<liteServer_validatorStats> fetch(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -1310,6 +1373,38 @@ class liteServer_getTransactions final : public Function {
   static ReturnType fetch_result(td::TlParser &p);
 };
 
+class liteServer_getValidatorStats final : public Function {
+ public:
+  std::int32_t mode_;
+  object_ptr<tonNode_blockIdExt> id_;
+  std::int32_t limit_;
+  td::Bits256 start_after_;
+  std::int32_t modified_after_;
+  enum Flags : std::int32_t {START_AFTER_MASK = 1, MODIFIED_AFTER_MASK = 4};
+  mutable std::int32_t var0;
+
+  liteServer_getValidatorStats();
+
+  liteServer_getValidatorStats(std::int32_t mode_, object_ptr<tonNode_blockIdExt> &&id_, std::int32_t limit_, td::Bits256 const &start_after_, std::int32_t modified_after_);
+
+  static const std::int32_t ID = 152721596;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<liteServer_validatorStats>;
+
+  static object_ptr<liteServer_getValidatorStats> fetch(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
 class liteServer_getVersion final : public Function {
  public:
 
@@ -1443,6 +1538,37 @@ class liteServer_queryPrefix final : public Function {
   static object_ptr<liteServer_queryPrefix> fetch(td::TlParser &p);
 
   explicit liteServer_queryPrefix(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class liteServer_runSmcMethod final : public Function {
+ public:
+  std::int32_t mode_;
+  object_ptr<tonNode_blockIdExt> id_;
+  object_ptr<liteServer_accountId> account_;
+  std::int64_t method_id_;
+  td::BufferSlice params_;
+  mutable std::int32_t var0;
+
+  liteServer_runSmcMethod();
+
+  liteServer_runSmcMethod(std::int32_t mode_, object_ptr<tonNode_blockIdExt> &&id_, object_ptr<liteServer_accountId> &&account_, std::int64_t method_id_, td::BufferSlice &&params_);
+
+  static const std::int32_t ID = 1556504018;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<liteServer_runMethodResult>;
+
+  static object_ptr<liteServer_runSmcMethod> fetch(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 

@@ -366,6 +366,10 @@ action_send_msg#0ec3c86d mode:(## 8)
 action_set_code#ad4de08e new_code:^Cell = OutAction;
 action_reserve_currency#36e6b809 mode:(## 8)
   currency:CurrencyCollection = OutAction;
+libref_hash$0 lib_hash:bits256 = LibRef;
+libref_ref$1 library:^Cell = LibRef;
+action_change_library#26fa1dd4 mode:(## 7) { mode <= 2 }
+  libref:LibRef = OutAction;
 
 out_list_node$_ prev:^Cell action:OutAction = OutListNode;
 //
@@ -505,6 +509,7 @@ _ (HashmapAugE 32 KeyExtBlkRef KeyMaxLt) = OldMcBlocksInfo;
 counters#_ last_updated:uint32 total:uint64 cnt2048:uint64 cnt65536:uint64 = Counters; 
 creator_info#4 mc_blocks:Counters shard_blocks:Counters = CreatorStats; 
 block_create_stats#17 counters:(HashmapE 256 CreatorStats) = BlockCreateStats;
+block_create_stats_ext#34 counters:(HashmapAugE 256 CreatorStats uint32) = BlockCreateStats;
 
 masterchain_state_extra#cc26
   shard_hashes:ShardHashes
@@ -678,3 +683,77 @@ top_block_descr#d5 proof_for:BlockIdExt signatures:(Maybe ^BlockSignatures)
 //  COLLATED DATA
 //
 top_block_descr_set#4ac789f3 collection:(HashmapE 96 ^TopBlockDescr) = TopBlockDescrSet;
+
+//
+//  TVM REFLECTION
+//
+vm_stk_null#00 = VmStackValue;
+vm_stk_tinyint#01 value:int64 = VmStackValue;
+vm_stk_int#0201_ value:int257 = VmStackValue;
+vm_stk_nan#02ff = VmStackValue;
+vm_stk_cell#03 cell:^Cell = VmStackValue;
+_ cell:^Cell st_bits:(## 10) end_bits:(## 10) { st_bits <= end_bits }
+  st_ref:(#<= 4) end_ref:(#<= 4) { st_ref <= end_ref } = VmCellSlice;
+vm_stk_slice#04 _:VmCellSlice = VmStackValue;
+vm_stk_builder#05 cell:^Cell = VmStackValue;
+vm_stk_cont#06 cont:VmCont = VmStackValue;
+vm_tupref_nil$_ = VmTupleRef 0;
+vm_tupref_single$_ entry:^VmStackValue = VmTupleRef 1;
+vm_tupref_any$_ {n:#} ref:^(VmTuple (n + 2)) = VmTupleRef (n + 2);
+vm_tuple_nil$_ = VmTuple 0;
+vm_tuple_tcons$_ {n:#} head:(VmTupleRef n) tail:^VmStackValue = VmTuple (n + 1);
+vm_stk_tuple#07 len:(## 16) data:(VmTuple len) = VmStackValue;
+
+vm_stack#_ depth:(## 24) stack:(VmStackList depth) = VmStack;
+vm_stk_cons#_ {n:#} rest:^(VmStackList n) tos:VmStackValue = VmStackList (n + 1);
+vm_stk_nil#_ = VmStackList 0;
+
+_ cregs:(HashmapE 4 VmStackValue) = VmSaveList;
+gas_limits#_ remaining:int64 _:^[ max_limit:int64 cur_limit:int64 credit:int64 ]
+  = VmGasLimits;
+_ libraries:(HashmapE 256 ^Cell) = VmLibraries;
+
+vm_ctl_data$_ nargs:(Maybe uint13) stack:(Maybe VmStack) save:VmSaveList
+cp:(Maybe int16) = VmControlData;
+vmc_std$00 cdata:VmControlData code:VmCellSlice = VmCont;
+vmc_envelope$01 cdata:VmControlData next:^VmCont = VmCont;
+vmc_quit$1000 exit_code:int32 = VmCont;
+vmc_quit_exc$1001 = VmCont;
+vmc_repeat$10100 count:uint63 body:^VmCont after:^VmCont = VmCont; 
+vmc_until$110000 body:^VmCont after:^VmCont = VmCont;
+vmc_again$110001 body:^VmCont = VmCont;
+vmc_while_cond$110010 cond:^VmCont body:^VmCont
+after:^VmCont = VmCont;
+vmc_while_body$110011 cond:^VmCont body:^VmCont
+after:^VmCont = VmCont;
+vmc_pushint$1111 value:int32 next:^VmCont = VmCont;
+
+//
+//  DNS RECORDS
+//
+_ (HashmapE 16 ^DNSRecord) = DNS_RecordSet;
+
+chunk_ref$_ {n:#} ref:^(TextChunks (n + 1)) = TextChunkRef (n + 1);
+chunk_ref_empty$_ = TextChunkRef 0;
+text_chunk$_ {n:#} len:(## 8) data:(bits (len * 8)) next:(TextChunkRef n) = TextChunks (n + 1);
+text_chunk_empty$_ = TextChunks 0;
+text$_ chunks:(## 8) rest:(TextChunks chunks) = Text;
+dns_text#1eda _:Text = DNSRecord;
+
+dns_next_resolver#ba93 resolver:MsgAddressInt = DNSRecord;  // usually in record #-1
+
+dns_adnl_address#ad01 adnl_addr:bits256 flags:(## 8) { flags <= 1 }
+  proto_list:flags . 0?ProtoList = DNSRecord;  // often in record #2
+proto_list_nil$0 = ProtoList;
+proto_list_next$1 head:Protocol tail:ProtoList = ProtoList;
+proto_http#4854 = Protocol;
+
+dns_smc_address#9fd3 smc_addr:MsgAddressInt flags:(## 8) { flags <= 1 }
+  cap_list:flags . 0?SmcCapList = DNSRecord;   // often in record #1
+cap_list_nil$0 = SmcCapList;
+cap_list_next$1 head:SmcCapability tail:SmcCapList = SmcCapList;
+cap_method_seqno#5371 = SmcCapability;
+cap_method_pubkey#71f4 = SmcCapability;
+cap_is_wallet#2177 = SmcCapability;
+cap_name#ff name:Text = SmcCapability;
+

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "func.h"
 
@@ -334,6 +334,13 @@ bool StackTransform::apply_pop(int i) {
   }
 }
 
+bool StackTransform::apply_blkpop(int k) {
+  if (!is_valid() || k < 0) {
+    return invalidate();
+  }
+  return !k || (touch(k - 1) && shift(k));
+}
+
 bool StackTransform::equal(const StackTransform &other, bool relaxed) const {
   if (!is_valid() || !other.is_valid()) {
     return false;
@@ -394,6 +401,57 @@ bool StackTransform::is_xchg(int *i, int *j) const {
   return true;
 }
 
+bool StackTransform::is_xchg_xchg(int i, int j, int k, int l) const {
+  if (is_valid() && !d && n <= 4 && (i | j | k | l) >= 0) {
+    StackTransform t;
+    return t.apply_xchg(i, j) && t.apply_xchg(k, l) && t <= *this;
+  } else {
+    return false;
+  }
+}
+
+bool StackTransform::is_xchg_xchg(int *i, int *j, int *k, int *l) const {
+  if (!is_valid() || d || n > 4 || !dp || !is_permutation()) {
+    return false;
+  }
+  if (!n) {
+    *i = *j = *k = *l = 0;
+    return true;
+  }
+  if (n <= 2) {
+    *k = *l = 0;
+    return is_xchg(i, j);
+  }
+  if (n == 3) {
+    // rotation: a -> b -> c -> a
+    int a = A[0].first;
+    int b = A[0].second;
+    int s = (b == A[2].first ? 2 : 1);
+    int c = A[s].second;
+    if (b != A[s].first || c != A[3 - s].first || a != A[3 - s].second) {
+      return false;
+    }
+    // implement as XCHG s(a),s(c) ; XCHG s(a),s(b)
+    *i = *k = a;
+    *j = c;
+    *l = b;
+    return is_xchg_xchg(*i, *j, *k, *l);
+  }
+  *i = A[0].first;
+  *j = A[0].second;
+  if (get(*j) != *i) {
+    return false;
+  }
+  for (int s = 1; s < 4; s++) {
+    if (A[s].first != *j) {
+      *k = A[s].first;
+      *l = A[s].second;
+      return get(*l) == *k && is_xchg_xchg(*i, *j, *k, *l);
+    }
+  }
+  return false;
+}
+
 bool StackTransform::is_push(int i) const {
   return is_valid() && d == -1 && n == 1 && A[0].first == -1 && A[0].second == i;
 }
@@ -411,6 +469,7 @@ bool StackTransform::is_push(int *i) const {
 // 0 2 3 4 .. = pop1
 // 1 0 3 4 .. = pop2
 // 1 2 0 4 .. = pop3
+// POP s(i) : 1 2 ... i-1 0 i+1 ... ; d=1, n=1, {(i,0)}
 bool StackTransform::is_pop(int i) const {
   if (!is_valid() || d != 1 || n > 1 || i < 0) {
     return false;
@@ -436,6 +495,38 @@ bool StackTransform::is_pop(int *i) const {
   return false;
 }
 
+// POP s(i) ; POP s(j) : 2 ... i-1 0 i+1 ... j 1 j+2 ... ; d=2, n=2, {(i,0),(j+1,1)} if i <> j+1
+bool StackTransform::is_pop_pop(int i, int j) const {
+  if (is_valid() && d == 2 && n <= 2 && i >= 0 && j >= 0) {
+    StackTransform t;
+    return t.apply_pop(i) && t.apply_pop(j) && t <= *this;
+  } else {
+    return false;
+  }
+}
+
+bool StackTransform::is_pop_pop(int *i, int *j) const {
+  if (!is_valid() || d != 2 || n > 2) {
+    return false;
+  }
+  if (!n) {
+    *i = *j = 0;  // 2DROP
+  } else if (n == 2) {
+    *i = A[0].first - A[0].second;
+    *j = A[1].first - A[1].second;
+    if (A[0].second > A[1].second) {
+      std::swap(*i, *j);
+    }
+  } else if (!A[0].second) {
+    *i = A[0].first;
+    *j = 0;
+  } else {
+    *i = 0;
+    *j = A[0].first - 1;
+  }
+  return is_pop_pop(*i, *j);
+}
+
 const StackTransform StackTransform::rot{2, 0, 1, 3};
 const StackTransform StackTransform::rot_rev{1, 2, 0, 3};
 
@@ -445,6 +536,53 @@ bool StackTransform::is_rot() const {
 
 bool StackTransform::is_rotrev() const {
   return equal(rot_rev, true);
+}
+
+// PUSH i ; ROT == 1 i 0 2 3
+bool StackTransform::is_push_rot(int i) const {
+  return is_valid() && d == -1 && i >= 0 && is_trivial_after(3) && get(0) == 1 && get(1) == i && get(2) == 0;
+}
+
+bool StackTransform::is_push_rot(int *i) const {
+  return is_valid() && (*i = get(1)) >= 0 && is_push_rot(*i);
+}
+
+// PUSH i ; -ROT == 0 1 i 2 3
+bool StackTransform::is_push_rotrev(int i) const {
+  return is_valid() && d == -1 && i >= 0 && is_trivial_after(3) && get(0) == 0 && get(1) == 1 && get(2) == i;
+}
+
+bool StackTransform::is_push_rotrev(int *i) const {
+  return is_valid() && (*i = get(2)) >= 0 && is_push_rotrev(*i);
+}
+
+// PUSH s(i) ; XCHG s(j),s(k) --> i 0 1 .. i ..
+// PUSH s(i) ; XCHG s(0),s(k) --> k-1 0 1 .. k-2 i k ..
+bool StackTransform::is_push_xchg(int i, int j, int k) const {
+  StackTransform t;
+  return is_valid() && d == -1 && n <= 3 && t.apply_push(i) && t.apply_xchg(j, k) && t <= *this;
+}
+
+bool StackTransform::is_push_xchg(int *i, int *j, int *k) const {
+  if (!(is_valid() && d == -1 && n <= 3 && n > 0)) {
+    return false;
+  }
+  int s = get(0);
+  if (s < 0) {
+    return false;
+  }
+  *i = s;
+  *j = 0;
+  if (n == 1) {
+    *k = 0;
+  } else if (n == 2) {
+    *k = s + 1;
+    *i = get(s + 1);
+  } else {
+    *j = A[1].first + 1;
+    *k = A[2].first + 1;
+  }
+  return is_push_xchg(*i, *j, *k);
 }
 
 // XCHG s1,s(i) ; XCHG s0,s(j)
@@ -465,10 +603,9 @@ bool StackTransform::is_xchg2(int *i, int *j) const {
   if (*i < 0 || *j < 0) {
     return false;
   }
-  if (n != 3) {
-    return is_xchg2(*i, *j);
-  }
-  if (*i) {
+  if (n == 2 && !*i) {
+    *j = *i;  // XCHG s0,s1 = XCHG2 s0,s0
+  } else if (n == 3 && *i) {
     // XCHG2 s(i),s(i) = XCHG s1,s(i) ; XCHG s0,s(i) : 0->1, 1->i
     *j = *i;
   }  // XCHG2 s0,s(i) = XCHG s0,s1 ; XCHG s0,s(i) : 0->i, 1->0
@@ -735,6 +872,28 @@ bool StackTransform::is_blkdrop(int *i) const {
   return false;
 }
 
+// 0 1 .. j-1 j+i j+i+1 ...
+bool StackTransform::is_blkdrop2(int i, int j) const {
+  if (!is_valid() || d != i || i <= 0 || j < 0 || dp < i + j || n != j || !is_trivial_after(j)) {
+    return false;
+  }
+  for (int s = 0; s < j; s++) {
+    if (get(s) != s) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool StackTransform::is_blkdrop2(int *i, int *j) const {
+  if (is_valid() && is_blkdrop2(d, n)) {
+    *i = d;
+    *j = n;
+    return true;
+  }
+  return false;
+}
+
 // equivalent to i times PUSH s(j)
 bool StackTransform::is_blkpush(int *i, int *j) const {
   if (!is_valid() || d >= 0) {
@@ -798,6 +957,77 @@ bool StackTransform::is_nip_seq(int *i, int *j) const {
   } else {
     return false;
   }
+}
+
+// POP s(i); BLKDROP k  (usually for i >= k >= 0)
+bool StackTransform::is_pop_blkdrop(int i, int k) const {
+  StackTransform t;
+  return is_valid() && d == k + 1 && t.apply_pop(i) && t.apply_blkpop(k) && t <= *this;
+}
+
+// POP s(i); BLKDROP k == XCHG s0,s(i); BLKDROP k+1  for i >= k >= 0
+// k+1 k+2 .. i-1 0 i+1 ..
+bool StackTransform::is_pop_blkdrop(int *i, int *k) const {
+  if (is_valid() && n == 1 && d > 0 && !A[0].second) {
+    *k = d - 1;
+    *i = A[0].first;
+    return is_pop_blkdrop(*i, *k);
+  } else {
+    return false;
+  }
+}
+
+// POP s(i); POP s(j); BLKDROP k  (usually for i<>j >= k >= 0)
+bool StackTransform::is_2pop_blkdrop(int i, int j, int k) const {
+  StackTransform t;
+  return is_valid() && d == k + 2 && t.apply_pop(i) && t.apply_pop(j) && t.apply_blkpop(k) && t <= *this;
+}
+
+// POP s(i); POP s(j); BLKDROP k == XCHG s0,s(i); XCHG s1,s(j+1); BLKDROP k+2 (usually for i<>j >= k >= 2)
+// k+2 k+3 .. i-1 0 i+1 ... j 1 j+2 ...
+bool StackTransform::is_2pop_blkdrop(int *i, int *j, int *k) const {
+  if (is_valid() && n == 2 && d >= 2 && A[0].second + A[1].second == 1) {
+    *k = d - 2;
+    int t = (A[0].second > 0);
+    *i = A[t].first;
+    *j = A[1 - t].first - 1;
+    return is_2pop_blkdrop(*i, *j, *k);
+  } else {
+    return false;
+  }
+}
+
+// PUSHCONST c ; ROT == 1 -1000 0 2 3
+bool StackTransform::is_const_rot(int c) const {
+  return is_valid() && d == -1 && is_trivial_after(3) && get(0) == 1 && c <= c_start && get(1) == c && get(2) == 0;
+}
+
+bool StackTransform::is_const_rot(int *c) const {
+  return is_valid() && (*c = get(1)) <= c_start && is_const_rot(*c);
+}
+
+// PUSHCONST c ; POP s(i) == 0 1 .. i-1 -1000 i+1 ...
+bool StackTransform::is_const_pop(int c, int i) const {
+  return is_valid() && !d && n == 1 && i > 0 && c <= c_start && get(i - 1) == c;
+}
+
+bool StackTransform::is_const_pop(int *c, int *i) const {
+  if (is_valid() && !d && n == 1 && A[0].second <= c_start) {
+    *i = A[0].first + 1;
+    *c = A[0].second;
+    return is_const_pop(*c, *i);
+  } else {
+    return false;
+  }
+}
+
+// PUSH i ; PUSHCONST c == c i 0 1 2 ...
+bool StackTransform::is_push_const(int i, int c) const {
+  return is_valid() && d == -2 && c <= c_start && i >= 0 && is_trivial_after(2) && get(0) == c && get(1) == i;
+}
+
+bool StackTransform::is_push_const(int *i, int *c) const {
+  return is_valid() && d == -2 && n == 2 && is_push_const(*i = get(1), *c = get(0));
 }
 
 void StackTransform::show(std::ostream &os, int mode) const {

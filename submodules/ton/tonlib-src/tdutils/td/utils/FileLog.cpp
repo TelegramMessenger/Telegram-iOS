@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/utils/FileLog.h"
 
@@ -126,6 +126,12 @@ void FileLog::do_rotate() {
   }
   size_ = 0;
   SET_VERBOSITY_LEVEL(current_verbosity_level);
+}
+
+Result<td::unique_ptr<LogInterface>> FileLog::create(string path, int64 rotate_threshold, bool redirect_stderr) {
+  auto l = make_unique<FileLog>();
+  TRY_STATUS(l->init(std::move(path), rotate_threshold, redirect_stderr));
+  return std::move(l);
 }
 
 }  // namespace td

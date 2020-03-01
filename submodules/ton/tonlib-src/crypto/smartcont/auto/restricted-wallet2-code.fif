@@ -4,6 +4,7 @@ PROGRAM{
   DECLPROC days_passed
   DECLPROC recv_external
   85143 DECLMETHOD seqno
+  78748 DECLMETHOD get_public_key
   104128 DECLMETHOD balance
   recv_internal PROC:<{
     //  in_msg
@@ -74,8 +75,7 @@ PROGRAM{
     s2 PUSH
     16 PUSHINT	//  stored_seqno public_key rdict cs ts rdict _57=16
     DICTIGETPREVEQ
-    NULLSWAPIFNOT
-    NULLSWAPIFNOT	//  stored_seqno public_key rdict cs _98 _97 _99
+    NULLSWAPIFNOT2	//  stored_seqno public_key rdict cs _98 _97 _99
     NIP	//  stored_seqno public_key rdict cs value found
     IF:<{	//  stored_seqno public_key rdict cs value
       LDGRAMS	//  stored_seqno public_key rdict cs _101 _100
@@ -110,6 +110,14 @@ PROGRAM{
     CTOS	//  _1
     32 PLDU	//  _3
   }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    32 LDU	//  _9 _8
+    NIP	//  cs
+    256 PLDU	//  _7
+  }>
   balance PROC:<{
     // 
     c4 PUSH	//  _1
@@ -124,8 +132,7 @@ PROGRAM{
     s0 s2 XCHG
     16 PUSHINT	//  balance ts rdict _19=16
     DICTIGETPREVEQ
-    NULLSWAPIFNOT
-    NULLSWAPIFNOT	//  balance _29 _28 _30
+    NULLSWAPIFNOT2	//  balance _29 _28 _30
     NIP	//  balance value found
     IF:<{	//  balance value
       LDGRAMS	//  balance _32 _31

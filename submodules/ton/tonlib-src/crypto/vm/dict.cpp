@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/dict.h"
 #include "vm/cells.h"
@@ -179,7 +179,7 @@ bool DictionaryBase::append_dict_to_bool(CellBuilder& cb) && {
   return cb.store_maybe_ref(std::move(root_cell));
 }
 
-bool DictionaryBase::append_dict_to_bool(CellBuilder& cb) const& {
+bool DictionaryBase::append_dict_to_bool(CellBuilder& cb) const & {
   return is_valid() && cb.store_maybe_ref(root_cell);
 }
 
@@ -793,8 +793,7 @@ std::tuple<Ref<CellSlice>, Ref<Cell>, bool> dict_lookup_set(Ref<Cell> dict, td::
 std::pair<Ref<Cell>, bool> pfx_dict_set(Ref<Cell> dict, td::ConstBitPtr key, int m, int n,
                                         const PrefixDictionary::store_value_func_t& store_val,
                                         Dictionary::SetMode mode) {
-  std::cerr << "up to " << n << "-bit prefix code dictionary modification for " << m << "-bit key = " << key.to_hex(m)
-            << std::endl;
+  // std::cerr << "up to " << n << "-bit prefix code dictionary modification for " << m << "-bit key = " << key.to_hex(m) << std::endl;
   if (m > n) {
     return std::make_pair(Ref<Cell>{}, false);
   }
@@ -1308,6 +1307,294 @@ Ref<CellSlice> DictionaryFixed::extract_minmax_key(td::BitPtr key_buffer, int ke
 Ref<Cell> Dictionary::extract_minmax_key_ref(td::BitPtr key_buffer, int key_len, bool fetch_max, bool invert_first) {
   return extract_value_ref(extract_minmax_key(key_buffer, key_len, fetch_max, invert_first));
 }
+
+/*
+ *
+ *   ITERATORS (to be moved into a separate file)
+ *
+ */
+
+bool DictIterator::prevalidate(int mode) {
+  if (key_bits_ <= 0 || key_bits_ > Dictionary::max_key_bits) {
+    reset();
+    flags_ &= ~f_valid;
+    key_bits_ = 0;
+    return false;
+  } else {
+    if (mode >= 0) {
+      order_ = -(mode & 1) ^ ((mode >> 1) & 1);
+    }
+    flags_ |= f_valid;
+    return true;
+  }
+}
+
+bool DictIterator::bind(const DictionaryFixed& dict, int do_rewind) {
+  if (!is_valid() || !is_bound_to(dict)) {
+    return false;
+  }
+  dict_ = &dict;
+  label_mode_ = dict.label_mode();
+  return !do_rewind || rewind(do_rewind < 0);
+}
+
+bool DictIterator::rebind_to(const DictionaryFixed& dict, int do_rewind) {
+  reset();
+  dict_ = &dict;
+  label_mode_ = dict.label_mode();
+  root_ = dict.get_root_cell();
+  key_bits_ = dict.get_key_bits();
+  flags_ &= 3;
+  return prevalidate() && (!do_rewind || rewind(do_rewind < 0));
+}
+
+int DictIterator::compare_keys(td::ConstBitPtr a, td::ConstBitPtr b) const {
+  if (!key_bits_) {
+    return 0;
+  }
+  int c = (int)*a - (int)*b;
+  if (c) {
+    return (order_ & 1) ? -c : c;
+  }
+  c = a.compare(b, key_bits_);
+  return order_ >= 0 ? c : -c;
+}
+
+bool DictIterator::dive(int mode) {
+  int n = key_bits_, m = 0;
+  Ref<Cell> node = path_.empty() ? root_ : path_.back().next;
+  if (!path_.empty()) {
+    m = path_.back().pos + 1;
+    n -= m;
+    mode >>= 1;
+  }
+  // similar to dict_lookup_minmax: create new path down until the leaf
+  while (1) {
+    LabelParser label{std::move(node), n, label_mode_};
+    int l = label.extract_label_to(key(m));
+    assert(l >= 0 && l <= n);
+    m += l;
+    n -= l;
+    if (!n) {
+      leaf_ = std::move(label.remainder);
+      return true;
+    }
+    if (l) {
+      mode >>= 1;
+    }
+    int bit = mode & 1;
+    node = label.remainder->prefetch_ref(bit);
+    auto alt = label.remainder->prefetch_ref(1 - bit);
+    path_.emplace_back(node, std::move(alt), m, bit);
+    *key(m++) = (bool)bit;
+    --n;
+    mode >>= 1;
+  }
+}
+
+bool DictIterator::rewind(bool to_end) {
+  if (!is_valid()) {
+    return false;
+  }
+  if (root_.is_null()) {
+    return true;
+  }
+  auto node = root_;
+  int k = 0, mode = order_ ^ -(int)to_end;
+  // NB: can optimize by reusing several first entries of current path_
+  while (k < (int)path_.size()) {
+    auto& pe = path_[k++];
+    assert(pe.pos >= 0 && pe.pos < key_bits_);
+    if (pe.pos) {
+      mode >>= 1;
+    }
+    if (pe.v != (bool)(mode & 1)) {
+      // went different way at this node before, rotate and stop going down
+      pe.rotate(key());
+      leaf_.clear();
+      path_.resize(k);  // drop the remainder of the original path after first incorrect branch
+      return dive(mode);
+    }
+    mode >>= 1;
+  }
+  return !eof() || dive(mode);
+}
+
+bool DictIterator::next(bool go_back) {
+  if (!is_valid() || root_.is_null() || eof()) {
+    return false;
+  }
+  leaf_.clear();
+  int mode = order_ ^ -(int)go_back;
+  while (!path_.empty()) {
+    auto& pe = path_.back();
+    int bit = (mode >> (pe.pos > 0)) & 1;
+    if (pe.v == bit) {
+      pe.rotate(key());
+      return dive(mode);
+    }
+    path_.pop_back();
+  }
+  return false;
+}
+
+bool DictIterator::lookup(td::ConstBitPtr pos, int pos_bits, bool strict_after, bool backw) {
+  if (!is_valid() || root_.is_null() || pos_bits < 0 || pos_bits > key_bits_) {
+    return false;
+  }
+  int fill_mode = -(strict_after ^ backw) ^ order_;
+  if (!eof()) {
+    // reuse part of current path
+    std::size_t bp0 = 0;
+    int bp;
+    if (!key().compare(pos, pos_bits, &bp0)) {
+      bp = pos_bits;
+      if (bp >= key_bits_) {
+        // already at the desired element
+        return !strict_after || next(backw);
+      }
+    } else {
+      bp = (int)bp0;
+    }
+    int k = 0;
+    while (k < (int)path_.size() && path_[k].pos <= bp) {
+      auto& pe = path_[k];
+      if (pe.pos == bp) {
+        if (bp < pos_bits || pe.v != ((fill_mode >> (bp > 0)) & 1)) {
+          // rotate the last path element if it branched in incorrect direction
+          path_[k++].rotate(key());
+        }
+        break;
+      }
+      ++k;
+    }
+    path_.resize(k);  // drop the remainder of the path
+  }
+  int m = 0, n = key_bits_;
+  auto node = path_.empty() ? root_ : path_.back().next;
+  if (!path_.empty()) {
+    m = path_.back().pos + 1;  // m <= pos_bits + 1
+    n -= m;
+  }
+  int mode = -backw ^ order_, action = 0;
+  while (m < pos_bits && !action) {
+    LabelParser label{std::move(node), n, label_mode_};
+    int pfx_len = label.common_prefix_len(pos + m, pos_bits - m);
+    int l = label.extract_label_to(key() + m);
+    assert(pfx_len >= 0 && pfx_len <= label.l_bits && label.l_bits <= n);
+    if (pfx_len == pos_bits - m) {
+      // end of given position prefix
+      if (strict_after) {
+        // have to backtrace
+        action = 2;
+        break;
+      } else {
+        // label has correct prefix, register and dive down
+        action = 1;
+      }
+    } else if (pfx_len < l) {
+      // all subtree is either smaller or larger than required
+      if (pos[m + pfx_len] != ((mode >> (int)(m + pfx_len > 0)) & 1)) {
+        // label smaller than required, have to backtrace
+        action = 2;
+        break;
+      } else {
+        // label larger than required, register node and dive down
+        action = 1;
+      }
+    }
+    // if we are here, then either action=1 (dive down activated)
+    // ... or l = pfx_len < pos_bits - m
+    // continue going down
+    m += l;
+    n -= l;
+    if (!n) {
+      // key found in a leaf
+      leaf_ = std::move(label.remainder);
+      return true;
+    }
+    bool bit = action ? ((mode >> (m > 0)) & 1) : pos[m];
+    node = label.remainder->prefetch_ref(bit);
+    auto alt = label.remainder->prefetch_ref(1 - bit);
+    path_.emplace_back(node, std::move(alt), m, bit);
+    *key(m++) = (bool)bit;
+    --n;
+  }
+  if (!action) {
+    action = (strict_after ? 2 : 1);
+  }
+  if (action == 2) {
+    // have to backtrace to the "next" larger branch
+    // similar to next()
+    leaf_.clear();
+    while (!path_.empty()) {
+      auto& pe = path_.back();
+      int bit = (mode >> (pe.pos > 0)) & 1;
+      if (pe.v == bit) {
+        pe.rotate(key());
+        return dive(mode);
+      }
+      path_.pop_back();
+    }
+    return false;  // eof: no suitable element
+  }
+  // action=1, dive down
+  return dive(mode);
+}
+
+DictIterator DictionaryFixed::null_iterator() {
+  force_validate();
+  return DictIterator{*this};
+}
+
+DictIterator DictionaryFixed::make_iterator(int mode) {
+  force_validate();
+  DictIterator it{*this, mode};
+  it.rewind();
+  return it;
+}
+
+DictIterator DictionaryFixed::init_iterator(bool backw, bool invert_first) {
+  return make_iterator((int)backw + 2 * (int)invert_first);
+}
+
+DictIterator DictionaryFixed::begin() {
+  return init_iterator();
+}
+
+DictIterator DictionaryFixed::end() {
+  return null_iterator();
+}
+
+DictIterator DictionaryFixed::cbegin() {
+  return begin();
+}
+
+DictIterator DictionaryFixed::cend() {
+  return end();
+}
+
+DictIterator DictionaryFixed::rbegin() {
+  return init_iterator(true);
+}
+
+DictIterator DictionaryFixed::rend() {
+  return null_iterator();
+}
+
+DictIterator DictionaryFixed::crbegin() {
+  return rbegin();
+}
+
+DictIterator DictionaryFixed::crend() {
+  return rend();
+}
+
+/*
+ *
+ *   END (ITERATORS)
+ *
+ */
 
 std::pair<Ref<Cell>, bool> DictionaryFixed::extract_prefix_subdict_internal(Ref<Cell> dict, td::ConstBitPtr prefix,
                                                                             int prefix_len, bool remove_prefix) const {
@@ -2241,7 +2528,7 @@ Ref<CellSlice> AugmentedDictionary::extract_root() && {
   return std::move(root);
 }
 
-bool AugmentedDictionary::append_dict_to_bool(CellBuilder& cb) const& {
+bool AugmentedDictionary::append_dict_to_bool(CellBuilder& cb) const & {
   if (!is_valid()) {
     return false;
   }
@@ -2308,6 +2595,14 @@ Ref<CellSlice> AugmentedDictionary::get_node_extra(Ref<Cell> cell_ref, int n) co
     }
   }
   return {};
+}
+
+Ref<CellSlice> AugmentedDictionary::extract_leaf_value(Ref<CellSlice> leaf) const {
+  if (leaf.not_null() && aug.skip_extra(leaf.write())) {
+    return std::move(leaf);
+  } else {
+    return Ref<CellSlice>{};
+  }
 }
 
 Ref<CellSlice> AugmentedDictionary::get_root_extra() const {
@@ -2536,7 +2831,7 @@ bool AugmentedDictionary::set(td::ConstBitPtr key, int key_len, const CellSlice&
   }
   auto res = dict_set(get_root_cell(), key, key_len, value, mode);
   if (res.second) {
-    //vm::CellSlice cs{vm::NoVm{}, res.first};
+    //vm::CellSlice cs{vm::NoVmOrd(), res.first};
     //std::cerr << "new augmented dictionary root is:\n";
     //cs.print_rec(std::cerr);
     set_root_cell(std::move(res.first));

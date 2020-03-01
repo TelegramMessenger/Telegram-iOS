@@ -71,6 +71,7 @@ IntCtx::Savepoint::Savepoint(IntCtx& _ctx, std::string new_filename, std::string
                              std::istream* new_input_stream)
     : ctx(_ctx)
     , old_line_no(_ctx.line_no)
+    , old_need_line(_ctx.need_line)
     , old_filename(_ctx.filename)
     , old_current_dir(_ctx.currentd_dir)
     , old_input_stream(_ctx.input_stream)
@@ -87,6 +88,7 @@ IntCtx::Savepoint::Savepoint(IntCtx& _ctx, std::string new_filename, std::string
 
 IntCtx::Savepoint::~Savepoint() {
   ctx.line_no = old_line_no;
+  ctx.need_line = old_need_line;
   ctx.filename = old_filename;
   ctx.currentd_dir = old_current_dir;
   ctx.input_stream = old_input_stream;
@@ -99,6 +101,7 @@ bool IntCtx::load_next_line() {
   if (!std::getline(*input_stream, str)) {
     return false;
   }
+  need_line = false;
   if (!str.empty() && str.back() == '\r') {
     str.pop_back();
   }
@@ -111,6 +114,7 @@ bool IntCtx::is_sb() const {
 }
 
 td::Slice IntCtx::scan_word_to(char delim, bool err_endl) {
+  load_next_line_ifreq();
   auto ptr = input_ptr;
   while (*ptr && *ptr != delim) {
     ptr++;
@@ -121,6 +125,7 @@ td::Slice IntCtx::scan_word_to(char delim, bool err_endl) {
   } else if (err_endl && delim) {
     throw IntError{std::string{"end delimiter `"} + delim + "` not found"};
   } else {
+    need_line = true;
     std::swap(ptr, input_ptr);
     return td::Slice{ptr, input_ptr};
   }

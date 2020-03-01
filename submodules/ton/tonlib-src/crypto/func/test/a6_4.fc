@@ -1,0 +1,20 @@
+var calc_root(m) {
+  int base = 1;
+  repeat(70) { base *= 10; }
+  var (a, b, c) = (1, 0, - m);
+  var (p1, q1, p2, q2) = (1, 0, 0, 1);
+  do {
+    int k = -1;
+    var (a1, b1, c1) = (0, 0, 0);
+    do {
+      k += 1;
+      (a1, b1, c1) = (a, b, c);
+      c += b;
+      c += b += a;
+    } until (c > 0);
+    (a, b, c) = (- c1, - b1, - a1);
+    (p1, q1) = (k * p1 + q1, p1);
+    (p2, q2) = (k * p2 + q2, p2);
+  } until (p1 > base);
+  return (p1, q1, p2, q2);
+}

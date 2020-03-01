@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/utils/base64.h"
 
@@ -29,6 +29,68 @@
 
 namespace td {
 //TODO: fix copypaste
+
+static const char *const symbols32_lc = "abcdefghijklmnopqrstuvwxyz234567";
+static const char *const symbols32_uc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+string base32_encode(Slice input, bool upper_case) {
+  auto *symbols32 = (upper_case ? symbols32_uc : symbols32_lc);
+  string base32;
+  base32.reserve((input.size() * 8 + 4) / 5);
+  uint32 c = 0;
+  uint32 length = 0;
+  for (size_t i = 0; i < input.size(); i++) {
+    c = (c << 8) | input.ubegin()[i];
+    length += 8;
+    while (length >= 5) {
+      length -= 5;
+      base32.push_back(symbols32[(c >> length) & 31]);
+    }
+  }
+  if (length != 0) {
+    base32.push_back(symbols32[(c << (5 - length)) & 31]);
+  }
+  //TODO: optional padding
+  return base32;
+}
+
+static unsigned char b32_char_to_value[256];
+static void init_base32_table() {
+  static bool is_inited = [] {
+    std::fill(std::begin(b32_char_to_value), std::end(b32_char_to_value), static_cast<unsigned char>(32));
+    for (unsigned char i = 0; i < 32; i++) {
+      b32_char_to_value[static_cast<size_t>(symbols32_lc[i])] = i;
+      b32_char_to_value[static_cast<size_t>(symbols32_uc[i])] = i;
+    }
+    return true;
+  }();
+  CHECK(is_inited);
+}
+
+Result<string> base32_decode(Slice base32) {
+  init_base32_table();
+  string res;
+  res.reserve(base32.size() * 5 / 8);
+  uint32 c = 0;
+  uint32 length = 0;
+  for (size_t i = 0; i < base32.size(); i++) {
+    auto value = b32_char_to_value[base32.ubegin()[i]];
+    if (value == 32) {
+      return Status::Error("Wrong character in the string");
+    }
+    c = (c << 5) | value;
+    length += 5;
+    while (length >= 8) {
+      length -= 8;
+      res.push_back(td::uint8((c >> length) & 255));
+    }
+  }
+  if ((c & ((1 << length) - 1)) != 0) {
+    return Status::Error("Nonzero padding");
+  }
+  //TODO: check padding
+  return res;
+}
 
 static const char *const symbols64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

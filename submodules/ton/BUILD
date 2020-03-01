@@ -35,12 +35,19 @@ ton_lib_names = [
     "tonlib",
 ]
 
+filegroup(
+    name = "TonSources",
+    srcs = glob([
+        "tonlib-src/**/*"
+    ]),
+)
+
 genrule(
     name = "ton_build",
     srcs = [
         "build-ton-bazel.sh",
         "iOS-bazel.cmake",
-        "tonlib-src.tar.gz",
+        ":TonSources",
         "//submodules/openssl:openssl_include",
         "//submodules/openssl:libcrypto.a",
     ],
@@ -70,7 +77,10 @@ genrule(
 
     cp $(location :build-ton-bazel.sh) "$$BUILD_DIR/"
     cp $(location :iOS-bazel.cmake) "$$BUILD_DIR/"
-    tar -xzf $(location tonlib-src.tar.gz) -C "$$BUILD_DIR/"
+
+    SOURCE_PATH="submodules/tonlib/tonlib-src"
+
+    cp -R "$$SOURCE_PATH" "$$BUILD_DIR/"
 
     mkdir -p "$$BUILD_DIR/openssl_headers/include/openssl"
     mkdir -p "$$BUILD_DIR/openssl_headers/lib"

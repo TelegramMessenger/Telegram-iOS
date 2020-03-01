@@ -37,6 +37,267 @@ void accountAddress::store(td::TlStorerToString &s, const char *field_name) cons
   }
 }
 
+accountRevisionList::accountRevisionList()
+  : revisions_()
+{}
+
+accountRevisionList::accountRevisionList(std::vector<std::int32_t> &&revisions_)
+  : revisions_(std::move(revisions_))
+{}
+
+const std::int32_t accountRevisionList::ID;
+
+void accountRevisionList::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "accountRevisionList");
+    { const std::vector<std::int32_t> &v = revisions_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("revisions", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { s.store_field("", v[i]); } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+raw_accountState::raw_accountState()
+  : code_()
+  , data_()
+  , frozen_hash_()
+{}
+
+raw_accountState::raw_accountState(std::string const &code_, std::string const &data_, std::string const &frozen_hash_)
+  : code_(std::move(code_))
+  , data_(std::move(data_))
+  , frozen_hash_(std::move(frozen_hash_))
+{}
+
+const std::int32_t raw_accountState::ID;
+
+void raw_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "raw_accountState");
+    s.store_bytes_field("code", code_);
+    s.store_bytes_field("data", data_);
+    s.store_bytes_field("frozen_hash", frozen_hash_);
+    s.store_class_end();
+  }
+}
+
+testWallet_accountState::testWallet_accountState()
+  : seqno_()
+{}
+
+testWallet_accountState::testWallet_accountState(std::int32_t seqno_)
+  : seqno_(seqno_)
+{}
+
+const std::int32_t testWallet_accountState::ID;
+
+void testWallet_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "testWallet_accountState");
+    s.store_field("seqno", seqno_);
+    s.store_class_end();
+  }
+}
+
+wallet_accountState::wallet_accountState()
+  : seqno_()
+{}
+
+wallet_accountState::wallet_accountState(std::int32_t seqno_)
+  : seqno_(seqno_)
+{}
+
+const std::int32_t wallet_accountState::ID;
+
+void wallet_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_accountState");
+    s.store_field("seqno", seqno_);
+    s.store_class_end();
+  }
+}
+
+wallet_v3_accountState::wallet_v3_accountState()
+  : wallet_id_()
+  , seqno_()
+{}
+
+wallet_v3_accountState::wallet_v3_accountState(std::int64_t wallet_id_, std::int32_t seqno_)
+  : wallet_id_(wallet_id_)
+  , seqno_(seqno_)
+{}
+
+const std::int32_t wallet_v3_accountState::ID;
+
+void wallet_v3_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_v3_accountState");
+    s.store_field("wallet_id", wallet_id_);
+    s.store_field("seqno", seqno_);
+    s.store_class_end();
+  }
+}
+
+wallet_highload_v1_accountState::wallet_highload_v1_accountState()
+  : wallet_id_()
+  , seqno_()
+{}
+
+wallet_highload_v1_accountState::wallet_highload_v1_accountState(std::int64_t wallet_id_, std::int32_t seqno_)
+  : wallet_id_(wallet_id_)
+  , seqno_(seqno_)
+{}
+
+const std::int32_t wallet_highload_v1_accountState::ID;
+
+void wallet_highload_v1_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_highload_v1_accountState");
+    s.store_field("wallet_id", wallet_id_);
+    s.store_field("seqno", seqno_);
+    s.store_class_end();
+  }
+}
+
+wallet_highload_v2_accountState::wallet_highload_v2_accountState()
+  : wallet_id_()
+{}
+
+wallet_highload_v2_accountState::wallet_highload_v2_accountState(std::int64_t wallet_id_)
+  : wallet_id_(wallet_id_)
+{}
+
+const std::int32_t wallet_highload_v2_accountState::ID;
+
+void wallet_highload_v2_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_highload_v2_accountState");
+    s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
+testGiver_accountState::testGiver_accountState()
+  : seqno_()
+{}
+
+testGiver_accountState::testGiver_accountState(std::int32_t seqno_)
+  : seqno_(seqno_)
+{}
+
+const std::int32_t testGiver_accountState::ID;
+
+void testGiver_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "testGiver_accountState");
+    s.store_field("seqno", seqno_);
+    s.store_class_end();
+  }
+}
+
+dns_accountState::dns_accountState()
+  : wallet_id_()
+{}
+
+dns_accountState::dns_accountState(std::int64_t wallet_id_)
+  : wallet_id_(wallet_id_)
+{}
+
+const std::int32_t dns_accountState::ID;
+
+void dns_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_accountState");
+    s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
+uninited_accountState::uninited_accountState()
+  : frozen_hash_()
+{}
+
+uninited_accountState::uninited_accountState(std::string const &frozen_hash_)
+  : frozen_hash_(std::move(frozen_hash_))
+{}
+
+const std::int32_t uninited_accountState::ID;
+
+void uninited_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "uninited_accountState");
+    s.store_bytes_field("frozen_hash", frozen_hash_);
+    s.store_class_end();
+  }
+}
+
+actionNoop::actionNoop() {
+}
+
+const std::int32_t actionNoop::ID;
+
+void actionNoop::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "actionNoop");
+    s.store_class_end();
+  }
+}
+
+actionMsg::actionMsg()
+  : messages_()
+  , allow_send_to_uninited_()
+{}
+
+actionMsg::actionMsg(std::vector<object_ptr<msg_message>> &&messages_, bool allow_send_to_uninited_)
+  : messages_(std::move(messages_))
+  , allow_send_to_uninited_(allow_send_to_uninited_)
+{}
+
+const std::int32_t actionMsg::ID;
+
+void actionMsg::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "actionMsg");
+    { const std::vector<object_ptr<msg_message>> &v = messages_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("messages", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_field("allow_send_to_uninited", allow_send_to_uninited_);
+    s.store_class_end();
+  }
+}
+
+actionDns::actionDns()
+  : actions_()
+{}
+
+actionDns::actionDns(std::vector<object_ptr<dns_Action>> &&actions_)
+  : actions_(std::move(actions_))
+{}
+
+const std::int32_t actionDns::ID;
+
+void actionDns::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "actionDns");
+    { const std::vector<object_ptr<dns_Action>> &v = actions_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("actions", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+adnlAddress::adnlAddress()
+  : adnl_address_()
+{}
+
+adnlAddress::adnlAddress(std::string const &adnl_address_)
+  : adnl_address_(std::move(adnl_address_))
+{}
+
+const std::int32_t adnlAddress::ID;
+
+void adnlAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnlAddress");
+    s.store_field("adnl_address", adnl_address_);
+    s.store_class_end();
+  }
+}
+
 bip39Hints::bip39Hints()
   : words_()
 {}
@@ -175,6 +436,24 @@ void exportedPemKey::store(td::TlStorerToString &s, const char *field_name) cons
   }
 }
 
+exportedUnencryptedKey::exportedUnencryptedKey()
+  : data_()
+{}
+
+exportedUnencryptedKey::exportedUnencryptedKey(td::SecureString &&data_)
+  : data_(std::move(data_))
+{}
+
+const std::int32_t exportedUnencryptedKey::ID;
+
+void exportedUnencryptedKey::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "exportedUnencryptedKey");
+    s.store_bytes_field("data", data_);
+    s.store_class_end();
+  }
+}
+
 fees::fees()
   : in_fwd_fee_()
   , storage_fee_()
@@ -198,6 +477,189 @@ void fees::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_field("storage_fee", storage_fee_);
     s.store_field("gas_fee", gas_fee_);
     s.store_field("fwd_fee", fwd_fee_);
+    s.store_class_end();
+  }
+}
+
+fullAccountState::fullAccountState()
+  : balance_()
+  , last_transaction_id_()
+  , block_id_()
+  , sync_utime_()
+  , account_state_()
+{}
+
+fullAccountState::fullAccountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, object_ptr<ton_blockIdExt> &&block_id_, std::int64_t sync_utime_, object_ptr<AccountState> &&account_state_)
+  : balance_(balance_)
+  , last_transaction_id_(std::move(last_transaction_id_))
+  , block_id_(std::move(block_id_))
+  , sync_utime_(sync_utime_)
+  , account_state_(std::move(account_state_))
+{}
+
+const std::int32_t fullAccountState::ID;
+
+void fullAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "fullAccountState");
+    s.store_field("balance", balance_);
+    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    if (block_id_ == nullptr) { s.store_field("block_id", "null"); } else { block_id_->store(s, "block_id"); }
+    s.store_field("sync_utime", sync_utime_);
+    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_end();
+  }
+}
+
+raw_initialAccountState::raw_initialAccountState()
+  : code_()
+  , data_()
+{}
+
+raw_initialAccountState::raw_initialAccountState(std::string const &code_, std::string const &data_)
+  : code_(std::move(code_))
+  , data_(std::move(data_))
+{}
+
+const std::int32_t raw_initialAccountState::ID;
+
+void raw_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "raw_initialAccountState");
+    s.store_bytes_field("code", code_);
+    s.store_bytes_field("data", data_);
+    s.store_class_end();
+  }
+}
+
+testGiver_initialAccountState::testGiver_initialAccountState() {
+}
+
+const std::int32_t testGiver_initialAccountState::ID;
+
+void testGiver_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "testGiver_initialAccountState");
+    s.store_class_end();
+  }
+}
+
+testWallet_initialAccountState::testWallet_initialAccountState()
+  : public_key_()
+{}
+
+testWallet_initialAccountState::testWallet_initialAccountState(std::string const &public_key_)
+  : public_key_(std::move(public_key_))
+{}
+
+const std::int32_t testWallet_initialAccountState::ID;
+
+void testWallet_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "testWallet_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_class_end();
+  }
+}
+
+wallet_initialAccountState::wallet_initialAccountState()
+  : public_key_()
+{}
+
+wallet_initialAccountState::wallet_initialAccountState(std::string const &public_key_)
+  : public_key_(std::move(public_key_))
+{}
+
+const std::int32_t wallet_initialAccountState::ID;
+
+void wallet_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_class_end();
+  }
+}
+
+wallet_v3_initialAccountState::wallet_v3_initialAccountState()
+  : public_key_()
+  , wallet_id_()
+{}
+
+wallet_v3_initialAccountState::wallet_v3_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_)
+  : public_key_(std::move(public_key_))
+  , wallet_id_(wallet_id_)
+{}
+
+const std::int32_t wallet_v3_initialAccountState::ID;
+
+void wallet_v3_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_v3_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
+wallet_highload_v1_initialAccountState::wallet_highload_v1_initialAccountState()
+  : public_key_()
+  , wallet_id_()
+{}
+
+wallet_highload_v1_initialAccountState::wallet_highload_v1_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_)
+  : public_key_(std::move(public_key_))
+  , wallet_id_(wallet_id_)
+{}
+
+const std::int32_t wallet_highload_v1_initialAccountState::ID;
+
+void wallet_highload_v1_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_highload_v1_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
+wallet_highload_v2_initialAccountState::wallet_highload_v2_initialAccountState()
+  : public_key_()
+  , wallet_id_()
+{}
+
+wallet_highload_v2_initialAccountState::wallet_highload_v2_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_)
+  : public_key_(std::move(public_key_))
+  , wallet_id_(wallet_id_)
+{}
+
+const std::int32_t wallet_highload_v2_initialAccountState::ID;
+
+void wallet_highload_v2_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_highload_v2_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
+dns_initialAccountState::dns_initialAccountState()
+  : public_key_()
+  , wallet_id_()
+{}
+
+dns_initialAccountState::dns_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_)
+  : public_key_(std::move(public_key_))
+  , wallet_id_(wallet_id_)
+{}
+
+const std::int32_t dns_initialAccountState::ID;
+
+void dns_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_field("wallet_id", wallet_id_);
     s.store_class_end();
   }
 }
@@ -400,27 +862,6 @@ void options::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
-sendGramsResult::sendGramsResult()
-  : sent_until_()
-  , body_hash_()
-{}
-
-sendGramsResult::sendGramsResult(std::int64_t sent_until_, std::string const &body_hash_)
-  : sent_until_(sent_until_)
-  , body_hash_(std::move(body_hash_))
-{}
-
-const std::int32_t sendGramsResult::ID;
-
-void sendGramsResult::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "sendGramsResult");
-    s.store_field("sent_until", sent_until_);
-    s.store_bytes_field("body_hash", body_hash_);
-    s.store_class_end();
-  }
-}
-
 syncStateDone::syncStateDone() {
 }
 
@@ -523,110 +964,209 @@ void updateSyncState::store(td::TlStorerToString &s, const char *field_name) con
   }
 }
 
-generic_accountStateRaw::generic_accountStateRaw()
-  : account_state_()
-{}
+dns_actionDeleteAll::dns_actionDeleteAll() {
+}
 
-generic_accountStateRaw::generic_accountStateRaw(object_ptr<raw_accountState> &&account_state_)
-  : account_state_(std::move(account_state_))
-{}
+const std::int32_t dns_actionDeleteAll::ID;
 
-const std::int32_t generic_accountStateRaw::ID;
-
-void generic_accountStateRaw::store(td::TlStorerToString &s, const char *field_name) const {
+void dns_actionDeleteAll::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_accountStateRaw");
-    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_begin(field_name, "dns_actionDeleteAll");
     s.store_class_end();
   }
 }
 
-generic_accountStateTestWallet::generic_accountStateTestWallet()
-  : account_state_()
+dns_actionDelete::dns_actionDelete()
+  : name_()
+  , category_()
 {}
 
-generic_accountStateTestWallet::generic_accountStateTestWallet(object_ptr<testWallet_accountState> &&account_state_)
-  : account_state_(std::move(account_state_))
+dns_actionDelete::dns_actionDelete(std::string const &name_, std::int32_t category_)
+  : name_(std::move(name_))
+  , category_(category_)
 {}
 
-const std::int32_t generic_accountStateTestWallet::ID;
+const std::int32_t dns_actionDelete::ID;
 
-void generic_accountStateTestWallet::store(td::TlStorerToString &s, const char *field_name) const {
+void dns_actionDelete::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_accountStateTestWallet");
-    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_begin(field_name, "dns_actionDelete");
+    s.store_field("name", name_);
+    s.store_field("category", category_);
     s.store_class_end();
   }
 }
 
-generic_accountStateWallet::generic_accountStateWallet()
-  : account_state_()
+dns_actionSet::dns_actionSet()
+  : entry_()
 {}
 
-generic_accountStateWallet::generic_accountStateWallet(object_ptr<wallet_accountState> &&account_state_)
-  : account_state_(std::move(account_state_))
+dns_actionSet::dns_actionSet(object_ptr<dns_entry> &&entry_)
+  : entry_(std::move(entry_))
 {}
 
-const std::int32_t generic_accountStateWallet::ID;
+const std::int32_t dns_actionSet::ID;
 
-void generic_accountStateWallet::store(td::TlStorerToString &s, const char *field_name) const {
+void dns_actionSet::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_accountStateWallet");
-    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_begin(field_name, "dns_actionSet");
+    if (entry_ == nullptr) { s.store_field("entry", "null"); } else { entry_->store(s, "entry"); }
     s.store_class_end();
   }
 }
 
-generic_accountStateWalletV3::generic_accountStateWalletV3()
-  : account_state_()
+dns_entry::dns_entry()
+  : name_()
+  , category_()
+  , entry_()
 {}
 
-generic_accountStateWalletV3::generic_accountStateWalletV3(object_ptr<wallet_v3_accountState> &&account_state_)
-  : account_state_(std::move(account_state_))
+dns_entry::dns_entry(std::string const &name_, std::int32_t category_, object_ptr<dns_EntryData> &&entry_)
+  : name_(std::move(name_))
+  , category_(category_)
+  , entry_(std::move(entry_))
 {}
 
-const std::int32_t generic_accountStateWalletV3::ID;
+const std::int32_t dns_entry::ID;
 
-void generic_accountStateWalletV3::store(td::TlStorerToString &s, const char *field_name) const {
+void dns_entry::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_accountStateWalletV3");
-    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_begin(field_name, "dns_entry");
+    s.store_field("name", name_);
+    s.store_field("category", category_);
+    if (entry_ == nullptr) { s.store_field("entry", "null"); } else { entry_->store(s, "entry"); }
     s.store_class_end();
   }
 }
 
-generic_accountStateTestGiver::generic_accountStateTestGiver()
-  : account_state_()
+dns_entryDataUnknown::dns_entryDataUnknown()
+  : bytes_()
 {}
 
-generic_accountStateTestGiver::generic_accountStateTestGiver(object_ptr<testGiver_accountState> &&account_state_)
-  : account_state_(std::move(account_state_))
+dns_entryDataUnknown::dns_entryDataUnknown(std::string const &bytes_)
+  : bytes_(std::move(bytes_))
 {}
 
-const std::int32_t generic_accountStateTestGiver::ID;
+const std::int32_t dns_entryDataUnknown::ID;
 
-void generic_accountStateTestGiver::store(td::TlStorerToString &s, const char *field_name) const {
+void dns_entryDataUnknown::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_accountStateTestGiver");
-    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_begin(field_name, "dns_entryDataUnknown");
+    s.store_bytes_field("bytes", bytes_);
     s.store_class_end();
   }
 }
 
-generic_accountStateUninited::generic_accountStateUninited()
-  : account_state_()
+dns_entryDataText::dns_entryDataText()
+  : text_()
 {}
 
-generic_accountStateUninited::generic_accountStateUninited(object_ptr<uninited_accountState> &&account_state_)
-  : account_state_(std::move(account_state_))
+dns_entryDataText::dns_entryDataText(std::string const &text_)
+  : text_(std::move(text_))
 {}
 
-const std::int32_t generic_accountStateUninited::ID;
+const std::int32_t dns_entryDataText::ID;
 
-void generic_accountStateUninited::store(td::TlStorerToString &s, const char *field_name) const {
+void dns_entryDataText::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_accountStateUninited");
-    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_begin(field_name, "dns_entryDataText");
+    s.store_field("text", text_);
+    s.store_class_end();
+  }
+}
+
+dns_entryDataNextResolver::dns_entryDataNextResolver()
+  : resolver_()
+{}
+
+dns_entryDataNextResolver::dns_entryDataNextResolver(object_ptr<accountAddress> &&resolver_)
+  : resolver_(std::move(resolver_))
+{}
+
+const std::int32_t dns_entryDataNextResolver::ID;
+
+void dns_entryDataNextResolver::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_entryDataNextResolver");
+    if (resolver_ == nullptr) { s.store_field("resolver", "null"); } else { resolver_->store(s, "resolver"); }
+    s.store_class_end();
+  }
+}
+
+dns_entryDataSmcAddress::dns_entryDataSmcAddress()
+  : smc_address_()
+{}
+
+dns_entryDataSmcAddress::dns_entryDataSmcAddress(object_ptr<accountAddress> &&smc_address_)
+  : smc_address_(std::move(smc_address_))
+{}
+
+const std::int32_t dns_entryDataSmcAddress::ID;
+
+void dns_entryDataSmcAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_entryDataSmcAddress");
+    if (smc_address_ == nullptr) { s.store_field("smc_address", "null"); } else { smc_address_->store(s, "smc_address"); }
+    s.store_class_end();
+  }
+}
+
+dns_entryDataAdnlAddress::dns_entryDataAdnlAddress()
+  : adnl_address_()
+{}
+
+dns_entryDataAdnlAddress::dns_entryDataAdnlAddress(object_ptr<adnlAddress> &&adnl_address_)
+  : adnl_address_(std::move(adnl_address_))
+{}
+
+const std::int32_t dns_entryDataAdnlAddress::ID;
+
+void dns_entryDataAdnlAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_entryDataAdnlAddress");
+    if (adnl_address_ == nullptr) { s.store_field("adnl_address", "null"); } else { adnl_address_->store(s, "adnl_address"); }
+    s.store_class_end();
+  }
+}
+
+dns_resolved::dns_resolved()
+  : entries_()
+{}
+
+dns_resolved::dns_resolved(std::vector<object_ptr<dns_entry>> &&entries_)
+  : entries_(std::move(entries_))
+{}
+
+const std::int32_t dns_resolved::ID;
+
+void dns_resolved::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_resolved");
+    { const std::vector<object_ptr<dns_entry>> &v = entries_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("entries", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+ton_blockId::ton_blockId()
+  : workchain_()
+  , shard_()
+  , seqno_()
+{}
+
+ton_blockId::ton_blockId(std::int32_t workchain_, std::int64_t shard_, std::int32_t seqno_)
+  : workchain_(workchain_)
+  , shard_(shard_)
+  , seqno_(seqno_)
+{}
+
+const std::int32_t ton_blockId::ID;
+
+void ton_blockId::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "ton_blockId");
+    s.store_field("workchain", workchain_);
+    s.store_field("shard", shard_);
+    s.store_field("seqno", seqno_);
     s.store_class_end();
   }
 }
@@ -676,6 +1216,120 @@ void liteServer_info::store(td::TlStorerToString &s, const char *field_name) con
   }
 }
 
+msg_dataRaw::msg_dataRaw()
+  : body_()
+{}
+
+msg_dataRaw::msg_dataRaw(std::string const &body_)
+  : body_(std::move(body_))
+{}
+
+const std::int32_t msg_dataRaw::ID;
+
+void msg_dataRaw::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataRaw");
+    s.store_bytes_field("body", body_);
+    s.store_class_end();
+  }
+}
+
+msg_dataText::msg_dataText()
+  : text_()
+{}
+
+msg_dataText::msg_dataText(std::string const &text_)
+  : text_(std::move(text_))
+{}
+
+const std::int32_t msg_dataText::ID;
+
+void msg_dataText::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataText");
+    s.store_bytes_field("text", text_);
+    s.store_class_end();
+  }
+}
+
+msg_dataDecryptedText::msg_dataDecryptedText()
+  : text_()
+{}
+
+msg_dataDecryptedText::msg_dataDecryptedText(std::string const &text_)
+  : text_(std::move(text_))
+{}
+
+const std::int32_t msg_dataDecryptedText::ID;
+
+void msg_dataDecryptedText::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataDecryptedText");
+    s.store_bytes_field("text", text_);
+    s.store_class_end();
+  }
+}
+
+msg_dataEncryptedText::msg_dataEncryptedText()
+  : text_()
+{}
+
+msg_dataEncryptedText::msg_dataEncryptedText(std::string const &text_)
+  : text_(std::move(text_))
+{}
+
+const std::int32_t msg_dataEncryptedText::ID;
+
+void msg_dataEncryptedText::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataEncryptedText");
+    s.store_bytes_field("text", text_);
+    s.store_class_end();
+  }
+}
+
+msg_dataArray::msg_dataArray()
+  : elements_()
+{}
+
+msg_dataArray::msg_dataArray(std::vector<object_ptr<msg_Data>> &&elements_)
+  : elements_(std::move(elements_))
+{}
+
+const std::int32_t msg_dataArray::ID;
+
+void msg_dataArray::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataArray");
+    { const std::vector<object_ptr<msg_Data>> &v = elements_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("elements", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+msg_message::msg_message()
+  : destination_()
+  , amount_()
+  , data_()
+{}
+
+msg_message::msg_message(object_ptr<accountAddress> &&destination_, std::int64_t amount_, object_ptr<msg_Data> &&data_)
+  : destination_(std::move(destination_))
+  , amount_(amount_)
+  , data_(std::move(data_))
+{}
+
+const std::int32_t msg_message::ID;
+
+void msg_message::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_message");
+    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
+    s.store_field("amount", amount_);
+    if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
+    s.store_class_end();
+  }
+}
+
 options_configInfo::options_configInfo()
   : default_wallet_id_()
 {}
@@ -694,12 +1348,30 @@ void options_configInfo::store(td::TlStorerToString &s, const char *field_name) 
   }
 }
 
+options_info::options_info()
+  : config_info_()
+{}
+
+options_info::options_info(object_ptr<options_configInfo> &&config_info_)
+  : config_info_(std::move(config_info_))
+{}
+
+const std::int32_t options_info::ID;
+
+void options_info::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "options_info");
+    if (config_info_ == nullptr) { s.store_field("config_info", "null"); } else { config_info_->store(s, "config_info"); }
+    s.store_class_end();
+  }
+}
+
 query_fees::query_fees()
   : source_fees_()
   , destination_fees_()
 {}
 
-query_fees::query_fees(object_ptr<fees> &&source_fees_, object_ptr<fees> &&destination_fees_)
+query_fees::query_fees(object_ptr<fees> &&source_fees_, std::vector<object_ptr<fees>> &&destination_fees_)
   : source_fees_(std::move(source_fees_))
   , destination_fees_(std::move(destination_fees_))
 {}
@@ -710,7 +1382,7 @@ void query_fees::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "query_fees");
     if (source_fees_ == nullptr) { s.store_field("source_fees", "null"); } else { source_fees_->store(s, "source_fees"); }
-    if (destination_fees_ == nullptr) { s.store_field("destination_fees", "null"); } else { destination_fees_->store(s, "destination_fees"); }
+    { const std::vector<object_ptr<fees>> &v = destination_fees_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("destination_fees", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_class_end();
   }
 }
@@ -739,56 +1411,38 @@ void query_info::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
-raw_accountState::raw_accountState()
+raw_fullAccountState::raw_fullAccountState()
   : balance_()
   , code_()
   , data_()
   , last_transaction_id_()
+  , block_id_()
   , frozen_hash_()
   , sync_utime_()
 {}
 
-raw_accountState::raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, std::string const &frozen_hash_, std::int64_t sync_utime_)
+raw_fullAccountState::raw_fullAccountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, object_ptr<ton_blockIdExt> &&block_id_, std::string const &frozen_hash_, std::int64_t sync_utime_)
   : balance_(balance_)
   , code_(std::move(code_))
   , data_(std::move(data_))
   , last_transaction_id_(std::move(last_transaction_id_))
+  , block_id_(std::move(block_id_))
   , frozen_hash_(std::move(frozen_hash_))
   , sync_utime_(sync_utime_)
 {}
 
-const std::int32_t raw_accountState::ID;
+const std::int32_t raw_fullAccountState::ID;
 
-void raw_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+void raw_fullAccountState::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "raw_accountState");
+    s.store_class_begin(field_name, "raw_fullAccountState");
     s.store_field("balance", balance_);
     s.store_bytes_field("code", code_);
     s.store_bytes_field("data", data_);
     if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    if (block_id_ == nullptr) { s.store_field("block_id", "null"); } else { block_id_->store(s, "block_id"); }
     s.store_bytes_field("frozen_hash", frozen_hash_);
     s.store_field("sync_utime", sync_utime_);
-    s.store_class_end();
-  }
-}
-
-raw_initialAccountState::raw_initialAccountState()
-  : code_()
-  , data_()
-{}
-
-raw_initialAccountState::raw_initialAccountState(std::string const &code_, std::string const &data_)
-  : code_(std::move(code_))
-  , data_(std::move(data_))
-{}
-
-const std::int32_t raw_initialAccountState::ID;
-
-void raw_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "raw_initialAccountState");
-    s.store_bytes_field("code", code_);
-    s.store_bytes_field("data", data_);
     s.store_class_end();
   }
 }
@@ -801,10 +1455,10 @@ raw_message::raw_message()
   , ihr_fee_()
   , created_lt_()
   , body_hash_()
-  , message_()
+  , msg_data_()
 {}
 
-raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, std::string const &message_)
+raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, object_ptr<msg_Data> &&msg_data_)
   : source_(std::move(source_))
   , destination_(std::move(destination_))
   , value_(value_)
@@ -812,7 +1466,7 @@ raw_message::raw_message(std::string const &source_, std::string const &destinat
   , ihr_fee_(ihr_fee_)
   , created_lt_(created_lt_)
   , body_hash_(std::move(body_hash_))
-  , message_(std::move(message_))
+  , msg_data_(std::move(msg_data_))
 {}
 
 const std::int32_t raw_message::ID;
@@ -827,7 +1481,7 @@ void raw_message::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_field("ihr_fee", ihr_fee_);
     s.store_field("created_lt", created_lt_);
     s.store_bytes_field("body_hash", body_hash_);
-    s.store_bytes_field("message", message_);
+    if (msg_data_ == nullptr) { s.store_field("msg_data", "null"); } else { msg_data_->store(s, "msg_data"); }
     s.store_class_end();
   }
 }
@@ -970,74 +1624,32 @@ void smc_runResult::store(td::TlStorerToString &s, const char *field_name) const
   }
 }
 
-testGiver_accountState::testGiver_accountState()
-  : balance_()
+ton_blockIdExt::ton_blockIdExt()
+  : workchain_()
+  , shard_()
   , seqno_()
-  , last_transaction_id_()
-  , sync_utime_()
+  , root_hash_()
+  , file_hash_()
 {}
 
-testGiver_accountState::testGiver_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
-  : balance_(balance_)
+ton_blockIdExt::ton_blockIdExt(std::int32_t workchain_, std::int64_t shard_, std::int32_t seqno_, std::string const &root_hash_, std::string const &file_hash_)
+  : workchain_(workchain_)
+  , shard_(shard_)
   , seqno_(seqno_)
-  , last_transaction_id_(std::move(last_transaction_id_))
-  , sync_utime_(sync_utime_)
+  , root_hash_(std::move(root_hash_))
+  , file_hash_(std::move(file_hash_))
 {}
 
-const std::int32_t testGiver_accountState::ID;
+const std::int32_t ton_blockIdExt::ID;
 
-void testGiver_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+void ton_blockIdExt::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testGiver_accountState");
-    s.store_field("balance", balance_);
+    s.store_class_begin(field_name, "ton_blockIdExt");
+    s.store_field("workchain", workchain_);
+    s.store_field("shard", shard_);
     s.store_field("seqno", seqno_);
-    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
-    s.store_field("sync_utime", sync_utime_);
-    s.store_class_end();
-  }
-}
-
-testWallet_accountState::testWallet_accountState()
-  : balance_()
-  , seqno_()
-  , last_transaction_id_()
-  , sync_utime_()
-{}
-
-testWallet_accountState::testWallet_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
-  : balance_(balance_)
-  , seqno_(seqno_)
-  , last_transaction_id_(std::move(last_transaction_id_))
-  , sync_utime_(sync_utime_)
-{}
-
-const std::int32_t testWallet_accountState::ID;
-
-void testWallet_accountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testWallet_accountState");
-    s.store_field("balance", balance_);
-    s.store_field("seqno", seqno_);
-    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
-    s.store_field("sync_utime", sync_utime_);
-    s.store_class_end();
-  }
-}
-
-testWallet_initialAccountState::testWallet_initialAccountState()
-  : public_key_()
-{}
-
-testWallet_initialAccountState::testWallet_initialAccountState(std::string const &public_key_)
-  : public_key_(std::move(public_key_))
-{}
-
-const std::int32_t testWallet_initialAccountState::ID;
-
-void testWallet_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testWallet_initialAccountState");
-    s.store_field("public_key", public_key_);
+    s.store_bytes_field("root_hash", root_hash_);
+    s.store_bytes_field("file_hash", file_hash_);
     s.store_class_end();
   }
 }
@@ -1055,7 +1667,25 @@ const std::int32_t tvm_cell::ID;
 void tvm_cell::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "tvm_cell");
-    s.store_field("bytes", bytes_);
+    s.store_bytes_field("bytes", bytes_);
+    s.store_class_end();
+  }
+}
+
+tvm_list::tvm_list()
+  : elements_()
+{}
+
+tvm_list::tvm_list(std::vector<object_ptr<tvm_StackEntry>> &&elements_)
+  : elements_(std::move(elements_))
+{}
+
+const std::int32_t tvm_list::ID;
+
+void tvm_list::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tvm_list");
+    { const std::vector<object_ptr<tvm_StackEntry>> &v = elements_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("elements", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_class_end();
   }
 }
@@ -1091,7 +1721,7 @@ const std::int32_t tvm_slice::ID;
 void tvm_slice::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "tvm_slice");
-    s.store_field("bytes", bytes_);
+    s.store_bytes_field("bytes", bytes_);
     s.store_class_end();
   }
 }
@@ -1150,6 +1780,42 @@ void tvm_stackEntryNumber::store(td::TlStorerToString &s, const char *field_name
   }
 }
 
+tvm_stackEntryTuple::tvm_stackEntryTuple()
+  : tuple_()
+{}
+
+tvm_stackEntryTuple::tvm_stackEntryTuple(object_ptr<tvm_tuple> &&tuple_)
+  : tuple_(std::move(tuple_))
+{}
+
+const std::int32_t tvm_stackEntryTuple::ID;
+
+void tvm_stackEntryTuple::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tvm_stackEntryTuple");
+    if (tuple_ == nullptr) { s.store_field("tuple", "null"); } else { tuple_->store(s, "tuple"); }
+    s.store_class_end();
+  }
+}
+
+tvm_stackEntryList::tvm_stackEntryList()
+  : list_()
+{}
+
+tvm_stackEntryList::tvm_stackEntryList(object_ptr<tvm_list> &&list_)
+  : list_(std::move(list_))
+{}
+
+const std::int32_t tvm_stackEntryList::ID;
+
+void tvm_stackEntryList::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tvm_stackEntryList");
+    if (list_ == nullptr) { s.store_field("list", "null"); } else { list_->store(s, "list"); }
+    s.store_class_end();
+  }
+}
+
 tvm_stackEntryUnsupported::tvm_stackEntryUnsupported() {
 }
 
@@ -1162,125 +1828,20 @@ void tvm_stackEntryUnsupported::store(td::TlStorerToString &s, const char *field
   }
 }
 
-uninited_accountState::uninited_accountState()
-  : balance_()
-  , last_transaction_id_()
-  , frozen_hash_()
-  , sync_utime_()
+tvm_tuple::tvm_tuple()
+  : elements_()
 {}
 
-uninited_accountState::uninited_accountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, std::string const &frozen_hash_, std::int64_t sync_utime_)
-  : balance_(balance_)
-  , last_transaction_id_(std::move(last_transaction_id_))
-  , frozen_hash_(std::move(frozen_hash_))
-  , sync_utime_(sync_utime_)
+tvm_tuple::tvm_tuple(std::vector<object_ptr<tvm_StackEntry>> &&elements_)
+  : elements_(std::move(elements_))
 {}
 
-const std::int32_t uninited_accountState::ID;
+const std::int32_t tvm_tuple::ID;
 
-void uninited_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+void tvm_tuple::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "uninited_accountState");
-    s.store_field("balance", balance_);
-    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
-    s.store_bytes_field("frozen_hash", frozen_hash_);
-    s.store_field("sync_utime", sync_utime_);
-    s.store_class_end();
-  }
-}
-
-wallet_accountState::wallet_accountState()
-  : balance_()
-  , seqno_()
-  , last_transaction_id_()
-  , sync_utime_()
-{}
-
-wallet_accountState::wallet_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
-  : balance_(balance_)
-  , seqno_(seqno_)
-  , last_transaction_id_(std::move(last_transaction_id_))
-  , sync_utime_(sync_utime_)
-{}
-
-const std::int32_t wallet_accountState::ID;
-
-void wallet_accountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_accountState");
-    s.store_field("balance", balance_);
-    s.store_field("seqno", seqno_);
-    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
-    s.store_field("sync_utime", sync_utime_);
-    s.store_class_end();
-  }
-}
-
-wallet_initialAccountState::wallet_initialAccountState()
-  : public_key_()
-{}
-
-wallet_initialAccountState::wallet_initialAccountState(std::string const &public_key_)
-  : public_key_(std::move(public_key_))
-{}
-
-const std::int32_t wallet_initialAccountState::ID;
-
-void wallet_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_initialAccountState");
-    s.store_field("public_key", public_key_);
-    s.store_class_end();
-  }
-}
-
-wallet_v3_accountState::wallet_v3_accountState()
-  : balance_()
-  , wallet_id_()
-  , seqno_()
-  , last_transaction_id_()
-  , sync_utime_()
-{}
-
-wallet_v3_accountState::wallet_v3_accountState(std::int64_t balance_, std::int64_t wallet_id_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
-  : balance_(balance_)
-  , wallet_id_(wallet_id_)
-  , seqno_(seqno_)
-  , last_transaction_id_(std::move(last_transaction_id_))
-  , sync_utime_(sync_utime_)
-{}
-
-const std::int32_t wallet_v3_accountState::ID;
-
-void wallet_v3_accountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_v3_accountState");
-    s.store_field("balance", balance_);
-    s.store_field("wallet_id", wallet_id_);
-    s.store_field("seqno", seqno_);
-    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
-    s.store_field("sync_utime", sync_utime_);
-    s.store_class_end();
-  }
-}
-
-wallet_v3_initialAccountState::wallet_v3_initialAccountState()
-  : public_key_()
-  , wallet_id_()
-{}
-
-wallet_v3_initialAccountState::wallet_v3_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_)
-  : public_key_(std::move(public_key_))
-  , wallet_id_(wallet_id_)
-{}
-
-const std::int32_t wallet_v3_initialAccountState::ID;
-
-void wallet_v3_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_v3_initialAccountState");
-    s.store_field("public_key", public_key_);
-    s.store_field("wallet_id", wallet_id_);
+    s.store_class_begin(field_name, "tvm_tuple");
+    { const std::vector<object_ptr<tvm_StackEntry>> &v = elements_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("elements", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_class_end();
   }
 }
@@ -1363,6 +1924,33 @@ void createNewKey::store(td::TlStorerToString &s, const char *field_name) const 
   }
 }
 
+createQuery::createQuery()
+  : private_key_()
+  , address_()
+  , timeout_()
+  , action_()
+{}
+
+createQuery::createQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&address_, std::int32_t timeout_, object_ptr<Action> &&action_)
+  : private_key_(std::move(private_key_))
+  , address_(std::move(address_))
+  , timeout_(timeout_)
+  , action_(std::move(action_))
+{}
+
+const std::int32_t createQuery::ID;
+
+void createQuery::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "createQuery");
+    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
+    if (address_ == nullptr) { s.store_field("address", "null"); } else { address_->store(s, "address"); }
+    s.store_field("timeout", timeout_);
+    if (action_ == nullptr) { s.store_field("action", "null"); } else { action_->store(s, "action"); }
+    s.store_class_end();
+  }
+}
+
 decrypt::decrypt()
   : encrypted_data_()
   , secret_()
@@ -1410,6 +1998,33 @@ void deleteKey::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "deleteKey");
     if (key_ == nullptr) { s.store_field("key", "null"); } else { key_->store(s, "key"); }
+    s.store_class_end();
+  }
+}
+
+dns_resolve::dns_resolve()
+  : account_address_()
+  , name_()
+  , category_()
+  , ttl_()
+{}
+
+dns_resolve::dns_resolve(object_ptr<accountAddress> &&account_address_, std::string const &name_, std::int32_t category_, std::int32_t ttl_)
+  : account_address_(std::move(account_address_))
+  , name_(std::move(name_))
+  , category_(category_)
+  , ttl_(ttl_)
+{}
+
+const std::int32_t dns_resolve::ID;
+
+void dns_resolve::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "dns_resolve");
+    if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
+    s.store_field("name", name_);
+    s.store_field("category", category_);
+    s.store_field("ttl", ttl_);
     s.store_class_end();
   }
 }
@@ -1495,92 +2110,59 @@ void exportPemKey::store(td::TlStorerToString &s, const char *field_name) const 
   }
 }
 
-generic_createSendGramsQuery::generic_createSendGramsQuery()
-  : private_key_()
-  , source_()
-  , destination_()
-  , amount_()
-  , timeout_()
-  , allow_send_to_uninited_()
-  , message_()
+exportUnencryptedKey::exportUnencryptedKey()
+  : input_key_()
 {}
 
-generic_createSendGramsQuery::generic_createSendGramsQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_)
-  : private_key_(std::move(private_key_))
-  , source_(std::move(source_))
-  , destination_(std::move(destination_))
-  , amount_(amount_)
-  , timeout_(timeout_)
-  , allow_send_to_uninited_(allow_send_to_uninited_)
-  , message_(std::move(message_))
+exportUnencryptedKey::exportUnencryptedKey(object_ptr<InputKey> &&input_key_)
+  : input_key_(std::move(input_key_))
 {}
 
-const std::int32_t generic_createSendGramsQuery::ID;
+const std::int32_t exportUnencryptedKey::ID;
 
-void generic_createSendGramsQuery::store(td::TlStorerToString &s, const char *field_name) const {
+void exportUnencryptedKey::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_createSendGramsQuery");
-    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
-    if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
-    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
-    s.store_field("amount", amount_);
-    s.store_field("timeout", timeout_);
-    s.store_field("allow_send_to_uninited", allow_send_to_uninited_);
-    s.store_bytes_field("message", message_);
+    s.store_class_begin(field_name, "exportUnencryptedKey");
+    if (input_key_ == nullptr) { s.store_field("input_key", "null"); } else { input_key_->store(s, "input_key"); }
     s.store_class_end();
   }
 }
 
-generic_getAccountState::generic_getAccountState()
+getAccountAddress::getAccountAddress()
+  : initial_account_state_()
+  , revision_()
+{}
+
+getAccountAddress::getAccountAddress(object_ptr<InitialAccountState> &&initial_account_state_, std::int32_t revision_)
+  : initial_account_state_(std::move(initial_account_state_))
+  , revision_(revision_)
+{}
+
+const std::int32_t getAccountAddress::ID;
+
+void getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "getAccountAddress");
+    if (initial_account_state_ == nullptr) { s.store_field("initial_account_state", "null"); } else { initial_account_state_->store(s, "initial_account_state"); }
+    s.store_field("revision", revision_);
+    s.store_class_end();
+  }
+}
+
+getAccountState::getAccountState()
   : account_address_()
 {}
 
-generic_getAccountState::generic_getAccountState(object_ptr<accountAddress> &&account_address_)
+getAccountState::getAccountState(object_ptr<accountAddress> &&account_address_)
   : account_address_(std::move(account_address_))
 {}
 
-const std::int32_t generic_getAccountState::ID;
+const std::int32_t getAccountState::ID;
 
-void generic_getAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+void getAccountState::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_getAccountState");
+    s.store_class_begin(field_name, "getAccountState");
     if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
-    s.store_class_end();
-  }
-}
-
-generic_sendGrams::generic_sendGrams()
-  : private_key_()
-  , source_()
-  , destination_()
-  , amount_()
-  , timeout_()
-  , allow_send_to_uninited_()
-  , message_()
-{}
-
-generic_sendGrams::generic_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_)
-  : private_key_(std::move(private_key_))
-  , source_(std::move(source_))
-  , destination_(std::move(destination_))
-  , amount_(amount_)
-  , timeout_(timeout_)
-  , allow_send_to_uninited_(allow_send_to_uninited_)
-  , message_(std::move(message_))
-{}
-
-const std::int32_t generic_sendGrams::ID;
-
-void generic_sendGrams::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_sendGrams");
-    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
-    if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
-    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
-    s.store_field("amount", amount_);
-    s.store_field("timeout", timeout_);
-    s.store_field("allow_send_to_uninited", allow_send_to_uninited_);
-    s.store_bytes_field("message", message_);
     s.store_class_end();
   }
 }
@@ -1657,6 +2239,24 @@ void getLogVerbosityLevel::store(td::TlStorerToString &s, const char *field_name
   }
 }
 
+guessAccountRevision::guessAccountRevision()
+  : initial_account_state_()
+{}
+
+guessAccountRevision::guessAccountRevision(object_ptr<InitialAccountState> &&initial_account_state_)
+  : initial_account_state_(std::move(initial_account_state_))
+{}
+
+const std::int32_t guessAccountRevision::ID;
+
+void guessAccountRevision::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "guessAccountRevision");
+    if (initial_account_state_ == nullptr) { s.store_field("initial_account_state", "null"); } else { initial_account_state_->store(s, "initial_account_state"); }
+    s.store_class_end();
+  }
+}
+
 importEncryptedKey::importEncryptedKey()
   : local_password_()
   , key_password_()
@@ -1729,6 +2329,27 @@ void importPemKey::store(td::TlStorerToString &s, const char *field_name) const 
   }
 }
 
+importUnencryptedKey::importUnencryptedKey()
+  : local_password_()
+  , exported_unencrypted_key_()
+{}
+
+importUnencryptedKey::importUnencryptedKey(td::SecureString &&local_password_, object_ptr<exportedUnencryptedKey> &&exported_unencrypted_key_)
+  : local_password_(std::move(local_password_))
+  , exported_unencrypted_key_(std::move(exported_unencrypted_key_))
+{}
+
+const std::int32_t importUnencryptedKey::ID;
+
+void importUnencryptedKey::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "importUnencryptedKey");
+    s.store_bytes_field("local_password", local_password_);
+    if (exported_unencrypted_key_ == nullptr) { s.store_field("exported_unencrypted_key", "null"); } else { exported_unencrypted_key_->store(s, "exported_unencrypted_key"); }
+    s.store_class_end();
+  }
+}
+
 init::init()
   : options_()
 {}
@@ -1779,6 +2400,27 @@ const std::int32_t liteServer_getInfo::ID;
 void liteServer_getInfo::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "liteServer_getInfo");
+    s.store_class_end();
+  }
+}
+
+msg_decrypt::msg_decrypt()
+  : input_key_()
+  , data_()
+{}
+
+msg_decrypt::msg_decrypt(object_ptr<InputKey> &&input_key_, object_ptr<msg_dataArray> &&data_)
+  : input_key_(std::move(input_key_))
+  , data_(std::move(data_))
+{}
+
+const std::int32_t msg_decrypt::ID;
+
+void msg_decrypt::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_decrypt");
+    if (input_key_ == nullptr) { s.store_field("input_key", "null"); } else { input_key_->store(s, "input_key"); }
+    if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
     s.store_class_end();
   }
 }
@@ -2005,24 +2647,6 @@ void raw_createQuery::store(td::TlStorerToString &s, const char *field_name) con
   }
 }
 
-raw_getAccountAddress::raw_getAccountAddress()
-  : initital_account_state_()
-{}
-
-raw_getAccountAddress::raw_getAccountAddress(object_ptr<raw_initialAccountState> &&initital_account_state_)
-  : initital_account_state_(std::move(initital_account_state_))
-{}
-
-const std::int32_t raw_getAccountAddress::ID;
-
-void raw_getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "raw_getAccountAddress");
-    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
-    s.store_class_end();
-  }
-}
-
 raw_getAccountState::raw_getAccountState()
   : account_address_()
 {}
@@ -2042,12 +2666,14 @@ void raw_getAccountState::store(td::TlStorerToString &s, const char *field_name)
 }
 
 raw_getTransactions::raw_getTransactions()
-  : account_address_()
+  : private_key_()
+  , account_address_()
   , from_transaction_id_()
 {}
 
-raw_getTransactions::raw_getTransactions(object_ptr<accountAddress> &&account_address_, object_ptr<internal_transactionId> &&from_transaction_id_)
-  : account_address_(std::move(account_address_))
+raw_getTransactions::raw_getTransactions(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&account_address_, object_ptr<internal_transactionId> &&from_transaction_id_)
+  : private_key_(std::move(private_key_))
+  , account_address_(std::move(account_address_))
   , from_transaction_id_(std::move(from_transaction_id_))
 {}
 
@@ -2056,6 +2682,7 @@ const std::int32_t raw_getTransactions::ID;
 void raw_getTransactions::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "raw_getTransactions");
+    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
     if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
     if (from_transaction_id_ == nullptr) { s.store_field("from_transaction_id", "null"); } else { from_transaction_id_->store(s, "from_transaction_id"); }
     s.store_class_end();
@@ -2263,141 +2890,6 @@ void sync::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
-testGiver_getAccountAddress::testGiver_getAccountAddress() {
-}
-
-const std::int32_t testGiver_getAccountAddress::ID;
-
-void testGiver_getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testGiver_getAccountAddress");
-    s.store_class_end();
-  }
-}
-
-testGiver_getAccountState::testGiver_getAccountState() {
-}
-
-const std::int32_t testGiver_getAccountState::ID;
-
-void testGiver_getAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testGiver_getAccountState");
-    s.store_class_end();
-  }
-}
-
-testGiver_sendGrams::testGiver_sendGrams()
-  : destination_()
-  , seqno_()
-  , amount_()
-  , message_()
-{}
-
-testGiver_sendGrams::testGiver_sendGrams(object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_)
-  : destination_(std::move(destination_))
-  , seqno_(seqno_)
-  , amount_(amount_)
-  , message_(std::move(message_))
-{}
-
-const std::int32_t testGiver_sendGrams::ID;
-
-void testGiver_sendGrams::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testGiver_sendGrams");
-    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
-    s.store_field("seqno", seqno_);
-    s.store_field("amount", amount_);
-    s.store_bytes_field("message", message_);
-    s.store_class_end();
-  }
-}
-
-testWallet_getAccountAddress::testWallet_getAccountAddress()
-  : initital_account_state_()
-{}
-
-testWallet_getAccountAddress::testWallet_getAccountAddress(object_ptr<testWallet_initialAccountState> &&initital_account_state_)
-  : initital_account_state_(std::move(initital_account_state_))
-{}
-
-const std::int32_t testWallet_getAccountAddress::ID;
-
-void testWallet_getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testWallet_getAccountAddress");
-    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
-    s.store_class_end();
-  }
-}
-
-testWallet_getAccountState::testWallet_getAccountState()
-  : account_address_()
-{}
-
-testWallet_getAccountState::testWallet_getAccountState(object_ptr<accountAddress> &&account_address_)
-  : account_address_(std::move(account_address_))
-{}
-
-const std::int32_t testWallet_getAccountState::ID;
-
-void testWallet_getAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testWallet_getAccountState");
-    if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
-    s.store_class_end();
-  }
-}
-
-testWallet_init::testWallet_init()
-  : private_key_()
-{}
-
-testWallet_init::testWallet_init(object_ptr<InputKey> &&private_key_)
-  : private_key_(std::move(private_key_))
-{}
-
-const std::int32_t testWallet_init::ID;
-
-void testWallet_init::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testWallet_init");
-    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
-    s.store_class_end();
-  }
-}
-
-testWallet_sendGrams::testWallet_sendGrams()
-  : private_key_()
-  , destination_()
-  , seqno_()
-  , amount_()
-  , message_()
-{}
-
-testWallet_sendGrams::testWallet_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_)
-  : private_key_(std::move(private_key_))
-  , destination_(std::move(destination_))
-  , seqno_(seqno_)
-  , amount_(amount_)
-  , message_(std::move(message_))
-{}
-
-const std::int32_t testWallet_sendGrams::ID;
-
-void testWallet_sendGrams::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "testWallet_sendGrams");
-    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
-    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
-    s.store_field("seqno", seqno_);
-    s.store_field("amount", amount_);
-    s.store_bytes_field("message", message_);
-    s.store_class_end();
-  }
-}
-
 unpackAccountAddress::unpackAccountAddress()
   : account_address_()
 {}
@@ -2416,107 +2908,23 @@ void unpackAccountAddress::store(td::TlStorerToString &s, const char *field_name
   }
 }
 
-wallet_getAccountAddress::wallet_getAccountAddress()
-  : initital_account_state_()
+withBlock::withBlock()
+  : id_()
+  , function_()
 {}
 
-wallet_getAccountAddress::wallet_getAccountAddress(object_ptr<wallet_initialAccountState> &&initital_account_state_)
-  : initital_account_state_(std::move(initital_account_state_))
+withBlock::withBlock(object_ptr<ton_blockIdExt> &&id_, object_ptr<Function> &&function_)
+  : id_(std::move(id_))
+  , function_(std::move(function_))
 {}
 
-const std::int32_t wallet_getAccountAddress::ID;
+const std::int32_t withBlock::ID;
 
-void wallet_getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
+void withBlock::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_getAccountAddress");
-    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
-    s.store_class_end();
-  }
-}
-
-wallet_getAccountState::wallet_getAccountState()
-  : account_address_()
-{}
-
-wallet_getAccountState::wallet_getAccountState(object_ptr<accountAddress> &&account_address_)
-  : account_address_(std::move(account_address_))
-{}
-
-const std::int32_t wallet_getAccountState::ID;
-
-void wallet_getAccountState::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_getAccountState");
-    if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
-    s.store_class_end();
-  }
-}
-
-wallet_init::wallet_init()
-  : private_key_()
-{}
-
-wallet_init::wallet_init(object_ptr<InputKey> &&private_key_)
-  : private_key_(std::move(private_key_))
-{}
-
-const std::int32_t wallet_init::ID;
-
-void wallet_init::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_init");
-    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
-    s.store_class_end();
-  }
-}
-
-wallet_sendGrams::wallet_sendGrams()
-  : private_key_()
-  , destination_()
-  , seqno_()
-  , valid_until_()
-  , amount_()
-  , message_()
-{}
-
-wallet_sendGrams::wallet_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_)
-  : private_key_(std::move(private_key_))
-  , destination_(std::move(destination_))
-  , seqno_(seqno_)
-  , valid_until_(valid_until_)
-  , amount_(amount_)
-  , message_(std::move(message_))
-{}
-
-const std::int32_t wallet_sendGrams::ID;
-
-void wallet_sendGrams::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_sendGrams");
-    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
-    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
-    s.store_field("seqno", seqno_);
-    s.store_field("valid_until", valid_until_);
-    s.store_field("amount", amount_);
-    s.store_bytes_field("message", message_);
-    s.store_class_end();
-  }
-}
-
-wallet_v3_getAccountAddress::wallet_v3_getAccountAddress()
-  : initital_account_state_()
-{}
-
-wallet_v3_getAccountAddress::wallet_v3_getAccountAddress(object_ptr<wallet_v3_initialAccountState> &&initital_account_state_)
-  : initital_account_state_(std::move(initital_account_state_))
-{}
-
-const std::int32_t wallet_v3_getAccountAddress::ID;
-
-void wallet_v3_getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "wallet_v3_getAccountAddress");
-    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
+    s.store_class_begin(field_name, "withBlock");
+    if (id_ == nullptr) { s.store_field("id", "null"); } else { id_->store(s, "id"); }
+    if (function_ == nullptr) { s.store_field("function", "null"); } else { function_->store(s, "function"); }
     s.store_class_end();
   }
 }

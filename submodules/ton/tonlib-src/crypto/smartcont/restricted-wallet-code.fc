@@ -62,6 +62,12 @@ int seqno() method_id {
   return get_data().begin_parse().preload_uint(32);
 }
 
+int get_public_key() method_id {
+  var cs = get_data().begin_parse();
+  cs~load_uint(32);
+  return cs.preload_uint(256);
+}
+
 int balance() method_id {
-  return restricted?() ? 0 : get_balance().first();
+  return restricted?() ? 0 : get_balance().pair_first();
 }

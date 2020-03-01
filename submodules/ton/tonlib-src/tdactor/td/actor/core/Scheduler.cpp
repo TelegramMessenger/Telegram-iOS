@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/actor/core/Scheduler.h"
 
@@ -24,6 +24,7 @@
 namespace td {
 namespace actor {
 namespace core {
+
 Scheduler::Scheduler(std::shared_ptr<SchedulerGroupInfo> scheduler_group_info, SchedulerId id, size_t cpu_threads_count)
     : scheduler_group_info_(std::move(scheduler_group_info)), cpu_threads_(cpu_threads_count) {
   scheduler_group_info_->active_scheduler_count++;
@@ -31,17 +32,21 @@ Scheduler::Scheduler(std::shared_ptr<SchedulerGroupInfo> scheduler_group_info, S
   info_->id = id;
   if (cpu_threads_count != 0) {
     info_->cpu_threads_count = cpu_threads_count;
-    info_->cpu_queue = std::make_unique<MpmcQueue<SchedulerMessage>>(1024, max_thread_count());
+    info_->cpu_queue = std::make_unique<MpmcQueue<SchedulerMessage::Raw *>>(1024, max_thread_count());
     info_->cpu_queue_waiter = std::make_unique<MpmcWaiter>();
+
+    info_->cpu_local_queue = std::vector<LocalQueue<SchedulerMessage::Raw *>>(cpu_threads_count);
   }
   info_->io_queue = std::make_unique<MpscPollableQueue<SchedulerMessage>>();
   info_->io_queue->init();
 
   info_->cpu_workers.resize(cpu_threads_count);
+  td::uint8 cpu_worker_id = 0;
   for (auto &worker : info_->cpu_workers) {
-    worker = std::make_unique<WorkerInfo>(WorkerInfo::Type::Cpu, true);
+    worker = std::make_unique<WorkerInfo>(WorkerInfo::Type::Cpu, true, CpuWorkerId{cpu_worker_id});
+    cpu_worker_id++;
   }
-  info_->io_worker = std::make_unique<WorkerInfo>(WorkerInfo::Type::Io, !info_->cpu_workers.empty());
+  info_->io_worker = std::make_unique<WorkerInfo>(WorkerInfo::Type::Io, !info_->cpu_workers.empty(), CpuWorkerId{});
 
   poll_.init();
   io_worker_ = std::make_unique<IoWorker>(*info_->io_queue);
@@ -62,8 +67,9 @@ Scheduler::~Scheduler() {
 void Scheduler::start() {
   for (size_t i = 0; i < cpu_threads_.size(); i++) {
     cpu_threads_[i] = td::thread([this, i] {
-      this->run_in_context_impl(*this->info_->cpu_workers[i],
-                                [this] { CpuWorker(*info_->cpu_queue, *info_->cpu_queue_waiter).run(); });
+      this->run_in_context_impl(*this->info_->cpu_workers[i], [this, i] {
+        CpuWorker(*info_->cpu_queue, *info_->cpu_queue_waiter, i, info_->cpu_local_queue).run();
+      });
     });
     cpu_threads_[i].set_name(PSLICE() << "#" << info_->id.value() << ":cpu#" << i);
   }
@@ -121,9 +127,14 @@ void Scheduler::do_stop() {
   scheduler_group_info_->active_scheduler_count_condition_variable.notify_all();
 }
 
-Scheduler::ContextImpl::ContextImpl(ActorInfoCreator *creator, SchedulerId scheduler_id,
+Scheduler::ContextImpl::ContextImpl(ActorInfoCreator *creator, SchedulerId scheduler_id, CpuWorkerId cpu_worker_id,
                                     SchedulerGroupInfo *scheduler_group, Poll *poll, KHeap<double> *heap)
-    : creator_(creator), scheduler_id_(scheduler_id), scheduler_group_(scheduler_group), poll_(poll), heap_(heap) {
+    : creator_(creator)
+    , scheduler_id_(scheduler_id)
+    , cpu_worker_id_(cpu_worker_id)
+    , scheduler_group_(scheduler_group)
+    , poll_(poll)
+    , heap_(heap) {
 }
 
 SchedulerId Scheduler::ContextImpl::get_scheduler_id() const {
@@ -138,7 +149,18 @@ void Scheduler::ContextImpl::add_to_queue(ActorInfoPtr actor_info_ptr, Scheduler
   if (need_poll || !info.cpu_queue) {
     info.io_queue->writer_put(std::move(actor_info_ptr));
   } else {
-    info.cpu_queue->push(std::move(actor_info_ptr), get_thread_id());
+    if (scheduler_id == get_scheduler_id() && cpu_worker_id_.is_valid()) {
+      // may push local
+      CHECK(actor_info_ptr);
+      auto raw = actor_info_ptr.release();
+      auto should_notify = info.cpu_local_queue[cpu_worker_id_.value()].push(
+          raw, [&](auto value) { info.cpu_queue->push(value, get_thread_id()); });
+      if (should_notify) {
+        info.cpu_queue_waiter->notify();
+      }
+      return;
+    }
+    info.cpu_queue->push(actor_info_ptr.release(), get_thread_id());
     info.cpu_queue_waiter->notify();
   }
 }
@@ -254,13 +276,26 @@ void Scheduler::close_scheduler_group(SchedulerGroupInfo &group_info) {
       }
 
       // Drain cpu queue
+      for (auto &q : scheduler_info.cpu_local_queue) {
+        auto &cpu_queue = q;
+        while (true) {
+          SchedulerMessage::Raw *raw_message;
+          if (!cpu_queue.try_pop(raw_message)) {
+            break;
+          }
+          SchedulerMessage(SchedulerMessage::acquire_t{}, raw_message);
+          // message's destructor is called
+          queues_are_empty = false;
+        }
+      }
       if (scheduler_info.cpu_queue) {
         auto &cpu_queue = *scheduler_info.cpu_queue;
         while (true) {
-          SchedulerMessage message;
-          if (!cpu_queue.try_pop(message, get_thread_id())) {
+          SchedulerMessage::Raw *raw_message;
+          if (!cpu_queue.try_pop(raw_message, get_thread_id())) {
             break;
           }
+          SchedulerMessage(SchedulerMessage::acquire_t{}, raw_message);
           // message's destructor is called
           queues_are_empty = false;
         }

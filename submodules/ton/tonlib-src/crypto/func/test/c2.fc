@@ -1,0 +1,10 @@
+global ((int, int) -> int) op;
+
+int check_assoc(int a, int b, int c) {
+  return op(op(a, b), c) == op(a, op(b, c));
+}
+
+int main() {
+  op = _+_;
+  return check_assoc(2, 3, 9);
+}

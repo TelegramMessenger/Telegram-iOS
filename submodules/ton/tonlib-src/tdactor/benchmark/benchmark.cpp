@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "third_party/FAAArrayQueue.h"
 #include "third_party/HazardPointers.h"
@@ -56,7 +56,10 @@ extern "C" {
 #include "td/utils/Random.h"
 #include "td/utils/Slice.h"
 #include "td/utils/Status.h"
+#include "td/utils/StealingQueue.h"
+#include "td/utils/ThreadSafeCounter.h"
 #include "td/utils/UInt.h"
+#include "td/utils/VectorQueue.h"
 
 #include <algorithm>
 #include <array>
@@ -796,10 +799,13 @@ class MpmcQueueBenchmark : public td::Benchmark {
     std::vector<td::thread> m_threads(m_);
     auto impl = std::make_unique<Impl>(n_ + m_ + 1);
     size_t thread_id = 0;
+    td::ThreadSafeCounter counter;
+    CHECK(counter.sum() == 0);
     for (auto &thread : m_threads) {
       thread = td::thread([&, thread_id] {
         while (true) {
           size_t value = impl->pop(thread_id);
+          counter.add(-static_cast<td::int64>(value));
           if (!value) {
             break;
           }
@@ -811,6 +817,7 @@ class MpmcQueueBenchmark : public td::Benchmark {
       thread = td::thread([&, thread_id] {
         for (int i = 0; i < n / n_; i++) {
           impl->push(static_cast<size_t>(i + 1), thread_id);
+          counter.add(i + 1);
         }
       });
       thread_id++;
@@ -818,7 +825,10 @@ class MpmcQueueBenchmark : public td::Benchmark {
     for (auto &thread : n_threads) {
       thread.join();
     }
-    for (int i = 0; i < m_; i++) {
+    while (counter.sum() != 0) {
+      td::this_thread::yield();
+    }
+    for (int i = 0; i < m_ + n_ + 1; i++) {
       impl->push(0, thread_id);
     }
     for (auto &thread : m_threads) {
@@ -830,6 +840,62 @@ class MpmcQueueBenchmark : public td::Benchmark {
  private:
   int n_;
   int m_;
+};
+
+template <class Impl>
+class MpmcQueueBenchmark2 : public td::Benchmark {
+ public:
+  MpmcQueueBenchmark2(int n, int k) : n_(n), k_(k) {
+  }
+  std::string get_description() const override {
+    return PSTRING() << "MpmcQueueBenchmark2 " << n_ << " " << k_ << " " << Impl::get_description();
+  }
+
+  void run(int n) override {
+    std::vector<td::thread> n_threads(n_);
+    auto impl = std::make_unique<Impl>(n_ + 1);
+    size_t thread_id = 0;
+    std::atomic<int> left{k_};
+
+    for (int i = 0; i < k_; i++) {
+      impl->push(n, thread_id);
+    }
+
+    for (auto &thread : n_threads) {
+      thread = td::thread([&, thread_id] {
+        while (true) {
+          size_t value = impl->pop(thread_id);
+          if (value > 1) {
+            impl->push(value - 1, thread_id);
+          }
+          if (value == 1) {
+            left--;
+          }
+          if (!value) {
+            break;
+          }
+        }
+      });
+      thread_id++;
+    }
+
+    while (left.load() != 0) {
+      td::this_thread::yield();
+    }
+
+    for (int i = 0; i < n_ + 1; i++) {
+      impl->push(0, thread_id);
+    }
+
+    for (auto &thread : n_threads) {
+      thread.join();
+    }
+    impl.reset();
+  }
+
+ private:
+  int n_;
+  int k_;
 };
 
 class Cheat {
@@ -959,26 +1025,95 @@ std::string CfQueueT<FAAArrayQueue<Cell>, Cell>::get_description() {
 template <class Value>
 class MoodyQueue {
  public:
-  explicit MoodyQueue(size_t) {
+  explicit MoodyQueue(size_t n) {
+    for (size_t i = 0; i < n; i++) {
+      p.push_back(moodycamel::ProducerToken(q));
+      c.push_back(moodycamel::ConsumerToken(q));
+    }
   }
   static std::string get_description() {
     return "moodycamel queue";
   }
-  void push(Value v, size_t) {
-    q.enqueue(v);
+  void push(Value v, size_t tid) {
+    q.enqueue(p[tid], v);
   }
-  Value pop(size_t) {
+  Value pop(size_t tid) {
     Value res;
-    while (!q.try_dequeue(res)) {
+    while (!q.try_dequeue(c[tid], res)) {
     }
+    //q.wait_dequeue(c[tid], res);
     return res;
   }
-  bool try_pop(Value &value, size_t) {
-    return q.try_dequeue(value);
+  bool try_pop(Value &value, size_t tid) {
+    return q.try_dequeue(c[tid], value);
   }
 
  private:
   moodycamel::ConcurrentQueue<Value> q;
+  std::vector<moodycamel::ProducerToken> p;
+  std::vector<moodycamel::ConsumerToken> c;
+};
+
+struct Sem {
+ public:
+  void post() {
+    if (++cnt_ == 0) {
+      {
+        std::unique_lock<std::mutex> lk(mutex_);
+      }
+      cnd_.notify_one();
+    }
+  }
+  void wait(int cnt = 1) {
+    auto was = cnt_.fetch_sub(cnt);
+    if (was >= cnt) {
+      return;
+    }
+    std::unique_lock<std::mutex> lk(mutex_);
+    cnd_.wait(lk, [&] { return cnt_ >= 0; });
+  }
+
+ private:
+  std::mutex mutex_;
+  std::condition_variable cnd_;
+  std::atomic<int> cnt_{0};
+};
+
+template <class Value>
+class MagicQueue {
+ public:
+  explicit MagicQueue(size_t n) : n_(n), qs_(n_ - 1), pos_{0} {
+  }
+  static std::string get_description() {
+    return "magic queue";
+  }
+  void push(Value v, size_t tid) {
+    if (v == 0) {
+      return;
+    }
+
+    if (tid + 1 == n_) {
+      qs_[pos_].push(v);
+      pos_ = (pos_ + 1) % (n_ - 1);
+    } else {
+      qs_[tid].push(v);
+    }
+  }
+  Value pop(size_t tid) {
+    CHECK(tid + 1 != n_);
+    if (qs_[tid].empty()) {
+      return 0;
+    }
+    return qs_[tid].pop();
+  }
+  bool try_pop(Value &value, size_t) {
+    UNREACHABLE();
+  }
+
+ private:
+  size_t n_;
+  std::vector<td::VectorQueue<Value>> qs_;
+  size_t pos_;
 };
 
 #if TG_LCR_QUEUE
@@ -1110,65 +1245,155 @@ class WaitQueue {
   static std::string get_description() {
     return "Wait + " + Q::get_description();
   }
-  explicit WaitQueue(size_t threads_n) : impl(threads_n) {
+
+  explicit WaitQueue(size_t threads_n) : impl(threads_n), slots(threads_n) {
+    for (size_t i = 0; i < threads_n; i++) {
+      waiter.init_slot(slots[i].slot, static_cast<int>(i));
+    }
   }
+
   T pop(size_t thread_id) {
     T res;
-    int yields = 0;
-    while (!impl.try_pop(res, thread_id)) {
-      yields = waiter.wait(yields, static_cast<uint32>(thread_id));
+    while (true) {
+      if (slots[thread_id].local_queue.try_pop(res)) {
+        break;
+      }
+      if (impl.try_pop(res, thread_id)) {
+        break;
+      }
+      waiter.wait(slots[thread_id].slot);
     }
-    waiter.stop_wait(yields, static_cast<uint32>(thread_id));
+    waiter.stop_wait(slots[thread_id].slot);
+    //LOG(ERROR) << "GOT";
     return res;
   }
+
+  void push_local(T value, size_t thread_id) {
+    auto o_value = slots[thread_id].local_queue.push(value);
+    if (o_value) {
+      push(o_value.unwrap, thread_id);
+    }
+  }
+
   void push(T value, size_t thread_id) {
-    impl.push(std::move(value), static_cast<uint32>(thread_id));
+    impl.push(value, static_cast<uint32>(thread_id));
     waiter.notify();
   }
 
  private:
   W waiter;
   Q impl;
+  struct Slot {
+    typename W::Slot slot;
+    td::actor::core::LocalQueue<T> local_queue;
+  };
+  std::vector<Slot> slots;
+};
+template <class Q, class W, class T>
+class StealingWaitQueue {
+ public:
+  static std::string get_description() {
+    return "StealWait + " + Q::get_description();
+  }
+
+  explicit StealingWaitQueue(size_t threads_n) : impl(threads_n), slots(threads_n) {
+    for (size_t i = 0; i < threads_n; i++) {
+      waiter.init_slot(slots[i].slot, static_cast<int>(i));
+    }
+  }
+
+  T pop(size_t thread_id) {
+    T res;
+    while (true) {
+      if (slots[thread_id].stealing_queue.local_pop(res)) {
+        break;
+      }
+      if (slots[thread_id].local_queue.try_pop(res)) {
+        break;
+      }
+      if (impl.try_pop(res, thread_id)) {
+        break;
+      }
+
+      bool ok = false;
+      for (size_t i = 1; i < slots.size(); i++) {
+        auto pos = (i + thread_id) % slots.size();
+        if (slots[thread_id].stealing_queue.steal(res, slots[pos].stealing_queue)) {
+          ok = true;
+          break;
+        }
+      }
+      if (ok) {
+        break;
+      }
+      waiter.wait(slots[thread_id].slot);
+    }
+    waiter.stop_wait(slots[thread_id].slot);
+    //LOG(ERROR) << "GOT";
+    return res;
+  }
+
+  void push_local(T value, size_t thread_id) {
+    auto o_value = slots[thread_id].local_queue.push(value);
+    if (o_value) {
+      push(o_value.unwrap, thread_id);
+    }
+  }
+
+  void push(T value, size_t thread_id) {
+    slots[thread_id].stealing_queue.local_push(value,
+                                               [&](auto value) { impl.push(value, static_cast<uint32>(thread_id)); });
+    waiter.notify();
+  }
+
+ private:
+  W waiter;
+  Q impl;
+  struct Slot {
+    typename W::Slot slot;
+    td::actor::core::LocalQueue<T> local_queue;
+    td::StealingQueue<T> stealing_queue;
+  };
+  std::vector<Slot> slots;
 };
 
 void run_queue_bench(int n, int m) {
-  bench(MpmcQueueBenchmark<WaitQueue<td::MpmcQueue<size_t>, td::MpmcWaiter, size_t>>(n, m), 2);
-  bench(MpmcQueueBenchmark<td::MpmcQueue<size_t>>(n, m), 2);
-  bench(MpmcQueueBenchmark<td::MpmcQueueOld<size_t>>(n, m), 2);
-  bench(MpmcQueueBenchmark<Cheat>(n, m), 2);
-  bench(MpmcQueueBenchmark<CfQueue<FAAArrayQueue<size_t>>>(n, m), 2);
-  bench(MpmcQueueBenchmark<CfQueue<LazyIndexArrayQueue<size_t>>>(n, m), 2);
-  bench(MpmcQueueBenchmark<StupidQueue<size_t>>(n, m), 2);
+  bench(MpmcQueueBenchmark<MoodyQueue<size_t>>(n, m), 2);
+  bench(MpmcQueueBenchmark<StealingWaitQueue<td::MpmcQueue<size_t>, td::MpmcEagerWaiter, size_t>>(n, m), 2);
+  bench(MpmcQueueBenchmark<StealingWaitQueue<td::MpmcQueue<size_t>, td::MpmcSleepyWaiter, size_t>>(n, m), 2);
+  bench(MpmcQueueBenchmark<WaitQueue<td::MpmcQueue<size_t>, td::MpmcEagerWaiter, size_t>>(n, m), 2);
+  bench(MpmcQueueBenchmark<WaitQueue<td::MpmcQueue<size_t>, td::MpmcSleepyWaiter, size_t>>(n, m), 2);
+  //bench(MpmcQueueBenchmark<td::MpmcQueue<size_t>>(n, m), 2);
+  //bench(MpmcQueueBenchmark<td::MpmcQueueOld<size_t>>(n, m), 2);
+  //bench(MpmcQueueBenchmark<Cheat>(n, m), 2);
+  //bench(MpmcQueueBenchmark<CfQueue<FAAArrayQueue<size_t>>>(n, m), 2);
+  //bench(MpmcQueueBenchmark<CfQueue<LazyIndexArrayQueue<size_t>>>(n, m), 2);
+  //bench(MpmcQueueBenchmark<StupidQueue<size_t>>(n, m), 2);
+
   //bench(MpmcQueueBenchmark<MpQueue>(n, m), 2);
 #if TG_LCR_QUEUE
   bench(MpmcQueueBenchmark<CfQueue<LCRQueue<size_t>>>(n, m), 2);
 #endif
 }
+void run_queue_bench2(int n, int k) {
+  bench(MpmcQueueBenchmark2<StealingWaitQueue<td::MpmcQueue<size_t>, td::MpmcSleepyWaiter, size_t>>(n, k), 2);
+  bench(MpmcQueueBenchmark2<StealingWaitQueue<td::MpmcQueue<size_t>, td::MpmcEagerWaiter, size_t>>(n, k), 2);
+  bench(MpmcQueueBenchmark2<MagicQueue<size_t>>(n, k), 2);
+  bench(MpmcQueueBenchmark2<MoodyQueue<size_t>>(n, k), 2);
+  bench(MpmcQueueBenchmark2<WaitQueue<td::MpmcQueue<size_t>, td::MpmcEagerWaiter, size_t>>(n, k), 2);
+  bench(MpmcQueueBenchmark2<WaitQueue<td::MpmcQueue<size_t>, td::MpmcSleepyWaiter, size_t>>(n, k), 2);
+  //bench(MpmcQueueBenchmark2<td::MpmcQueue<size_t>>(n, k), 2);
+  //bench(MpmcQueueBenchmark2<td::MpmcQueueOld<size_t>>(n, k), 2);
+  //bench(MpmcQueueBenchmark2<Cheat>(n, k), 2);
+  //bench(MpmcQueueBenchmark2<CfQueue<FAAArrayQueue<size_t>>>(n, k), 2);
+  //bench(MpmcQueueBenchmark2<CfQueue<LazyIndexArrayQueue<size_t>>>(n, k), 2);
+  //bench(MpmcQueueBenchmark2<StupidQueue<size_t>>(n, k), 2);
 
-struct Sem {
- public:
-  void post() {
-    if (++cnt_ == 0) {
-      {
-        std::unique_lock<std::mutex> lk(mutex_);
-      }
-      cnd_.notify_one();
-    }
-  }
-  void wait(int cnt = 1) {
-    auto was = cnt_.fetch_sub(cnt);
-    if (was >= cnt) {
-      return;
-    }
-    std::unique_lock<std::mutex> lk(mutex_);
-    cnd_.wait(lk, [&] { return cnt_ >= 0; });
-  }
-
- private:
-  std::mutex mutex_;
-  std::condition_variable cnd_;
-  std::atomic<int> cnt_{0};
-};
+  //bench(MpmcQueueBenchmark<MpQueue>(n, m), 2);
+#if TG_LCR_QUEUE
+  bench(MpmcQueueBenchmark2<CfQueue<LCRQueue<size_t>>>(n, k), 2);
+#endif
+}
 
 class ChainedSpawn : public td::Benchmark {
  public:
@@ -1415,17 +1640,18 @@ class YieldMany : public td::Benchmark {
 int main(int argc, char **argv) {
   if (argc > 1) {
     if (argv[1][0] == 'a') {
-      bench_n(MpmcQueueBenchmark<td::MpmcQueue<size_t>>(1, 1), 1 << 26);
+      bench_n(MpmcQueueBenchmark2<WaitQueue<td::MpmcQueue<size_t>, td::MpmcEagerWaiter, size_t>>(50, 1), 1 << 26);
+      //bench_n(MpmcQueueBenchmark<td::MpmcQueue<size_t>>(1, 1), 1 << 26);
       //bench_n(MpmcQueueBenchmark<MpQueue>(1, 40), 1 << 20);
       //bench_n(MpmcQueueBenchmark<CfQueue<LCRQueue<size_t>>>(1, 40), 1 << 20);
     } else {
-      bench_n(MpmcQueueBenchmark<td::MpmcQueueOld<size_t>>(1, 1), 1 << 26);
+      bench_n(MpmcQueueBenchmark2<WaitQueue<td::MpmcQueue<size_t>, td::MpmcSleepyWaiter, size_t>>(50, 1), 1 << 26);
+      //bench_n(MpmcQueueBenchmark<td::MpmcQueueOld<size_t>>(1, 1), 1 << 26);
       //bench_n(MpmcQueueBenchmark<CfQueue<LCRQueue<size_t>>>(1, 40), 1 << 20);
       //bench_n(MpmcQueueBenchmark<CfQueue<FAAArrayQueue<size_t>>>(1, 1), 1 << 26);
     }
     return 0;
   }
-
   bench(YieldMany(false));
   bench(YieldMany(true));
   bench(SpawnMany(false));
@@ -1436,6 +1662,22 @@ int main(int argc, char **argv) {
   bench(ChainedSpawnInplace(true));
   bench(ChainedSpawn(false));
   bench(ChainedSpawn(true));
+
+  run_queue_bench(10, 10);
+  run_queue_bench(10, 1);
+  run_queue_bench(1, 10);
+  run_queue_bench(1, 1);
+  run_queue_bench(2, 10);
+  run_queue_bench(2, 2);
+  run_queue_bench(10, 1);
+
+  run_queue_bench2(50, 1);
+  run_queue_bench2(50, 2);
+  run_queue_bench2(1, 100);
+  run_queue_bench2(1, 1000);
+  run_queue_bench2(10, 2);
+  run_queue_bench2(10, 1000);
+
   return 0;
 
   bench(ActorDummyQuery());
@@ -1465,17 +1707,6 @@ int main(int argc, char **argv) {
 
   bench(CalcHashSha256Benchmark<BlockSha256MpmcQueue<BoundedMpmcQueue<std::function<void()>>>>());
   bench(CalcHashSha256Benchmark<BlockSha256MpmcQueue<td::MpmcQueue<std::function<void()>>>>());
-
-  run_queue_bench(1, 10);
-  run_queue_bench(1, 1);
-  run_queue_bench(2, 10);
-  run_queue_bench(2, 2);
-  run_queue_bench(10, 10);
-
-  run_queue_bench(2, 2);
-  run_queue_bench(1, 10);
-  run_queue_bench(10, 1);
-  run_queue_bench(10, 10);
 
   return 0;
 }

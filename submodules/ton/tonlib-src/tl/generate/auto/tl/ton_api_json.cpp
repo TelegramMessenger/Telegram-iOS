@@ -188,7 +188,19 @@ Result<int32> tl_constructor_from_string(ton_api::db_filedb_Key *object, const s
     {"db.filedb.key.proof", -627749396},
     {"db.filedb.key.proofLink", -1728330290},
     {"db.filedb.key.signatures", -685175541},
-    {"db.filedb.key.candidate", -494269767}
+    {"db.filedb.key.candidate", -494269767},
+    {"db.filedb.key.blockInfo", -996551428}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(ton_api::db_files_Key *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"db.files.index.key", 2109998338},
+    {"db.files.package.key", -1526463682}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -228,7 +240,8 @@ Result<int32> tl_constructor_from_string(ton_api::db_state_Key *object, const st
     {"db.state.key.gcBlockId", -1015417890},
     {"db.state.key.shardClient", -912576121},
     {"db.state.key.asyncSerializer", 699304479},
-    {"db.state.key.hardforks", -420206662}
+    {"db.state.key.hardforks", -420206662},
+    {"db.state.key.dbVersion", 1917788500}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -371,6 +384,17 @@ Result<int32> tl_constructor_from_string(ton_api::ton_BlockId *object, const std
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"ton.blockId", -989106576},
     {"ton.blockIdApprove", 768887369}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(ton_api::tonNode_ArchiveInfo *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"tonNode.archiveNotFound", -1725360509},
+    {"tonNode.archiveInfo", 435158924}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -593,7 +617,13 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"db.filedb.key.proofLink", -1728330290},
     {"db.filedb.key.signatures", -685175541},
     {"db.filedb.key.candidate", -494269767},
+    {"db.filedb.key.blockInfo", -996551428},
     {"db.filedb.value", -220390867},
+    {"db.files.index.key", 2109998338},
+    {"db.files.package.key", -1526463682},
+    {"db.files.index.value", -1565402372},
+    {"db.files.package.firstBlock", 1880254951},
+    {"db.files.package.value", -464726741},
     {"db.lt.el.key", -1523442974},
     {"db.lt.desc.key", -236722287},
     {"db.lt.shard.key", 1353120015},
@@ -608,6 +638,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"db.root.key.blockDb", 806534976},
     {"db.root.key.config", 331559556},
     {"db.state.asyncSerializer", -751883871},
+    {"db.state.dbVersion", -650698505},
     {"db.state.destroyedSessions", -1381443196},
     {"db.state.gcBlockId", -550453937},
     {"db.state.hardforks", -2047668988},
@@ -618,6 +649,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"db.state.key.shardClient", -912576121},
     {"db.state.key.asyncSerializer", 699304479},
     {"db.state.key.hardforks", -420206662},
+    {"db.state.key.dbVersion", 1917788500},
     {"db.state.shardClient", 186033821},
     {"dht.key", -160964977},
     {"dht.keyDescription", 673009157},
@@ -670,6 +702,12 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"fec.raptorQ", -1953257504},
     {"fec.roundRobin", 854927588},
     {"fec.online", 19359244},
+    {"http.header", -1902385903},
+    {"http.payloadPart", 693819236},
+    {"http.response", -273307789},
+    {"http.server.config", 974419964},
+    {"http.server.dnsEntry", -663592810},
+    {"http.server.host", -981605721},
     {"id.config.local", -1834367090},
     {"liteclient.config.global", 143507704},
     {"liteserver.desc", -1001806732},
@@ -708,6 +746,8 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"tcp.pong", -597034237},
     {"ton.blockId", -989106576},
     {"ton.blockIdApprove", 768887369},
+    {"tonNode.archiveNotFound", -1725360509},
+    {"tonNode.archiveInfo", 435158924},
     {"tonNode.blockDescriptionEmpty", -2088456555},
     {"tonNode.blockDescription", 1185009800},
     {"tonNode.blockId", -1211256473},
@@ -811,6 +851,8 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"engine.validator.setVerbosity", -1316856190},
     {"engine.validator.sign", 451549736},
     {"getTestObject", 197109379},
+    {"http.getNextPayloadPart", -1871422196},
+    {"http.request", 1639027169},
     {"overlay.getBroadcast", 758510240},
     {"overlay.getBroadcastList", 1109141562},
     {"overlay.getRandomPeers", 1223582891},
@@ -827,6 +869,8 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"tonNode.downloadPersistentState", 2140791736},
     {"tonNode.downloadPersistentStateSlice", -169220381},
     {"tonNode.downloadZeroState", -1379131814},
+    {"tonNode.getArchiveInfo", 2066602305},
+    {"tonNode.getArchiveSlice", 540758376},
     {"tonNode.getCapabilities", -555345672},
     {"tonNode.getNextBlockDescription", 341160179},
     {"tonNode.getNextBlocksDescription", 1059590852},
@@ -2116,6 +2160,12 @@ Status from_json(ton_api::db_block_info &to, JsonObject &from) {
       TRY_STATUS(from_json(to.state_, value));
     }
   }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "masterchain_ref_seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.masterchain_ref_seqno_, value));
+    }
+  }
   return Status::OK();
 }
 Status from_json(ton_api::db_block_packedInfo &to, JsonObject &from) {
@@ -2343,6 +2393,15 @@ Status from_json(ton_api::db_filedb_key_candidate &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::db_filedb_key_blockInfo &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "block_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.block_id_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::db_filedb_value &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "key", JsonValue::Type::Null, true));
@@ -2366,6 +2425,117 @@ Status from_json(ton_api::db_filedb_value &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "file_hash", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.file_hash_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::db_files_index_key &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(ton_api::db_files_package_key &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "package_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.package_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "temp", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.temp_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::db_files_index_value &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "packages", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.packages_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "key_packages", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.key_packages_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "temp_packages", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.temp_packages_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::db_files_package_firstBlock &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "workchain", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.workchain_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "shard", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.shard_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "unixtime", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.unixtime_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "lt", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.lt_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::db_files_package_value &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "package_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.package_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "temp", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.temp_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "firstblocks", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.firstblocks_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "deleted", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.deleted_, value));
     }
   }
   return Status::OK();
@@ -2574,6 +2744,15 @@ Status from_json(ton_api::db_state_asyncSerializer &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::db_state_dbVersion &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "version", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.version_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::db_state_destroyedSessions &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "sessions", JsonValue::Type::Null, true));
@@ -2626,6 +2805,9 @@ Status from_json(ton_api::db_state_key_asyncSerializer &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(ton_api::db_state_key_hardforks &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(ton_api::db_state_key_dbVersion &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(ton_api::db_state_shardClient &to, JsonObject &from) {
@@ -3456,6 +3638,126 @@ Status from_json(ton_api::fec_online &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::http_header &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "name", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.name_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "value", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.value_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::http_payloadPart &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.data_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "trailer", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.trailer_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "last", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.last_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::http_response &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "http_version", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.http_version_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "status_code", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.status_code_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "reason", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.reason_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "headers", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.headers_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::http_server_config &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "dhs", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.dhs_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "local_hosts", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.local_hosts_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::http_server_dnsEntry &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "domain", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.domain_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "addr", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.addr_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::http_server_host &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "domains", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.domains_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "ip", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.ip_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "port", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.port_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "adnl_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.adnl_id_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::id_config_local &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
@@ -4142,6 +4444,18 @@ Status from_json(ton_api::ton_blockIdApprove &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "file_hash", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.file_hash_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_archiveNotFound &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_archiveInfo &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
     }
   }
   return Status::OK();
@@ -5550,6 +5864,60 @@ Status from_json(ton_api::engine_validator_sign &to, JsonObject &from) {
 Status from_json(ton_api::getTestObject &to, JsonObject &from) {
   return Status::OK();
 }
+Status from_json(ton_api::http_getNextPayloadPart &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "max_chunk_size", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.max_chunk_size_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::http_request &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "method", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.method_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "url", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.url_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "http_version", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.http_version_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "headers", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.headers_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::overlay_getBroadcast &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "hash", JsonValue::Type::Null, true));
@@ -5714,6 +6082,36 @@ Status from_json(ton_api::tonNode_downloadZeroState &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.block_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_getArchiveInfo &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "masterchain_seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.masterchain_seqno_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_getArchiveSlice &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "archive_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.archive_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "offset", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.offset_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "max_size", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.max_size_, value));
     }
   }
   return Status::OK();
@@ -6468,6 +6866,7 @@ void to_json(JsonValueScope &jv, const ton_api::db_block_info &object) {
   jo << ctie("lt", ToJson(JsonInt64{object.lt_}));
   jo << ctie("ts", ToJson(object.ts_));
   jo << ctie("state", ToJson(object.state_));
+  jo << ctie("masterchain_ref_seqno", ToJson(object.masterchain_ref_seqno_));
 }
 void to_json(JsonValueScope &jv, const ton_api::db_block_packedInfo &object) {
   auto jo = jv.enter_object();
@@ -6610,6 +7009,13 @@ void to_json(JsonValueScope &jv, const ton_api::db_filedb_key_candidate &object)
     jo << ctie("id", ToJson(object.id_));
   }
 }
+void to_json(JsonValueScope &jv, const ton_api::db_filedb_key_blockInfo &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.filedb.key.blockInfo");
+  if (object.block_id_) {
+    jo << ctie("block_id", ToJson(object.block_id_));
+  }
+}
 void to_json(JsonValueScope &jv, const ton_api::db_filedb_value &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "db.filedb.value");
@@ -6619,6 +7025,45 @@ void to_json(JsonValueScope &jv, const ton_api::db_filedb_value &object) {
   jo << ctie("prev", ToJson(object.prev_));
   jo << ctie("next", ToJson(object.next_));
   jo << ctie("file_hash", ToJson(object.file_hash_));
+}
+void to_json(JsonValueScope &jv, const ton_api::db_files_Key &object) {
+  ton_api::downcast_call(const_cast<ton_api::db_files_Key &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const ton_api::db_files_index_key &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.files.index.key");
+}
+void to_json(JsonValueScope &jv, const ton_api::db_files_package_key &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.files.package.key");
+  jo << ctie("package_id", ToJson(object.package_id_));
+  jo << ctie("key", ToJson(object.key_));
+  jo << ctie("temp", ToJson(object.temp_));
+}
+void to_json(JsonValueScope &jv, const ton_api::db_files_index_value &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.files.index.value");
+  jo << ctie("packages", ToJson(object.packages_));
+  jo << ctie("key_packages", ToJson(object.key_packages_));
+  jo << ctie("temp_packages", ToJson(object.temp_packages_));
+}
+void to_json(JsonValueScope &jv, const ton_api::db_files_package_firstBlock &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.files.package.firstBlock");
+  jo << ctie("workchain", ToJson(object.workchain_));
+  jo << ctie("shard", ToJson(JsonInt64{object.shard_}));
+  jo << ctie("seqno", ToJson(object.seqno_));
+  jo << ctie("unixtime", ToJson(object.unixtime_));
+  jo << ctie("lt", ToJson(JsonInt64{object.lt_}));
+}
+void to_json(JsonValueScope &jv, const ton_api::db_files_package_value &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.files.package.value");
+  jo << ctie("package_id", ToJson(object.package_id_));
+  jo << ctie("key", ToJson(object.key_));
+  jo << ctie("temp", ToJson(object.temp_));
+  jo << ctie("firstblocks", ToJson(object.firstblocks_));
+  jo << ctie("deleted", ToJson(object.deleted_));
 }
 void to_json(JsonValueScope &jv, const ton_api::db_lt_Key &object) {
   ton_api::downcast_call(const_cast<ton_api::db_lt_Key &>(object), [&jv](const auto &object) { to_json(jv, object); });
@@ -6717,6 +7162,11 @@ void to_json(JsonValueScope &jv, const ton_api::db_state_asyncSerializer &object
   }
   jo << ctie("last_ts", ToJson(object.last_ts_));
 }
+void to_json(JsonValueScope &jv, const ton_api::db_state_dbVersion &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.state.dbVersion");
+  jo << ctie("version", ToJson(object.version_));
+}
 void to_json(JsonValueScope &jv, const ton_api::db_state_destroyedSessions &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "db.state.destroyedSessions");
@@ -6767,6 +7217,10 @@ void to_json(JsonValueScope &jv, const ton_api::db_state_key_asyncSerializer &ob
 void to_json(JsonValueScope &jv, const ton_api::db_state_key_hardforks &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "db.state.key.hardforks");
+}
+void to_json(JsonValueScope &jv, const ton_api::db_state_key_dbVersion &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.state.key.dbVersion");
 }
 void to_json(JsonValueScope &jv, const ton_api::db_state_shardClient &object) {
   auto jo = jv.enter_object();
@@ -7139,6 +7593,51 @@ void to_json(JsonValueScope &jv, const ton_api::fec_online &object) {
   jo << ctie("symbol_size", ToJson(object.symbol_size_));
   jo << ctie("symbols_count", ToJson(object.symbols_count_));
 }
+void to_json(JsonValueScope &jv, const ton_api::http_header &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.header");
+  jo << ctie("name", ToJson(object.name_));
+  jo << ctie("value", ToJson(object.value_));
+}
+void to_json(JsonValueScope &jv, const ton_api::http_payloadPart &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.payloadPart");
+  jo << ctie("data", ToJson(JsonBytes{object.data_}));
+  jo << ctie("trailer", ToJson(object.trailer_));
+  jo << ctie("last", ToJson(object.last_));
+}
+void to_json(JsonValueScope &jv, const ton_api::http_response &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.response");
+  jo << ctie("http_version", ToJson(object.http_version_));
+  jo << ctie("status_code", ToJson(object.status_code_));
+  jo << ctie("reason", ToJson(object.reason_));
+  jo << ctie("headers", ToJson(object.headers_));
+}
+void to_json(JsonValueScope &jv, const ton_api::http_server_config &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.server.config");
+  jo << ctie("dhs", ToJson(object.dhs_));
+  jo << ctie("local_hosts", ToJson(object.local_hosts_));
+}
+void to_json(JsonValueScope &jv, const ton_api::http_server_dnsEntry &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.server.dnsEntry");
+  jo << ctie("domain", ToJson(object.domain_));
+  if (object.addr_) {
+    jo << ctie("addr", ToJson(object.addr_));
+  }
+}
+void to_json(JsonValueScope &jv, const ton_api::http_server_host &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.server.host");
+  jo << ctie("domains", ToJson(object.domains_));
+  jo << ctie("ip", ToJson(object.ip_));
+  jo << ctie("port", ToJson(object.port_));
+  if (object.adnl_id_) {
+    jo << ctie("adnl_id", ToJson(object.adnl_id_));
+  }
+}
 void to_json(JsonValueScope &jv, const ton_api::id_config_local &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "id.config.local");
@@ -7441,6 +7940,18 @@ void to_json(JsonValueScope &jv, const ton_api::ton_blockIdApprove &object) {
   jo << ctie("@type", "ton.blockIdApprove");
   jo << ctie("root_cell_hash", ToJson(object.root_cell_hash_));
   jo << ctie("file_hash", ToJson(object.file_hash_));
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_ArchiveInfo &object) {
+  ton_api::downcast_call(const_cast<ton_api::tonNode_ArchiveInfo &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_archiveNotFound &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.archiveNotFound");
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_archiveInfo &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.archiveInfo");
+  jo << ctie("id", ToJson(JsonInt64{object.id_}));
 }
 void to_json(JsonValueScope &jv, const ton_api::tonNode_BlockDescription &object) {
   ton_api::downcast_call(const_cast<ton_api::tonNode_BlockDescription &>(object), [&jv](const auto &object) { to_json(jv, object); });
@@ -8065,6 +8576,22 @@ void to_json(JsonValueScope &jv, const ton_api::getTestObject &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "getTestObject");
 }
+void to_json(JsonValueScope &jv, const ton_api::http_getNextPayloadPart &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.getNextPayloadPart");
+  jo << ctie("id", ToJson(object.id_));
+  jo << ctie("seqno", ToJson(object.seqno_));
+  jo << ctie("max_chunk_size", ToJson(object.max_chunk_size_));
+}
+void to_json(JsonValueScope &jv, const ton_api::http_request &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "http.request");
+  jo << ctie("id", ToJson(object.id_));
+  jo << ctie("method", ToJson(object.method_));
+  jo << ctie("url", ToJson(object.url_));
+  jo << ctie("http_version", ToJson(object.http_version_));
+  jo << ctie("headers", ToJson(object.headers_));
+}
 void to_json(JsonValueScope &jv, const ton_api::overlay_getBroadcast &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "overlay.getBroadcast");
@@ -8172,6 +8699,18 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadZeroState &objec
   if (object.block_) {
     jo << ctie("block", ToJson(object.block_));
   }
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_getArchiveInfo &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.getArchiveInfo");
+  jo << ctie("masterchain_seqno", ToJson(object.masterchain_seqno_));
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_getArchiveSlice &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.getArchiveSlice");
+  jo << ctie("archive_id", ToJson(JsonInt64{object.archive_id_}));
+  jo << ctie("offset", ToJson(JsonInt64{object.offset_}));
+  jo << ctie("max_size", ToJson(object.max_size_));
 }
 void to_json(JsonValueScope &jv, const ton_api::tonNode_getCapabilities &object) {
   auto jo = jv.enter_object();

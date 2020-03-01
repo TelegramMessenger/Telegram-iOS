@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "common/bitstring.h"
@@ -171,6 +171,13 @@ class DictionaryBase {
   }
 };
 
+class DictIterator;
+
+template <typename T>
+std::pair<T, int> dict_range(T&& dict, bool rev = false, bool sgnd = false) {
+  return std::pair<T, int>{std::forward<T>(dict), (int)rev + 2 * (int)sgnd};
+}
+
 class DictionaryFixed : public DictionaryBase {
  public:
   typedef std::function<int(vm::CellSlice&, td::ConstBitPtr, int)> filter_func_t;
@@ -199,6 +206,9 @@ class DictionaryFixed : public DictionaryBase {
   static BitSlice integer_key(td::RefInt256 x, unsigned n, bool sgnd = true, unsigned char buffer[128] = 0,
                               bool quiet = false);
   static bool integer_key_simple(td::RefInt256 x, unsigned n, bool sgnd, td::BitPtr buffer, bool quiet = false);
+  td::RefInt256 key_as_integer(td::ConstBitPtr key, bool sgnd = false) const {
+    return td::bits_to_refint(key, key_bits, sgnd);
+  }
   bool key_exists(td::ConstBitPtr key, int key_len);
   bool int_key_exists(long long key);
   bool uint_key_exists(unsigned long long key);
@@ -221,6 +231,17 @@ class DictionaryFixed : public DictionaryBase {
   bool scan_diff(DictionaryFixed& dict2, const scan_diff_func_t& diff_func, int check_augm = 0);
   bool validate_check(const foreach_func_t& foreach_func, bool invert_first = false);
   bool validate_all();
+  DictIterator null_iterator();
+  DictIterator init_iterator(bool backw = false, bool invert_first = false);
+  DictIterator make_iterator(int mode);
+  DictIterator begin();
+  DictIterator end();
+  DictIterator cbegin();
+  DictIterator cend();
+  DictIterator rbegin();
+  DictIterator rend();
+  DictIterator crbegin();
+  DictIterator crend();
   template <typename T>
   bool key_exists(const T& key) {
     return key_exists(key.bits(), key.size());
@@ -237,10 +258,18 @@ class DictionaryFixed : public DictionaryBase {
   Ref<CellSlice> get_minmax_key(T& key_buffer, bool fetch_max = false, bool invert_first = false) {
     return get_minmax_key(key_buffer.bits(), key_buffer.size(), fetch_max, invert_first);
   }
+  template <typename T>
+  Ref<CellSlice> lookup_nearest_key(T& key_buffer, bool fetch_next = false, bool allow_eq = false,
+                                    bool invert_first = false) {
+    return lookup_nearest_key(key_buffer.bits(), key_buffer.size(), fetch_next, allow_eq, invert_first);
+  }
 
  protected:
   virtual int label_mode() const {
     return dict::LabelParser::chk_all;
+  }
+  virtual Ref<CellSlice> extract_leaf_value(Ref<CellSlice> leaf) const {
+    return leaf;
   }
   virtual Ref<Cell> finish_create_leaf(CellBuilder& cb, const CellSlice& value) const;
   virtual Ref<Cell> finish_create_fork(CellBuilder& cb, Ref<Cell> c1, Ref<Cell> c2, int n) const;
@@ -254,6 +283,7 @@ class DictionaryFixed : public DictionaryBase {
     return check_leaf(cs_ref.write(), key, key_len);
   }
   bool check_fork_raw(Ref<CellSlice> cs_ref, int n) const;
+  friend class DictIterator;
 
  private:
   std::pair<Ref<CellSlice>, Ref<Cell>> dict_lookup_delete(Ref<Cell> dict, td::ConstBitPtr key, int n) const;
@@ -271,6 +301,148 @@ class DictionaryFixed : public DictionaryBase {
   bool dict_validate_check(Ref<Cell> dict, td::BitPtr key_buffer, int n, int total_key_len,
                            const foreach_func_t& foreach_func, bool invert_first = false) const;
 };
+
+class DictIterator {
+  const DictionaryFixed* dict_{nullptr};
+  Ref<Cell> root_;
+  int label_mode_{dict::LabelParser::chk_size};
+  int key_bits_;
+  int flags_;
+  int order_;
+  unsigned char key_buffer[DictionaryBase::max_key_bytes];
+  bool prevalidate(int mode = -1);
+  enum { f_valid = 4 };
+
+ protected:
+  struct Fork {
+    Ref<Cell> next, alt;
+    int pos;
+    bool v;
+    Fork() : pos(-1) {
+    }
+    Fork(Ref<Cell> _next, Ref<Cell> _alt, int _pos, bool _v)
+        : next(std::move(_next)), alt(std::move(_alt)), pos(_pos), v(_v) {
+    }
+    void rotate(td::BitPtr key) {
+      std::swap(next, alt);
+      key[pos] = (v ^= true);
+    }
+  };
+  std::vector<Fork> path_;
+  Ref<CellSlice> leaf_;
+
+  td::BitPtr key(int offs = 0) {
+    return td::BitPtr{key_buffer, offs};
+  }
+  td::ConstBitPtr key(int offs = 0) const {
+    return td::ConstBitPtr{key_buffer, offs};
+  }
+  td::ConstBitPtr ckey(int offs = 0) const {
+    return td::ConstBitPtr{key_buffer, offs};
+  }
+
+ public:
+  DictIterator() : key_bits_(0), flags_(0), order_(0) {
+  }
+  // mode: 0 = bidir, +4 = fwd only, +8 = back only; +1 = reverse directions, +2 = signed int keys
+  enum { it_reverse = 1, it_signed = 2 };
+  DictIterator(Ref<Cell> root_cell, int key_bits, int mode = 0)
+      : root_(std::move(root_cell)), key_bits_(key_bits), flags_(mode >> 2) {
+    prevalidate(mode & 3);
+  }
+  DictIterator(const DictionaryFixed& dict, int mode = 0)
+      : DictIterator(dict.get_root_cell(), dict.get_key_bits(), mode) {
+    dict_ = &dict;
+    label_mode_ = dict.label_mode();
+  }
+  bool is_valid() const {
+    return flags_ & f_valid;
+  }
+  bool eof() const {
+    return leaf_.is_null();
+  }
+  bool reset() {
+    dict_ = nullptr;
+    root_.clear();
+    path_.clear();
+    leaf_.clear();
+    return true;
+  }
+  td::ConstBitPtr cur_pos() const {
+    return eof() ? td::ConstBitPtr{nullptr} : key();
+  }
+  Ref<Cell> get_root_cell() const {
+    return root_;
+  }
+  int get_key_bits() const {
+    return key_bits_;
+  }
+  bool is_bound() const {
+    return dict_;
+  }
+  bool is_bound_to(const DictionaryFixed& dict) const {
+    return root_.not_null() == dict.get_root_cell().not_null() &&
+           (root_.not_null() ? root_.get() == dict.get_root_cell().get() : key_bits_ == dict.get_key_bits());
+  }
+  bool bind(const DictionaryFixed& dict, int do_rewind = 0);
+  bool rebind_to(const DictionaryFixed& dict, int do_rewind = 0);
+  bool rewind(bool to_end = false);
+  bool next(bool backw = false);
+  bool prev() {
+    return next(true);
+  }
+  bool lookup(td::ConstBitPtr pos, int pos_bits, bool strict_after = false, bool backw = false);
+  template <typename T>
+  bool lookup(const T& key, bool strict_after = false, bool backw = false) {
+    return lookup(key.bits(), key.size(), strict_after, backw);
+  }
+  Ref<CellSlice> cur_value() const {
+    return dict_ ? dict_->extract_leaf_value(leaf_) : Ref<CellSlice>{};
+  }
+  Ref<CellSlice> cur_value_raw() const {
+    return leaf_;
+  }
+  std::pair<td::ConstBitPtr, Ref<CellSlice>> operator*() const {
+    return std::make_pair(cur_pos(), cur_value());
+  }
+  bool bound_to_same(const DictIterator& other) const {
+    return dict_ && dict_ == other.dict_;
+  }
+  bool operator==(const DictIterator& other) const {
+    return bound_to_same(other) && eof() == other.eof() && (eof() || key().equals(other.key(), key_bits_));
+  }
+  int compare_keys(td::ConstBitPtr a, td::ConstBitPtr b) const;
+  bool operator<(const DictIterator& other) const {
+    return bound_to_same(other) && !eof() && (other.eof() || compare_keys(key(), other.key()) < 0);
+  }
+  bool operator!=(const DictIterator& other) const {
+    return !(operator==(other));
+  }
+  bool operator>(const DictIterator& other) const {
+    return other < *this;
+  }
+  DictIterator& operator++() {
+    next();
+    return *this;
+  }
+  DictIterator& operator--() {
+    next(true);
+    return *this;
+  }
+
+ private:
+  bool dive(int mode);
+};
+
+template <typename T>
+DictIterator begin(std::pair<T, int> dictm) {
+  return dictm.first.make_iterator(dictm.second);
+}
+
+template <typename T>
+DictIterator end(std::pair<T, int> dictm) {
+  return dictm.first.null_iterator();
+}
 
 class Dictionary final : public DictionaryFixed {
  public:
@@ -350,6 +522,9 @@ class Dictionary final : public DictionaryFixed {
   template <typename T>
   Ref<CellSlice> lookup_set_builder(const T& key, Ref<vm::CellBuilder> val_ref, SetMode mode = SetMode::Set) {
     return lookup_set_builder(key.bits(), key.size(), std::move(val_ref), mode);
+  }
+  auto range(bool rev = false, bool sgnd = false) {
+    return dict_range(*this, rev, sgnd);
   }
 
  private:
@@ -449,6 +624,9 @@ class AugmentedDictionary final : public DictionaryFixed {
   Ref<Cell> lookup_delete_ref(const T& key) {
     return lookup_delete_ref(key.bits(), key.size());
   }
+  auto range(bool rev = false, bool sgnd = false) {
+    return dict_range(*this, rev, sgnd);
+  }
 
   Ref<CellSlice> extract_value(Ref<CellSlice> value_extra) const;
   Ref<Cell> extract_value_ref(Ref<CellSlice> value_extra) const;
@@ -458,6 +636,7 @@ class AugmentedDictionary final : public DictionaryFixed {
  private:
   bool compute_root() const;
   Ref<CellSlice> get_node_extra(Ref<Cell> cell_ref, int n) const;
+  Ref<CellSlice> extract_leaf_value(Ref<CellSlice> leaf) const override;
   bool check_leaf(CellSlice& cs, td::ConstBitPtr key, int key_len) const override;
   bool check_fork(CellSlice& cs, Ref<Cell> c1, Ref<Cell> c2, int n) const override;
   Ref<Cell> finish_create_leaf(CellBuilder& cb, const CellSlice& value) const override;

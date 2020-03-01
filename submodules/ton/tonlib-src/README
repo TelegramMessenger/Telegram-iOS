@@ -8,18 +8,19 @@ The software is likely to compile and work properly on most Linux systems. It sh
 
 BASIC COMPILATION AND INSTALLATION INSTRUCTIONS
 
-1) Download and unpack the newest version of this archive, available at
+1) Download the newest version of the TON blockchain sources, available at GitHub repository https://github.com/ton-blockchain/ton/ :
 
-https://test.ton.org/download
+git clone https://github.com/ton-blockchain/ton.git
+git submodule update
 
 The TON Blockchain Test Network is updated quite often, so we cannot guarantee that older versions of the Lite Client will always work. Backward compatibility is not enforced at this development stage.
 
 2) Install the newest versions of make, cmake (version 3.0.2 or later), OpenSSL (including C header files), and g++ or clang (or another C++14-compatible compiler as appropriate for your operating system). We strongly recommend installing OpenSSL version 1.1.1 or later for better performance, especially if you intend to run a Full Node or a Validator as well.
 
-3) Suppose that you have unpacked this archive to directory ~/lite-client, where ~ is your home directory, and that you have created an empty directory ~/liteclient-build. Then run the following in a terminal on a Linux system:
+3) Suppose that you have fetched the source tree to directory ~/ton, where ~ is your home directory, and that you have created an empty directory ~/liteclient-build. Then run the following in a terminal on a Linux system:
 
 cd ~/liteclient-build
-cmake ~/lite-client
+cmake ~/ton
 cmake --build . --target lite-client
 
 You might also build some extra utilities useful for smart-contract development:

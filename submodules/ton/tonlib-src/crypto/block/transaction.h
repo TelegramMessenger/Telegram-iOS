@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "common/refcnt.hpp"
@@ -65,10 +65,10 @@ struct NewOutMsg {
   NewOutMsg(ton::LogicalTime _lt, Ref<vm::Cell> _msg, Ref<vm::Cell> _trans)
       : lt(_lt), msg(std::move(_msg)), trans(std::move(_trans)) {
   }
-  bool operator<(const NewOutMsg& other) const& {
+  bool operator<(const NewOutMsg& other) const & {
     return lt < other.lt || (lt == other.lt && msg->get_hash() < other.msg->get_hash());
   }
-  bool operator>(const NewOutMsg& other) const& {
+  bool operator>(const NewOutMsg& other) const & {
     return lt > other.lt || (lt == other.lt && other.msg->get_hash() < msg->get_hash());
   }
 };
@@ -130,6 +130,11 @@ struct ComputePhaseConfig {
   }
   bool parse_GasLimitsPrices(Ref<vm::CellSlice> cs, td::RefInt256& freeze_due_limit, td::RefInt256& delete_due_limit);
   bool parse_GasLimitsPrices(Ref<vm::Cell> cell, td::RefInt256& freeze_due_limit, td::RefInt256& delete_due_limit);
+
+ private:
+  bool parse_GasLimitsPrices_internal(Ref<vm::CellSlice> cs, td::RefInt256& freeze_due_limit,
+                                      td::RefInt256& delete_due_limit, td::uint64 flat_gas_limit = 0,
+                                      td::uint64 flat_gas_price = 0);
 };
 
 struct ActionPhaseConfig {
@@ -189,10 +194,6 @@ struct ActionPhase {
   Ref<vm::Cell> new_code;
   td::BitArray<256> action_list_hash;
   block::CurrencyCollection remaining_balance, reserved_balance;
-  // td::RefInt256 remaining_balance;
-  // Ref<vm::Cell> remaining_extra;
-  // td::RefInt256 reserved_balance;
-  // Ref<vm::Cell> reserved_extra;
   std::vector<Ref<vm::Cell>> action_list;  // processed in reverse order
   std::vector<Ref<vm::Cell>> out_msgs;
   ton::LogicalTime end_lt;
@@ -314,7 +315,7 @@ struct Transaction {
   const Account& account;                     // only `commit` method modifies the account
   Ref<vm::CellSlice> my_addr, my_addr_exact;  // almost the same as in account.*
   ton::LogicalTime start_lt, end_lt;
-  block::CurrencyCollection balance;
+  block::CurrencyCollection balance, original_balance;
   block::CurrencyCollection msg_balance_remaining;
   td::RefInt256 due_payment;
   td::RefInt256 in_fwd_fee, msg_fwd_fees;
@@ -371,6 +372,7 @@ struct Transaction {
   Ref<vm::Tuple> prepare_vm_c7(const ComputePhaseConfig& cfg) const;
   bool prepare_rand_seed(td::BitArray<256>& rand_seed, const ComputePhaseConfig& cfg) const;
   int try_action_set_code(vm::CellSlice& cs, ActionPhase& ap, const ActionPhaseConfig& cfg);
+  int try_action_change_library(vm::CellSlice& cs, ActionPhase& ap, const ActionPhaseConfig& cfg);
   int try_action_send_msg(const vm::CellSlice& cs, ActionPhase& ap, const ActionPhaseConfig& cfg, int redoing = 0);
   int try_action_reserve_currency(vm::CellSlice& cs, ActionPhase& ap, const ActionPhaseConfig& cfg);
   bool check_replace_src_addr(Ref<vm::CellSlice>& src_addr) const;

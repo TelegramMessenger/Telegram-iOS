@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "td/actor/actor.h"
@@ -54,7 +54,7 @@ class LastConfig : public td::actor::Actor {
   QueryState get_config_state_{QueryState::Empty};
 
   std::vector<td::Promise<LastConfigState>> promises_;
-  std::vector<td::int32> params_{18, 20, 21, 24, 25};
+  std::vector<td::int32> params_{4, 18, 20, 21, 24, 25};
 
   void with_last_block(td::Result<LastBlockState> r_last_block);
   void on_config(td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_configInfo>> r_config);

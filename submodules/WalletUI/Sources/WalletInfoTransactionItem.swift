@@ -242,7 +242,14 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                             if !description.isEmpty {
                                 description.append("\n")
                             }
-                            description.append(message.textMessage)
+                            switch message.contents {
+                            case .raw:
+                                break
+                            case .encryptedText:
+                                description.append("<encrypted>")
+                            case let .plainText(text):
+                                description.append(text)
+                            }
                         }
                     }
                 case let .pending(transaction):
@@ -268,7 +275,14 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 case let .completed(transaction):
                     if let inMessage = transaction.inMessage {
                         text = formatAddress(inMessage.source)
-                        description = inMessage.textMessage
+                        switch inMessage.contents {
+                        case .raw:
+                            description = ""
+                        case .encryptedText:
+                            description = "<encrypted>"
+                        case let .plainText(text):
+                            description = text
+                        }
                     } else {
                         text = "<unknown>"
                     }

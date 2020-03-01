@@ -14,12 +14,14 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/dispatch.h"
 #include "vm/continuation.h"
 #include "vm/dict.h"
 #include "vm/log.h"
+#include "vm/vm.h"
+#include "vm/vmstate.h"
 
 namespace vm {
 
@@ -30,6 +32,17 @@ int Continuation::jump_w(VmState* st) & {
 bool Continuation::has_c0() const {
   const ControlData* cont_data = get_cdata();
   return cont_data && cont_data->save.c[0].not_null();
+}
+
+bool ControlRegs::clear() {
+  for (unsigned i = 0; i < creg_num; i++) {
+    c[i].clear();
+  }
+  for (unsigned i = 0; i < dreg_num; i++) {
+    d[i].clear();
+  }
+  c7.clear();
+  return true;
 }
 
 StackEntry ControlRegs::get(unsigned idx) const {
@@ -107,6 +120,155 @@ ControlRegs& ControlRegs::operator&=(const ControlRegs& save) {
   return *this;
 }
 
+bool ControlRegs::serialize(CellBuilder& cb) const {
+  // _ cregs:(HashmapE 4 VmStackValue) = VmSaveList;
+  Dictionary dict{4};
+  CellBuilder cb2;
+  for (int i = 0; i < creg_num; i++) {
+    if (c[i].not_null() &&
+        !(StackEntry{c[i]}.serialize(cb2) && dict.set_builder(td::BitArray<4>(i), cb2) && cb2.reset_bool())) {
+      return false;
+    }
+  }
+  for (int i = 0; i < dreg_num; i++) {
+    if (d[i].not_null() && !(StackEntry{d[i]}.serialize(cb2) && dict.set_builder(td::BitArray<4>(dreg_idx + i), cb2) &&
+                             cb2.reset_bool())) {
+      return false;
+    }
+  }
+  return (c7.is_null() || (StackEntry{c7}.serialize(cb2) && dict.set_builder(td::BitArray<4>(7), cb2))) &&
+         std::move(dict).append_dict_to_bool(cb);
+}
+
+bool ControlRegs::deserialize(CellSlice& cs, int mode) {
+  // _ cregs:(HashmapE 4 VmStackValue) = VmSaveList;
+  Ref<Cell> root;
+  return cs.fetch_maybe_ref(root) && deserialize(std::move(root), mode);
+}
+
+bool ControlRegs::deserialize(Ref<Cell> root, int mode) {
+  try {
+    clear();
+    Dictionary dict{std::move(root), 4};
+    return dict.check_for_each([this, mode](Ref<CellSlice> val, td::ConstBitPtr key, int n) {
+      StackEntry value;
+      return value.deserialize(val.write(), mode) && val->empty_ext() && set((int)key.get_uint(4), std::move(value));
+    });
+  } catch (VmError&) {
+    return false;
+  }
+}
+
+bool ControlData::clear() {
+  stack.clear();
+  save.clear();
+  nargs = cp = -1;
+  return true;
+}
+
+bool ControlData::serialize(CellBuilder& cb) const {
+  // vm_ctl_data$_ nargs:(Maybe uint13) stack:(Maybe VmStack) save:VmSaveList
+  // cp:(Maybe int16) = VmControlData;
+  return cb.store_bool_bool(nargs >= 0)                   // vm_ctl_data$_ nargs:(Maybe ...
+         && (nargs < 0 || cb.store_long_bool(nargs, 13))  // ... int13)
+         && cb.store_bool_bool(stack.not_null())          // stack:(Maybe ...
+         && (stack.is_null() || stack->serialize(cb))     // ... VmStack)
+         && save.serialize(cb)                            // save:VmSaveList
+         && cb.store_bool_bool(cp != -1)                  // cp:(Maybe ...
+         && (cp == -1 || cb.store_long_bool(cp, 16));     // ... int16)
+}
+
+bool ControlData::deserialize(CellSlice& cs, int mode) {
+  // vm_ctl_data$_ nargs:(Maybe uint13) stack:(Maybe VmStack) save:VmSaveList
+  // cp:(Maybe int16) = VmControlData;
+  nargs = cp = -1;
+  stack.clear();
+  bool f;
+  return cs.fetch_bool_to(f) && (!f || cs.fetch_uint_to(13, nargs))                // nargs:(Maybe uint13)
+         && cs.fetch_bool_to(f) && (!f || Stack::deserialize_to(cs, stack, mode))  // stack:(Maybe VmStack)
+         && save.deserialize(cs, mode)                                             // save:VmSaveList
+         && cs.fetch_bool_to(f) && (!f || (cs.fetch_int_to(16, cp) && cp != -1));  // cp:(Maybe int16)
+}
+
+bool Continuation::serialize_ref(CellBuilder& cb) const {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
+  vm::CellBuilder cb2;
+  return serialize(cb2) && cb.store_ref_bool(cb2.finalize());
+}
+
+Ref<Continuation> Continuation::deserialize(CellSlice& cs, int mode) {
+  if (mode & 0x1002) {
+    return {};
+  }
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return {};
+  }
+
+  mode |= 0x1000;
+  switch (cs.bselect_ext(6, 0x100f011100010001ULL)) {
+    case 0:
+      // vmc_std$00 cdata:VmControlData code:VmCellSlice = VmCont;
+      return OrdCont::deserialize(cs, mode);
+    case 1:
+      // vmc_envelope$01 cdata:VmControlData next:^VmCont = VmCont;
+      return ArgContExt::deserialize(cs, mode);
+    case 2:
+      // vmc_quit$1000 exit_code:int32 = VmCont;
+      return QuitCont::deserialize(cs, mode);
+    case 3:
+      // vmc_quit_exc$1001 = VmCont;
+      return ExcQuitCont::deserialize(cs, mode);
+    case 4:
+      // vmc_repeat$10100 count:uint63 body:^VmCont after:^VmCont = VmCont;
+      return RepeatCont::deserialize(cs, mode);
+    case 5:
+      // vmc_until$110000 body:^VmCont after:^VmCont = VmCont;
+      return UntilCont::deserialize(cs, mode);
+    case 6:
+      // vmc_again$110001 body:^VmCont = VmCont;
+      return AgainCont::deserialize(cs, mode);
+    case 7:
+      // vmc_while_cond$110010 cond:^VmCont body:^VmCont after:^VmCont = VmCont;
+      return WhileCont::deserialize(cs, mode | 0x2000);
+    case 8:
+      // vmc_while_body$110011 cond:^VmCont body:^VmCont after:^VmCont = VmCont;
+      return WhileCont::deserialize(cs, mode & ~0x2000);
+    case 9:
+      // vmc_pushint$1111 value:int32 next:^VmCont = VmCont;
+      return PushIntCont::deserialize(cs, mode);
+    default:
+      return {};
+  }
+}
+
+bool Continuation::deserialize_to(Ref<Cell> cell, Ref<Continuation>& cont, int mode) {
+  if (cell.is_null()) {
+    cont.clear();
+    return false;
+  }
+  CellSlice cs = load_cell_slice(std::move(cell));
+  return deserialize_to(cs, cont, mode & ~0x1000) && cs.empty_ext();
+}
+
+bool QuitCont::serialize(CellBuilder& cb) const {
+  // vmc_quit$1000 exit_code:int32 = VmCont;
+  return cb.store_long_bool(8, 4) && cb.store_long_bool(exit_code, 32);
+}
+
+Ref<QuitCont> QuitCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_quit$1000 exit_code:int32 = VmCont;
+  int exit_code;
+  if (cs.fetch_ulong(4) == 8 && cs.fetch_int_to(32, exit_code)) {
+    return Ref<QuitCont>{true, exit_code};
+  } else {
+    return {};
+  }
+}
+
 int ExcQuitCont::jump(VmState* st) const & {
   int n = 0;
   try {
@@ -116,6 +278,16 @@ int ExcQuitCont::jump(VmState* st) const & {
   }
   VM_LOG(st) << "default exception handler, terminating vm with exit code " << n;
   return ~n;
+}
+
+bool ExcQuitCont::serialize(CellBuilder& cb) const {
+  // vmc_quit_exc$1001 = VmCont;
+  return cb.store_long_bool(9, 4);
+}
+
+Ref<ExcQuitCont> ExcQuitCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_quit_exc$1001 = VmCont;
+  return cs.fetch_ulong(4) == 9 ? Ref<ExcQuitCont>{true} : Ref<ExcQuitCont>{};
 }
 
 int PushIntCont::jump(VmState* st) const & {
@@ -128,6 +300,24 @@ int PushIntCont::jump_w(VmState* st) & {
   VM_LOG(st) << "execute implicit PUSH " << push_val;
   st->get_stack().push_smallint(push_val);
   return st->jump(std::move(next));
+}
+
+bool PushIntCont::serialize(CellBuilder& cb) const {
+  // vmc_pushint$1111 value:int32 next:^VmCont = VmCont;
+  return cb.store_long_bool(15, 4) && cb.store_long_bool(push_val, 32) && next->serialize_ref(cb);
+}
+
+Ref<PushIntCont> PushIntCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_pushint$1111 value:int32 next:^VmCont = VmCont;
+  int value;
+  Ref<Cell> ref;
+  Ref<Continuation> next;
+  if (cs.fetch_ulong(4) == 15 && cs.fetch_int_to(32, value) && cs.fetch_ref_to(ref) &&
+      deserialize_to(std::move(ref), next, mode)) {
+    return Ref<PushIntCont>{true, value, std::move(next)};
+  } else {
+    return {};
+  }
 }
 
 int ArgContExt::jump(VmState* st) const & {
@@ -144,6 +334,23 @@ int ArgContExt::jump_w(VmState* st) & {
     st->force_cp(data.cp);
   }
   return st->jump_to(std::move(ext));
+}
+
+bool ArgContExt::serialize(CellBuilder& cb) const {
+  // vmc_envelope$01 cdata:VmControlData next:^VmCont = VmCont;
+  return cb.store_long_bool(1, 2) && data.serialize(cb) && ext->serialize_ref(cb);
+}
+
+Ref<ArgContExt> ArgContExt::deserialize(CellSlice& cs, int mode) {
+  // vmc_envelope$01 cdata:VmControlData next:^VmCont = VmCont;
+  ControlData cdata;
+  Ref<Cell> ref;
+  Ref<Continuation> next;
+  mode &= ~0x1000;
+  return cs.fetch_ulong(2) == 1 && cdata.deserialize(cs, mode) && cs.fetch_ref_to(ref) &&
+                 deserialize_to(std::move(ref), next, mode)
+             ? Ref<ArgContExt>{true, std::move(next), std::move(cdata)}
+             : Ref<ArgContExt>{};
 }
 
 int RepeatCont::jump(VmState* st) const & {
@@ -174,6 +381,26 @@ int RepeatCont::jump_w(VmState* st) & {
   return st->jump(body);
 }
 
+bool RepeatCont::serialize(CellBuilder& cb) const {
+  // vmc_repeat$10100 count:uint63 body:^VmCont after:^VmCont = VmCont;
+  return cb.store_long_bool(0x14, 5) && cb.store_long_bool(count, 63) && body->serialize_ref(cb) &&
+         after->serialize_ref(cb);
+}
+
+Ref<RepeatCont> RepeatCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_repeat$10100 count:uint63 body:^VmCont after:^VmCont = VmCont;
+  long long count;
+  Ref<Cell> ref;
+  Ref<Continuation> body, after;
+  if (cs.fetch_ulong(5) == 0x14 && cs.fetch_uint_to(63, count) && cs.fetch_ref_to(ref) &&
+      deserialize_to(std::move(ref), body, mode) && cs.fetch_ref_to(ref) &&
+      deserialize_to(std::move(ref), after, mode)) {
+    return Ref<RepeatCont>{true, std::move(body), std::move(after), count};
+  } else {
+    return {};
+  }
+}
+
 int VmState::repeat(Ref<Continuation> body, Ref<Continuation> after, long long count) {
   if (count <= 0) {
     body.clear();
@@ -198,6 +425,22 @@ int AgainCont::jump_w(VmState* st) & {
     return st->jump(body);
   } else {
     return st->jump(std::move(body));
+  }
+}
+
+bool AgainCont::serialize(CellBuilder& cb) const {
+  // vmc_again$110001 body:^VmCont = VmCont;
+  return cb.store_long_bool(0x31, 6) && body->serialize_ref(cb);
+}
+
+Ref<AgainCont> AgainCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_again$110001 body:^VmCont = VmCont;
+  Ref<Cell> ref;
+  Ref<Continuation> body;
+  if (cs.fetch_ulong(6) == 0x31 && cs.fetch_ref_to(ref) && deserialize_to(std::move(ref), body, mode)) {
+    return Ref<AgainCont>{true, std::move(body)};
+  } else {
+    return {};
   }
 }
 
@@ -230,6 +473,23 @@ int UntilCont::jump_w(VmState* st) & {
   } else {
     after.clear();
     return st->jump(std::move(body));
+  }
+}
+
+bool UntilCont::serialize(CellBuilder& cb) const {
+  // vmc_until$110000 body:^VmCont after:^VmCont = VmCont;
+  return cb.store_long_bool(0x30, 6) && body->serialize_ref(cb) && after->serialize_ref(cb);
+}
+
+Ref<UntilCont> UntilCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_until$110000 body:^VmCont after:^VmCont = VmCont;
+  Ref<Cell> ref;
+  Ref<Continuation> body, after;
+  if (cs.fetch_ulong(6) == 0x30 && cs.fetch_ref_to(ref) && deserialize_to(std::move(ref), body, mode) &&
+      cs.fetch_ref_to(ref) && deserialize_to(std::move(ref), after, mode)) {
+    return Ref<UntilCont>{true, std::move(body), std::move(after)};
+  } else {
+    return {};
   }
 }
 
@@ -292,6 +552,29 @@ int WhileCont::jump_w(VmState* st) & {
   }
 }
 
+bool WhileCont::serialize(CellBuilder& cb) const {
+  // vmc_while_cond$110010 cond:^VmCont body:^VmCont after:^VmCont = VmCont;
+  // vmc_while_body$110011 cond:^VmCont body:^VmCont after:^VmCont = VmCont;
+  return cb.store_long_bool(0x19, 5) && cb.store_bool_bool(!chkcond) && cond->serialize_ref(cb) &&
+         body->serialize_ref(cb) && after->serialize_ref(cb);
+}
+
+Ref<WhileCont> WhileCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_while_cond$110010 cond:^VmCont body:^VmCont after:^VmCont = VmCont;
+  // vmc_while_body$110011 cond:^VmCont body:^VmCont after:^VmCont = VmCont;
+  bool at_body;
+  Ref<Cell> ref;
+  Ref<Continuation> cond, body, after;
+  if (cs.fetch_ulong(5) == 0x19 && cs.fetch_bool_to(at_body) && cs.fetch_ref_to(ref) &&
+      deserialize_to(std::move(ref), cond, mode) && cs.fetch_ref_to(ref) &&
+      deserialize_to(std::move(ref), body, mode) && cs.fetch_ref_to(ref) &&
+      deserialize_to(std::move(ref), after, mode)) {
+    return Ref<WhileCont>{true, std::move(cond), std::move(body), std::move(after), !at_body};
+  } else {
+    return {};
+  }
+}
+
 int VmState::loop_while(Ref<Continuation> cond, Ref<Continuation> body, Ref<Continuation> after) {
   if (!cond->has_c0()) {
     set_c0(Ref<WhileCont>{true, cond, std::move(body), std::move(after), true});
@@ -309,6 +592,22 @@ int OrdCont::jump_w(VmState* st) & {
   st->adjust_cr(std::move(data.save));
   st->set_code(std::move(code), data.cp);
   return 0;
+}
+
+bool OrdCont::serialize(CellBuilder& cb) const {
+  // vmc_std$00 cdata:VmControlData code:VmCellSlice = VmCont;
+  return cb.store_long_bool(0, 2) && data.serialize(cb) && StackEntry{code}.serialize(cb, 0x1000);
+}
+
+Ref<OrdCont> OrdCont::deserialize(CellSlice& cs, int mode) {
+  // vmc_std$00 cdata:VmControlData code:VmCellSlice = VmCont;
+  ControlData cdata;
+  StackEntry val;
+  mode &= ~0x1000;
+  return cs.fetch_ulong(2) == 0 && cdata.deserialize(cs, mode) && val.deserialize(cs, 0x4000) &&
+                 val.is(StackEntry::t_slice)
+             ? Ref<OrdCont>{true, std::move(val).as_slice(), std::move(cdata)}
+             : Ref<OrdCont>{};
 }
 
 void VmState::init_cregs(bool same_c3, bool push_0) {
@@ -335,557 +634,6 @@ void VmState::init_cregs(bool same_c3, bool push_0) {
   if (cr.c7.is_null()) {
     cr.set_c7(Ref<Tuple>{true});
   }
-}
-
-VmState::VmState() : cp(-1), dispatch(&dummy_dispatch_table), quit0(true, 0), quit1(true, 1) {
-  ensure_throw(init_cp(0));
-  init_cregs();
-}
-
-VmState::VmState(Ref<CellSlice> _code)
-    : code(std::move(_code)), cp(-1), dispatch(&dummy_dispatch_table), quit0(true, 0), quit1(true, 1) {
-  ensure_throw(init_cp(0));
-  init_cregs();
-}
-
-VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, int flags, Ref<Cell> _data, VmLog log,
-                 std::vector<Ref<Cell>> _libraries, Ref<Tuple> init_c7)
-    : code(std::move(_code))
-    , stack(std::move(_stack))
-    , cp(-1)
-    , dispatch(&dummy_dispatch_table)
-    , quit0(true, 0)
-    , quit1(true, 1)
-    , log(log)
-    , libraries(std::move(_libraries)) {
-  ensure_throw(init_cp(0));
-  set_c4(std::move(_data));
-  if (init_c7.not_null()) {
-    set_c7(std::move(init_c7));
-  }
-  init_cregs(flags & 1, flags & 2);
-}
-
-VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, const GasLimits& gas, int flags, Ref<Cell> _data, VmLog log,
-                 std::vector<Ref<Cell>> _libraries, Ref<Tuple> init_c7)
-    : code(std::move(_code))
-    , stack(std::move(_stack))
-    , cp(-1)
-    , dispatch(&dummy_dispatch_table)
-    , quit0(true, 0)
-    , quit1(true, 1)
-    , log(log)
-    , gas(gas)
-    , libraries(std::move(_libraries)) {
-  ensure_throw(init_cp(0));
-  set_c4(std::move(_data));
-  if (init_c7.not_null()) {
-    set_c7(std::move(init_c7));
-  }
-  init_cregs(flags & 1, flags & 2);
-}
-
-Ref<CellSlice> VmState::convert_code_cell(Ref<Cell> code_cell) {
-  if (code_cell.is_null()) {
-    return {};
-  }
-  Ref<CellSlice> csr{true, NoVmOrd(), code_cell};
-  if (csr->is_valid()) {
-    return csr;
-  }
-  return load_cell_slice_ref(CellBuilder{}.store_ref(std::move(code_cell)).finalize());
-}
-
-bool VmState::init_cp(int new_cp) {
-  const DispatchTable* dt = DispatchTable::get_table(new_cp);
-  if (dt) {
-    cp = new_cp;
-    dispatch = dt;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool VmState::set_cp(int new_cp) {
-  return new_cp == cp || init_cp(new_cp);
-}
-
-void VmState::force_cp(int new_cp) {
-  if (!set_cp(new_cp)) {
-    throw VmError{Excno::inv_opcode, "unsupported codepage"};
-  }
-}
-
-// simple call to a continuation cont
-int VmState::call(Ref<Continuation> cont) {
-  const ControlData* cont_data = cont->get_cdata();
-  if (cont_data) {
-    if (cont_data->save.c[0].not_null()) {
-      // call reduces to a jump
-      return jump(std::move(cont));
-    }
-    if (cont_data->stack.not_null() || cont_data->nargs >= 0) {
-      // if cont has non-empty stack or expects fixed number of arguments, call is not simple
-      return call(std::move(cont), -1, -1);
-    }
-    // create return continuation, to be stored into new c0
-    Ref<OrdCont> ret = Ref<OrdCont>{true, std::move(code), cp};
-    ret.unique_write().get_cdata()->save.set_c0(std::move(cr.c[0]));
-    cr.set_c0(
-        std::move(ret));  // set c0 to its final value before switching to cont; notice that cont.save.c0 is not set
-    return jump_to(std::move(cont));
-  }
-  // create return continuation, to be stored into new c0
-  Ref<OrdCont> ret = Ref<OrdCont>{true, std::move(code), cp};
-  ret.unique_write().get_cdata()->save.set_c0(std::move(cr.c[0]));
-  // general implementation of a simple call
-  cr.set_c0(std::move(ret));  // set c0 to its final value before switching to cont; notice that cont.save.c0 is not set
-  return jump_to(std::move(cont));
-}
-
-// call with parameters to continuation cont
-int VmState::call(Ref<Continuation> cont, int pass_args, int ret_args) {
-  const ControlData* cont_data = cont->get_cdata();
-  if (cont_data) {
-    if (cont_data->save.c[0].not_null()) {
-      // call reduces to a jump
-      return jump(std::move(cont), pass_args);
-    }
-    int depth = stack->depth();
-    if (pass_args > depth || cont_data->nargs > depth) {
-      throw VmError{Excno::stk_und, "stack underflow while calling a continuation: not enough arguments on stack"};
-    }
-    if (cont_data->nargs > pass_args && pass_args >= 0) {
-      throw VmError{Excno::stk_und,
-                    "stack underflow while calling a closure continuation: not enough arguments passed"};
-    }
-    auto old_c0 = std::move(cr.c[0]);
-    // optimization(?): decrease refcnts of unused continuations in c[i] as early as possible
-    preclear_cr(cont_data->save);
-    // no exceptions should be thrown after this point
-    int copy = cont_data->nargs, skip = 0;
-    if (pass_args >= 0) {
-      if (copy >= 0) {
-        skip = pass_args - copy;
-      } else {
-        copy = pass_args;
-      }
-    }
-    // copy=-1 : pass whole stack, else pass top `copy` elements, drop next `skip` elements.
-    Ref<Stack> new_stk;
-    if (cont_data->stack.not_null() && !cont_data->stack->is_empty()) {
-      // `cont` already has a stack, create resulting stack from it
-      if (copy < 0) {
-        copy = stack->depth();
-      }
-      if (cont->is_unique()) {
-        // optimization: avoid copying stack if we hold the only copy of `cont`
-        new_stk = std::move(cont.unique_write().get_cdata()->stack);
-      } else {
-        new_stk = cont_data->stack;
-      }
-      new_stk.write().move_from_stack(get_stack(), copy);
-      if (skip > 0) {
-        get_stack().pop_many(skip);
-      }
-    } else if (copy >= 0) {
-      new_stk = get_stack().split_top(copy, skip);
-    } else {
-      new_stk = std::move(stack);
-      stack.clear();
-    }
-    // create return continuation using the remainder of current stack
-    Ref<OrdCont> ret = Ref<OrdCont>{true, std::move(code), cp, std::move(stack), ret_args};
-    ret.unique_write().get_cdata()->save.set_c0(std::move(old_c0));
-    Ref<OrdCont> ord_cont = static_cast<Ref<OrdCont>>(cont);
-    set_stack(std::move(new_stk));
-    cr.set_c0(std::move(ret));  // ??? if codepage of code in ord_cont is unknown, will end up with incorrect c0
-    return jump_to(std::move(cont));
-  } else {
-    // have no continuation data, situation is somewhat simpler
-    int depth = stack->depth();
-    if (pass_args > depth) {
-      throw VmError{Excno::stk_und, "stack underflow while calling a continuation: not enough arguments on stack"};
-    }
-    // create new stack from the top `pass_args` elements of the current stack
-    Ref<Stack> new_stk = (pass_args >= 0 ? get_stack().split_top(pass_args) : std::move(stack));
-    // create return continuation using the remainder of the current stack
-    Ref<OrdCont> ret = Ref<OrdCont>{true, std::move(code), cp, std::move(stack), ret_args};
-    ret.unique_write().get_cdata()->save.set_c0(std::move(cr.c[0]));
-    set_stack(std::move(new_stk));
-    cr.set_c0(std::move(ret));  // ??? if codepage of code in ord_cont is unknown, will end up with incorrect c0
-    return jump_to(std::move(cont));
-  }
-}
-
-// simple jump to continuation cont
-int VmState::jump(Ref<Continuation> cont) {
-  const ControlData* cont_data = cont->get_cdata();
-  if (cont_data && (cont_data->stack.not_null() || cont_data->nargs >= 0)) {
-    // if cont has non-empty stack or expects fixed number of arguments, jump is not simple
-    return jump(std::move(cont), -1);
-  } else {
-    return jump_to(std::move(cont));
-  }
-}
-
-// general jump to continuation cont
-int VmState::jump(Ref<Continuation> cont, int pass_args) {
-  const ControlData* cont_data = cont->get_cdata();
-  if (cont_data) {
-    // first do the checks
-    int depth = stack->depth();
-    if (pass_args > depth || cont_data->nargs > depth) {
-      throw VmError{Excno::stk_und, "stack underflow while jumping to a continuation: not enough arguments on stack"};
-    }
-    if (cont_data->nargs > pass_args && pass_args >= 0) {
-      throw VmError{Excno::stk_und,
-                    "stack underflow while jumping to closure continuation: not enough arguments passed"};
-    }
-    // optimization(?): decrease refcnts of unused continuations in c[i] as early as possible
-    preclear_cr(cont_data->save);
-    // no exceptions should be thrown after this point
-    int copy = cont_data->nargs;
-    if (pass_args >= 0 && copy < 0) {
-      copy = pass_args;
-    }
-    // copy=-1 : pass whole stack, else pass top `copy` elements, drop the remainder.
-    if (cont_data->stack.not_null() && !cont_data->stack->is_empty()) {
-      // `cont` already has a stack, create resulting stack from it
-      if (copy < 0) {
-        copy = get_stack().depth();
-      }
-      Ref<Stack> new_stk;
-      if (cont->is_unique()) {
-        // optimization: avoid copying the stack if we hold the only copy of `cont`
-        new_stk = std::move(cont.unique_write().get_cdata()->stack);
-      } else {
-        new_stk = cont_data->stack;
-      }
-      new_stk.write().move_from_stack(get_stack(), copy);
-      set_stack(std::move(new_stk));
-    } else {
-      if (copy >= 0) {
-        get_stack().drop_bottom(stack->depth() - copy);
-      }
-    }
-    return jump_to(std::move(cont));
-  } else {
-    // have no continuation data, situation is somewhat simpler
-    if (pass_args >= 0) {
-      int depth = get_stack().depth();
-      if (pass_args > depth) {
-        throw VmError{Excno::stk_und, "stack underflow while jumping to a continuation: not enough arguments on stack"};
-      }
-      get_stack().drop_bottom(depth - pass_args);
-    }
-    return jump_to(std::move(cont));
-  }
-}
-
-int VmState::ret() {
-  Ref<Continuation> cont = quit0;
-  cont.swap(cr.c[0]);
-  return jump(std::move(cont));
-}
-
-int VmState::ret(int ret_args) {
-  Ref<Continuation> cont = quit0;
-  cont.swap(cr.c[0]);
-  return jump(std::move(cont), ret_args);
-}
-
-int VmState::ret_alt() {
-  Ref<Continuation> cont = quit1;
-  cont.swap(cr.c[1]);
-  return jump(std::move(cont));
-}
-
-int VmState::ret_alt(int ret_args) {
-  Ref<Continuation> cont = quit1;
-  cont.swap(cr.c[1]);
-  return jump(std::move(cont), ret_args);
-}
-
-Ref<OrdCont> VmState::extract_cc(int save_cr, int stack_copy, int cc_args) {
-  Ref<Stack> new_stk;
-  if (stack_copy < 0 || stack_copy == stack->depth()) {
-    new_stk = std::move(stack);
-    stack.clear();
-  } else if (stack_copy > 0) {
-    stack->check_underflow(stack_copy);
-    new_stk = get_stack().split_top(stack_copy);
-  } else {
-    new_stk = Ref<Stack>{true};
-  }
-  Ref<OrdCont> cc = Ref<OrdCont>{true, std::move(code), cp, std::move(stack), cc_args};
-  stack = std::move(new_stk);
-  if (save_cr & 7) {
-    ControlData* cdata = cc.unique_write().get_cdata();
-    if (save_cr & 1) {
-      cdata->save.set_c0(std::move(cr.c[0]));
-      cr.set_c0(quit0);
-    }
-    if (save_cr & 2) {
-      cdata->save.set_c1(std::move(cr.c[1]));
-      cr.set_c1(quit1);
-    }
-    if (save_cr & 4) {
-      cdata->save.set_c2(std::move(cr.c[2]));
-      // cr.set_c2(Ref<ExcQuitCont>{true});
-    }
-  }
-  return cc;
-}
-
-int VmState::throw_exception(int excno) {
-  Stack& stack_ref = get_stack();
-  stack_ref.clear();
-  stack_ref.push_smallint(0);
-  stack_ref.push_smallint(excno);
-  code.clear();
-  consume_gas(exception_gas_price);
-  return jump(get_c2());
-}
-
-int VmState::throw_exception(int excno, StackEntry&& arg) {
-  Stack& stack_ref = get_stack();
-  stack_ref.clear();
-  stack_ref.push(std::move(arg));
-  stack_ref.push_smallint(excno);
-  code.clear();
-  consume_gas(exception_gas_price);
-  return jump(get_c2());
-}
-
-void GasLimits::gas_exception() const {
-  throw VmNoGas{};
-}
-
-void GasLimits::set_limits(long long _max, long long _limit, long long _credit) {
-  gas_max = _max;
-  gas_limit = _limit;
-  gas_credit = _credit;
-  change_base(_limit + _credit);
-}
-
-void GasLimits::change_limit(long long _limit) {
-  _limit = std::min(std::max(_limit, 0LL), gas_max);
-  gas_credit = 0;
-  gas_limit = _limit;
-  change_base(_limit);
-}
-
-bool VmState::set_gas_limits(long long _max, long long _limit, long long _credit) {
-  gas.set_limits(_max, _limit, _credit);
-  return true;
-}
-
-void VmState::change_gas_limit(long long new_limit) {
-  VM_LOG(this) << "changing gas limit to " << std::min(new_limit, gas.gas_max);
-  gas.change_limit(new_limit);
-}
-
-int VmState::step() {
-  assert(!code.is_null());
-  //VM_LOG(st) << "stack:";  stack->dump(VM_LOG(st));
-  //VM_LOG(st) << "; cr0.refcnt = " << get_c0()->get_refcnt() - 1 << std::endl;
-  if (stack_trace) {
-    stack->dump(std::cerr);
-  }
-  ++steps;
-  if (code->size()) {
-    return dispatch->dispatch(this, code.write());
-  } else if (code->size_refs()) {
-    VM_LOG(this) << "execute implicit JMPREF\n";
-    Ref<Continuation> cont = Ref<OrdCont>{true, load_cell_slice_ref(code->prefetch_ref()), get_cp()};
-    return jump(std::move(cont));
-  } else {
-    VM_LOG(this) << "execute implicit RET\n";
-    return ret();
-  }
-}
-
-int VmState::run() {
-  int res;
-  Guard guard(this);
-  do {
-    // LOG(INFO) << "[BS] data cells: " << DataCell::get_total_data_cells();
-    try {
-      try {
-        res = step();
-        gas.check();
-      } catch (vm::CellBuilder::CellWriteError) {
-        throw VmError{Excno::cell_ov};
-      } catch (vm::CellBuilder::CellCreateError) {
-        throw VmError{Excno::cell_ov};
-      } catch (vm::CellSlice::CellReadError) {
-        throw VmError{Excno::cell_und};
-      }
-    } catch (const VmError& vme) {
-      VM_LOG(this) << "handling exception code " << vme.get_errno() << ": " << vme.get_msg();
-      try {
-        // LOG(INFO) << "[EX] data cells: " << DataCell::get_total_data_cells();
-        ++steps;
-        res = throw_exception(vme.get_errno());
-      } catch (const VmError& vme2) {
-        VM_LOG(this) << "exception " << vme2.get_errno() << " while handling exception: " << vme.get_msg();
-        // LOG(INFO) << "[EXX] data cells: " << DataCell::get_total_data_cells();
-        return ~vme2.get_errno();
-      }
-    } catch (VmNoGas vmoog) {
-      ++steps;
-      VM_LOG(this) << "unhandled out-of-gas exception: gas consumed=" << gas.gas_consumed()
-                   << ", limit=" << gas.gas_limit;
-      get_stack().clear();
-      get_stack().push_smallint(gas.gas_consumed());
-      return vmoog.get_errno();  // no ~ for unhandled exceptions (to make their faking impossible)
-    }
-  } while (!res);
-  // LOG(INFO) << "[EN] data cells: " << DataCell::get_total_data_cells();
-  if ((res | 1) == -1) {
-    commit();
-  }
-  return res;
-}
-
-ControlData* force_cdata(Ref<Continuation>& cont) {
-  if (!cont->get_cdata()) {
-    cont = Ref<ArgContExt>{true, cont};
-    return cont.unique_write().get_cdata();
-  } else {
-    return cont.write().get_cdata();
-  }
-}
-
-ControlRegs* force_cregs(Ref<Continuation>& cont) {
-  return &force_cdata(cont)->save;
-}
-
-int run_vm_code(Ref<CellSlice> code, Ref<Stack>& stack, int flags, Ref<Cell>* data_ptr, VmLog log, long long* steps,
-                GasLimits* gas_limits, std::vector<Ref<Cell>> libraries, Ref<Tuple> init_c7) {
-  VmState vm{code,
-             std::move(stack),
-             gas_limits ? *gas_limits : GasLimits{},
-             flags,
-             data_ptr ? *data_ptr : Ref<Cell>{},
-             log,
-             std::move(libraries),
-             std::move(init_c7)};
-  int res = vm.run();
-  stack = vm.get_stack_ref();
-  if (res == -1 && data_ptr) {
-    *data_ptr = vm.get_c4();
-  }
-  if (steps) {
-    *steps = vm.get_steps_count();
-  }
-  if (gas_limits) {
-    *gas_limits = vm.get_gas_limits();
-    LOG(INFO) << "steps: " << vm.get_steps_count() << " gas: used=" << gas_limits->gas_consumed()
-              << ", max=" << gas_limits->gas_max << ", limit=" << gas_limits->gas_limit
-              << ", credit=" << gas_limits->gas_credit;
-  }
-  if ((vm.get_log().log_mask & vm::VmLog::DumpStack) != 0) {
-    VM_LOG(&vm) << "BEGIN_STACK_DUMP";
-    for (int i = stack->depth(); i > 0; i--) {
-      VM_LOG(&vm) << (*stack)[i - 1].to_string();
-    }
-    VM_LOG(&vm) << "END_STACK_DUMP";
-  }
-
-  return ~res;
-}
-
-int run_vm_code(Ref<CellSlice> code, Stack& stack, int flags, Ref<Cell>* data_ptr, VmLog log, long long* steps,
-                GasLimits* gas_limits, std::vector<Ref<Cell>> libraries, Ref<Tuple> init_c7) {
-  Ref<Stack> stk{true};
-  stk.unique_write().set_contents(std::move(stack));
-  stack.clear();
-  int res = run_vm_code(code, stk, flags, data_ptr, log, steps, gas_limits, std::move(libraries), std::move(init_c7));
-  CHECK(stack.is_unique());
-  if (stk.is_null()) {
-    stack.clear();
-  } else if (&(*stk) != &stack) {
-    VmState* st = nullptr;
-    if (stk->is_unique()) {
-      VM_LOG(st) << "move resulting stack (" << stk->depth() << " entries)";
-      stack.set_contents(std::move(stk.unique_write()));
-    } else {
-      VM_LOG(st) << "copying resulting stack (" << stk->depth() << " entries)";
-      stack.set_contents(*stk);
-    }
-  }
-  return res;
-}
-
-// may throw a dictionary exception; returns nullptr if library is not found in context
-Ref<Cell> VmState::load_library(td::ConstBitPtr hash) {
-  std::unique_ptr<VmStateInterface> tmp_ctx;
-  // install temporary dummy vm state interface to prevent charging for cell load operations during library lookup
-  VmStateInterface::Guard(tmp_ctx.get());
-  for (const auto& lib_collection : libraries) {
-    auto lib = lookup_library_in(hash, lib_collection);
-    if (lib.not_null()) {
-      return lib;
-    }
-  }
-  return {};
-}
-
-bool VmState::register_library_collection(Ref<Cell> lib) {
-  if (lib.is_null()) {
-    return true;
-  }
-  libraries.push_back(std::move(lib));
-  return true;
-}
-
-void VmState::register_cell_load() {
-  consume_gas(cell_load_gas_price);
-}
-
-void VmState::register_cell_create() {
-  consume_gas(cell_create_gas_price);
-}
-
-td::BitArray<256> VmState::get_state_hash() const {
-  // TODO: implement properly, by serializing the stack etc, and computing the Merkle hash
-  td::BitArray<256> res;
-  res.clear();
-  return res;
-}
-
-td::BitArray<256> VmState::get_final_state_hash(int exit_code) const {
-  // TODO: implement properly, by serializing the stack etc, and computing the Merkle hash
-  td::BitArray<256> res;
-  res.clear();
-  return res;
-}
-
-Ref<vm::Cell> lookup_library_in(td::ConstBitPtr key, vm::Dictionary& dict) {
-  try {
-    auto val = dict.lookup(key, 256);
-    if (val.is_null() || !val->have_refs()) {
-      return {};
-    }
-    auto root = val->prefetch_ref();
-    if (root.not_null() && !root->get_hash().bits().compare(key, 256)) {
-      return root;
-    }
-    return {};
-  } catch (vm::VmError) {
-    return {};
-  }
-}
-
-Ref<vm::Cell> lookup_library_in(td::ConstBitPtr key, Ref<vm::Cell> lib_root) {
-  if (lib_root.is_null()) {
-    return lib_root;
-  }
-  vm::Dictionary dict{std::move(lib_root), 256};
-  return lookup_library_in(key, dict);
 }
 
 }  // namespace vm
