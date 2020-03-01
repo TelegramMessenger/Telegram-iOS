@@ -5,11 +5,13 @@ filegroup(
     srcs = glob([
         "Resources/**/*",
     ], exclude = ["Resources/**/.*"]),
+    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "PasswordSetupUIAssets",
     srcs = glob(["PasswordSetupUIImages.xcassets/**"]),
+    visibility = ["//visibility:public"],
 )
 
 swift_library(
@@ -18,10 +20,6 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
-    data = [
-        ":PasswordSetupUIResources",
-        ":PasswordSetupUIAssets",
-    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

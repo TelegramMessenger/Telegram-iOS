@@ -1,5 +1,6 @@
 load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
+    "ios_extension",
     "ios_framework",
 )
 
@@ -27,6 +28,49 @@ load(
     "telegram_bundle_id",
     "telegram_aps_environment",
 )
+
+config_setting(
+    name = "debug",
+    values = {
+        "compilation_mode": "dbg",
+    },
+)
+
+genrule(
+    name = "empty",
+    outs = ["empty.swift"],
+    cmd = "touch $(OUTS)",
+)
+
+swift_library(
+    name = "_LocalDebugOptions",
+    srcs = [":empty"],
+    copts = [
+        "-Xfrontend",
+        "-serialize-debugging-options",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
+        "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
+        "//submodules/Crc32:Crc32",
+        "//submodules/MurMurHash32:MurMurHash32",
+        "//submodules/StringTransliteration:StringTransliteration",
+        "//submodules/sqlcipher:sqlcipher",
+        "//submodules/NumberPluralizationForm:NumberPluralizationForm",
+        "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/MtProtoKit:MtProtoKit",
+    ],
+    module_name = "_LocalDebugOptions",
+    tags = ["no-remote"],
+    visibility = ["//visibility:public"],
+)
+
+debug_deps = select({
+    ":debug": [":_LocalDebugOptions"],
+    "//conditions:default": [],
+})
 
 filegroup(
     name = "AppResources",
@@ -114,6 +158,14 @@ swift_library(
         ":AppResources",
         ":AppIntentVocabularyResources",
         ":InfoPlistStringResources",
+        "//submodules/LegacyComponents:LegacyComponentsResources",
+        "//submodules/OverlayStatusController:OverlayStatusControllerResources",
+        "//submodules/PasswordSetupUI:PasswordSetupUIResources",
+        "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
+        "//submodules/TelegramUI:TelegramUIResources",
+        "//submodules/TelegramUI:TelegramUIAssets",
+        "//submodules/WalletUI:WalletUIResources",
+        "//submodules/WalletUI:WalletUIAssets",
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
@@ -283,7 +335,7 @@ objc_library(
 )
 
 plist_fragment(
-    name = "WatchVersionInfoPlist",
+    name = "VersionInfoPlist",
     extension = "plist",
     template =
     """
@@ -298,7 +350,7 @@ plist_fragment(
 )
 
 plist_fragment(
-    name = "WatchAppNameInfoPlist",
+    name = "AppNameInfoPlist",
     extension = "plist",
     template =
     """
@@ -347,8 +399,8 @@ watchos_extension(
     bundle_name = "TelegramWatchExtension",
     infoplists = [
         "Watch/Extension/Info.plist",
-        ":WatchVersionInfoPlist",
-        ":WatchAppNameInfoPlist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
         ":WatchExtensionNSExtensionInfoPlist",
     ],
     minimum_os_version = "5.0",
@@ -374,8 +426,8 @@ watchos_application(
     extension = ":TelegramWatchExtension",
     infoplists = [
         "Watch/App/Info.plist",
-        ":WatchVersionInfoPlist",
-        ":WatchAppNameInfoPlist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
         ":WatchAppCompanionInfoPlist",
     ],
     minimum_os_version = "5.0",
@@ -388,6 +440,79 @@ watchos_application(
         ":TelegramWatchAppInterface",
     ],
     strings = [
+    ],
+)
+
+swift_library(
+    name = "ShareExtensionLib",
+    module_name = "ShareExtensionLib",
+    srcs = glob([
+        "Share/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/TelegramUI:TelegramUI"
+    ],
+)
+
+plist_fragment(
+    name = "TelegramUIInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.TelegramUI</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>TelegramUI</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "TelegramUIFramework",
+    bundle_id = "{telegram_bundle_id}.TelegramUI".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":TelegramUIInfoPlist.plist",
+    ],
+    minimum_os_version = "9.0",
+    deps = [
+        "//submodules/TelegramUI:TelegramUI",
+    ] + debug_deps,
+)
+
+ios_extension(
+    name = "ShareExtension",
+    bundle_id = "{telegram_bundle_id}.Share".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        "Share/Info.plist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    provisioning_profile = "//build-input/data/provisioning-profiles:Share.mobileprovision",
+    deps = [":ShareExtensionLib"],
+    frameworks = [
+        ":TelegramUIFramework"
     ],
 )
 
@@ -408,10 +533,13 @@ ios_application(
         ":DefaultAppIcon",
     ],
     frameworks = [
-        #":AsyncDisplayKitFramework",
+        ":TelegramUIFramework",
     ],
     strings = [
         ":AppStringResources",
+    ],
+    extensions = [
+        ":ShareExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [

@@ -51,6 +51,7 @@ ifneq ($(BAZEL_CACHE_DIR),)
 endif
 
 BAZEL_COMMON_FLAGS=\
+	--announce_rc \
 	--features=swift.use_global_module_cache \
 	
 BAZEL_DEBUG_FLAGS=\
@@ -445,3 +446,9 @@ bazel_project: kill_xcode
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	build-system/generate-xcode-project.sh
+
+bazel_soft_project:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/generate-xcode-project.sh
+

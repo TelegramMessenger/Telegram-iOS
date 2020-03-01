@@ -5,11 +5,13 @@ filegroup(
     srcs = glob([
         "Resources/**/*",
     ], exclude = ["Resources/**/.*"]),
+    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "WalletUIAssets",
     srcs = glob(["WalletImages.xcassets/**"]),
+    visibility = ["//visibility:public"],
 )
 
 swift_library(
@@ -18,10 +20,6 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
-    data = [
-        ":WalletUIResources",
-        ":WalletUIAssets",
-    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

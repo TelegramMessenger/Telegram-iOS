@@ -5,14 +5,12 @@ filegroup(
     srcs = glob([
         "Resources/**/*",
     ], exclude = ["Resources/**/.*"]),
+    visibility = ["//visibility:public"],
 )
 
 swift_library(
     name = "OverlayStatusController",
     module_name = "OverlayStatusController",
-    data = [
-        ":OverlayStatusControllerResources",
-    ],
     srcs = glob([
         "Sources/**/*.swift",
     ]),

@@ -6,11 +6,13 @@ filegroup(
         "Sounds/**/*",
         "Resources/**/*",
     ], exclude = ["Sounds/**/.*", "Resources/**/.*"]),
+    visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "TelegramUIAssets",
     srcs = glob(["Images.xcassets/**"]),
+    visibility = ["//visibility:public"],
 )
 
 swift_library(
@@ -19,10 +21,6 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
-    data = [
-        ":TelegramUIResources",
-        ":TelegramUIAssets",
-    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",

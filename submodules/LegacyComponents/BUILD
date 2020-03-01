@@ -4,6 +4,7 @@ filegroup(
     srcs = glob([
         "LegacyComponentsResources.bundle/**/*",
     ], exclude = ["Resources/LegacyComponentsResources.bundle/**/.*"]),
+    visibility = ["//visibility:public"],
 )
 
 objc_library(
