@@ -214,6 +214,10 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     return tgvoip::VoIPController::GetConnectionMaxLayer();
 }
 
++ (NSString *)version {
+    return [NSString stringWithUTF8String:tgvoip::VoIPController::GetVersion()];
+}
+
 - (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving derivedState:(NSData * _Nonnull)derivedState {
     self = [super init];
     if (self != nil) {
