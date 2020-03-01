@@ -391,6 +391,51 @@ plist_fragment(
     )
 )
 
+plist_fragment(
+    name = "WatchExtensionInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.watchkitapp.watchkitextension</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>WKExtensionDelegateClassName</key>
+    <string>TGExtensionDelegate</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
+plist_fragment(
+    name = "WatchAppInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.watchkitapp</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    </array>
+    <key>WKWatchKitApp</key>
+    <true/>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
 watchos_extension(
     name = "TelegramWatchExtension",
     bundle_id = "{telegram_bundle_id}.watchkitapp.watchkitextension".format(
@@ -398,7 +443,7 @@ watchos_extension(
     ),
     bundle_name = "TelegramWatchExtension",
     infoplists = [
-        "Watch/Extension/Info.plist",
+        ":WatchExtensionInfoPlist",
         ":VersionInfoPlist",
         ":AppNameInfoPlist",
         ":WatchExtensionNSExtensionInfoPlist",
@@ -425,7 +470,7 @@ watchos_application(
     bundle_name = "TelegramWatch",
     extension = ":TelegramWatchExtension",
     infoplists = [
-        "Watch/App/Info.plist",
+        ":WatchAppInfoPlist",
         ":VersionInfoPlist",
         ":AppNameInfoPlist",
         ":WatchAppCompanionInfoPlist",
@@ -486,12 +531,62 @@ ios_framework(
         "ipad",
     ],
     infoplists = [
-        ":TelegramUIInfoPlist.plist",
+        ":TelegramUIInfoPlist",
     ],
     minimum_os_version = "9.0",
     deps = [
         "//submodules/TelegramUI:TelegramUI",
     ] + debug_deps,
+)
+
+plist_fragment(
+    name = "ShareInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.Share</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <key>IntentsSupported</key>
+            <array>
+                <string>INSendMessageIntent</string>
+            </array>
+            <key>NSExtensionActivationRule</key>
+            <string>SUBQUERY (
+    extensionItems,
+    $extensionItem,
+    SUBQUERY (
+        $extensionItem.attachments,
+        $attachment,
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.file-url" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.movie" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.image" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.url" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.text" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.audio" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.data" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.vcard" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "com.apple.pkpass"
+    ).@count == $extensionItem.attachments.@count
+).@count &gt; 0</string>
+        </dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.share-services</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>ShareRootController</string>
+    </dict>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
 )
 
 ios_extension(
@@ -504,7 +599,7 @@ ios_extension(
         "ipad",
     ],
     infoplists = [
-        "Share/Info.plist",
+        ":ShareInfoPlist",
         ":VersionInfoPlist",
         ":AppNameInfoPlist",
     ],
@@ -514,6 +609,171 @@ ios_extension(
     frameworks = [
         ":TelegramUIFramework"
     ],
+)
+
+plist_fragment(
+    name = "TelegramInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>{telegram_bundle_id}.refresh</string>
+    </array>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>Telegram</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>instagram</string>
+        <string>comgooglemaps-x-callback</string>
+        <string>foursquare</string>
+        <string>here-location</string>
+        <string>yandexmaps</string>
+        <string>yandexnavi</string>
+        <string>comgooglemaps</string>
+        <string>youtube</string>
+        <string>twitter</string>
+        <string>vk</string>
+        <string>waze</string>
+        <string>googlechrome</string>
+        <string>firefox</string>
+        <string>touch-http</string>
+        <string>yandexbrowser-open-url</string>
+        <string>vimeo</string>
+        <string>vine</string>
+        <string>coub</string>
+        <string>uber</string>
+        <string>citymapper</string>
+        <string>lyft</string>
+        <string>opera-http</string>
+        <string>firefox-focus</string>
+        <string>ddgQuickLink</string>
+        <string>moovit</string>
+        <string>alook</string>
+        <string>dgis</string>
+        <string>microsoft-edge-http</string>
+        <string>brave</string>
+        <string>onionhttp</string>
+        <string>ucbrowser</string>
+        <string>dolphin</string>
+    </array>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>We need this so that you can take and share photos and videos.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Telegram stores your contacts heavily encrypted in the cloud to let you connect with your friends across all your devices.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>You can use Face ID to unlock the app.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>When you send your location to your friends, Telegram needs access to show them a map. You also need this to send locations from an Apple Watch.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>When you send your location to your friends, Telegram needs access to show them a map.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>We need this so that you can record and share voice messages and videos with sound.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>When you send your location to your friends, Telegram needs access to show them a map.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>We need this so that you can share photos and videos from your photo library.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need this so that you can share photos and videos from your photo library.</string>
+    <key>NSSiriUsageDescription</key>
+    <string>You can use Siri to send messages.</string>
+    <key>NSUserActivityTypes</key>
+    <array>
+        <string>INSendMessageIntent</string>
+        <string>RemindAboutChatIntent</string>
+    </array>
+    <key>UIAppFonts</key>
+    <array>
+        <string>SFCompactRounded-Semibold.otf</string>
+    </array>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+        <string>fetch</string>
+        <string>location</string>
+        <string>remote-notification</string>
+        <string>voip</string>
+    </array>
+    <key>UIDeviceFamily</key>
+    <array>
+        <integer>1</integer>
+        <integer>2</integer>
+    </array>
+    <key>UIFileSharingEnabled</key>
+    <false/>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
+    <key>UIRequiresPersistentWiFi</key>
+    <true/>
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleDefault</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+    <key>UIViewEdgeAntialiasing</key>
+    <false/>
+    <key>UIViewGroupOpacity</key>
+    <false/>
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>Telegram iOS Color Theme File</string>
+            <key>UTTypeIconFiles</key>
+            <array>
+                <string>BlueIcon@3x.png</string>
+            </array>
+            <key>UTTypeIdentifier</key>
+            <string>org.telegram.Telegram-iOS.theme</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>tgios-theme</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
 )
 
 ios_application(
@@ -526,7 +786,7 @@ ios_application(
     provisioning_profile = "//build-input/data/provisioning-profiles:Telegram.mobileprovision",
     entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
-        "Info.plist",
+        ":TelegramInfoPlist",
         ":AdditionalInfoPlist",
     ],
     app_icons = [
