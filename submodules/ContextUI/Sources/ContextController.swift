@@ -747,7 +747,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.withoutBlurDimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
             }
             
-            self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
+            self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
                 completedActionsNode = true
                 intermediateCompletion()
             })

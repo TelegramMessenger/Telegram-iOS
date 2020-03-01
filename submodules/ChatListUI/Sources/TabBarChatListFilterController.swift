@@ -320,7 +320,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
         unreadCountItems.append(.total(nil))
         var additionalPeerIds = Set<PeerId>()
         for filter in filters {
-            additionalPeerIds.formUnion(filter.includePeers)
+            additionalPeerIds.formUnion(filter.data.includePeers)
         }
         if !additionalPeerIds.isEmpty {
             for peerId in additionalPeerIds {
@@ -390,22 +390,22 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
             var shouldUpdateLayout = false
             for filter in filters {
                 var tags: [PeerSummaryCounterTags] = []
-                if filter.categories.contains(.privateChats) {
+                if filter.data.categories.contains(.privateChats) {
                     tags.append(.privateChat)
                 }
-                if filter.categories.contains(.secretChats) {
+                if filter.data.categories.contains(.secretChats) {
                     tags.append(.secretChat)
                 }
-                if filter.categories.contains(.privateGroups) {
+                if filter.data.categories.contains(.privateGroups) {
                     tags.append(.privateGroup)
                 }
-                if filter.categories.contains(.bots) {
+                if filter.data.categories.contains(.bots) {
                     tags.append(.bot)
                 }
-                if filter.categories.contains(.publicGroups) {
+                if filter.data.categories.contains(.publicGroups) {
                     tags.append(.publicGroup)
                 }
-                if filter.categories.contains(.channels) {
+                if filter.data.categories.contains(.channels) {
                     tags.append(.channel)
                 }
                     
@@ -417,7 +417,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                         }
                     }
                 }
-                for peerId in filter.includePeers {
+                for peerId in filter.data.includePeers {
                     if let (tag, peerCount) = peerTagAndCount[peerId] {
                         if !tags.contains(tag) {
                             if peerCount != 0 {
@@ -513,7 +513,7 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
         unreadCountItems.append(.total(nil))
         var additionalPeerIds = Set<PeerId>()
         for preset in presetList {
-            additionalPeerIds.formUnion(preset.includePeers)
+            additionalPeerIds.formUnion(preset.data.includePeers)
         }
         if !additionalPeerIds.isEmpty {
             for peerId in additionalPeerIds {
@@ -567,22 +567,22 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
                     let badgeString: String
                     if let preset = contentNode.preset {
                         var tags: [PeerSummaryCounterTags] = []
-                        if preset.categories.contains(.privateChats) {
+                        if preset.data.categories.contains(.privateChats) {
                             tags.append(.privateChat)
                         }
-                        if preset.categories.contains(.secretChats) {
+                        if preset.data.categories.contains(.secretChats) {
                             tags.append(.secretChat)
                         }
-                        if preset.categories.contains(.privateGroups) {
+                        if preset.data.categories.contains(.privateGroups) {
                             tags.append(.privateGroup)
                         }
-                        if preset.categories.contains(.bots) {
+                        if preset.data.categories.contains(.bots) {
                             tags.append(.bot)
                         }
-                        if preset.categories.contains(.publicGroups) {
+                        if preset.data.categories.contains(.publicGroups) {
                             tags.append(.publicGroup)
                         }
-                        if preset.categories.contains(.channels) {
+                        if preset.data.categories.contains(.channels) {
                             tags.append(.channel)
                         }
                         
@@ -594,7 +594,7 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
                                 }
                             }
                         }
-                        for peerId in preset.includePeers {
+                        for peerId in preset.data.includePeers {
                             if let (tag, peerCount) = peerTagAndCount[peerId] {
                                 if !tags.contains(tag) {
                                     count += peerCount

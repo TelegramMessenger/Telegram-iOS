@@ -5366,3 +5366,5 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.ViewsBySourceTitle" = "VIEWS BY SOURCE";
 "Stats.FollowersBySourceTitle" = "FOLLOWERS BY SOURCE";
 "Stats.LanguagesTitle" = "LANGUAGES";
+
+"ChatListFilter.AddChatsTitle" = "Add Chats";

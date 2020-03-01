@@ -18,6 +18,8 @@ extension StickerPackReference {
                 return .inputStickerSetShortName(shortName: name)
             case .animatedEmoji:
                 return .inputStickerSetAnimatedEmoji
+            case .dice:
+                return .inputStickerSetDice
         }
     }
 }

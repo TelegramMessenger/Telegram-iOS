@@ -1,15 +1,19 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+private_headers = glob([
+    "lottie-ios/**/*.h",
+], exclude = [
+    "lottie-ios/Classes/PublicHeaders/**/*.h",
+])
+
 static_library(
     name = "Lottie",
     srcs = glob([
         "lottie-ios/**/*.m",
     ]),
-    headers = glob([
-    	"lottie-ios/**/*.h",
-    ]),
+    headers = private_headers,
 	exported_headers = glob([
-    	"lottie-ios/Classes/PublicHeaders/*.h",
+        "lottie-ios/Classes/PublicHeaders/**/*.h",
     ]),
     deps = [
     ],

@@ -320,6 +320,7 @@ final class MutableChatListView {
     fileprivate var additionalItemIds: Set<PeerId>
     fileprivate var additionalItemEntries: [MutableChatListEntry]
     fileprivate var additionalMixedItemIds: Set<PeerId>
+    fileprivate var additionalMixedPinnedItemIds: Set<PeerId>
     fileprivate var additionalMixedItemEntries: [MutableChatListEntry]
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
@@ -340,10 +341,17 @@ final class MutableChatListView {
         self.additionalItemEntries = []
         self.additionalMixedItemEntries = []
         self.additionalMixedItemIds = Set()
+        self.additionalMixedPinnedItemIds = Set()
         if let filterPredicate = self.filterPredicate {
             self.additionalMixedItemIds.formUnion(filterPredicate.includePeerIds)
+            for (itemId, _) in postbox.chatListTable.getPinnedItemIds(groupId: self.groupId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable) {
+                switch itemId {
+                case let .peer(peerId):
+                    self.additionalMixedPinnedItemIds.insert(peerId)
+                }
+            }
         }
-        for peerId in self.additionalMixedItemIds {
+        for peerId in self.additionalMixedItemIds.union(self.additionalMixedPinnedItemIds) {
             if let entry = postbox.chatListTable.getEntry(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable) {
                 self.additionalMixedItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
             }
@@ -554,7 +562,7 @@ final class MutableChatListView {
         if !updatedPeerNotificationSettings.isEmpty {
             if let filterPredicate = self.filterPredicate {
                 for (peerId, settingsChange) in updatedPeerNotificationSettings {
-                    if let peer = postbox.peerTable.get(peerId) {
+                    if let peer = postbox.peerTable.get(peerId), !self.additionalMixedItemIds.contains(peerId), !self.additionalMixedPinnedItemIds.contains(peerId) {
                         let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
                         let wasIncluded = filterPredicate.includes(peer: peer, notificationSettings: settingsChange.0, isUnread: isUnread)
                         let isIncluded = filterPredicate.includes(peer: peer, notificationSettings: settingsChange.1, isUnread: isUnread)
@@ -609,6 +617,22 @@ final class MutableChatListView {
                         }
                     default:
                         continue
+                }
+            }
+            
+            for i in 0 ..< self.additionalMixedItemEntries.count {
+                switch self.additionalMixedItemEntries[i] {
+                case let .MessageEntry(index, message, readState, _, embeddedState, peer, peerPresence, summaryInfo, hasFailed):
+                    var notificationSettingsPeerId = peer.peerId
+                    if let peer = peer.peers[peer.peerId], let associatedPeerId = peer.associatedPeerId {
+                        notificationSettingsPeerId = associatedPeerId
+                    }
+                    if let (_, settings) = updatedPeerNotificationSettings[notificationSettingsPeerId] {
+                        self.additionalMixedItemEntries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, peerPresence, summaryInfo, hasFailed)
+                        hasChanges = true
+                    }
+                default:
+                    continue
                 }
             }
         }
@@ -723,7 +747,7 @@ final class MutableChatListView {
             hasChanges = true
         }
         var updateAdditionalMixedItems = false
-        for peerId in self.additionalMixedItemIds {
+        for peerId in self.additionalMixedItemIds.union(self.additionalMixedPinnedItemIds) {
             if transaction.currentOperationsByPeerId[peerId] != nil {
                 updateAdditionalMixedItems = true
             }
@@ -736,7 +760,7 @@ final class MutableChatListView {
         }
         if updateAdditionalMixedItems {
             self.additionalMixedItemEntries.removeAll()
-            for peerId in self.additionalMixedItemIds {
+            for peerId in self.additionalMixedItemIds.union(self.additionalMixedPinnedItemIds) {
                 if let entry = postbox.chatListTable.getEntry(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable) {
                     self.additionalMixedItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
                 }
@@ -753,6 +777,12 @@ final class MutableChatListView {
                 if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
                     let isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
                     if !filterPredicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId), isUnread: isUnread) {
+                        return false
+                    }
+                    if self.additionalMixedItemIds.contains(peer.id) {
+                        return false
+                    }
+                    if self.additionalMixedPinnedItemIds.contains(peer.id) {
                         return false
                     }
                 } else {
@@ -1076,12 +1106,17 @@ public final class ChatListView {
                     existingIds.insert(messageEntry.0.messageIndex.id.peerId)
                 }
             }
-            for entry in mutableView.additionalMixedItemEntries {
+            loop: for entry in mutableView.additionalMixedItemEntries {
                 if case let .MessageEntry(messageEntry) = entry {
                     if !existingIds.contains(messageEntry.0.messageIndex.id.peerId) {
                         switch entry {
                         case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed):
-                            entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed))
+                            if let filterPredicate = mutableView.filterPredicate, let peerValue = peer.peer {
+                                if filterPredicate.includes(peer: peerValue, notificationSettings: notificationSettings, isUnread: combinedReadState?.isUnread ?? false) {
+                                    existingIds.insert(messageEntry.0.messageIndex.id.peerId)
+                                    entries.append(.MessageEntry(ChatListIndex(pinningIndex: nil, messageIndex: index.messageIndex), message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed))
+                                }
+                            }
                         case let .HoleEntry(hole):
                             entries.append(.HoleEntry(hole))
                         case .IntermediateMessageEntry:
@@ -1104,12 +1139,8 @@ public final class ChatListView {
                     additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed))
                 case .HoleEntry:
                     assertionFailure()
-                /*case .GroupReferenceEntry:
-                    assertionFailure()*/
                 case .IntermediateMessageEntry:
                     assertionFailure()
-                /*case .IntermediateGroupReferenceEntry:
-                    assertionFailure()*/
             }
         }
         

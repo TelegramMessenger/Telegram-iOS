@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(APP_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -14,6 +16,10 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(PRODUCT_BUNDLE_SHORT_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>${BUILD_NUMBER}</string>
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>4</integer>
@@ -23,6 +29,8 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>WKCompanionAppBundleIdentifier</key>
+	<string>$(APP_BUNDLE_ID)</string>
 	<key>WKWatchKitApp</key>
 	<true/>
 </dict>

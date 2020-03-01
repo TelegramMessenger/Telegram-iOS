@@ -629,6 +629,9 @@ public enum ViewControllerNavigationPresentation {
     
     open func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
     }
+    
+    open func tabBarItemSwipeAction(direction: TabBarItemSwipeDirection) {
+    }
 }
 
 func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {

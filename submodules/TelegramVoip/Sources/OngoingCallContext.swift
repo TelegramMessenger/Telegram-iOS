@@ -173,6 +173,10 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
+    public static var version: String {
+        return OngoingCallThreadLocalContext.version()!
+    }
+    
     public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)

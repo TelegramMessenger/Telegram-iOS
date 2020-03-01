@@ -33,7 +33,7 @@ static_library(
         "Sources/**/*.swift",
     ]),
     exported_headers = glob([
-        "Sources/**/*.h",
+        "Public/**/*.h",
     ]),
     deps = [
         ":opus_lib",

@@ -1,0 +1,28 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "LegacyDataImportImpl",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+    	"Sources/*.h",
+    ]),
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    deps = [
+	    "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+	    "//submodules/Postbox:Postbox#shared",
+	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/TelegramNotices:TelegramNotices",
+    	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
+    	"//submodules/RadialStatusNode:RadialStatusNode",
+    	"//submodules/LegacyComponents:LegacyComponents",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

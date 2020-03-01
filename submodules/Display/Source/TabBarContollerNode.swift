@@ -25,10 +25,10 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void) {
+    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void) {
         self.theme = theme
         self.navigationBar = navigationBar
-        self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected, contextAction: contextAction)
+        self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected, contextAction: contextAction, swipeAction: swipeAction)
         self.toolbarActionSelected = toolbarActionSelected
         
         super.init()

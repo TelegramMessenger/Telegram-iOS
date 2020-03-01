@@ -9,6 +9,7 @@ import TelegramPresentationData
 import MergeLists
 import AccountContext
 import ContactListUI
+import ChatListUI
 
 private struct SearchResultEntry: Identifiable {
     let index: Int
@@ -27,8 +28,22 @@ private struct SearchResultEntry: Identifiable {
     }
 }
 
+enum ContactMultiselectionContentNode {
+    case contacts(ContactListNode)
+    case chats(ChatListNode)
+    
+    var node: ASDisplayNode {
+        switch self {
+        case let .contacts(contacts):
+            return contacts
+        case let .chats(chats):
+            return chats
+        }
+    }
+}
+
 final class ContactMultiselectionControllerNode: ASDisplayNode {
-    let contactListNode: ContactListNode
+    let contentNode: ContactMultiselectionContentNode
     let tokenListNode: EditableTokenListNode
     var searchResultsNode: ContactListNode?
     
@@ -53,7 +68,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let placeholder: String
+        var placeholder: String
         var includeChatList = false
         switch mode {
             case let .peerSelection(_, searchGroups, searchChannels):
@@ -67,7 +82,13 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList)), filters: filters, selectionState: ContactListNodeGroupSelectionState())
+        if case .chatSelection = mode {
+            placeholder = self.presentationData.strings.Common_Search
+            self.contentNode = .chats(ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: [.excludeSavedMessages], isSelecting: true), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true))
+        } else {
+            self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
+        }
+        
         self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder)
         
         super.init()
@@ -78,11 +99,18 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
-        self.addSubnode(self.contactListNode)
+        self.addSubnode(self.contentNode.node)
         self.addSubnode(self.tokenListNode)
         
-        self.contactListNode.openPeer = { [weak self] peer in
-            self?.openPeer?(peer)
+        switch self.contentNode {
+        case let .contacts(contactsNode):
+            contactsNode.openPeer = { [weak self] peer in
+                self?.openPeer?(peer)
+            }
+        case let .chats(chatsNode):
+            chatsNode.peerSelected = { [weak self] peer, _, _ in
+                self?.openPeer?(.peer(peer: peer, isGlobal: false, participantCount: nil))
+            }
         }
         
         let searchText = ValuePromise<String>()
@@ -102,9 +130,14 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 } else {
                     if strongSelf.searchResultsNode == nil {
                         var selectionState: ContactListNodeGroupSelectionState?
-                        strongSelf.contactListNode.updateSelectionState { state in
-                            selectionState = state
-                            return state
+                        switch strongSelf.contentNode {
+                        case let .contacts(contactsNode):
+                            contactsNode.updateSelectionState { state in
+                                selectionState = state
+                                return state
+                            }
+                        case .chats:
+                            break
                         }
                         var searchChatList = false
                         var searchGroups = false
@@ -113,6 +146,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchChatList = peerSelection.searchChatList
                             searchGroups = peerSelection.searchGroups
                             searchChannels = peerSelection.searchChannels
+                        } else if case .chatSelection = mode {
+                            searchChatList = true
+                            searchGroups = true
+                            searchChannels = true
                         }
                         let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels)), filters: filters, selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
@@ -136,7 +173,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         
                         strongSelf.searchResultsReadyDisposable.set((searchResultsNode.ready |> deliverOnMainQueue).start(next: { _ in
                             if let strongSelf = self, let searchResultsNode = strongSelf.searchResultsNode {
-                                strongSelf.insertSubnode(searchResultsNode, aboveSubnode: strongSelf.contactListNode)
+                                strongSelf.insertSubnode(searchResultsNode, aboveSubnode: strongSelf.contentNode.node)
                             }
                         }))
                     }
@@ -167,6 +204,15 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
     }
     
+    func scrollToTop() {
+        switch self.contentNode {
+        case let .contacts(contactsNode):
+            contactsNode.scrollToTop()
+        case let .chats(chatsNode):
+            chatsNode.scrollToPosition(.top)
+        }
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight, actualNavigationBarHeight)
         
@@ -183,8 +229,15 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         insets.top += tokenListHeight
         headerInsets.top += tokenListHeight
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
-        self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        switch self.contentNode {
+        case let .contacts(contactsNode):
+            contactsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
+        case let .chats(chatsNode):
+            let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
+            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
+        }
+        self.contentNode.node.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         if let searchResultsNode = self.searchResultsNode {
             searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)

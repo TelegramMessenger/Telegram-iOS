@@ -13,7 +13,7 @@ static_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
         "//submodules/TelegramAudio:TelegramAudio",
-        "//submodules/FFMpeg:FFMpeg",
+        "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/RingBuffer:RingBuffer",
     ],
     frameworks = [

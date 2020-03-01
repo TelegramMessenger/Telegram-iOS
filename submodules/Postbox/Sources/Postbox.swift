@@ -763,6 +763,39 @@ public final class Transaction {
         }
     }
     
+    public func getChatCountMatchingPredicate(_ predicate: ChatListFilterPredicate) -> Int {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return 0
+        }
+        var includedPeerIds: [PeerId: Bool] = [:]
+        for peerId in predicate.includePeerIds {
+            includedPeerIds[peerId] = false
+        }
+        var count = postbox.chatListTable.countWithPredicate(groupId: .root, predicate: { peerId in
+            if let peer = postbox.peerTable.get(peerId) {
+                let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
+                if predicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread) {
+                    includedPeerIds[peer.id] = true
+                    return true
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+        })
+        for (peerId, included) in includedPeerIds {
+            if !included {
+                if postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+    
     public func legacyGetAccessChallengeData() -> PostboxAccessChallengeData {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -1657,9 +1690,13 @@ public final class Postbox {
         return { entry in
             switch entry {
             case let .message(index, _, _):
+                if index.pinningIndex != nil {
+                    return false
+                }
                 if let peer = self.peerTable.get(index.messageIndex.id.peerId) {
                     let isUnread = self.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
-                    if predicate.includes(peer: peer, notificationSettings: self.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId), isUnread: isUnread) {
+                    let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
+                    if predicate.includes(peer: peer, notificationSettings: self.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread) {
                         return true
                     } else {
                         return false

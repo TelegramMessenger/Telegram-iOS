@@ -8,10 +8,10 @@ static_library(
     ]),
     headers = glob([
         "Sources/**/*.h",
-    ], exclude = ["Sources/RMIntro.h"]),
+    ]),
     exported_headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/RMIntro.h"]),
+        "PublicHeaders/**/*.h",
+    ]),
     deps = [
     	"//submodules/LegacyComponents:LegacyComponents",
     ],

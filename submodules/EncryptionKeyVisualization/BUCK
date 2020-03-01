@@ -4,17 +4,11 @@ static_library(
     name = "EncryptionKeyVisualization",
     srcs = glob([
         "Sources/*.swift",
-        "Sources/*.m",
     ]),
-    headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/EncryptionKeyVisualization.h"]),
-    exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/EncryptionKeyVisualization.h"]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/EncryptionKeyVisualization/Impl:EncryptionKeyVisualizationImpl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

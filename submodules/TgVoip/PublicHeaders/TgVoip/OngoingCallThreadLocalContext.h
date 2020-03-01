@@ -59,6 +59,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
 + (void)setupLoggingFunction:(void (* _Nullable)(NSString * _Nullable))loggingFunction;
 + (void)applyServerConfig:(NSString * _Nullable)data;
 + (int32_t)maxLayer;
++ (NSString *)version;
 
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallState);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);

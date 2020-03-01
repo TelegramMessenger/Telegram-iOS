@@ -1,0 +1,21 @@
+load("//Config:buck_rule_macros.bzl", "static_library", "framework")
+
+static_library(
+    name = "WebPBinding",
+    srcs = glob([
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ]),
+	exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    deps = [
+        "//submodules/webp:webp",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

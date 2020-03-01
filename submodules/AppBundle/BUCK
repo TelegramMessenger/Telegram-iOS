@@ -3,10 +3,13 @@ load("//Config:buck_rule_macros.bzl", "static_library")
 static_library(
     name = "AppBundle",
     srcs = glob([
-        "Source/AppBundle/*.m",
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
     ]),
     exported_headers = glob([
-        "Source/AppBundle/*.h",
+        "PublicHeaders/**/*.h",
     ]),
     deps = [
     ],

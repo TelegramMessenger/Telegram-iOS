@@ -11,7 +11,7 @@ static_library(
         "//submodules/SyncCore:SyncCore#shared",
         "//submodules/Postbox:Postbox#shared",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/libtgvoip:libtgvoip",
+        "//submodules/TgVoip:TgVoip",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

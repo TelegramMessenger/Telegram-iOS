@@ -89,6 +89,11 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
 
 private let badgeFont = Font.regular(13.0)
 
+public enum TabBarItemSwipeDirection {
+    case left
+    case right
+}
+
 private final class TabBarItemNode: ASDisplayNode {
     let extractedContainerNode: ContextExtractedContentContainingNode
     let containerNode: ContextControllerSourceNode
@@ -97,6 +102,8 @@ private final class TabBarItemNode: ASDisplayNode {
     let contextImageNode: ASImageNode
     let contextTextImageNode: ASImageNode
     var contentWidth: CGFloat?
+    
+    var swiped: ((TabBarItemSwipeDirection) -> Void)?
     
     override init() {
         self.extractedContainerNode = ContextExtractedContentContainingNode()
@@ -147,6 +154,26 @@ private final class TabBarItemNode: ASDisplayNode {
             transition.updateAlpha(node: strongSelf.contextImageNode, alpha: isExtracted ? 1.0 : 0.0)
             transition.updateAlpha(node: strongSelf.contextTextImageNode, alpha: isExtracted ? 1.0 : 0.0)
         }
+        
+        let leftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
+        leftSwipe.direction = .left
+        self.containerNode.view.addGestureRecognizer(leftSwipe)
+        let rightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
+        rightSwipe.direction = .right
+        self.containerNode.view.addGestureRecognizer(rightSwipe)
+    }
+    
+    @objc private func swipeGesture(_ gesture: UISwipeGestureRecognizer) {
+        if case .ended = gesture.state {
+            self.containerNode.cancelGesture()
+            
+            switch gesture.direction {
+            case .left:
+                self.swiped?(.left)
+            default:
+                self.swiped?(.right)
+            }
+        }
     }
 }
 
@@ -174,7 +201,7 @@ private final class TabBarNodeContainer {
     var selectedImageValue: UIImage?
     var appliedSelectedImageValue: UIImage?
     
-    init(item: TabBarNodeItem, imageNode: TabBarItemNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void, contextAction: @escaping (ContextExtractedContentContainingNode, ContextGesture) -> Void) {
+    init(item: TabBarNodeItem, imageNode: TabBarItemNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void, contextAction: @escaping (ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (TabBarItemSwipeDirection) -> Void) {
         self.item = item.item
         
         self.imageNode = imageNode
@@ -226,6 +253,9 @@ private final class TabBarNodeContainer {
             }
             contextAction(strongSelf.imageNode.extractedContainerNode, gesture)
         }
+        imageNode.swiped = { [weak self] direction in
+            swipeAction(direction)
+        }
         imageNode.containerNode.isGestureEnabled = item.hasContext
     }
     
@@ -270,6 +300,7 @@ class TabBarNode: ASDisplayNode {
     
     private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
     private let contextAction: (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void
+    private let swipeAction: (Int, TabBarItemSwipeDirection) -> Void
     
     private var theme: TabBarControllerTheme
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -283,9 +314,10 @@ class TabBarNode: ASDisplayNode {
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void) {
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void) {
         self.itemSelected = itemSelected
         self.contextAction = contextAction
+        self.swipeAction = swipeAction
         self.theme = theme
         
         self.separatorNode = ASDisplayNode()
@@ -382,6 +414,8 @@ class TabBarNode: ASDisplayNode {
             }, contextAction: { [weak self] node, gesture in
                 self?.tapRecognizer?.cancel()
                 self?.contextAction(i, node, gesture)
+            }, swipeAction: { [weak self] direction in
+                self?.swipeAction(i, direction)
             })
             if let selectedIndex = self.selectedIndex, selectedIndex == i {
                 let (textImage, contentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)

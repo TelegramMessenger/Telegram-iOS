@@ -75,6 +75,10 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return OngoingCallContext.maxLayer
     }
     
+    public static var voipVersions: [String] {
+        return [OngoingCallContext.version]
+    }
+    
     public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
         self.getDeviceAccessData = getDeviceAccessData
         self.accountManager = accountManager

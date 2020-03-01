@@ -341,16 +341,6 @@ build_buckdebug: check_env
     //Telegram:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
     --verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
-build_buckdebug_one: check_env
-	BUCK_DEBUG_MODE=1 $(BUCK) build \
-	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
-	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-
-build_verbose_one: check_env
-	$(BUCK) build \
-	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
-	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-
 build_verbose: check_env
 	$(BUCK) build \
 	//Telegram:AppPackage#iphoneos-arm64 \
@@ -385,39 +375,12 @@ deps: check_env
 	$(BUCK) query "deps(//Telegram:AppPackage)" --dot  \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
-build_openssl: check_env
-	$(BUCK) build \
-	//submodules/openssl:openssl#iphoneos-arm64 \
-	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-
-build_libphonenumber: check_env
-	$(BUCK) build \
-	//submodules/libphonenumber:libphonenumber#iphoneos-arm64 \
-	${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-
-build_ton: check_env
-	$(BUCK) build \
-	//submodules/ton:ton#iphoneos-arm64 \
-	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-
 clean: kill_xcode
 	sh clean.sh
 
 project: check_env kill_xcode
 	$(BUCK) project //Telegram:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-	open Telegram_Buck.xcworkspace
-
-project_opt: check_env kill_xcode
-	$(BUCK) project //Telegram:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS}
-	open Telegram_Buck.xcworkspace
-
-project_buckdebug: check_env kill_xcode
-	BUCK_DEBUG_MODE=1 $(BUCK) project //Telegram:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-	open Telegram_Buck.xcworkspace
-
-temp_project: check_env kill_xcode
-	$(BUCK) project //Temp:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
-	open Temp/Telegram_Buck.xcworkspace
+	open Telegram/Telegram_Buck.xcworkspace
 
 bazel_app_debug_arm64:
 	APP_VERSION="${APP_VERSION}" \
