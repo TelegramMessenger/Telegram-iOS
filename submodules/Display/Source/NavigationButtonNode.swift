@@ -283,7 +283,10 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     public var isEnabled: Bool = true {
         didSet {
             if self.isEnabled != oldValue {
-                self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedText = NSAttributedString(string: self.text, attributes: self.attributesForCurrentState())
+                if let constrainedSize = self.constrainedSize {
+                    let _ = self.updateLayout(constrainedSize)
+                }
             }
         }
     }

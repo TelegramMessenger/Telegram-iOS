@@ -50,6 +50,8 @@ public class ImmediateTextNode: TextNode {
     
     public var trailingLineWidth: CGFloat?
     
+    var constrainedSize: CGSize?
+    
     public var highlightAttributeAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? {
         didSet {
             if self.isNodeLoaded {
@@ -83,6 +85,8 @@ public class ImmediateTextNode: TextNode {
     }
     
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
+        self.constrainedSize = constrainedSize
+        
         let makeLayout = TextNode.asyncLayout(self)
         let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, textShadowColor: self.textShadowColor, textStroke: self.textStroke))
         let _ = apply()
@@ -95,6 +99,8 @@ public class ImmediateTextNode: TextNode {
     }
     
     public func updateLayoutInfo(_ constrainedSize: CGSize) -> ImmediateTextNodeLayoutInfo {
+        self.constrainedSize = constrainedSize
+        
         let makeLayout = TextNode.asyncLayout(self)
         let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets))
         let _ = apply()
