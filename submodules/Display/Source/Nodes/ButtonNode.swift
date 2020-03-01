@@ -6,6 +6,7 @@ open class ASButtonNode: ASControlNode {
     public let titleNode: ImmediateTextNode
     public let highlightedTitleNode: ImmediateTextNode
     public let imageNode: ASImageNode
+    public let disabledImageNode: ASImageNode
     public let backgroundImageNode: ASImageNode
     public let highlightedBackgroundImageNode: ASImageNode
     
@@ -62,6 +63,11 @@ open class ASButtonNode: ASControlNode {
         self.imageNode.displaysAsynchronously = false
         self.imageNode.displayWithoutProcessing = true
         
+        self.disabledImageNode = ASImageNode()
+        self.disabledImageNode.isUserInteractionEnabled = false
+        self.disabledImageNode.displaysAsynchronously = false
+        self.disabledImageNode.displayWithoutProcessing = true
+        
         self.backgroundImageNode = ASImageNode()
         self.backgroundImageNode.isUserInteractionEnabled = false
         self.backgroundImageNode.displaysAsynchronously = false
@@ -81,6 +87,8 @@ open class ASButtonNode: ASControlNode {
         self.addSubnode(self.highlightedTitleNode)
         self.highlightedTitleNode.isHidden = true
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.disabledImageNode)
+        self.disabledImageNode.isHidden = true
     }
     
     override open func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -184,7 +192,11 @@ open class ASButtonNode: ASControlNode {
             self.invalidateCalculatedLayout()
             self.setNeedsLayout()
         }
-        self.imageNode.image = image
+        if state == .disabled {
+            self.disabledImageNode.image = image
+        } else {
+            self.imageNode.image = image
+        }
     }
     
     open func setBackgroundImage(_ image: UIImage?, for state: UIControl.State) {
@@ -199,7 +211,12 @@ open class ASButtonNode: ASControlNode {
     }
     
     open func image(for state: UIControl.State) -> UIImage? {
-        return self.imageNode.image
+        switch state {
+        case .disabled:
+            return self.disabledImageNode.image ?? self.imageNode.image
+        default:
+            return self.imageNode.image
+        }
     }
     
     open func backgroundImage(for state: UIControl.State) -> UIImage? {
@@ -230,6 +247,20 @@ open class ASButtonNode: ASControlNode {
                     
                     self.highlightedBackgroundImageNode.isHidden = true
                     self.backgroundImageNode.isHidden = false
+                }
+            }
+        }
+    }
+    
+    override open var isEnabled: Bool {
+        didSet {
+            if self.isEnabled != oldValue {
+                if self.isEnabled || self.disabledImageNode.image == nil {
+                    self.imageNode.isHidden = false
+                    self.disabledImageNode.isHidden = true
+                } else {
+                    self.imageNode.isHidden = true
+                    self.disabledImageNode.isHidden = false
                 }
             }
         }
@@ -275,12 +306,9 @@ open class ASButtonNode: ASControlNode {
         self.titleNode.frame = CGRect(origin: titleOrigin, size: self.calculatedTitleSize)
         self.highlightedTitleNode.frame = CGRect(origin: highlightedTitleOrigin, size: self.calculatedHighlightedTitleSize)
         self.imageNode.frame = CGRect(origin: imageOrigin, size: imageSize)
+        self.disabledImageNode.frame = CGRect(origin: imageOrigin, size: imageSize)
         
         self.backgroundImageNode.frame = CGRect(origin: CGPoint(), size: size)
         self.highlightedBackgroundImageNode.frame = CGRect(origin: CGPoint(), size: size)
-    }
-
-    func f2() {
-    
     }
 }
