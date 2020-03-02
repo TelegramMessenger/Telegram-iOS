@@ -45,9 +45,10 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let shouldUpdateText: (String) -> Bool
     let processPaste: ((String) -> String)?
     let updatedFocus: ((Bool) -> Void)?
+    let cleared: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
@@ -64,6 +65,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.processPaste = processPaste
         self.updatedFocus = updatedFocus
         self.action = action
+        self.cleared = cleared
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -420,6 +422,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     @objc private func clearButtonPressed() {
         self.textNode.textField.text = ""
         self.textUpdated("")
+        self.item?.cleared?()
     }
     
     private func textUpdated(_ text: String) {

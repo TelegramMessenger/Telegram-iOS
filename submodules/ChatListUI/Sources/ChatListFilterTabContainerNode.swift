@@ -257,13 +257,12 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
-        let focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
-        var previousSelectedAbsFrame: CGRect?
+    private var previousSelectedAbsFrame: CGRect?
+    private var previousSelectedFrame: CGRect?
+    
+    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, transitionFraction: CGFloat, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+        var focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
         let previousScrollBounds = self.scrollNode.bounds
-        if let currentSelectedFilter = self.currentParams?.selectedFilter, let itemNode = self.itemNodes[currentSelectedFilter] {
-            previousSelectedAbsFrame = itemNode.frame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
-        }
         
         if self.currentParams?.presentationData.theme !== presentationData.theme {
             self.selectedLineNode.image = generateImage(CGSize(width: 7.0, height: 4.0), rotatedContext: { size, context in
@@ -362,7 +361,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             }
         }
         
-        let minSpacing: CGFloat = 30.0
+        let minSpacing: CGFloat = 26.0
         
         let sideInset: CGFloat = 16.0
         var leftOffset: CGFloat = sideInset
@@ -391,7 +390,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         
         self.scrollNode.view.contentSize = CGSize(width: leftOffset - minSpacing + sideInset - 5.0, height: size.height)
         
-        let transitionFraction: CGFloat = 0.0
+        var previousFrame: CGRect?
+        var nextFrame: CGRect?
         var selectedFrame: CGRect?
         if let selectedFilter = selectedFilter, let currentIndex = filters.index(where: { $0.id == selectedFilter }) {
             func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
@@ -422,28 +422,41 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             } else {
                 transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
             }
+            if !transitionFraction.isZero {
+                if previousScrollBounds.minX.isZero {
+                    focusOnSelectedFilter = true
+                } else if previousScrollBounds.maxX == previousScrollBounds.width {
+                    focusOnSelectedFilter = true
+                } else if let previousSelectedFrame = self.previousSelectedFrame, abs(previousSelectedFrame.offsetBy(dx: -previousScrollBounds.minX, dy: 0.0).midX - previousScrollBounds.width / 2.0) < 1.0 {
+                    focusOnSelectedFilter = true
+                }
+            }
             if focusOnSelectedFilter {
-                if selectedFilter == filters.first?.id {
+                if transitionFraction.isZero && selectedFilter == filters.first?.id {
                     transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
-                } else if selectedFilter == filters.last?.id {
+                } else if transitionFraction.isZero && selectedFilter == filters.last?.id {
                     transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: max(0.0, self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width), y: 0.0), size: self.scrollNode.bounds.size))
                 } else {
                     let contentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, floor(selectedFrame.midX - self.scrollNode.bounds.width / 2.0)))
                     transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size))
                 }
-            } else if !wasAdded, let previousSelectedAbsFrame = previousSelectedAbsFrame {
+            } else if !wasAdded, transitionFraction.isZero, let previousSelectedAbsFrame = self.previousSelectedAbsFrame {
                 let contentOffsetX: CGFloat
                 if previousScrollBounds.minX.isZero {
                     contentOffsetX = 0.0
                 } else if previousScrollBounds.maxX == previousScrollBounds.width {
                     contentOffsetX = self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width
                 } else {
-                    contentOffsetX = selectedFrame.midX - previousSelectedAbsFrame.midX
+                    contentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, selectedFrame.midX - previousSelectedAbsFrame.midX))
                 }
                 transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size))
             }
+            self.previousSelectedAbsFrame = selectedFrame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
+            self.previousSelectedFrame = selectedFrame
         } else {
             self.selectedLineNode.isHidden = true
+            self.previousSelectedAbsFrame = nil
+            self.previousSelectedFrame = nil
         }
     }
 }

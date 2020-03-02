@@ -240,6 +240,13 @@ open class TabBarController: ViewController {
             if index >= 0 && index < strongSelf.controllers.count {
                 strongSelf.controllers[index].tabBarItemContextAction(sourceNode: node, gesture: gesture)
             }
+        }, swipeAction: { [weak self] index, direction in
+            guard let strongSelf = self else {
+                return
+            }
+            if index >= 0 && index < strongSelf.controllers.count {
+                strongSelf.controllers[index].tabBarItemSwipeAction(direction: direction)
+            }
         }, toolbarActionSelected: { [weak self] action in
             self?.currentController?.toolbarActionSelected(action: action)
         })
