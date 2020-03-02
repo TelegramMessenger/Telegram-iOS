@@ -4858,6 +4858,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.OwnAddressAlertProceed" = "Proceed";
 "Wallet.Send.TransactionInProgress" = "Please wait until the current transaction is completed.";
 "Wallet.Send.SyncInProgress" = "Please wait while the wallet finishes syncing with the TON Blockchain.";
+"Wallet.Send.EncryptComment" = "Encrypt Text";
 "Wallet.Settings.Title" = "Settings";
 "Wallet.Settings.Configuration" = "Server Settings";
 "Wallet.Settings.ConfigurationInfo" = "Advanced Settings";

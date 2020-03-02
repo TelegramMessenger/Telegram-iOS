@@ -699,7 +699,7 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
+- (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount comment:(NSData *)comment encryptComment:(bool)encryptComment forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         if ([_sendGramRandomIds containsObject:@(randomId)]) {
             [_sendGramRandomIds addObject:@(randomId)];
@@ -739,9 +739,16 @@ typedef enum {
             }
         }];
         
-        auto inputMessageData = make_object<tonlib_api::msg_dataEncryptedText>(
-            makeString(textMessage)
-        );
+        tonlib_api::object_ptr<tonlib_api::msg_Data> inputMessageData;
+        if (encryptComment && comment.length != 0) {
+            inputMessageData = make_object<tonlib_api::msg_dataDecryptedText>(
+                makeString(comment)
+            );
+        } else {
+            inputMessageData = make_object<tonlib_api::msg_dataText>(
+                makeString(comment)
+            );
+        }
         std::vector<tonlib_api::object_ptr<tonlib_api::msg_message> > inputMessages;
         inputMessages.push_back(make_object<tonlib_api::msg_message>(
             make_object<tonlib_api::accountAddress>(address.UTF8String),
@@ -772,7 +779,7 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout {
+- (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount comment:(NSData *)comment encryptComment:(bool)encryptComment forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         
         uint64_t requestId = _nextRequestId;
@@ -792,9 +799,16 @@ typedef enum {
             }
         }];
         
-        auto inputMessageData = make_object<tonlib_api::msg_dataEncryptedText>(
-            makeString(textMessage)
-        );
+        tonlib_api::object_ptr<tonlib_api::msg_Data> inputMessageData;
+        if (encryptComment && comment.length != 0) {
+            inputMessageData = make_object<tonlib_api::msg_dataDecryptedText>(
+                makeString(comment)
+            );
+        } else {
+            inputMessageData = make_object<tonlib_api::msg_dataText>(
+                makeString(comment)
+            );
+        }
         std::vector<tonlib_api::object_ptr<tonlib_api::msg_message> > inputMessages;
         inputMessages.push_back(make_object<tonlib_api::msg_message>(
             make_object<tonlib_api::accountAddress>(address.UTF8String),
@@ -1070,6 +1084,76 @@ typedef enum {
             make_object<tonlib_api::internal_transactionId>(
                 lt,
                 makeString(hash)
+            )
+        );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
+}
+
+- (SSignal *)decryptMessagesWithKey:(TONKey * _Nonnull)key localPassword:(NSData * _Nonnull)localPassword messages:(NSArray<NSData *> * _Nonnull)messages {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in decryptMessagesWithKey"]];
+            return [[SBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::msg_dataArray::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::msg_dataArray>(object);
+                if (result->elements_.size() != messages.count) {
+                    [subscriber putError:[[TONError alloc] initWithText:@"API interaction error"]];
+                } else {
+                    NSMutableArray<id<TONTransactionMessageContents> > *resultMessages = [[NSMutableArray alloc] init];
+                    int index = 0;
+                    for (auto &it : result->elements_) {
+                        if (it->get_id() == tonlib_api::msg_dataDecryptedText::ID) {
+                            auto dataDecryptedText = tonlib_api::move_object_as<tonlib_api::msg_dataDecryptedText>(it);
+                            NSString *decryptedString = readString(dataDecryptedText->text_);
+                            if (decryptedString != nil) {
+                                [resultMessages addObject:[[TONTransactionMessageContentsPlainText alloc] initWithText:decryptedString]];
+                            } else {
+                                [resultMessages addObject:[[TONTransactionMessageContentsEncryptedText alloc] initWithData:messages[index]]];
+                            }
+                        } else {
+                            [resultMessages addObject:[[TONTransactionMessageContentsEncryptedText alloc] initWithData:messages[index]]];
+                        }
+                        index++;
+                    }
+                    [subscriber putNext:resultMessages];
+                    [subscriber putCompletion];
+                }
+            } else {
+                assert(false);
+            }
+        }];
+        
+        std::vector<tonlib_api::object_ptr<tonlib_api::msg_Data>> inputData;
+        for (NSData *message in messages) {
+            inputData.push_back(make_object<tonlib_api::msg_dataEncryptedText>(
+                makeString(message)
+            ));
+        }
+        
+        auto query = make_object<tonlib_api::msg_decrypt>(
+            make_object<tonlib_api::inputKeyRegular>(
+                make_object<tonlib_api::key>(
+                    makeString(publicKeyData),
+                    makeSecureString(key.secret)
+                ),
+                makeSecureString(localPassword)
+            ),
+            make_object<tonlib_api::msg_dataArray>(
+                std::move(inputData)
             )
         );
         _client->send({ requestId, std::move(query) });
