@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -117,24 +117,28 @@ template <class T>
 class OneValue<T *> {
  public:
   bool set_value(T *value) {
-    T *was = nullptr;
+    T *was = Empty();
     return state_.compare_exchange_strong(was, value, std::memory_order_acq_rel);
   }
   bool get_value(T *&value) {
     value = state_.exchange(Taken(), std::memory_order_acq_rel);
-    return value != nullptr;
+    return value != Empty();
   }
   void reset() {
-    state_ = nullptr;
+    state_ = Empty();
   }
   OneValue() {
   }
 
  private:
-  std::atomic<T *> state_{nullptr};
-  T *Taken() {
-    static T xxx;
-    return &xxx;
+  std::atomic<T *> state_{Empty()};
+  static T *Empty() {
+    static int64 xxx;
+    return reinterpret_cast<T *>(&xxx);
+  }
+  static T *Taken() {
+    static int64 xxx;
+    return reinterpret_cast<T *>(&xxx);
   }
 };
 

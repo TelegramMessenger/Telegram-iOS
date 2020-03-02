@@ -1,3 +1,21 @@
+/*
+    This file is part of TON Blockchain Library.
+
+    TON Blockchain Library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    TON Blockchain Library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
+
+    Copyright 2019-2020 Telegram Systems LLP
+*/
 #pragma once
 #include "vm/cells.h"
 
@@ -20,7 +38,7 @@ class MultisigWallet : public ton::SmartContract {
 
   class QueryBuilder {
    public:
-    QueryBuilder(td::int64 query_id, td::Ref<vm::Cell> msg, int mode = 3);
+    QueryBuilder(td::uint32 wallet_id, td::int64 query_id, td::Ref<vm::Cell> msg, int mode = 3);
     void sign(td::int32 id, td::Ed25519::PrivateKey& pk);
 
     td::Ref<vm::Cell> create_inner() const;
@@ -42,8 +60,9 @@ class MultisigWallet : public ton::SmartContract {
   // creation
   static td::Ref<MultisigWallet> create(td::Ref<vm::Cell> data = {});
 
-  td::Ref<vm::Cell> create_init_data(std::vector<td::SecureString> public_keys, int k) const;
-  static td::Ref<vm::Cell> create_init_data_fast(std::vector<td::SecureString> public_keys, int k);
+  td::Ref<vm::Cell> create_init_data(td::uint32 wallet_id, std::vector<td::SecureString> public_keys, int k) const;
+  static td::Ref<vm::Cell> create_init_data_fast(td::uint32 wallet_id, std::vector<td::SecureString> public_keys,
+                                                 int k);
 
   // get methods
   int processed(td::uint64 query_id) const;

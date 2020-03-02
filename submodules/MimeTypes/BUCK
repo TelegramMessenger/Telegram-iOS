@@ -7,10 +7,10 @@ static_library(
     ]),
     headers = glob([
         "Sources/*.h",
-    ], exclude = ["Sources/MimeTypes.h"]),
+    ]),
     exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/MimeTypes.h"]),
+        "PublicHeaders/**/*.h",
+    ]),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ImageBlur
+import FastBlur
 
 protocol PasscodeBackground {
     var size: CGSize { get }

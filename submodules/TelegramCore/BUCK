@@ -4,18 +4,7 @@ framework(
     name = "TelegramCore",
     srcs = glob([
         "Sources/*.swift",
-        "Sources/*.m",
     ]),
-    headers = [
-        "Sources/Crypto.h",
-        "Sources/NetworkLogging.h",
-        "Sources/Reachability.h",
-    ],
-    exported_headers = [
-        "Sources/Crypto.h",
-        "Sources/NetworkLogging.h",
-        "Sources/Reachability.h",
-    ],
     deps = [
         "//submodules/TelegramApi:TelegramApi#shared",
     	"//submodules/MtProtoKit:MtProtoKit#shared",
@@ -24,9 +13,11 @@ framework(
         "//submodules/SyncCore:SyncCore#shared",
         "//submodules/CloudData:CloudData",
         "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/CryptoUtils:CryptoUtils",
+        "//submodules/NetworkLogging:NetworkLogging",
+        "//submodules/Reachability:Reachability",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],
 )
-

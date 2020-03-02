@@ -3,7 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import SyncCore
-import FFMpeg
+import FFMpegBinding
 
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<UniversalSoftwareVideoSourceImpl>.fromOpaque(userData!).takeUnretainedValue()

@@ -14,24 +14,37 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "SmartContract.h"
+#include "smc-envelope/WalletInterface.h"
 #include "block/block.h"
 #include "vm/cells/CellString.h"
 namespace ton {
-class TestGiver : public SmartContract {
+class TestGiver : public SmartContract, public WalletInterface {
  public:
   explicit TestGiver(State state) : ton::SmartContract(std::move(state)) {
   }
+  TestGiver() : ton::SmartContract({}) {
+  }
   static constexpr unsigned max_message_size = vm::CellString::max_bytes;
+  static constexpr unsigned max_gifts_size = 1;
   static const block::StdAddress& address() noexcept;
   static vm::CellHash get_init_code_hash() noexcept;
-  static td::Ref<vm::Cell> make_a_gift_message(td::uint32 seqno, td::uint64 gramms, td::Slice message,
-                                               const block::StdAddress& dest_address) noexcept;
+  static td::Ref<vm::Cell> make_a_gift_message_static(td::uint32 seqno, td::Span<Gift>) noexcept;
 
   td::Result<td::uint32> get_seqno() const;
+
+  using WalletInterface::get_init_message;
+  td::Result<td::Ref<vm::Cell>> make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 valid_until,
+                                                    td::Span<Gift> gifts) const override {
+    TRY_RESULT(seqno, get_seqno());
+    return make_a_gift_message_static(seqno, gifts);
+  }
+  size_t get_max_gifts_size() const override {
+    return max_gifts_size;
+  }
 
  private:
   td::Result<td::uint32> get_seqno_or_throw() const;

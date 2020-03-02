@@ -1,9 +1,9 @@
 import Foundation
-
 import Postbox
 import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
+import NetworkLogging
 
 #if os(iOS)
     import CloudData

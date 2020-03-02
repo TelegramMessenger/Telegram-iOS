@@ -143,19 +143,80 @@ Ref<Cell> MerkleProof::virtualize(Ref<Cell> cell, int virtualization) {
   return virtualize_raw(r_raw.move_as_ok(), {0 /*level*/, static_cast<td::uint8>(virtualization)});
 }
 
+class MerkleProofCombineFast {
+ public:
+  MerkleProofCombineFast(Ref<Cell> a, Ref<Cell> b) : a_(std::move(a)), b_(std::move(b)) {
+  }
+  td::Result<Ref<Cell>> run() {
+    TRY_RESULT_ASSIGN(a_, unpack_proof(a_));
+    TRY_RESULT_ASSIGN(b_, unpack_proof(b_));
+    TRY_RESULT(res, run_raw());
+    return CellBuilder::create_merkle_proof(std::move(res));
+  }
+
+  td::Result<Ref<Cell>> run_raw() {
+    if (a_->get_hash(0) != b_->get_hash(0)) {
+      return td::Status::Error("Can't combine MerkleProofs with different roots");
+    }
+    return merge(a_, b_, 0);
+  }
+
+ private:
+  Ref<Cell> a_;
+  Ref<Cell> b_;
+
+  Ref<Cell> merge(Ref<Cell> a, Ref<Cell> b, td::uint32 merkle_depth) {
+    if (a->get_hash() == b->get_hash()) {
+      return a;
+    }
+    if (a->get_level() == merkle_depth) {
+      return a;
+    }
+    if (b->get_level() == merkle_depth) {
+      return b;
+    }
+
+    CellSlice csa(NoVm(), a);
+    CellSlice csb(NoVm(), b);
+
+    if (csa.is_special() && csa.special_type() == vm::Cell::SpecialType::PrunnedBranch) {
+      return b;
+    }
+    if (csb.is_special() && csb.special_type() == vm::Cell::SpecialType::PrunnedBranch) {
+      return a;
+    }
+
+    CHECK(csa.size_refs() != 0);
+
+    auto child_merkle_depth = csa.child_merkle_depth(merkle_depth);
+
+    CellBuilder cb;
+    cb.store_bits(csa.fetch_bits(csa.size()));
+    for (unsigned i = 0; i < csa.size_refs(); i++) {
+      cb.store_ref(merge(csa.prefetch_ref(i), csb.prefetch_ref(i), child_merkle_depth));
+    }
+    return cb.finalize(csa.is_special());
+  }
+};
+
 class MerkleProofCombine {
  public:
   MerkleProofCombine(Ref<Cell> a, Ref<Cell> b) : a_(std::move(a)), b_(std::move(b)) {
   }
   td::Result<Ref<Cell>> run() {
-    TRY_RESULT(a, unpack_proof(a_));
-    TRY_RESULT(b, unpack_proof(b_));
-    if (a->get_hash(0) != b->get_hash(0)) {
+    TRY_RESULT_ASSIGN(a_, unpack_proof(a_));
+    TRY_RESULT_ASSIGN(b_, unpack_proof(b_));
+    TRY_RESULT(res, run_raw());
+    return CellBuilder::create_merkle_proof(std::move(res));
+  }
+
+  td::Result<Ref<Cell>> run_raw() {
+    if (a_->get_hash(0) != b_->get_hash(0)) {
       return td::Status::Error("Can't combine MerkleProofs with different roots");
     }
-    dfs(a, 0);
-    dfs(b, 0);
-    return CellBuilder::create_merkle_proof(create_A(a, 0, 0));
+    dfs(a_, 0);
+    dfs(b_, 0);
+    return create_A(a_, 0, 0);
   }
 
  private:
@@ -256,6 +317,30 @@ class MerkleProofCombine {
 
 Ref<Cell> MerkleProof::combine(Ref<Cell> a, Ref<Cell> b) {
   auto res = MerkleProofCombine(std::move(a), std::move(b)).run();
+  if (res.is_error()) {
+    return {};
+  }
+  return res.move_as_ok();
+}
+
+Ref<Cell> MerkleProof::combine_fast(Ref<Cell> a, Ref<Cell> b) {
+  auto res = MerkleProofCombineFast(std::move(a), std::move(b)).run();
+  if (res.is_error()) {
+    return {};
+  }
+  return res.move_as_ok();
+}
+
+Ref<Cell> MerkleProof::combine_raw(Ref<Cell> a, Ref<Cell> b) {
+  auto res = MerkleProofCombine(std::move(a), std::move(b)).run_raw();
+  if (res.is_error()) {
+    return {};
+  }
+  return res.move_as_ok();
+}
+
+Ref<Cell> MerkleProof::combine_fast_raw(Ref<Cell> a, Ref<Cell> b) {
+  auto res = MerkleProofCombineFast(std::move(a), std::move(b)).run_raw();
   if (res.is_error()) {
     return {};
   }

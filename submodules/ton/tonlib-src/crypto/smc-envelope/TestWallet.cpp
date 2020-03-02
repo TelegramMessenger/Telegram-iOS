@@ -13,17 +13,19 @@
 
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
-Copyright 2017-2019 Telegram Systems LLP
+Copyright 2017-2020 Telegram Systems LLP
 */
 #include "TestWallet.h"
 #include "GenericAccount.h"
+
+#include "SmartContractCode.h"
 
 #include "vm/boc.h"
 #include "td/utils/base64.h"
 
 namespace ton {
-td::Ref<vm::Cell> TestWallet::get_init_state(const td::Ed25519::PublicKey& public_key) noexcept {
-  auto code = get_init_code();
+td::Ref<vm::Cell> TestWallet::get_init_state(const td::Ed25519::PublicKey& public_key, td::int32 revision) noexcept {
+  auto code = get_init_code(revision);
   auto data = get_init_data(public_key);
   return GenericAccount::get_init_state(std::move(code), std::move(data));
 }
@@ -35,42 +37,46 @@ td::Ref<vm::Cell> TestWallet::get_init_message(const td::Ed25519::PrivateKey& pr
   return vm::CellBuilder().store_bytes(signature).store_bytes(seq_no).finalize();
 }
 
-td::Ref<vm::Cell> TestWallet::make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 seqno,
-                                                  td::int64 gramms, td::Slice message,
-                                                  const block::StdAddress& dest_address) noexcept {
-  td::int32 send_mode = 3;
-  if (gramms == -1) {
-    gramms = 0;
-    send_mode += 128;
-  }
+td::Ref<vm::Cell> TestWallet::make_a_gift_message_static(const td::Ed25519::PrivateKey& private_key, td::uint32 seqno,
+                                                         td::Span<Gift> gifts) noexcept {
+  CHECK(gifts.size() <= max_gifts_size);
+
   vm::CellBuilder cb;
-  GenericAccount::store_int_message(cb, dest_address, gramms);
-  cb.store_bytes("\0\0\0\0", 4);
-  vm::CellString::store(cb, message, 35 * 8).ensure();
-  auto message_inner = cb.finalize();
-  auto message_outer =
-      vm::CellBuilder().store_long(seqno, 32).store_long(send_mode, 8).store_ref(message_inner).finalize();
+  cb.store_long(seqno, 32);
+
+  for (auto& gift : gifts) {
+    td::int32 send_mode = 3;
+    auto gramms = gift.gramms;
+    if (gramms == -1) {
+      gramms = 0;
+      send_mode += 128;
+    }
+    vm::CellBuilder cbi;
+    GenericAccount::store_int_message(cbi, gift.destination, gramms);
+    store_gift_message(cbi, gift);
+    auto message_inner = cbi.finalize();
+    cb.store_long(send_mode, 8).store_ref(std::move(message_inner));
+  }
+
+  auto message_outer = cb.finalize();
   auto signature = private_key.sign(message_outer->get_hash().as_slice()).move_as_ok();
   return vm::CellBuilder().store_bytes(signature).append_cellslice(vm::load_cell_slice(message_outer)).finalize();
 }
 
-td::Ref<vm::Cell> TestWallet::get_init_code() noexcept {
-  static auto res = [] {
-    auto serialized_code = td::base64_decode(
-                               "te6ccgEEAQEAAAAAUwAAov8AIN0gggFMl7qXMO1E0NcLH+Ck8mCBAgDXGCDXCx/tRNDTH9P/"
-                               "0VESuvKhIvkBVBBE+RDyovgAAdMfMSDXSpbTB9QC+wDe0aTIyx/L/8ntVA==")
-                               .move_as_ok();
-    return vm::std_boc_deserialize(serialized_code).move_as_ok();
-  }();
-  return res;
+td::Ref<vm::Cell> TestWallet::get_init_code(td::int32 revision) noexcept {
+  return ton::SmartContractCode::get_code(ton::SmartContractCode::WalletV1, revision);
 }
 
 vm::CellHash TestWallet::get_init_code_hash() noexcept {
   return get_init_code()->get_hash();
 }
 
+td::Ref<vm::Cell> TestWallet::get_data(const td::Ed25519::PublicKey& public_key, td::uint32 seqno) noexcept {
+  return vm::CellBuilder().store_long(seqno, 32).store_bytes(public_key.as_octet_string()).finalize();
+}
+
 td::Ref<vm::Cell> TestWallet::get_init_data(const td::Ed25519::PublicKey& public_key) noexcept {
-  return vm::CellBuilder().store_long(0, 32).store_bytes(public_key.as_octet_string()).finalize();
+  return get_data(public_key, 0);
 }
 
 td::Result<td::uint32> TestWallet::get_seqno() const {
@@ -86,6 +92,22 @@ td::Result<td::uint32> TestWallet::get_seqno_or_throw() const {
     return td::Status::Error("Failed to parse seq_no");
   }
   return static_cast<td::uint32>(seqno);
+}
+
+td::Result<td::Ed25519::PublicKey> TestWallet::get_public_key() const {
+  return TRY_VM(get_public_key_or_throw());
+}
+
+td::Result<td::Ed25519::PublicKey> TestWallet::get_public_key_or_throw() const {
+  if (state_.data.is_null()) {
+    return td::Status::Error("data is null");
+  }
+  //FIXME use get method
+  auto cs = vm::load_cell_slice(state_.data);
+  cs.skip_first(32);
+  td::SecureString res(td::Ed25519::PublicKey::LENGTH);
+  cs.fetch_bytes(res.as_mutable_slice().ubegin(), td::narrow_cast<td::int32>(res.size()));
+  return td::Ed25519::PublicKey(std::move(res));
 }
 
 }  // namespace ton

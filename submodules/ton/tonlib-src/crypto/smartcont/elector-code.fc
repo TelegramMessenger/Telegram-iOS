@@ -123,7 +123,7 @@ _ ~credit_to(credits, addr, amount) {
   }
   ;; parse current election data
   var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
-  elect_at~dump();
+  ;; elect_at~dump();
   msg_value -= 1000000000;   ;; deduct GR$1 for sending confirmation
   if ((msg_value << 12) < total_stake) {
     ;; stake smaller than 1/4096 of the total accumulated stakes, return
@@ -338,7 +338,7 @@ int upgrade_code(s_addr, cs, query_id) {
   var code = cs~load_ref();
   set_code(code);
   ifnot(cs.slice_empty?()) {
-    set_c3(code);
+    set_c3(code.begin_parse().bless());
     ;; run_method3(1666, s_addr, cs, query_id);
     after_code_upgrade(s_addr, cs, query_id);
     throw(0);
@@ -443,7 +443,7 @@ _ compute_total_stake(l, n, m_stake) {
     if (f) {
       var (stake, _, pubkey) = (min(key~load_uint(128), max_stake), key~load_uint(32), key.preload_uint(256));
       var (max_f, _, adnl_addr) = (cs~load_uint(32), cs~load_uint(256), cs.preload_uint(256));
-      l = cons(tuple4(stake, max_f, pubkey, adnl_addr), l);
+      l = cons([stake, max_f, pubkey, adnl_addr], l);
     }
   } until (~ f);
   ;; l is the list of all stakes in decreasing order
@@ -468,7 +468,7 @@ _ compute_total_stake(l, n, m_stake) {
   }
   ;; we have to select first m validators from list l
   l1 = touch(l);
-  l1~dump();  ;; DEBUG
+  ;; l1~dump();  ;; DEBUG
   repeat (m - 1) {
     l1 = cdr(l1);
   }
@@ -480,7 +480,7 @@ _ compute_total_stake(l, n, m_stake) {
   var vset = new_dict();
   var frozen = new_dict();
   do {
-    var (stake, max_f, pubkey, adnl_addr) = l~list_next().untuple4();
+    var [stake, max_f, pubkey, adnl_addr] = l~list_next();
     ;; lookup source address first
     var (val, f) = members.udict_get?(256, pubkey);
     throw_unless(61, f);
@@ -733,7 +733,7 @@ int announce_new_elections(ds, elect, credits) {
   (_, var min_stake) = config_param(17).begin_parse().load_grams();
   ;; announce new elections
   var elect_at = t + elect_begin_before;
-  elect_at~dump();
+  ;; elect_at~dump();
   var elect_close = elect_at - elect_end_before;
   elect = pack_elect(elect_at, elect_close, min_stake, 0, new_dict(), false, false);
   set_data(begin_cell().store_dict(elect).store_dict(credits).store_slice(ds).end_cell());
@@ -786,10 +786,30 @@ _ participant_list() method_id {
   do {
     (id, var fs, var f) = members.udict_get_prev?(256, id);
     if (f) {
-      l = cons(pair(id, fs~load_grams()), l);
+      l = cons([id, fs~load_grams()], l);
     }
   } until (~ f);
   return l;
+}
+
+;; returns the list of all participants of current elections with their data
+_ participant_list_extended() method_id {
+  var elect = get_data().begin_parse().preload_dict();
+  if (elect.null?()) {
+    return (0, 0, 0, 0, nil, 0, 0);
+  }
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  var l = nil;
+  var id = (1 << 255) + ((1 << 255) - 1);
+  do {
+    (id, var cs, var f) = members.udict_get_prev?(256, id);
+    if (f) {
+      var (stake, time, max_factor, addr, adnl_addr) = (cs~load_grams(), cs~load_uint(32), cs~load_uint(32), cs~load_uint(256), cs~load_uint(256));
+      cs.end_parse();
+      l = cons([id, [stake, max_factor, addr, adnl_addr]], l);
+    }
+  } until (~ f);
+  return (elect_at, elect_close, min_stake, total_stake, l, failed, finished);
 }
 
 ;; computes the return stake

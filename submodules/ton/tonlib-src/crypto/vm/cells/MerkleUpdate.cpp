@@ -268,7 +268,7 @@ class MerkleCombine {
     // 1. Create maximum subtrees of X and Z with all cells in A, B, C and D
     // Max(V) - such maximum subtree
     //
-    // 2. Max(A) and Max(D) should be merkle update already. But win want to minimize it
+    // 2. Max(A) and Max(D) should be merkle update already. But we want to minimize it
     // So we cut all branches of Max(D) which are in maxA
     // When we cut branch q in Max(D) we mark some path to q in Max(A)
     // Then we cut all branches of Max(A) which are not marked.

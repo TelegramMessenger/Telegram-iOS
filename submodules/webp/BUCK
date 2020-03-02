@@ -11,10 +11,7 @@ genrule(
 )
 
 apple_library(
-    name = "WebP_lib",
-    visibility = [
-        "//submodules/WebP:..."
-    ],
+    name = "webp",
     header_namespace = "webp",
     exported_headers = {
         "webp/encode.h": "include/webp/encode.h",
@@ -25,24 +22,5 @@ apple_library(
         "-lwebp",
         "-L$(location :WebP_lib_file)",
     ],
-)
-
-static_library(
-    name = "WebPImage",
-    srcs = glob([
-        "WebP/*.m",
-    ]),
-    headers = [
-    	"WebP/UIImage+WebP.h",
-    ],
-	exported_headers = [
-        "WebP/UIImage+WebP.h",
-    ],
-    deps = [
-        ":WebP_lib",
-    ],
-    frameworks = [
-        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
-        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
-    ],
+    visibility = ["PUBLIC"],
 )

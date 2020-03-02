@@ -222,6 +222,10 @@ public final class SqliteValueBox: ValueBox {
         let path = basePath + "/db_sqlite"
         
         #if DEBUG
+        print("Instance \(self) opening sqlite at \(path)")
+        #endif
+        
+        #if DEBUG
         let exists = FileManager.default.fileExists(atPath: path)
         postboxLog("Opening \(path), exists: \(exists)")
         if exists {

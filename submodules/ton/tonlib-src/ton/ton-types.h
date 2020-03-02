@@ -23,6 +23,9 @@
 #include "td/utils/bits.h"
 #include "td/utils/Slice.h"
 #include "td/utils/UInt.h"
+#include "td/utils/misc.h"
+
+#include <cinttypes>
 
 namespace ton {
 
@@ -140,7 +143,7 @@ struct AccountIdPrefixFull {
   std::string to_str() const {
     char buffer[64];
     return std::string{
-        buffer, (unsigned)snprintf(buffer, 63, "(%d,%016llx)", workchain, (unsigned long long)account_id_prefix)};
+        buffer, (unsigned)snprintf(buffer, 63, "(%d,%016llx)", workchain, static_cast<long long>(account_id_prefix))};
   }
 };
 
@@ -156,6 +159,9 @@ struct BlockId {
   BlockId() : workchain(workchainInvalid) {
   }
   explicit operator ShardIdFull() const {
+    return ShardIdFull{workchain, shard};
+  }
+  ShardIdFull shard_full() const {
     return ShardIdFull{workchain, shard};
   }
   bool is_valid() const {
@@ -200,8 +206,8 @@ struct BlockId {
   }
   std::string to_str() const {
     char buffer[64];
-    return std::string{buffer,
-                       (unsigned)snprintf(buffer, 63, "(%d,%016llx,%u)", workchain, (unsigned long long)shard, seqno)};
+    return std::string{buffer, (unsigned)snprintf(buffer, 63, "(%d,%016llx,%u)", workchain,
+                                                  static_cast<unsigned long long>(shard), seqno)};
   }
 };
 
@@ -273,6 +279,23 @@ struct BlockIdExt {
   }
   std::string to_str() const {
     return id.to_str() + ':' + root_hash.to_hex() + ':' + file_hash.to_hex();
+  }
+  static td::Result<BlockIdExt> from_str(td::CSlice s) {
+    BlockIdExt v;
+    char rh[65];
+    char fh[65];
+    auto r = sscanf(s.begin(), "(%d,%" SCNx64 ",%u):%64s:%64s", &v.id.workchain, &v.id.shard, &v.id.seqno, rh, fh);
+    if (r < 5) {
+      return td::Status::Error("failed to parse block id");
+    }
+    if (strlen(rh) != 64 || strlen(fh) != 64) {
+      return td::Status::Error("failed to parse block id: bad roothash/filehash");
+    }
+    TRY_RESULT(re, td::hex_decode(td::Slice(rh, 64)));
+    v.root_hash.as_slice().copy_from(td::Slice(re));
+    TRY_RESULT(fe, td::hex_decode(td::Slice(fh, 64)));
+    v.file_hash.as_slice().copy_from(td::Slice(fe));
+    return v;
   }
 };
 

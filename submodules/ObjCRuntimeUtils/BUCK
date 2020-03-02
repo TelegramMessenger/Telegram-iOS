@@ -1,0 +1,15 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ObjCRuntimeUtils",
+    srcs = glob([
+        "Source/ObjCRuntimeUtils/*.m",
+    ]),
+    exported_headers = glob([
+        "Source/ObjCRuntimeUtils/*.h",
+    ]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

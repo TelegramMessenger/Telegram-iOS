@@ -1,4 +1,4 @@
-#import "OpenSSLEncryptionProvider.h"
+#import <OpenSSLEncryptionProvider/OpenSSLEncryptionProvider.h>
 
 #import <openssl/bn.h>
 #import <openssl/rsa.h>

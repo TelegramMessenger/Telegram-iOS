@@ -4,14 +4,7 @@ static_library(
     name = "UniversalMediaPlayer",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/*.m",
     ]),
-    headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/UniversalMediaPlayer.h"]),
-    exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/UniversalMediaPlayer.h"]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
@@ -20,7 +13,8 @@ static_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
         "//submodules/TelegramAudio:TelegramAudio",
-        "//submodules/FFMpeg:FFMpeg",
+        "//submodules/FFMpegBinding:FFMpegBinding",
+        "//submodules/RingBuffer:RingBuffer",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

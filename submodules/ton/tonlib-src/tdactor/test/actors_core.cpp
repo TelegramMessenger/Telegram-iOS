@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/actor/core/ActorLocker.h"
 #include "td/actor/actor.h"
@@ -101,10 +101,10 @@ TEST(Actor2, locker) {
   kill_signal.add_signal(ActorSignals::Kill);
 
   ActorSignals wakeup_signal;
-  kill_signal.add_signal(ActorSignals::Wakeup);
+  wakeup_signal.add_signal(ActorSignals::Wakeup);
 
   ActorSignals cpu_signal;
-  kill_signal.add_signal(ActorSignals::Cpu);
+  cpu_signal.add_signal(ActorSignals::Cpu);
 
   {
     ActorLocker lockerA(&state);
@@ -410,7 +410,7 @@ class Master : public Actor {
 
  private:
   uint32 l = 0;
-  uint32 r = 100000;
+  uint32 r = 1000;
   core::ActorInfoPtr worker;
   void start_up() override {
     worker = detail::create_actor<Worker>(ActorOptions().with_name("Master"));
@@ -444,8 +444,8 @@ TEST(Actor2, scheduler_simple) {
   core::Scheduler scheduler{group_info, SchedulerId{0}, 2};
   scheduler.start();
   scheduler.run_in_context([] {
-    global_cnt = 10;
-    for (int i = 0; i < 10; i++) {
+    global_cnt = 1000;
+    for (int i = 0; i < global_cnt; i++) {
       detail::create_actor<Master>(ActorOptions().with_name("Master"));
     }
   });
@@ -734,7 +734,7 @@ TEST(Actor2, actor_ping_pong) {
             return;
           }
           auto dest = td::Random::fast(0, (int)next_.size() - 1);
-          if (td::Random::fast(0, 1) == 0 && 0) {
+          if (td::Random::fast(0, 1) == 0) {
             send_closure(next_[dest], &PingPong::query, left - 1, std::move(data));
           } else {
             send_closure_later(next_[dest], &PingPong::query, left - 1, std::move(data));
@@ -755,7 +755,7 @@ TEST(Actor2, actor_ping_pong) {
         std::shared_ptr<td::Destructor> watcher_;
       };
 
-      int N = td::Random::fast(2, 10);
+      int N = td::Random::fast(2, 100);
       //N = 2;
       std::vector<ActorOwn<PingPong>> actors;
       for (int i = 0; i < N; i++) {

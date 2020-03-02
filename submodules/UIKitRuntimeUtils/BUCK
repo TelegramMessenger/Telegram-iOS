@@ -1,0 +1,19 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "UIKitRuntimeUtils",
+    srcs = glob([
+        "Source/UIKitRuntimeUtils/*.m",
+    ]),
+    exported_headers = glob([
+        "Source/UIKitRuntimeUtils/*.h",
+    ]),
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

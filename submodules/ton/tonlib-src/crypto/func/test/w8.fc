@@ -1,0 +1,22 @@
+int check_signatures(msg_hash, signatures, signers, bitmask_size) impure {
+  var bitmask = 0;
+  var id = -1;
+  do {
+    (id, var signature, var f) = signatures.udict_get_next?(32, id);
+    if (f){
+      var sig = signature.preload_bits(512);
+      var public_key = -1;
+      do {
+        (public_key, var cs, var _found) = signers.udict_get_next?(256, public_key);
+        if (_found){
+          if (check_signature(msg_hash, sig, public_key)){
+            var signer_index = cs~load_uint(bitmask_size);
+                    bitmask = bitmask | (1 << (signer_index - 1));  
+          } 
+        }
+      } until (~ _found);
+      ;; signature~touch(); 
+    }
+  } until (~ f);
+  return bitmask;
+}

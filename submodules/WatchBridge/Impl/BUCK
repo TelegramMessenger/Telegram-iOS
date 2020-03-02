@@ -1,0 +1,38 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "WatchBridgeImpl",
+    srcs = glob([
+        "Sources/**/*.swift",
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ]),
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/SSignalKit/SSignalKit:SSignalKit",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/WatchCommon/Host:WatchCommon",
+        "//submodules/WatchBridgeAudio:WatchBridgeAudio",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/AvatarNode:AvatarNode",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/LegacyUI:LegacyUI",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/WatchConnectivity.framework",
+    ],
+)

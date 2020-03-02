@@ -12,6 +12,7 @@ import TelegramAudio
 import AccountContext
 import LocalizedPeerData
 import PhotoResources
+import CallsEmoji
 
 final class CallControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext

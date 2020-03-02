@@ -3,10 +3,8 @@ load("//Config:buck_rule_macros.bzl", "framework")
 framework(
     name = "SwiftSignalKit",
     srcs = glob([
-        "*.swift",
+        "Source/**/*.swift",
     ]),
-    deps = [
-    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],

@@ -1,5 +1,5 @@
 import Foundation
-import sqlcipher
+import MurMurHash32
 
 public enum HashFunctions {
     public static func murMurHash32(_ s: String) -> Int32 {

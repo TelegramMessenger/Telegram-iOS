@@ -1,30 +1,21 @@
 load("//Config:buck_rule_macros.bzl", "framework")
 
-ASYNCDISPLAYKIT_EXPORTED_HEADERS = glob([
-  "Source/*.h",
-  "Source/Details/**/*.h",
-  "Source/Layout/*.h",
-  "Source/Base/*.h",
-  "Source/Debug/AsyncDisplayKit+Debug.h",
-  "Source/TextKit/ASTextNodeTypes.h",
-  "Source/TextKit/ASTextKitComponents.h"
+public_headers = glob([
+  "Source/PublicHeaders/AsyncDisplayKit/*.h",
 ])
 
-ASYNCDISPLAYKIT_PRIVATE_HEADERS = glob([
-    "Source/**/*.h"
-  ],
-  exclude = ASYNCDISPLAYKIT_EXPORTED_HEADERS,
-)
+private_headers = glob([
+  "Source/*.h",
+])
 
 framework(
   name = "AsyncDisplayKit",
-  headers = ASYNCDISPLAYKIT_PRIVATE_HEADERS,
-  exported_headers = ASYNCDISPLAYKIT_EXPORTED_HEADERS,
   srcs = glob([
     "Source/**/*.m",
     "Source/**/*.mm",
-    "Source/Base/*.m"
   ]),
+  headers = private_headers,
+  exported_headers = public_headers,
   compiler_flags = [
     "-DMINIMAL_ASDK",
   ],

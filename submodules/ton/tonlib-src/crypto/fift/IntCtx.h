@@ -68,6 +68,7 @@ struct IntCtx {
   int state{0};
   int include_depth{0};
   int line_no{0};
+  bool need_line{true};
   std::string filename;
   std::string currentd_dir;
   std::istream* input_stream{nullptr};
@@ -116,6 +117,9 @@ struct IntCtx {
   }
 
   bool load_next_line();
+  bool load_next_line_ifreq() {
+    return need_line && load_next_line();
+  }
 
   bool is_sb() const;
 
@@ -126,6 +130,7 @@ struct IntCtx {
   class Savepoint {
     IntCtx& ctx;
     int old_line_no;
+    bool old_need_line;
     std::string old_filename;
     std::string old_current_dir;
     std::istream* old_input_stream;

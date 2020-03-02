@@ -1,0 +1,514 @@
+{-
+  Adapted from original version written by:
+  /------------------------------------------------------------------------\
+  | Created for: Telegram (Open Network) Blockchain Contest                |
+  |      Task 2: DNS Resolver (Automatically registering)                  |
+  >------------------------------------------------------------------------<
+  | Author: Oleksandr Murzin (tg: @skydev / em: alexhacker64@gmail.com)    |
+  |         October 2019                                                   |
+  \------------------------------------------------------------------------/
+-}
+
+;;===========================================================================;;
+;; Utility functions                                                         ;;
+;;===========================================================================;;
+
+{-
+  Data structure:
+  Root cell: [OptRef<1b+1r?>:Hashmap<PfxDict:Slice->UInt<32b>,CatTable>:domains]
+         [OptRef<1b+1r?>:Hashmap<UInt<160b>(Time|Hash128)->Slice(DomName)>:gc]
+         [UInt<32b>:stdperiod] [Gram:PPReg] [Gram:PPCell] [Gram:PPBit]
+         [UInt<32b>:lasthousekeeping] 
+  <CatTable> := HashmapE 16 ^DNSRecord
+  
+  STORED DOMAIN NAME SLICE FORMAT: (#ZeroChars<7b>) (Domain name value)
+  #Zeros allows to simultaneously store, for example, com\0 and com\0google\0
+  That will be stored as \1com\0 and \2com\0google\0 (pfx tree has restricitons)
+  This will allow to resolve more specific requests to subdomains, and resort
+      to parent domain next resolver lookup if subdomain is not found
+  com\0goo\0 lookup will, for example look up \2com\0goo\0 and then
+      \1com\0goo\0 which will return \1com\0 (as per pfx tree) with -1 cat
+-}
+
+(cell, cell, cell, [int, int, int, int], int, int) load_data() inline_ref {
+  slice cs = get_data().begin_parse();
+  return (
+    cs~load_ref(),        ;; control data
+    cs~load_dict(),       ;; pfx tree: domains data and exp
+    cs~load_dict(),       ;; gc auxillary with expiration and 128-bit hash slice
+    [ cs~load_uint(30),   ;; length of this period of time in seconds
+      cs~load_grams(),    ;; standard payment for registering a new subdomain
+      cs~load_grams(),    ;; price paid for each cell (PPC)
+      cs~load_grams() ],  ;;                 and bit  (PPB)
+    cs~load_uint(32),     ;; next housekeeping to be done at
+    cs~load_uint(32)      ;; last housekeeping done at
+  );
+}
+
+(int, int, int, int) load_prices() inline_ref {
+  slice cs = get_data().begin_parse();
+  (cs~load_ref(), cs~load_dict(), cs~load_dict());
+  return (cs~load_uint(30), cs~load_grams(), cs~load_grams(), cs~load_grams());
+}
+
+() store_data(cell ctl, cell dd, cell gc, prices, int nhk, int lhk) impure {
+  var [sp, ppr, ppc, ppb] = prices;
+  set_data(begin_cell()
+      .store_ref(ctl) ;; control data
+      .store_dict(dd) ;; domains data and exp
+      .store_dict(gc) ;; keyed expiration time and 128-bit hash slice
+      .store_uint(sp, 30) ;; standard period
+      .store_grams(ppr) ;; price per registration
+      .store_grams(ppc) ;; price per cell
+      .store_grams(ppb) ;; price per bit
+      .store_uint(nhk, 32) ;; next housekeeping
+      .store_uint(lhk, 32) ;; last housekeeping
+      .end_cell());
+}
+
+global var query_info;
+
+() send_message(slice addr, int tag,   int query_id, 
+                int   body, int grams, int mode) impure {
+  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool 
+  ;;                src:MsgAddress -> 011000 0x18
+  var msg = begin_cell()
+    .store_uint (0x18, 6)
+    .store_slice(addr)
+    .store_grams(grams)
+    .store_uint (0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint (tag, 32)
+    .store_uint (query_id, 64);
+  if (body >= 0) {
+    msg~store_uint(body, 32);
+  }
+  send_raw_message(msg.end_cell(), mode);
+}
+
+() send_error(int error_code) impure {
+  var (addr, query_id, op) = query_info;
+  return send_message(addr, error_code, query_id, op, 0, 64);
+}
+
+() send_ok(int price) impure {
+  raw_reserve(price, 4);
+  var (addr, query_id, op) = query_info;
+  return send_message(addr, 0xef6b6179, query_id, op, 0, 128);
+}
+
+() housekeeping(cell ctl, cell dd, cell gc, prices, int nhk, int lhk, int max_steps) impure {
+  int n = now();
+  if (n < max(nhk, lhk + 60)) { ;; housekeeping cooldown: 1 minute
+    ;; if housekeeping was done recently, or if next housekeeping is in the future, just save
+    return store_data(ctl, dd, gc, prices, nhk, lhk);
+  }
+  ;; need to do some housekeeping - maybe remove entry with
+  ;;     least expiration but only if it is already expired
+  ;; no iterating and deleting all to not put too much gas gc
+  ;;     burden on any random specific user request
+  ;; over time it will do the garbage collection required
+  (int mkey, _, int found?) = gc.udict_get_min?(256);
+  while (found? & max_steps) { ;; no short circuit optimization, two nested ifs
+    nhk = (mkey >> (256 - 32));
+    if (nhk < n) {
+      int key = mkey % (1 << (256 - 32));
+      (slice val, found?) = dd.udict_get?(256 - 32, key);
+      if (found?) {
+        int exp = val.preload_uint(32);
+        if (exp <= n) {
+          dd~udict_delete?(256 - 32, key);
+        }
+      }
+      gc~udict_delete?(256, mkey);
+      (mkey, _, found?) = gc.udict_get_min?(256);
+      nhk = (found? ? mkey >> (256 - 32) : 0xffffffff);
+      max_steps -= 1;
+    } else {
+      found? = false;
+    }
+  }
+  store_data(ctl, dd, gc, prices, nhk, n);
+}
+
+int calcprice_internal(slice domain, cell data, ppc, ppb) inline_ref { ;; only for internal calcs
+  var (_, bits, refs) = compute_data_size(data, 100);  ;; 100 cells max
+  bits += slice_bits(domain) * 2 + (128 + 32 + 32);
+  return ppc * (refs + 2) + ppb * bits;
+}
+
+int check_owner(cell cat_table, cell owner_info, int src_wc, int src_addr, int strict) inline_ref {
+  if (strict & cat_table.null?()) { ;; domain not found: return notf | 2^31
+    return 0xee6f7466;
+  }
+  if (owner_info.null?()) { ;; no owner on this domain: no-2 (in strict mode), ok else
+    return strict & 0xee6f2d32;
+  }
+  var ERR_BAD2 = 0xe2616432;
+  slice sown = owner_info.begin_parse();
+  if (sown.slice_bits() < 16 + 3 + 8 + 256) { ;; bad owner record: bad2
+    return ERR_BAD2;
+  }
+  if (sown~load_uint(16 + 3) != 0x9fd3 * 8 + 4) {
+    return ERR_BAD2;
+  }
+  (int owner_wc, int owner_addr) = (sown~load_int(8), sown.preload_uint(256));
+  if ((owner_wc != src_wc) | (owner_addr != src_addr)) { ;; not owner: nown
+    return 0xee6f776e;
+  }
+  return 0;  ;; ok
+}
+
+;;===========================================================================;;
+;; Internal message handler (Code 0)                                         ;;
+;;===========================================================================;;
+
+{-
+  Internal message cell structure:
+                   8             4           2            1
+    int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+    src:MsgAddressInt dest:MsgAddressInt
+    value:CurrencyCollection ihr_fee:Grams fwd_fee:Grams
+    created_lt:uint64 created_at:uint32  
+  Internal message data structure:
+    [UInt<32b>:op] [UInt<64b>:query_id] [Ref<1r>:domain] 
+    (if not prolong: [Ref<1r>:value->CatTable])
+    
+-}
+
+;; Control operations: permitted only to the owner of this smartcontract
+() perform_ctl_op(int op, int src_wc, int src_addr, slice in_msg) impure inline_ref {
+  var (ctl, domdata, gc, prices, nhk, lhk) = load_data();
+  var cs = ctl.begin_parse();
+  if ((cs~load_int(8) != src_wc) | (cs~load_uint(256) != src_addr)) {
+    return send_error(0xee6f776e);
+  }
+  if (op == 0x43685072) {  ;; ChPr = Change Prices
+    var (stdper, ppr, ppc, ppb) = (in_msg~load_uint(32), in_msg~load_grams(), in_msg~load_grams(), in_msg~load_grams());
+    in_msg.end_parse();
+    ;; NB: stdper == 0 -> disable new actions
+    store_data(ctl, domdata, gc, [stdper, ppr, ppc, ppb], nhk, lhk);
+    return send_ok(0);
+  }
+  if (op == 0x4344656c) {  ;; CDel = destroy smart contract
+    ifnot (domdata.null?()) {
+      ;; domain dictionary not empty, force gc
+      housekeeping(ctl, domdata, gc, prices, nhk, 1, -1);
+    }
+    (ctl, domdata, gc, prices, nhk, lhk) = load_data();
+    ifnot (domdata.null?()) {
+      ;; domain dictionary still not empty, error
+      return send_error(0xee74656d);
+    }
+    var (addr, query_id, op) = query_info;
+    return send_message(addr, 0xef6b6179, query_id, op, 0, 128 + 32);
+  }
+  return send_error(0xffffffff);
+}
+
+;; Must send at least GR$1 more for possible gas fees!
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+  ;; this time very interested in internal messages
+  if (in_msg.slice_bits() < 32) { 
+    return ();  ;; simple transfer or short
+  }
+  slice cs = in_msg_cell.begin_parse();
+  int flags = cs~load_uint(4);
+  if (flags & 1) { 
+    return ();  ;; bounced messages
+  }
+  slice s_addr = cs~load_msg_addr();
+  (int src_wc, int src_addr) = s_addr.parse_std_addr();
+  int op = in_msg~load_uint(32);
+  ifnot (op) { 
+    return ();   ;; simple transfer with comment
+  }
+  int query_id = 0;
+  if (in_msg.slice_bits() >= 64) { 
+    query_id = in_msg~load_uint(64);
+  }
+  
+  query_info = (s_addr, query_id, op);
+  
+  if (op & (1 << 31)) {
+    return ();   ;; an answer to our query
+  }
+  if ((op >> 24) == 0x43) {
+    ;; Control operations
+    return perform_ctl_op(op, src_wc, src_addr, in_msg);
+  }
+  
+  int qt = (op == 0x72656764) * 1 + (op == 0x70726f6c) * 2 + (op == 0x75706464) * 4 + (op == 0x676f6763) * 8;
+  ifnot (qt) { ;; unknown query, return error
+    return send_error(0xffffffff);
+  }
+  qt = - qt;
+  
+  (cell ctl, cell domdata, cell gc, [int, int, int, int] prices, int nhk, int lhk) = load_data();
+  
+  if (qt == 8) { ;; 0x676f6763 -> GO, GC! go!!!
+    ;; Manual garbage collection iteration
+    int max_steps = in_msg~load_int(32);   ;; -1 = infty
+    housekeeping(ctl, domdata, gc, prices, nhk, 1, max_steps); ;; forced
+    return send_error(0xef6b6179);
+  }
+
+  slice domain = null();
+  cell domain_cell = in_msg~load_maybe_ref();
+  int fail = 0;
+  if (domain_cell.null?()) {
+    int bytes = in_msg~load_uint(6);
+    fail = (bytes == 0);
+    domain = in_msg~load_bits(bytes * 8);
+  } else {
+    domain = domain_cell.begin_parse();
+    var (bits, refs) = slice_bits_refs(domain);
+    fail = (refs | ((bits - 8) & (7 - 128)));
+  }
+
+  ifnot (fail) {
+    ;; domain must end with \0! no\0 error
+    fail = domain.slice_last(8).preload_uint(8);
+  }
+  if (fail) {
+    return send_error(0xee6f5c30);
+  }
+    
+  int n = now();
+  cell cat_table = cell owner_info = null();
+  int key = int exp = int zeros = 0;
+  slice tail = domain;
+  repeat (tail.slice_bits() ^>> 3) {
+    cat_table = null();
+    int z = (tail~load_uint(8) == 0);
+    zeros -= z;
+    if (z) {
+      key = (string_hash(domain.skip_last_bits(tail.slice_bits())) >> 32);
+      var (val, found?) = domdata.udict_get?(256 - 32, key);
+      if (found?) {
+        exp = val~load_uint(32);
+        if (exp >= n) {  ;; entry not expired
+          cell cat_table = val~load_ref();
+          val.end_parse();
+          var (cown, ok) = cat_table.idict_get_ref?(16, -2);
+          if (ok) {
+            owner_info = cown;
+          }
+        }
+      }
+    }
+  }
+  
+  if (zeros > 4) { ;; too much zero chars (overflow): ov\0
+    return send_error(0xef765c30);
+  }
+
+  ;; ##########################################################################
+  
+  int err = check_owner(cat_table, owner_info, src_wc, src_addr, qt != 1);
+  if (err) {
+    return send_error(err);
+  }
+
+  ;; ##########################################################################
+  
+  ;; load desired data (reuse old for a "prolong" operation)
+  cell data = null();
+  
+  if (qt != 2) {  ;; not a "prolong", load data dictionary
+    data = in_msg~load_ref();
+    ;; basic integrity check of (client-provided) dictionary
+    ifnot (data.dict_empty?()) { ;; 1000 gas!
+      var (oinfo, ok) = data.idict_get_ref?(16, -2);
+      if (ok) {
+        var cs = oinfo.begin_parse();
+        throw_unless(31, cs.slice_bits() >= 16 + 3 + 8 + 256);
+        throw_unless(31, cs.preload_uint(19) == 0x9fd3 * 8 + 4);
+      }
+      (_, _, int minok) = data.idict_get_min?(16);
+      (_, _, int maxok) = data.idict_get_max?(16);
+      throw_unless(31, minok & maxok);
+    }
+  } else {
+    data = cat_table;
+  }
+
+  ;; load prices
+  var [stdper, ppr, ppc, ppb] = prices;
+  ifnot (stdper) {  ;; smart contract disabled by owner, no new actions
+    return send_error(0xd34f4646);
+  }
+
+  ;; compute action price
+  int price = calcprice_internal(domain, data, ppc, ppb) + (ppr & (qt != 4));
+  if (msg_value - (1 << 30) < price) { ;; gr<p: grams - GR$1 < price
+    return send_error(0xe7723c70);
+  }
+  
+  ;; load desired expiration unixtime
+  int req_expires_at = in_msg~load_uint(32);
+
+  ;; ##########################################################################
+  if (qt == 2) { ;; 0x70726f6c -> prol | prolong domain
+    if (exp > n + stdper) {  ;; does not expire soon, cannot prolong
+      return send_error(0xf365726f);
+    }
+    domdata~udict_set_builder(256 - 32, key, begin_cell().store_uint(exp + stdper, 32).store_ref(data));
+
+    int gckeyO = (exp << (256 - 32)) + key;
+    int gckeyN = gckeyO + (stdper << (256 - 32));
+    gc~udict_delete?(256, gckeyO); ;; delete old gc entry, add new
+    gc~udict_set_builder(256, gckeyN, begin_cell());
+    
+    housekeeping(ctl, domdata, gc, prices, nhk, lhk, 1);
+    return send_ok(price);
+  }
+  
+  ;; ##########################################################################
+  if (qt == 1) { ;; 0x72656764 -> regd | register domain
+    ifnot (cat_table.null?()) { ;; domain already exists: return alre | 2^31
+      return send_error(0xe16c7265);
+    }
+    int expires_at = n + stdper;
+    domdata~udict_set_builder(256 - 32, key, begin_cell().store_uint(expires_at, 32).store_ref(data));
+
+    int gckey = (expires_at << (256 - 32)) | key;
+    gc~udict_set_builder(256, gckey, begin_cell());
+
+    housekeeping(ctl, domdata, gc, prices, min(nhk, expires_at), lhk, 1);
+    return send_ok(price);
+  }
+
+  ;; ##########################################################################
+  if (qt == 4) { ;; 0x75706464 -> updd | update domain (data)
+    domdata~udict_set_builder(256 - 32, key, begin_cell().store_uint(exp, 32).store_ref(data));
+    housekeeping(ctl, domdata, gc, prices, nhk, lhk, 1);
+    return send_ok(price);
+  }
+  ;; ##########################################################################
+  
+  return (); ;; should NEVER reach this part of code!
+}
+
+;;===========================================================================;;
+;; External message handler (Code -1)                                        ;;
+;;===========================================================================;;
+
+() recv_external(slice in_msg) impure {
+  ;; only for initialization
+  (cell ctl, cell dd, cell gc, var prices, int nhk, int lhk) = load_data();
+  ifnot (lhk) {
+    accept_message();
+    return store_data(ctl, dd, gc, prices, 0xffffffff, now());
+  }
+}
+
+;;===========================================================================;;
+;; Getter methods                                                            ;;
+;;===========================================================================;;
+
+(int, cell, int, slice) dnsdictlookup(slice domain, int nowtime) inline_ref {
+  (int bits, int refs) = domain.slice_bits_refs();
+  throw_if(30, refs | (bits & 7)); ;; malformed input (~ 8n-bit)
+  ifnot (bits) {
+    return (0, null(), 0, null());  ;; zero-length input
+  }
+
+  int domain_last_byte = domain.slice_last(8).preload_uint(8);
+  if (domain_last_byte) {
+    domain = begin_cell().store_slice(domain) ;; append zero byte
+                         .store_uint(0, 8).end_cell().begin_parse();
+    bits += 8;
+  }
+  if (bits == 8) {
+    return (0, null(), 0, null()); ;; zero-length input, but with zero byte
+  }
+  var ds = get_data().begin_parse();
+  (_, cell root) = (ds~load_ref(), ds~load_dict());
+  
+  slice val = null();
+  int tail_bits = -1;
+  slice tail = domain;
+
+  repeat (bits >> 3) {
+    if (tail~load_uint(8) == 0) {
+      var key = (string_hash(domain.skip_last_bits(tail.slice_bits())) >> 32);
+      var (v, found?) = root.udict_get?(256 - 32, key);
+      if (found?) {
+        if (v.preload_uint(32) >= nowtime) {  ;; entry not expired
+          val = v;
+          tail_bits = tail.slice_bits();
+        }
+      }
+    }
+  }
+
+  if (val.null?()) {
+    return (0, null(), 0, null()); ;; failed to find entry in subdomain dictionary
+  }
+
+  return (val~load_uint(32), val~load_ref(), tail_bits == 0, domain.skip_last_bits(tail_bits));
+}
+
+;;8m  dns-record-value
+(int, cell) dnsresolve(slice domain, int category) method_id {
+  (int exp, cell cat_table, int exact?, slice pfx) = dnsdictlookup(domain, now());
+  ifnot (exp) {
+    return (0, null());
+  }
+  ifnot (exact?) { ;; incomplete subdomain found, must return next resolver (-1)
+    category = -1;
+  }
+  
+  int pfx_bits = pfx.slice_bits();
+  
+  ;; pfx.slice_bits() will contain 8m, where m is number of bytes in subdomain 
+  ;;   COUNTING the zero byte (if structurally correct: no multiple-ZB keys)
+  ;;   which corresponds to 8m, m=one plus the number of bytes in the subdomain found)
+  ifnot (category) {
+    return (pfx_bits, cat_table); ;; return cell with entire dictionary for 0
+  } else {
+    cell cat_found = cat_table.idict_get_ref(16, category);
+    return (pfx_bits, cat_found);
+  }
+}
+
+;; getexpiration needs to know the current time to skip any possible expired
+;;     subdomains in the chain. it will return 0 if not found or expired.
+int getexpirationx(slice domain, int nowtime) inline method_id {
+  (int exp, _, _, _) = dnsdictlookup(domain, nowtime);
+  return exp;
+}
+
+int getexpiration(slice domain) method_id {
+  return getexpirationx(domain, now());
+}
+
+int getstdperiod() method_id {
+  (int stdper, _, _, _) = load_prices();
+  return stdper;
+}
+
+int getppr() method_id {
+  (_, int ppr, _, _) = load_prices();
+  return ppr;
+}
+
+int getppc() method_id {
+  (_, _, int ppc, _) = load_prices();
+  return ppc;
+}
+
+int getppb() method_id {
+  ( _, _, _, int ppb) = load_prices();
+  return ppb;
+}
+
+int calcprice(slice domain, cell val) method_id { ;; only for external gets (not efficient)
+  (_, _, int ppc, int ppb) = load_prices();
+  return calcprice_internal(domain, val, ppc, ppb);
+}
+
+int calcregprice(slice domain, cell val) method_id { ;; only for external gets (not efficient)
+  (_, int ppr, int ppc, int ppb) = load_prices();
+  return ppr + calcprice_internal(domain, val, ppc, ppb);
+}

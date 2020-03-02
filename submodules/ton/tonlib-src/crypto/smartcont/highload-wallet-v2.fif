@@ -1,20 +1,41 @@
 #!/usr/bin/fift -s
 "TonUtil.fif" include
+"GetOpt.fif" include
 
-{ ."usage: " @' $0 type ." <filename-base> <subwallet-id> <order-file> [<savefile>]" cr
-  ."Creates a request with up to 254 orders loaded from <order-file> to high-load v2 (sub)wallet created by new-highload-v2-wallet.fif, with private key loaded from file <filename-base>.pk "
-  ."and address from <filename-base><subwallet-id>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)" cr 
-  ."<order-file> is a text file with lines `SEND <dest-addr> <amount>`" cr 1 halt
-} : usage
+{ show-options-help 1 halt } : usage
+
+true =: allow-bounce
+false =: force-bounce
+3 =: send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
+60 =: timeout   // external message expires in 60 seconds
+
+begin-options
+     " <filename-base> <subwallet-id> <order-file> [-n|-b] [-t<timeout>] [<savefile>]" +cr +tab
+    +"Creates a request with up to 254 orders loaded from <order-file> to high-load (sub)wallet created by new-highload-v2-wallet.fif, with private key loaded from file <filename-base>.pk "
+    +"and address from <filename-base><subwallet-id>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)" +cr 
+    +"<order-file> is a text file with lines `SEND <dest-addr> <amount>`"
+    disable-digit-options generic-help-setopt
+  "n" "--no-bounce" { false =: allow-bounce } short-long-option
+    "Clears bounce flag" option-help
+  "b" "--force-bounce" { true =: force-bounce } short-long-option
+    "Forces bounce flag" option-help
+  "t" "--timeout" { parse-int =: timeout } short-long-option-arg
+    "Sets expiration timeout in seconds (" timeout (.) $+ +" by default)" option-help
+  "m" "--mode" { parse-int =: send-mode } short-long-option-arg
+    "Sets transfer mode (0..255) for SENDRAWMSG (" send-mode (.) $+ +" by default)"
+    option-help
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
 $# dup 3 < swap 4 > or ' usage if
+4 :$1..n
 
 $1 =: file-base
 $2 parse-int dup 32 fits ' usage ifnot =: subwallet-id   // parse subwallet-id
 { subwallet-id (.) $+ } : +subwallet
 $3 =: order-file
-def? $4 { @' $4 } { "wallet-query" } cond constant savefile
-3 constant send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
-60 constant timeout   // external message expires in 60 seconds
+$4 "wallet-query" replace-if-null =: savefile
 
 file-base +subwallet +".addr" load-address
 2dup 2constant wallet_addr
@@ -29,7 +50,7 @@ variable order#   order# 0!
   orders ! order# 1+!
 } : add-order
 // b body -- b'
-{ tuck <s 2dup s-fits? not rot over 1 i, -rot
+{ tuck <s 2dup 1 s-fits-with? not rot over 1 i, -rot
   { drop swap ref, } { s, nip } cond
 } : append-msg-body
 // ng wc addr bounce body -- c
@@ -41,7 +62,7 @@ variable order#   order# 0!
   -rot 2dup 4 pick 7 + .Addr ." = " .addr ." bounce=" . cr
 } : .transfer
 // addr$ ng -- c
-{ swap parse-smc-addr  // ng wc addr bnc 
+{ swap parse-smc-addr force-bounce or allow-bounce and  // ng wc addr bnc 
   2over 2over .transfer
   <b 0 32 u, b> create-int-msg
 } : create-simple-transfer

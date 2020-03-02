@@ -9,7 +9,7 @@ static_library(
         "Sources/*.h",
     ]),
     exported_headers = glob([
-        "Sources/*.h",
+        "PublicHeaders/**/*.h",
     ]),
     deps = [
         "//submodules/PKCS:PKCS",

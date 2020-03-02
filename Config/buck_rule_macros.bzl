@@ -309,9 +309,9 @@ def glob_map(glob_results):
         result[file_name] = path
     return result
 
-def glob_sub_map(prefix, glob_specs):
+def glob_sub_map(prefix, glob_specs, exclude = []):
     result = dict()
-    for path in native.glob(glob_specs):
+    for path in native.glob(glob_specs, exclude = exclude):
         if not path.startswith(prefix):
             fail('\"%s\" does not start with \"%s\"' % (path, prefix))
         file_key = path[len(prefix):]

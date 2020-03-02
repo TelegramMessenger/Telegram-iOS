@@ -6,11 +6,7 @@ import Postbox
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import ItemListUI
 import PresentationDataUtils
 import AccountContext

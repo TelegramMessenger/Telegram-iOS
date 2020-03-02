@@ -1,0 +1,8 @@
+_ g(s) {
+  var (z, t) = (17, s);
+  while (z > 0) {
+    t = s;
+    z -= 1;
+  }
+  return ~ t;
+}

@@ -5,6 +5,7 @@ PROGRAM{
   DECLPROC check_destination
   DECLPROC recv_external
   85143 DECLMETHOD seqno
+  78748 DECLMETHOD get_public_key
   104128 DECLMETHOD balance
   recv_internal PROC:<{
     //  in_msg
@@ -71,8 +72,7 @@ PROGRAM{
     s0 s3 XCHG	//  signature in_msg public_key cs stored_seqno msg_seqno
     IFNOTJMP:<{	//  signature in_msg public_key cs stored_seqno
       NIP
-      s2 POP
-      s2 POP	//  public_key stored_seqno
+      2 2 BLKDROP2	//  public_key stored_seqno
       ACCEPT
       INC	//  public_key _35
       NEWC	//  public_key _35 _36
@@ -110,8 +110,7 @@ PROGRAM{
         s0 s2 XCHG	//  elector stored_seqno public_key restrict cs msg mode
         SENDRAWMSG
       }>ELSE<{
-        s2 POP
-        DROP	//  elector stored_seqno public_key restrict cs
+        2 1 BLKDROP2	//  elector stored_seqno public_key restrict cs
       }>
     }>	//  elector stored_seqno public_key restrict cs
     NIP
@@ -130,6 +129,14 @@ PROGRAM{
     c4 PUSH	//  _0
     CTOS	//  _1
     32 PLDU	//  _3
+  }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    32 LDU	//  _9 _8
+    NIP	//  cs
+    256 PLDU	//  _7
   }>
   balance PROC:<{
     // 

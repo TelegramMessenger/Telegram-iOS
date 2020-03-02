@@ -5,12 +5,12 @@
 //  Created by ishtar on 13. 2. 25..
 //
 
-#import "NBAsYouTypeFormatter.h"
-#import "NBPhoneNumberDefines.h"
+#import <libphonenumber/NBAsYouTypeFormatter.h>
+#import <libphonenumber/NBPhoneNumberDefines.h>
 
 #import "NBMetadataHelper.h"
 
-#import "NBPhoneNumberUtil.h"
+#import <libphonenumber/NBPhoneNumberUtil.h>
 #import "NBPhoneMetaData.h"
 #import "NBNumberFormat.h"
 

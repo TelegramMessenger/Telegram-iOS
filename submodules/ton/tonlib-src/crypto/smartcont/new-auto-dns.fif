@@ -1,0 +1,66 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+
+Basechain =: wc   // create smart contract in basechain
+"new-dns-query.boc" =: savefile
+0 =: contract-id
+variable dns-dict  dictnew dns-dict !
+
+begin-options
+     "<filename-base> <address> <reg-period> <reg-price> <ng-per-bit> <ng-per-cell> [-w<workchain>] [-r<random-id>] [-o<savefile-boc>]" +cr +tab
+    +"Creates a new automatic dns smart contract with 32-bit identifier <random-id> controlled from wallet with address <address> "
+    +"and saves it into <savefile-boc> ('" savefile $+ +"' by default)"
+    disable-digit-options generic-help-setopt
+  "w" "--workchain" { parse-workchain-id =: wc } short-long-option-arg
+    "Selects workchain to create smart contract (" wc (.) $+ +" by default)" option-help
+  "r" "--random-id" { parse-int =: contract-id } short-long-option-arg
+    "Sets 'random' smart contract identifier (" contract-id (.) $+ +" by default)" option-help
+  "o" "--output" { =: savefile } short-long-option-arg
+    "Sets output file for generated initialization message ('" savefile $+ +"' by default)" option-help
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# 6 <> ' usage if
+6 :$1..n
+$1 =: file-base
+$2 false parse-load-address drop 2=: ctl-addr
+$3 parse-int dup 0 10000000 in-range? ' usage ifnot =: reg-period
+$4 $>GR =: reg-price
+$5 parse-int dup 0< ' usage if =: ng-pb
+$6 parse-int dup 0< ' usage if =: ng-pc
+contract-id 32 fits ' usage ifnot
+{ contract-id ?dup { (.) $+ } if } : +contractid
+
+."Creating new automatic DNS smart contract in workchain " wc .
+."with random id " contract-id . cr
+."Controlling wallet (smart contract) is " ctl-addr 6 .Addr cr
+."Subdomain registration period is " reg-period . ."seconds" cr
+."Subdomain registration price is " reg-price .GR
+."+ " ng-pc . ."per cell + " ng-pb . ."per bit" cr
+
+// Create new automatic DNS; source code included from `auto/dns-auto-code.fif`
+"auto/dns-auto-code.fif" include
+// code
+<b <b ctl-addr -rot 8 i, swap 256 u, contract-id 32 i, b> ref,  // ctl
+   dns-dict @ dict, dictnew dict,   // dom_dict gc
+   reg-period 30 u, reg-price Gram, ng-pc Gram, ng-pb Gram,  // stdper ppc ppb
+   0 64 u,  // nhk lhk
+b> // data
+null // no libraries
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant wallet_addr
+."new automatic DNS smartcontract address = " 2dup .addr cr
+2dup file-base +"-dns" +contractid +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile tuck B>file
+."(Saved dns smart-contract creating query to file " type .")" cr

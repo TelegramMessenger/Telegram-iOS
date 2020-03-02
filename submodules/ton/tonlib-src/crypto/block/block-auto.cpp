@@ -14,11 +14,16 @@
 // uses built-in type `uint`
 // uses built-in type `bits`
 // uses built-in type `int8`
+// uses built-in type `uint13`
 // uses built-in type `uint15`
+// uses built-in type `int16`
 // uses built-in type `uint16`
 // uses built-in type `int32`
 // uses built-in type `uint32`
+// uses built-in type `uint63`
+// uses built-in type `int64`
 // uses built-in type `uint64`
+// uses built-in type `int257`
 // uses built-in type `bits256`
 
 namespace block {
@@ -273,7 +278,7 @@ int BoolFalse::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(1) == 0 ? bool_false : -1;
 }
 
-bool BoolFalse::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BoolFalse::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(1) == 0;
 }
 
@@ -340,7 +345,7 @@ int BoolTrue::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(1) == 1 ? bool_true : -1;
 }
 
-bool BoolTrue::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BoolTrue::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(1) == 1;
 }
 
@@ -423,13 +428,13 @@ bool Maybe::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool Maybe::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Maybe::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case nothing:
     return cs.advance(1);
   case just:
     return cs.advance(1)
-        && X_.validate_skip(cs, weak);
+        && X_.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -556,14 +561,14 @@ bool Either::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool Either::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Either::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case left:
     return cs.advance(1)
-        && X_.validate_skip(cs, weak);
+        && X_.validate_skip(ops, cs, weak);
   case right:
     return cs.advance(1)
-        && Y_.validate_skip(cs, weak);
+        && Y_.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -684,9 +689,9 @@ bool Both::skip(vm::CellSlice& cs) const {
       && Y_.skip(cs);
 }
 
-bool Both::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return X_.validate_skip(cs, weak)
-      && Y_.validate_skip(cs, weak);
+bool Both::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return X_.validate_skip(ops, cs, weak)
+      && Y_.validate_skip(ops, cs, weak);
 }
 
 bool Both::unpack(vm::CellSlice& cs, Both::Record& data) const {
@@ -812,11 +817,11 @@ bool Hashmap::skip(vm::CellSlice& cs) const {
       && HashmapNode{m, X_}.skip(cs);
 }
 
-bool Hashmap::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Hashmap::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int l, m;
-  return HmLabel{m_}.validate_skip(cs, weak, l)
+  return HmLabel{m_}.validate_skip(ops, cs, weak, l)
       && add_r1(m, l, m_)
-      && HashmapNode{m, X_}.validate_skip(cs, weak);
+      && HashmapNode{m, X_}.validate_skip(ops, cs, weak);
 }
 
 bool Hashmap::unpack(vm::CellSlice& cs, Hashmap::Record& data) const {
@@ -889,16 +894,16 @@ bool HashmapNode::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool HashmapNode::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HashmapNode::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case hmn_leaf:
     return m_ == 0
-        && X_.validate_skip(cs, weak);
+        && X_.validate_skip(ops, cs, weak);
   case hmn_fork: {
     int n;
     return add_r1(n, 1, m_)
-        && Hashmap{n, X_}.validate_skip_ref(cs, weak)
-        && Hashmap{n, X_}.validate_skip_ref(cs, weak);
+        && Hashmap{n, X_}.validate_skip_ref(ops, cs, weak)
+        && Hashmap{n, X_}.validate_skip_ref(ops, cs, weak);
     }
   }
   return false;
@@ -1077,12 +1082,12 @@ bool HmLabel::skip(vm::CellSlice& cs, int& m_) const {
   return false;
 }
 
-bool HmLabel::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HmLabel::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case hml_short: {
     int m_;
     return cs.advance(1)
-        && t_Unary.validate_skip(cs, weak, m_)
+        && t_Unary.validate_skip(ops, cs, weak, m_)
         && m_ <= n_
         && cs.advance(m_);
     }
@@ -1101,11 +1106,11 @@ bool HmLabel::validate_skip(vm::CellSlice& cs, bool weak) const {
   return false;
 }
 
-bool HmLabel::validate_skip(vm::CellSlice& cs, bool weak, int& m_) const {
+bool HmLabel::validate_skip(int* ops, vm::CellSlice& cs, bool weak, int& m_) const {
   switch (get_tag(cs)) {
   case hml_short:
     return cs.advance(1)
-        && t_Unary.validate_skip(cs, weak, m_)
+        && t_Unary.validate_skip(ops, cs, weak, m_)
         && m_ <= n_
         && cs.advance(m_);
   case hml_long:
@@ -1360,20 +1365,20 @@ bool Unary::skip(vm::CellSlice& cs, int& m_) const {
   return false;
 }
 
-bool Unary::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Unary::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case unary_zero:
     return cs.advance(1);
   case unary_succ: {
     int n;
     return cs.advance(1)
-        && validate_skip(cs, weak, n);
+        && validate_skip(ops, cs, weak, n);
     }
   }
   return false;
 }
 
-bool Unary::validate_skip(vm::CellSlice& cs, bool weak, int& m_) const {
+bool Unary::validate_skip(int* ops, vm::CellSlice& cs, bool weak, int& m_) const {
   switch (get_tag(cs)) {
   case unary_zero:
     return (m_ = 0) >= 0
@@ -1381,7 +1386,7 @@ bool Unary::validate_skip(vm::CellSlice& cs, bool weak, int& m_) const {
   case unary_succ: {
     int n;
     return cs.advance(1)
-        && validate_skip(cs, weak, n)
+        && validate_skip(ops, cs, weak, n)
         && (m_ = n + 1) >= 0;
     }
   }
@@ -1545,13 +1550,13 @@ bool HashmapE::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool HashmapE::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HashmapE::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case hme_empty:
     return cs.advance(1);
   case hme_root:
     return cs.advance(1)
-        && Hashmap{m_, X_}.validate_skip_ref(cs, weak);
+        && Hashmap{m_, X_}.validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -1666,8 +1671,8 @@ bool BitstringSet::skip(vm::CellSlice& cs) const {
   return Hashmap{m_, t_True}.skip(cs);
 }
 
-bool BitstringSet::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return Hashmap{m_, t_True}.validate_skip(cs, weak);
+bool BitstringSet::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return Hashmap{m_, t_True}.validate_skip(ops, cs, weak);
 }
 
 bool BitstringSet::unpack(vm::CellSlice& cs, BitstringSet::Record& data) const {
@@ -1733,11 +1738,11 @@ bool HashmapAug::skip(vm::CellSlice& cs) const {
       && HashmapAugNode{m, X_, Y_}.skip(cs);
 }
 
-bool HashmapAug::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HashmapAug::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int l, m;
-  return HmLabel{m_}.validate_skip(cs, weak, l)
+  return HmLabel{m_}.validate_skip(ops, cs, weak, l)
       && add_r1(m, l, m_)
-      && HashmapAugNode{m, X_, Y_}.validate_skip(cs, weak);
+      && HashmapAugNode{m, X_, Y_}.validate_skip(ops, cs, weak);
 }
 
 bool HashmapAug::unpack(vm::CellSlice& cs, HashmapAug::Record& data) const {
@@ -1812,18 +1817,18 @@ bool HashmapAugNode::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool HashmapAugNode::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HashmapAugNode::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case ahmn_leaf:
     return m_ == 0
-        && Y_.validate_skip(cs, weak)
-        && X_.validate_skip(cs, weak);
+        && Y_.validate_skip(ops, cs, weak)
+        && X_.validate_skip(ops, cs, weak);
   case ahmn_fork: {
     int n;
     return add_r1(n, 1, m_)
-        && HashmapAug{n, X_, Y_}.validate_skip_ref(cs, weak)
-        && HashmapAug{n, X_, Y_}.validate_skip_ref(cs, weak)
-        && Y_.validate_skip(cs, weak);
+        && HashmapAug{n, X_, Y_}.validate_skip_ref(ops, cs, weak)
+        && HashmapAug{n, X_, Y_}.validate_skip_ref(ops, cs, weak)
+        && Y_.validate_skip(ops, cs, weak);
     }
   }
   return false;
@@ -1954,15 +1959,15 @@ bool HashmapAugE::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool HashmapAugE::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HashmapAugE::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case ahme_empty:
     return cs.advance(1)
-        && Y_.validate_skip(cs, weak);
+        && Y_.validate_skip(ops, cs, weak);
   case ahme_root:
     return cs.advance(1)
-        && HashmapAug{m_, X_, Y_}.validate_skip_ref(cs, weak)
-        && Y_.validate_skip(cs, weak);
+        && HashmapAug{m_, X_, Y_}.validate_skip_ref(ops, cs, weak)
+        && Y_.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -2093,11 +2098,11 @@ bool VarHashmap::skip(vm::CellSlice& cs) const {
       && VarHashmapNode{m, X_}.skip(cs);
 }
 
-bool VarHashmap::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool VarHashmap::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int l, m;
-  return HmLabel{m_}.validate_skip(cs, weak, l)
+  return HmLabel{m_}.validate_skip(ops, cs, weak, l)
       && add_r1(m, l, m_)
-      && VarHashmapNode{m, X_}.validate_skip(cs, weak);
+      && VarHashmapNode{m, X_}.validate_skip(ops, cs, weak);
 }
 
 bool VarHashmap::unpack(vm::CellSlice& cs, VarHashmap::Record& data) const {
@@ -2176,25 +2181,25 @@ bool VarHashmapNode::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool VarHashmapNode::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool VarHashmapNode::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case vhmn_leaf:
     return cs.advance(2)
-        && X_.validate_skip(cs, weak);
+        && X_.validate_skip(ops, cs, weak);
   case vhmn_fork: {
     int n;
     return add_r1(n, 1, m_)
         && cs.advance(2)
-        && VarHashmap{n, X_}.validate_skip_ref(cs, weak)
-        && VarHashmap{n, X_}.validate_skip_ref(cs, weak)
-        && Maybe{X_}.validate_skip(cs, weak);
+        && VarHashmap{n, X_}.validate_skip_ref(ops, cs, weak)
+        && VarHashmap{n, X_}.validate_skip_ref(ops, cs, weak)
+        && Maybe{X_}.validate_skip(ops, cs, weak);
     }
   case vhmn_cont: {
     int n;
     return add_r1(n, 1, m_)
         && cs.advance(2)
-        && VarHashmap{n, X_}.validate_skip_ref(cs, weak)
-        && X_.validate_skip(cs, weak);
+        && VarHashmap{n, X_}.validate_skip_ref(ops, cs, weak)
+        && X_.validate_skip(ops, cs, weak);
     }
   }
   return false;
@@ -2360,13 +2365,13 @@ bool VarHashmapE::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool VarHashmapE::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool VarHashmapE::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case vhme_empty:
     return cs.advance(1);
   case vhme_root:
     return cs.advance(1)
-        && VarHashmap{m_, X_}.validate_skip_ref(cs, weak);
+        && VarHashmap{m_, X_}.validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -2484,11 +2489,11 @@ bool PfxHashmap::skip(vm::CellSlice& cs) const {
       && PfxHashmapNode{m, X_}.skip(cs);
 }
 
-bool PfxHashmap::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool PfxHashmap::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int l, m;
-  return HmLabel{m_}.validate_skip(cs, weak, l)
+  return HmLabel{m_}.validate_skip(ops, cs, weak, l)
       && add_r1(m, l, m_)
-      && PfxHashmapNode{m, X_}.validate_skip(cs, weak);
+      && PfxHashmapNode{m, X_}.validate_skip(ops, cs, weak);
 }
 
 bool PfxHashmap::unpack(vm::CellSlice& cs, PfxHashmap::Record& data) const {
@@ -2556,17 +2561,17 @@ bool PfxHashmapNode::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool PfxHashmapNode::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool PfxHashmapNode::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case phmn_leaf:
     return cs.advance(1)
-        && X_.validate_skip(cs, weak);
+        && X_.validate_skip(ops, cs, weak);
   case phmn_fork: {
     int n;
     return add_r1(n, 1, m_)
         && cs.advance(1)
-        && PfxHashmap{n, X_}.validate_skip_ref(cs, weak)
-        && PfxHashmap{n, X_}.validate_skip_ref(cs, weak);
+        && PfxHashmap{n, X_}.validate_skip_ref(ops, cs, weak)
+        && PfxHashmap{n, X_}.validate_skip_ref(ops, cs, weak);
     }
   }
   return false;
@@ -2714,13 +2719,13 @@ bool PfxHashmapE::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool PfxHashmapE::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool PfxHashmapE::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case phme_empty:
     return cs.advance(1);
   case phme_root:
     return cs.advance(1)
-        && PfxHashmap{m_, X_}.validate_skip_ref(cs, weak);
+        && PfxHashmap{m_, X_}.validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -2851,7 +2856,7 @@ bool MsgAddressExt::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool MsgAddressExt::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool MsgAddressExt::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case addr_none:
     return cs.advance(2);
@@ -2984,7 +2989,7 @@ bool Anycast::skip(vm::CellSlice& cs) const {
       && cs.advance(depth);
 }
 
-bool Anycast::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Anycast::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int depth;
   return cs.fetch_uint_leq(30, depth)
       && 1 <= depth
@@ -3082,16 +3087,16 @@ bool MsgAddressInt::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool MsgAddressInt::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool MsgAddressInt::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case addr_std:
     return cs.advance(2)
-        && t_Maybe_Anycast.validate_skip(cs, weak)
+        && t_Maybe_Anycast.validate_skip(ops, cs, weak)
         && cs.advance(264);
   case addr_var: {
     int addr_len;
     return cs.advance(2)
-        && t_Maybe_Anycast.validate_skip(cs, weak)
+        && t_Maybe_Anycast.validate_skip(ops, cs, weak)
         && cs.fetch_uint_to(9, addr_len)
         && cs.advance(32)
         && cs.advance(addr_len);
@@ -3229,12 +3234,12 @@ bool MsgAddress::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool MsgAddress::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool MsgAddress::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case cons1:
-    return t_MsgAddressInt.validate_skip(cs, weak);
+    return t_MsgAddressInt.validate_skip(ops, cs, weak);
   case cons2:
-    return t_MsgAddressExt.validate_skip(cs, weak);
+    return t_MsgAddressExt.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -3347,7 +3352,7 @@ bool VarUInteger::skip(vm::CellSlice& cs) const {
       && cs.advance(8 * len);
 }
 
-bool VarUInteger::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool VarUInteger::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int len;
   return cs.fetch_uint_less(m_, len)
       && cs.advance(8 * len);
@@ -3421,7 +3426,7 @@ bool VarInteger::skip(vm::CellSlice& cs) const {
       && cs.advance(8 * len);
 }
 
-bool VarInteger::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool VarInteger::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int len;
   return cs.fetch_uint_less(m_, len)
       && cs.advance(8 * len);
@@ -3493,8 +3498,8 @@ bool Grams::skip(vm::CellSlice& cs) const {
   return t_VarUInteger_16.skip(cs);
 }
 
-bool Grams::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_VarUInteger_16.validate_skip(cs, weak);
+bool Grams::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_VarUInteger_16.validate_skip(ops, cs, weak);
 }
 
 bool Grams::unpack(vm::CellSlice& cs, Grams::Record& data) const {
@@ -3556,8 +3561,8 @@ bool ExtraCurrencyCollection::skip(vm::CellSlice& cs) const {
   return t_HashmapE_32_VarUInteger_32.skip(cs);
 }
 
-bool ExtraCurrencyCollection::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapE_32_VarUInteger_32.validate_skip(cs, weak);
+bool ExtraCurrencyCollection::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_32_VarUInteger_32.validate_skip(ops, cs, weak);
 }
 
 bool ExtraCurrencyCollection::unpack(vm::CellSlice& cs, ExtraCurrencyCollection::Record& data) const {
@@ -3620,9 +3625,9 @@ bool CurrencyCollection::skip(vm::CellSlice& cs) const {
       && t_ExtraCurrencyCollection.skip(cs);
 }
 
-bool CurrencyCollection::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Grams.validate_skip(cs, weak)
-      && t_ExtraCurrencyCollection.validate_skip(cs, weak);
+bool CurrencyCollection::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Grams.validate_skip(ops, cs, weak)
+      && t_ExtraCurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool CurrencyCollection::unpack(vm::CellSlice& cs, CurrencyCollection::Record& data) const {
@@ -3720,25 +3725,25 @@ bool CommonMsgInfo::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool CommonMsgInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CommonMsgInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case int_msg_info:
     return cs.advance(4)
-        && t_MsgAddressInt.validate_skip(cs, weak)
-        && t_MsgAddressInt.validate_skip(cs, weak)
-        && t_CurrencyCollection.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && t_CurrencyCollection.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
         && cs.advance(96);
   case ext_in_msg_info:
     return cs.advance(2)
-        && t_MsgAddressExt.validate_skip(cs, weak)
-        && t_MsgAddressInt.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak);
+        && t_MsgAddressExt.validate_skip(ops, cs, weak)
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
   case ext_out_msg_info:
     return cs.advance(2)
-        && t_MsgAddressInt.validate_skip(cs, weak)
-        && t_MsgAddressExt.validate_skip(cs, weak)
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && t_MsgAddressExt.validate_skip(ops, cs, weak)
         && cs.advance(96);
   }
   return false;
@@ -3942,20 +3947,20 @@ bool CommonMsgInfoRelaxed::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool CommonMsgInfoRelaxed::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CommonMsgInfoRelaxed::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case int_msg_info:
     return cs.advance(4)
-        && t_MsgAddress.validate_skip(cs, weak)
-        && t_MsgAddressInt.validate_skip(cs, weak)
-        && t_CurrencyCollection.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
+        && t_MsgAddress.validate_skip(ops, cs, weak)
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && t_CurrencyCollection.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
         && cs.advance(96);
   case ext_out_msg_info:
     return cs.fetch_ulong(2) == 3
-        && t_MsgAddress.validate_skip(cs, weak)
-        && t_MsgAddressExt.validate_skip(cs, weak)
+        && t_MsgAddress.validate_skip(ops, cs, weak)
+        && t_MsgAddressExt.validate_skip(ops, cs, weak)
         && cs.advance(96);
   }
   return false;
@@ -4139,12 +4144,12 @@ bool StateInit::skip(vm::CellSlice& cs) const {
       && t_HashmapE_256_SimpleLib.skip(cs);
 }
 
-bool StateInit::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Maybe_natwidth_5.validate_skip(cs, weak)
-      && t_Maybe_TickTock.validate_skip(cs, weak)
-      && t_Maybe_Ref_Cell.validate_skip(cs, weak)
-      && t_Maybe_Ref_Cell.validate_skip(cs, weak)
-      && t_HashmapE_256_SimpleLib.validate_skip(cs, weak);
+bool StateInit::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Maybe_natwidth_5.validate_skip(ops, cs, weak)
+      && t_Maybe_TickTock.validate_skip(ops, cs, weak)
+      && t_Maybe_Ref_Cell.validate_skip(ops, cs, weak)
+      && t_Maybe_Ref_Cell.validate_skip(ops, cs, weak)
+      && t_HashmapE_256_SimpleLib.validate_skip(ops, cs, weak);
 }
 
 bool StateInit::unpack(vm::CellSlice& cs, StateInit::Record& data) const {
@@ -4199,7 +4204,7 @@ int SimpleLib::check_tag(const vm::CellSlice& cs) const {
   return simple_lib;
 }
 
-bool SimpleLib::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool SimpleLib::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance_ext(0x10001);
 }
 
@@ -4269,10 +4274,10 @@ bool Message::skip(vm::CellSlice& cs) const {
       && Either{X_, RefT{X_}}.skip(cs);
 }
 
-bool Message::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_CommonMsgInfo.validate_skip(cs, weak)
-      && t_Maybe_Either_StateInit_Ref_StateInit.validate_skip(cs, weak)
-      && Either{X_, RefT{X_}}.validate_skip(cs, weak);
+bool Message::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_CommonMsgInfo.validate_skip(ops, cs, weak)
+      && t_Maybe_Either_StateInit_Ref_StateInit.validate_skip(ops, cs, weak)
+      && Either{X_, RefT{X_}}.validate_skip(ops, cs, weak);
 }
 
 bool Message::unpack(vm::CellSlice& cs, Message::Record& data) const {
@@ -4347,10 +4352,10 @@ bool MessageRelaxed::skip(vm::CellSlice& cs) const {
       && Either{X_, RefT{X_}}.skip(cs);
 }
 
-bool MessageRelaxed::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_CommonMsgInfoRelaxed.validate_skip(cs, weak)
-      && t_Maybe_Either_StateInit_Ref_StateInit.validate_skip(cs, weak)
-      && Either{X_, RefT{X_}}.validate_skip(cs, weak);
+bool MessageRelaxed::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_CommonMsgInfoRelaxed.validate_skip(ops, cs, weak)
+      && t_Maybe_Either_StateInit_Ref_StateInit.validate_skip(ops, cs, weak)
+      && Either{X_, RefT{X_}}.validate_skip(ops, cs, weak);
 }
 
 bool MessageRelaxed::unpack(vm::CellSlice& cs, MessageRelaxed::Record& data) const {
@@ -4441,7 +4446,7 @@ bool IntermediateAddress::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool IntermediateAddress::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool IntermediateAddress::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case interm_addr_regular: {
     int use_dest_bits;
@@ -4635,12 +4640,12 @@ bool MsgEnvelope::skip(vm::CellSlice& cs) const {
       && cs.advance_refs(1);
 }
 
-bool MsgEnvelope::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool MsgEnvelope::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 4
-      && t_IntermediateAddress.validate_skip(cs, weak)
-      && t_IntermediateAddress.validate_skip(cs, weak)
-      && t_Grams.validate_skip(cs, weak)
-      && t_Message_Any.validate_skip_ref(cs, weak);
+      && t_IntermediateAddress.validate_skip(ops, cs, weak)
+      && t_IntermediateAddress.validate_skip(ops, cs, weak)
+      && t_Grams.validate_skip(ops, cs, weak)
+      && t_Message_Any.validate_skip_ref(ops, cs, weak);
 }
 
 bool MsgEnvelope::unpack(vm::CellSlice& cs, MsgEnvelope::Record& data) const {
@@ -4739,43 +4744,43 @@ bool InMsg::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool InMsg::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool InMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case msg_import_ext:
     return cs.fetch_ulong(3) == 0
-        && t_Message_Any.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak);
+        && t_Message_Any.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak);
   case msg_import_ihr:
     return cs.advance(3)
-        && t_Message_Any.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
+        && t_Message_Any.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
         && cs.advance_refs(1);
   case msg_import_imm:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak)
-        && t_Grams.validate_skip(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
   case msg_import_fin:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak)
-        && t_Grams.validate_skip(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
   case msg_import_tr:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_Grams.validate_skip(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
   case msg_discard_fin:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
         && cs.advance(64)
-        && t_Grams.validate_skip(cs, weak);
+        && t_Grams.validate_skip(ops, cs, weak);
   case msg_discard_tr:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
         && cs.advance(64)
-        && t_Grams.validate_skip(cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
         && cs.advance_refs(1);
   }
   return false;
@@ -5172,9 +5177,9 @@ bool ImportFees::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool ImportFees::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Grams.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+bool ImportFees::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Grams.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool ImportFees::unpack(vm::CellSlice& cs, ImportFees::Record& data) const {
@@ -5242,8 +5247,8 @@ bool InMsgDescr::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_256_InMsg_ImportFees.skip(cs);
 }
 
-bool InMsgDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_256_InMsg_ImportFees.validate_skip(cs, weak);
+bool InMsgDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_256_InMsg_ImportFees.validate_skip(ops, cs, weak);
 }
 
 bool InMsgDescr::unpack(vm::CellSlice& cs, InMsgDescr::Record& data) const {
@@ -5338,37 +5343,37 @@ bool OutMsg::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool OutMsg::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool OutMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case msg_export_ext:
     return cs.advance(3)
-        && t_Message_Any.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak);
+        && t_Message_Any.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak);
   case msg_export_imm:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak)
-        && t_InMsg.validate_skip_ref(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak)
+        && t_InMsg.validate_skip_ref(ops, cs, weak);
   case msg_export_new:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_Transaction.validate_skip_ref(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak);
   case msg_export_tr:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_InMsg.validate_skip_ref(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_InMsg.validate_skip_ref(ops, cs, weak);
   case msg_export_deq:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
         && cs.advance(64);
   case msg_export_tr_req:
     return cs.advance(3)
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_InMsg.validate_skip_ref(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_InMsg.validate_skip_ref(ops, cs, weak);
   case msg_export_deq_imm:
     return cs.fetch_ulong(3) == 4
-        && t_MsgEnvelope.validate_skip_ref(cs, weak)
-        && t_InMsg.validate_skip_ref(cs, weak);
+        && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
+        && t_InMsg.validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -5772,9 +5777,9 @@ int EnqueuedMsg::check_tag(const vm::CellSlice& cs) const {
   return cons1;
 }
 
-bool EnqueuedMsg::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool EnqueuedMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(64)
-      && t_MsgEnvelope.validate_skip_ref(cs, weak);
+      && t_MsgEnvelope.validate_skip_ref(ops, cs, weak);
 }
 
 bool EnqueuedMsg::unpack(vm::CellSlice& cs, EnqueuedMsg::Record& data) const {
@@ -5841,8 +5846,8 @@ bool OutMsgDescr::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_256_OutMsg_CurrencyCollection.skip(cs);
 }
 
-bool OutMsgDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_256_OutMsg_CurrencyCollection.validate_skip(cs, weak);
+bool OutMsgDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_256_OutMsg_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool OutMsgDescr::unpack(vm::CellSlice& cs, OutMsgDescr::Record& data) const {
@@ -5904,8 +5909,8 @@ bool OutMsgQueue::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_352_EnqueuedMsg_uint64.skip(cs);
 }
 
-bool OutMsgQueue::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_352_EnqueuedMsg_uint64.validate_skip(cs, weak);
+bool OutMsgQueue::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_352_EnqueuedMsg_uint64.validate_skip(ops, cs, weak);
 }
 
 bool OutMsgQueue::unpack(vm::CellSlice& cs, OutMsgQueue::Record& data) const {
@@ -6026,8 +6031,8 @@ bool ProcessedInfo::skip(vm::CellSlice& cs) const {
   return t_HashmapE_96_ProcessedUpto.skip(cs);
 }
 
-bool ProcessedInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapE_96_ProcessedUpto.validate_skip(cs, weak);
+bool ProcessedInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_96_ProcessedUpto.validate_skip(ops, cs, weak);
 }
 
 bool ProcessedInfo::unpack(vm::CellSlice& cs, ProcessedInfo::Record& data) const {
@@ -6143,8 +6148,8 @@ bool IhrPendingInfo::skip(vm::CellSlice& cs) const {
   return t_HashmapE_320_IhrPendingSince.skip(cs);
 }
 
-bool IhrPendingInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapE_320_IhrPendingSince.validate_skip(cs, weak);
+bool IhrPendingInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_320_IhrPendingSince.validate_skip(ops, cs, weak);
 }
 
 bool IhrPendingInfo::unpack(vm::CellSlice& cs, IhrPendingInfo::Record& data) const {
@@ -6208,10 +6213,10 @@ bool OutMsgQueueInfo::skip(vm::CellSlice& cs) const {
       && t_IhrPendingInfo.skip(cs);
 }
 
-bool OutMsgQueueInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_OutMsgQueue.validate_skip(cs, weak)
-      && t_ProcessedInfo.validate_skip(cs, weak)
-      && t_IhrPendingInfo.validate_skip(cs, weak);
+bool OutMsgQueueInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_OutMsgQueue.validate_skip(ops, cs, weak)
+      && t_ProcessedInfo.validate_skip(ops, cs, weak)
+      && t_IhrPendingInfo.validate_skip(ops, cs, weak);
 }
 
 bool OutMsgQueueInfo::unpack(vm::CellSlice& cs, OutMsgQueueInfo::Record& data) const {
@@ -6287,10 +6292,10 @@ bool StorageUsed::skip(vm::CellSlice& cs) const {
       && t_VarUInteger_7.skip(cs);
 }
 
-bool StorageUsed::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_VarUInteger_7.validate_skip(cs, weak)
-      && t_VarUInteger_7.validate_skip(cs, weak)
-      && t_VarUInteger_7.validate_skip(cs, weak);
+bool StorageUsed::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_VarUInteger_7.validate_skip(ops, cs, weak)
+      && t_VarUInteger_7.validate_skip(ops, cs, weak)
+      && t_VarUInteger_7.validate_skip(ops, cs, weak);
 }
 
 bool StorageUsed::unpack(vm::CellSlice& cs, StorageUsed::Record& data) const {
@@ -6365,9 +6370,9 @@ bool StorageUsedShort::skip(vm::CellSlice& cs) const {
       && t_VarUInteger_7.skip(cs);
 }
 
-bool StorageUsedShort::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_VarUInteger_7.validate_skip(cs, weak)
-      && t_VarUInteger_7.validate_skip(cs, weak);
+bool StorageUsedShort::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_VarUInteger_7.validate_skip(ops, cs, weak)
+      && t_VarUInteger_7.validate_skip(ops, cs, weak);
 }
 
 bool StorageUsedShort::unpack(vm::CellSlice& cs, StorageUsedShort::Record& data) const {
@@ -6437,10 +6442,10 @@ bool StorageInfo::skip(vm::CellSlice& cs) const {
       && t_Maybe_Grams.skip(cs);
 }
 
-bool StorageInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_StorageUsed.validate_skip(cs, weak)
+bool StorageInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_StorageUsed.validate_skip(ops, cs, weak)
       && cs.advance(32)
-      && t_Maybe_Grams.validate_skip(cs, weak);
+      && t_Maybe_Grams.validate_skip(ops, cs, weak);
 }
 
 bool StorageInfo::unpack(vm::CellSlice& cs, StorageInfo::Record& data) const {
@@ -6528,15 +6533,15 @@ bool Account::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool Account::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Account::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case account_none:
     return cs.advance(1);
   case account:
     return cs.advance(1)
-        && t_MsgAddressInt.validate_skip(cs, weak)
-        && t_StorageInfo.validate_skip(cs, weak)
-        && t_AccountStorage.validate_skip(cs, weak);
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && t_StorageInfo.validate_skip(ops, cs, weak)
+        && t_AccountStorage.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -6664,10 +6669,10 @@ bool AccountStorage::skip(vm::CellSlice& cs) const {
       && t_AccountState.skip(cs);
 }
 
-bool AccountStorage::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool AccountStorage::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(64)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_AccountState.validate_skip(cs, weak);
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_AccountState.validate_skip(ops, cs, weak);
 }
 
 bool AccountStorage::unpack(vm::CellSlice& cs, AccountStorage::Record& data) const {
@@ -6759,13 +6764,13 @@ bool AccountState::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool AccountState::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool AccountState::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case account_uninit:
     return cs.advance(2);
   case account_active:
     return cs.advance(1)
-        && t_StateInit.validate_skip(cs, weak);
+        && t_StateInit.validate_skip(ops, cs, weak);
   case account_frozen:
     return cs.advance(258);
   }
@@ -7123,8 +7128,8 @@ int ShardAccount::check_tag(const vm::CellSlice& cs) const {
   return account_descr;
 }
 
-bool ShardAccount::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Account.validate_skip_ref(cs, weak)
+bool ShardAccount::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Account.validate_skip_ref(ops, cs, weak)
       && cs.advance(320);
 }
 
@@ -7198,10 +7203,10 @@ bool DepthBalanceInfo::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool DepthBalanceInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool DepthBalanceInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int split_depth;
   return cs.fetch_uint_leq(30, split_depth)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool DepthBalanceInfo::unpack(vm::CellSlice& cs, DepthBalanceInfo::Record& data) const {
@@ -7270,8 +7275,8 @@ bool ShardAccounts::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_256_ShardAccount_DepthBalanceInfo.skip(cs);
 }
 
-bool ShardAccounts::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_256_ShardAccount_DepthBalanceInfo.validate_skip(cs, weak);
+bool ShardAccounts::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_256_ShardAccount_DepthBalanceInfo.validate_skip(ops, cs, weak);
 }
 
 bool ShardAccounts::unpack(vm::CellSlice& cs, ShardAccounts::Record& data) const {
@@ -7334,9 +7339,9 @@ bool Transaction_aux::skip(vm::CellSlice& cs) const {
       && t_HashmapE_15_Ref_Message_Any.skip(cs);
 }
 
-bool Transaction_aux::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Maybe_Ref_Message_Any.validate_skip(cs, weak)
-      && t_HashmapE_15_Ref_Message_Any.validate_skip(cs, weak);
+bool Transaction_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Maybe_Ref_Message_Any.validate_skip(ops, cs, weak)
+      && t_HashmapE_15_Ref_Message_Any.validate_skip(ops, cs, weak);
 }
 
 bool Transaction_aux::unpack(vm::CellSlice& cs, Transaction_aux::Record& data) const {
@@ -7407,13 +7412,13 @@ bool Transaction::skip(vm::CellSlice& cs) const {
       && cs.advance_refs(2);
 }
 
-bool Transaction::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Transaction::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 7
       && cs.advance(691)
-      && t_Transaction_aux.validate_skip_ref(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_HASH_UPDATE_Account.validate_skip_ref(cs, weak)
-      && t_TransactionDescr.validate_skip_ref(cs, weak);
+      && t_Transaction_aux.validate_skip_ref(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_HASH_UPDATE_Account.validate_skip_ref(ops, cs, weak)
+      && t_TransactionDescr.validate_skip_ref(ops, cs, weak);
 }
 
 bool Transaction::unpack(vm::CellSlice& cs, Transaction::Record& data) const {
@@ -7496,11 +7501,11 @@ int MERKLE_UPDATE::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 2 ? _merkle_update : -1;
 }
 
-bool MERKLE_UPDATE::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool MERKLE_UPDATE::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 2
       && cs.advance(512)
-      && X_.validate_skip_ref(cs, weak)
-      && X_.validate_skip_ref(cs, weak);
+      && X_.validate_skip_ref(ops, cs, weak)
+      && X_.validate_skip_ref(ops, cs, weak);
 }
 
 bool MERKLE_UPDATE::unpack(vm::CellSlice& cs, MERKLE_UPDATE::Record& data) const {
@@ -7552,7 +7557,7 @@ int HASH_UPDATE::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0x72 ? update_hashes : -1;
 }
 
-bool HASH_UPDATE::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool HASH_UPDATE::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0x72
       && cs.advance(512);
 }
@@ -7627,11 +7632,11 @@ bool AccountBlock::skip(vm::CellSlice& cs) const {
       && cs.advance_refs(1);
 }
 
-bool AccountBlock::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool AccountBlock::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 5
       && cs.advance(256)
-      && t_HashmapAug_64_Ref_Transaction_CurrencyCollection.validate_skip(cs, weak)
-      && t_HASH_UPDATE_Account.validate_skip_ref(cs, weak);
+      && t_HashmapAug_64_Ref_Transaction_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_HASH_UPDATE_Account.validate_skip_ref(ops, cs, weak);
 }
 
 bool AccountBlock::unpack(vm::CellSlice& cs, AccountBlock::Record& data) const {
@@ -7709,8 +7714,8 @@ bool ShardAccountBlocks::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_256_AccountBlock_CurrencyCollection.skip(cs);
 }
 
-bool ShardAccountBlocks::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_256_AccountBlock_CurrencyCollection.validate_skip(cs, weak);
+bool ShardAccountBlocks::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_256_AccountBlock_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool ShardAccountBlocks::unpack(vm::CellSlice& cs, ShardAccountBlocks::Record& data) const {
@@ -7774,10 +7779,10 @@ bool TrStoragePhase::skip(vm::CellSlice& cs) const {
       && t_AccStatusChange.skip(cs);
 }
 
-bool TrStoragePhase::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Grams.validate_skip(cs, weak)
-      && t_Maybe_Grams.validate_skip(cs, weak)
-      && t_AccStatusChange.validate_skip(cs, weak);
+bool TrStoragePhase::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Grams.validate_skip(ops, cs, weak)
+      && t_Maybe_Grams.validate_skip(ops, cs, weak)
+      && t_AccStatusChange.validate_skip(ops, cs, weak);
 }
 
 bool TrStoragePhase::unpack(vm::CellSlice& cs, TrStoragePhase::Record& data) const {
@@ -7869,7 +7874,7 @@ bool AccStatusChange::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool AccStatusChange::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool AccStatusChange::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case acst_unchanged:
     return cs.advance(1);
@@ -8035,9 +8040,9 @@ bool TrCreditPhase::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool TrCreditPhase::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Maybe_Grams.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+bool TrCreditPhase::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Maybe_Grams.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool TrCreditPhase::unpack(vm::CellSlice& cs, TrCreditPhase::Record& data) const {
@@ -8110,12 +8115,12 @@ bool TrComputePhase_aux::skip(vm::CellSlice& cs) const {
       && cs.advance(544);
 }
 
-bool TrComputePhase_aux::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_VarUInteger_7.validate_skip(cs, weak)
-      && t_VarUInteger_7.validate_skip(cs, weak)
-      && t_Maybe_VarUInteger_3.validate_skip(cs, weak)
+bool TrComputePhase_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_VarUInteger_7.validate_skip(ops, cs, weak)
+      && t_VarUInteger_7.validate_skip(ops, cs, weak)
+      && t_Maybe_VarUInteger_3.validate_skip(ops, cs, weak)
       && cs.advance(40)
-      && t_Maybe_int32.validate_skip(cs, weak)
+      && t_Maybe_int32.validate_skip(ops, cs, weak)
       && cs.advance(544);
 }
 
@@ -8200,15 +8205,15 @@ bool TrComputePhase::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool TrComputePhase::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TrComputePhase::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case tr_phase_compute_skipped:
     return cs.advance(1)
-        && t_ComputeSkipReason.validate_skip(cs, weak);
+        && t_ComputeSkipReason.validate_skip(ops, cs, weak);
   case tr_phase_compute_vm:
     return cs.advance(4)
-        && t_Grams.validate_skip(cs, weak)
-        && t_TrComputePhase_aux.validate_skip_ref(cs, weak);
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_TrComputePhase_aux.validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -8327,7 +8332,7 @@ int ComputeSkipReason::check_tag(const vm::CellSlice& cs) const {
   return -1;
 }
 
-bool ComputeSkipReason::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ComputeSkipReason::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case cskip_no_state:
     return cs.advance(2);
@@ -8499,15 +8504,15 @@ bool TrActionPhase::skip(vm::CellSlice& cs) const {
       && t_StorageUsedShort.skip(cs);
 }
 
-bool TrActionPhase::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TrActionPhase::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(3)
-      && t_AccStatusChange.validate_skip(cs, weak)
-      && t_Maybe_Grams.validate_skip(cs, weak)
-      && t_Maybe_Grams.validate_skip(cs, weak)
+      && t_AccStatusChange.validate_skip(ops, cs, weak)
+      && t_Maybe_Grams.validate_skip(ops, cs, weak)
+      && t_Maybe_Grams.validate_skip(ops, cs, weak)
       && cs.advance(32)
-      && t_Maybe_int32.validate_skip(cs, weak)
+      && t_Maybe_int32.validate_skip(ops, cs, weak)
       && cs.advance(320)
-      && t_StorageUsedShort.validate_skip(cs, weak);
+      && t_StorageUsedShort.validate_skip(ops, cs, weak);
 }
 
 bool TrActionPhase::unpack(vm::CellSlice& cs, TrActionPhase::Record& data) const {
@@ -8616,19 +8621,19 @@ bool TrBouncePhase::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool TrBouncePhase::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TrBouncePhase::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case tr_phase_bounce_negfunds:
     return cs.advance(2);
   case tr_phase_bounce_nofunds:
     return cs.advance(2)
-        && t_StorageUsedShort.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak);
+        && t_StorageUsedShort.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
   case tr_phase_bounce_ok:
     return cs.advance(1)
-        && t_StorageUsedShort.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak);
+        && t_StorageUsedShort.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -8912,48 +8917,48 @@ bool TransactionDescr::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool TransactionDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TransactionDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case trans_ord:
     return cs.advance(5)
-        && t_Maybe_TrStoragePhase.validate_skip(cs, weak)
-        && t_Maybe_TrCreditPhase.validate_skip(cs, weak)
-        && t_TrComputePhase.validate_skip(cs, weak)
-        && t_Maybe_Ref_TrActionPhase.validate_skip(cs, weak)
+        && t_Maybe_TrStoragePhase.validate_skip(ops, cs, weak)
+        && t_Maybe_TrCreditPhase.validate_skip(ops, cs, weak)
+        && t_TrComputePhase.validate_skip(ops, cs, weak)
+        && t_Maybe_Ref_TrActionPhase.validate_skip(ops, cs, weak)
         && cs.advance(1)
-        && t_Maybe_TrBouncePhase.validate_skip(cs, weak)
+        && t_Maybe_TrBouncePhase.validate_skip(ops, cs, weak)
         && cs.advance(1);
   case trans_storage:
     return cs.advance(4)
-        && t_TrStoragePhase.validate_skip(cs, weak);
+        && t_TrStoragePhase.validate_skip(ops, cs, weak);
   case trans_tick_tock:
     return cs.advance(4)
-        && t_TrStoragePhase.validate_skip(cs, weak)
-        && t_TrComputePhase.validate_skip(cs, weak)
-        && t_Maybe_Ref_TrActionPhase.validate_skip(cs, weak)
+        && t_TrStoragePhase.validate_skip(ops, cs, weak)
+        && t_TrComputePhase.validate_skip(ops, cs, weak)
+        && t_Maybe_Ref_TrActionPhase.validate_skip(ops, cs, weak)
         && cs.advance(2);
   case trans_split_prepare:
     return cs.advance(528)
-        && t_Maybe_TrStoragePhase.validate_skip(cs, weak)
-        && t_TrComputePhase.validate_skip(cs, weak)
-        && t_Maybe_Ref_TrActionPhase.validate_skip(cs, weak)
+        && t_Maybe_TrStoragePhase.validate_skip(ops, cs, weak)
+        && t_TrComputePhase.validate_skip(ops, cs, weak)
+        && t_Maybe_Ref_TrActionPhase.validate_skip(ops, cs, weak)
         && cs.advance(2);
   case trans_split_install:
     return cs.advance(528)
-        && t_Transaction.validate_skip_ref(cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak)
         && cs.advance(1);
   case trans_merge_prepare:
     return cs.advance(528)
-        && t_TrStoragePhase.validate_skip(cs, weak)
+        && t_TrStoragePhase.validate_skip(ops, cs, weak)
         && cs.advance(1);
   case trans_merge_install:
     return cs.fetch_ulong(4) == 7
         && cs.advance(524)
-        && t_Transaction.validate_skip_ref(cs, weak)
-        && t_Maybe_TrStoragePhase.validate_skip(cs, weak)
-        && t_Maybe_TrCreditPhase.validate_skip(cs, weak)
-        && t_TrComputePhase.validate_skip(cs, weak)
-        && t_Maybe_Ref_TrActionPhase.validate_skip(cs, weak)
+        && t_Transaction.validate_skip_ref(ops, cs, weak)
+        && t_Maybe_TrStoragePhase.validate_skip(ops, cs, weak)
+        && t_Maybe_TrCreditPhase.validate_skip(ops, cs, weak)
+        && t_TrComputePhase.validate_skip(ops, cs, weak)
+        && t_Maybe_Ref_TrActionPhase.validate_skip(ops, cs, weak)
         && cs.advance(2);
   }
   return false;
@@ -9342,11 +9347,11 @@ bool SmartContractInfo::skip(vm::CellSlice& cs) const {
       && t_MsgAddressInt.skip(cs);
 }
 
-bool SmartContractInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool SmartContractInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0x76ef1ea
       && cs.advance(448)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_MsgAddressInt.validate_skip(cs, weak);
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_MsgAddressInt.validate_skip(ops, cs, weak);
 }
 
 bool SmartContractInfo::unpack(vm::CellSlice& cs, SmartContractInfo::Record& data) const {
@@ -9435,15 +9440,15 @@ bool OutList::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool OutList::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool OutList::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case out_list_empty:
     return m_ == 0;
   case out_list: {
     int n;
     return add_r1(n, 1, m_)
-        && OutList{n}.validate_skip_ref(cs, weak)
-        && t_OutAction.validate_skip(cs, weak);
+        && OutList{n}.validate_skip_ref(ops, cs, weak)
+        && t_OutAction.validate_skip(ops, cs, weak);
     }
   }
   return false;
@@ -9556,9 +9561,146 @@ bool OutList::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 
 
 //
+// code for type `LibRef`
+//
+
+int LibRef::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case libref_hash:
+    return cs.have(1) ? libref_hash : -1;
+  case libref_ref:
+    return cs.have(1) ? libref_ref : -1;
+  }
+  return -1;
+}
+
+bool LibRef::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case libref_hash:
+    return cs.advance(257);
+  case libref_ref:
+    return cs.advance_ext(0x10001);
+  }
+  return false;
+}
+
+bool LibRef::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case libref_hash:
+    return cs.advance(257);
+  case libref_ref:
+    return cs.advance_ext(0x10001);
+  }
+  return false;
+}
+
+bool LibRef::unpack(vm::CellSlice& cs, LibRef::Record_libref_hash& data) const {
+  return cs.fetch_ulong(1) == 0
+      && cs.fetch_bits_to(data.lib_hash.bits(), 256);
+}
+
+bool LibRef::unpack_libref_hash(vm::CellSlice& cs, td::BitArray<256>& lib_hash) const {
+  return cs.fetch_ulong(1) == 0
+      && cs.fetch_bits_to(lib_hash.bits(), 256);
+}
+
+bool LibRef::cell_unpack(Ref<vm::Cell> cell_ref, LibRef::Record_libref_hash& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool LibRef::cell_unpack_libref_hash(Ref<vm::Cell> cell_ref, td::BitArray<256>& lib_hash) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_libref_hash(cs, lib_hash) && cs.empty_ext();
+}
+
+bool LibRef::unpack(vm::CellSlice& cs, LibRef::Record_libref_ref& data) const {
+  return cs.fetch_ulong(1) == 1
+      && cs.fetch_ref_to(data.library);
+}
+
+bool LibRef::unpack_libref_ref(vm::CellSlice& cs, Ref<Cell>& library) const {
+  return cs.fetch_ulong(1) == 1
+      && cs.fetch_ref_to(library);
+}
+
+bool LibRef::cell_unpack(Ref<vm::Cell> cell_ref, LibRef::Record_libref_ref& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool LibRef::cell_unpack_libref_ref(Ref<vm::Cell> cell_ref, Ref<Cell>& library) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_libref_ref(cs, library) && cs.empty_ext();
+}
+
+bool LibRef::pack(vm::CellBuilder& cb, const LibRef::Record_libref_hash& data) const {
+  return cb.store_long_bool(0, 1)
+      && cb.store_bits_bool(data.lib_hash.cbits(), 256);
+}
+
+bool LibRef::pack_libref_hash(vm::CellBuilder& cb, td::BitArray<256> lib_hash) const {
+  return cb.store_long_bool(0, 1)
+      && cb.store_bits_bool(lib_hash.cbits(), 256);
+}
+
+bool LibRef::cell_pack(Ref<vm::Cell>& cell_ref, const LibRef::Record_libref_hash& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool LibRef::cell_pack_libref_hash(Ref<vm::Cell>& cell_ref, td::BitArray<256> lib_hash) const {
+  vm::CellBuilder cb;
+  return pack_libref_hash(cb, lib_hash) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool LibRef::pack(vm::CellBuilder& cb, const LibRef::Record_libref_ref& data) const {
+  return cb.store_long_bool(1, 1)
+      && cb.store_ref_bool(data.library);
+}
+
+bool LibRef::pack_libref_ref(vm::CellBuilder& cb, Ref<Cell> library) const {
+  return cb.store_long_bool(1, 1)
+      && cb.store_ref_bool(library);
+}
+
+bool LibRef::cell_pack(Ref<vm::Cell>& cell_ref, const LibRef::Record_libref_ref& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool LibRef::cell_pack_libref_ref(Ref<vm::Cell>& cell_ref, Ref<Cell> library) const {
+  vm::CellBuilder cb;
+  return pack_libref_ref(cb, std::move(library)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool LibRef::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case libref_hash:
+    return cs.advance(1)
+        && pp.open("libref_hash")
+        && pp.fetch_bits_field(cs, 256, "lib_hash")
+        && pp.close();
+  case libref_ref:
+    return cs.advance(1)
+        && pp.open("libref_ref")
+        && pp.field("library")
+        && t_Anything.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for LibRef");
+}
+
+const LibRef t_LibRef;
+
+//
 // code for type `OutAction`
 //
-constexpr unsigned OutAction::cons_tag[3];
+constexpr unsigned OutAction::cons_tag[4];
 
 int OutAction::check_tag(const vm::CellSlice& cs) const {
   switch (get_tag(cs)) {
@@ -9568,6 +9710,8 @@ int OutAction::check_tag(const vm::CellSlice& cs) const {
     return cs.prefetch_ulong(32) == 0xad4de08eU ? action_set_code : -1;
   case action_reserve_currency:
     return cs.prefetch_ulong(32) == 0x36e6b809 ? action_reserve_currency : -1;
+  case action_change_library:
+    return cs.prefetch_ulong(32) == 0x26fa1dd4 ? action_change_library : -1;
   }
   return -1;
 }
@@ -9581,23 +9725,37 @@ bool OutAction::skip(vm::CellSlice& cs) const {
   case action_reserve_currency:
     return cs.advance(40)
         && t_CurrencyCollection.skip(cs);
+  case action_change_library: {
+    int mode;
+    return cs.advance(32)
+        && cs.fetch_uint_to(7, mode)
+        && mode <= 2
+        && t_LibRef.skip(cs);
+    }
   }
   return false;
 }
 
-bool OutAction::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool OutAction::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case action_send_msg:
     return cs.fetch_ulong(32) == 0xec3c86d
         && cs.advance(8)
-        && t_MessageRelaxed_Any.validate_skip_ref(cs, weak);
+        && t_MessageRelaxed_Any.validate_skip_ref(ops, cs, weak);
   case action_set_code:
     return cs.fetch_ulong(32) == 0xad4de08eU
         && cs.advance_refs(1);
   case action_reserve_currency:
     return cs.fetch_ulong(32) == 0x36e6b809
         && cs.advance(8)
-        && t_CurrencyCollection.validate_skip(cs, weak);
+        && t_CurrencyCollection.validate_skip(ops, cs, weak);
+  case action_change_library: {
+    int mode;
+    return cs.fetch_ulong(32) == 0x26fa1dd4
+        && cs.fetch_uint_to(7, mode)
+        && mode <= 2
+        && t_LibRef.validate_skip(ops, cs, weak);
+    }
   }
   return false;
 }
@@ -9672,6 +9830,32 @@ bool OutAction::cell_unpack_action_reserve_currency(Ref<vm::Cell> cell_ref, int&
   return unpack_action_reserve_currency(cs, mode, currency) && cs.empty_ext();
 }
 
+bool OutAction::unpack(vm::CellSlice& cs, OutAction::Record_action_change_library& data) const {
+  return cs.fetch_ulong(32) == 0x26fa1dd4
+      && cs.fetch_uint_to(7, data.mode)
+      && data.mode <= 2
+      && t_LibRef.fetch_to(cs, data.libref);
+}
+
+bool OutAction::unpack_action_change_library(vm::CellSlice& cs, int& mode, Ref<CellSlice>& libref) const {
+  return cs.fetch_ulong(32) == 0x26fa1dd4
+      && cs.fetch_uint_to(7, mode)
+      && mode <= 2
+      && t_LibRef.fetch_to(cs, libref);
+}
+
+bool OutAction::cell_unpack(Ref<vm::Cell> cell_ref, OutAction::Record_action_change_library& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool OutAction::cell_unpack_action_change_library(Ref<vm::Cell> cell_ref, int& mode, Ref<CellSlice>& libref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_action_change_library(cs, mode, libref) && cs.empty_ext();
+}
+
 bool OutAction::pack(vm::CellBuilder& cb, const OutAction::Record_action_send_msg& data) const {
   return cb.store_long_bool(0xec3c86d, 32)
       && cb.store_ulong_rchk_bool(data.mode, 8)
@@ -9736,6 +9920,30 @@ bool OutAction::cell_pack_action_reserve_currency(Ref<vm::Cell>& cell_ref, int m
   return pack_action_reserve_currency(cb, mode, std::move(currency)) && std::move(cb).finalize_to(cell_ref);
 }
 
+bool OutAction::pack(vm::CellBuilder& cb, const OutAction::Record_action_change_library& data) const {
+  return cb.store_long_bool(0x26fa1dd4, 32)
+      && cb.store_ulong_rchk_bool(data.mode, 7)
+      && data.mode <= 2
+      && t_LibRef.store_from(cb, data.libref);
+}
+
+bool OutAction::pack_action_change_library(vm::CellBuilder& cb, int mode, Ref<CellSlice> libref) const {
+  return cb.store_long_bool(0x26fa1dd4, 32)
+      && cb.store_ulong_rchk_bool(mode, 7)
+      && mode <= 2
+      && t_LibRef.store_from(cb, libref);
+}
+
+bool OutAction::cell_pack(Ref<vm::Cell>& cell_ref, const OutAction::Record_action_change_library& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool OutAction::cell_pack_action_change_library(Ref<vm::Cell>& cell_ref, int mode, Ref<CellSlice> libref) const {
+  vm::CellBuilder cb;
+  return pack_action_change_library(cb, mode, std::move(libref)) && std::move(cb).finalize_to(cell_ref);
+}
+
 bool OutAction::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
   switch (get_tag(cs)) {
   case action_send_msg: {
@@ -9764,6 +9972,17 @@ bool OutAction::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && t_CurrencyCollection.print_skip(pp, cs)
         && pp.close();
     }
+  case action_change_library: {
+    int mode;
+    return cs.fetch_ulong(32) == 0x26fa1dd4
+        && pp.open("action_change_library")
+        && cs.fetch_uint_to(7, mode)
+        && pp.field_int(mode, "mode")
+        && mode <= 2
+        && pp.field("libref")
+        && t_LibRef.print_skip(pp, cs)
+        && pp.close();
+    }
   }
   return pp.fail("unknown constructor for OutAction");
 }
@@ -9783,9 +10002,9 @@ bool OutListNode::skip(vm::CellSlice& cs) const {
       && t_OutAction.skip(cs);
 }
 
-bool OutListNode::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool OutListNode::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance_refs(1)
-      && t_OutAction.validate_skip(cs, weak);
+      && t_OutAction.validate_skip(ops, cs, weak);
 }
 
 bool OutListNode::unpack(vm::CellSlice& cs, OutListNode::Record& data) const {
@@ -9849,7 +10068,7 @@ int ShardIdent::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(2) == 0 ? shard_ident : -1;
 }
 
-bool ShardIdent::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ShardIdent::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int shard_pfx_bits;
   return cs.fetch_ulong(2) == 0
       && cs.fetch_uint_leq(60, shard_pfx_bits)
@@ -9971,8 +10190,8 @@ int BlockIdExt::check_tag(const vm::CellSlice& cs) const {
   return block_id_ext;
 }
 
-bool BlockIdExt::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_ShardIdent.validate_skip(cs, weak)
+bool BlockIdExt::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_ShardIdent.validate_skip(ops, cs, weak)
       && cs.advance(544);
 }
 
@@ -10084,12 +10303,12 @@ bool ShardStateUnsplit_aux::skip(vm::CellSlice& cs) const {
       && t_Maybe_BlkMasterInfo.skip(cs);
 }
 
-bool ShardStateUnsplit_aux::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ShardStateUnsplit_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(128)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_HashmapE_256_LibDescr.validate_skip(cs, weak)
-      && t_Maybe_BlkMasterInfo.validate_skip(cs, weak);
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_HashmapE_256_LibDescr.validate_skip(ops, cs, weak)
+      && t_Maybe_BlkMasterInfo.validate_skip(ops, cs, weak);
 }
 
 bool ShardStateUnsplit_aux::unpack(vm::CellSlice& cs, ShardStateUnsplit_aux::Record& data) const {
@@ -10152,16 +10371,16 @@ bool ShardStateUnsplit::skip(vm::CellSlice& cs) const {
       && t_Maybe_Ref_McStateExtra.skip(cs);
 }
 
-bool ShardStateUnsplit::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ShardStateUnsplit::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0x9023afe2U
       && cs.advance(32)
-      && t_ShardIdent.validate_skip(cs, weak)
+      && t_ShardIdent.validate_skip(ops, cs, weak)
       && cs.advance(192)
-      && t_OutMsgQueueInfo.validate_skip_ref(cs, weak)
+      && t_OutMsgQueueInfo.validate_skip_ref(ops, cs, weak)
       && cs.advance(1)
-      && t_ShardAccounts.validate_skip_ref(cs, weak)
-      && t_ShardStateUnsplit_aux.validate_skip_ref(cs, weak)
-      && t_Maybe_Ref_McStateExtra.validate_skip(cs, weak);
+      && t_ShardAccounts.validate_skip_ref(ops, cs, weak)
+      && t_ShardStateUnsplit_aux.validate_skip_ref(ops, cs, weak)
+      && t_Maybe_Ref_McStateExtra.validate_skip(ops, cs, weak);
 }
 
 bool ShardStateUnsplit::unpack(vm::CellSlice& cs, ShardStateUnsplit::Record& data) const {
@@ -10263,14 +10482,14 @@ bool ShardState::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool ShardState::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ShardState::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case cons1:
-    return t_ShardStateUnsplit.validate_skip(cs, weak);
+    return t_ShardStateUnsplit.validate_skip(ops, cs, weak);
   case split_state:
     return cs.fetch_ulong(32) == 0x5f327da5
-        && t_ShardStateUnsplit.validate_skip_ref(cs, weak)
-        && t_ShardStateUnsplit.validate_skip_ref(cs, weak);
+        && t_ShardStateUnsplit.validate_skip_ref(ops, cs, weak)
+        && t_ShardStateUnsplit.validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -10393,10 +10612,10 @@ bool LibDescr::skip(vm::CellSlice& cs) const {
       && t_Hashmap_256_True.skip(cs);
 }
 
-bool LibDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool LibDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(2) == 0
       && cs.advance_refs(1)
-      && t_Hashmap_256_True.validate_skip(cs, weak);
+      && t_Hashmap_256_True.validate_skip(ops, cs, weak);
 }
 
 bool LibDescr::unpack(vm::CellSlice& cs, LibDescr::Record& data) const {
@@ -10484,7 +10703,7 @@ bool BlockInfo::skip(vm::CellSlice& cs) const {
       && (!vert_seqno_incr || cs.advance_refs(1));
 }
 
-bool BlockInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int not_master, after_merge, vert_seqno_incr, seq_no, vert_seq_no, prev_seq_no;
   return cs.fetch_ulong(32) == 0x9bc7a987U
       && cs.advance(32)
@@ -10497,11 +10716,11 @@ bool BlockInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
       && cs.fetch_uint_to(32, vert_seq_no)
       && vert_seqno_incr <= vert_seq_no
       && add_r1(prev_seq_no, 1, seq_no)
-      && t_ShardIdent.validate_skip(cs, weak)
+      && t_ShardIdent.validate_skip(ops, cs, weak)
       && cs.advance(288)
-      && (!not_master || t_BlkMasterInfo.validate_skip_ref(cs, weak))
-      && BlkPrevInfo{after_merge}.validate_skip_ref(cs, weak)
-      && (!vert_seqno_incr || t_BlkPrevInfo_0.validate_skip_ref(cs, weak));
+      && (!not_master || t_BlkMasterInfo.validate_skip_ref(ops, cs, weak))
+      && BlkPrevInfo{after_merge}.validate_skip_ref(ops, cs, weak)
+      && (!vert_seqno_incr || t_BlkPrevInfo_0.validate_skip_ref(ops, cs, weak));
 }
 
 bool BlockInfo::unpack(vm::CellSlice& cs, BlockInfo::Record& data) const {
@@ -10656,14 +10875,14 @@ bool BlkPrevInfo::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool BlkPrevInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlkPrevInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case prev_blk_info:
     return cs.advance(608)
         && m_ == 0;
   case prev_blks_info:
-    return t_ExtBlkRef.validate_skip_ref(cs, weak)
-        && t_ExtBlkRef.validate_skip_ref(cs, weak)
+    return t_ExtBlkRef.validate_skip_ref(ops, cs, weak)
+        && t_ExtBlkRef.validate_skip_ref(ops, cs, weak)
         && m_ == 1;
   }
   return false;
@@ -10787,13 +11006,13 @@ int Block::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(32) == 0x11ef55aa ? block : -1;
 }
 
-bool Block::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Block::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0x11ef55aa
       && cs.advance(32)
-      && t_BlockInfo.validate_skip_ref(cs, weak)
-      && t_ValueFlow.validate_skip_ref(cs, weak)
-      && t_MERKLE_UPDATE_ShardState.validate_skip_ref(cs, weak)
-      && t_BlockExtra.validate_skip_ref(cs, weak);
+      && t_BlockInfo.validate_skip_ref(ops, cs, weak)
+      && t_ValueFlow.validate_skip_ref(ops, cs, weak)
+      && t_MERKLE_UPDATE_ShardState.validate_skip_ref(ops, cs, weak)
+      && t_BlockExtra.validate_skip_ref(ops, cs, weak);
 }
 
 bool Block::unpack(vm::CellSlice& cs, Block::Record& data) const {
@@ -10856,13 +11075,13 @@ bool BlockExtra::skip(vm::CellSlice& cs) const {
       && t_Maybe_Ref_McBlockExtra.skip(cs);
 }
 
-bool BlockExtra::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockExtra::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0x4a33f6fd
-      && t_InMsgDescr.validate_skip_ref(cs, weak)
-      && t_OutMsgDescr.validate_skip_ref(cs, weak)
-      && t_ShardAccountBlocks.validate_skip_ref(cs, weak)
+      && t_InMsgDescr.validate_skip_ref(ops, cs, weak)
+      && t_OutMsgDescr.validate_skip_ref(ops, cs, weak)
+      && t_ShardAccountBlocks.validate_skip_ref(ops, cs, weak)
       && cs.advance(512)
-      && t_Maybe_Ref_McBlockExtra.validate_skip(cs, weak);
+      && t_Maybe_Ref_McBlockExtra.validate_skip(ops, cs, weak);
 }
 
 bool BlockExtra::unpack(vm::CellSlice& cs, BlockExtra::Record& data) const {
@@ -10929,11 +11148,11 @@ bool ValueFlow_aux::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool ValueFlow_aux::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+bool ValueFlow_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool ValueFlow_aux::unpack(vm::CellSlice& cs, ValueFlow_aux::Record& data) const {
@@ -10991,11 +11210,11 @@ bool ValueFlow_aux1::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool ValueFlow_aux1::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+bool ValueFlow_aux1::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool ValueFlow_aux1::unpack(vm::CellSlice& cs, ValueFlow_aux1::Record& data) const {
@@ -11053,11 +11272,11 @@ bool ValueFlow::skip(vm::CellSlice& cs) const {
       && cs.advance_refs(1);
 }
 
-bool ValueFlow::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ValueFlow::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0xb8e48dfbU
-      && t_ValueFlow_aux.validate_skip_ref(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_ValueFlow_aux1.validate_skip_ref(cs, weak);
+      && t_ValueFlow_aux.validate_skip_ref(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_ValueFlow_aux1.validate_skip_ref(ops, cs, weak);
 }
 
 bool ValueFlow::unpack(vm::CellSlice& cs, ValueFlow::Record& data) const {
@@ -11127,15 +11346,15 @@ bool BinTree::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool BinTree::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BinTree::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case bt_leaf:
     return cs.advance(1)
-        && X_.validate_skip(cs, weak);
+        && X_.validate_skip(ops, cs, weak);
   case bt_fork:
     return cs.advance(1)
-        && validate_skip_ref(cs, weak)
-        && validate_skip_ref(cs, weak);
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak);
   }
   return false;
 }
@@ -11279,7 +11498,7 @@ bool FutureSplitMerge::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool FutureSplitMerge::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool FutureSplitMerge::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case fsm_none:
     return cs.advance(1);
@@ -11464,16 +11683,16 @@ bool ShardDescr::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool ShardDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ShardDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int flags;
   return cs.fetch_ulong(4) == 11
       && cs.advance(709)
       && cs.fetch_uint_to(3, flags)
       && flags == 0
       && cs.advance(160)
-      && t_FutureSplitMerge.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+      && t_FutureSplitMerge.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool ShardDescr::unpack(vm::CellSlice& cs, ShardDescr::Record& data) const {
@@ -11580,8 +11799,8 @@ bool ShardHashes::skip(vm::CellSlice& cs) const {
   return t_HashmapE_32_Ref_BinTree_ShardDescr.skip(cs);
 }
 
-bool ShardHashes::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapE_32_Ref_BinTree_ShardDescr.validate_skip(cs, weak);
+bool ShardHashes::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_32_Ref_BinTree_ShardDescr.validate_skip(ops, cs, weak);
 }
 
 bool ShardHashes::unpack(vm::CellSlice& cs, ShardHashes::Record& data) const {
@@ -11658,17 +11877,17 @@ bool BinTreeAug::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool BinTreeAug::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BinTreeAug::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case bta_leaf:
     return cs.advance(1)
-        && Y_.validate_skip(cs, weak)
-        && X_.validate_skip(cs, weak);
+        && Y_.validate_skip(ops, cs, weak)
+        && X_.validate_skip(ops, cs, weak);
   case bta_fork:
     return cs.advance(1)
-        && validate_skip_ref(cs, weak)
-        && validate_skip_ref(cs, weak)
-        && Y_.validate_skip(cs, weak);
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak)
+        && Y_.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -11807,9 +12026,9 @@ bool ShardFeeCreated::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool ShardFeeCreated::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_CurrencyCollection.validate_skip(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+bool ShardFeeCreated::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_CurrencyCollection.validate_skip(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool ShardFeeCreated::unpack(vm::CellSlice& cs, ShardFeeCreated::Record& data) const {
@@ -11877,8 +12096,8 @@ bool ShardFees::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_96_ShardFeeCreated_ShardFeeCreated.skip(cs);
 }
 
-bool ShardFees::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_96_ShardFeeCreated_ShardFeeCreated.validate_skip(cs, weak);
+bool ShardFees::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_96_ShardFeeCreated_ShardFeeCreated.validate_skip(ops, cs, weak);
 }
 
 bool ShardFees::unpack(vm::CellSlice& cs, ShardFees::Record& data) const {
@@ -11936,9 +12155,9 @@ int ConfigParams::check_tag(const vm::CellSlice& cs) const {
   return cons1;
 }
 
-bool ConfigParams::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ConfigParams::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(256)
-      && t_Hashmap_32_Ref_Cell.validate_skip_ref(cs, weak);
+      && t_Hashmap_32_Ref_Cell.validate_skip_ref(ops, cs, weak);
 }
 
 bool ConfigParams::unpack(vm::CellSlice& cs, ConfigParams::Record& data) const {
@@ -12247,8 +12466,8 @@ bool OldMcBlocksInfo::skip(vm::CellSlice& cs) const {
   return t_HashmapAugE_32_KeyExtBlkRef_KeyMaxLt.skip(cs);
 }
 
-bool OldMcBlocksInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapAugE_32_KeyExtBlkRef_KeyMaxLt.validate_skip(cs, weak);
+bool OldMcBlocksInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapAugE_32_KeyExtBlkRef_KeyMaxLt.validate_skip(ops, cs, weak);
 }
 
 bool OldMcBlocksInfo::unpack(vm::CellSlice& cs, OldMcBlocksInfo::Record& data) const {
@@ -12351,7 +12570,7 @@ int CreatorStats::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(4) == 4 ? creator_info : -1;
 }
 
-bool CreatorStats::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CreatorStats::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 4
       && cs.advance(448);
 }
@@ -12417,23 +12636,43 @@ const CreatorStats t_CreatorStats;
 //
 // code for type `BlockCreateStats`
 //
-constexpr unsigned char BlockCreateStats::cons_tag[1];
+constexpr unsigned char BlockCreateStats::cons_tag[2];
 
 int BlockCreateStats::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(8) == 23 ? block_create_stats : -1;
+  switch (get_tag(cs)) {
+  case block_create_stats:
+    return cs.prefetch_ulong(8) == 23 ? block_create_stats : -1;
+  case block_create_stats_ext:
+    return cs.prefetch_ulong(8) == 0x34 ? block_create_stats_ext : -1;
+  }
+  return -1;
 }
 
 bool BlockCreateStats::skip(vm::CellSlice& cs) const {
-  return cs.advance(8)
-      && t_HashmapE_256_CreatorStats.skip(cs);
+  switch (get_tag(cs)) {
+  case block_create_stats:
+    return cs.advance(8)
+        && t_HashmapE_256_CreatorStats.skip(cs);
+  case block_create_stats_ext:
+    return cs.advance(8)
+        && t_HashmapAugE_256_CreatorStats_uint32.skip(cs);
+  }
+  return false;
 }
 
-bool BlockCreateStats::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return cs.fetch_ulong(8) == 23
-      && t_HashmapE_256_CreatorStats.validate_skip(cs, weak);
+bool BlockCreateStats::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case block_create_stats:
+    return cs.fetch_ulong(8) == 23
+        && t_HashmapE_256_CreatorStats.validate_skip(ops, cs, weak);
+  case block_create_stats_ext:
+    return cs.fetch_ulong(8) == 0x34
+        && t_HashmapAugE_256_CreatorStats_uint32.validate_skip(ops, cs, weak);
+  }
+  return false;
 }
 
-bool BlockCreateStats::unpack(vm::CellSlice& cs, BlockCreateStats::Record& data) const {
+bool BlockCreateStats::unpack(vm::CellSlice& cs, BlockCreateStats::Record_block_create_stats& data) const {
   return cs.fetch_ulong(8) == 23
       && t_HashmapE_256_CreatorStats.fetch_to(cs, data.counters);
 }
@@ -12443,7 +12682,7 @@ bool BlockCreateStats::unpack_block_create_stats(vm::CellSlice& cs, Ref<CellSlic
       && t_HashmapE_256_CreatorStats.fetch_to(cs, counters);
 }
 
-bool BlockCreateStats::cell_unpack(Ref<vm::Cell> cell_ref, BlockCreateStats::Record& data) const {
+bool BlockCreateStats::cell_unpack(Ref<vm::Cell> cell_ref, BlockCreateStats::Record_block_create_stats& data) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack(cs, data) && cs.empty_ext();
@@ -12455,7 +12694,29 @@ bool BlockCreateStats::cell_unpack_block_create_stats(Ref<vm::Cell> cell_ref, Re
   return unpack_block_create_stats(cs, counters) && cs.empty_ext();
 }
 
-bool BlockCreateStats::pack(vm::CellBuilder& cb, const BlockCreateStats::Record& data) const {
+bool BlockCreateStats::unpack(vm::CellSlice& cs, BlockCreateStats::Record_block_create_stats_ext& data) const {
+  return cs.fetch_ulong(8) == 0x34
+      && t_HashmapAugE_256_CreatorStats_uint32.fetch_to(cs, data.counters);
+}
+
+bool BlockCreateStats::unpack_block_create_stats_ext(vm::CellSlice& cs, Ref<CellSlice>& counters) const {
+  return cs.fetch_ulong(8) == 0x34
+      && t_HashmapAugE_256_CreatorStats_uint32.fetch_to(cs, counters);
+}
+
+bool BlockCreateStats::cell_unpack(Ref<vm::Cell> cell_ref, BlockCreateStats::Record_block_create_stats_ext& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool BlockCreateStats::cell_unpack_block_create_stats_ext(Ref<vm::Cell> cell_ref, Ref<CellSlice>& counters) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_block_create_stats_ext(cs, counters) && cs.empty_ext();
+}
+
+bool BlockCreateStats::pack(vm::CellBuilder& cb, const BlockCreateStats::Record_block_create_stats& data) const {
   return cb.store_long_bool(23, 8)
       && t_HashmapE_256_CreatorStats.store_from(cb, data.counters);
 }
@@ -12465,7 +12726,7 @@ bool BlockCreateStats::pack_block_create_stats(vm::CellBuilder& cb, Ref<CellSlic
       && t_HashmapE_256_CreatorStats.store_from(cb, counters);
 }
 
-bool BlockCreateStats::cell_pack(Ref<vm::Cell>& cell_ref, const BlockCreateStats::Record& data) const {
+bool BlockCreateStats::cell_pack(Ref<vm::Cell>& cell_ref, const BlockCreateStats::Record_block_create_stats& data) const {
   vm::CellBuilder cb;
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
@@ -12475,12 +12736,42 @@ bool BlockCreateStats::cell_pack_block_create_stats(Ref<vm::Cell>& cell_ref, Ref
   return pack_block_create_stats(cb, std::move(counters)) && std::move(cb).finalize_to(cell_ref);
 }
 
+bool BlockCreateStats::pack(vm::CellBuilder& cb, const BlockCreateStats::Record_block_create_stats_ext& data) const {
+  return cb.store_long_bool(0x34, 8)
+      && t_HashmapAugE_256_CreatorStats_uint32.store_from(cb, data.counters);
+}
+
+bool BlockCreateStats::pack_block_create_stats_ext(vm::CellBuilder& cb, Ref<CellSlice> counters) const {
+  return cb.store_long_bool(0x34, 8)
+      && t_HashmapAugE_256_CreatorStats_uint32.store_from(cb, counters);
+}
+
+bool BlockCreateStats::cell_pack(Ref<vm::Cell>& cell_ref, const BlockCreateStats::Record_block_create_stats_ext& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool BlockCreateStats::cell_pack_block_create_stats_ext(Ref<vm::Cell>& cell_ref, Ref<CellSlice> counters) const {
+  vm::CellBuilder cb;
+  return pack_block_create_stats_ext(cb, std::move(counters)) && std::move(cb).finalize_to(cell_ref);
+}
+
 bool BlockCreateStats::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  return cs.fetch_ulong(8) == 23
-      && pp.open("block_create_stats")
-      && pp.field("counters")
-      && t_HashmapE_256_CreatorStats.print_skip(pp, cs)
-      && pp.close();
+  switch (get_tag(cs)) {
+  case block_create_stats:
+    return cs.fetch_ulong(8) == 23
+        && pp.open("block_create_stats")
+        && pp.field("counters")
+        && t_HashmapE_256_CreatorStats.print_skip(pp, cs)
+        && pp.close();
+  case block_create_stats_ext:
+    return cs.fetch_ulong(8) == 0x34
+        && pp.open("block_create_stats_ext")
+        && pp.field("counters")
+        && t_HashmapAugE_256_CreatorStats_uint32.print_skip(pp, cs)
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for BlockCreateStats");
 }
 
 const BlockCreateStats t_BlockCreateStats;
@@ -12504,15 +12795,15 @@ bool McStateExtra_aux::skip(vm::CellSlice& cs) const {
       && (!(flags & 1) || t_BlockCreateStats.skip(cs));
 }
 
-bool McStateExtra_aux::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool McStateExtra_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int flags;
   return cs.fetch_uint_to(16, flags)
       && flags <= 1
       && cs.advance(65)
-      && t_OldMcBlocksInfo.validate_skip(cs, weak)
+      && t_OldMcBlocksInfo.validate_skip(ops, cs, weak)
       && cs.advance(1)
-      && t_Maybe_ExtBlkRef.validate_skip(cs, weak)
-      && (!(flags & 1) || t_BlockCreateStats.validate_skip(cs, weak));
+      && t_Maybe_ExtBlkRef.validate_skip(ops, cs, weak)
+      && (!(flags & 1) || t_BlockCreateStats.validate_skip(ops, cs, weak));
 }
 
 bool McStateExtra_aux::unpack(vm::CellSlice& cs, McStateExtra_aux::Record& data) const {
@@ -12581,12 +12872,12 @@ bool McStateExtra::skip(vm::CellSlice& cs) const {
       && t_CurrencyCollection.skip(cs);
 }
 
-bool McStateExtra::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool McStateExtra::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(16) == 0xcc26
-      && t_ShardHashes.validate_skip(cs, weak)
-      && t_ConfigParams.validate_skip(cs, weak)
-      && t_McStateExtra_aux.validate_skip_ref(cs, weak)
-      && t_CurrencyCollection.validate_skip(cs, weak);
+      && t_ShardHashes.validate_skip(ops, cs, weak)
+      && t_ConfigParams.validate_skip(ops, cs, weak)
+      && t_McStateExtra_aux.validate_skip_ref(ops, cs, weak)
+      && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
 bool McStateExtra::unpack(vm::CellSlice& cs, McStateExtra::Record& data) const {
@@ -12643,7 +12934,7 @@ int SigPubKey::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(32) == 0x8e81278aU ? ed25519_pubkey : -1;
 }
 
-bool SigPubKey::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool SigPubKey::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0x8e81278aU
       && cs.advance(256);
 }
@@ -12708,7 +12999,7 @@ int CryptoSignatureSimple::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(4) == 5 ? ed25519_signature : -1;
 }
 
-bool CryptoSignatureSimple::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CryptoSignatureSimple::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 5
       && cs.advance(512);
 }
@@ -12782,9 +13073,9 @@ bool CryptoSignaturePair::skip(vm::CellSlice& cs) const {
       && t_CryptoSignature.skip(cs);
 }
 
-bool CryptoSignaturePair::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CryptoSignaturePair::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(256)
-      && t_CryptoSignature.validate_skip(cs, weak);
+      && t_CryptoSignature.validate_skip(ops, cs, weak);
 }
 
 bool CryptoSignaturePair::unpack(vm::CellSlice& cs, CryptoSignaturePair::Record& data) const {
@@ -12848,9 +13139,9 @@ int Certificate::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(4) == 4 ? certificate : -1;
 }
 
-bool Certificate::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool Certificate::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 4
-      && t_SigPubKey.validate_skip(cs, weak)
+      && t_SigPubKey.validate_skip(ops, cs, weak)
       && cs.advance(64);
 }
 
@@ -12925,9 +13216,9 @@ int CertificateEnv::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(28) == 0xa419b7d ? certificate_env : -1;
 }
 
-bool CertificateEnv::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CertificateEnv::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(28) == 0xa419b7d
-      && t_Certificate.validate_skip(cs, weak);
+      && t_Certificate.validate_skip(ops, cs, weak);
 }
 
 bool CertificateEnv::unpack(vm::CellSlice& cs, CertificateEnv::Record& data) const {
@@ -12995,9 +13286,9 @@ bool SignedCertificate::skip(vm::CellSlice& cs) const {
       && t_CryptoSignature.skip(cs);
 }
 
-bool SignedCertificate::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_Certificate.validate_skip(cs, weak)
-      && t_CryptoSignature.validate_skip(cs, weak);
+bool SignedCertificate::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Certificate.validate_skip(ops, cs, weak)
+      && t_CryptoSignature.validate_skip(ops, cs, weak);
 }
 
 bool SignedCertificate::unpack(vm::CellSlice& cs, SignedCertificate::Record& data) const {
@@ -13079,14 +13370,14 @@ bool CryptoSignature::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool CryptoSignature::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CryptoSignature::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case cons1:
-    return t_CryptoSignatureSimple.validate_skip(cs, weak);
+    return t_CryptoSignatureSimple.validate_skip(ops, cs, weak);
   case chained_signature:
     return cs.fetch_ulong(4) == 15
-        && t_SignedCertificate.validate_skip_ref(cs, weak)
-        && t_CryptoSignatureSimple.validate_skip(cs, weak);
+        && t_SignedCertificate.validate_skip_ref(ops, cs, weak)
+        && t_CryptoSignatureSimple.validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -13210,10 +13501,10 @@ bool McBlockExtra_aux::skip(vm::CellSlice& cs) const {
       && t_Maybe_Ref_InMsg.skip(cs);
 }
 
-bool McBlockExtra_aux::validate_skip(vm::CellSlice& cs, bool weak) const {
-  return t_HashmapE_16_CryptoSignaturePair.validate_skip(cs, weak)
-      && t_Maybe_Ref_InMsg.validate_skip(cs, weak)
-      && t_Maybe_Ref_InMsg.validate_skip(cs, weak);
+bool McBlockExtra_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_16_CryptoSignaturePair.validate_skip(ops, cs, weak)
+      && t_Maybe_Ref_InMsg.validate_skip(ops, cs, weak)
+      && t_Maybe_Ref_InMsg.validate_skip(ops, cs, weak);
 }
 
 bool McBlockExtra_aux::unpack(vm::CellSlice& cs, McBlockExtra_aux::Record& data) const {
@@ -13294,14 +13585,14 @@ bool McBlockExtra::skip(vm::CellSlice& cs) const {
       && (!key_block || t_ConfigParams.skip(cs));
 }
 
-bool McBlockExtra::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool McBlockExtra::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int key_block;
   return cs.fetch_ulong(16) == 0xcca5
       && cs.fetch_bool_to(key_block)
-      && t_ShardHashes.validate_skip(cs, weak)
-      && t_ShardFees.validate_skip(cs, weak)
-      && t_McBlockExtra_aux.validate_skip_ref(cs, weak)
-      && (!key_block || t_ConfigParams.validate_skip(cs, weak));
+      && t_ShardHashes.validate_skip(ops, cs, weak)
+      && t_ShardFees.validate_skip(ops, cs, weak)
+      && t_McBlockExtra_aux.validate_skip_ref(ops, cs, weak)
+      && (!key_block || t_ConfigParams.validate_skip(ops, cs, weak));
 }
 
 bool McBlockExtra::unpack(vm::CellSlice& cs, McBlockExtra::Record& data) const {
@@ -13378,15 +13669,15 @@ bool ValidatorDescr::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool ValidatorDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ValidatorDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case validator:
     return cs.fetch_ulong(8) == 0x53
-        && t_SigPubKey.validate_skip(cs, weak)
+        && t_SigPubKey.validate_skip(ops, cs, weak)
         && cs.advance(64);
   case validator_addr:
     return cs.fetch_ulong(8) == 0x73
-        && t_SigPubKey.validate_skip(cs, weak)
+        && t_SigPubKey.validate_skip(ops, cs, weak)
         && cs.advance(320);
   }
   return false;
@@ -13560,7 +13851,7 @@ bool ValidatorSet::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool ValidatorSet::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ValidatorSet::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case validators: {
     int total, main;
@@ -13570,7 +13861,7 @@ bool ValidatorSet::validate_skip(vm::CellSlice& cs, bool weak) const {
         && cs.fetch_uint_to(16, main)
         && main <= total
         && 1 <= main
-        && t_Hashmap_16_ValidatorDescr.validate_skip(cs, weak);
+        && t_Hashmap_16_ValidatorDescr.validate_skip(ops, cs, weak);
     }
   case validators_ext: {
     int total, main;
@@ -13581,7 +13872,7 @@ bool ValidatorSet::validate_skip(vm::CellSlice& cs, bool weak) const {
         && main <= total
         && 1 <= main
         && cs.advance(64)
-        && t_HashmapE_16_ValidatorDescr.validate_skip(cs, weak);
+        && t_HashmapE_16_ValidatorDescr.validate_skip(ops, cs, weak);
     }
   }
   return false;
@@ -13705,7 +13996,7 @@ int GlobalVersion::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0xc4 ? capabilities : -1;
 }
 
-bool GlobalVersion::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool GlobalVersion::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0xc4
       && cs.advance(96);
 }
@@ -13803,7 +14094,7 @@ bool WorkchainFormat::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool WorkchainFormat::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool WorkchainFormat::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case wfmt_basic:
     return cs.fetch_ulong(4) == 1
@@ -13974,7 +14265,7 @@ bool WorkchainDescr::skip(vm::CellSlice& cs) const {
       && WorkchainFormat{basic}.skip(cs);
 }
 
-bool WorkchainDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool WorkchainDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int actual_min_split, min_split, basic, flags;
   return cs.fetch_ulong(8) == 0xa6
       && cs.advance(32)
@@ -13987,7 +14278,7 @@ bool WorkchainDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
       && cs.fetch_uint_to(13, flags)
       && flags == 0
       && cs.advance(544)
-      && WorkchainFormat{basic}.validate_skip(cs, weak);
+      && WorkchainFormat{basic}.validate_skip(ops, cs, weak);
 }
 
 bool WorkchainDescr::unpack(vm::CellSlice& cs, WorkchainDescr::Record& data) const {
@@ -14081,10 +14372,10 @@ bool BlockCreateFees::skip(vm::CellSlice& cs) const {
       && t_Grams.skip(cs);
 }
 
-bool BlockCreateFees::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockCreateFees::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0x6b
-      && t_Grams.validate_skip(cs, weak)
-      && t_Grams.validate_skip(cs, weak);
+      && t_Grams.validate_skip(ops, cs, weak)
+      && t_Grams.validate_skip(ops, cs, weak);
 }
 
 bool BlockCreateFees::unpack(vm::CellSlice& cs, BlockCreateFees::Record& data) const {
@@ -14154,7 +14445,7 @@ int StoragePrices::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0xcc ? cons1 : -1;
 }
 
-bool StoragePrices::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool StoragePrices::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0xcc
       && cs.advance(288);
 }
@@ -14242,7 +14533,7 @@ bool GasLimitsPrices::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool GasLimitsPrices::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool GasLimitsPrices::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case gas_prices:
     return cs.fetch_ulong(8) == 0xdd
@@ -14253,7 +14544,7 @@ bool GasLimitsPrices::validate_skip(vm::CellSlice& cs, bool weak) const {
   case gas_flat_pfx:
     return cs.fetch_ulong(8) == 0xd1
         && cs.advance(128)
-        && validate_skip(cs, weak);
+        && validate_skip(ops, cs, weak);
   }
   return false;
 }
@@ -14418,7 +14709,7 @@ int ParamLimits::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0xc3 ? param_limits : -1;
 }
 
-bool ParamLimits::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ParamLimits::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int underload, soft_limit, hard_limit;
   return cs.fetch_ulong(8) == 0xc3
       && cs.fetch_uint_to(32, underload)
@@ -14512,11 +14803,11 @@ int BlockLimits::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0x5d ? block_limits : -1;
 }
 
-bool BlockLimits::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockLimits::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0x5d
-      && t_ParamLimits.validate_skip(cs, weak)
-      && t_ParamLimits.validate_skip(cs, weak)
-      && t_ParamLimits.validate_skip(cs, weak);
+      && t_ParamLimits.validate_skip(ops, cs, weak)
+      && t_ParamLimits.validate_skip(ops, cs, weak)
+      && t_ParamLimits.validate_skip(ops, cs, weak);
 }
 
 bool BlockLimits::unpack(vm::CellSlice& cs, BlockLimits::Record& data) const {
@@ -14592,7 +14883,7 @@ int MsgForwardPrices::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0xea ? msg_forward_prices : -1;
 }
 
-bool MsgForwardPrices::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool MsgForwardPrices::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0xea
       && cs.advance(256);
 }
@@ -14651,7 +14942,7 @@ int CatchainConfig::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0xc1 ? catchain_config : -1;
 }
 
-bool CatchainConfig::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool CatchainConfig::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0xc1
       && cs.advance(128);
 }
@@ -14704,7 +14995,7 @@ int ConsensusConfig::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(8) == 0xd6 ? consensus_config : -1;
 }
 
-bool ConsensusConfig::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ConsensusConfig::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int round_candidates;
   return cs.fetch_ulong(8) == 0xd6
       && cs.fetch_uint_to(32, round_candidates)
@@ -14777,10 +15068,10 @@ int ValidatorTempKey::check_tag(const vm::CellSlice& cs) const {
   return cs.prefetch_ulong(4) == 3 ? validator_temp_key : -1;
 }
 
-bool ValidatorTempKey::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ValidatorTempKey::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 3
       && cs.advance(256)
-      && t_SigPubKey.validate_skip(cs, weak)
+      && t_SigPubKey.validate_skip(ops, cs, weak)
       && cs.advance(64);
 }
 
@@ -14840,10 +15131,10 @@ bool ValidatorSignedTempKey::skip(vm::CellSlice& cs) const {
       && t_CryptoSignature.skip(cs);
 }
 
-bool ValidatorSignedTempKey::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ValidatorSignedTempKey::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(4) == 4
-      && t_ValidatorTempKey.validate_skip_ref(cs, weak)
-      && t_CryptoSignature.validate_skip(cs, weak);
+      && t_ValidatorTempKey.validate_skip_ref(ops, cs, weak)
+      && t_CryptoSignature.validate_skip(ops, cs, weak);
 }
 
 bool ValidatorSignedTempKey::unpack(vm::CellSlice& cs, ValidatorSignedTempKey::Record& data) const {
@@ -15155,7 +15446,7 @@ bool ConfigParam::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool ConfigParam::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ConfigParam::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case cons0:
     return cs.advance(256)
@@ -15173,23 +15464,23 @@ bool ConfigParam::validate_skip(vm::CellSlice& cs, bool weak) const {
     return cs.advance(256)
         && m_ == 4;
   case cons6:
-    return t_Grams.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
+    return t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
         && m_ == 6;
   case cons7:
-    return t_ExtraCurrencyCollection.validate_skip(cs, weak)
+    return t_ExtraCurrencyCollection.validate_skip(ops, cs, weak)
         && m_ == 7;
   case cons8:
-    return t_GlobalVersion.validate_skip(cs, weak)
+    return t_GlobalVersion.validate_skip(ops, cs, weak)
         && m_ == 8;
   case cons9:
-    return t_Hashmap_32_True.validate_skip(cs, weak)
+    return t_Hashmap_32_True.validate_skip(ops, cs, weak)
         && m_ == 9;
   case cons12:
-    return t_HashmapE_32_WorkchainDescr.validate_skip(cs, weak)
+    return t_HashmapE_32_WorkchainDescr.validate_skip(ops, cs, weak)
         && m_ == 12;
   case cons14:
-    return t_BlockCreateFees.validate_skip(cs, weak)
+    return t_BlockCreateFees.validate_skip(ops, cs, weak)
         && m_ == 14;
   case cons15:
     return cs.advance(128)
@@ -15205,61 +15496,61 @@ bool ConfigParam::validate_skip(vm::CellSlice& cs, bool weak) const {
         && m_ == 16;
     }
   case cons17:
-    return t_Grams.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
-        && t_Grams.validate_skip(cs, weak)
+    return t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
         && cs.advance(32)
         && m_ == 17;
   case cons18:
-    return t_Hashmap_32_StoragePrices.validate_skip(cs, weak)
+    return t_Hashmap_32_StoragePrices.validate_skip(ops, cs, weak)
         && m_ == 18;
   case config_mc_gas_prices:
-    return t_GasLimitsPrices.validate_skip(cs, weak)
+    return t_GasLimitsPrices.validate_skip(ops, cs, weak)
         && m_ == 20;
   case config_gas_prices:
-    return t_GasLimitsPrices.validate_skip(cs, weak)
+    return t_GasLimitsPrices.validate_skip(ops, cs, weak)
         && m_ == 21;
   case config_mc_block_limits:
-    return t_BlockLimits.validate_skip(cs, weak)
+    return t_BlockLimits.validate_skip(ops, cs, weak)
         && m_ == 22;
   case config_block_limits:
-    return t_BlockLimits.validate_skip(cs, weak)
+    return t_BlockLimits.validate_skip(ops, cs, weak)
         && m_ == 23;
   case config_mc_fwd_prices:
-    return t_MsgForwardPrices.validate_skip(cs, weak)
+    return t_MsgForwardPrices.validate_skip(ops, cs, weak)
         && m_ == 24;
   case config_fwd_prices:
-    return t_MsgForwardPrices.validate_skip(cs, weak)
+    return t_MsgForwardPrices.validate_skip(ops, cs, weak)
         && m_ == 25;
   case cons28:
-    return t_CatchainConfig.validate_skip(cs, weak)
+    return t_CatchainConfig.validate_skip(ops, cs, weak)
         && m_ == 28;
   case cons29:
-    return t_ConsensusConfig.validate_skip(cs, weak)
+    return t_ConsensusConfig.validate_skip(ops, cs, weak)
         && m_ == 29;
   case cons31:
-    return t_HashmapE_256_True.validate_skip(cs, weak)
+    return t_HashmapE_256_True.validate_skip(ops, cs, weak)
         && m_ == 31;
   case cons32:
-    return t_ValidatorSet.validate_skip(cs, weak)
+    return t_ValidatorSet.validate_skip(ops, cs, weak)
         && m_ == 32;
   case cons33:
-    return t_ValidatorSet.validate_skip(cs, weak)
+    return t_ValidatorSet.validate_skip(ops, cs, weak)
         && m_ == 33;
   case cons34:
-    return t_ValidatorSet.validate_skip(cs, weak)
+    return t_ValidatorSet.validate_skip(ops, cs, weak)
         && m_ == 34;
   case cons35:
-    return t_ValidatorSet.validate_skip(cs, weak)
+    return t_ValidatorSet.validate_skip(ops, cs, weak)
         && m_ == 35;
   case cons36:
-    return t_ValidatorSet.validate_skip(cs, weak)
+    return t_ValidatorSet.validate_skip(ops, cs, weak)
         && m_ == 36;
   case cons37:
-    return t_ValidatorSet.validate_skip(cs, weak)
+    return t_ValidatorSet.validate_skip(ops, cs, weak)
         && m_ == 37;
   case cons39:
-    return t_HashmapE_256_ValidatorSignedTempKey.validate_skip(cs, weak)
+    return t_HashmapE_256_ValidatorSignedTempKey.validate_skip(ops, cs, weak)
         && m_ == 39;
   }
   return false;
@@ -16780,9 +17071,9 @@ bool BlockSignaturesPure::skip(vm::CellSlice& cs) const {
       && t_HashmapE_16_CryptoSignaturePair.skip(cs);
 }
 
-bool BlockSignaturesPure::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockSignaturesPure::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.advance(96)
-      && t_HashmapE_16_CryptoSignaturePair.validate_skip(cs, weak);
+      && t_HashmapE_16_CryptoSignaturePair.validate_skip(ops, cs, weak);
 }
 
 bool BlockSignaturesPure::unpack(vm::CellSlice& cs, BlockSignaturesPure::Record& data) const {
@@ -16856,10 +17147,10 @@ bool BlockSignatures::skip(vm::CellSlice& cs) const {
       && t_BlockSignaturesPure.skip(cs);
 }
 
-bool BlockSignatures::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockSignatures::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 17
       && cs.advance(64)
-      && t_BlockSignaturesPure.validate_skip(cs, weak);
+      && t_BlockSignaturesPure.validate_skip(ops, cs, weak);
 }
 
 bool BlockSignatures::unpack(vm::CellSlice& cs, BlockSignatures::Record& data) const {
@@ -16934,11 +17225,11 @@ bool BlockProof::skip(vm::CellSlice& cs) const {
       && t_Maybe_Ref_BlockSignatures.skip(cs);
 }
 
-bool BlockProof::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool BlockProof::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(8) == 0xc3
-      && t_BlockIdExt.validate_skip(cs, weak)
+      && t_BlockIdExt.validate_skip(ops, cs, weak)
       && cs.advance_refs(1)
-      && t_Maybe_Ref_BlockSignatures.validate_skip(cs, weak);
+      && t_Maybe_Ref_BlockSignatures.validate_skip(ops, cs, weak);
 }
 
 bool BlockProof::unpack(vm::CellSlice& cs, BlockProof::Record& data) const {
@@ -17038,7 +17329,7 @@ bool ProofChain::skip(vm::CellSlice& cs) const {
   return false;
 }
 
-bool ProofChain::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool ProofChain::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   switch (get_tag(cs)) {
   case chain_empty:
     return m_ == 0;
@@ -17046,7 +17337,7 @@ bool ProofChain::validate_skip(vm::CellSlice& cs, bool weak) const {
     int n;
     return add_r1(n, 1, m_)
         && cs.advance_refs(1)
-        && (!n || ProofChain{n}.validate_skip_ref(cs, weak));
+        && (!n || ProofChain{n}.validate_skip_ref(ops, cs, weak));
     }
   }
   return false;
@@ -17176,15 +17467,15 @@ bool TopBlockDescr::skip(vm::CellSlice& cs) const {
       && ProofChain{len}.skip(cs);
 }
 
-bool TopBlockDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TopBlockDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int len;
   return cs.fetch_ulong(8) == 0xd5
-      && t_BlockIdExt.validate_skip(cs, weak)
-      && t_Maybe_Ref_BlockSignatures.validate_skip(cs, weak)
+      && t_BlockIdExt.validate_skip(ops, cs, weak)
+      && t_Maybe_Ref_BlockSignatures.validate_skip(ops, cs, weak)
       && cs.fetch_uint_to(8, len)
       && 1 <= len
       && len <= 8
-      && ProofChain{len}.validate_skip(cs, weak);
+      && ProofChain{len}.validate_skip(ops, cs, weak);
 }
 
 bool TopBlockDescr::unpack(vm::CellSlice& cs, TopBlockDescr::Record& data) const {
@@ -17251,9 +17542,9 @@ bool TopBlockDescrSet::skip(vm::CellSlice& cs) const {
       && t_HashmapE_96_Ref_TopBlockDescr.skip(cs);
 }
 
-bool TopBlockDescrSet::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TopBlockDescrSet::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   return cs.fetch_ulong(32) == 0x4ac789f3
-      && t_HashmapE_96_Ref_TopBlockDescr.validate_skip(cs, weak);
+      && t_HashmapE_96_Ref_TopBlockDescr.validate_skip(ops, cs, weak);
 }
 
 bool TopBlockDescrSet::unpack(vm::CellSlice& cs, TopBlockDescrSet::Record& data) const {
@@ -17307,6 +17598,3450 @@ bool TopBlockDescrSet::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 }
 
 const TopBlockDescrSet t_TopBlockDescrSet;
+
+//
+// code for type `VmCellSlice`
+//
+
+int VmCellSlice::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
+}
+
+bool VmCellSlice::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  int st_bits, end_bits, st_ref, end_ref;
+  return cs.advance_refs(1)
+      && cs.fetch_uint_to(10, st_bits)
+      && cs.fetch_uint_to(10, end_bits)
+      && st_bits <= end_bits
+      && cs.fetch_uint_leq(4, st_ref)
+      && cs.fetch_uint_leq(4, end_ref)
+      && st_ref <= end_ref;
+}
+
+bool VmCellSlice::unpack(vm::CellSlice& cs, VmCellSlice::Record& data) const {
+  return cs.fetch_ref_to(data.cell)
+      && cs.fetch_uint_to(10, data.st_bits)
+      && cs.fetch_uint_to(10, data.end_bits)
+      && data.st_bits <= data.end_bits
+      && cs.fetch_uint_leq(4, data.st_ref)
+      && cs.fetch_uint_leq(4, data.end_ref)
+      && data.st_ref <= data.end_ref;
+}
+
+bool VmCellSlice::cell_unpack(Ref<vm::Cell> cell_ref, VmCellSlice::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCellSlice::pack(vm::CellBuilder& cb, const VmCellSlice::Record& data) const {
+  return cb.store_ref_bool(data.cell)
+      && cb.store_ulong_rchk_bool(data.st_bits, 10)
+      && cb.store_ulong_rchk_bool(data.end_bits, 10)
+      && data.st_bits <= data.end_bits
+      && cb.store_uint_leq(4, data.st_ref)
+      && cb.store_uint_leq(4, data.end_ref)
+      && data.st_ref <= data.end_ref;
+}
+
+bool VmCellSlice::cell_pack(Ref<vm::Cell>& cell_ref, const VmCellSlice::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCellSlice::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  int st_bits, end_bits, st_ref, end_ref;
+  return pp.open()
+      && pp.field("cell")
+      && t_Anything.print_ref(pp, cs.fetch_ref())
+      && cs.fetch_uint_to(10, st_bits)
+      && pp.field_int(st_bits, "st_bits")
+      && cs.fetch_uint_to(10, end_bits)
+      && pp.field_int(end_bits, "end_bits")
+      && st_bits <= end_bits
+      && cs.fetch_uint_leq(4, st_ref)
+      && pp.field_int(st_ref, "st_ref")
+      && cs.fetch_uint_leq(4, end_ref)
+      && pp.field_int(end_ref, "end_ref")
+      && st_ref <= end_ref
+      && pp.close();
+}
+
+const VmCellSlice t_VmCellSlice;
+
+//
+// code for type `VmTupleRef`
+//
+
+int VmTupleRef::get_tag(const vm::CellSlice& cs) const {
+  // distinguish by parameter `m_` using 1 2 3 3
+  // static inline size_t nat_abs(int x) { return (x > 1) * 2 + (x & 1); }
+  static signed char ctab[4] = { vm_tupref_nil, vm_tupref_single, vm_tupref_any, vm_tupref_any };
+  return ctab[nat_abs(m_)];
+}
+
+int VmTupleRef::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_tupref_nil:
+    return vm_tupref_nil;
+  case vm_tupref_single:
+    return vm_tupref_single;
+  case vm_tupref_any:
+    return vm_tupref_any;
+  }
+  return -1;
+}
+
+bool VmTupleRef::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_tupref_nil:
+    return m_ == 0;
+  case vm_tupref_single:
+    return cs.advance_refs(1)
+        && m_ == 1;
+  case vm_tupref_any: {
+    int n;
+    return add_r1(n, 2, m_)
+        && cs.advance_refs(1);
+    }
+  }
+  return false;
+}
+
+bool VmTupleRef::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case vm_tupref_nil:
+    return m_ == 0;
+  case vm_tupref_single:
+    return t_VmStackValue.validate_skip_ref(ops, cs, weak)
+        && m_ == 1;
+  case vm_tupref_any: {
+    int n;
+    return add_r1(n, 2, m_)
+        && VmTuple{n + 2}.validate_skip_ref(ops, cs, weak);
+    }
+  }
+  return false;
+}
+
+bool VmTupleRef::unpack(vm::CellSlice& cs, VmTupleRef::Record_vm_tupref_nil& data) const {
+  return m_ == 0;
+}
+
+bool VmTupleRef::unpack_vm_tupref_nil(vm::CellSlice& cs) const {
+  return m_ == 0;
+}
+
+bool VmTupleRef::cell_unpack(Ref<vm::Cell> cell_ref, VmTupleRef::Record_vm_tupref_nil& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmTupleRef::cell_unpack_vm_tupref_nil(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_tupref_nil(cs) && cs.empty_ext();
+}
+
+bool VmTupleRef::unpack(vm::CellSlice& cs, VmTupleRef::Record_vm_tupref_single& data) const {
+  return cs.fetch_ref_to(data.entry)
+      && m_ == 1;
+}
+
+bool VmTupleRef::unpack_vm_tupref_single(vm::CellSlice& cs, Ref<Cell>& entry) const {
+  return cs.fetch_ref_to(entry)
+      && m_ == 1;
+}
+
+bool VmTupleRef::cell_unpack(Ref<vm::Cell> cell_ref, VmTupleRef::Record_vm_tupref_single& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmTupleRef::cell_unpack_vm_tupref_single(Ref<vm::Cell> cell_ref, Ref<Cell>& entry) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_tupref_single(cs, entry) && cs.empty_ext();
+}
+
+bool VmTupleRef::unpack(vm::CellSlice& cs, VmTupleRef::Record_vm_tupref_any& data) const {
+  return add_r1(data.n, 2, m_)
+      && cs.fetch_ref_to(data.ref);
+}
+
+bool VmTupleRef::unpack_vm_tupref_any(vm::CellSlice& cs, int& n, Ref<Cell>& ref) const {
+  return add_r1(n, 2, m_)
+      && cs.fetch_ref_to(ref);
+}
+
+bool VmTupleRef::cell_unpack(Ref<vm::Cell> cell_ref, VmTupleRef::Record_vm_tupref_any& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmTupleRef::cell_unpack_vm_tupref_any(Ref<vm::Cell> cell_ref, int& n, Ref<Cell>& ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_tupref_any(cs, n, ref) && cs.empty_ext();
+}
+
+bool VmTupleRef::pack(vm::CellBuilder& cb, const VmTupleRef::Record_vm_tupref_nil& data) const {
+  return m_ == 0;
+}
+
+bool VmTupleRef::pack_vm_tupref_nil(vm::CellBuilder& cb) const {
+  return m_ == 0;
+}
+
+bool VmTupleRef::cell_pack(Ref<vm::Cell>& cell_ref, const VmTupleRef::Record_vm_tupref_nil& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTupleRef::cell_pack_vm_tupref_nil(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_vm_tupref_nil(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTupleRef::pack(vm::CellBuilder& cb, const VmTupleRef::Record_vm_tupref_single& data) const {
+  return cb.store_ref_bool(data.entry)
+      && m_ == 1;
+}
+
+bool VmTupleRef::pack_vm_tupref_single(vm::CellBuilder& cb, Ref<Cell> entry) const {
+  return cb.store_ref_bool(entry)
+      && m_ == 1;
+}
+
+bool VmTupleRef::cell_pack(Ref<vm::Cell>& cell_ref, const VmTupleRef::Record_vm_tupref_single& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTupleRef::cell_pack_vm_tupref_single(Ref<vm::Cell>& cell_ref, Ref<Cell> entry) const {
+  vm::CellBuilder cb;
+  return pack_vm_tupref_single(cb, std::move(entry)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTupleRef::pack(vm::CellBuilder& cb, const VmTupleRef::Record_vm_tupref_any& data) const {
+  int n;
+  return add_r1(n, 2, m_)
+      && cb.store_ref_bool(data.ref);
+}
+
+bool VmTupleRef::pack_vm_tupref_any(vm::CellBuilder& cb, Ref<Cell> ref) const {
+  int n;
+  return add_r1(n, 2, m_)
+      && cb.store_ref_bool(ref);
+}
+
+bool VmTupleRef::cell_pack(Ref<vm::Cell>& cell_ref, const VmTupleRef::Record_vm_tupref_any& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTupleRef::cell_pack_vm_tupref_any(Ref<vm::Cell>& cell_ref, Ref<Cell> ref) const {
+  vm::CellBuilder cb;
+  return pack_vm_tupref_any(cb, std::move(ref)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTupleRef::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_tupref_nil:
+    return pp.cons("vm_tupref_nil")
+        && m_ == 0;
+  case vm_tupref_single:
+    return pp.open("vm_tupref_single")
+        && pp.field("entry")
+        && t_VmStackValue.print_ref(pp, cs.fetch_ref())
+        && m_ == 1
+        && pp.close();
+  case vm_tupref_any: {
+    int n;
+    return pp.open("vm_tupref_any")
+        && add_r1(n, 2, m_)
+        && pp.field("ref")
+        && VmTuple{n + 2}.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for VmTupleRef");
+}
+
+
+//
+// code for type `VmTuple`
+//
+
+int VmTuple::get_tag(const vm::CellSlice& cs) const {
+  // distinguish by parameter `m_` using 1 2 2 2
+  return m_ ? vm_tuple_tcons : vm_tuple_nil;
+}
+
+int VmTuple::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_tuple_nil:
+    return vm_tuple_nil;
+  case vm_tuple_tcons:
+    return vm_tuple_tcons;
+  }
+  return -1;
+}
+
+bool VmTuple::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_tuple_nil:
+    return m_ == 0;
+  case vm_tuple_tcons: {
+    int n;
+    return add_r1(n, 1, m_)
+        && VmTupleRef{n}.skip(cs)
+        && cs.advance_refs(1);
+    }
+  }
+  return false;
+}
+
+bool VmTuple::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case vm_tuple_nil:
+    return m_ == 0;
+  case vm_tuple_tcons: {
+    int n;
+    return add_r1(n, 1, m_)
+        && VmTupleRef{n}.validate_skip(ops, cs, weak)
+        && t_VmStackValue.validate_skip_ref(ops, cs, weak);
+    }
+  }
+  return false;
+}
+
+bool VmTuple::unpack(vm::CellSlice& cs, VmTuple::Record_vm_tuple_nil& data) const {
+  return m_ == 0;
+}
+
+bool VmTuple::unpack_vm_tuple_nil(vm::CellSlice& cs) const {
+  return m_ == 0;
+}
+
+bool VmTuple::cell_unpack(Ref<vm::Cell> cell_ref, VmTuple::Record_vm_tuple_nil& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmTuple::cell_unpack_vm_tuple_nil(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_tuple_nil(cs) && cs.empty_ext();
+}
+
+bool VmTuple::unpack(vm::CellSlice& cs, VmTuple::Record_vm_tuple_tcons& data) const {
+  return add_r1(data.n, 1, m_)
+      && VmTupleRef{data.n}.fetch_to(cs, data.head)
+      && cs.fetch_ref_to(data.tail);
+}
+
+bool VmTuple::unpack_vm_tuple_tcons(vm::CellSlice& cs, int& n, Ref<CellSlice>& head, Ref<Cell>& tail) const {
+  return add_r1(n, 1, m_)
+      && VmTupleRef{n}.fetch_to(cs, head)
+      && cs.fetch_ref_to(tail);
+}
+
+bool VmTuple::cell_unpack(Ref<vm::Cell> cell_ref, VmTuple::Record_vm_tuple_tcons& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmTuple::cell_unpack_vm_tuple_tcons(Ref<vm::Cell> cell_ref, int& n, Ref<CellSlice>& head, Ref<Cell>& tail) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_tuple_tcons(cs, n, head, tail) && cs.empty_ext();
+}
+
+bool VmTuple::pack(vm::CellBuilder& cb, const VmTuple::Record_vm_tuple_nil& data) const {
+  return m_ == 0;
+}
+
+bool VmTuple::pack_vm_tuple_nil(vm::CellBuilder& cb) const {
+  return m_ == 0;
+}
+
+bool VmTuple::cell_pack(Ref<vm::Cell>& cell_ref, const VmTuple::Record_vm_tuple_nil& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTuple::cell_pack_vm_tuple_nil(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_vm_tuple_nil(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTuple::pack(vm::CellBuilder& cb, const VmTuple::Record_vm_tuple_tcons& data) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && VmTupleRef{n}.store_from(cb, data.head)
+      && cb.store_ref_bool(data.tail);
+}
+
+bool VmTuple::pack_vm_tuple_tcons(vm::CellBuilder& cb, Ref<CellSlice> head, Ref<Cell> tail) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && VmTupleRef{n}.store_from(cb, head)
+      && cb.store_ref_bool(tail);
+}
+
+bool VmTuple::cell_pack(Ref<vm::Cell>& cell_ref, const VmTuple::Record_vm_tuple_tcons& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTuple::cell_pack_vm_tuple_tcons(Ref<vm::Cell>& cell_ref, Ref<CellSlice> head, Ref<Cell> tail) const {
+  vm::CellBuilder cb;
+  return pack_vm_tuple_tcons(cb, std::move(head), std::move(tail)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmTuple::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_tuple_nil:
+    return pp.cons("vm_tuple_nil")
+        && m_ == 0;
+  case vm_tuple_tcons: {
+    int n;
+    return pp.open("vm_tuple_tcons")
+        && add_r1(n, 1, m_)
+        && pp.field("head")
+        && VmTupleRef{n}.print_skip(pp, cs)
+        && pp.field("tail")
+        && t_VmStackValue.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for VmTuple");
+}
+
+
+//
+// code for type `VmStackValue`
+//
+constexpr char VmStackValue::cons_len[9];
+constexpr unsigned short VmStackValue::cons_tag[9];
+
+int VmStackValue::get_tag(const vm::CellSlice& cs) const {
+  switch (cs.bselect(6, 7)) {
+  case 0:
+    if (cs.bit_at(6)) {
+      if (cs.bit_at(7)) {
+        return vm_stk_cell;
+      } else {
+        return cs.bit_at(8) ? vm_stk_nan : vm_stk_int;
+      }
+    } else {
+      return cs.bit_at(7) ? vm_stk_tinyint : vm_stk_null;
+    }
+  case 1:
+    if (cs.bit_at(6)) {
+      return cs.bit_at(7) ? vm_stk_tuple : vm_stk_cont;
+    } else {
+      return cs.bit_at(7) ? vm_stk_builder : vm_stk_slice;
+    }
+  default:
+    return -1;
+  }
+}
+
+int VmStackValue::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_stk_null:
+    return cs.prefetch_ulong(8) == 0 ? vm_stk_null : -1;
+  case vm_stk_tinyint:
+    return cs.prefetch_ulong(8) == 1 ? vm_stk_tinyint : -1;
+  case vm_stk_int:
+    return cs.prefetch_ulong(15) == 0x100 ? vm_stk_int : -1;
+  case vm_stk_nan:
+    return cs.prefetch_ulong(16) == 0x2ff ? vm_stk_nan : -1;
+  case vm_stk_cell:
+    return cs.prefetch_ulong(8) == 3 ? vm_stk_cell : -1;
+  case vm_stk_slice:
+    return cs.prefetch_ulong(8) == 4 ? vm_stk_slice : -1;
+  case vm_stk_builder:
+    return cs.prefetch_ulong(8) == 5 ? vm_stk_builder : -1;
+  case vm_stk_cont:
+    return cs.prefetch_ulong(8) == 6 ? vm_stk_cont : -1;
+  case vm_stk_tuple:
+    return cs.prefetch_ulong(8) == 7 ? vm_stk_tuple : -1;
+  }
+  return -1;
+}
+
+bool VmStackValue::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_stk_null:
+    return cs.advance(8);
+  case vm_stk_tinyint:
+    return cs.advance(72);
+  case vm_stk_int:
+    return cs.advance(272);
+  case vm_stk_nan:
+    return cs.advance(16);
+  case vm_stk_cell:
+    return cs.advance_ext(0x10008);
+  case vm_stk_slice:
+    return cs.advance_ext(0x10022);
+  case vm_stk_builder:
+    return cs.advance_ext(0x10008);
+  case vm_stk_cont:
+    return cs.advance(8)
+        && t_VmCont.skip(cs);
+  case vm_stk_tuple: {
+    int len;
+    return cs.advance(8)
+        && cs.fetch_uint_to(16, len)
+        && VmTuple{len}.skip(cs);
+    }
+  }
+  return false;
+}
+
+bool VmStackValue::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case vm_stk_null:
+    return cs.fetch_ulong(8) == 0;
+  case vm_stk_tinyint:
+    return cs.fetch_ulong(8) == 1
+        && cs.advance(64);
+  case vm_stk_int:
+    return cs.fetch_ulong(15) == 0x100
+        && cs.advance(257);
+  case vm_stk_nan:
+    return cs.fetch_ulong(16) == 0x2ff;
+  case vm_stk_cell:
+    return cs.fetch_ulong(8) == 3
+        && cs.advance_refs(1);
+  case vm_stk_slice:
+    return cs.fetch_ulong(8) == 4
+        && t_VmCellSlice.validate_skip(ops, cs, weak);
+  case vm_stk_builder:
+    return cs.fetch_ulong(8) == 5
+        && cs.advance_refs(1);
+  case vm_stk_cont:
+    return cs.fetch_ulong(8) == 6
+        && t_VmCont.validate_skip(ops, cs, weak);
+  case vm_stk_tuple: {
+    int len;
+    return cs.fetch_ulong(8) == 7
+        && cs.fetch_uint_to(16, len)
+        && VmTuple{len}.validate_skip(ops, cs, weak);
+    }
+  }
+  return false;
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_null& data) const {
+  return cs.fetch_ulong(8) == 0;
+}
+
+bool VmStackValue::unpack_vm_stk_null(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0;
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_null& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_null(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_null(cs) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_tinyint& data) const {
+  return cs.fetch_ulong(8) == 1
+      && cs.fetch_int_to(64, data.value);
+}
+
+bool VmStackValue::unpack_vm_stk_tinyint(vm::CellSlice& cs, long long& value) const {
+  return cs.fetch_ulong(8) == 1
+      && cs.fetch_int_to(64, value);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_tinyint& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_tinyint(Ref<vm::Cell> cell_ref, long long& value) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_tinyint(cs, value) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_int& data) const {
+  return cs.fetch_ulong(15) == 0x100
+      && cs.fetch_int256_to(257, data.value);
+}
+
+bool VmStackValue::unpack_vm_stk_int(vm::CellSlice& cs, RefInt256& value) const {
+  return cs.fetch_ulong(15) == 0x100
+      && cs.fetch_int256_to(257, value);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_int& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_int(Ref<vm::Cell> cell_ref, RefInt256& value) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_int(cs, value) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_nan& data) const {
+  return cs.fetch_ulong(16) == 0x2ff;
+}
+
+bool VmStackValue::unpack_vm_stk_nan(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(16) == 0x2ff;
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_nan& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_nan(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_nan(cs) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_cell& data) const {
+  return cs.fetch_ulong(8) == 3
+      && cs.fetch_ref_to(data.cell);
+}
+
+bool VmStackValue::unpack_vm_stk_cell(vm::CellSlice& cs, Ref<Cell>& cell) const {
+  return cs.fetch_ulong(8) == 3
+      && cs.fetch_ref_to(cell);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_cell& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_cell(Ref<vm::Cell> cell_ref, Ref<Cell>& cell) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_cell(cs, cell) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_slice& data) const {
+  return cs.fetch_ulong(8) == 4
+      && cs.fetch_subslice_ext_to(0x1001a, data.x);
+}
+
+bool VmStackValue::unpack_vm_stk_slice(vm::CellSlice& cs, Ref<CellSlice>& x) const {
+  return cs.fetch_ulong(8) == 4
+      && cs.fetch_subslice_ext_to(0x1001a, x);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_slice& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_slice(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_slice(cs, x) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_builder& data) const {
+  return cs.fetch_ulong(8) == 5
+      && cs.fetch_ref_to(data.cell);
+}
+
+bool VmStackValue::unpack_vm_stk_builder(vm::CellSlice& cs, Ref<Cell>& cell) const {
+  return cs.fetch_ulong(8) == 5
+      && cs.fetch_ref_to(cell);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_builder& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_builder(Ref<vm::Cell> cell_ref, Ref<Cell>& cell) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_builder(cs, cell) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_cont& data) const {
+  return cs.fetch_ulong(8) == 6
+      && t_VmCont.fetch_to(cs, data.cont);
+}
+
+bool VmStackValue::unpack_vm_stk_cont(vm::CellSlice& cs, Ref<CellSlice>& cont) const {
+  return cs.fetch_ulong(8) == 6
+      && t_VmCont.fetch_to(cs, cont);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_cont& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_cont(Ref<vm::Cell> cell_ref, Ref<CellSlice>& cont) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_cont(cs, cont) && cs.empty_ext();
+}
+
+bool VmStackValue::unpack(vm::CellSlice& cs, VmStackValue::Record_vm_stk_tuple& data) const {
+  return cs.fetch_ulong(8) == 7
+      && cs.fetch_uint_to(16, data.len)
+      && VmTuple{data.len}.fetch_to(cs, data.data);
+}
+
+bool VmStackValue::unpack_vm_stk_tuple(vm::CellSlice& cs, int& len, Ref<CellSlice>& data) const {
+  return cs.fetch_ulong(8) == 7
+      && cs.fetch_uint_to(16, len)
+      && VmTuple{len}.fetch_to(cs, data);
+}
+
+bool VmStackValue::cell_unpack(Ref<vm::Cell> cell_ref, VmStackValue::Record_vm_stk_tuple& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackValue::cell_unpack_vm_stk_tuple(Ref<vm::Cell> cell_ref, int& len, Ref<CellSlice>& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_tuple(cs, len, data) && cs.empty_ext();
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_null& data) const {
+  return cb.store_long_bool(0, 8);
+}
+
+bool VmStackValue::pack_vm_stk_null(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0, 8);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_null& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_null(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_null(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_tinyint& data) const {
+  return cb.store_long_bool(1, 8)
+      && cb.store_long_rchk_bool(data.value, 64);
+}
+
+bool VmStackValue::pack_vm_stk_tinyint(vm::CellBuilder& cb, long long value) const {
+  return cb.store_long_bool(1, 8)
+      && cb.store_long_rchk_bool(value, 64);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_tinyint& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_tinyint(Ref<vm::Cell>& cell_ref, long long value) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_tinyint(cb, value) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_int& data) const {
+  return cb.store_long_bool(0x100, 15)
+      && cb.store_int256_bool(data.value, 257);
+}
+
+bool VmStackValue::pack_vm_stk_int(vm::CellBuilder& cb, RefInt256 value) const {
+  return cb.store_long_bool(0x100, 15)
+      && cb.store_int256_bool(value, 257);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_int& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_int(Ref<vm::Cell>& cell_ref, RefInt256 value) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_int(cb, std::move(value)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_nan& data) const {
+  return cb.store_long_bool(0x2ff, 16);
+}
+
+bool VmStackValue::pack_vm_stk_nan(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0x2ff, 16);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_nan& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_nan(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_nan(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_cell& data) const {
+  return cb.store_long_bool(3, 8)
+      && cb.store_ref_bool(data.cell);
+}
+
+bool VmStackValue::pack_vm_stk_cell(vm::CellBuilder& cb, Ref<Cell> cell) const {
+  return cb.store_long_bool(3, 8)
+      && cb.store_ref_bool(cell);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_cell& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_cell(Ref<vm::Cell>& cell_ref, Ref<Cell> cell) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_cell(cb, std::move(cell)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_slice& data) const {
+  return cb.store_long_bool(4, 8)
+      && cb.append_cellslice_chk(data.x, 0x1001a);
+}
+
+bool VmStackValue::pack_vm_stk_slice(vm::CellBuilder& cb, Ref<CellSlice> x) const {
+  return cb.store_long_bool(4, 8)
+      && cb.append_cellslice_chk(x, 0x1001a);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_slice& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_slice(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_slice(cb, std::move(x)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_builder& data) const {
+  return cb.store_long_bool(5, 8)
+      && cb.store_ref_bool(data.cell);
+}
+
+bool VmStackValue::pack_vm_stk_builder(vm::CellBuilder& cb, Ref<Cell> cell) const {
+  return cb.store_long_bool(5, 8)
+      && cb.store_ref_bool(cell);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_builder& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_builder(Ref<vm::Cell>& cell_ref, Ref<Cell> cell) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_builder(cb, std::move(cell)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_cont& data) const {
+  return cb.store_long_bool(6, 8)
+      && t_VmCont.store_from(cb, data.cont);
+}
+
+bool VmStackValue::pack_vm_stk_cont(vm::CellBuilder& cb, Ref<CellSlice> cont) const {
+  return cb.store_long_bool(6, 8)
+      && t_VmCont.store_from(cb, cont);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_cont& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_cont(Ref<vm::Cell>& cell_ref, Ref<CellSlice> cont) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_cont(cb, std::move(cont)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::pack(vm::CellBuilder& cb, const VmStackValue::Record_vm_stk_tuple& data) const {
+  return cb.store_long_bool(7, 8)
+      && cb.store_ulong_rchk_bool(data.len, 16)
+      && VmTuple{data.len}.store_from(cb, data.data);
+}
+
+bool VmStackValue::pack_vm_stk_tuple(vm::CellBuilder& cb, int len, Ref<CellSlice> data) const {
+  return cb.store_long_bool(7, 8)
+      && cb.store_ulong_rchk_bool(len, 16)
+      && VmTuple{len}.store_from(cb, data);
+}
+
+bool VmStackValue::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackValue::Record_vm_stk_tuple& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::cell_pack_vm_stk_tuple(Ref<vm::Cell>& cell_ref, int len, Ref<CellSlice> data) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_tuple(cb, len, std::move(data)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackValue::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_stk_null:
+    return cs.fetch_ulong(8) == 0
+        && pp.cons("vm_stk_null");
+  case vm_stk_tinyint:
+    return cs.fetch_ulong(8) == 1
+        && pp.open("vm_stk_tinyint")
+        && pp.fetch_int_field(cs, 64, "value")
+        && pp.close();
+  case vm_stk_int:
+    return cs.fetch_ulong(15) == 0x100
+        && pp.open("vm_stk_int")
+        && pp.fetch_int256_field(cs, 257, "value")
+        && pp.close();
+  case vm_stk_nan:
+    return cs.fetch_ulong(16) == 0x2ff
+        && pp.cons("vm_stk_nan");
+  case vm_stk_cell:
+    return cs.fetch_ulong(8) == 3
+        && pp.open("vm_stk_cell")
+        && pp.field("cell")
+        && t_Anything.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vm_stk_slice:
+    return cs.fetch_ulong(8) == 4
+        && pp.open("vm_stk_slice")
+        && pp.field()
+        && t_VmCellSlice.print_skip(pp, cs)
+        && pp.close();
+  case vm_stk_builder:
+    return cs.fetch_ulong(8) == 5
+        && pp.open("vm_stk_builder")
+        && pp.field("cell")
+        && t_Anything.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vm_stk_cont:
+    return cs.fetch_ulong(8) == 6
+        && pp.open("vm_stk_cont")
+        && pp.field("cont")
+        && t_VmCont.print_skip(pp, cs)
+        && pp.close();
+  case vm_stk_tuple: {
+    int len;
+    return cs.fetch_ulong(8) == 7
+        && pp.open("vm_stk_tuple")
+        && cs.fetch_uint_to(16, len)
+        && pp.field_int(len, "len")
+        && pp.field("data")
+        && VmTuple{len}.print_skip(pp, cs)
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for VmStackValue");
+}
+
+const VmStackValue t_VmStackValue;
+
+//
+// code for type `VmStack`
+//
+
+int VmStack::check_tag(const vm::CellSlice& cs) const {
+  return vm_stack;
+}
+
+bool VmStack::skip(vm::CellSlice& cs) const {
+  int depth;
+  return cs.fetch_uint_to(24, depth)
+      && VmStackList{depth}.skip(cs);
+}
+
+bool VmStack::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  int depth;
+  return cs.fetch_uint_to(24, depth)
+      && VmStackList{depth}.validate_skip(ops, cs, weak);
+}
+
+bool VmStack::unpack(vm::CellSlice& cs, VmStack::Record& data) const {
+  return cs.fetch_uint_to(24, data.depth)
+      && VmStackList{data.depth}.fetch_to(cs, data.stack);
+}
+
+bool VmStack::unpack_vm_stack(vm::CellSlice& cs, int& depth, Ref<CellSlice>& stack) const {
+  return cs.fetch_uint_to(24, depth)
+      && VmStackList{depth}.fetch_to(cs, stack);
+}
+
+bool VmStack::cell_unpack(Ref<vm::Cell> cell_ref, VmStack::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStack::cell_unpack_vm_stack(Ref<vm::Cell> cell_ref, int& depth, Ref<CellSlice>& stack) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stack(cs, depth, stack) && cs.empty_ext();
+}
+
+bool VmStack::pack(vm::CellBuilder& cb, const VmStack::Record& data) const {
+  return cb.store_ulong_rchk_bool(data.depth, 24)
+      && VmStackList{data.depth}.store_from(cb, data.stack);
+}
+
+bool VmStack::pack_vm_stack(vm::CellBuilder& cb, int depth, Ref<CellSlice> stack) const {
+  return cb.store_ulong_rchk_bool(depth, 24)
+      && VmStackList{depth}.store_from(cb, stack);
+}
+
+bool VmStack::cell_pack(Ref<vm::Cell>& cell_ref, const VmStack::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStack::cell_pack_vm_stack(Ref<vm::Cell>& cell_ref, int depth, Ref<CellSlice> stack) const {
+  vm::CellBuilder cb;
+  return pack_vm_stack(cb, depth, std::move(stack)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStack::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  int depth;
+  return pp.open("vm_stack")
+      && cs.fetch_uint_to(24, depth)
+      && pp.field_int(depth, "depth")
+      && pp.field("stack")
+      && VmStackList{depth}.print_skip(pp, cs)
+      && pp.close();
+}
+
+const VmStack t_VmStack;
+
+//
+// code for type `VmStackList`
+//
+
+int VmStackList::get_tag(const vm::CellSlice& cs) const {
+  // distinguish by parameter `m_` using 2 1 1 1
+  return m_ ? vm_stk_cons : vm_stk_nil;
+}
+
+int VmStackList::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_stk_cons:
+    return vm_stk_cons;
+  case vm_stk_nil:
+    return vm_stk_nil;
+  }
+  return -1;
+}
+
+bool VmStackList::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_stk_cons: {
+    int n;
+    return add_r1(n, 1, m_)
+        && cs.advance_refs(1)
+        && t_VmStackValue.skip(cs);
+    }
+  case vm_stk_nil:
+    return m_ == 0;
+  }
+  return false;
+}
+
+bool VmStackList::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case vm_stk_cons: {
+    int n;
+    return add_r1(n, 1, m_)
+        && VmStackList{n}.validate_skip_ref(ops, cs, weak)
+        && t_VmStackValue.validate_skip(ops, cs, weak);
+    }
+  case vm_stk_nil:
+    return m_ == 0;
+  }
+  return false;
+}
+
+bool VmStackList::unpack(vm::CellSlice& cs, VmStackList::Record_vm_stk_cons& data) const {
+  return add_r1(data.n, 1, m_)
+      && cs.fetch_ref_to(data.rest)
+      && t_VmStackValue.fetch_to(cs, data.tos);
+}
+
+bool VmStackList::unpack_vm_stk_cons(vm::CellSlice& cs, int& n, Ref<Cell>& rest, Ref<CellSlice>& tos) const {
+  return add_r1(n, 1, m_)
+      && cs.fetch_ref_to(rest)
+      && t_VmStackValue.fetch_to(cs, tos);
+}
+
+bool VmStackList::cell_unpack(Ref<vm::Cell> cell_ref, VmStackList::Record_vm_stk_cons& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackList::cell_unpack_vm_stk_cons(Ref<vm::Cell> cell_ref, int& n, Ref<Cell>& rest, Ref<CellSlice>& tos) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_cons(cs, n, rest, tos) && cs.empty_ext();
+}
+
+bool VmStackList::unpack(vm::CellSlice& cs, VmStackList::Record_vm_stk_nil& data) const {
+  return m_ == 0;
+}
+
+bool VmStackList::unpack_vm_stk_nil(vm::CellSlice& cs) const {
+  return m_ == 0;
+}
+
+bool VmStackList::cell_unpack(Ref<vm::Cell> cell_ref, VmStackList::Record_vm_stk_nil& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmStackList::cell_unpack_vm_stk_nil(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vm_stk_nil(cs) && cs.empty_ext();
+}
+
+bool VmStackList::pack(vm::CellBuilder& cb, const VmStackList::Record_vm_stk_cons& data) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && cb.store_ref_bool(data.rest)
+      && t_VmStackValue.store_from(cb, data.tos);
+}
+
+bool VmStackList::pack_vm_stk_cons(vm::CellBuilder& cb, Ref<Cell> rest, Ref<CellSlice> tos) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && cb.store_ref_bool(rest)
+      && t_VmStackValue.store_from(cb, tos);
+}
+
+bool VmStackList::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackList::Record_vm_stk_cons& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackList::cell_pack_vm_stk_cons(Ref<vm::Cell>& cell_ref, Ref<Cell> rest, Ref<CellSlice> tos) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_cons(cb, std::move(rest), std::move(tos)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackList::pack(vm::CellBuilder& cb, const VmStackList::Record_vm_stk_nil& data) const {
+  return m_ == 0;
+}
+
+bool VmStackList::pack_vm_stk_nil(vm::CellBuilder& cb) const {
+  return m_ == 0;
+}
+
+bool VmStackList::cell_pack(Ref<vm::Cell>& cell_ref, const VmStackList::Record_vm_stk_nil& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackList::cell_pack_vm_stk_nil(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_vm_stk_nil(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmStackList::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vm_stk_cons: {
+    int n;
+    return pp.open("vm_stk_cons")
+        && add_r1(n, 1, m_)
+        && pp.field("rest")
+        && VmStackList{n}.print_ref(pp, cs.fetch_ref())
+        && pp.field("tos")
+        && t_VmStackValue.print_skip(pp, cs)
+        && pp.close();
+    }
+  case vm_stk_nil:
+    return pp.cons("vm_stk_nil")
+        && m_ == 0;
+  }
+  return pp.fail("unknown constructor for VmStackList");
+}
+
+
+//
+// code for type `VmSaveList`
+//
+
+int VmSaveList::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
+}
+
+bool VmSaveList::skip(vm::CellSlice& cs) const {
+  return t_HashmapE_4_VmStackValue.skip(cs);
+}
+
+bool VmSaveList::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_4_VmStackValue.validate_skip(ops, cs, weak);
+}
+
+bool VmSaveList::unpack(vm::CellSlice& cs, VmSaveList::Record& data) const {
+  return t_HashmapE_4_VmStackValue.fetch_to(cs, data.cregs);
+}
+
+bool VmSaveList::unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& cregs) const {
+  return t_HashmapE_4_VmStackValue.fetch_to(cs, cregs);
+}
+
+bool VmSaveList::cell_unpack(Ref<vm::Cell> cell_ref, VmSaveList::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmSaveList::cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& cregs) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons1(cs, cregs) && cs.empty_ext();
+}
+
+bool VmSaveList::pack(vm::CellBuilder& cb, const VmSaveList::Record& data) const {
+  return t_HashmapE_4_VmStackValue.store_from(cb, data.cregs);
+}
+
+bool VmSaveList::pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> cregs) const {
+  return t_HashmapE_4_VmStackValue.store_from(cb, cregs);
+}
+
+bool VmSaveList::cell_pack(Ref<vm::Cell>& cell_ref, const VmSaveList::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmSaveList::cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> cregs) const {
+  vm::CellBuilder cb;
+  return pack_cons1(cb, std::move(cregs)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmSaveList::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open()
+      && pp.field("cregs")
+      && t_HashmapE_4_VmStackValue.print_skip(pp, cs)
+      && pp.close();
+}
+
+const VmSaveList t_VmSaveList;
+
+//
+// code for auxiliary type `VmGasLimits_aux`
+//
+
+int VmGasLimits_aux::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
+}
+
+bool VmGasLimits_aux::unpack(vm::CellSlice& cs, VmGasLimits_aux::Record& data) const {
+  return cs.fetch_int_to(64, data.max_limit)
+      && cs.fetch_int_to(64, data.cur_limit)
+      && cs.fetch_int_to(64, data.credit);
+}
+
+bool VmGasLimits_aux::unpack_cons1(vm::CellSlice& cs, long long& max_limit, long long& cur_limit, long long& credit) const {
+  return cs.fetch_int_to(64, max_limit)
+      && cs.fetch_int_to(64, cur_limit)
+      && cs.fetch_int_to(64, credit);
+}
+
+bool VmGasLimits_aux::cell_unpack(Ref<vm::Cell> cell_ref, VmGasLimits_aux::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmGasLimits_aux::cell_unpack_cons1(Ref<vm::Cell> cell_ref, long long& max_limit, long long& cur_limit, long long& credit) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons1(cs, max_limit, cur_limit, credit) && cs.empty_ext();
+}
+
+bool VmGasLimits_aux::pack(vm::CellBuilder& cb, const VmGasLimits_aux::Record& data) const {
+  return cb.store_long_rchk_bool(data.max_limit, 64)
+      && cb.store_long_rchk_bool(data.cur_limit, 64)
+      && cb.store_long_rchk_bool(data.credit, 64);
+}
+
+bool VmGasLimits_aux::pack_cons1(vm::CellBuilder& cb, long long max_limit, long long cur_limit, long long credit) const {
+  return cb.store_long_rchk_bool(max_limit, 64)
+      && cb.store_long_rchk_bool(cur_limit, 64)
+      && cb.store_long_rchk_bool(credit, 64);
+}
+
+bool VmGasLimits_aux::cell_pack(Ref<vm::Cell>& cell_ref, const VmGasLimits_aux::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmGasLimits_aux::cell_pack_cons1(Ref<vm::Cell>& cell_ref, long long max_limit, long long cur_limit, long long credit) const {
+  vm::CellBuilder cb;
+  return pack_cons1(cb, max_limit, cur_limit, credit) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmGasLimits_aux::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open()
+      && pp.fetch_int_field(cs, 64, "max_limit")
+      && pp.fetch_int_field(cs, 64, "cur_limit")
+      && pp.fetch_int_field(cs, 64, "credit")
+      && pp.close();
+}
+
+const VmGasLimits_aux t_VmGasLimits_aux;
+
+//
+// code for type `VmGasLimits`
+//
+
+int VmGasLimits::check_tag(const vm::CellSlice& cs) const {
+  return gas_limits;
+}
+
+bool VmGasLimits::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.advance(64)
+      && t_VmGasLimits_aux.validate_skip_ref(ops, cs, weak);
+}
+
+bool VmGasLimits::unpack(vm::CellSlice& cs, VmGasLimits::Record& data) const {
+  return cs.fetch_int_to(64, data.remaining)
+      && t_VmGasLimits_aux.cell_unpack(cs.fetch_ref(), data.r1);
+}
+
+bool VmGasLimits::cell_unpack(Ref<vm::Cell> cell_ref, VmGasLimits::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmGasLimits::pack(vm::CellBuilder& cb, const VmGasLimits::Record& data) const {
+  Ref<vm::Cell> tmp_cell;
+  return cb.store_long_rchk_bool(data.remaining, 64)
+      && t_VmGasLimits_aux.cell_pack(tmp_cell, data.r1)
+      && cb.store_ref_bool(std::move(tmp_cell));
+}
+
+bool VmGasLimits::cell_pack(Ref<vm::Cell>& cell_ref, const VmGasLimits::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmGasLimits::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("gas_limits")
+      && pp.fetch_int_field(cs, 64, "remaining")
+      && pp.field()
+      && t_VmGasLimits_aux.print_ref(pp, cs.fetch_ref())
+      && pp.close();
+}
+
+const VmGasLimits t_VmGasLimits;
+
+//
+// code for type `VmLibraries`
+//
+
+int VmLibraries::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
+}
+
+bool VmLibraries::skip(vm::CellSlice& cs) const {
+  return t_HashmapE_256_Ref_Cell.skip(cs);
+}
+
+bool VmLibraries::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_256_Ref_Cell.validate_skip(ops, cs, weak);
+}
+
+bool VmLibraries::unpack(vm::CellSlice& cs, VmLibraries::Record& data) const {
+  return t_HashmapE_256_Ref_Cell.fetch_to(cs, data.libraries);
+}
+
+bool VmLibraries::unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& libraries) const {
+  return t_HashmapE_256_Ref_Cell.fetch_to(cs, libraries);
+}
+
+bool VmLibraries::cell_unpack(Ref<vm::Cell> cell_ref, VmLibraries::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmLibraries::cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& libraries) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons1(cs, libraries) && cs.empty_ext();
+}
+
+bool VmLibraries::pack(vm::CellBuilder& cb, const VmLibraries::Record& data) const {
+  return t_HashmapE_256_Ref_Cell.store_from(cb, data.libraries);
+}
+
+bool VmLibraries::pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> libraries) const {
+  return t_HashmapE_256_Ref_Cell.store_from(cb, libraries);
+}
+
+bool VmLibraries::cell_pack(Ref<vm::Cell>& cell_ref, const VmLibraries::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmLibraries::cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> libraries) const {
+  vm::CellBuilder cb;
+  return pack_cons1(cb, std::move(libraries)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmLibraries::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open()
+      && pp.field("libraries")
+      && t_HashmapE_256_Ref_Cell.print_skip(pp, cs)
+      && pp.close();
+}
+
+const VmLibraries t_VmLibraries;
+
+//
+// code for type `VmControlData`
+//
+
+int VmControlData::check_tag(const vm::CellSlice& cs) const {
+  return vm_ctl_data;
+}
+
+bool VmControlData::skip(vm::CellSlice& cs) const {
+  return t_Maybe_uint13.skip(cs)
+      && t_Maybe_VmStack.skip(cs)
+      && t_VmSaveList.skip(cs)
+      && t_Maybe_int16.skip(cs);
+}
+
+bool VmControlData::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Maybe_uint13.validate_skip(ops, cs, weak)
+      && t_Maybe_VmStack.validate_skip(ops, cs, weak)
+      && t_VmSaveList.validate_skip(ops, cs, weak)
+      && t_Maybe_int16.validate_skip(ops, cs, weak);
+}
+
+bool VmControlData::unpack(vm::CellSlice& cs, VmControlData::Record& data) const {
+  return t_Maybe_uint13.fetch_to(cs, data.nargs)
+      && t_Maybe_VmStack.fetch_to(cs, data.stack)
+      && t_VmSaveList.fetch_to(cs, data.save)
+      && t_Maybe_int16.fetch_to(cs, data.cp);
+}
+
+bool VmControlData::cell_unpack(Ref<vm::Cell> cell_ref, VmControlData::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmControlData::pack(vm::CellBuilder& cb, const VmControlData::Record& data) const {
+  return t_Maybe_uint13.store_from(cb, data.nargs)
+      && t_Maybe_VmStack.store_from(cb, data.stack)
+      && t_VmSaveList.store_from(cb, data.save)
+      && t_Maybe_int16.store_from(cb, data.cp);
+}
+
+bool VmControlData::cell_pack(Ref<vm::Cell>& cell_ref, const VmControlData::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmControlData::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("vm_ctl_data")
+      && pp.field("nargs")
+      && t_Maybe_uint13.print_skip(pp, cs)
+      && pp.field("stack")
+      && t_Maybe_VmStack.print_skip(pp, cs)
+      && pp.field("save")
+      && t_VmSaveList.print_skip(pp, cs)
+      && pp.field("cp")
+      && t_Maybe_int16.print_skip(pp, cs)
+      && pp.close();
+}
+
+const VmControlData t_VmControlData;
+
+//
+// code for type `VmCont`
+//
+constexpr char VmCont::cons_len[10];
+constexpr unsigned char VmCont::cons_tag[10];
+
+int VmCont::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vmc_std:
+    return cs.have(2) ? vmc_std : -1;
+  case vmc_envelope:
+    return cs.have(2) ? vmc_envelope : -1;
+  case vmc_quit:
+    return cs.have(4) ? vmc_quit : -1;
+  case vmc_quit_exc:
+    return cs.have(4) ? vmc_quit_exc : -1;
+  case vmc_repeat:
+    return cs.prefetch_ulong(5) == 20 ? vmc_repeat : -1;
+  case vmc_until:
+    return cs.have(6) ? vmc_until : -1;
+  case vmc_again:
+    return cs.have(6) ? vmc_again : -1;
+  case vmc_while_cond:
+    return cs.have(6) ? vmc_while_cond : -1;
+  case vmc_while_body:
+    return cs.prefetch_ulong(6) == 0x33 ? vmc_while_body : -1;
+  case vmc_pushint:
+    return cs.have(4) ? vmc_pushint : -1;
+  }
+  return -1;
+}
+
+bool VmCont::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vmc_std:
+    return cs.advance(2)
+        && t_VmControlData.skip(cs)
+        && cs.advance_ext(0x1001a);
+  case vmc_envelope:
+    return cs.advance(2)
+        && t_VmControlData.skip(cs)
+        && cs.advance_refs(1);
+  case vmc_quit:
+    return cs.advance(36);
+  case vmc_quit_exc:
+    return cs.advance(4);
+  case vmc_repeat:
+    return cs.advance_ext(0x20044);
+  case vmc_until:
+    return cs.advance_ext(0x20006);
+  case vmc_again:
+    return cs.advance_ext(0x10006);
+  case vmc_while_cond:
+    return cs.advance_ext(0x30006);
+  case vmc_while_body:
+    return cs.advance_ext(0x30006);
+  case vmc_pushint:
+    return cs.advance_ext(0x10024);
+  }
+  return false;
+}
+
+bool VmCont::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case vmc_std:
+    return cs.advance(2)
+        && t_VmControlData.validate_skip(ops, cs, weak)
+        && t_VmCellSlice.validate_skip(ops, cs, weak);
+  case vmc_envelope:
+    return cs.advance(2)
+        && t_VmControlData.validate_skip(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak);
+  case vmc_quit:
+    return cs.advance(36);
+  case vmc_quit_exc:
+    return cs.advance(4);
+  case vmc_repeat:
+    return cs.fetch_ulong(5) == 20
+        && cs.advance(63)
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak);
+  case vmc_until:
+    return cs.advance(6)
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak);
+  case vmc_again:
+    return cs.advance(6)
+        && validate_skip_ref(ops, cs, weak);
+  case vmc_while_cond:
+    return cs.advance(6)
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak);
+  case vmc_while_body:
+    return cs.fetch_ulong(6) == 0x33
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak)
+        && validate_skip_ref(ops, cs, weak);
+  case vmc_pushint:
+    return cs.advance(36)
+        && validate_skip_ref(ops, cs, weak);
+  }
+  return false;
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_std& data) const {
+  return cs.fetch_ulong(2) == 0
+      && t_VmControlData.fetch_to(cs, data.cdata)
+      && cs.fetch_subslice_ext_to(0x1001a, data.code);
+}
+
+bool VmCont::unpack_vmc_std(vm::CellSlice& cs, Ref<CellSlice>& cdata, Ref<CellSlice>& code) const {
+  return cs.fetch_ulong(2) == 0
+      && t_VmControlData.fetch_to(cs, cdata)
+      && cs.fetch_subslice_ext_to(0x1001a, code);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_std& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_std(Ref<vm::Cell> cell_ref, Ref<CellSlice>& cdata, Ref<CellSlice>& code) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_std(cs, cdata, code) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_envelope& data) const {
+  return cs.fetch_ulong(2) == 1
+      && t_VmControlData.fetch_to(cs, data.cdata)
+      && cs.fetch_ref_to(data.next);
+}
+
+bool VmCont::unpack_vmc_envelope(vm::CellSlice& cs, Ref<CellSlice>& cdata, Ref<Cell>& next) const {
+  return cs.fetch_ulong(2) == 1
+      && t_VmControlData.fetch_to(cs, cdata)
+      && cs.fetch_ref_to(next);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_envelope& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_envelope(Ref<vm::Cell> cell_ref, Ref<CellSlice>& cdata, Ref<Cell>& next) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_envelope(cs, cdata, next) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_quit& data) const {
+  return cs.fetch_ulong(4) == 8
+      && cs.fetch_int_to(32, data.exit_code);
+}
+
+bool VmCont::unpack_vmc_quit(vm::CellSlice& cs, int& exit_code) const {
+  return cs.fetch_ulong(4) == 8
+      && cs.fetch_int_to(32, exit_code);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_quit& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_quit(Ref<vm::Cell> cell_ref, int& exit_code) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_quit(cs, exit_code) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_quit_exc& data) const {
+  return cs.fetch_ulong(4) == 9;
+}
+
+bool VmCont::unpack_vmc_quit_exc(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(4) == 9;
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_quit_exc& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_quit_exc(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_quit_exc(cs) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_repeat& data) const {
+  return cs.fetch_ulong(5) == 20
+      && cs.fetch_uint_to(63, data.count)
+      && cs.fetch_ref_to(data.body)
+      && cs.fetch_ref_to(data.after);
+}
+
+bool VmCont::unpack_vmc_repeat(vm::CellSlice& cs, long long& count, Ref<Cell>& body, Ref<Cell>& after) const {
+  return cs.fetch_ulong(5) == 20
+      && cs.fetch_uint_to(63, count)
+      && cs.fetch_ref_to(body)
+      && cs.fetch_ref_to(after);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_repeat& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_repeat(Ref<vm::Cell> cell_ref, long long& count, Ref<Cell>& body, Ref<Cell>& after) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_repeat(cs, count, body, after) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_until& data) const {
+  return cs.fetch_ulong(6) == 0x30
+      && cs.fetch_ref_to(data.body)
+      && cs.fetch_ref_to(data.after);
+}
+
+bool VmCont::unpack_vmc_until(vm::CellSlice& cs, Ref<Cell>& body, Ref<Cell>& after) const {
+  return cs.fetch_ulong(6) == 0x30
+      && cs.fetch_ref_to(body)
+      && cs.fetch_ref_to(after);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_until& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_until(Ref<vm::Cell> cell_ref, Ref<Cell>& body, Ref<Cell>& after) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_until(cs, body, after) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_again& data) const {
+  return cs.fetch_ulong(6) == 0x31
+      && cs.fetch_ref_to(data.body);
+}
+
+bool VmCont::unpack_vmc_again(vm::CellSlice& cs, Ref<Cell>& body) const {
+  return cs.fetch_ulong(6) == 0x31
+      && cs.fetch_ref_to(body);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_again& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_again(Ref<vm::Cell> cell_ref, Ref<Cell>& body) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_again(cs, body) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_while_cond& data) const {
+  return cs.fetch_ulong(6) == 0x32
+      && cs.fetch_ref_to(data.cond)
+      && cs.fetch_ref_to(data.body)
+      && cs.fetch_ref_to(data.after);
+}
+
+bool VmCont::unpack_vmc_while_cond(vm::CellSlice& cs, Ref<Cell>& cond, Ref<Cell>& body, Ref<Cell>& after) const {
+  return cs.fetch_ulong(6) == 0x32
+      && cs.fetch_ref_to(cond)
+      && cs.fetch_ref_to(body)
+      && cs.fetch_ref_to(after);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_while_cond& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_while_cond(Ref<vm::Cell> cell_ref, Ref<Cell>& cond, Ref<Cell>& body, Ref<Cell>& after) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_while_cond(cs, cond, body, after) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_while_body& data) const {
+  return cs.fetch_ulong(6) == 0x33
+      && cs.fetch_ref_to(data.cond)
+      && cs.fetch_ref_to(data.body)
+      && cs.fetch_ref_to(data.after);
+}
+
+bool VmCont::unpack_vmc_while_body(vm::CellSlice& cs, Ref<Cell>& cond, Ref<Cell>& body, Ref<Cell>& after) const {
+  return cs.fetch_ulong(6) == 0x33
+      && cs.fetch_ref_to(cond)
+      && cs.fetch_ref_to(body)
+      && cs.fetch_ref_to(after);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_while_body& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_while_body(Ref<vm::Cell> cell_ref, Ref<Cell>& cond, Ref<Cell>& body, Ref<Cell>& after) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_while_body(cs, cond, body, after) && cs.empty_ext();
+}
+
+bool VmCont::unpack(vm::CellSlice& cs, VmCont::Record_vmc_pushint& data) const {
+  return cs.fetch_ulong(4) == 15
+      && cs.fetch_int_to(32, data.value)
+      && cs.fetch_ref_to(data.next);
+}
+
+bool VmCont::unpack_vmc_pushint(vm::CellSlice& cs, int& value, Ref<Cell>& next) const {
+  return cs.fetch_ulong(4) == 15
+      && cs.fetch_int_to(32, value)
+      && cs.fetch_ref_to(next);
+}
+
+bool VmCont::cell_unpack(Ref<vm::Cell> cell_ref, VmCont::Record_vmc_pushint& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool VmCont::cell_unpack_vmc_pushint(Ref<vm::Cell> cell_ref, int& value, Ref<Cell>& next) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_vmc_pushint(cs, value, next) && cs.empty_ext();
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_std& data) const {
+  return cb.store_long_bool(0, 2)
+      && t_VmControlData.store_from(cb, data.cdata)
+      && cb.append_cellslice_chk(data.code, 0x1001a);
+}
+
+bool VmCont::pack_vmc_std(vm::CellBuilder& cb, Ref<CellSlice> cdata, Ref<CellSlice> code) const {
+  return cb.store_long_bool(0, 2)
+      && t_VmControlData.store_from(cb, cdata)
+      && cb.append_cellslice_chk(code, 0x1001a);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_std& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_std(Ref<vm::Cell>& cell_ref, Ref<CellSlice> cdata, Ref<CellSlice> code) const {
+  vm::CellBuilder cb;
+  return pack_vmc_std(cb, std::move(cdata), std::move(code)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_envelope& data) const {
+  return cb.store_long_bool(1, 2)
+      && t_VmControlData.store_from(cb, data.cdata)
+      && cb.store_ref_bool(data.next);
+}
+
+bool VmCont::pack_vmc_envelope(vm::CellBuilder& cb, Ref<CellSlice> cdata, Ref<Cell> next) const {
+  return cb.store_long_bool(1, 2)
+      && t_VmControlData.store_from(cb, cdata)
+      && cb.store_ref_bool(next);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_envelope& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_envelope(Ref<vm::Cell>& cell_ref, Ref<CellSlice> cdata, Ref<Cell> next) const {
+  vm::CellBuilder cb;
+  return pack_vmc_envelope(cb, std::move(cdata), std::move(next)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_quit& data) const {
+  return cb.store_long_bool(8, 4)
+      && cb.store_long_rchk_bool(data.exit_code, 32);
+}
+
+bool VmCont::pack_vmc_quit(vm::CellBuilder& cb, int exit_code) const {
+  return cb.store_long_bool(8, 4)
+      && cb.store_long_rchk_bool(exit_code, 32);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_quit& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_quit(Ref<vm::Cell>& cell_ref, int exit_code) const {
+  vm::CellBuilder cb;
+  return pack_vmc_quit(cb, exit_code) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_quit_exc& data) const {
+  return cb.store_long_bool(9, 4);
+}
+
+bool VmCont::pack_vmc_quit_exc(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(9, 4);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_quit_exc& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_quit_exc(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_vmc_quit_exc(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_repeat& data) const {
+  return cb.store_long_bool(20, 5)
+      && cb.store_ulong_rchk_bool(data.count, 63)
+      && cb.store_ref_bool(data.body)
+      && cb.store_ref_bool(data.after);
+}
+
+bool VmCont::pack_vmc_repeat(vm::CellBuilder& cb, long long count, Ref<Cell> body, Ref<Cell> after) const {
+  return cb.store_long_bool(20, 5)
+      && cb.store_ulong_rchk_bool(count, 63)
+      && cb.store_ref_bool(body)
+      && cb.store_ref_bool(after);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_repeat& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_repeat(Ref<vm::Cell>& cell_ref, long long count, Ref<Cell> body, Ref<Cell> after) const {
+  vm::CellBuilder cb;
+  return pack_vmc_repeat(cb, count, std::move(body), std::move(after)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_until& data) const {
+  return cb.store_long_bool(0x30, 6)
+      && cb.store_ref_bool(data.body)
+      && cb.store_ref_bool(data.after);
+}
+
+bool VmCont::pack_vmc_until(vm::CellBuilder& cb, Ref<Cell> body, Ref<Cell> after) const {
+  return cb.store_long_bool(0x30, 6)
+      && cb.store_ref_bool(body)
+      && cb.store_ref_bool(after);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_until& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_until(Ref<vm::Cell>& cell_ref, Ref<Cell> body, Ref<Cell> after) const {
+  vm::CellBuilder cb;
+  return pack_vmc_until(cb, std::move(body), std::move(after)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_again& data) const {
+  return cb.store_long_bool(0x31, 6)
+      && cb.store_ref_bool(data.body);
+}
+
+bool VmCont::pack_vmc_again(vm::CellBuilder& cb, Ref<Cell> body) const {
+  return cb.store_long_bool(0x31, 6)
+      && cb.store_ref_bool(body);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_again& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_again(Ref<vm::Cell>& cell_ref, Ref<Cell> body) const {
+  vm::CellBuilder cb;
+  return pack_vmc_again(cb, std::move(body)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_while_cond& data) const {
+  return cb.store_long_bool(0x32, 6)
+      && cb.store_ref_bool(data.cond)
+      && cb.store_ref_bool(data.body)
+      && cb.store_ref_bool(data.after);
+}
+
+bool VmCont::pack_vmc_while_cond(vm::CellBuilder& cb, Ref<Cell> cond, Ref<Cell> body, Ref<Cell> after) const {
+  return cb.store_long_bool(0x32, 6)
+      && cb.store_ref_bool(cond)
+      && cb.store_ref_bool(body)
+      && cb.store_ref_bool(after);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_while_cond& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_while_cond(Ref<vm::Cell>& cell_ref, Ref<Cell> cond, Ref<Cell> body, Ref<Cell> after) const {
+  vm::CellBuilder cb;
+  return pack_vmc_while_cond(cb, std::move(cond), std::move(body), std::move(after)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_while_body& data) const {
+  return cb.store_long_bool(0x33, 6)
+      && cb.store_ref_bool(data.cond)
+      && cb.store_ref_bool(data.body)
+      && cb.store_ref_bool(data.after);
+}
+
+bool VmCont::pack_vmc_while_body(vm::CellBuilder& cb, Ref<Cell> cond, Ref<Cell> body, Ref<Cell> after) const {
+  return cb.store_long_bool(0x33, 6)
+      && cb.store_ref_bool(cond)
+      && cb.store_ref_bool(body)
+      && cb.store_ref_bool(after);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_while_body& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_while_body(Ref<vm::Cell>& cell_ref, Ref<Cell> cond, Ref<Cell> body, Ref<Cell> after) const {
+  vm::CellBuilder cb;
+  return pack_vmc_while_body(cb, std::move(cond), std::move(body), std::move(after)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::pack(vm::CellBuilder& cb, const VmCont::Record_vmc_pushint& data) const {
+  return cb.store_long_bool(15, 4)
+      && cb.store_long_rchk_bool(data.value, 32)
+      && cb.store_ref_bool(data.next);
+}
+
+bool VmCont::pack_vmc_pushint(vm::CellBuilder& cb, int value, Ref<Cell> next) const {
+  return cb.store_long_bool(15, 4)
+      && cb.store_long_rchk_bool(value, 32)
+      && cb.store_ref_bool(next);
+}
+
+bool VmCont::cell_pack(Ref<vm::Cell>& cell_ref, const VmCont::Record_vmc_pushint& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::cell_pack_vmc_pushint(Ref<vm::Cell>& cell_ref, int value, Ref<Cell> next) const {
+  vm::CellBuilder cb;
+  return pack_vmc_pushint(cb, value, std::move(next)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool VmCont::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case vmc_std:
+    return cs.advance(2)
+        && pp.open("vmc_std")
+        && pp.field("cdata")
+        && t_VmControlData.print_skip(pp, cs)
+        && pp.field("code")
+        && t_VmCellSlice.print_skip(pp, cs)
+        && pp.close();
+  case vmc_envelope:
+    return cs.advance(2)
+        && pp.open("vmc_envelope")
+        && pp.field("cdata")
+        && t_VmControlData.print_skip(pp, cs)
+        && pp.field("next")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vmc_quit:
+    return cs.advance(4)
+        && pp.open("vmc_quit")
+        && pp.fetch_int_field(cs, 32, "exit_code")
+        && pp.close();
+  case vmc_quit_exc:
+    return cs.advance(4)
+        && pp.cons("vmc_quit_exc");
+  case vmc_repeat:
+    return cs.fetch_ulong(5) == 20
+        && pp.open("vmc_repeat")
+        && pp.fetch_uint_field(cs, 63, "count")
+        && pp.field("body")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.field("after")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vmc_until:
+    return cs.advance(6)
+        && pp.open("vmc_until")
+        && pp.field("body")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.field("after")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vmc_again:
+    return cs.advance(6)
+        && pp.open("vmc_again")
+        && pp.field("body")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vmc_while_cond:
+    return cs.advance(6)
+        && pp.open("vmc_while_cond")
+        && pp.field("cond")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.field("body")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.field("after")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vmc_while_body:
+    return cs.fetch_ulong(6) == 0x33
+        && pp.open("vmc_while_body")
+        && pp.field("cond")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.field("body")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.field("after")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case vmc_pushint:
+    return cs.advance(4)
+        && pp.open("vmc_pushint")
+        && pp.fetch_int_field(cs, 32, "value")
+        && pp.field("next")
+        && print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for VmCont");
+}
+
+const VmCont t_VmCont;
+
+//
+// code for type `DNS_RecordSet`
+//
+
+int DNS_RecordSet::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
+}
+
+bool DNS_RecordSet::skip(vm::CellSlice& cs) const {
+  return t_HashmapE_16_Ref_DNSRecord.skip(cs);
+}
+
+bool DNS_RecordSet::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_HashmapE_16_Ref_DNSRecord.validate_skip(ops, cs, weak);
+}
+
+bool DNS_RecordSet::unpack(vm::CellSlice& cs, DNS_RecordSet::Record& data) const {
+  return t_HashmapE_16_Ref_DNSRecord.fetch_to(cs, data.x);
+}
+
+bool DNS_RecordSet::unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& x) const {
+  return t_HashmapE_16_Ref_DNSRecord.fetch_to(cs, x);
+}
+
+bool DNS_RecordSet::cell_unpack(Ref<vm::Cell> cell_ref, DNS_RecordSet::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool DNS_RecordSet::cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons1(cs, x) && cs.empty_ext();
+}
+
+bool DNS_RecordSet::pack(vm::CellBuilder& cb, const DNS_RecordSet::Record& data) const {
+  return t_HashmapE_16_Ref_DNSRecord.store_from(cb, data.x);
+}
+
+bool DNS_RecordSet::pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> x) const {
+  return t_HashmapE_16_Ref_DNSRecord.store_from(cb, x);
+}
+
+bool DNS_RecordSet::cell_pack(Ref<vm::Cell>& cell_ref, const DNS_RecordSet::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNS_RecordSet::cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const {
+  vm::CellBuilder cb;
+  return pack_cons1(cb, std::move(x)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNS_RecordSet::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open()
+      && pp.field()
+      && t_HashmapE_16_Ref_DNSRecord.print_skip(pp, cs)
+      && pp.close();
+}
+
+const DNS_RecordSet t_DNS_RecordSet;
+
+//
+// code for type `TextChunkRef`
+//
+
+int TextChunkRef::get_tag(const vm::CellSlice& cs) const {
+  // distinguish by parameter `m_` using 2 1 1 1
+  return m_ ? chunk_ref : chunk_ref_empty;
+}
+
+int TextChunkRef::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chunk_ref:
+    return chunk_ref;
+  case chunk_ref_empty:
+    return chunk_ref_empty;
+  }
+  return -1;
+}
+
+bool TextChunkRef::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chunk_ref: {
+    int n;
+    return add_r1(n, 1, m_)
+        && cs.advance_refs(1);
+    }
+  case chunk_ref_empty:
+    return m_ == 0;
+  }
+  return false;
+}
+
+bool TextChunkRef::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case chunk_ref: {
+    int n;
+    return add_r1(n, 1, m_)
+        && TextChunks{n + 1}.validate_skip_ref(ops, cs, weak);
+    }
+  case chunk_ref_empty:
+    return m_ == 0;
+  }
+  return false;
+}
+
+bool TextChunkRef::unpack(vm::CellSlice& cs, TextChunkRef::Record_chunk_ref& data) const {
+  return add_r1(data.n, 1, m_)
+      && cs.fetch_ref_to(data.ref);
+}
+
+bool TextChunkRef::unpack_chunk_ref(vm::CellSlice& cs, int& n, Ref<Cell>& ref) const {
+  return add_r1(n, 1, m_)
+      && cs.fetch_ref_to(ref);
+}
+
+bool TextChunkRef::cell_unpack(Ref<vm::Cell> cell_ref, TextChunkRef::Record_chunk_ref& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool TextChunkRef::cell_unpack_chunk_ref(Ref<vm::Cell> cell_ref, int& n, Ref<Cell>& ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chunk_ref(cs, n, ref) && cs.empty_ext();
+}
+
+bool TextChunkRef::unpack(vm::CellSlice& cs, TextChunkRef::Record_chunk_ref_empty& data) const {
+  return m_ == 0;
+}
+
+bool TextChunkRef::unpack_chunk_ref_empty(vm::CellSlice& cs) const {
+  return m_ == 0;
+}
+
+bool TextChunkRef::cell_unpack(Ref<vm::Cell> cell_ref, TextChunkRef::Record_chunk_ref_empty& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool TextChunkRef::cell_unpack_chunk_ref_empty(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chunk_ref_empty(cs) && cs.empty_ext();
+}
+
+bool TextChunkRef::pack(vm::CellBuilder& cb, const TextChunkRef::Record_chunk_ref& data) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && cb.store_ref_bool(data.ref);
+}
+
+bool TextChunkRef::pack_chunk_ref(vm::CellBuilder& cb, Ref<Cell> ref) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && cb.store_ref_bool(ref);
+}
+
+bool TextChunkRef::cell_pack(Ref<vm::Cell>& cell_ref, const TextChunkRef::Record_chunk_ref& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunkRef::cell_pack_chunk_ref(Ref<vm::Cell>& cell_ref, Ref<Cell> ref) const {
+  vm::CellBuilder cb;
+  return pack_chunk_ref(cb, std::move(ref)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunkRef::pack(vm::CellBuilder& cb, const TextChunkRef::Record_chunk_ref_empty& data) const {
+  return m_ == 0;
+}
+
+bool TextChunkRef::pack_chunk_ref_empty(vm::CellBuilder& cb) const {
+  return m_ == 0;
+}
+
+bool TextChunkRef::cell_pack(Ref<vm::Cell>& cell_ref, const TextChunkRef::Record_chunk_ref_empty& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunkRef::cell_pack_chunk_ref_empty(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_chunk_ref_empty(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunkRef::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chunk_ref: {
+    int n;
+    return pp.open("chunk_ref")
+        && add_r1(n, 1, m_)
+        && pp.field("ref")
+        && TextChunks{n + 1}.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+    }
+  case chunk_ref_empty:
+    return pp.cons("chunk_ref_empty")
+        && m_ == 0;
+  }
+  return pp.fail("unknown constructor for TextChunkRef");
+}
+
+
+//
+// code for type `TextChunks`
+//
+
+int TextChunks::get_tag(const vm::CellSlice& cs) const {
+  // distinguish by parameter `m_` using 2 1 1 1
+  return m_ ? text_chunk : text_chunk_empty;
+}
+
+int TextChunks::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case text_chunk:
+    return text_chunk;
+  case text_chunk_empty:
+    return text_chunk_empty;
+  }
+  return -1;
+}
+
+bool TextChunks::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case text_chunk: {
+    int n, len;
+    return add_r1(n, 1, m_)
+        && cs.fetch_uint_to(8, len)
+        && cs.advance(8 * len)
+        && TextChunkRef{n}.skip(cs);
+    }
+  case text_chunk_empty:
+    return m_ == 0;
+  }
+  return false;
+}
+
+bool TextChunks::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case text_chunk: {
+    int n, len;
+    return add_r1(n, 1, m_)
+        && cs.fetch_uint_to(8, len)
+        && cs.advance(8 * len)
+        && TextChunkRef{n}.validate_skip(ops, cs, weak);
+    }
+  case text_chunk_empty:
+    return m_ == 0;
+  }
+  return false;
+}
+
+bool TextChunks::unpack(vm::CellSlice& cs, TextChunks::Record_text_chunk& data) const {
+  return add_r1(data.n, 1, m_)
+      && cs.fetch_uint_to(8, data.len)
+      && cs.fetch_bitstring_to(8 * data.len, data.data)
+      && TextChunkRef{data.n}.fetch_to(cs, data.next);
+}
+
+bool TextChunks::cell_unpack(Ref<vm::Cell> cell_ref, TextChunks::Record_text_chunk& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool TextChunks::unpack(vm::CellSlice& cs, TextChunks::Record_text_chunk_empty& data) const {
+  return m_ == 0;
+}
+
+bool TextChunks::unpack_text_chunk_empty(vm::CellSlice& cs) const {
+  return m_ == 0;
+}
+
+bool TextChunks::cell_unpack(Ref<vm::Cell> cell_ref, TextChunks::Record_text_chunk_empty& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool TextChunks::cell_unpack_text_chunk_empty(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_text_chunk_empty(cs) && cs.empty_ext();
+}
+
+bool TextChunks::pack(vm::CellBuilder& cb, const TextChunks::Record_text_chunk& data) const {
+  int n;
+  return add_r1(n, 1, m_)
+      && cb.store_ulong_rchk_bool(data.len, 8)
+      && cb.append_bitstring_chk(data.data, 8 * data.len)
+      && TextChunkRef{n}.store_from(cb, data.next);
+}
+
+bool TextChunks::cell_pack(Ref<vm::Cell>& cell_ref, const TextChunks::Record_text_chunk& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunks::pack(vm::CellBuilder& cb, const TextChunks::Record_text_chunk_empty& data) const {
+  return m_ == 0;
+}
+
+bool TextChunks::pack_text_chunk_empty(vm::CellBuilder& cb) const {
+  return m_ == 0;
+}
+
+bool TextChunks::cell_pack(Ref<vm::Cell>& cell_ref, const TextChunks::Record_text_chunk_empty& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunks::cell_pack_text_chunk_empty(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_text_chunk_empty(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool TextChunks::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case text_chunk: {
+    int n, len;
+    return pp.open("text_chunk")
+        && add_r1(n, 1, m_)
+        && cs.fetch_uint_to(8, len)
+        && pp.field_int(len, "len")
+        && pp.fetch_bits_field(cs, 8 * len, "data")
+        && pp.field("next")
+        && TextChunkRef{n}.print_skip(pp, cs)
+        && pp.close();
+    }
+  case text_chunk_empty:
+    return pp.cons("text_chunk_empty")
+        && m_ == 0;
+  }
+  return pp.fail("unknown constructor for TextChunks");
+}
+
+
+//
+// code for type `Text`
+//
+
+int Text::check_tag(const vm::CellSlice& cs) const {
+  return text;
+}
+
+bool Text::skip(vm::CellSlice& cs) const {
+  int chunks;
+  return cs.fetch_uint_to(8, chunks)
+      && TextChunks{chunks}.skip(cs);
+}
+
+bool Text::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  int chunks;
+  return cs.fetch_uint_to(8, chunks)
+      && TextChunks{chunks}.validate_skip(ops, cs, weak);
+}
+
+bool Text::unpack(vm::CellSlice& cs, Text::Record& data) const {
+  return cs.fetch_uint_to(8, data.chunks)
+      && TextChunks{data.chunks}.fetch_to(cs, data.rest);
+}
+
+bool Text::unpack_text(vm::CellSlice& cs, int& chunks, Ref<CellSlice>& rest) const {
+  return cs.fetch_uint_to(8, chunks)
+      && TextChunks{chunks}.fetch_to(cs, rest);
+}
+
+bool Text::cell_unpack(Ref<vm::Cell> cell_ref, Text::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool Text::cell_unpack_text(Ref<vm::Cell> cell_ref, int& chunks, Ref<CellSlice>& rest) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_text(cs, chunks, rest) && cs.empty_ext();
+}
+
+bool Text::pack(vm::CellBuilder& cb, const Text::Record& data) const {
+  return cb.store_ulong_rchk_bool(data.chunks, 8)
+      && TextChunks{data.chunks}.store_from(cb, data.rest);
+}
+
+bool Text::pack_text(vm::CellBuilder& cb, int chunks, Ref<CellSlice> rest) const {
+  return cb.store_ulong_rchk_bool(chunks, 8)
+      && TextChunks{chunks}.store_from(cb, rest);
+}
+
+bool Text::cell_pack(Ref<vm::Cell>& cell_ref, const Text::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool Text::cell_pack_text(Ref<vm::Cell>& cell_ref, int chunks, Ref<CellSlice> rest) const {
+  vm::CellBuilder cb;
+  return pack_text(cb, chunks, std::move(rest)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool Text::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  int chunks;
+  return pp.open("text")
+      && cs.fetch_uint_to(8, chunks)
+      && pp.field_int(chunks, "chunks")
+      && pp.field("rest")
+      && TextChunks{chunks}.print_skip(pp, cs)
+      && pp.close();
+}
+
+const Text t_Text;
+
+//
+// code for type `ProtoList`
+//
+
+int ProtoList::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case proto_list_nil:
+    return cs.have(1) ? proto_list_nil : -1;
+  case proto_list_next:
+    return cs.have(1) ? proto_list_next : -1;
+  }
+  return -1;
+}
+
+bool ProtoList::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case proto_list_nil:
+    return cs.advance(1);
+  case proto_list_next:
+    return cs.advance(17)
+        && skip(cs);
+  }
+  return false;
+}
+
+bool ProtoList::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case proto_list_nil:
+    return cs.advance(1);
+  case proto_list_next:
+    return cs.advance(1)
+        && t_Protocol.validate_skip(ops, cs, weak)
+        && validate_skip(ops, cs, weak);
+  }
+  return false;
+}
+
+bool ProtoList::unpack(vm::CellSlice& cs, ProtoList::Record_proto_list_nil& data) const {
+  return cs.fetch_ulong(1) == 0;
+}
+
+bool ProtoList::unpack_proto_list_nil(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(1) == 0;
+}
+
+bool ProtoList::cell_unpack(Ref<vm::Cell> cell_ref, ProtoList::Record_proto_list_nil& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ProtoList::cell_unpack_proto_list_nil(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_proto_list_nil(cs) && cs.empty_ext();
+}
+
+bool ProtoList::unpack(vm::CellSlice& cs, ProtoList::Record_proto_list_next& data) const {
+  return cs.fetch_ulong(1) == 1
+      && t_Protocol.fetch_enum_to(cs, data.head)
+      && fetch_to(cs, data.tail);
+}
+
+bool ProtoList::unpack_proto_list_next(vm::CellSlice& cs, char& head, Ref<CellSlice>& tail) const {
+  return cs.fetch_ulong(1) == 1
+      && t_Protocol.fetch_enum_to(cs, head)
+      && fetch_to(cs, tail);
+}
+
+bool ProtoList::cell_unpack(Ref<vm::Cell> cell_ref, ProtoList::Record_proto_list_next& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ProtoList::cell_unpack_proto_list_next(Ref<vm::Cell> cell_ref, char& head, Ref<CellSlice>& tail) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_proto_list_next(cs, head, tail) && cs.empty_ext();
+}
+
+bool ProtoList::pack(vm::CellBuilder& cb, const ProtoList::Record_proto_list_nil& data) const {
+  return cb.store_long_bool(0, 1);
+}
+
+bool ProtoList::pack_proto_list_nil(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0, 1);
+}
+
+bool ProtoList::cell_pack(Ref<vm::Cell>& cell_ref, const ProtoList::Record_proto_list_nil& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ProtoList::cell_pack_proto_list_nil(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_proto_list_nil(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ProtoList::pack(vm::CellBuilder& cb, const ProtoList::Record_proto_list_next& data) const {
+  return cb.store_long_bool(1, 1)
+      && t_Protocol.store_enum_from(cb, data.head)
+      && store_from(cb, data.tail);
+}
+
+bool ProtoList::pack_proto_list_next(vm::CellBuilder& cb, char head, Ref<CellSlice> tail) const {
+  return cb.store_long_bool(1, 1)
+      && t_Protocol.store_enum_from(cb, head)
+      && store_from(cb, tail);
+}
+
+bool ProtoList::cell_pack(Ref<vm::Cell>& cell_ref, const ProtoList::Record_proto_list_next& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ProtoList::cell_pack_proto_list_next(Ref<vm::Cell>& cell_ref, char head, Ref<CellSlice> tail) const {
+  vm::CellBuilder cb;
+  return pack_proto_list_next(cb, head, std::move(tail)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ProtoList::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case proto_list_nil:
+    return cs.advance(1)
+        && pp.cons("proto_list_nil");
+  case proto_list_next:
+    return cs.advance(1)
+        && pp.open("proto_list_next")
+        && pp.field("head")
+        && t_Protocol.print_skip(pp, cs)
+        && pp.field("tail")
+        && print_skip(pp, cs)
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for ProtoList");
+}
+
+const ProtoList t_ProtoList;
+
+//
+// code for type `Protocol`
+//
+constexpr unsigned short Protocol::cons_tag[1];
+
+int Protocol::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(16) == 0x4854 ? proto_http : -1;
+}
+
+bool Protocol::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(16) == 0x4854;
+}
+
+bool Protocol::fetch_enum_to(vm::CellSlice& cs, char& value) const {
+  value = (cs.fetch_ulong(16) == 0x4854) ? 0 : -1;
+  return !value;
+}
+
+bool Protocol::store_enum_from(vm::CellBuilder& cb, int value) const {
+  return !value && cb.store_long_bool(0x4854, 16);
+}
+
+bool Protocol::unpack(vm::CellSlice& cs, Protocol::Record& data) const {
+  return cs.fetch_ulong(16) == 0x4854;
+}
+
+bool Protocol::unpack_proto_http(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(16) == 0x4854;
+}
+
+bool Protocol::cell_unpack(Ref<vm::Cell> cell_ref, Protocol::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool Protocol::cell_unpack_proto_http(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_proto_http(cs) && cs.empty_ext();
+}
+
+bool Protocol::pack(vm::CellBuilder& cb, const Protocol::Record& data) const {
+  return cb.store_long_bool(0x4854, 16);
+}
+
+bool Protocol::pack_proto_http(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0x4854, 16);
+}
+
+bool Protocol::cell_pack(Ref<vm::Cell>& cell_ref, const Protocol::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool Protocol::cell_pack_proto_http(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_proto_http(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool Protocol::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(16) == 0x4854
+      && pp.cons("proto_http");
+}
+
+const Protocol t_Protocol;
+
+//
+// code for type `DNSRecord`
+//
+constexpr unsigned short DNSRecord::cons_tag[4];
+
+int DNSRecord::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case dns_text:
+    return cs.prefetch_ulong(16) == 0x1eda ? dns_text : -1;
+  case dns_next_resolver:
+    return cs.prefetch_ulong(16) == 0xba93 ? dns_next_resolver : -1;
+  case dns_adnl_address:
+    return cs.prefetch_ulong(16) == 0xad01 ? dns_adnl_address : -1;
+  case dns_smc_address:
+    return cs.prefetch_ulong(16) == 0x9fd3 ? dns_smc_address : -1;
+  }
+  return -1;
+}
+
+bool DNSRecord::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case dns_text:
+    return cs.advance(16)
+        && t_Text.skip(cs);
+  case dns_next_resolver:
+    return cs.advance(16)
+        && t_MsgAddressInt.skip(cs);
+  case dns_adnl_address: {
+    int flags;
+    return cs.advance(272)
+        && cs.fetch_uint_to(8, flags)
+        && flags <= 1
+        && (!(flags & 1) || t_ProtoList.skip(cs));
+    }
+  case dns_smc_address: {
+    int flags;
+    return cs.advance(16)
+        && t_MsgAddressInt.skip(cs)
+        && cs.fetch_uint_to(8, flags)
+        && flags <= 1
+        && (!(flags & 1) || t_SmcCapList.skip(cs));
+    }
+  }
+  return false;
+}
+
+bool DNSRecord::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case dns_text:
+    return cs.fetch_ulong(16) == 0x1eda
+        && t_Text.validate_skip(ops, cs, weak);
+  case dns_next_resolver:
+    return cs.fetch_ulong(16) == 0xba93
+        && t_MsgAddressInt.validate_skip(ops, cs, weak);
+  case dns_adnl_address: {
+    int flags;
+    return cs.fetch_ulong(16) == 0xad01
+        && cs.advance(256)
+        && cs.fetch_uint_to(8, flags)
+        && flags <= 1
+        && (!(flags & 1) || t_ProtoList.validate_skip(ops, cs, weak));
+    }
+  case dns_smc_address: {
+    int flags;
+    return cs.fetch_ulong(16) == 0x9fd3
+        && t_MsgAddressInt.validate_skip(ops, cs, weak)
+        && cs.fetch_uint_to(8, flags)
+        && flags <= 1
+        && (!(flags & 1) || t_SmcCapList.validate_skip(ops, cs, weak));
+    }
+  }
+  return false;
+}
+
+bool DNSRecord::unpack(vm::CellSlice& cs, DNSRecord::Record_dns_text& data) const {
+  return cs.fetch_ulong(16) == 0x1eda
+      && t_Text.fetch_to(cs, data.x);
+}
+
+bool DNSRecord::unpack_dns_text(vm::CellSlice& cs, Ref<CellSlice>& x) const {
+  return cs.fetch_ulong(16) == 0x1eda
+      && t_Text.fetch_to(cs, x);
+}
+
+bool DNSRecord::cell_unpack(Ref<vm::Cell> cell_ref, DNSRecord::Record_dns_text& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool DNSRecord::cell_unpack_dns_text(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_dns_text(cs, x) && cs.empty_ext();
+}
+
+bool DNSRecord::unpack(vm::CellSlice& cs, DNSRecord::Record_dns_next_resolver& data) const {
+  return cs.fetch_ulong(16) == 0xba93
+      && t_MsgAddressInt.fetch_to(cs, data.resolver);
+}
+
+bool DNSRecord::unpack_dns_next_resolver(vm::CellSlice& cs, Ref<CellSlice>& resolver) const {
+  return cs.fetch_ulong(16) == 0xba93
+      && t_MsgAddressInt.fetch_to(cs, resolver);
+}
+
+bool DNSRecord::cell_unpack(Ref<vm::Cell> cell_ref, DNSRecord::Record_dns_next_resolver& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool DNSRecord::cell_unpack_dns_next_resolver(Ref<vm::Cell> cell_ref, Ref<CellSlice>& resolver) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_dns_next_resolver(cs, resolver) && cs.empty_ext();
+}
+
+bool DNSRecord::unpack(vm::CellSlice& cs, DNSRecord::Record_dns_adnl_address& data) const {
+  return cs.fetch_ulong(16) == 0xad01
+      && cs.fetch_bits_to(data.adnl_addr.bits(), 256)
+      && cs.fetch_uint_to(8, data.flags)
+      && data.flags <= 1
+      && (!(data.flags & 1) || t_ProtoList.fetch_to(cs, data.proto_list));
+}
+
+bool DNSRecord::unpack_dns_adnl_address(vm::CellSlice& cs, td::BitArray<256>& adnl_addr, int& flags, Ref<CellSlice>& proto_list) const {
+  return cs.fetch_ulong(16) == 0xad01
+      && cs.fetch_bits_to(adnl_addr.bits(), 256)
+      && cs.fetch_uint_to(8, flags)
+      && flags <= 1
+      && (!(flags & 1) || t_ProtoList.fetch_to(cs, proto_list));
+}
+
+bool DNSRecord::cell_unpack(Ref<vm::Cell> cell_ref, DNSRecord::Record_dns_adnl_address& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool DNSRecord::cell_unpack_dns_adnl_address(Ref<vm::Cell> cell_ref, td::BitArray<256>& adnl_addr, int& flags, Ref<CellSlice>& proto_list) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_dns_adnl_address(cs, adnl_addr, flags, proto_list) && cs.empty_ext();
+}
+
+bool DNSRecord::unpack(vm::CellSlice& cs, DNSRecord::Record_dns_smc_address& data) const {
+  return cs.fetch_ulong(16) == 0x9fd3
+      && t_MsgAddressInt.fetch_to(cs, data.smc_addr)
+      && cs.fetch_uint_to(8, data.flags)
+      && data.flags <= 1
+      && (!(data.flags & 1) || t_SmcCapList.fetch_to(cs, data.cap_list));
+}
+
+bool DNSRecord::unpack_dns_smc_address(vm::CellSlice& cs, Ref<CellSlice>& smc_addr, int& flags, Ref<CellSlice>& cap_list) const {
+  return cs.fetch_ulong(16) == 0x9fd3
+      && t_MsgAddressInt.fetch_to(cs, smc_addr)
+      && cs.fetch_uint_to(8, flags)
+      && flags <= 1
+      && (!(flags & 1) || t_SmcCapList.fetch_to(cs, cap_list));
+}
+
+bool DNSRecord::cell_unpack(Ref<vm::Cell> cell_ref, DNSRecord::Record_dns_smc_address& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool DNSRecord::cell_unpack_dns_smc_address(Ref<vm::Cell> cell_ref, Ref<CellSlice>& smc_addr, int& flags, Ref<CellSlice>& cap_list) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_dns_smc_address(cs, smc_addr, flags, cap_list) && cs.empty_ext();
+}
+
+bool DNSRecord::pack(vm::CellBuilder& cb, const DNSRecord::Record_dns_text& data) const {
+  return cb.store_long_bool(0x1eda, 16)
+      && t_Text.store_from(cb, data.x);
+}
+
+bool DNSRecord::pack_dns_text(vm::CellBuilder& cb, Ref<CellSlice> x) const {
+  return cb.store_long_bool(0x1eda, 16)
+      && t_Text.store_from(cb, x);
+}
+
+bool DNSRecord::cell_pack(Ref<vm::Cell>& cell_ref, const DNSRecord::Record_dns_text& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::cell_pack_dns_text(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const {
+  vm::CellBuilder cb;
+  return pack_dns_text(cb, std::move(x)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::pack(vm::CellBuilder& cb, const DNSRecord::Record_dns_next_resolver& data) const {
+  return cb.store_long_bool(0xba93, 16)
+      && t_MsgAddressInt.store_from(cb, data.resolver);
+}
+
+bool DNSRecord::pack_dns_next_resolver(vm::CellBuilder& cb, Ref<CellSlice> resolver) const {
+  return cb.store_long_bool(0xba93, 16)
+      && t_MsgAddressInt.store_from(cb, resolver);
+}
+
+bool DNSRecord::cell_pack(Ref<vm::Cell>& cell_ref, const DNSRecord::Record_dns_next_resolver& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::cell_pack_dns_next_resolver(Ref<vm::Cell>& cell_ref, Ref<CellSlice> resolver) const {
+  vm::CellBuilder cb;
+  return pack_dns_next_resolver(cb, std::move(resolver)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::pack(vm::CellBuilder& cb, const DNSRecord::Record_dns_adnl_address& data) const {
+  return cb.store_long_bool(0xad01, 16)
+      && cb.store_bits_bool(data.adnl_addr.cbits(), 256)
+      && cb.store_ulong_rchk_bool(data.flags, 8)
+      && data.flags <= 1
+      && (!(data.flags & 1) || t_ProtoList.store_from(cb, data.proto_list));
+}
+
+bool DNSRecord::pack_dns_adnl_address(vm::CellBuilder& cb, td::BitArray<256> adnl_addr, int flags, Ref<CellSlice> proto_list) const {
+  return cb.store_long_bool(0xad01, 16)
+      && cb.store_bits_bool(adnl_addr.cbits(), 256)
+      && cb.store_ulong_rchk_bool(flags, 8)
+      && flags <= 1
+      && (!(flags & 1) || t_ProtoList.store_from(cb, proto_list));
+}
+
+bool DNSRecord::cell_pack(Ref<vm::Cell>& cell_ref, const DNSRecord::Record_dns_adnl_address& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::cell_pack_dns_adnl_address(Ref<vm::Cell>& cell_ref, td::BitArray<256> adnl_addr, int flags, Ref<CellSlice> proto_list) const {
+  vm::CellBuilder cb;
+  return pack_dns_adnl_address(cb, adnl_addr, flags, std::move(proto_list)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::pack(vm::CellBuilder& cb, const DNSRecord::Record_dns_smc_address& data) const {
+  return cb.store_long_bool(0x9fd3, 16)
+      && t_MsgAddressInt.store_from(cb, data.smc_addr)
+      && cb.store_ulong_rchk_bool(data.flags, 8)
+      && data.flags <= 1
+      && (!(data.flags & 1) || t_SmcCapList.store_from(cb, data.cap_list));
+}
+
+bool DNSRecord::pack_dns_smc_address(vm::CellBuilder& cb, Ref<CellSlice> smc_addr, int flags, Ref<CellSlice> cap_list) const {
+  return cb.store_long_bool(0x9fd3, 16)
+      && t_MsgAddressInt.store_from(cb, smc_addr)
+      && cb.store_ulong_rchk_bool(flags, 8)
+      && flags <= 1
+      && (!(flags & 1) || t_SmcCapList.store_from(cb, cap_list));
+}
+
+bool DNSRecord::cell_pack(Ref<vm::Cell>& cell_ref, const DNSRecord::Record_dns_smc_address& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::cell_pack_dns_smc_address(Ref<vm::Cell>& cell_ref, Ref<CellSlice> smc_addr, int flags, Ref<CellSlice> cap_list) const {
+  vm::CellBuilder cb;
+  return pack_dns_smc_address(cb, std::move(smc_addr), flags, std::move(cap_list)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool DNSRecord::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case dns_text:
+    return cs.fetch_ulong(16) == 0x1eda
+        && pp.open("dns_text")
+        && pp.field()
+        && t_Text.print_skip(pp, cs)
+        && pp.close();
+  case dns_next_resolver:
+    return cs.fetch_ulong(16) == 0xba93
+        && pp.open("dns_next_resolver")
+        && pp.field("resolver")
+        && t_MsgAddressInt.print_skip(pp, cs)
+        && pp.close();
+  case dns_adnl_address: {
+    int flags;
+    return cs.fetch_ulong(16) == 0xad01
+        && pp.open("dns_adnl_address")
+        && pp.fetch_bits_field(cs, 256, "adnl_addr")
+        && cs.fetch_uint_to(8, flags)
+        && pp.field_int(flags, "flags")
+        && flags <= 1
+        && (!(flags & 1) || (pp.field("proto_list") && t_ProtoList.print_skip(pp, cs)))
+        && pp.close();
+    }
+  case dns_smc_address: {
+    int flags;
+    return cs.fetch_ulong(16) == 0x9fd3
+        && pp.open("dns_smc_address")
+        && pp.field("smc_addr")
+        && t_MsgAddressInt.print_skip(pp, cs)
+        && cs.fetch_uint_to(8, flags)
+        && pp.field_int(flags, "flags")
+        && flags <= 1
+        && (!(flags & 1) || (pp.field("cap_list") && t_SmcCapList.print_skip(pp, cs)))
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for DNSRecord");
+}
+
+const DNSRecord t_DNSRecord;
+
+//
+// code for type `SmcCapList`
+//
+
+int SmcCapList::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case cap_list_nil:
+    return cs.have(1) ? cap_list_nil : -1;
+  case cap_list_next:
+    return cs.have(1) ? cap_list_next : -1;
+  }
+  return -1;
+}
+
+bool SmcCapList::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case cap_list_nil:
+    return cs.advance(1);
+  case cap_list_next:
+    return cs.advance(1)
+        && t_SmcCapability.skip(cs)
+        && skip(cs);
+  }
+  return false;
+}
+
+bool SmcCapList::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case cap_list_nil:
+    return cs.advance(1);
+  case cap_list_next:
+    return cs.advance(1)
+        && t_SmcCapability.validate_skip(ops, cs, weak)
+        && validate_skip(ops, cs, weak);
+  }
+  return false;
+}
+
+bool SmcCapList::unpack(vm::CellSlice& cs, SmcCapList::Record_cap_list_nil& data) const {
+  return cs.fetch_ulong(1) == 0;
+}
+
+bool SmcCapList::unpack_cap_list_nil(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(1) == 0;
+}
+
+bool SmcCapList::cell_unpack(Ref<vm::Cell> cell_ref, SmcCapList::Record_cap_list_nil& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool SmcCapList::cell_unpack_cap_list_nil(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cap_list_nil(cs) && cs.empty_ext();
+}
+
+bool SmcCapList::unpack(vm::CellSlice& cs, SmcCapList::Record_cap_list_next& data) const {
+  return cs.fetch_ulong(1) == 1
+      && t_SmcCapability.fetch_to(cs, data.head)
+      && fetch_to(cs, data.tail);
+}
+
+bool SmcCapList::unpack_cap_list_next(vm::CellSlice& cs, Ref<CellSlice>& head, Ref<CellSlice>& tail) const {
+  return cs.fetch_ulong(1) == 1
+      && t_SmcCapability.fetch_to(cs, head)
+      && fetch_to(cs, tail);
+}
+
+bool SmcCapList::cell_unpack(Ref<vm::Cell> cell_ref, SmcCapList::Record_cap_list_next& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool SmcCapList::cell_unpack_cap_list_next(Ref<vm::Cell> cell_ref, Ref<CellSlice>& head, Ref<CellSlice>& tail) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cap_list_next(cs, head, tail) && cs.empty_ext();
+}
+
+bool SmcCapList::pack(vm::CellBuilder& cb, const SmcCapList::Record_cap_list_nil& data) const {
+  return cb.store_long_bool(0, 1);
+}
+
+bool SmcCapList::pack_cap_list_nil(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0, 1);
+}
+
+bool SmcCapList::cell_pack(Ref<vm::Cell>& cell_ref, const SmcCapList::Record_cap_list_nil& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapList::cell_pack_cap_list_nil(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_cap_list_nil(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapList::pack(vm::CellBuilder& cb, const SmcCapList::Record_cap_list_next& data) const {
+  return cb.store_long_bool(1, 1)
+      && t_SmcCapability.store_from(cb, data.head)
+      && store_from(cb, data.tail);
+}
+
+bool SmcCapList::pack_cap_list_next(vm::CellBuilder& cb, Ref<CellSlice> head, Ref<CellSlice> tail) const {
+  return cb.store_long_bool(1, 1)
+      && t_SmcCapability.store_from(cb, head)
+      && store_from(cb, tail);
+}
+
+bool SmcCapList::cell_pack(Ref<vm::Cell>& cell_ref, const SmcCapList::Record_cap_list_next& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapList::cell_pack_cap_list_next(Ref<vm::Cell>& cell_ref, Ref<CellSlice> head, Ref<CellSlice> tail) const {
+  vm::CellBuilder cb;
+  return pack_cap_list_next(cb, std::move(head), std::move(tail)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapList::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case cap_list_nil:
+    return cs.advance(1)
+        && pp.cons("cap_list_nil");
+  case cap_list_next:
+    return cs.advance(1)
+        && pp.open("cap_list_next")
+        && pp.field("head")
+        && t_SmcCapability.print_skip(pp, cs)
+        && pp.field("tail")
+        && print_skip(pp, cs)
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for SmcCapList");
+}
+
+const SmcCapList t_SmcCapList;
+
+//
+// code for type `SmcCapability`
+//
+constexpr char SmcCapability::cons_len[4];
+constexpr unsigned short SmcCapability::cons_tag[4];
+
+int SmcCapability::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case cap_method_seqno:
+    return cs.prefetch_ulong(16) == 0x5371 ? cap_method_seqno : -1;
+  case cap_method_pubkey:
+    return cs.prefetch_ulong(16) == 0x71f4 ? cap_method_pubkey : -1;
+  case cap_is_wallet:
+    return cs.prefetch_ulong(16) == 0x2177 ? cap_is_wallet : -1;
+  case cap_name:
+    return cs.prefetch_ulong(8) == 0xff ? cap_name : -1;
+  }
+  return -1;
+}
+
+bool SmcCapability::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case cap_method_seqno:
+    return cs.advance(16);
+  case cap_method_pubkey:
+    return cs.advance(16);
+  case cap_is_wallet:
+    return cs.advance(16);
+  case cap_name:
+    return cs.advance(8)
+        && t_Text.skip(cs);
+  }
+  return false;
+}
+
+bool SmcCapability::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case cap_method_seqno:
+    return cs.fetch_ulong(16) == 0x5371;
+  case cap_method_pubkey:
+    return cs.fetch_ulong(16) == 0x71f4;
+  case cap_is_wallet:
+    return cs.fetch_ulong(16) == 0x2177;
+  case cap_name:
+    return cs.fetch_ulong(8) == 0xff
+        && t_Text.validate_skip(ops, cs, weak);
+  }
+  return false;
+}
+
+bool SmcCapability::unpack(vm::CellSlice& cs, SmcCapability::Record_cap_method_seqno& data) const {
+  return cs.fetch_ulong(16) == 0x5371;
+}
+
+bool SmcCapability::unpack_cap_method_seqno(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(16) == 0x5371;
+}
+
+bool SmcCapability::cell_unpack(Ref<vm::Cell> cell_ref, SmcCapability::Record_cap_method_seqno& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool SmcCapability::cell_unpack_cap_method_seqno(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cap_method_seqno(cs) && cs.empty_ext();
+}
+
+bool SmcCapability::unpack(vm::CellSlice& cs, SmcCapability::Record_cap_method_pubkey& data) const {
+  return cs.fetch_ulong(16) == 0x71f4;
+}
+
+bool SmcCapability::unpack_cap_method_pubkey(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(16) == 0x71f4;
+}
+
+bool SmcCapability::cell_unpack(Ref<vm::Cell> cell_ref, SmcCapability::Record_cap_method_pubkey& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool SmcCapability::cell_unpack_cap_method_pubkey(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cap_method_pubkey(cs) && cs.empty_ext();
+}
+
+bool SmcCapability::unpack(vm::CellSlice& cs, SmcCapability::Record_cap_is_wallet& data) const {
+  return cs.fetch_ulong(16) == 0x2177;
+}
+
+bool SmcCapability::unpack_cap_is_wallet(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(16) == 0x2177;
+}
+
+bool SmcCapability::cell_unpack(Ref<vm::Cell> cell_ref, SmcCapability::Record_cap_is_wallet& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool SmcCapability::cell_unpack_cap_is_wallet(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cap_is_wallet(cs) && cs.empty_ext();
+}
+
+bool SmcCapability::unpack(vm::CellSlice& cs, SmcCapability::Record_cap_name& data) const {
+  return cs.fetch_ulong(8) == 0xff
+      && t_Text.fetch_to(cs, data.name);
+}
+
+bool SmcCapability::unpack_cap_name(vm::CellSlice& cs, Ref<CellSlice>& name) const {
+  return cs.fetch_ulong(8) == 0xff
+      && t_Text.fetch_to(cs, name);
+}
+
+bool SmcCapability::cell_unpack(Ref<vm::Cell> cell_ref, SmcCapability::Record_cap_name& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool SmcCapability::cell_unpack_cap_name(Ref<vm::Cell> cell_ref, Ref<CellSlice>& name) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cap_name(cs, name) && cs.empty_ext();
+}
+
+bool SmcCapability::pack(vm::CellBuilder& cb, const SmcCapability::Record_cap_method_seqno& data) const {
+  return cb.store_long_bool(0x5371, 16);
+}
+
+bool SmcCapability::pack_cap_method_seqno(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0x5371, 16);
+}
+
+bool SmcCapability::cell_pack(Ref<vm::Cell>& cell_ref, const SmcCapability::Record_cap_method_seqno& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::cell_pack_cap_method_seqno(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_cap_method_seqno(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::pack(vm::CellBuilder& cb, const SmcCapability::Record_cap_method_pubkey& data) const {
+  return cb.store_long_bool(0x71f4, 16);
+}
+
+bool SmcCapability::pack_cap_method_pubkey(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0x71f4, 16);
+}
+
+bool SmcCapability::cell_pack(Ref<vm::Cell>& cell_ref, const SmcCapability::Record_cap_method_pubkey& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::cell_pack_cap_method_pubkey(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_cap_method_pubkey(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::pack(vm::CellBuilder& cb, const SmcCapability::Record_cap_is_wallet& data) const {
+  return cb.store_long_bool(0x2177, 16);
+}
+
+bool SmcCapability::pack_cap_is_wallet(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0x2177, 16);
+}
+
+bool SmcCapability::cell_pack(Ref<vm::Cell>& cell_ref, const SmcCapability::Record_cap_is_wallet& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::cell_pack_cap_is_wallet(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_cap_is_wallet(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::pack(vm::CellBuilder& cb, const SmcCapability::Record_cap_name& data) const {
+  return cb.store_long_bool(0xff, 8)
+      && t_Text.store_from(cb, data.name);
+}
+
+bool SmcCapability::pack_cap_name(vm::CellBuilder& cb, Ref<CellSlice> name) const {
+  return cb.store_long_bool(0xff, 8)
+      && t_Text.store_from(cb, name);
+}
+
+bool SmcCapability::cell_pack(Ref<vm::Cell>& cell_ref, const SmcCapability::Record_cap_name& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::cell_pack_cap_name(Ref<vm::Cell>& cell_ref, Ref<CellSlice> name) const {
+  vm::CellBuilder cb;
+  return pack_cap_name(cb, std::move(name)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool SmcCapability::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case cap_method_seqno:
+    return cs.fetch_ulong(16) == 0x5371
+        && pp.cons("cap_method_seqno");
+  case cap_method_pubkey:
+    return cs.fetch_ulong(16) == 0x71f4
+        && pp.cons("cap_method_pubkey");
+  case cap_is_wallet:
+    return cs.fetch_ulong(16) == 0x2177
+        && pp.cons("cap_is_wallet");
+  case cap_name:
+    return cs.fetch_ulong(8) == 0xff
+        && pp.open("cap_name")
+        && pp.field("name")
+        && t_Text.print_skip(pp, cs)
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for SmcCapability");
+}
+
+const SmcCapability t_SmcCapability;
 
 // definitions of constant types used
 
@@ -17368,12 +21103,13 @@ const NatWidth t_natwidth_6{6};
 const NatWidth t_natwidth_8{8};
 const MessageRelaxed t_MessageRelaxed_Any{t_Anything};
 const RefT t_Ref_MessageRelaxed_Any{t_MessageRelaxed_Any};
+const NatWidth t_natwidth_7{7};
 const NatLeq t_natleq_60{60};
 const RefT t_Ref_OutMsgQueueInfo{t_OutMsgQueueInfo};
 const RefT t_Ref_ShardAccounts{t_ShardAccounts};
 const HashmapE t_HashmapE_256_LibDescr{256, t_LibDescr};
 const Maybe t_Maybe_BlkMasterInfo{t_BlkMasterInfo};
-const RefT t_Ref_TYPE_1637{t_ShardStateUnsplit_aux};
+const RefT t_Ref_TYPE_1638{t_ShardStateUnsplit_aux};
 const RefT t_Ref_McStateExtra{t_McStateExtra};
 const Maybe t_Maybe_Ref_McStateExtra{t_Ref_McStateExtra};
 const RefT t_Ref_ShardStateUnsplit{t_ShardStateUnsplit};
@@ -17392,8 +21128,8 @@ const RefT t_Ref_OutMsgDescr{t_OutMsgDescr};
 const RefT t_Ref_ShardAccountBlocks{t_ShardAccountBlocks};
 const RefT t_Ref_McBlockExtra{t_McBlockExtra};
 const Maybe t_Maybe_Ref_McBlockExtra{t_Ref_McBlockExtra};
-const RefT t_Ref_TYPE_1647{t_ValueFlow_aux};
-const RefT t_Ref_TYPE_1648{t_ValueFlow_aux1};
+const RefT t_Ref_TYPE_1648{t_ValueFlow_aux};
+const RefT t_Ref_TYPE_1649{t_ValueFlow_aux1};
 const NatWidth t_natwidth_3{3};
 const BinTree t_BinTree_ShardDescr{t_ShardDescr};
 const RefT t_Ref_BinTree_ShardDescr{t_BinTree_ShardDescr};
@@ -17403,13 +21139,14 @@ const Hashmap t_Hashmap_32_Ref_Cell{32, t_RefCell};
 const RefT t_Ref_Hashmap_32_Ref_Cell{t_Hashmap_32_Ref_Cell};
 const HashmapAugE t_HashmapAugE_32_KeyExtBlkRef_KeyMaxLt{32, t_KeyExtBlkRef, t_KeyMaxLt};
 const HashmapE t_HashmapE_256_CreatorStats{256, t_CreatorStats};
+const HashmapAugE t_HashmapAugE_256_CreatorStats_uint32{256, t_CreatorStats, t_uint32};
 const NatWidth t_natwidth_16{16};
 const Maybe t_Maybe_ExtBlkRef{t_ExtBlkRef};
-const RefT t_Ref_TYPE_1665{t_McStateExtra_aux};
+const RefT t_Ref_TYPE_1666{t_McStateExtra_aux};
 const RefT t_Ref_SignedCertificate{t_SignedCertificate};
 const HashmapE t_HashmapE_16_CryptoSignaturePair{16, t_CryptoSignaturePair};
 const Maybe t_Maybe_Ref_InMsg{t_Ref_InMsg};
-const RefT t_Ref_TYPE_1673{t_McBlockExtra_aux};
+const RefT t_Ref_TYPE_1674{t_McBlockExtra_aux};
 const Hashmap t_Hashmap_16_ValidatorDescr{16, t_ValidatorDescr};
 const HashmapE t_HashmapE_16_ValidatorDescr{16, t_ValidatorDescr};
 const Hashmap t_Hashmap_32_True{32, t_True};
@@ -17425,6 +21162,156 @@ const RefT t_Ref_BlockSignatures{t_BlockSignatures};
 const Maybe t_Maybe_Ref_BlockSignatures{t_Ref_BlockSignatures};
 const RefT t_Ref_TopBlockDescr{t_TopBlockDescr};
 const HashmapE t_HashmapE_96_Ref_TopBlockDescr{96, t_Ref_TopBlockDescr};
+const Int t_int64{64};
+const Int t_int257{257};
+const NatWidth t_natwidth_10{10};
+const NatLeq t_natleq_4{4};
+const RefT t_Ref_VmStackValue{t_VmStackValue};
+const NatWidth t_natwidth_24{24};
+const HashmapE t_HashmapE_4_VmStackValue{4, t_VmStackValue};
+const RefT t_Ref_TYPE_1705{t_VmGasLimits_aux};
+const HashmapE t_HashmapE_256_Ref_Cell{256, t_RefCell};
+const UInt t_uint13{13};
+const Maybe t_Maybe_uint13{t_uint13};
+const Maybe t_Maybe_VmStack{t_VmStack};
+const Int t_int16{16};
+const Maybe t_Maybe_int16{t_int16};
+const RefT t_Ref_VmCont{t_VmCont};
+const UInt t_uint63{63};
+const RefT t_Ref_DNSRecord{t_DNSRecord};
+const HashmapE t_HashmapE_16_Ref_DNSRecord{16, t_Ref_DNSRecord};
+
+// definition of type name registration function
+bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
+  return func("Unit", &t_Unit)
+      && func("True", &t_True)
+      && func("Bool", &t_Bool)
+      && func("BoolFalse", &t_BoolFalse)
+      && func("BoolTrue", &t_BoolTrue)
+      && func("Bit", &t_Bit)
+      && func("Unary", &t_Unary)
+      && func("MsgAddressExt", &t_MsgAddressExt)
+      && func("Anycast", &t_Anycast)
+      && func("MsgAddressInt", &t_MsgAddressInt)
+      && func("MsgAddress", &t_MsgAddress)
+      && func("Grams", &t_Grams)
+      && func("ExtraCurrencyCollection", &t_ExtraCurrencyCollection)
+      && func("CurrencyCollection", &t_CurrencyCollection)
+      && func("CommonMsgInfo", &t_CommonMsgInfo)
+      && func("CommonMsgInfoRelaxed", &t_CommonMsgInfoRelaxed)
+      && func("TickTock", &t_TickTock)
+      && func("SimpleLib", &t_SimpleLib)
+      && func("StateInit", &t_StateInit)
+      && func("IntermediateAddress", &t_IntermediateAddress)
+      && func("MsgEnvelope", &t_MsgEnvelope)
+      && func("Transaction", &t_Transaction)
+      && func("InMsg", &t_InMsg)
+      && func("ImportFees", &t_ImportFees)
+      && func("InMsgDescr", &t_InMsgDescr)
+      && func("OutMsg", &t_OutMsg)
+      && func("EnqueuedMsg", &t_EnqueuedMsg)
+      && func("OutMsgDescr", &t_OutMsgDescr)
+      && func("OutMsgQueue", &t_OutMsgQueue)
+      && func("ProcessedUpto", &t_ProcessedUpto)
+      && func("ProcessedInfo", &t_ProcessedInfo)
+      && func("IhrPendingSince", &t_IhrPendingSince)
+      && func("IhrPendingInfo", &t_IhrPendingInfo)
+      && func("OutMsgQueueInfo", &t_OutMsgQueueInfo)
+      && func("StorageUsed", &t_StorageUsed)
+      && func("StorageUsedShort", &t_StorageUsedShort)
+      && func("StorageInfo", &t_StorageInfo)
+      && func("Account", &t_Account)
+      && func("AccountStorage", &t_AccountStorage)
+      && func("AccountState", &t_AccountState)
+      && func("AccountStatus", &t_AccountStatus)
+      && func("ShardAccount", &t_ShardAccount)
+      && func("DepthBalanceInfo", &t_DepthBalanceInfo)
+      && func("ShardAccounts", &t_ShardAccounts)
+      && func("TransactionDescr", &t_TransactionDescr)
+      && func("AccountBlock", &t_AccountBlock)
+      && func("ShardAccountBlocks", &t_ShardAccountBlocks)
+      && func("AccStatusChange", &t_AccStatusChange)
+      && func("TrStoragePhase", &t_TrStoragePhase)
+      && func("TrCreditPhase", &t_TrCreditPhase)
+      && func("ComputeSkipReason", &t_ComputeSkipReason)
+      && func("TrComputePhase", &t_TrComputePhase)
+      && func("TrActionPhase", &t_TrActionPhase)
+      && func("TrBouncePhase", &t_TrBouncePhase)
+      && func("SplitMergeInfo", &t_SplitMergeInfo)
+      && func("SmartContractInfo", &t_SmartContractInfo)
+      && func("OutAction", &t_OutAction)
+      && func("LibRef", &t_LibRef)
+      && func("OutListNode", &t_OutListNode)
+      && func("ShardIdent", &t_ShardIdent)
+      && func("ExtBlkRef", &t_ExtBlkRef)
+      && func("BlockIdExt", &t_BlockIdExt)
+      && func("BlkMasterInfo", &t_BlkMasterInfo)
+      && func("LibDescr", &t_LibDescr)
+      && func("McStateExtra", &t_McStateExtra)
+      && func("ShardStateUnsplit", &t_ShardStateUnsplit)
+      && func("ShardState", &t_ShardState)
+      && func("BlockInfo", &t_BlockInfo)
+      && func("ValueFlow", &t_ValueFlow)
+      && func("BlockExtra", &t_BlockExtra)
+      && func("Block", &t_Block)
+      && func("McBlockExtra", &t_McBlockExtra)
+      && func("FutureSplitMerge", &t_FutureSplitMerge)
+      && func("ShardDescr", &t_ShardDescr)
+      && func("ShardHashes", &t_ShardHashes)
+      && func("ShardFeeCreated", &t_ShardFeeCreated)
+      && func("ShardFees", &t_ShardFees)
+      && func("ConfigParams", &t_ConfigParams)
+      && func("ValidatorInfo", &t_ValidatorInfo)
+      && func("ValidatorBaseInfo", &t_ValidatorBaseInfo)
+      && func("KeyMaxLt", &t_KeyMaxLt)
+      && func("KeyExtBlkRef", &t_KeyExtBlkRef)
+      && func("OldMcBlocksInfo", &t_OldMcBlocksInfo)
+      && func("Counters", &t_Counters)
+      && func("CreatorStats", &t_CreatorStats)
+      && func("BlockCreateStats", &t_BlockCreateStats)
+      && func("SigPubKey", &t_SigPubKey)
+      && func("CryptoSignatureSimple", &t_CryptoSignatureSimple)
+      && func("CryptoSignature", &t_CryptoSignature)
+      && func("CryptoSignaturePair", &t_CryptoSignaturePair)
+      && func("Certificate", &t_Certificate)
+      && func("CertificateEnv", &t_CertificateEnv)
+      && func("SignedCertificate", &t_SignedCertificate)
+      && func("ValidatorDescr", &t_ValidatorDescr)
+      && func("ValidatorSet", &t_ValidatorSet)
+      && func("GlobalVersion", &t_GlobalVersion)
+      && func("WorkchainDescr", &t_WorkchainDescr)
+      && func("BlockCreateFees", &t_BlockCreateFees)
+      && func("StoragePrices", &t_StoragePrices)
+      && func("GasLimitsPrices", &t_GasLimitsPrices)
+      && func("ParamLimits", &t_ParamLimits)
+      && func("BlockLimits", &t_BlockLimits)
+      && func("MsgForwardPrices", &t_MsgForwardPrices)
+      && func("CatchainConfig", &t_CatchainConfig)
+      && func("ConsensusConfig", &t_ConsensusConfig)
+      && func("ValidatorTempKey", &t_ValidatorTempKey)
+      && func("ValidatorSignedTempKey", &t_ValidatorSignedTempKey)
+      && func("BlockSignaturesPure", &t_BlockSignaturesPure)
+      && func("BlockSignatures", &t_BlockSignatures)
+      && func("BlockProof", &t_BlockProof)
+      && func("TopBlockDescr", &t_TopBlockDescr)
+      && func("TopBlockDescrSet", &t_TopBlockDescrSet)
+      && func("VmStackValue", &t_VmStackValue)
+      && func("VmCellSlice", &t_VmCellSlice)
+      && func("VmCont", &t_VmCont)
+      && func("VmStack", &t_VmStack)
+      && func("VmSaveList", &t_VmSaveList)
+      && func("VmGasLimits", &t_VmGasLimits)
+      && func("VmLibraries", &t_VmLibraries)
+      && func("VmControlData", &t_VmControlData)
+      && func("DNSRecord", &t_DNSRecord)
+      && func("DNS_RecordSet", &t_DNS_RecordSet)
+      && func("Text", &t_Text)
+      && func("ProtoList", &t_ProtoList)
+      && func("Protocol", &t_Protocol)
+      && func("SmcCapList", &t_SmcCapList)
+      && func("SmcCapability", &t_SmcCapability);
+}
+
 
 } // namespace gen
 

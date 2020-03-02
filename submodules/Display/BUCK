@@ -3,16 +3,11 @@ load("//Config:buck_rule_macros.bzl", "framework")
 framework(
     name = "Display",
     srcs = glob([
-        "Display/**/*.swift",
-        "Display/**/*.m",
+        "Source/**/*.swift",
     ]),
-    headers = glob([
-        "Display/*.h",
-    ], exclude = ["Display/Display.h"]),
-    exported_headers = glob([
-        "Display/*.h",
-    ], exclude = ["Display/Display.h"]),
     deps = [
+        "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
+        "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
     	"//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AppBundle:AppBundle",

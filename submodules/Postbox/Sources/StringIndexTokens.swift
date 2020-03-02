@@ -1,5 +1,5 @@
 import Foundation
-import sqlcipher
+import StringTransliteration
 
 public enum StringIndexTokenTransliteration {
     case none

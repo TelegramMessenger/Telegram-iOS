@@ -115,11 +115,11 @@ rules = [
     genrule(
         name = "openssl_build_" + arch,
         srcs = glob([
-            "build-openssl.sh",
+            "build-openssl-buck.sh",
             "*.tar.gz",
             "*.patch",
         ]),
-        bash = "sh $SRCDIR/build-openssl.sh $OUT $SRCDIR " + arch,
+        bash = "sh $SRCDIR/build-openssl-buck.sh $OUT $SRCDIR " + arch,
         out = "openssl_" + arch,
         visibility = [
             "//submodules/openssl:...",

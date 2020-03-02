@@ -1,4 +1,4 @@
-#import "DeviceUptime.h"
+#import <MonotonicTime/DeviceUptime.h>
 
 #include <sys/sysctl.h>
 

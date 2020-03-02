@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import CryptoUtils
 
 public extension MemoryBuffer {
     func md5Digest() -> Data {

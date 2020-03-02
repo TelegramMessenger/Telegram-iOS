@@ -14,14 +14,14 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/log.h"
 #include "vm/stackops.h"
 #include "vm/opctable.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
 #include "vm/excno.hpp"
+#include "vm/vm.h"
 
 namespace vm {
 
@@ -47,6 +47,23 @@ int exec_null_swap_if(VmState* st, bool cond, int depth) {
     stack.push({});
     for (int i = 0; i < depth; i++) {
       swap(stack[i], stack[i + 1]);
+    }
+  }
+  stack.push_int(std::move(x));
+  return 0;
+}
+
+int exec_null_swap_if_many(VmState* st, bool cond, int depth, int count) {
+  Stack& stack = st->get_stack();
+  VM_LOG(st) << "execute NULL" << (depth ? "ROTR" : "SWAP") << (cond ? "IF" : "IFNOT") << count;
+  stack.check_underflow(depth + 1);
+  auto x = stack.pop_int_finite();
+  if (!x->sgn() != cond) {
+    for (int i = 0; i < count; i++) {
+      stack.push({});
+    }
+    for (int i = 0; i < depth; i++) {
+      swap(stack[i], stack[i + count]);
     }
   }
   stack.push_int(std::move(x));
@@ -374,6 +391,10 @@ void register_tuple_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0x6fa1, 16, "NULLSWAPIFNOT", std::bind(exec_null_swap_if, _1, false, 0)))
       .insert(OpcodeInstr::mksimple(0x6fa2, 16, "NULLROTRIF", std::bind(exec_null_swap_if, _1, true, 1)))
       .insert(OpcodeInstr::mksimple(0x6fa3, 16, "NULLROTRIFNOT", std::bind(exec_null_swap_if, _1, false, 1)))
+      .insert(OpcodeInstr::mksimple(0x6fa4, 16, "NULLSWAPIF2", std::bind(exec_null_swap_if_many, _1, true, 0, 2)))
+      .insert(OpcodeInstr::mksimple(0x6fa5, 16, "NULLSWAPIFNOT2", std::bind(exec_null_swap_if_many, _1, false, 0, 2)))
+      .insert(OpcodeInstr::mksimple(0x6fa6, 16, "NULLROTRIF2", std::bind(exec_null_swap_if_many, _1, true, 1, 2)))
+      .insert(OpcodeInstr::mksimple(0x6fa7, 16, "NULLROTRIFNOT2", std::bind(exec_null_swap_if_many, _1, false, 1, 2)))
       .insert(OpcodeInstr::mkfixed(0x6fb, 12, 4, dump_tuple_index2, exec_tuple_index2))
       .insert(OpcodeInstr::mkfixed(0x6fc >> 2, 10, 6, dump_tuple_index3, exec_tuple_index3));
 }

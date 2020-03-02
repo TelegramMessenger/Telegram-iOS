@@ -9,9 +9,9 @@ static_library(
     headers = {
         "ogg/ogg.h": "Sources/ogg/ogg.h",
         "ogg/os_types.h": "Sources/ogg/os_types.h",
-        "OggOpusReader.h": "Sources/OggOpusReader.h",
-        "TGDataItem.h": "Sources/TGDataItem.h",
-        "TGOggOpusWriter.h": "Sources/TGOggOpusWriter.h",
+        "OggOpusReader.h": "PublicHeaders/OpusBinding/OggOpusReader.h",
+        "TGDataItem.h": "PublicHeaders/OpusBinding/TGDataItem.h",
+        "TGOggOpusWriter.h": "PublicHeaders/OpusBinding/TGOggOpusWriter.h",
         "opusenc/diag_range.h": "Sources/opusenc/diag_range.h",
         "opusenc/opus_header.h": "Sources/opusenc/opus_header.h",
         "opusenc/picture.h": "Sources/opusenc/picture.h",
@@ -19,11 +19,9 @@ static_library(
         "opusfile/internal.h": "Sources/opusfile/internal.h",
         "OpusBinding/opusfile.h": "Sources/opusfile/opusfile.h",
     },
-    exported_headers = [
-        "Sources/TGDataItem.h",
-        "Sources/TGOggOpusWriter.h",
-        "Sources/OggOpusReader.h",
-    ],
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
     deps = [
         "//submodules/Opus:opus",
     ],

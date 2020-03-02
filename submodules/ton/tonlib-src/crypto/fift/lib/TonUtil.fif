@@ -12,6 +12,8 @@ library TonUtil // TON Blockchain Fift Library
 
 { (number) 1- abort"integer expected" } : parse-int
 
+{ over null? ' swap if drop } : replace-if-null
+
 // Private key load/generate
 // ( fname -- pubkey privkey )
 { dup ."Loading private key from file " type cr 
@@ -32,8 +34,10 @@ library TonUtil // TON Blockchain Fift Library
   1 and 0= 
 } : parse-smc-addr
 
+// ( x -- ) Displays a 64-digit hex number
+{ 64 0x. } : 64x.
 // ( wc addr -- )  Show address in <workchain>:<account> form
-{ swap ._ .":" 64 0x. } : .addr
+{ swap ._ .":" 64x. } : .addr
 // ( wc addr flags -- )  Show address in base64url form
 { smca>$ type } : .Addr
 // ( wc addr fname -- )  Save address to file in 36-byte format
@@ -65,6 +69,9 @@ library TonUtil // TON Blockchain Fift Library
 
 // ( b wc addr -- b' )  Serializes address into Builder b
 { -rot 8 i, swap 256 u, } : addr, 
+{ over 8 fits { rot b{100} s, -rot addr, } {
+  rot b{110} s, 256 9 u, rot 32 i, swap 256 u, } cond
+} : Addr,
 
 // Gram utilities
 1000000000 constant Gram
@@ -148,3 +155,46 @@ recursive append-long-bytes {
 // ( x -- S )  serialize public key
 { 256 u>B B{3ee6} swap B+ dup crc16 16 u>B B+ B>base64 } : pubkey>$
 { pubkey>$ type } : .pubkey
+
+// adnl address parser
+{ 256 u>B B{2D} swap B+ dup crc16 16 u>B B+ } : adnl-preconv
+{ swap 32 /mod dup 26 < { 65 } { 24 } cond + rot swap hold } : Base32#
+{ <# ' Base32# 8 times #> } : Base32#*8
+{ "" over Blen 5 / { swap 40 B>u@+ Base32#*8 nip rot swap $+ } swap times nip } : B>Base32
+
+// ( x -- S )  Converts an adnl-address from a 256-bit integer to a string
+{ adnl-preconv B>Base32 1 $| nip } : adnl>$
+
+{ 65 - dup 0>= { -33 and dup 26 < } { 41 + dup 25 > over 32 < and } cond ?dup nip } : Base32-digit?
+{ Base32-digit? not abort"not a Base32 digit" } : Base32-digit
+{ 0 { over $len } { swap 1 $| -rot (char) Base32-digit swap 5 << + } while nip } : Base32-number
+{ B{} { over $len } { swap 8 $| -rot Base32-number 40 u>B B+ } while nip } : Base32>B
+
+// ( S -- x )  Converts an adnl address from a string to 256-bit integer
+{ dup $len 55 <> abort"not 55 alphanumeric characters" "F" swap $+ Base32>B
+  33 B| 16 B>u@ over crc16 <> abort"crc16 checksum mismatch"
+  8 B>u@+ 0x2D <> abort"not a valid adnl address" 256 B>u@ } : $>adnl
+
+{ 65 - dup 0>= { -33 and 10 + dup 16 < } { 17 + dup 0>= over 10 < and } cond ?dup nip } : hex-digit?
+// ( S -- x -1 or 0 )  Parses a hexadecimal integer
+{ dup $len {
+    0 {
+      4 << swap 1 $| -rot (char) hex-digit?  // S a d -1 or S a 0
+      { + over $len 0= } { drop -1 true } cond
+    } until
+    dup 0< { 2drop false } { nip true } cond
+  } { drop false } cond
+} : hex$>u?
+// ( S -- x )
+{ hex$>u? not abort"not a hexadecimal number" } : hex$>u
+
+{ dup $len 64 = { hex$>u } {
+  dup $len 55 = { $>adnl } {
+    true abort"invalid adnl address"
+  } cond } cond
+} : parse-adnl-addr
+{ adnl>$ type } : .adnl
+{ bl word parse-adnl-addr 1 'nop } ::_ adnl:
+
+// ( x a b -- a<=x<=b )
+{ 2 pick >= -rot >= and } : in-range?

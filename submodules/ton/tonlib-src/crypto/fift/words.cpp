@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "words.h"
 
@@ -32,7 +32,7 @@
 
 #include "vm/cells.h"
 #include "vm/cellslice.h"
-#include "vm/continuation.h"
+#include "vm/vm.h"
 #include "vm/cp0.h"
 #include "vm/dict.h"
 #include "vm/boc.h"
@@ -96,6 +96,10 @@ void interpret_dotstack_list(IntCtx& ctx) {
   *ctx.output_stream << std::endl;
 }
 
+void interpret_dotstack_list_dump(IntCtx& ctx) {
+  ctx.stack.dump(*ctx.output_stream, 3);
+}
+
 void interpret_dump(IntCtx& ctx) {
   ctx.stack.pop_chk().dump(*ctx.output_stream);
   *ctx.output_stream << ' ';
@@ -103,6 +107,10 @@ void interpret_dump(IntCtx& ctx) {
 
 void interpret_dump_internal(vm::Stack& stack) {
   stack.push_string(stack.pop_chk().to_string());
+}
+
+void interpret_list_dump_internal(vm::Stack& stack) {
+  stack.push_string(stack.pop_chk().to_lisp_string());
 }
 
 void interpret_print_list(IntCtx& ctx) {
@@ -172,9 +180,9 @@ void interpret_times_div(vm::Stack& stack, int round_mode) {
   auto z = stack.pop_int();
   auto y = stack.pop_int();
   auto x = stack.pop_int();
-  td::BigIntG<257 * 2> tmp{0};
+  typename td::BigInt256::DoubleInt tmp{0};
   tmp.add_mul(*x, *y);
-  auto q = td::RefInt256{true};
+  auto q = td::make_refint();
   tmp.mod_div(*z, q.unique_write(), round_mode);
   q.unique_write().normalize();
   stack.push_int(std::move(q));
@@ -184,26 +192,23 @@ void interpret_times_divmod(vm::Stack& stack, int round_mode) {
   auto z = stack.pop_int();
   auto y = stack.pop_int();
   auto x = stack.pop_int();
-  td::BigIntG<257 * 2> tmp{0};
+  typename td::BigInt256::DoubleInt tmp{0};
   tmp.add_mul(*x, *y);
-  auto q = td::RefInt256{true};
+  auto q = td::make_refint();
   tmp.mod_div(*z, q.unique_write(), round_mode);
   q.unique_write().normalize();
-  auto r = td::RefInt256{true, tmp};
   stack.push_int(std::move(q));
-  stack.push_int(std::move(r));
+  stack.push_int(td::make_refint(tmp));
 }
 
 void interpret_times_mod(vm::Stack& stack, int round_mode) {
   auto z = stack.pop_int();
   auto y = stack.pop_int();
   auto x = stack.pop_int();
-  td::BigIntG<257 * 2> tmp{0};
+  typename td::BigInt256::DoubleInt tmp{0}, q;
   tmp.add_mul(*x, *y);
-  td::BigIntG<257 * 2> q;
   tmp.mod_div(*z, q, round_mode);
-  auto r = td::RefInt256{true, tmp};
-  stack.push_int(std::move(r));
+  stack.push_int(td::make_refint(tmp));
 }
 
 void interpret_negate(vm::Stack& stack) {
@@ -245,21 +250,21 @@ void interpret_fits(vm::Stack& stack, bool sgnd) {
 
 void interpret_pow2(vm::Stack& stack) {
   int x = stack.pop_smallint_range(255);
-  auto r = td::RefInt256{true};
+  auto r = td::make_refint();
   r.unique_write().set_pow2(x);
   stack.push_int(r);
 }
 
 void interpret_neg_pow2(vm::Stack& stack) {
   int x = stack.pop_smallint_range(256);
-  auto r = td::RefInt256{true};
+  auto r = td::make_refint();
   r.unique_write().set_pow2(x).negate().normalize();
   stack.push_int(r);
 }
 
 void interpret_pow2_minus1(vm::Stack& stack) {
   int x = stack.pop_smallint_range(256);
-  auto r = td::RefInt256{true};
+  auto r = td::make_refint();
   r.unique_write().set_pow2(x).add_tiny(-1).normalize();
   stack.push_int(r);
 }
@@ -293,19 +298,18 @@ void interpret_times_rshift(vm::Stack& stack, int round_mode) {
   int z = stack.pop_smallint_range(256);
   auto y = stack.pop_int();
   auto x = stack.pop_int();
-  td::BigIntG<257 * 2> tmp{0};
+  typename td::BigInt256::DoubleInt tmp{0};
   tmp.add_mul(*x, *y).rshift(z, round_mode).normalize();
-  auto q = td::RefInt256{true, tmp};
-  stack.push_int(std::move(q));
+  stack.push_int(td::make_refint(tmp));
 }
 
 void interpret_lshift_div(vm::Stack& stack, int round_mode) {
   int z = stack.pop_smallint_range(256);
   auto y = stack.pop_int();
   auto x = stack.pop_int();
-  td::BigIntG<257 * 2> tmp{*x};
+  typename td::BigInt256::DoubleInt tmp{*x};
   tmp <<= z;
-  auto q = td::RefInt256{true};
+  auto q = td::make_refint();
   tmp.mod_div(*y, q.unique_write(), round_mode);
   q.unique_write().normalize();
   stack.push_int(std::move(q));
@@ -596,6 +600,12 @@ void interpret_str_split(vm::Stack& stack) {
   stack.push_string(std::string{str, sz});
 }
 
+void interpret_str_pos(vm::Stack& stack) {
+  auto s2 = stack.pop_string(), s1 = stack.pop_string();
+  auto pos = s1.find(s2);
+  stack.push_smallint(pos == std::string::npos ? -1 : pos);
+}
+
 void interpret_str_reverse(vm::Stack& stack) {
   std::string s = stack.pop_string();
   auto it = s.begin();
@@ -649,6 +659,20 @@ void interpret_utf8_str_split(vm::Stack& stack) {
   } else {
     throw IntError{"not enough utf8 characters for cutting"};
   }
+}
+
+void interpret_utf8_str_pos(vm::Stack& stack) {
+  auto s2 = stack.pop_string(), s1 = stack.pop_string();
+  auto pos = s1.find(s2);
+  if (pos == std::string::npos) {
+    stack.push_smallint(-1);
+    return;
+  }
+  int cnt = 0;
+  for (std::size_t i = 0; i < pos; i++) {
+    cnt += ((s1[i] & 0xc0) != 0x80);
+  }
+  stack.push_smallint(cnt);
 }
 
 void interpret_str_remove_trailing_int(vm::Stack& stack, int arg) {
@@ -979,8 +1003,8 @@ void interpret_store_end(vm::Stack& stack, bool special) {
 
 void interpret_from_cell(vm::Stack& stack) {
   auto cell = stack.pop_cell();
-  Ref<vm::CellSlice> cs{true};
-  if (!cs.unique_write().load(vm::NoVmOrd(), std::move(cell))) {
+  Ref<vm::CellSlice> cs{true, vm::NoVmOrd(), std::move(cell)};
+  if (!cs->is_valid()) {
     throw IntError{"deserializing a special cell as ordinary"};
   }
   stack.push(cs);
@@ -1089,7 +1113,10 @@ void interpret_fetch_ref(vm::Stack& stack, int mode) {
       stack.push(std::move(cs));
     }
     if (mode & 1) {
-      Ref<vm::CellSlice> new_cs{true, vm::NoVm(), std::move(cell)};
+      Ref<vm::CellSlice> new_cs{true, vm::NoVmOrd(), std::move(cell)};
+      if (!new_cs->is_valid()) {
+        throw IntError{"cannot load ordinary cell"};
+      }
       stack.push(std::move(new_cs));
     } else {
       stack.push_cell(std::move(cell));
@@ -1484,11 +1511,12 @@ void interpret_store_dict(vm::Stack& stack) {
 }
 
 // val key dict keylen -- dict' ?
-void interpret_dict_add_u(vm::Stack& stack, vm::Dictionary::SetMode mode, bool add_builder, bool sgnd) {
+void interpret_dict_add(vm::Stack& stack, vm::Dictionary::SetMode mode, bool add_builder, int sgnd) {
   int n = stack.pop_smallint_range(vm::Dictionary::max_key_bits);
   vm::Dictionary dict{stack.pop_maybe_cell(), n};
   unsigned char buffer[vm::Dictionary::max_key_bytes];
-  vm::BitSlice key = dict.integer_key(stack.pop_int(), n, sgnd, buffer);
+  vm::BitSlice key =
+      (sgnd >= 0) ? dict.integer_key(stack.pop_int(), n, sgnd, buffer) : stack.pop_cellslice()->prefetch_bits(n);
   if (!key.is_valid()) {
     throw IntError{"not enough bits for a dictionary key"};
   }
@@ -1502,81 +1530,91 @@ void interpret_dict_add_u(vm::Stack& stack, vm::Dictionary::SetMode mode, bool a
   stack.push_bool(res);
 }
 
-void interpret_dict_get_u(vm::Stack& stack, bool sgnd) {
+void interpret_dict_get(vm::Stack& stack, int sgnd, int mode) {
   int n = stack.pop_smallint_range(vm::Dictionary::max_key_bits);
   vm::Dictionary dict{stack.pop_maybe_cell(), n};
   unsigned char buffer[vm::Dictionary::max_key_bytes];
-  vm::BitSlice key = dict.integer_key(stack.pop_int(), n, sgnd, buffer);
+  vm::BitSlice key =
+      (sgnd >= 0) ? dict.integer_key(stack.pop_int(), n, sgnd, buffer) : stack.pop_cellslice()->prefetch_bits(n);
   if (!key.is_valid()) {
     throw IntError{"not enough bits for a dictionary key"};
   }
-  auto res = dict.lookup(std::move(key));
-  if (res.not_null()) {
+  auto res = (mode & 4 ? dict.lookup_delete(std::move(key)) : dict.lookup(std::move(key)));
+  if (mode & 4) {
+    stack.push_maybe_cell(std::move(dict).extract_root_cell());
+  }
+  bool found = res.not_null();
+  if (found && (mode & 2)) {
     stack.push_cellslice(std::move(res));
-    stack.push_bool(true);
-  } else {
-    stack.push_bool(false);
+  }
+  if (mode & 1) {
+    stack.push_bool(found);
   }
 }
 
-void interpret_dict_map(IntCtx& ctx) {
+void interpret_dict_map(IntCtx& ctx, bool ext, bool sgnd) {
   auto func = pop_exec_token(ctx);
   int n = ctx.stack.pop_smallint_range(vm::Dictionary::max_key_bits);
-  vm::Dictionary dict{ctx.stack.pop_maybe_cell(), n};
-  vm::Dictionary::simple_map_func_t simple_map = [&ctx, func](vm::CellBuilder& cb, Ref<vm::CellSlice> cs_ref) -> bool {
-    ctx.stack.push_builder(Ref<vm::CellBuilder>(cb));
-    ctx.stack.push_cellslice(std::move(cs_ref));
-    func->run(ctx);
-    assert(cb.is_unique());
-    if (!ctx.stack.pop_bool()) {
-      return false;
+  vm::Dictionary dict{ctx.stack.pop_maybe_cell(), n}, dict2{n};
+  for (auto entry : dict.range(false, sgnd)) {
+    ctx.stack.push_builder(Ref<vm::CellBuilder>{true});
+    if (ext) {
+      ctx.stack.push_int(dict.key_as_integer(entry.first, sgnd));
     }
-    Ref<vm::CellBuilder> cb_ref = ctx.stack.pop_builder();
-    cb = *cb_ref;
-    return true;
+    ctx.stack.push_cellslice(std::move(entry.second));
+    func->run(ctx);
+    if (ctx.stack.pop_bool()) {
+      if (!dict2.set_builder(entry.first, n, ctx.stack.pop_builder())) {
+        throw IntError{"cannot insert value into dictionary"};
+      }
+    }
   };
-  dict.map(std::move(simple_map));
-  ctx.stack.push_maybe_cell(std::move(dict).extract_root_cell());
+  ctx.stack.push_maybe_cell(std::move(dict2).extract_root_cell());
 }
 
-void interpret_dict_map_ext(IntCtx& ctx) {
+void interpret_dict_foreach(IntCtx& ctx, bool reverse, bool sgnd) {
   auto func = pop_exec_token(ctx);
   int n = ctx.stack.pop_smallint_range(vm::Dictionary::max_key_bits);
   vm::Dictionary dict{ctx.stack.pop_maybe_cell(), n};
-  vm::Dictionary::map_func_t map_func = [&ctx, func](vm::CellBuilder& cb, Ref<vm::CellSlice> cs_ref,
-                                                     td::ConstBitPtr key, int key_len) -> bool {
-    ctx.stack.push_builder(Ref<vm::CellBuilder>(cb));
-    td::RefInt256 x{true};
-    x.unique_write().import_bits(key, key_len, false);
-    ctx.stack.push_int(std::move(x));
-    ctx.stack.push_cellslice(std::move(cs_ref));
+  for (auto entry : dict.range(reverse, sgnd)) {
+    ctx.stack.push_int(dict.key_as_integer(entry.first, sgnd));
+    ctx.stack.push_cellslice(std::move(entry.second));
     func->run(ctx);
-    assert(cb.is_unique());
     if (!ctx.stack.pop_bool()) {
-      return false;
+      ctx.stack.push_bool(false);
+      return;
     }
-    Ref<vm::CellBuilder> cb_ref = ctx.stack.pop_builder();
-    cb = *cb_ref;
-    return true;
   };
-  dict.map(std::move(map_func));
-  ctx.stack.push_maybe_cell(std::move(dict).extract_root_cell());
+  ctx.stack.push_bool(true);
 }
 
-void interpret_dict_foreach(IntCtx& ctx) {
+// mode: +1 = reverse, +2 = signed, +4 = strict, +8 = lookup backwards, +16 = with hint
+void interpret_dict_foreach_from(IntCtx& ctx, int mode) {
+  if (mode < 0) {
+    mode = ctx.stack.pop_smallint_range(31);
+  }
   auto func = pop_exec_token(ctx);
   int n = ctx.stack.pop_smallint_range(vm::Dictionary::max_key_bits);
   vm::Dictionary dict{ctx.stack.pop_maybe_cell(), n};
-  vm::Dictionary::foreach_func_t foreach_func = [&ctx, func](Ref<vm::CellSlice> cs_ref, td::ConstBitPtr key,
-                                                             int key_len) -> bool {
-    td::RefInt256 x{true};
-    x.unique_write().import_bits(key, key_len, false);
-    ctx.stack.push_int(std::move(x));
-    ctx.stack.push_cellslice(std::move(cs_ref));
+  vm::DictIterator it{dict, mode & 3};
+  unsigned char buffer[vm::Dictionary::max_key_bytes];
+  for (int s = (mode >> 4) & 1; s >= 0; --s) {
+    auto key = dict.integer_key(ctx.stack.pop_int(), n, mode & 2, buffer);
+    if (!key.is_valid()) {
+      throw IntError{"not enough bits for a dictionary key"};
+    }
+    it.lookup(key, mode & 4, mode & 8);
+  }
+  for (; !it.eof(); ++it) {
+    ctx.stack.push_int(dict.key_as_integer(it.cur_pos(), mode & 2));
+    ctx.stack.push_cellslice(it.cur_value());
     func->run(ctx);
-    return ctx.stack.pop_bool();
+    if (!ctx.stack.pop_bool()) {
+      ctx.stack.push_bool(false);
+      return;
+    }
   };
-  ctx.stack.push_bool(dict.check_for_each(std::move(foreach_func)));
+  ctx.stack.push_bool(true);
 }
 
 void interpret_dict_merge(IntCtx& ctx) {
@@ -1584,24 +1622,33 @@ void interpret_dict_merge(IntCtx& ctx) {
   int n = ctx.stack.pop_smallint_range(vm::Dictionary::max_key_bits);
   vm::Dictionary dict2{ctx.stack.pop_maybe_cell(), n};
   vm::Dictionary dict1{ctx.stack.pop_maybe_cell(), n};
-  vm::Dictionary::simple_combine_func_t simple_combine = [&ctx, func](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
-                                                                      Ref<vm::CellSlice> cs2_ref) -> bool {
-    ctx.stack.push_builder(Ref<vm::CellBuilder>(cb));
-    ctx.stack.push_cellslice(std::move(cs1_ref));
-    ctx.stack.push_cellslice(std::move(cs2_ref));
-    func->run(ctx);
-    assert(cb.is_unique());
-    if (!ctx.stack.pop_bool()) {
-      return false;
+  vm::Dictionary dict3{n};
+  auto it1 = dict1.begin(), it2 = dict2.begin();
+  while (!it1.eof() || !it2.eof()) {
+    int c = it1.eof() ? 1 : (it2.eof() ? -1 : it1.cur_pos().compare(it2.cur_pos(), n));
+    bool ok = true;
+    if (c < 0) {
+      ok = dict3.set(it1.cur_pos(), n, it1.cur_value());
+      ++it1;
+    } else if (c > 0) {
+      ok = dict3.set(it2.cur_pos(), n, it2.cur_value());
+      ++it2;
+    } else {
+      ctx.stack.push_builder(Ref<vm::CellBuilder>{true});
+      ctx.stack.push_cellslice(it1.cur_value());
+      ctx.stack.push_cellslice(it2.cur_value());
+      func->run(ctx);
+      if (ctx.stack.pop_bool()) {
+        ok = dict3.set_builder(it1.cur_pos(), n, ctx.stack.pop_builder());
+      }
+      ++it1;
+      ++it2;
     }
-    Ref<vm::CellBuilder> cb_ref = ctx.stack.pop_builder();
-    cb = *cb_ref;
-    return true;
-  };
-  if (!dict1.combine_with(dict2, std::move(simple_combine))) {
-    throw IntError{"cannot combine dictionaries"};
+    if (!ok) {
+      throw IntError{"cannot insert value into dictionary"};
+    }
   }
-  ctx.stack.push_maybe_cell(std::move(dict1).extract_root_cell());
+  ctx.stack.push_maybe_cell(std::move(dict3).extract_root_cell());
 }
 
 void interpret_dict_diff(IntCtx& ctx) {
@@ -1609,17 +1656,40 @@ void interpret_dict_diff(IntCtx& ctx) {
   int n = ctx.stack.pop_smallint_range(vm::Dictionary::max_key_bits);
   vm::Dictionary dict2{ctx.stack.pop_maybe_cell(), n};
   vm::Dictionary dict1{ctx.stack.pop_maybe_cell(), n};
-  vm::Dictionary::scan_diff_func_t scan_value_pair =
-      [&ctx, func](td::ConstBitPtr key, int key_len, Ref<vm::CellSlice> cs1_ref, Ref<vm::CellSlice> cs2_ref) -> bool {
-    td::RefInt256 x{true};
-    x.unique_write().import_bits(key, key_len, false);
-    ctx.stack.push_int(std::move(x));
-    ctx.stack.push_maybe_cellslice(std::move(cs1_ref));
-    ctx.stack.push_maybe_cellslice(std::move(cs2_ref));
-    func->run(ctx);
-    return ctx.stack.pop_bool();
-  };
-  ctx.stack.push_bool(dict1.scan_diff(dict2, std::move(scan_value_pair)));
+  auto it1 = dict1.begin(), it2 = dict2.begin();
+  while (!it1.eof() || !it2.eof()) {
+    int c = it1.eof() ? 1 : (it2.eof() ? -1 : it1.cur_pos().compare(it2.cur_pos(), n));
+    bool run = true;
+    if (c < 0) {
+      ctx.stack.push_int(dict1.key_as_integer(it1.cur_pos()));
+      ctx.stack.push_cellslice(it1.cur_value());
+      ctx.stack.push_null();
+      ++it1;
+    } else if (c > 0) {
+      ctx.stack.push_int(dict2.key_as_integer(it2.cur_pos()));
+      ctx.stack.push_null();
+      ctx.stack.push_cellslice(it2.cur_value());
+      ++it2;
+    } else {
+      if (!it1.cur_value()->contents_equal(*it2.cur_value())) {
+        ctx.stack.push_int(dict1.key_as_integer(it1.cur_pos()));
+        ctx.stack.push_cellslice(it1.cur_value());
+        ctx.stack.push_cellslice(it2.cur_value());
+      } else {
+        run = false;
+      }
+      ++it1;
+      ++it2;
+    }
+    if (run) {
+      func->run(ctx);
+      if (!ctx.stack.pop_bool()) {
+        ctx.stack.push_bool(false);
+        return;
+      }
+    }
+  }
+  ctx.stack.push_bool(true);
 }
 
 void interpret_pfx_dict_add(vm::Stack& stack, vm::Dictionary::SetMode mode, bool add_builder) {
@@ -1858,7 +1928,7 @@ int parse_number(std::string s, td::RefInt256& num, td::RefInt256& denom, bool a
   const char* str = s.c_str();
   int len = (int)s.size();
   int frac = -1, base, *frac_ptr = allow_frac ? &frac : nullptr;
-  num = td::RefInt256{true};
+  num = td::make_refint();
   auto& x = num.unique_write();
   if (len >= 4 && str[0] == '-' && str[1] == '0' && (str[2] == 'x' || str[2] == 'b')) {
     if (str[2] == 'x') {
@@ -1900,7 +1970,7 @@ int parse_number(std::string s, td::RefInt256& num, td::RefInt256& denom, bool a
   if (frac < 0) {
     return 1;
   } else {
-    denom = td::RefInt256{true, 1};
+    denom = td::make_refint(1);
     while (frac-- > 0) {
       if (!denom.unique_write().mul_tiny(base).normalize_bool()) {
         if (throw_error) {
@@ -2141,6 +2211,7 @@ class StringLogger : public td::LogInterface {
   }
   std::string res;
 };
+
 class OstreamLogger : public td::LogInterface {
  public:
   explicit OstreamLogger(std::ostream* stream) : stream_(stream) {
@@ -2163,59 +2234,42 @@ std::vector<Ref<vm::Cell>> get_vm_libraries() {
   }
 }
 
-void interpret_run_vm_code(IntCtx& ctx, bool with_gas) {
-  long long gas_limit = with_gas ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
-  auto cs = ctx.stack.pop_cellslice();
-  OstreamLogger ostream_logger(ctx.error_stream);
-  auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
-  vm::GasLimits gas{gas_limit};
-  int res = vm::run_vm_code(cs, ctx.stack, 0, nullptr, log, nullptr, &gas, get_vm_libraries());
-  ctx.stack.push_smallint(res);
-  if (with_gas) {
-    ctx.stack.push_smallint(gas.gas_consumed());
+// mode: -1 = pop from stack
+// +1 = same_c3 (set c3 to code)
+// +2 = push_0 (push an implicit 0 before running the code)
+// +4 = load c4 (persistent data) from stack and return its final value
+// +8 = load gas limit from stack and return consumed gas
+// +16 = load c7 (smart-contract context)
+// +32 = return c5 (actions)
+// +64 = log vm ops to stderr
+void interpret_run_vm(IntCtx& ctx, int mode) {
+  if (mode < 0) {
+    mode = ctx.stack.pop_smallint_range(0xff);
   }
-}
-
-void interpret_run_vm_dict(IntCtx& ctx, bool with_gas) {
-  long long gas_limit = with_gas ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
-  auto cs = ctx.stack.pop_cellslice();
-  OstreamLogger ostream_logger(ctx.error_stream);
-  auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
-  vm::GasLimits gas{gas_limit};
-  int res = vm::run_vm_code(cs, ctx.stack, 3, nullptr, log, nullptr, &gas, get_vm_libraries());
-  ctx.stack.push_smallint(res);
-  if (with_gas) {
-    ctx.stack.push_smallint(gas.gas_consumed());
+  bool with_data = mode & 4;
+  Ref<vm::Tuple> c7;
+  Ref<vm::Cell> data, actions;
+  long long gas_limit = (mode & 8) ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
+  if (mode & 16) {
+    c7 = ctx.stack.pop_tuple();
   }
-}
-
-void interpret_run_vm(IntCtx& ctx, bool with_gas) {
-  long long gas_limit = with_gas ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
-  auto data = ctx.stack.pop_cell();
-  auto cs = ctx.stack.pop_cellslice();
-  OstreamLogger ostream_logger(ctx.error_stream);
-  auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
-  vm::GasLimits gas{gas_limit};
-  int res = vm::run_vm_code(cs, ctx.stack, 1, &data, log, nullptr, &gas, get_vm_libraries());
-  ctx.stack.push_smallint(res);
-  ctx.stack.push_cell(std::move(data));
-  if (with_gas) {
-    ctx.stack.push_smallint(gas.gas_consumed());
+  if (with_data) {
+    data = ctx.stack.pop_cell();
   }
-}
-
-void interpret_run_vm_c7(IntCtx& ctx, bool with_gas) {
-  long long gas_limit = with_gas ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
-  auto c7 = ctx.stack.pop_tuple();
-  auto data = ctx.stack.pop_cell();
   auto cs = ctx.stack.pop_cellslice();
   OstreamLogger ostream_logger(ctx.error_stream);
-  auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
+  auto log = create_vm_log((mode & 64) && ctx.error_stream ? &ostream_logger : nullptr);
   vm::GasLimits gas{gas_limit};
-  int res = vm::run_vm_code(cs, ctx.stack, 1, &data, log, nullptr, &gas, get_vm_libraries(), std::move(c7));
+  int res =
+      vm::run_vm_code(cs, ctx.stack, mode & 3, &data, log, nullptr, &gas, get_vm_libraries(), std::move(c7), &actions);
   ctx.stack.push_smallint(res);
-  ctx.stack.push_cell(std::move(data));
-  if (with_gas) {
+  if (with_data) {
+    ctx.stack.push_cell(std::move(data));
+  }
+  if (mode & 32) {
+    ctx.stack.push_cell(std::move(actions));
+  }
+  if (mode & 8) {
     ctx.stack.push_smallint(gas.gas_consumed());
   }
 }
@@ -2328,17 +2382,75 @@ void interpret_db_run_vm_parallel(IntCtx& ctx) {
   do_interpret_db_run_vm_parallel(ctx.error_stream, ctx.stack, ctx.ton_db, threads_n, tasks_n);
 }
 
+void interpret_store_vm_cont(vm::Stack& stack) {
+  auto vmcont = stack.pop_cont();
+  auto cb = stack.pop_builder();
+  if (!vmcont->serialize(cb.write())) {
+    throw IntError{"cannot serialize vm continuation"};
+  }
+  stack.push_builder(std::move(cb));
+}
+
+void interpret_fetch_vm_cont(vm::Stack& stack) {
+  auto cs = stack.pop_cellslice();
+  auto vmcont = vm::Continuation::deserialize(cs.write());
+  if (vmcont.is_null()) {
+    throw IntError{"cannot deserialize vm continuation"};
+  }
+  stack.push_cellslice(std::move(cs));
+  stack.push_cont(std::move(vmcont));
+}
+
+Ref<vm::Box> cmdline_args{true};
+
+void interpret_get_fixed_cmdline_arg(vm::Stack& stack, int n) {
+  if (!n) {
+    return;
+  }
+  auto v = cmdline_args->get();
+  while (true) {
+    if (v.empty()) {
+      stack.push(vm::StackEntry{});
+      return;
+    }
+    auto t = v.as_tuple_range(2, 2);
+    if (t.is_null()) {
+      throw IntError{"invalid cmdline arg list"};
+    }
+    if (!--n) {
+      stack.push(t->at(0));
+      return;
+    }
+    v = t->at(1);
+  }
+}
+
 // n -- executes $n
 void interpret_get_cmdline_arg(IntCtx& ctx) {
   int n = ctx.stack.pop_smallint_range(999999);
-  char buffer[14];
-  sprintf(buffer, "$%d ", n);
-  auto entry = ctx.dictionary->lookup(std::string{buffer});
+  if (n) {
+    interpret_get_fixed_cmdline_arg(ctx.stack, n);
+    return;
+  }
+  auto entry = ctx.dictionary->lookup("$0 ");
   if (!entry) {
     throw IntError{"-?"};
   } else {
     (*entry)(ctx);
   }
+}
+
+void interpret_get_cmdline_arg_count(vm::Stack& stack) {
+  auto v = cmdline_args->get();
+  int cnt;
+  for (cnt = 0; !v.empty(); cnt++) {
+    auto t = v.as_tuple_range(2, 2);
+    if (t.is_null()) {
+      throw IntError{"invalid cmdline arg list"};
+    }
+    v = t->at(1);
+  }
+  stack.push_smallint(cnt);
 }
 
 void interpret_getenv(vm::Stack& stack) {
@@ -2434,10 +2546,12 @@ void init_words_common(Dictionary& d) {
   d.def_ctx_word("csr. ", interpret_dot_cellslice_rec);
   d.def_ctx_word(".s ", interpret_dotstack);
   d.def_ctx_word(".sl ", interpret_dotstack_list);
+  d.def_ctx_word(".sL ", interpret_dotstack_list_dump);  // TMP
   d.def_ctx_word(".dump ", interpret_dump);
   d.def_ctx_word(".l ", interpret_print_list);
   d.def_ctx_word(".tc ", interpret_dottc);
   d.def_stack_word("(dump) ", interpret_dump_internal);
+  d.def_stack_word("(ldump) ", interpret_list_dump_internal);
   d.def_stack_word("(.) ", interpret_dot_internal);
   d.def_stack_word("(x.) ", std::bind(interpret_dothex_internal, _1, false));
   d.def_stack_word("(X.) ", std::bind(interpret_dothex_internal, _1, true));
@@ -2558,6 +2672,7 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("$= ", interpret_str_equal);
   d.def_stack_word("$cmp ", interpret_str_cmp);
   d.def_stack_word("$reverse ", interpret_str_reverse);
+  d.def_stack_word("$pos ", interpret_str_pos);
   d.def_stack_word("(-trailing) ", std::bind(interpret_str_remove_trailing_int, _1, 0));
   d.def_stack_word("-trailing ", std::bind(interpret_str_remove_trailing_int, _1, ' '));
   d.def_stack_word("-trailing0 ", std::bind(interpret_str_remove_trailing_int, _1, '0'));
@@ -2565,6 +2680,7 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("Blen ", interpret_bytes_len);
   d.def_stack_word("$Len ", interpret_utf8_str_len);
   d.def_stack_word("$Split ", interpret_utf8_str_split);
+  d.def_stack_word("$Pos ", interpret_utf8_str_pos);
   d.def_ctx_word("Bx. ", std::bind(interpret_bytes_hex_print_raw, _1, true));
   d.def_stack_word("B>X ", std::bind(interpret_bytes_to_hex, _1, true));
   d.def_stack_word("B>x ", std::bind(interpret_bytes_to_hex, _1, false));
@@ -2669,22 +2785,38 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("dict, ", interpret_store_dict);
   d.def_stack_word("dict@ ", std::bind(interpret_load_dict, _1, false));
   d.def_stack_word("dict@+ ", std::bind(interpret_load_dict, _1, true));
-  d.def_stack_word("udict!+ ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Add, false, false));
-  d.def_stack_word("udict! ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Set, false, false));
-  d.def_stack_word("b>udict!+ ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Add, true, false));
-  d.def_stack_word("b>udict! ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Set, true, false));
-  d.def_stack_word("udict@ ", std::bind(interpret_dict_get_u, _1, false));
-  d.def_stack_word("idict!+ ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Add, false, true));
-  d.def_stack_word("idict! ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Set, false, true));
-  d.def_stack_word("b>idict!+ ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Add, true, true));
-  d.def_stack_word("b>idict! ", std::bind(interpret_dict_add_u, _1, vm::Dictionary::SetMode::Set, true, true));
-  d.def_stack_word("idict@ ", std::bind(interpret_dict_get_u, _1, true));
+  d.def_stack_word("sdict!+ ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Add, false, -1));
+  d.def_stack_word("sdict! ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Set, false, -1));
+  d.def_stack_word("b>sdict!+ ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Add, true, -1));
+  d.def_stack_word("b>sdict! ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Set, true, -1));
+  d.def_stack_word("sdict@ ", std::bind(interpret_dict_get, _1, -1, 3));
+  d.def_stack_word("sdict@- ", std::bind(interpret_dict_get, _1, -1, 7));
+  d.def_stack_word("sdict- ", std::bind(interpret_dict_get, _1, -1, 5));
+  d.def_stack_word("udict!+ ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Add, false, 0));
+  d.def_stack_word("udict! ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Set, false, 0));
+  d.def_stack_word("b>udict!+ ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Add, true, 0));
+  d.def_stack_word("b>udict! ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Set, true, 0));
+  d.def_stack_word("udict@ ", std::bind(interpret_dict_get, _1, 0, 3));
+  d.def_stack_word("udict@- ", std::bind(interpret_dict_get, _1, 0, 7));
+  d.def_stack_word("udict- ", std::bind(interpret_dict_get, _1, 0, 5));
+  d.def_stack_word("idict!+ ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Add, false, 1));
+  d.def_stack_word("idict! ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Set, false, 1));
+  d.def_stack_word("b>idict!+ ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Add, true, 1));
+  d.def_stack_word("b>idict! ", std::bind(interpret_dict_add, _1, vm::Dictionary::SetMode::Set, true, 1));
+  d.def_stack_word("idict@ ", std::bind(interpret_dict_get, _1, 1, 3));
+  d.def_stack_word("idict@- ", std::bind(interpret_dict_get, _1, 1, 7));
+  d.def_stack_word("idict- ", std::bind(interpret_dict_get, _1, 1, 5));
   d.def_stack_word("pfxdict!+ ", std::bind(interpret_pfx_dict_add, _1, vm::Dictionary::SetMode::Add, false));
   d.def_stack_word("pfxdict! ", std::bind(interpret_pfx_dict_add, _1, vm::Dictionary::SetMode::Set, false));
   d.def_stack_word("pfxdict@ ", interpret_pfx_dict_get);
-  d.def_ctx_word("dictmap ", interpret_dict_map);
-  d.def_ctx_word("dictmapext ", interpret_dict_map_ext);
-  d.def_ctx_word("dictforeach ", interpret_dict_foreach);
+  d.def_ctx_word("dictmap ", std::bind(interpret_dict_map, _1, false, false));
+  d.def_ctx_word("dictmapext ", std::bind(interpret_dict_map, _1, true, false));
+  d.def_ctx_word("idictmapext ", std::bind(interpret_dict_map, _1, true, true));
+  d.def_ctx_word("dictforeach ", std::bind(interpret_dict_foreach, _1, false, false));
+  d.def_ctx_word("idictforeach ", std::bind(interpret_dict_foreach, _1, false, true));
+  d.def_ctx_word("dictforeachrev ", std::bind(interpret_dict_foreach, _1, true, false));
+  d.def_ctx_word("idictforeachrev ", std::bind(interpret_dict_foreach, _1, true, true));
+  d.def_ctx_word("dictforeachfromx ", std::bind(interpret_dict_foreach_from, _1, -1));
   d.def_ctx_word("dictmerge ", interpret_dict_merge);
   d.def_ctx_word("dictdiff ", interpret_dict_diff);
   // slice/bitstring constants
@@ -2756,6 +2888,10 @@ void init_words_common(Dictionary& d) {
   d.def_ctx_word("quit ", interpret_quit);
   d.def_ctx_word("bye ", interpret_bye);
   d.def_stack_word("halt ", interpret_halt);
+  // cmdline args
+  d.def_stack_word("$* ", std::bind(interpret_literal, _1, vm::StackEntry{cmdline_args}));
+  d.def_stack_word("$# ", interpret_get_cmdline_arg_count);
+  d.def_ctx_word("$() ", interpret_get_cmdline_arg);
 }
 
 void init_words_ton(Dictionary& d) {
@@ -2768,34 +2904,34 @@ void init_words_ton(Dictionary& d) {
   d.def_stack_word("base64url>B ", std::bind(interpret_base64_to_bytes, _1, true, false));
 }
 
-void init_words_vm(Dictionary& d) {
+void init_words_vm(Dictionary& d, bool enable_debug) {
   using namespace std::placeholders;
-  vm::init_op_cp0();
+  vm::init_op_cp0(enable_debug);
   // vm run
   d.def_stack_word("vmlibs ", std::bind(interpret_literal, _1, vm::StackEntry{vm_libraries}));
-  d.def_ctx_word("runvmcode ", std::bind(interpret_run_vm_code, _1, false));
-  d.def_ctx_word("gasrunvmcode ", std::bind(interpret_run_vm_code, _1, true));
-  d.def_ctx_word("runvmdict ", std::bind(interpret_run_vm_dict, _1, false));
-  d.def_ctx_word("gasrunvmdict ", std::bind(interpret_run_vm_dict, _1, true));
-  d.def_ctx_word("runvm ", std::bind(interpret_run_vm, _1, false));
-  d.def_ctx_word("gasrunvm ", std::bind(interpret_run_vm, _1, true));
-  d.def_ctx_word("runvmctx ", std::bind(interpret_run_vm_c7, _1, false));
-  d.def_ctx_word("gasrunvmctx ", std::bind(interpret_run_vm_c7, _1, true));
+  // d.def_ctx_word("runvmcode ", std::bind(interpret_run_vm, _1, 0x40));
+  // d.def_ctx_word("runvm ", std::bind(interpret_run_vm, _1, 0x45));
+  d.def_ctx_word("runvmx ", std::bind(interpret_run_vm, _1, -1));
   d.def_ctx_word("dbrunvm ", interpret_db_run_vm);
   d.def_ctx_word("dbrunvm-parallel ", interpret_db_run_vm_parallel);
+  d.def_stack_word("vmcont, ", interpret_store_vm_cont);
+  d.def_stack_word("vmcont@ ", interpret_fetch_vm_cont);
 }
 
 void import_cmdline_args(Dictionary& d, std::string arg0, int n, const char* const argv[]) {
   using namespace std::placeholders;
   LOG(DEBUG) << "import_cmdlist_args(" << arg0 << "," << n << ")";
   d.def_stack_word("$0 ", std::bind(interpret_literal, _1, vm::StackEntry{arg0}));
-  for (int i = 0; i < n; i++) {
-    char buffer[14];
-    sprintf(buffer, "$%d ", i + 1);
-    d.def_stack_word(buffer, std::bind(interpret_literal, _1, vm::StackEntry{argv[i]}));
+  vm::StackEntry list;
+  for (int i = n - 1; i >= 0; i--) {
+    list = vm::StackEntry::cons(vm::StackEntry{argv[i]}, list);
   }
-  d.def_stack_word("$# ", std::bind(interpret_const, _1, n));
-  d.def_ctx_word("$() ", interpret_get_cmdline_arg);
+  cmdline_args->set(std::move(list));
+  for (int i = 1; i <= n; i++) {
+    char buffer[14];
+    sprintf(buffer, "$%d ", i);
+    d.def_stack_word(buffer, std::bind(interpret_get_fixed_cmdline_arg, _1, i));
+  }
 }
 
 std::pair<td::RefInt256, td::RefInt256> numeric_value_ext(std::string s, bool allow_frac = true) {

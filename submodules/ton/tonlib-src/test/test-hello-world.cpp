@@ -31,6 +31,7 @@
 #include "auto/tl/ton_api_json.h"
 
 #include "tl/tl_json.h"
+#include "td/utils/Random.h"
 
 namespace {
 std::string config = R"json(
@@ -135,4 +136,25 @@ int main() {
     return res;
   };
   test_tl_json(ton::ton_api::make_object<ton::ton_api::testVectorBytes>(create_vector_bytes()));
+
+  td::Bits256 x;
+  td::Random::secure_bytes(x.as_slice());
+
+  auto s = x.to_hex();
+
+  auto v = td::hex_decode(s).move_as_ok();
+
+  auto w = td::buffer_to_hex(x.as_slice());
+
+  td::Bits256 y;
+  y.as_slice().copy_from(v);
+
+  CHECK(x == y);
+
+  auto w2 = td::hex_decode(w).move_as_ok();
+  td::Bits256 z;
+  z.as_slice().copy_from(w2);
+
+  LOG_CHECK(x == z) << s << " " << w;
+  return 0;
 }

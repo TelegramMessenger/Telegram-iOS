@@ -1,0 +1,20 @@
+var twice(f, x) {
+  return f (f x);
+}
+
+_ sqr(x) {
+  return x * x;
+}
+
+var main(x) {
+  var f = sqr;
+  return twice(f, x) * f(x);
+}
+
+var pow6(x) {
+  return twice(sqr, x) * sqr(x);
+}
+
+_ q() {
+  return false;
+}

@@ -11,16 +11,16 @@ apple_asset_catalog(
 apple_resource(
     name = "TelegramUIResources",
     files = glob([
-        "TelegramUI/Sounds/**/*",
-        "TelegramUI/Resources/**/*",
-    ], exclude = ["TelegramUI/**/.*"]),
+        "Sounds/**/*",
+        "Resources/**/*",
+    ], exclude = ["Sounds/**/.*", "Resources/**/.*"]),
     visibility = ["PUBLIC"],
 )
 
 framework(
     name = "TelegramUI",
     srcs = glob([
-        "TelegramUI/**/*.swift",
+        "Sources/**/*.swift",
     ]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
@@ -34,10 +34,10 @@ framework(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/LegacyComponents:LegacyComponents",
-        "//submodules/libtgvoip:libtgvoip",
+        "//submodules/TgVoip:TgVoip",
         "//submodules/lottie-ios:Lottie",
-        "//submodules/FFMpeg:FFMpeg",
-        "//submodules/WebP:WebPImage",
+        "//submodules/FFMpegBinding:FFMpegBinding",
+        "//submodules/WebPBinding:WebPBinding",
         "//submodules/RMIntro:RMIntro",
         "//submodules/GZip:GZip",
         "//submodules/TelegramCallsUI:TelegramCallsUI",

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include <vector>
@@ -169,6 +169,8 @@ class PropagateConstSpan {
   size_t size_{0};
 };
 
+struct Normalize {};
+
 template <class Tr = BigIntInfo>
 class AnyIntView {
  public:
@@ -307,6 +309,10 @@ class BigIntG {
   }
   explicit BigIntG(word_t x) : n(1) {
     digits[0] = x;
+  }
+  BigIntG(Normalize, word_t x) : n(1) {
+    digits[0] = x;
+    normalize_bool();
   }
   BigIntG(const BigIntG& x) : n(x.n) {
     std::memcpy(digits, x.digits, n * sizeof(word_t));
@@ -2514,6 +2520,11 @@ std::ostream& operator<<(std::ostream& os, BigIntG<len, Tr>&& x) {
 extern template class AnyIntView<BigIntInfo>;
 extern template class BigIntG<257, BigIntInfo>;
 typedef BigIntG<257, BigIntInfo> BigInt256;
+
+template <int n = 257>
+BigIntG<n, BigIntInfo> make_bigint(long long x) {
+  return BigIntG<n, BigIntInfo>{Normalize(), x};
+}
 
 namespace literals {
 

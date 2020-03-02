@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -45,6 +45,10 @@ class TerminalIOImpl : public TerminalIO, td::ObserverBase {
   void deactivate_readline();
   void reactivate_readline();
   void output_line(std::string line) override;
+  void output_line_stderr(std::string line) override;
+  bool readline_used() const override {
+    return use_readline_;
+  }
   void set_log_interface() override;
   //void read_line();
   void loop() override;

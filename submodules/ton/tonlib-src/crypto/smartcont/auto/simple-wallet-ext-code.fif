@@ -7,14 +7,15 @@ PROGRAM{
   DECLPROC do_verify_message
   DECLPROC recv_external
   85143 DECLMETHOD seqno
+  78748 DECLMETHOD get_public_key
   81625 DECLMETHOD create_init_state
   116960 DECLMETHOD prepare_send_message_with_seqno
   101633 DECLMETHOD prepare_send_message
   95420 DECLMETHOD verify_message
   create_state PROC:<{
     //  seqno public_key
-    NEWC	//  seqno public_key _2
-    s1 s2 XCHG	//  public_key seqno _2
+    SWAP
+    NEWC	//  public_key seqno _2
     32 STU	//  public_key _4
     256 STU	//  _6
     ENDC	//  _7
@@ -75,6 +76,11 @@ PROGRAM{
     c4 PUSH	//  _0
     CTOS	//  _1
     32 PLDU	//  _3
+  }>
+  get_public_key PROC:<{
+    // 
+    load_state CALLDICT	//  _3 _4
+    NIP	//  public_key
   }>
   create_init_state PROC:<{
     //  public_key

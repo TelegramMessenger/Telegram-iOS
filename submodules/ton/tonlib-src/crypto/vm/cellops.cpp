@@ -14,16 +14,16 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <functional>
 #include "vm/cellops.h"
 #include "vm/log.h"
 #include "vm/opctable.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
 #include "vm/excno.hpp"
 #include "vm/vmstate.h"
+#include "vm/vm.h"
 #include "common/bigint.hpp"
 #include "common/refint.h"
 
@@ -815,6 +815,9 @@ void register_cell_serialize_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0xcf23, 16, "ENDXC", exec_builder_to_special_cell))
       .insert(OpcodeInstr::mkfixed(0xcf28 >> 2, 14, 2, dump_store_le_int, exec_store_le_int))
       .insert(OpcodeInstr::mksimple(
+          0xcf30, 16, "BDEPTH",
+          std::bind(exec_int_builder_func, _1, "BDEPTH", [](Ref<CellBuilder> b) { return b->get_depth(); })))
+      .insert(OpcodeInstr::mksimple(
           0xcf31, 16, "BBITS",
           std::bind(exec_int_builder_func, _1, "BBITS", [](Ref<CellBuilder> b) { return b->size(); })))
       .insert(OpcodeInstr::mksimple(
@@ -1321,6 +1324,22 @@ int exec_load_same(VmState* st, const char* name, int x) {
   return 0;
 }
 
+int exec_cell_depth(VmState* st) {
+  Stack& stack = st->get_stack();
+  VM_LOG(st) << "execute CDEPTH";
+  auto cell = stack.pop_maybe_cell();
+  stack.push_smallint(cell.not_null() ? cell->get_depth() : 0);
+  return 0;
+}
+
+int exec_slice_depth(VmState* st) {
+  Stack& stack = st->get_stack();
+  VM_LOG(st) << "execute SDEPTH";
+  auto cs = stack.pop_cellslice();
+  stack.push_smallint(cs->get_depth());
+  return 0;
+}
+
 void register_cell_deserialize_ops(OpcodeTable& cp0) {
   using namespace std::placeholders;
   cp0.insert(OpcodeInstr::mksimple(0xd0, 8, "CTOS", exec_cell_to_slice))
@@ -1407,7 +1426,9 @@ void register_cell_deserialize_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mkfixed(0xd75, 12, 4, dump_load_le_int, exec_load_le_int))
       .insert(OpcodeInstr::mksimple(0xd760, 16, "LDZEROES", std::bind(exec_load_same, _1, "LDZEROES", 0)))
       .insert(OpcodeInstr::mksimple(0xd761, 16, "LDONES", std::bind(exec_load_same, _1, "LDONES", 1)))
-      .insert(OpcodeInstr::mksimple(0xd762, 16, "LDSAME", std::bind(exec_load_same, _1, "LDSAME", -1)));
+      .insert(OpcodeInstr::mksimple(0xd762, 16, "LDSAME", std::bind(exec_load_same, _1, "LDSAME", -1)))
+      .insert(OpcodeInstr::mksimple(0xd764, 16, "SDEPTH", exec_slice_depth))
+      .insert(OpcodeInstr::mksimple(0xd765, 16, "CDEPTH", exec_cell_depth));
 }
 
 void register_cell_ops(OpcodeTable& cp0) {

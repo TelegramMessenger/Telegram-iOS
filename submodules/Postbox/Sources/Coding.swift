@@ -1,5 +1,5 @@
 import Foundation
-import sqlcipher
+import MurMurHash32
 
 public protocol PostboxCoding {
     init(decoder: PostboxDecoder)

@@ -1,4 +1,4 @@
-"Lisp.fif" include
+"Lists.fif" include
 16 constant key-bits
 16 constant val-bits
 { val-bits u, } : val,
@@ -7,8 +7,14 @@
 { dictnew { over null? not } { swap uncons swap rot +dictpair } while nip } : mkdict
 { dup null? { ."(null) " drop } { val@ . } cond } : .val
 { key-bits { swap . ."-> " .val ."; " true } dictforeach drop cr } : show-dict
+{ key-bits { swap . ."-> " .val ."; " true } idictforeach drop cr } : show-idict
+{ key-bits { swap . ."-> " .val ."; " true } dictforeachrev drop cr } : show-rev-dict
+{ key-bits { swap . ."-> " .val ."; " true } idictforeachrev drop cr } : show-rev-idict
 { key-bits { rot . ."-> " swap .val .val ."; " true } dictdiff drop cr } : show-dict-diff
 { key-bits { val@ swap val@ + val, true } dictmerge } : dict-sum
+{ key-bits { val@ 2* val, true } dictmap } : dict-twice
+{ key-bits { val@ 2 /mod { 2drop false } { val, true } cond } dictmap } : dict-half
+{ key-bits { val@ + val, true } dictmapext } : dict-add-x
 { null swap key-bits { val@ pair swap cons true } dictforeach drop  } : dict>list-rev
 { dict>list-rev list-reverse } : dict>list
 ( _( 13 169 ) _( 17 289 ) _( 10 100 ) ) mkdict =: Dict
@@ -22,3 +28,7 @@ Dict2 dict>list .l cr
 Dict2 <s csr. cr
 Dict1 Dict2 show-dict-diff
 Dict2 Dict1 show-dict-diff
+."Dict1 + Dict2 = " Dict1 Dict2 dict-sum show-dict
+."Dict2 * 2 = " Dict2 dict-twice show-dict
+."Dict2 / 2 = " Dict2 dict-half show-dict
+."Dict2 + x = " Dict2 dict-add-x show-dict

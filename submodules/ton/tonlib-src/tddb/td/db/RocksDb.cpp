@@ -19,6 +19,7 @@
 #include "td/db/RocksDb.h"
 
 #include "rocksdb/db.h"
+#include "rocksdb/table.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/write_batch.h"
 #include "rocksdb/utilities/optimistic_transaction_db.h"
@@ -63,6 +64,13 @@ Result<RocksDb> RocksDb::open(std::string path) {
   auto statistics = rocksdb::CreateDBStatistics();
   {
     rocksdb::Options options;
+
+    static auto cache = rocksdb::NewLRUCache(1 << 30);
+
+    rocksdb::BlockBasedTableOptions table_options;
+    table_options.block_cache = cache;
+    options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+
     options.manual_wal_flush = true;
     options.create_if_missing = true;
     options.max_background_compactions = 4;
@@ -82,6 +90,10 @@ std::unique_ptr<KeyValueReader> RocksDb::snapshot() {
 }
 
 std::string RocksDb::stats() const {
+  std::string out;
+  db_->GetProperty("rocksdb.stats", &out);
+  //db_->GetProperty("rocksdb.cur-size-all-mem-tables", &out);
+  return out;
   return statistics_->ToString();
 }
 

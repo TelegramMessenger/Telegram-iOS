@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import FFMpeg
+import FFMpegBinding
 
 final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     private let codecContext: FFMpegAVCodecContext

@@ -60,6 +60,10 @@ class RocksDb : public KeyValue {
   RocksDb &operator=(RocksDb &&);
   ~RocksDb();
 
+  std::shared_ptr<rocksdb::OptimisticTransactionDB> raw_db() const {
+    return db_;
+  };
+
  private:
   std::shared_ptr<rocksdb::OptimisticTransactionDB> db_;
   std::shared_ptr<rocksdb::Statistics> statistics_;

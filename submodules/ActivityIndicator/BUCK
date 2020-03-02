@@ -7,7 +7,7 @@ static_library(
     ]),
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
-	"//submodules/Display:Display#shared",
+        "//submodules/Display:Display#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

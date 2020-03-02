@@ -8,12 +8,9 @@ static_library(
     headers = glob([
 	    "Sources/*.h",
     ]),
-    exported_headers = [
-    	"Sources/NBPhoneNumberDefines.h",
-    	"Sources/NBPhoneNumber.h",
-		"Sources/NBPhoneNumberUtil.h",
-        "Sources/NBAsYouTypeFormatter.h",
-    ],
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
     deps = [
     ],
     frameworks = [

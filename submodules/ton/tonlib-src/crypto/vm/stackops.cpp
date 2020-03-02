@@ -14,14 +14,14 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/log.h"
 #include "vm/stackops.h"
 #include "vm/opctable.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
 #include "vm/excno.hpp"
+#include "vm/vm.h"
 
 namespace vm {
 
@@ -379,6 +379,15 @@ int exec_blkdrop(VmState* st, unsigned args) {
   return 0;
 }
 
+int exec_blkdrop2(VmState* st, unsigned args) {
+  int x = ((args >> 4) & 15), y = (args & 15);
+  Stack& stack = st->get_stack();
+  VM_LOG(st) << "execute BLKDROP2 " << x << ',' << y;
+  stack.check_underflow(x + y);
+  stack.pop_many(x, y);
+  return 0;
+}
+
 int exec_blkpush(VmState* st, unsigned args) {
   int x = ((args >> 4) & 15), y = (args & 15);
   Stack& stack = st->get_stack();
@@ -570,7 +579,8 @@ void register_stack_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0x68, 8, "DEPTH", exec_depth))
       .insert(OpcodeInstr::mksimple(0x69, 8, "CHKDEPTH", exec_chkdepth))
       .insert(OpcodeInstr::mksimple(0x6a, 8, "ONLYTOPX", exec_onlytop_x))
-      .insert(OpcodeInstr::mksimple(0x6b, 8, "ONLYX", exec_only_x));
+      .insert(OpcodeInstr::mksimple(0x6b, 8, "ONLYX", exec_only_x))
+      .insert(OpcodeInstr::mkfixedrange(0x6c10, 0x6d00, 16, 8, instr::dump_2c("BLKDROP2 ", ","), exec_blkdrop2));
 }
 
 }  // namespace vm

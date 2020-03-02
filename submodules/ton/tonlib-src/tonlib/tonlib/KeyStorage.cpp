@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "KeyStorage.h"
 
@@ -179,12 +179,25 @@ td::Result<KeyStorage::ExportedEncryptedKey> KeyStorage::export_encrypted_key(In
   return ExportedEncryptedKey{std::move(res.encrypted_data)};
 }
 
+td::Result<KeyStorage::ExportedUnencryptedKey> KeyStorage::export_unencrypted_key(InputKey input_key) {
+  TRY_RESULT(decrypted_key, export_decrypted_key(std::move(input_key)));
+  return ExportedUnencryptedKey{decrypted_key.private_key.as_octet_string()};
+}
+
 td::Result<KeyStorage::Key> KeyStorage::import_encrypted_key(td::Slice local_password, td::Slice key_password,
                                                              ExportedEncryptedKey exported_key) {
   EncryptedKey encrypted_key{std::move(exported_key.data), td::Ed25519::PublicKey(td::SecureString()),
                              get_dummy_secret()};
   TRY_RESULT_PREFIX(decrypted_key, encrypted_key.decrypt(key_password, false), TonlibError::KeyDecrypt());
   return save_key(std::move(decrypted_key), local_password);
+}
+
+td::Result<KeyStorage::Key> KeyStorage::import_unencrypted_key(td::Slice local_password,
+                                                               ExportedUnencryptedKey exported_key) {
+  RawDecryptedKey raw_key;
+  raw_key.private_key = std::move(exported_key.data);
+  DecryptedKey key(std::move(raw_key));
+  return save_key(std::move(key), local_password);
 }
 
 KeyStorage::PrivateKey KeyStorage::fake_private_key() {

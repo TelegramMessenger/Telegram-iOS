@@ -4,8 +4,8 @@
 //
 //
 
-#import "NBPhoneNumber.h"
-#import "NBPhoneNumberDefines.h"
+#import <libphonenumber/NBPhoneNumber.h>
+#import <libphonenumber/NBPhoneNumberDefines.h>
 
 
 @implementation NBPhoneNumber

@@ -63,3 +63,9 @@ int processed?(int query_id) method_id {
   (_, var found) = old_queries.udict_get?(64, query_id);
   return found ? true : - (query_id <= last_cleaned);
 }
+
+int get_public_key() method_id {
+  var cs = get_data().begin_parse();
+  cs~load_uint(32 + 64);
+  return cs.preload_uint(256);
+}

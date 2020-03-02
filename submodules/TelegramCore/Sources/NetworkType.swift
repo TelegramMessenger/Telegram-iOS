@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import MtProtoKit
+import Reachability
 #if os(iOS)
 import CoreTelephony
 #endif

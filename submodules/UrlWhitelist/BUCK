@@ -5,8 +5,6 @@ static_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
-    deps = [
-    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],

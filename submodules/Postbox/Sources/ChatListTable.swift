@@ -421,8 +421,8 @@ final class ChatListTable: Table {
                 lowerEntries.append(entry)
                 return .accept
             }
-        }, limit: count / 2 + 1)
-        if lowerEntries.count >= count / 2 + 1 {
+        }, limit: count + 1)
+        if lowerEntries.count >= count + 1 {
             lower = lowerEntries.last
             lowerEntries.removeLast()
         }
@@ -440,40 +440,10 @@ final class ChatListTable: Table {
                 upperEntries.append(entry)
                 return .accept
             }
-        }, limit: count - lowerEntries.count + 1)
-        if upperEntries.count >= count - lowerEntries.count + 1 {
+        }, limit: count + 1)
+        if upperEntries.count >= count + 1 {
             upper = upperEntries.last
             upperEntries.removeLast()
-        }
-        
-        if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
-            var additionalLowerEntries: [ChatListIntermediateEntry] = []
-            let startEntryType: ChatListEntryType
-            switch lowerEntries.last! {
-                case .message:
-                    startEntryType = .message
-                case .hole:
-                    startEntryType = .hole
-            }
-            self.valueBox.filteredRange(self.table, start: self.key(groupId: groupId, index: lowerEntries.last!.index, type: startEntryType), end: self.lowerBound(groupId: groupId), values: { key, value in
-                let entry = readEntry(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value)
-                if let predicate = predicate {
-                    if predicate(entry) {
-                        additionalLowerEntries.append(entry)
-                        return .accept
-                    } else {
-                        return .skip
-                    }
-                } else {
-                    additionalLowerEntries.append(entry)
-                    return .accept
-                }
-            }, limit: count - lowerEntries.count - upperEntries.count + 1)
-            if additionalLowerEntries.count >= count - lowerEntries.count + upperEntries.count + 1 {
-                lower = additionalLowerEntries.last
-                additionalLowerEntries.removeLast()
-            }
-            lowerEntries.append(contentsOf: additionalLowerEntries)
         }
         
         var entries: [ChatListIntermediateEntry] = []

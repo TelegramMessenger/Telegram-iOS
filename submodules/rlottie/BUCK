@@ -1,5 +1,9 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+public_headers = glob([
+    "PublicHeaders/**/*.h",
+])
+
 static_library(
     name = "RLottieBinding",
     srcs = glob([
@@ -20,12 +24,9 @@ static_library(
     ], exclude = [
         "rlottie/src/lottie/rapidjson/msinttypes/**/*",
     ]) + [
-        "LottieInstance.h",
         "config.h",
-    ],
-    exported_headers = [
-        "LottieInstance.h"
-    ],
+    ] + public_headers,
+    exported_headers = public_headers,
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",

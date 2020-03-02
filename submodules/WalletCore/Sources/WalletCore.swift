@@ -1060,18 +1060,73 @@ private extension WalletTransactionId {
     }
 }
 
+public enum WalletTransactionMessageContentsDecodingError: Error {
+    case generic
+}
+
+public enum WalletTransactionMessageContents: Codable, Equatable {
+    enum Key: CodingKey {
+        case raw
+        case plainText
+        case encryptedText
+    }
+    
+    case raw(Data)
+    case plainText(String)
+    case encryptedText(Data)
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Key.self)
+        if let data = try? container.decode(Data.self, forKey: .raw) {
+            self = .raw(data)
+        } else if let plainText = try? container.decode(String.self, forKey: .plainText) {
+            self = .plainText(plainText)
+        } else if let encryptedText = try? container.decode(Data.self, forKey: .encryptedText) {
+            self = .encryptedText(encryptedText)
+        } else {
+            throw WalletTransactionMessageContentsDecodingError.generic
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = try encoder.container(keyedBy: Key.self)
+        switch self {
+        case let .raw(data):
+            try container.encode(data, forKey: .raw)
+        case let .plainText(text):
+            try container.encode(text, forKey: .plainText)
+        case let .encryptedText(data):
+            try container.encode(data, forKey: .encryptedText)
+        }
+    }
+}
+
+private extension WalletTransactionMessageContents {
+    init(tonTransactionMessageContents: TONTransactionMessageContents) {
+        if let raw = tonTransactionMessageContents as? TONTransactionMessageContentsRawData {
+            self = .raw(raw.data)
+        } else if let plainText = tonTransactionMessageContents as? TONTransactionMessageContentsPlainText {
+            self = .plainText(plainText.text)
+        } else if let encryptedText = tonTransactionMessageContents as? TONTransactionMessageContentsEncryptedText {
+            self = .encryptedText(encryptedText.data)
+        } else {
+            self = .raw(Data())
+        }
+    }
+}
+
 public final class WalletTransactionMessage: Codable, Equatable {
     public let value: Int64
     public let source: String
     public let destination: String
-    public let textMessage: String
+    public let contents: WalletTransactionMessageContents
     public let bodyHash: Data
     
-    init(value: Int64, source: String, destination: String, textMessage: String, bodyHash: Data) {
+    init(value: Int64, source: String, destination: String, contents: WalletTransactionMessageContents, bodyHash: Data) {
         self.value = value
         self.source = source
         self.destination = destination
-        self.textMessage = textMessage
+        self.contents = contents
         self.bodyHash = bodyHash
     }
     
@@ -1085,7 +1140,7 @@ public final class WalletTransactionMessage: Codable, Equatable {
         if lhs.destination != rhs.destination {
             return false
         }
-        if lhs.textMessage != rhs.textMessage {
+        if lhs.contents != rhs.contents {
             return false
         }
         if lhs.bodyHash != rhs.bodyHash {
@@ -1097,7 +1152,7 @@ public final class WalletTransactionMessage: Codable, Equatable {
 
 private extension WalletTransactionMessage {
     convenience init(tonTransactionMessage: TONTransactionMessage) {
-        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination, textMessage: tonTransactionMessage.textMessage, bodyHash: tonTransactionMessage.bodyHash)
+        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination, contents: WalletTransactionMessageContents(tonTransactionMessageContents: tonTransactionMessage.contents), bodyHash: tonTransactionMessage.bodyHash)
     }
 }
 

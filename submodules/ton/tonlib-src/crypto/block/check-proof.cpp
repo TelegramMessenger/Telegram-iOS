@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "check-proof.h"
 #include "block/block.h"
@@ -219,7 +219,17 @@ td::Status check_account_proof(td::Slice proof, ton::BlockIdExt shard_blk, const
 }
 
 td::Result<AccountState::Info> AccountState::validate(ton::BlockIdExt ref_blk, block::StdAddress addr) const {
-  TRY_RESULT_PREFIX(root, vm::std_boc_deserialize(state.as_slice(), true), "cannot deserialize account state");
+  TRY_RESULT_PREFIX(true_root, vm::std_boc_deserialize(state.as_slice(), true), "cannot deserialize account state");
+  Ref<vm::Cell> root;
+
+  if (is_virtualized && true_root.not_null()) {
+    root = vm::MerkleProof::virtualize(true_root, 1);
+    if (root.is_null()) {
+      return td::Status::Error("account state proof is invalid");
+    }
+  } else {
+    root = true_root;
+  }
 
   if (blk != ref_blk && ref_blk.id.seqno != ~0U) {
     return td::Status::Error(PSLICE() << "obtained getAccountState() for a different reference block " << blk.to_str()
@@ -241,6 +251,7 @@ td::Result<AccountState::Info> AccountState::validate(ton::BlockIdExt ref_blk, b
   TRY_STATUS(block::check_account_proof(proof.as_slice(), shard_blk, addr, root, &res.last_trans_lt,
                                         &res.last_trans_hash, &res.gen_utime, &res.gen_lt));
   res.root = std::move(root);
+  res.true_root = std::move(true_root);
 
   return res;
 }

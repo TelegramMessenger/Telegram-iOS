@@ -1,4 +1,5 @@
 import Foundation
+import NumberPluralizationForm
 
 public enum PluralizationForm: Int32 {
     case zero = 0

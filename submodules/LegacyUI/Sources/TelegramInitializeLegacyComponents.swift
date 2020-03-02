@@ -3,11 +3,7 @@ import UIKit
 import TelegramCore
 import SyncCore
 import SwiftSignalKit
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import Display
 import TelegramPresentationData
 import DeviceAccess

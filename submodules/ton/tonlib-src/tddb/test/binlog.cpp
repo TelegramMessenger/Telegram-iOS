@@ -679,7 +679,7 @@ TEST(Buffers, CyclicBufferSimple) {
     auto data = td::rand_string('a', 'z', 100001);
     td::Slice write_slice = data;
     td::Slice read_slice = data;
-    for (size_t i = 1; (int)i < options.count; i++) {
+    for (size_t i = 1; i < options.count; i++) {
       ASSERT_EQ((i - 1) * options.chunk_size, reader.reader_size());
       ASSERT_EQ((i - 1) * options.chunk_size, writer.writer_size());
       auto slice = writer.prepare_write();

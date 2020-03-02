@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "tl_writer_jni_h.h"
 
@@ -24,7 +24,8 @@ namespace td {
 
 bool TD_TL_writer_jni_h::is_built_in_simple_type(const std::string &name) const {
   return name == "Bool" || name == "Int32" || name == "Int53" || name == "Int64" || name == "Double" ||
-         name == "String" || name == "Bytes" || name == "SecureString" || name == "SecureBytes";
+         name == "String" || name == "Bytes" || name == "SecureString" || name == "SecureBytes" || name == "Function" ||
+         name == "Object";
 }
 
 bool TD_TL_writer_jni_h::is_built_in_complex_type(const std::string &name) const {

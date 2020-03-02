@@ -1,0 +1,52 @@
+"Lists.fif" include
+16 constant key-bits
+16 constant val-bits
+{ val-bits u, } : val,
+{ val-bits u@ } : val@
+{ swap unpair <b swap val, b> <s swap rot key-bits udict! not abort"cannot add key-value" } : +dictpair
+{ dictnew { over null? not } { swap uncons swap rot +dictpair } while nip } : mkdict
+{ dup null? { ."(null) " drop } { val@ . } cond } : .val
+{ key-bits { swap . ."-> " .val ."; " true } dictforeach drop cr } : show-dict
+{ key-bits { swap . ."-> " .val ."; " true } idictforeach drop cr } : show-idict
+{ key-bits { swap . ."-> " .val ."; " true } dictforeachrev drop cr } : show-rev-dict
+{ key-bits { swap . ."-> " .val ."; " true } idictforeachrev drop cr } : show-rev-idict
+{ key-bits { rot . ."-> " swap .val .val ."; " true } dictdiff drop cr } : show-dict-diff
+{ key-bits { swap . ."-> " .val ."; " true } rot dictforeachfromx drop cr } : show-dict-from
+{ key-bits { val@ swap val@ + val, true } dictmerge } : dict-sum
+{ key-bits { val@ 2* val, true } dictmap } : dict-twice
+{ key-bits { val@ 2 /mod { 2drop false } { val, true } cond } dictmap } : dict-half
+{ key-bits { val@ + val, true } dictmapext } : dict-add-x
+{ null swap key-bits { val@ pair swap cons true } dictforeach drop  } : dict>list-rev
+{ dict>list-rev list-reverse } : dict>list
+( _( 13 169 ) _( 17 289 ) _( 10 100 ) ) mkdict =: Dict
+_( 4 16 ) _( 9 81 ) Dict +dictpair +dictpair =: Dict1
+_( 4 20 ) _( 101 10201 ) Dict +dictpair +dictpair =: Dict2
+_( 65533 9 ) Dict2 +dictpair =: Dict3
+."Dict1 = " Dict1 show-idict
+."Dict2 = " Dict2 show-idict
+."Dict3 = " Dict3 show-idict
+variable D
+{ D ! } : D!
+{ ."D = " D @ show-idict } : show-D
+{ D @ 2 show-dict-from } : show-D-from
+{ D @ 6 show-dict-from } : show-D-from+
+{ D @ 18 show-dict-from } : show-D-from-hint
+{ D @ 22 show-dict-from } : show-D-from-hint+
+variable hint  hint 0!
+{ ."D[" dup ._ ."..] = " show-D-from } : test-from
+{ ."D[" dup ._ ."+..] = " show-D-from+ } : test-from+
+{ hint @ ."(hint=" dup ._ .") D[" over ._ ."..] = " show-D-from-hint } : test-from-hint
+{ hint @ ."(hint=" dup ._ .") D[" over ._ ."+..] = " show-D-from-hint+ } : test-from-hint+
+{ -16 { 2dup swap execute 1+ } 120 times 2drop } : range-run 
+{ hint ! ' test-from-hint range-run  ' test-from-hint+ range-run } : range-test-hint
+
+{ ."------- BIG TEST -------" cr show-D
+  ' test-from range-run ' test-from+ range-run
+  0 range-test-hint  13 range-test-hint 7 range-test-hint 100 range-test-hint
+} : big-test
+Dict1 D!
+big-test
+Dict2 D!
+big-test
+Dict3 D!
+big-test

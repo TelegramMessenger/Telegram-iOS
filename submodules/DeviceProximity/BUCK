@@ -7,10 +7,10 @@ static_library(
     ]),
     headers = glob([
         "Sources/*.h",
-    ], exclude = ["Sources/DeviceProximity.h"]),
+    ]),
     exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/DeviceProximity.h"]),
+        "PublicHeaders/**/*.h",
+    ]),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",

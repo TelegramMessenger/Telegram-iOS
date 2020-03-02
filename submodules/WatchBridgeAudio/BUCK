@@ -4,19 +4,10 @@ static_library(
     name = "WatchBridgeAudio",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/**/*.m",
-        "Sources/**/*.mm",
     ]),
-    headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/WatchBridgeAudio.h"]),
-    exported_headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/WatchBridgeAudio.h"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/SSignalKit/SSignalKit:SSignalKit",
-        "//submodules/OpusBinding:OpusBinding",
+        "//submodules/WatchBridgeAudio/Impl:WatchBridgeAudioImpl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

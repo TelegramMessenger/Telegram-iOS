@@ -4,11 +4,8 @@ import TelegramCore
 import SyncCore
 import SwiftSignalKit
 import Postbox
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
+import LegacyDataImportImpl
 
 public enum AccountImportError: Error {
     case generic

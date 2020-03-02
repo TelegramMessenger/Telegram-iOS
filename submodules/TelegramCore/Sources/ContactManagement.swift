@@ -2,7 +2,7 @@ import Foundation
 import TelegramApi
 import Postbox
 import SwiftSignalKit
-
+import CryptoUtils
 import SyncCore
 
 private func md5(_ data: Data) -> Data {

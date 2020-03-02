@@ -4,18 +4,13 @@ framework(
     name = "Postbox",
     srcs = glob([
         "Sources/*.swift",
-        "Sources/*.m",
     ]),
-    headers = [
-        "Sources/MurMurHash32.h",
-    ],
-    exported_headers = [
-        "Sources/MurMurHash32.h",
-    ],
     deps = [
     	"//submodules/Crc32:Crc32",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/sqlcipher:sqlcipher",
+        "//submodules/MurMurHash32:MurMurHash32",
+        "//submodules/StringTransliteration:StringTransliteration",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

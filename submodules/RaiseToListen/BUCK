@@ -3,17 +3,10 @@ load("//Config:buck_rule_macros.bzl", "static_library")
 static_library(
     name = "RaiseToListen",
     srcs = glob([
-        "Sources/*.m",
         "Sources/*.swift",
     ]),
-    headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/RaiseToListen.h"]),
-    exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/RaiseToListen.h"]),
     deps = [
-        "//submodules/DeviceProximity:DeviceProximity",
+        "//submodules/RaiseToListen/Impl:RaiseToListenImpl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

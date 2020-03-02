@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "parser/srcread.h"
 #include "func.h"
@@ -121,10 +121,47 @@ AsmOp AsmOp::BlkDrop(int a) {
   return AsmOp::Custom(os.str(), a, 0);
 }
 
+AsmOp AsmOp::BlkDrop2(int a, int b) {
+  if (!b) {
+    return BlkDrop(a);
+  }
+  std::ostringstream os;
+  os << a << " " << b << " BLKDROP2";
+  return AsmOp::Custom(os.str(), a + b, b);
+}
+
 AsmOp AsmOp::BlkReverse(int a, int b) {
   std::ostringstream os;
   os << a << " " << b << " REVERSE";
   return AsmOp::Custom(os.str(), a + b, a + b);
+}
+
+AsmOp AsmOp::Tuple(int a) {
+  switch (a) {
+    case 1:
+      return AsmOp::Custom("SINGLE", 1, 1);
+    case 2:
+      return AsmOp::Custom("PAIR", 2, 1);
+    case 3:
+      return AsmOp::Custom("TRIPLE", 3, 1);
+  }
+  std::ostringstream os;
+  os << a << " TUPLE";
+  return AsmOp::Custom(os.str(), a, 1);
+}
+
+AsmOp AsmOp::UnTuple(int a) {
+  switch (a) {
+    case 1:
+      return AsmOp::Custom("UNSINGLE", 1, 1);
+    case 2:
+      return AsmOp::Custom("UNPAIR", 1, 2);
+    case 3:
+      return AsmOp::Custom("UNTRIPLE", 1, 3);
+  }
+  std::ostringstream os;
+  os << a << " UNTUPLE";
+  return AsmOp::Custom(os.str(), 1, a);
 }
 
 AsmOp AsmOp::IntConst(td::RefInt256 x) {
@@ -325,6 +362,8 @@ bool apply_op(StackTransform& trans, const AsmOp& op) {
       return trans.apply_pop(op.a);
     case AsmOp::a_const:
       return !op.a && op.b == 1 && trans.apply_push_newconst();
+    case AsmOp::a_custom:
+      return op.is_gconst() && trans.apply_push_newconst();
     default:
       return false;
   }

@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import MtProtoKit
 import SwiftSignalKit
+import CryptoUtils
 
 private enum GenerateSecureSecretError {
     case generic

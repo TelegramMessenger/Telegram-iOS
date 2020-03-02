@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/utils/as.h"
 #include "td/utils/base64.h"
@@ -218,6 +218,26 @@ TEST(Misc, base64) {
   ASSERT_TRUE(base64_encode("      /'.;.';≤.];,].',[.;/,.;/]/..;!@#!*(%?::;!%\";") ==
               "ICAgICAgLycuOy4nO+KJpC5dOyxdLicsWy47LywuOy9dLy4uOyFAIyEqKCU/"
               "Ojo7ISUiOw==");
+}
+
+TEST(Misc, base32) {
+  ASSERT_EQ("", base32_encode(""));
+  ASSERT_EQ("me", base32_encode("a"));
+  base32_decode("me").ensure();
+  ASSERT_EQ("mfra", base32_encode("ab"));
+  ASSERT_EQ("mfrgg", base32_encode("abc"));
+  ASSERT_EQ("mfrggza", base32_encode("abcd"));
+  ASSERT_EQ("mfrggzdg", base32_encode("abcdf"));
+  ASSERT_EQ("mfrggzdgm4", base32_encode("abcdfg"));
+  for (int l = 0; l < 300000; l += l / 20 + l / 1000 * 500 + 1) {
+    for (int t = 0; t < 10; t++) {
+      string s = rand_string(std::numeric_limits<char>::min(), std::numeric_limits<char>::max(), l);
+      auto encoded = base32_encode(s);
+      auto decoded = base32_decode(encoded);
+      ASSERT_TRUE(decoded.is_ok());
+      ASSERT_TRUE(decoded.ok() == s);
+    }
+  }
 }
 
 TEST(Misc, to_integer) {
@@ -570,6 +590,10 @@ static void test_full_split(Slice str, vector<Slice> expected) {
   ASSERT_EQ(expected, td::full_split(str));
 }
 
+static void test_full_split(Slice str, char c, size_t max_parts, vector<Slice> expected) {
+  ASSERT_EQ(expected, td::full_split(str, c, max_parts));
+}
+
 TEST(Misc, full_split) {
   test_full_split("", {});
   test_full_split(" ", {"", ""});
@@ -585,6 +609,7 @@ TEST(Misc, full_split) {
   test_full_split(" abcdef ", {"", "abcdef", ""});
   test_full_split(" ab cd ef ", {"", "ab", "cd", "ef", ""});
   test_full_split("  ab  cd  ef  ", {"", "", "ab", "", "cd", "", "ef", "", ""});
+  test_full_split("ab cd ef gh", ' ', 3, {"ab", "cd", "ef gh"});
 }
 
 TEST(Misc, StringBuilder) {

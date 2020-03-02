@@ -1,6 +1,5 @@
 #!/bin/sh
 
-#set -x
 set -e
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
@@ -55,7 +54,7 @@ mkdir -p "$TEMP_ENTITLEMENTS_PATH"
 if [ "$APP_TYPE" == "wallet" ]; then
 	cp "buck-out/gen/Wallet/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
 else
-	cp "buck-out/gen/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
+	cp "buck-out/gen/Telegram/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
 fi
 rm -rf "$IPA_PATH.original.unpacked"
 rm -f "$BUILD_PATH/${APP_NAME}_signed.ipa"
@@ -278,7 +277,7 @@ APP_PLIST="$APP_PATH/Info.plist"
 if [ "$APP_TYPE" == "wallet" ]; then
 	APP_BINARY_TARGET="//Wallet:Wallet"
 else
-	APP_BINARY_TARGET="//:Telegram"
+	APP_BINARY_TARGET="//Telegram:Telegram"
 fi
 
 echo "Repacking frameworks..."
@@ -312,7 +311,7 @@ done
 if [ "$APP_TYPE" == "wallet" ]; then
 	APP_BINARY_DSYM_PATH="buck-out/gen/Wallet/Wallet#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/Wallet.app.dSYM"
 else
-	APP_BINARY_DSYM_PATH="buck-out/gen/Telegram#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/Telegram.app.dSYM"
+	APP_BINARY_DSYM_PATH="buck-out/gen/Telegram/Telegram#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/Telegram.app.dSYM"
 fi
 cp -r "$APP_BINARY_DSYM_PATH" "$DSYMS_DIR/"
 
@@ -323,12 +322,12 @@ else
 fi
 
 for EXTENSION in $EXTENSIONS; do
-	EXTENSION_DSYM_PATH="buck-out/gen/${EXTENSION}Extension#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/${EXTENSION}Extension.appex.dSYM"
+	EXTENSION_DSYM_PATH="buck-out/gen/Telegram/${EXTENSION}Extension#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/${EXTENSION}Extension.appex.dSYM"
 	cp -r "$EXTENSION_DSYM_PATH" "$DSYMS_DIR/"
 done
 
 if [ "$APP_TYPE" != "wallet" ]; then
-	WATCH_EXTENSION_DSYM_PATH="buck-out/gen/WatchAppExtension#dwarf-and-dsym,no-include-frameworks,watchos-arm64_32,watchos-armv7k/WatchAppExtension.appex.dSYM"
+	WATCH_EXTENSION_DSYM_PATH="buck-out/gen/Telegram/WatchAppExtension#dwarf-and-dsym,no-include-frameworks,watchos-arm64_32,watchos-armv7k/WatchAppExtension.appex.dSYM"
 	cp -r "$WATCH_EXTENSION_DSYM_PATH" "$DSYMS_DIR/"
 fi
 

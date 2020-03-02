@@ -14,13 +14,14 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
 #include "td/utils/crypto.h"
 #include "td/utils/Slice.h"
 #include "td/utils/SharedSlice.h"
+#include "crypto/Ed25519.h"
 
 namespace tonlib {
 class SimpleEncryption {
@@ -33,8 +34,23 @@ class SimpleEncryption {
  private:
   static td::AesCbcState calc_aes_cbc_state_hash(td::Slice hash);
   static td::AesCbcState calc_aes_cbc_state_sha512(td::Slice seed);
-  static td::SecureString gen_random_prefix(td::int64 data_size);
+  static td::SecureString gen_random_prefix(td::int64 data_size, td::int64 min_padding);
 
+  static td::SecureString encrypt_data_with_prefix(td::Slice data, td::Slice secret);
+
+  friend class SimpleEncryptionV2;
+};
+
+class SimpleEncryptionV2 {
+ public:
+  static td::Result<td::SecureString> encrypt_data(td::Slice data, const td::Ed25519::PublicKey &public_key);
+  static td::Result<td::SecureString> decrypt_data(td::Slice data, const td::Ed25519::PrivateKey &private_key);
+  static td::Result<td::SecureString> encrypt_data(td::Slice data, const td::Ed25519::PublicKey &public_key,
+                                                   const td::Ed25519::PrivateKey &private_key);
+  static td::SecureString encrypt_data(td::Slice data, td::Slice secret);
+  static td::Result<td::SecureString> decrypt_data(td::Slice encrypted_data, td::Slice secret);
+
+ private:
   static td::SecureString encrypt_data_with_prefix(td::Slice data, td::Slice secret);
 };
 }  // namespace tonlib

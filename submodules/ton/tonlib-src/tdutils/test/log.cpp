@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/utils/tests.h"
 #include "td/utils/FileLog.h"
@@ -80,7 +80,8 @@ void bench_log(std::string name, int threads_n, F &&f) {
 };
 
 TEST(Log, TsLogger) {
-  bench_log("NewTsFileLog", 4, [] { return td::TsFileLog::create("tmplog").move_as_ok(); });
+  bench_log("NewTsFileLog", 4,
+            [] { return td::TsFileLog::create("tmplog", std::numeric_limits<td::int64>::max(), false).move_as_ok(); });
   bench_log("TsFileLog", 8, [] {
     class FileLog : public td::LogInterface {
      public:

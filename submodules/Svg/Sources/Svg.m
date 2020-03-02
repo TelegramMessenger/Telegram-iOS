@@ -1,4 +1,4 @@
-#import "Svg.h"
+#import <Svg/Svg.h>
 
 #import "nanosvg.h"
 

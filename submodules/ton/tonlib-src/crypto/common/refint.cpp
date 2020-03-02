@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "common/refint.h"
 #include <utility>
@@ -38,6 +38,11 @@ RefInt256 operator+(RefInt256 x, long long y) {
   return x;
 }
 
+RefInt256 operator+(RefInt256 x, const BigInt256& y) {
+  (x.write() += y).normalize();
+  return x;
+}
+
 RefInt256 operator-(RefInt256 x, RefInt256 y) {
   (x.write() -= *y).normalize();
   return x;
@@ -45,6 +50,11 @@ RefInt256 operator-(RefInt256 x, RefInt256 y) {
 
 RefInt256 operator-(RefInt256 x, long long y) {
   x.write().add_tiny(-y).normalize();
+  return x;
+}
+
+RefInt256 operator-(RefInt256 x, const BigInt256& y) {
+  (x.write() -= y).normalize();
   return x;
 }
 
@@ -67,6 +77,12 @@ RefInt256 operator*(RefInt256 x, RefInt256 y) {
 RefInt256 operator*(RefInt256 x, long long y) {
   x.write().mul_short_opt(y).normalize();
   return x;
+}
+
+RefInt256 operator*(RefInt256 x, const BigInt256& y) {
+  RefInt256 z{true, 0};
+  z.write().add_mul(*x, y).normalize();
+  return z;
 }
 
 RefInt256 operator/(RefInt256 x, RefInt256 y) {
@@ -142,6 +158,11 @@ RefInt256& operator+=(RefInt256& x, long long y) {
   return x;
 }
 
+RefInt256& operator+=(RefInt256& x, const BigInt256& y) {
+  (x.write() += y).normalize();
+  return x;
+}
+
 RefInt256& operator-=(RefInt256& x, RefInt256 y) {
   (x.write() -= *y).normalize();
   return x;
@@ -149,6 +170,11 @@ RefInt256& operator-=(RefInt256& x, RefInt256 y) {
 
 RefInt256& operator-=(RefInt256& x, long long y) {
   x.write().add_tiny(-y).normalize();
+  return x;
+}
+
+RefInt256& operator-=(RefInt256& x, const BigInt256& y) {
+  (x.write() -= y).normalize();
   return x;
 }
 
@@ -161,6 +187,12 @@ RefInt256& operator*=(RefInt256& x, RefInt256 y) {
 RefInt256& operator*=(RefInt256& x, long long y) {
   x.write().mul_short_opt(y).normalize();
   return x;
+}
+
+RefInt256& operator*=(RefInt256& x, const BigInt256& y) {
+  RefInt256 z{true, 0};
+  z.write().add_mul(*x, y).normalize();
+  return x = z;
 }
 
 RefInt256& operator/=(RefInt256& x, RefInt256 y) {
@@ -213,10 +245,20 @@ int sgn(RefInt256 x) {
   return x->sgn();
 }
 
-extern RefInt256 make_refint(long long x) {
-  auto xx = td::RefInt256{true, x};
-  xx.unique_write().normalize();
-  return xx;
+RefInt256 make_refint(long long x) {
+  return td::RefInt256{true, td::Normalize(), x};
+}
+
+RefInt256 zero_refint() {
+  //  static RefInt256 Zero = td::RefInt256{true, 0};
+  //  return Zero;
+  return td::RefInt256{true, 0};
+}
+
+RefInt256 bits_to_refint(td::ConstBitPtr bits, int n, bool sgnd) {
+  td::RefInt256 x{true};
+  x.unique_write().import_bits(bits, n, sgnd);
+  return x;
 }
 
 std::string dec_string(RefInt256 x) {

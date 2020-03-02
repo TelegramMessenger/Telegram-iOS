@@ -1,0 +1,7 @@
+_ check_assoc(op, a, b, c) {
+  return op(op(a, b), c) == op(a, op(b, c));
+}
+
+int main() {
+  return check_assoc(_+_, 2, 3, 9);
+}
