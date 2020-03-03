@@ -57,6 +57,7 @@ private final class TokenNode: ASDisplayNode {
         didSet {
             if self.isSelected != oldValue {
                 self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
+                self.titleNode.redrawIfPossible()
                 self.selectedBackgroundNode.isHidden = !self.isSelected
             }
         }
@@ -67,6 +68,7 @@ private final class TokenNode: ASDisplayNode {
         self.token = token
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
         self.selectedBackgroundNode = ASImageNode()
         self.selectedBackgroundNode.displaysAsynchronously = false

@@ -55,6 +55,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((ContactListPeerId) -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
     var removeSelectedPeer: ((ContactListPeerId) -> Void)?
+    var additionalCategorySelected: ((Int) -> Void)?
     
     var editableTokens: [EditableTokenListToken] = []
     
@@ -82,9 +83,22 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        if case .chatSelection = mode {
+        if case let .chatSelection(selectedChats, additionalCategories) = mode {
             placeholder = self.presentationData.strings.Common_Search
-            self.contentNode = .chats(ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: [.excludeSavedMessages], isSelecting: true), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true))
+            let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: [.excludeSavedMessages], isSelecting: true, additionalCategories: additionalCategories?.categories ?? []), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+            chatListNode.updateState { state in
+                var state = state
+                for peerId in selectedChats {
+                    state.selectedPeerIds.insert(peerId)
+                }
+                if let additionalCategories = additionalCategories {
+                    for id in additionalCategories.selectedCategories {
+                        state.selectedAdditionalCategoryIds.insert(id)
+                    }
+                }
+                return state
+            }
+            self.contentNode = .chats(chatListNode)
         } else {
             self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
         }
@@ -110,6 +124,12 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         case let .chats(chatsNode):
             chatsNode.peerSelected = { [weak self] peer, _, _ in
                 self?.openPeer?(.peer(peer: peer, isGlobal: false, participantCount: nil))
+            }
+            chatsNode.additionalCategorySelected = { [weak self] id in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.additionalCategorySelected?(id)
             }
         }
         

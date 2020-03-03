@@ -1,3 +1,5 @@
+build --experimental_guard_against_concurrent_changes
+
 build --strategy=Genrule=local
 build --apple_platform_type=ios
 build --cxxopt='-std=c++14'

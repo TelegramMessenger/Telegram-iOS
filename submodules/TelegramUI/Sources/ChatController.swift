@@ -8379,12 +8379,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         var canEdit = false
-        self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
-            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
-                canEdit = true
-            }
-            return state
-        })
+        if self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.length == 0 && self.presentationInterfaceState.interfaceState.editMessage == nil {
+            canEdit = true
+        }
         
         if canEdit, let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
             inputShortcuts.append(KeyShortcut(input: UIKeyCommand.inputUpArrow, action: { [weak self] in

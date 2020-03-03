@@ -78,7 +78,7 @@ genrule(
     cp $(location :build-ton-bazel.sh) "$$BUILD_DIR/"
     cp $(location :iOS-bazel.cmake) "$$BUILD_DIR/"
 
-    SOURCE_PATH="submodules/tonlib/tonlib-src"
+    SOURCE_PATH="submodules/ton/tonlib-src"
 
     cp -R "$$SOURCE_PATH" "$$BUILD_DIR/"
 

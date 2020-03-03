@@ -255,7 +255,8 @@ final class ChatListTable: Table {
                 if let filterPredicate = filterPredicate {
                     if let peer = postbox.peerTable.get(messageIndex.id.peerId) {
                         let isUnread = postbox.readStateTable.getCombinedState(messageIndex.id.peerId)?.isUnread ?? false
-                        if filterPredicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId), isUnread: isUnread) {
+                        let isContact = postbox.contactsTable.isContact(peerId: messageIndex.id.peerId)
+                        if filterPredicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId), isUnread: isUnread, isContact: isContact, isArchived: groupId != .root) {
                             passFilter = true
                         } else {
                             passFilter = false

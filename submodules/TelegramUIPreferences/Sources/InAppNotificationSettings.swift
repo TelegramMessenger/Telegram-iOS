@@ -39,7 +39,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var displayNotificationsFromAllAccounts: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.privateChat, .secretChat, .bot, .privateGroup], displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
     }
     
     public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool) {
@@ -65,19 +65,21 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
             var resultTags: PeerSummaryCounterTags = []
             for legacyTag in LegacyPeerSummaryCounterTags(rawValue: value) {
                 if legacyTag == .regularChatsAndPrivateGroups {
-                    resultTags.insert(.privateChat)
-                    resultTags.insert(.secretChat)
+                    resultTags.insert(.contact)
+                    resultTags.insert(.nonContact)
                     resultTags.insert(.bot)
-                    resultTags.insert(.privateGroup)
+                    resultTags.insert(.smallGroup)
+                    resultTags.insert(.largeGroup)
                 } else if legacyTag == .publicGroups {
-                    resultTags.insert(.publicGroup)
+                    resultTags.insert(.smallGroup)
+                    resultTags.insert(.largeGroup)
                 } else if legacyTag == .channels {
                     resultTags.insert(.channel)
                 }
             }
             self.totalUnreadCountIncludeTags = resultTags
         } else {
-            self.totalUnreadCountIncludeTags = [.privateChat, .secretChat, .bot, .privateGroup]
+            self.totalUnreadCountIncludeTags = .all
         }
         self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
         self.displayNotificationsFromAllAccounts = decoder.decodeInt32ForKey("displayNotificationsFromAllAccounts", orElse: 1) != 0

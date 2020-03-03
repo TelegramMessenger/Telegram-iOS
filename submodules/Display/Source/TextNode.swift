@@ -837,10 +837,14 @@ public class TextNode: ASDisplayNode {
                 } else {
                     font = defaultFont
                 }
-                if let paragraphStyle = attributedString.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
-                    resolvedAlignment = paragraphStyle.alignment
+                if alignment == .center {
+                    resolvedAlignment = .center
                 } else {
-                    resolvedAlignment = alignment
+                    if let paragraphStyle = attributedString.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
+                        resolvedAlignment = paragraphStyle.alignment
+                    } else {
+                        resolvedAlignment = alignment
+                    }
                 }
             } else {
                 font = defaultFont

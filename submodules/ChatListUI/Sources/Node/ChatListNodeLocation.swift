@@ -31,7 +31,8 @@ struct ChatListNodeViewUpdate {
 
 func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
     let includePeers = Set(filter.includePeers)
-    return ChatListFilterPredicate(includePeerIds: includePeers, include: { peer, notificationSettings, isUnread in
+    let excludePeers = Set(filter.excludePeers)
+    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, include: { peer, notificationSettings, isUnread, isContact, isArchived in
         if filter.excludeRead {
             if !isUnread {
                 return false
@@ -46,15 +47,26 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
                 return false
             }
         }
-        if !filter.categories.contains(.privateChats) {
+        if filter.excludeArchived {
+            if isArchived {
+                return false
+            }
+        }
+        if !filter.categories.contains(.contacts) && isContact {
             if let user = peer as? TelegramUser {
                 if user.botInfo == nil {
                     return false
                 }
+            } else if let _ = peer as? TelegramSecretChat {
+                return false
             }
         }
-        if !filter.categories.contains(.secretChats) {
-            if let _ = peer as? TelegramSecretChat {
+        if !filter.categories.contains(.nonContacts) && !isContact {
+            if let user = peer as? TelegramUser {
+                if user.botInfo == nil {
+                    return false
+                }
+            } else if let _ = peer as? TelegramSecretChat {
                 return false
             }
         }
@@ -65,7 +77,7 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
                 }
             }
         }
-        if !filter.categories.contains(.privateGroups) {
+        if !filter.categories.contains(.smallGroups) {
             if let _ = peer as? TelegramGroup {
                 return false
             } else if let channel = peer as? TelegramChannel {
@@ -76,7 +88,7 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
                 }
             }
         }
-        if !filter.categories.contains(.publicGroups) {
+        if !filter.categories.contains(.largeGroups) {
             if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
                     if channel.username != nil {

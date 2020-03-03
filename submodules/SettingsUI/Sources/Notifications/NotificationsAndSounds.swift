@@ -26,13 +26,13 @@ private struct CounterTagSettings: OptionSet {
     
     init(summaryTags: PeerSummaryCounterTags) {
         var result = CounterTagSettings()
-        if summaryTags.contains(.privateChat) {
+        if summaryTags.contains(.contact) {
             result.insert(.regularChatsAndPrivateGroups)
         }
         if summaryTags.contains(.channel) {
             result.insert(.channels)
         }
-        if summaryTags.contains(.publicGroup) {
+        if summaryTags.contains(.largeGroup) {
             result.insert(.publicGroups)
         }
         self = result
@@ -41,13 +41,13 @@ private struct CounterTagSettings: OptionSet {
     func toSumaryTags() -> PeerSummaryCounterTags {
         var result = PeerSummaryCounterTags()
         if self.contains(.regularChatsAndPrivateGroups) {
-            result.insert(.privateChat)
-            result.insert(.secretChat)
+            result.insert(.contact)
+            result.insert(.nonContact)
             result.insert(.bot)
-            result.insert(.privateGroup)
+            result.insert(.smallGroup)
         }
         if self.contains(.publicGroups) {
-            result.insert(.publicGroup)
+            result.insert(.largeGroup)
         }
         if self.contains(.channels) {
             result.insert(.channel)

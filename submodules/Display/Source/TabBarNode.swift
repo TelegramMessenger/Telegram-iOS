@@ -392,6 +392,11 @@ class TabBarNode: ASDisplayNode {
         return [container.imageNode.imageNode, container.imageNode.textImageNode, container.badgeContainerNode]
     }
     
+    func frameForControllerTab(at index: Int) -> CGRect? {
+        let container = self.tabBarNodeContainers[index]
+        return container.imageNode.frame
+    }
+    
     private func reloadTabBarItems() {
         for node in self.tabBarNodeContainers {
             node.imageNode.removeFromSupernode()

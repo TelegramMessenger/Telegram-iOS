@@ -69,7 +69,7 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
         let contentHeight: CGFloat = largeScreen ? 420.0 : 400.0
         
         let iconSize = self.iconNode.measure(CGSize(width: 400.0, height: 400.0))
-        let labelSize = self.labelNode.measure(CGSize(width: 295.0, height: CGFloat.greatestFiniteMagnitude))
+        let labelSize = self.labelNode.updateLayout(CGSize(width: 295.0, height: CGFloat.greatestFiniteMagnitude))
         let buttonSize = self.buttonNode.measure(CGSize(width: 295.0, height: CGFloat.greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: insets.top + floor((availableHeight - contentHeight) / 2.0) + floor(iconSize.height * (largeScreen ? CGFloat(0.2) : CGFloat(0.5)))), size: iconSize))

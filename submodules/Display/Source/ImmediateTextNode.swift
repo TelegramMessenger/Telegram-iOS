@@ -107,6 +107,12 @@ public class ImmediateTextNode: TextNode {
         return ImmediateTextNodeLayoutInfo(size: layout.size, truncated: layout.truncated)
     }
     
+    public func redrawIfPossible() {
+        if let constrainedSize = self.constrainedSize {
+            let _ = self.updateLayout(constrainedSize)
+        }
+    }
+    
     override public func didLoad() {
         super.didLoad()
         
@@ -191,6 +197,12 @@ public class ImmediateTextNode: TextNode {
 }
 
 public class ASTextNode: ImmediateTextNode {
+    override public init() {
+        super.init()
+        
+        self.maximumNumberOfLines = 0
+    }
+    
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return self.updateLayout(constrainedSize)
     }

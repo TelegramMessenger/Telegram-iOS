@@ -131,7 +131,12 @@ public class ComposeController: ViewController {
                     }
                 })
                 strongSelf.createActionDisposable.set((controller.result
-                |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
+                |> deliverOnMainQueue).start(next: { [weak controller] result in
+                    var peerIds: [ContactListPeerId] = []
+                    if case let .result(peerIdsValue, _) = result {
+                        peerIds = peerIdsValue
+                    }
+                    
                     if let strongSelf = self, let controller = controller {
                         let createGroup = strongSelf.context.sharedContext.makeCreateGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
                             if case let .peer(peerId) = peerId {

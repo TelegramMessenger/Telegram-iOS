@@ -89,8 +89,8 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 var minTimestamp: Int32?
                 var maxTimestamp: Int32?
                 for (_, item, _) in indicesAndItems {
-                    if case .PeerEntry = item, item.sortIndex.pinningIndex == nil {
-                        let timestamp = item.sortIndex.messageIndex.timestamp
+                    if case .PeerEntry = item, case let .index(index) = item.sortIndex, index.pinningIndex == nil {
+                        let timestamp = index.messageIndex.timestamp
                         
                         if minTimestamp == nil || timestamp < minTimestamp! {
                             minTimestamp = timestamp
@@ -146,7 +146,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 case let .index(scrollIndex, position, directionHint, animated):
                     var index = toView.filteredEntries.count - 1
                     for entry in toView.filteredEntries {
-                        if entry.sortIndex >= scrollIndex {
+                        if entry.sortIndex >= .index(scrollIndex) {
                             scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
                             break
                         }
@@ -156,7 +156,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     if scrollToItem == nil {
                         var index = 0
                         for entry in toView.filteredEntries.reversed() {
-                            if entry.sortIndex < scrollIndex {
+                            if entry.sortIndex < .index(scrollIndex) {
                                 scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
                                 break
                             }

@@ -207,6 +207,24 @@ public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, stroke
     })
 }
 
+public func generateAdjustedStretchableFilledCircleImage(diameter: CGFloat, color: UIColor) -> UIImage? {
+    let corner: CGFloat = diameter / 2.0
+    return generateImage(CGSize(width: diameter + 2.0, height: diameter + 2.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        context.move(to: CGPoint(x: 0.0, y: corner))
+        context.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: corner, y: 0.0), radius: corner)
+        context.addLine(to: CGPoint(x: size.width - corner, y: 0.0))
+        context.addArc(tangent1End: CGPoint(x: size.width, y: 0.0), tangent2End: CGPoint(x: size.width, y: corner), radius: corner)
+        context.addLine(to: CGPoint(x: size.width, y: size.height - corner))
+        context.addArc(tangent1End: CGPoint(x: size.width, y: size.height), tangent2End: CGPoint(x: size.width - corner, y: size.height), radius: corner)
+        context.addLine(to: CGPoint(x: corner, y: size.height))
+        context.addArc(tangent1End: CGPoint(x: 0.0, y: size.height), tangent2End: CGPoint(x: 0.0, y: size.height - corner), radius: corner)
+        context.closePath()
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: Int(diameter / 2) + 1, topCapHeight: Int(diameter / 2) + 1)
+}
+
 public func generateCircleImage(diameter: CGFloat, lineWidth: CGFloat, color: UIColor?, strokeColor: UIColor? = nil, strokeWidth: CGFloat? = nil, backgroundColor: UIColor? = nil) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

@@ -170,6 +170,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, peerSelected: { _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
+        }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
                 if let index = strongSelf.searchResult.messages.firstIndex(where: { $0.index == message.index }) {
@@ -178,7 +179,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 strongSelf.listNode.clearHighlightAnimated(true)
             }
         }, groupSelected: { _ in
-        }, addContact: { [weak self] phoneNumber in
+        }, addContact: { _ in
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, setItemPinned: { _, _ in
         }, setPeerMuted: { _, _ in

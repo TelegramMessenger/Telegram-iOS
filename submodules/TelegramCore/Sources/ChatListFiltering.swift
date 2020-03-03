@@ -24,20 +24,20 @@ public struct ChatListFilterPeerCategories: OptionSet, Hashable {
         self.rawValue = rawValue
     }
     
-    public static let privateChats = ChatListFilterPeerCategories(rawValue: 1 << 0)
-    public static let secretChats = ChatListFilterPeerCategories(rawValue: 1 << 1)
-    public static let privateGroups = ChatListFilterPeerCategories(rawValue: 1 << 2)
-    public static let bots = ChatListFilterPeerCategories(rawValue: 1 << 3)
-    public static let publicGroups = ChatListFilterPeerCategories(rawValue: 1 << 4)
-    public static let channels = ChatListFilterPeerCategories(rawValue: 1 << 5)
+    public static let contacts = ChatListFilterPeerCategories(rawValue: 1 << 0)
+    public static let nonContacts = ChatListFilterPeerCategories(rawValue: 1 << 1)
+    public static let smallGroups = ChatListFilterPeerCategories(rawValue: 1 << 2)
+    public static let largeGroups = ChatListFilterPeerCategories(rawValue: 1 << 3)
+    public static let channels = ChatListFilterPeerCategories(rawValue: 1 << 4)
+    public static let bots = ChatListFilterPeerCategories(rawValue: 1 << 5)
     
     public static let all: ChatListFilterPeerCategories = [
-        .privateChats,
-        .secretChats,
-        .privateGroups,
-        .bots,
-        .publicGroups,
-        .channels
+        .contacts,
+        .nonContacts,
+        .smallGroups,
+        .largeGroups,
+        .channels,
+        .bots
     ]
 }
 
@@ -48,10 +48,10 @@ private struct ChatListFilterPeerApiCategories: OptionSet {
         self.rawValue = rawValue
     }
     
-    static let privateChats = ChatListFilterPeerApiCategories(rawValue: 1 << 0)
-    static let secretChats = ChatListFilterPeerApiCategories(rawValue: 1 << 1)
-    static let privateGroups = ChatListFilterPeerApiCategories(rawValue: 1 << 2)
-    static let publicGroups = ChatListFilterPeerApiCategories(rawValue: 1 << 3)
+    static let contacts = ChatListFilterPeerApiCategories(rawValue: 1 << 0)
+    static let nonContacts = ChatListFilterPeerApiCategories(rawValue: 1 << 1)
+    static let smallGroups = ChatListFilterPeerApiCategories(rawValue: 1 << 2)
+    static let largeGroups = ChatListFilterPeerApiCategories(rawValue: 1 << 3)
     static let channels = ChatListFilterPeerApiCategories(rawValue: 1 << 4)
     static let bots = ChatListFilterPeerApiCategories(rawValue: 1 << 5)
 }
@@ -60,17 +60,17 @@ extension ChatListFilterPeerCategories {
     init(apiFlags: Int32) {
         let flags = ChatListFilterPeerApiCategories(rawValue: apiFlags)
         var result: ChatListFilterPeerCategories = []
-        if flags.contains(.privateChats) {
-            result.insert(.privateChats)
+        if flags.contains(.contacts) {
+            result.insert(.contacts)
         }
-        if flags.contains(.secretChats) {
-            result.insert(.secretChats)
+        if flags.contains(.nonContacts) {
+            result.insert(.nonContacts)
         }
-        if flags.contains(.privateGroups) {
-            result.insert(.privateGroups)
+        if flags.contains(.smallGroups) {
+            result.insert(.smallGroups)
         }
-        if flags.contains(.publicGroups) {
-            result.insert(.publicGroups)
+        if flags.contains(.largeGroups) {
+            result.insert(.largeGroups)
         }
         if flags.contains(.channels) {
             result.insert(.channels)
@@ -83,17 +83,17 @@ extension ChatListFilterPeerCategories {
     
     var apiFlags: Int32 {
         var result: ChatListFilterPeerApiCategories = []
-        if self.contains(.privateChats) {
-            result.insert(.privateChats)
+        if self.contains(.contacts) {
+            result.insert(.contacts)
         }
-        if self.contains(.secretChats) {
-            result.insert(.secretChats)
+        if self.contains(.nonContacts) {
+            result.insert(.nonContacts)
         }
-        if self.contains(.privateGroups) {
-            result.insert(.privateGroups)
+        if self.contains(.smallGroups) {
+            result.insert(.smallGroups)
         }
-        if self.contains(.publicGroups) {
-            result.insert(.publicGroups)
+        if self.contains(.largeGroups) {
+            result.insert(.largeGroups)
         }
         if self.contains(.channels) {
             result.insert(.channels)
@@ -109,18 +109,24 @@ public struct ChatListFilterData: Equatable, Hashable {
     public var categories: ChatListFilterPeerCategories
     public var excludeMuted: Bool
     public var excludeRead: Bool
+    public var excludeArchived: Bool
     public var includePeers: [PeerId]
+    public var excludePeers: [PeerId]
     
     public init(
         categories: ChatListFilterPeerCategories,
         excludeMuted: Bool,
         excludeRead: Bool,
-        includePeers: [PeerId]
+        excludeArchived: Bool,
+        includePeers: [PeerId],
+        excludePeers: [PeerId]
     ) {
         self.categories = categories
         self.excludeMuted = excludeMuted
         self.excludeRead = excludeRead
+        self.excludeArchived = excludeArchived
         self.includePeers = includePeers
+        self.excludePeers = excludePeers
     }
 }
 
@@ -146,7 +152,9 @@ public struct ChatListFilter: PostboxCoding, Equatable {
             categories: ChatListFilterPeerCategories(rawValue: decoder.decodeInt32ForKey("categories", orElse: 0)),
             excludeMuted: decoder.decodeInt32ForKey("excludeMuted", orElse: 0) != 0,
             excludeRead: decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0,
-            includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init)
+            excludeArchived: decoder.decodeInt32ForKey("excludeArchived", orElse: 0) != 0,
+            includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init),
+            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init)
         )
     }
     
@@ -156,14 +164,16 @@ public struct ChatListFilter: PostboxCoding, Equatable {
         encoder.encodeInt32(self.data.categories.rawValue, forKey: "categories")
         encoder.encodeInt32(self.data.excludeMuted ? 1 : 0, forKey: "excludeMuted")
         encoder.encodeInt32(self.data.excludeRead ? 1 : 0, forKey: "excludeRead")
+        encoder.encodeInt32(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
         encoder.encodeInt64Array(self.data.includePeers.map { $0.toInt64() }, forKey: "includePeers")
+        encoder.encodeInt64Array(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
     }
 }
 
 extension ChatListFilter {
     init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
-        case let .dialogFilter(flags, id, title, includePeers):
+        case let .dialogFilter(flags, id, title, includePeers, excludePeers):
             self.init(
                 id: id,
                 title: title,
@@ -171,7 +181,20 @@ extension ChatListFilter {
                     categories: ChatListFilterPeerCategories(apiFlags: flags),
                     excludeMuted: (flags & (1 << 11)) != 0,
                     excludeRead: (flags & (1 << 12)) != 0,
+                    excludeArchived: false,
                     includePeers: includePeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        default:
+                            return nil
+                        }
+                    },
+                    excludePeers: excludePeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
                             return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
@@ -198,6 +221,8 @@ extension ChatListFilter {
         }
         flags |= self.data.categories.apiFlags
         return .dialogFilter(flags: flags, id: self.id, title: self.title, includePeers: self.data.includePeers.compactMap { peerId -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        }, excludePeers: self.data.excludePeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         })
     }
@@ -259,8 +284,27 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
                 let filter = ChatListFilter(apiFilter: apiFilter)
                 filters.append(filter)
                 switch apiFilter {
-                case let .dialogFilter(_, _, _, includePeers):
+                case let .dialogFilter(_, _, _, includePeers, excludePeers):
                     for peer in includePeers {
+                        var peerId: PeerId?
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        case let .inputPeerChat(chatId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        case let .inputPeerChannel(channelId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        default:
+                            break
+                        }
+                        if let peerId = peerId {
+                            if transaction.getPeer(peerId) == nil && !missingPeerIds.contains(peerId) {
+                                missingPeerIds.insert(peerId)
+                                missingPeers.append(peer)
+                            }
+                        }
+                    }
+                    for peer in excludePeers {
                         var peerId: PeerId?
                         switch peer {
                         case let .inputPeerUser(userId, _):
@@ -292,6 +336,8 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
 }
 
 func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    return .complete()
+    
     return requestChatListFilters(postbox: postbox, network: network)
     |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
         return .complete()
@@ -309,6 +355,8 @@ func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never,
 }
 
 public func replaceRemoteChatListFilters(account: Account) -> Signal<Never, NoError> {
+    return .complete()
+    
     return account.postbox.transaction { transaction -> [ChatListFilter] in
         let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
         return settings.filters
@@ -414,7 +462,7 @@ public func updateChatListFilterSettingsInteractively(postbox: Postbox, _ f: @es
     return postbox.transaction { transaction -> ChatListFiltersState in
         var result: ChatListFiltersState?
         transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
-            var settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
+            let settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
             let updated = f(settings)
             result = updated
             return updated

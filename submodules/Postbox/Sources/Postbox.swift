@@ -776,7 +776,23 @@ public final class Transaction {
             if let peer = postbox.peerTable.get(peerId) {
                 let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
                 let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
-                if predicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread) {
+                let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
+                if predicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact, isArchived: false) {
+                    includedPeerIds[peer.id] = true
+                    return true
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+        })
+        let archivedCount = postbox.chatListTable.countWithPredicate(groupId: .group(1), predicate: { peerId in
+            if let peer = postbox.peerTable.get(peerId) {
+                let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
+                let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
+                if predicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact, isArchived: false) {
                     includedPeerIds[peer.id] = true
                     return true
                 } else {
@@ -793,7 +809,7 @@ public final class Transaction {
                 }
             }
         }
-        return count
+        return count + archivedCount
     }
     
     public func legacyGetAccessChallengeData() -> PostboxAccessChallengeData {
@@ -1400,9 +1416,9 @@ public final class Postbox {
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCountsState(value: reindexUnreadVersion)
             }
-            #if DEBUG
+            //#if DEBUG
             self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
-            #endif
+            //#endif
             
             if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
@@ -1686,7 +1702,7 @@ public final class Postbox {
         self.synchronizeGroupMessageStatsTable.set(groupId: groupId, namespace: namespace, needsValidation: false, operations: &self.currentUpdatedGroupSummarySynchronizeOperations)
     }
     
-    private func mappedChatListFilterPredicate(_ predicate: ChatListFilterPredicate) -> (ChatListIntermediateEntry) -> Bool {
+    private func mappedChatListFilterPredicate(_ predicate: ChatListFilterPredicate, isArchived: Bool) -> (ChatListIntermediateEntry) -> Bool {
         return { entry in
             switch entry {
             case let .message(index, _, _):
@@ -1696,7 +1712,8 @@ public final class Postbox {
                 if let peer = self.peerTable.get(index.messageIndex.id.peerId) {
                     let isUnread = self.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
                     let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
-                    if predicate.includes(peer: peer, notificationSettings: self.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread) {
+                    let isContact = self.contactsTable.isContact(peerId: notificationsPeerId)
+                    if predicate.includes(peer: peer, notificationSettings: self.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact, isArchived: isArchived) {
                         return true
                     } else {
                         return false
@@ -1711,7 +1728,9 @@ public final class Postbox {
     }
     
     func fetchAroundChatEntries(groupId: PeerGroupId, index: ChatListIndex, count: Int, filterPredicate: ChatListFilterPredicate?) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?) {
-        let mappedPredicate = filterPredicate.flatMap(self.mappedChatListFilterPredicate)
+        let mappedPredicate = filterPredicate.flatMap { predicate in
+            self.mappedChatListFilterPredicate(predicate, isArchived: groupId != .root)
+        }
         let (intermediateEntries, intermediateLower, intermediateUpper) = self.chatListTable.entriesAround(groupId: groupId, index: index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
             return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
@@ -1727,7 +1746,9 @@ public final class Postbox {
     }
     
     func fetchEarlierChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ChatListFilterPredicate?) -> [MutableChatListEntry] {
-        let mappedPredicate = filterPredicate.flatMap(self.mappedChatListFilterPredicate)
+        let mappedPredicate = filterPredicate.flatMap { predicate in
+            self.mappedChatListFilterPredicate(predicate, isArchived: groupId != .root)
+        }
         let intermediateEntries = self.chatListTable.earlierEntries(groupId: groupId, index: index.flatMap({ ($0, true) }), messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
             return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
@@ -1736,7 +1757,9 @@ public final class Postbox {
     }
     
     func fetchLaterChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ChatListFilterPredicate?) -> [MutableChatListEntry] {
-        let mappedPredicate = filterPredicate.flatMap(self.mappedChatListFilterPredicate)
+        let mappedPredicate = filterPredicate.flatMap { predicate in
+            self.mappedChatListFilterPredicate(predicate, isArchived: groupId != .root)
+        }
         let intermediateEntries = self.chatListTable.laterEntries(groupId: groupId, index: index.flatMap({ ($0, true) }), messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
             return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
@@ -1775,7 +1798,26 @@ public final class Postbox {
         self.peerChatTopTaggedMessageIdsTable.replay(historyOperationsByPeerId: self.currentOperationsByPeerId)
         
         let alteredInitialPeerCombinedReadStates = self.readStateTable.transactionAlteredInitialPeerCombinedReadStates()
-        let updatedPeers = self.peerTable.transactionUpdatedPeers()
+        var updatedPeers = self.peerTable.transactionUpdatedPeers(contactsTable: self.contactsTable)
+        let updatedContacts = self.contactsTable.transactionUpdatedPeers()
+        if !updatedContacts.isEmpty {
+            var updatedPeerIdToIndex: [PeerId: Int] = [:]
+            var index = 0
+            for (_, peer) in updatedPeers {
+                updatedPeerIdToIndex[peer.0.id] = index
+            }
+            index += 1
+            for (peerId, change) in updatedContacts {
+                if let index = updatedPeerIdToIndex[peerId] {
+                    if let (peer, _) = updatedPeers[index].0 {
+                        updatedPeers[index].0 = (peer, change.0)
+                    }
+                    updatedPeers[index].1 = (updatedPeers[index].1.0, change.1)
+                } else if let peer = self.peerTable.get(peerId) {
+                    updatedPeers.append(((peer, change.0), (peer, change.1)))
+                }
+            }
+        }
         let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self)
         self.chatListIndexTable.commitWithTransaction(postbox: self, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedRootUnreadState: &self.currentUpdatedTotalUnreadState, updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries, currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations)
         
@@ -3268,7 +3310,7 @@ public final class Postbox {
     
     fileprivate func reindexUnreadCounters() {
         self.groupMessageStatsTable.removeAll()
-        let startTime = CFAbsoluteTimeGetCurrent()
+        let _ = CFAbsoluteTimeGetCurrent()
         let (rootState, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
         
         self.messageHistoryMetadataTable.setChatListTotalUnreadState(rootState)

@@ -51,6 +51,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, peerSelected: { peer in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
+        }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in

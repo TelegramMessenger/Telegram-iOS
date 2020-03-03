@@ -293,7 +293,12 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: false), options: []))
         addPeerDisposable.set((controller.result
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
+        |> deliverOnMainQueue).start(next: { [weak controller] result in
+            var peerIds: [ContactListPeerId] = []
+            if case let .result(peerIdsValue, _) = result {
+                peerIds = peerIdsValue
+            }
+            
             let applyPeers: Signal<Void, NoError> = peersPromise.get()
             |> take(1)
             |> mapToSignal { peers -> Signal<[SelectivePrivacyPeer], NoError> in

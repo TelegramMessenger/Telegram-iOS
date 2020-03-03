@@ -54,15 +54,22 @@ public struct InteractiveTransitionGestureRecognizerDirections: OptionSet {
     public static let right: InteractiveTransitionGestureRecognizerDirections = [.rightEdge, .rightCenter]
 }
 
+public enum InteractiveTransitionGestureRecognizerEdgeWidth {
+    case constant(CGFloat)
+    case widthMultiplier(factor: CGFloat, min: CGFloat, max: CGFloat)
+}
+
 public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
+    private let edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
     private let allowedDirections: (CGPoint) -> InteractiveTransitionGestureRecognizerDirections
     
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
     private var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
     
-    public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections) {
+    public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections, edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth = .constant(16.0)) {
         self.allowedDirections = allowedDirections
+        self.edgeWidth = edgeWidth
         
         super.init(target: target, action: action)
         
@@ -120,7 +127,14 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         let absTranslationY: CGFloat = abs(translation.y)
         
         let size = self.view?.bounds.size ?? CGSize()
-        let edgeWidth: CGFloat = 20.0
+        
+        let edgeWidth: CGFloat
+        switch self.edgeWidth {
+        case let .constant(value):
+            edgeWidth = value
+        case let .widthMultiplier(factor, minValue, maxValue):
+            edgeWidth = max(minValue, min(size.width * factor, maxValue))
+        }
         
         if !self.validatedGesture {
             if self.firstLocation.x < edgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {

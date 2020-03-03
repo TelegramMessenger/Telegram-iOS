@@ -3449,7 +3449,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             if let contactsController = contactsController as? ContactMultiselectionController {
                 selectAddMemberDisposable.set((contactsController.result
-                |> deliverOnMainQueue).start(next: { [weak contactsController] peers in
+                |> deliverOnMainQueue).start(next: { [weak contactsController] result in
+                    var peers: [ContactListPeerId] = []
+                    if case let .result(peerIdsValue, _) = result {
+                        peers = peerIdsValue
+                    }
+                    
                     contactsController?.displayProgress = true
                     addMemberDisposable.set((addMembers(peers)
                     |> deliverOnMainQueue).start(error: { error in

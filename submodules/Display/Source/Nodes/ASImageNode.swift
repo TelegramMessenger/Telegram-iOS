@@ -16,6 +16,9 @@ open class ASImageNode: ASDisplayNode {
             } else {
                 self.contents = nil
             }
+            if self.image?.size != oldValue?.size {
+                self.invalidateCalculatedLayout()
+            }
         }
     }
 
@@ -23,5 +26,9 @@ open class ASImageNode: ASDisplayNode {
 
     override public init() {
         super.init()
+    }
+    
+    override public func calculateSizeThatFits(_ contrainedSize: CGSize) -> CGSize {
+        return self.image?.size ?? CGSize()
     }
 }

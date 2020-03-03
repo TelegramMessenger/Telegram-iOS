@@ -44,6 +44,8 @@ swift_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     visibility = [
         "//visibility:public",

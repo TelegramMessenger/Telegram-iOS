@@ -260,6 +260,11 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     private var previousSelectedAbsFrame: CGRect?
     private var previousSelectedFrame: CGRect?
     
+    func cancelAnimations() {
+        self.selectedLineNode.layer.removeAllAnimations()
+        self.scrollNode.layer.removeAllAnimations()
+    }
+    
     func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, transitionFraction: CGFloat, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         var focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
         let previousScrollBounds = self.scrollNode.bounds
@@ -393,7 +398,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         var previousFrame: CGRect?
         var nextFrame: CGRect?
         var selectedFrame: CGRect?
-        if let selectedFilter = selectedFilter, let currentIndex = filters.index(where: { $0.id == selectedFilter }) {
+        if let selectedFilter = selectedFilter, let currentIndex = filters.firstIndex(where: { $0.id == selectedFilter }) {
             func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
                 return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
             }
@@ -423,12 +428,11 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
             }
             if !transitionFraction.isZero {
-                if previousScrollBounds.minX.isZero {
-                    focusOnSelectedFilter = true
-                } else if previousScrollBounds.maxX == previousScrollBounds.width {
-                    focusOnSelectedFilter = true
-                } else if let previousSelectedFrame = self.previousSelectedFrame, abs(previousSelectedFrame.offsetBy(dx: -previousScrollBounds.minX, dy: 0.0).midX - previousScrollBounds.width / 2.0) < 1.0 {
-                    focusOnSelectedFilter = true
+                if let previousSelectedFrame = self.previousSelectedFrame, abs(previousSelectedFrame.offsetBy(dx: -previousScrollBounds.minX, dy: 0.0).midX - previousScrollBounds.width / 2.0) < 1.0 {
+                    let previousContentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, floor(previousSelectedFrame.midX - self.scrollNode.bounds.width / 2.0)))
+                    if abs(previousContentOffsetX - previousScrollBounds.minX) < 1.0 {
+                        focusOnSelectedFilter = true
+                    }
                 }
             }
             if focusOnSelectedFilter {

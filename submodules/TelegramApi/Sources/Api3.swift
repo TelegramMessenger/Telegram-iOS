@@ -3229,6 +3229,20 @@ public extension Api {
                     })
                 }
             
+                public static func getSuggestedDialogFilters() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogFilterSuggested]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1566780372)
+                    
+                    return (FunctionDescription(name: "messages.getSuggestedDialogFilters", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.DialogFilterSuggested]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.DialogFilterSuggested]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogFilterSuggested.self)
+                        }
+                        return result
+                    })
+                }
+            
                 public static func updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(450142282)

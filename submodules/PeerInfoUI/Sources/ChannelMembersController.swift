@@ -361,8 +361,13 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             addMembersDisposable.set((contactsController.result
             |> deliverOnMainQueue
             |> castError(AddChannelMemberError.self)
-            |> mapToSignal { [weak contactsController] contacts -> Signal<Never, AddChannelMemberError> in
+            |> mapToSignal { [weak contactsController] result -> Signal<Never, AddChannelMemberError> in
                 contactsController?.displayProgress = true
+                
+                var contacts: [ContactListPeerId] = []
+                if case let .result(peerIdsValue, _) = result {
+                    contacts = peerIdsValue
+                }
                 
                 let signal = context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
                     switch contact {

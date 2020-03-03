@@ -166,6 +166,14 @@ open class TabBarController: ViewController {
         return self.tabBarControllerNode.tabBarNode.sourceNodesForController(at: index)
     }
     
+    public func frameForControllerTab(controller: ViewController) -> CGRect? {
+        if let index = self.controllers.firstIndex(of: controller) {
+            return self.tabBarControllerNode.tabBarNode.frameForControllerTab(at: index).flatMap { self.tabBarControllerNode.tabBarNode.view.convert($0, to: self.view) }
+        } else {
+            return nil
+        }
+    }
+    
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {

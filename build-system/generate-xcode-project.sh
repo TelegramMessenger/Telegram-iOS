@@ -8,6 +8,14 @@ if [ "$BAZEL" = "" ]; then
 	exit 1
 fi
 
+XCODE_VERSION=$(cat "build-system/xcode_version")
+INSTALLED_XCODE_VERSION=$(echo `plutil -p \`xcode-select -p\`/../Info.plist | grep -e CFBundleShortVersionString | sed 's/[^0-9\.]*//g'`)
+
+if [ "$INSTALLED_XCODE_VERSION" != "$XCODE_VERSION" ]; then
+	echo "Xcode $XCODE_VERSION required, $INSTALLED_XCODE_VERSION installed (at $(xcode-select -p))"
+	exit 1
+fi
+
 EXPECTED_VARIABLES=(\
 	BUILD_NUMBER \
 	APP_VERSION \
@@ -37,7 +45,7 @@ rm -rf "$GEN_DIRECTORY"
 mkdir -p "$GEN_DIRECTORY"
 
 pushd "build-system/tulsi"
-"$BAZEL" build //:tulsi --xcode_version=$(cat "build-system/xcode_version")
+"$BAZEL" build //:tulsi --xcode_version="$XCODE_VERSION"
 popd
 
 TULSI_DIRECTORY="build-input/gen/project"
