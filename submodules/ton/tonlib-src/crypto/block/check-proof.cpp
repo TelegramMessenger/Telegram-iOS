@@ -26,6 +26,7 @@
 
 #include "vm/cells/MerkleProof.h"
 #include "openssl/digest.h"
+#include "crypto/openssl/digest_ex.h"
 #include "Ed25519.h"
 
 namespace block {

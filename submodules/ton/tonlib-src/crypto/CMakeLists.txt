@@ -55,7 +55,7 @@ set(TON_CRYPTO_SOURCE
   ellcurve/TwEdwards.h
 
   openssl/bignum.h
-  openssl/digest.h
+  openssl/digest_ex.h
   openssl/rand.hpp
   openssl/residue.h
 

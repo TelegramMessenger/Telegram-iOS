@@ -25,6 +25,7 @@
 #include "td/utils/format.h"
 
 #include "openssl/digest.h"
+#include "crypto/openssl/digest_ex.h"
 
 namespace vm {
 

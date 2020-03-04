@@ -19,6 +19,7 @@
 #include "vm/cells/DataCell.h"
 
 #include "openssl/digest.h"
+#include "crypto/openssl/digest_ex.h"
 
 #include "td/utils/ScopeGuard.h"
 

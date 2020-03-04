@@ -22,7 +22,7 @@
 #include "td/utils/as.h"
 #include "td/utils/bits.h"
 #include "td/utils/misc.h"
-#include "crypto/openssl/digest.h"
+#include "crypto/openssl/digest_ex.h"
 
 namespace td {
 

@@ -99,7 +99,7 @@ BigNum BigNum::from_binary(Slice str) {
 
 BigNum BigNum::from_le_binary(Slice str) {
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
-  return BigNum(make_unique<Impl>(BN_lebin2bn(str.ubegin(), narrow_cast<int>(str.size()), nullptr)));
+  return BigNum(make_unique<Impl>(BN_le2bn(str.ubegin(), narrow_cast<int>(str.size()), nullptr)));
 #else
   LOG(FATAL) << "Unsupported from_le_binary";
   return BigNum();
@@ -132,7 +132,7 @@ BigNum::BigNum(unique_ptr<Impl> &&impl) : impl_(std::move(impl)) {
 }
 
 void BigNum::ensure_const_time() {
-  BN_set_flags(impl_->big_num, BN_FLG_CONSTTIME);
+  //BN_set_flags(impl_->big_num, BN_FLG_CONSTTIME);
 }
 
 int BigNum::get_num_bits() const {
@@ -225,7 +225,7 @@ string BigNum::to_le_binary(int exact_size) const {
     CHECK(exact_size >= num_size);
   }
   string res(exact_size, '\0');
-  BN_bn2lebinpad(impl_->big_num, MutableSlice(res).ubegin(), exact_size);
+  BN_bn2le_padded(MutableSlice(res).ubegin(), exact_size, impl_->big_num);
   return res;
 #else
   LOG(FATAL) << "Unsupported to_le_binary";

@@ -169,6 +169,7 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
+        "//third-party/boringssl:crypto",
     ],
 )
 

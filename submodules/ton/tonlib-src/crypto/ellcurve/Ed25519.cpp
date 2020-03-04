@@ -20,6 +20,8 @@
 
 #include "td/utils/Random.h"
 
+#include "crypto/openssl/digest_ex.h"
+
 namespace crypto {
 namespace Ed25519 {
 

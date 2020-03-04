@@ -52,6 +52,8 @@
 #include "td/utils/tl_helpers.h"
 #include "td/utils/crypto.h"
 
+#include "crypto/openssl/digest_ex.h"
+
 #include <ctime>
 
 namespace fift {

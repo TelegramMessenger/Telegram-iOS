@@ -66,7 +66,7 @@ swift_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/OverlayStatusController:OverlayStatusController",
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/WalletCore:WalletCore",
         "//submodules/BuildConfig:BuildConfig",

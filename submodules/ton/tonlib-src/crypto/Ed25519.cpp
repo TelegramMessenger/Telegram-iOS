@@ -22,7 +22,7 @@
 
 #include <openssl/opensslv.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L && OPENSSL_VERSION_NUMBER != 0x20000000L
+#if 1 //OPENSSL_VERSION_NUMBER >= 0x10101000L && OPENSSL_VERSION_NUMBER != 0x20000000L
 
 #include "td/utils/base64.h"
 #include "td/utils/BigNum.h"
@@ -57,7 +57,7 @@ SecureString Ed25519::PrivateKey::as_octet_string() const {
   return octet_string_.copy();
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L && OPENSSL_VERSION_NUMBER != 0x20000000L
+#if 1 //OPENSSL_VERSION_NUMBER >= 0x10101000L && OPENSSL_VERSION_NUMBER != 0x20000000L
 
 namespace detail {
 

@@ -17,7 +17,7 @@
     Copyright 2017-2019 Telegram Systems LLP
 */
 #include "openssl/bignum.h"
-
+#include <openssl/mem.h>
 // impl only
 #include <cstring>
 

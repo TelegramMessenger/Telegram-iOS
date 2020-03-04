@@ -101,10 +101,10 @@ class Bignum {
     BN_copy(val, x.val);
     return *this;
   }
-  Bignum& operator=(Bignum&& x) {
-    swap(x);
-    return *this;
-  }
+  //Bignum& operator=(Bignum&& x) {
+  //  swap(x);
+  //  return *this;
+  //}
   Bignum& operator=(long x) {
     return set_long(x);
   }
@@ -114,10 +114,10 @@ class Bignum {
   Bignum& operator=(const hex_string& hs) {
     return set_hex_str(hs.str);
   }
-  Bignum& swap(Bignum& x) {
-    BN_swap(val, x.val);
-    return *this;
-  }
+  //Bignum& swap(Bignum& x) {
+  //  BN_swap(val, x.val);
+  //  return *this;
+  //}
   BIGNUM* bn_ptr() {
     return val;
   }

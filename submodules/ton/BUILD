@@ -42,14 +42,15 @@ filegroup(
     ]),
 )
 
+libcrypto_location = "//third-party/boringssl:libcrypto"
+
 genrule(
     name = "ton_build",
     srcs = [
         "build-ton-bazel.sh",
         "iOS-bazel.cmake",
         ":TonSources",
-        "//submodules/openssl:openssl_include",
-        "//submodules/openssl:libcrypto.a",
+        libcrypto_location,
     ],
     cmd_bash = 
     """
@@ -84,14 +85,16 @@ genrule(
 
     mkdir -p "$$BUILD_DIR/openssl_headers/include/openssl"
     mkdir -p "$$BUILD_DIR/openssl_headers/lib"
-    cp -f "$(location //submodules/openssl:libcrypto.a)" "$$BUILD_DIR/openssl_headers/lib/"
-    for f in $(locations //submodules/openssl:openssl_include); do
+    cp -f "$(location {libcrypto_location})" "$$BUILD_DIR/openssl_headers/lib/"
+    for f in third-party/boringssl/src/include/openssl/*.h; do
         cp -f "$$f" "$$BUILD_DIR/openssl_headers/include/openssl/"
     done
     mkdir -p "$$BUILD_DIR/Public/ton"
 
     PATH="$$PATH:$$CMAKE_DIR/bin" sh $$BUILD_DIR/build-ton-bazel.sh "$$BUILD_DIR" "$$BUILD_DIR" "$$BUILD_DIR/openssl_headers" $$BUILD_ARCH
-    """ +
+    """.format(
+        libcrypto_location = libcrypto_location
+    ) +
     "\n".join([
         "cp -f \"$$BUILD_DIR/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers
     ]) +
