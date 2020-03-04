@@ -90,7 +90,9 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
                     }
                 }
-                strongSelf.becameEmpty(filter)
+                if !isLoading {
+                    strongSelf.becameEmpty(filter)
+                }
             case .notEmpty:
                 if let emptyNode = strongSelf.emptyNode {
                     strongSelf.emptyNode = nil
