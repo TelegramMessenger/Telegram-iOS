@@ -336,8 +336,6 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
 }
 
 func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
-    return .complete()
-    
     return requestChatListFilters(postbox: postbox, network: network)
     |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
         return .complete()
@@ -355,8 +353,6 @@ func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never,
 }
 
 public func replaceRemoteChatListFilters(account: Account) -> Signal<Never, NoError> {
-    return .complete()
-    
     return account.postbox.transaction { transaction -> [ChatListFilter] in
         let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
         return settings.filters
