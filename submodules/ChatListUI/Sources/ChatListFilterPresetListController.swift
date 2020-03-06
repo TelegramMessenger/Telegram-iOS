@@ -159,7 +159,7 @@ private struct ChatListFilterPresetListControllerState: Equatable {
 private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], suggestedFilters: [(String, String, ChatListFilterData)], settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
-    entries.append(.screenHeader("Create filters for different groups of chats and\nquickly switch between them."))
+    entries.append(.screenHeader("Create folders for different groups of chats and\nquickly switch between them."))
     
     let filteredSuggestedFilters = suggestedFilters.filter { _, _, data in
         for (filter, _) in filters {
@@ -170,17 +170,17 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
         return true
     }
     
-    entries.append(.listHeader("FILTERS"))
+    entries.append(.listHeader("FOLDERS"))
     for (filter, chatCount) in filters {
         entries.append(.preset(index: entries.count, title: filter.title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
     }
     if filters.count < 10 {
-        entries.append(.addItem(text: "Create New Filter", isEditing: state.isEditing))
+        entries.append(.addItem(text: "Create New Folder", isEditing: state.isEditing))
     }
-    entries.append(.listFooter("Tap \"Edit\" to change the order or delete filters."))
+    entries.append(.listFooter("Tap \"Edit\" to change the order or delete folders."))
     
     if !filteredSuggestedFilters.isEmpty {
-        entries.append(.suggestedListHeader("RECOMMENDED FILTERS"))
+        entries.append(.suggestedListHeader("RECOMMENDED FOLDERS"))
         for (title, label, data) in filteredSuggestedFilters {
             entries.append(.suggestedPreset(index: entries.count, title: title, label: label, preset: data))
         }

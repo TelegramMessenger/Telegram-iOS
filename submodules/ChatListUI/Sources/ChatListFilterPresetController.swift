@@ -688,7 +688,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     if let currentPreset = currentPreset {
         initialName = currentPreset.title
     } else {
-        initialName = "New Filter"
+        initialName = "New Folder"
     }
     let initialState = ChatListFilterPresetControllerState(name: initialName, includeCategories: currentPreset?.data.categories ?? [], excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, excludeArchived: currentPreset?.data.excludeArchived ?? false, additionallyIncludePeers: currentPreset?.data.includePeers ?? [], additionallyExcludePeers: currentPreset?.data.excludePeers ?? [])
     let stateValue = Atomic(value: initialState)
@@ -900,7 +900,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             })
         })
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? "Filter" : "Create Filter"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? "Folder" : "Create Folder"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         

@@ -2253,7 +2253,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             let (_, filterItems) = filterItemsAndTotalCount
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? "Add Filter" : "Edit Filters", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? "Add Folder" : "Edit Folders", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
             }, action: { c, f in
                 c.dismiss(completion: {
