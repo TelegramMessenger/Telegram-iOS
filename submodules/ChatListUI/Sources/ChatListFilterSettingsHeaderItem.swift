@@ -86,6 +86,18 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         self.addSubnode(self.animationNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
+    }
+    
+    @objc private func animationTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.animationNode.play()
+        }
+    }
+    
     func asyncLayout() -> (_ item: ChatListFilterSettingsHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
