@@ -898,11 +898,13 @@ private final class ReorderingGestureRecognizer: UIGestureRecognizer, UIGestureR
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
+        self.delayTimer?.invalidate()
+        
         if self.state == .began || self.state == .changed {
-            self.delayTimer?.invalidate()
             self.ended()
-            self.state = .failed
         }
+        
+        self.state = .failed
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
