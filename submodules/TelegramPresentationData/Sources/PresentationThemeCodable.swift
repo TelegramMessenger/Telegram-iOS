@@ -424,9 +424,9 @@ extension PresentationThemeRootNavigationBar: Codable {
             segmentedBackgroundColor: try decodeColor(values, .segmentedBg, decoder: decoder, fallbackKey: "root.searchBar.inputFill"),
             segmentedForegroundColor: try decodeColor(values, .segmentedFg, decoder: decoder, fallbackKey: "root.navBar.background"),
             segmentedTextColor: try decodeColor(values, .segmentedText, decoder: decoder, fallbackKey: "root.navBar.primaryText"),
-            segmentedDividerColor: try decodeColor(values, .segmentedDivider, decoder: decoder, fallbackKey: "root.list.freeInputField.stroke"),
-            clearButtonBackgroundColor: try decodeColor(values, .clearButtonBackground, decoder: decoder, fallbackKey: "root.list.freeInputField.bg"),
-            clearButtonForegroundColor: try decodeColor(values, .clearButtonForeground, decoder: decoder, fallbackKey: "root.list.freeInputField.primary")
+            segmentedDividerColor: try decodeColor(values, .segmentedDivider, decoder: decoder, fallbackKey: "list.freeInputField.stroke"),
+            clearButtonBackgroundColor: try decodeColor(values, .clearButtonBackground, decoder: decoder, fallbackKey: "list.freeInputField.bg"),
+            clearButtonForegroundColor: try decodeColor(values, .clearButtonForeground, decoder: decoder, fallbackKey: "list.freeInputField.primary")
         )
     }
     
