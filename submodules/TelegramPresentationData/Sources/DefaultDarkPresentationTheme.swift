@@ -256,7 +256,9 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         segmentedBackgroundColor: UIColor(rgb: 0x3a3b3d),
         segmentedForegroundColor: UIColor(rgb: 0x6f7075),
         segmentedTextColor: UIColor(rgb: 0xffffff),
-        segmentedDividerColor: UIColor(rgb: 0x505155)
+        segmentedDividerColor: UIColor(rgb: 0x505155),
+        clearButtonBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1),
+        clearButtonForegroundColor: UIColor(rgb: 0xffffff)
     )
 
     let navigationSearchBar = PresentationThemeNavigationSearchBar(

@@ -124,7 +124,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
         let arguments = arguments as! ChatListFilterPresetListControllerArguments
         switch self {
         case let .screenHeader(text):
-            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, sectionId: self.section)
+            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .folders, sectionId: self.section)
         case let .suggestedListHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
         case let .suggestedPreset(_, title, label, preset):
@@ -272,7 +272,7 @@ public func chatListFilterPresetListController(context: AccountContext, updated:
     
     let suggestedFilters: [(String, String, ChatListFilterData)] = [
         ("Unread", "All unread chats", ChatListFilterData(categories: .all, excludeMuted: false, excludeRead: true, excludeArchived: false, includePeers: [], excludePeers: [])),
-        ("Personal", "Exclude large groups and channels", ChatListFilterData(categories: ChatListFilterPeerCategories.all.subtracting([.largeGroups, .channels]), excludeMuted: false, excludeRead: false, excludeArchived: false, includePeers: [], excludePeers: [])),
+        ("Personal", "Exclude groups and channels", ChatListFilterData(categories: ChatListFilterPeerCategories.all.subtracting([.groups, .channels]), excludeMuted: false, excludeRead: false, excludeArchived: false, includePeers: [], excludePeers: [])),
     ]
     
     let signal = combineLatest(queue: .mainQueue(),

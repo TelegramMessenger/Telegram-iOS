@@ -465,7 +465,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             case .none:
                 updatedSelectionNode = nil
             case let .selectable(selected):
-                rightInset += 28.0
+                rightInset += 38.0
                 isSelected = selected
                 
                 let selectionNode: CheckNode

@@ -772,36 +772,28 @@ public final class Transaction {
         for peerId in predicate.includePeerIds {
             includedPeerIds[peerId] = false
         }
-        var count = postbox.chatListTable.countWithPredicate(groupId: .root, predicate: { peerId in
-            if let peer = postbox.peerTable.get(peerId) {
-                let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
-                let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
-                let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
-                if predicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact, isArchived: false) {
-                    includedPeerIds[peer.id] = true
-                    return true
+        
+        var count = 0
+        
+        var groupIds: [PeerGroupId] = [.root]
+        groupIds.append(contentsOf: predicate.includeAdditionalPeerGroupIds)
+        for groupId in groupIds {
+            count += postbox.chatListTable.countWithPredicate(groupId: groupId, predicate: { peerId in
+                if let peer = postbox.peerTable.get(peerId) {
+                    let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                    let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
+                    let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
+                    if predicate.includes(peer: peer, groupId: groupId, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact) {
+                        includedPeerIds[peer.id] = true
+                        return true
+                    } else {
+                        return false
+                    }
                 } else {
                     return false
                 }
-            } else {
-                return false
-            }
-        })
-        let archivedCount = postbox.chatListTable.countWithPredicate(groupId: .group(1), predicate: { peerId in
-            if let peer = postbox.peerTable.get(peerId) {
-                let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
-                let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
-                let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
-                if predicate.includes(peer: peer, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact, isArchived: false) {
-                    includedPeerIds[peer.id] = true
-                    return true
-                } else {
-                    return false
-                }
-            } else {
-                return false
-            }
-        })
+            })
+        }
         for (peerId, included) in includedPeerIds {
             if !included {
                 if postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil {
@@ -809,7 +801,7 @@ public final class Transaction {
                 }
             }
         }
-        return count + archivedCount
+        return count
     }
     
     public func legacyGetAccessChallengeData() -> PostboxAccessChallengeData {
@@ -1647,7 +1639,7 @@ public final class Postbox {
         switch peerIds {
             case let .associated(_, messageId):
                 if let messageId = messageId, let readState = self.readStateTable.getCombinedState(messageId.peerId), readState.count != 0 {
-                    if let topMessage = self.messageHistoryTable.topMessage(messageId.peerId) {
+                    if let topMessage = self.messageHistoryTable.topMessage(peerId: messageId.peerId) {
                         let _ = self.messageHistoryTable.applyInteractiveMaxReadIndex(postbox: self, messageIndex: topMessage.index, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
                     }
                 }
@@ -1700,71 +1692,6 @@ public final class Postbox {
     
     fileprivate func confirmSynchronizedPeerGroupMessageStats(groupId: PeerGroupId, namespace: MessageId.Namespace) {
         self.synchronizeGroupMessageStatsTable.set(groupId: groupId, namespace: namespace, needsValidation: false, operations: &self.currentUpdatedGroupSummarySynchronizeOperations)
-    }
-    
-    private func mappedChatListFilterPredicate(_ predicate: ChatListFilterPredicate, isArchived: Bool) -> (ChatListIntermediateEntry) -> Bool {
-        return { entry in
-            switch entry {
-            case let .message(index, _, _):
-                if index.pinningIndex != nil {
-                    return false
-                }
-                if let peer = self.peerTable.get(index.messageIndex.id.peerId) {
-                    let isUnread = self.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
-                    let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
-                    let isContact = self.contactsTable.isContact(peerId: notificationsPeerId)
-                    if predicate.includes(peer: peer, notificationSettings: self.peerNotificationSettingsTable.getEffective(notificationsPeerId), isUnread: isUnread, isContact: isContact, isArchived: isArchived) {
-                        return true
-                    } else {
-                        return false
-                    }
-                } else {
-                    return false
-                }
-            case .hole:
-                return true
-            }
-        }
-    }
-    
-    func fetchAroundChatEntries(groupId: PeerGroupId, index: ChatListIndex, count: Int, filterPredicate: ChatListFilterPredicate?) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?) {
-        let mappedPredicate = filterPredicate.flatMap { predicate in
-            self.mappedChatListFilterPredicate(predicate, isArchived: groupId != .root)
-        }
-        let (intermediateEntries, intermediateLower, intermediateUpper) = self.chatListTable.entriesAround(groupId: groupId, index: index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
-        let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
-            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
-        }
-        let lower: MutableChatListEntry? = intermediateLower.flatMap { entry in
-            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
-        }
-        let upper: MutableChatListEntry? = intermediateUpper.flatMap { entry in
-            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
-        }
-        
-        return (entries, lower, upper)
-    }
-    
-    func fetchEarlierChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ChatListFilterPredicate?) -> [MutableChatListEntry] {
-        let mappedPredicate = filterPredicate.flatMap { predicate in
-            self.mappedChatListFilterPredicate(predicate, isArchived: groupId != .root)
-        }
-        let intermediateEntries = self.chatListTable.earlierEntries(groupId: groupId, index: index.flatMap({ ($0, true) }), messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
-        let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
-            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
-        }
-        return entries
-    }
-    
-    func fetchLaterChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ChatListFilterPredicate?) -> [MutableChatListEntry] {
-        let mappedPredicate = filterPredicate.flatMap { predicate in
-            self.mappedChatListFilterPredicate(predicate, isArchived: groupId != .root)
-        }
-        let intermediateEntries = self.chatListTable.laterEntries(groupId: groupId, index: index.flatMap({ ($0, true) }), messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
-        let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
-            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
-        }
-        return entries
     }
     
     func renderIntermediateMessage(_ message: IntermediateMessage) -> Message {

@@ -61,7 +61,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         let sideInset: CGFloat = 13.0
         let bottomInset: CGFloat = 10.0
         let contentInset: CGFloat = 9.0
-        let contentVerticalInset: CGFloat = 9.0
+        let contentVerticalInset: CGFloat = 11.0
         let animationSize = CGSize(width: 32.0, height: 32.0)
         let animationInset: CGFloat = (70 - animationSize.width) / 2.0
         let animationSpacing: CGFloat = 8.0

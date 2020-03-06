@@ -26,16 +26,14 @@ public struct ChatListFilterPeerCategories: OptionSet, Hashable {
     
     public static let contacts = ChatListFilterPeerCategories(rawValue: 1 << 0)
     public static let nonContacts = ChatListFilterPeerCategories(rawValue: 1 << 1)
-    public static let smallGroups = ChatListFilterPeerCategories(rawValue: 1 << 2)
-    public static let largeGroups = ChatListFilterPeerCategories(rawValue: 1 << 3)
-    public static let channels = ChatListFilterPeerCategories(rawValue: 1 << 4)
-    public static let bots = ChatListFilterPeerCategories(rawValue: 1 << 5)
+    public static let groups = ChatListFilterPeerCategories(rawValue: 1 << 2)
+    public static let channels = ChatListFilterPeerCategories(rawValue: 1 << 3)
+    public static let bots = ChatListFilterPeerCategories(rawValue: 1 << 4)
     
     public static let all: ChatListFilterPeerCategories = [
         .contacts,
         .nonContacts,
-        .smallGroups,
-        .largeGroups,
+        .groups,
         .channels,
         .bots
     ]
@@ -50,10 +48,9 @@ private struct ChatListFilterPeerApiCategories: OptionSet {
     
     static let contacts = ChatListFilterPeerApiCategories(rawValue: 1 << 0)
     static let nonContacts = ChatListFilterPeerApiCategories(rawValue: 1 << 1)
-    static let smallGroups = ChatListFilterPeerApiCategories(rawValue: 1 << 2)
-    static let largeGroups = ChatListFilterPeerApiCategories(rawValue: 1 << 3)
-    static let channels = ChatListFilterPeerApiCategories(rawValue: 1 << 4)
-    static let bots = ChatListFilterPeerApiCategories(rawValue: 1 << 5)
+    static let groups = ChatListFilterPeerApiCategories(rawValue: 1 << 2)
+    static let channels = ChatListFilterPeerApiCategories(rawValue: 1 << 3)
+    static let bots = ChatListFilterPeerApiCategories(rawValue: 1 << 4)
 }
 
 extension ChatListFilterPeerCategories {
@@ -66,11 +63,8 @@ extension ChatListFilterPeerCategories {
         if flags.contains(.nonContacts) {
             result.insert(.nonContacts)
         }
-        if flags.contains(.smallGroups) {
-            result.insert(.smallGroups)
-        }
-        if flags.contains(.largeGroups) {
-            result.insert(.largeGroups)
+        if flags.contains(.groups) {
+            result.insert(.groups)
         }
         if flags.contains(.channels) {
             result.insert(.channels)
@@ -89,11 +83,8 @@ extension ChatListFilterPeerCategories {
         if self.contains(.nonContacts) {
             result.insert(.nonContacts)
         }
-        if self.contains(.smallGroups) {
-            result.insert(.smallGroups)
-        }
-        if self.contains(.largeGroups) {
-            result.insert(.largeGroups)
+        if self.contains(.groups) {
+            result.insert(.groups)
         }
         if self.contains(.channels) {
             result.insert(.channels)

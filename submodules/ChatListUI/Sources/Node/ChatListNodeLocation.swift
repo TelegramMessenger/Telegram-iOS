@@ -32,7 +32,11 @@ struct ChatListNodeViewUpdate {
 func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
     let includePeers = Set(filter.includePeers)
     let excludePeers = Set(filter.excludePeers)
-    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, include: { peer, notificationSettings, isUnread, isContact, isArchived in
+    var includeAdditionalPeerGroupIds: [PeerGroupId] = []
+    if !filter.excludeArchived {
+        includeAdditionalPeerGroupIds.append(Namespaces.PeerGroup.archive)
+    }
+    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, includeAdditionalPeerGroupIds: includeAdditionalPeerGroupIds, include: { peer, notificationSettings, isUnread, isContact in
         if filter.excludeRead {
             if !isUnread {
                 return false
@@ -44,11 +48,6 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
                     return false
                 }
             } else {
-                return false
-            }
-        }
-        if filter.excludeArchived {
-            if isArchived {
                 return false
             }
         }
@@ -77,23 +76,12 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
                 }
             }
         }
-        if !filter.categories.contains(.smallGroups) {
+        if !filter.categories.contains(.groups) {
             if let _ = peer as? TelegramGroup {
                 return false
             } else if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
-                    if channel.username == nil {
-                        return false
-                    }
-                }
-            }
-        }
-        if !filter.categories.contains(.largeGroups) {
-            if let channel = peer as? TelegramChannel {
-                if case .group = channel.info {
-                    if channel.username != nil {
-                        return false
-                    }
+                    return false
                 }
             }
         }

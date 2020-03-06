@@ -184,16 +184,16 @@ public struct ChatListIndex: Comparable, Hashable {
         return lhs.messageIndex < rhs.messageIndex
     }
     
-    public var hashValue: Int {
-        return self.messageIndex.hashValue
-    }
-    
     public static var absoluteUpperBound: ChatListIndex {
         return ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex.absoluteUpperBound())
     }
     
     public static var absoluteLowerBound: ChatListIndex {
         return ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex.absoluteLowerBound())
+    }
+    
+    public static var pinnedLowerBound: ChatListIndex {
+        return ChatListIndex(pinningIndex: UInt16(Int8.max - 1), messageIndex: MessageIndex.absoluteLowerBound())
     }
     
     public var predecessor: ChatListIndex {

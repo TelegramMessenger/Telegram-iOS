@@ -13,8 +13,7 @@ import ChatListSearchItemHeader
 enum ChatListFilterCategoryIcon {
     case contacts
     case nonContacts
-    case smallGroups
-    case largeGroups
+    case groups
     case channels
     case bots
     case muted
@@ -245,12 +244,9 @@ class ChatListFilterPresetCategoryItemNode: ItemListRevealOptionsItemNode, ItemL
                         case .nonContacts:
                             color = .yellow
                             imageName = "Chat/Context Menu/UnknownUser"
-                        case .smallGroups:
+                        case .groups:
                             color = .green
                             imageName = "Chat/Context Menu/Groups"
-                        case .largeGroups:
-                            color = .purple
-                            imageName = "Chat/Context Menu/LargeGroup"
                         case .channels:
                             color = .red
                             imageName = "Chat/Context Menu/Channels"

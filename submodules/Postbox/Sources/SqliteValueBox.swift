@@ -1517,14 +1517,18 @@ public final class SqliteValueBox: ValueBox {
                 switch result {
                 case .accept:
                     acceptedCount += 1
-                    return true
+                    if limit > 0 && acceptedCount >= limit {
+                        hadStop = true
+                        return false
+                    } else {
+                        return true
+                    }
                 case .skip:
                     return true
                 case .stop:
                     hadStop = true
                     return false
                 }
-                return true
             }, limit: limit)
             if let lastKey = lastKey {
                 currentStart = lastKey

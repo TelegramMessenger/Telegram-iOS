@@ -9,14 +9,21 @@ import PresentationDataUtils
 import AnimatedStickerNode
 import AppBundle
 
+enum ChatListFilterSettingsHeaderAnimation {
+    case folders
+    case newFolder
+}
+
 class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
+    let animation: ChatListFilterSettingsHeaderAnimation
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, text: String, animation: ChatListFilterSettingsHeaderAnimation, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
+        self.animation = animation
         self.sectionId = sectionId
     }
     
@@ -72,10 +79,6 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "ChatListFolders", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct)
-            self.animationNode.visibility = true
-        }
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -100,6 +103,20 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    if strongSelf.item == nil {
+                        let animationName: String
+                        switch item.animation {
+                        case .folders:
+                            animationName = "ChatListFolders"
+                        case .newFolder:
+                            animationName = "ChatListNewFolder"
+                        }
+                        if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
+                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct)
+                            strongSelf.animationNode.visibility = true
+                        }
+                    }
+                    
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         

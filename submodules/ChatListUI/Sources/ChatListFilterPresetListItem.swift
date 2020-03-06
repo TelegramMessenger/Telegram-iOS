@@ -351,7 +351,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 11.0), size: titleLayout.size))
                     
-                    let labelFrame = CGRect(origin: CGPoint(x: params.width - rightArrowInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)
+                    let labelFrame = CGRect(origin: CGPoint(x: params.width - rightArrowInset - labelLayout.size.width + revealOffset, y: 11.0), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
                     
                     transition.updateAlpha(node: strongSelf.labelNode, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
@@ -362,7 +362,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
@@ -432,6 +432,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         }
         
         let leftInset: CGFloat = 16.0 + params.leftInset
+        let rightArrowInset: CGFloat = 34.0 + params.rightInset
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
@@ -444,6 +445,14 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         }
         
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + offset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
+        
+        var labelFrame = self.labelNode.frame
+        labelFrame.origin.x = params.width - rightArrowInset - labelFrame.width + revealOffset
+        transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        
+        var arrowFrame = self.arrowNode.frame
+        arrowFrame.origin.x = params.width - params.rightInset - 7.0 - arrowFrame.width + revealOffset
+        transition.updateFrame(node: self.arrowNode, frame: arrowFrame)
     }
     
     override func revealOptionsInteractivelyOpened() {
