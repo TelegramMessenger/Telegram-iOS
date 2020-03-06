@@ -268,10 +268,11 @@ public struct ChatListFilterPredicate {
     }
     
     func includes(peer: Peer, groupId: PeerGroupId, notificationSettings: PeerNotificationSettings?, isUnread: Bool, isContact: Bool) -> Bool {
-        if self.excludePeerIds.contains(peer.id) {
+        let includePeerId = peer.associatedPeerId ?? peer.id
+        if self.excludePeerIds.contains(includePeerId) {
             return false
         }
-        if self.includePeerIds.contains(peer.id) {
+        if self.includePeerIds.contains(includePeerId) {
             return true
         }
         if groupId != .root {
