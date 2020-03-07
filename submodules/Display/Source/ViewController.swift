@@ -67,6 +67,12 @@ public enum ViewControllerNavigationPresentation {
     case modalInLargeLayout
 }
 
+public enum TabBarItemContextActionType {
+    case none
+    case always
+    case whenActive
+}
+
 @objc open class ViewController: UIViewController, ContainableController {
     private var validLayout: ContainerViewLayout?
     public var currentlyAppliedLayout: ContainerViewLayout? {
@@ -625,7 +631,7 @@ public enum ViewControllerNavigationPresentation {
     open func toolbarActionSelected(action: ToolbarActionOption) {
     }
     
-    open var hasTabBarItemContextAction: Bool = false
+    open var tabBarItemContextActionType: TabBarItemContextActionType = .none
     
     open func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
     }

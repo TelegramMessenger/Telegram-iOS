@@ -232,7 +232,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         case .includePeersHeader, .addIncludePeer, .includeCategory, .includePeer, .includePeerInfo:
             return ChatListFilterPresetControllerSection.includePeers.rawValue
         case .excludePeersHeader, .addExcludePeer, .excludeCategory, .excludePeer, .excludePeerInfo:
-            return ChatListFilterPresetControllerSection.includePeers.rawValue
+            return ChatListFilterPresetControllerSection.excludePeers.rawValue
         }
     }
     
@@ -859,7 +859,9 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         let (state, includePeers, excludePeers) = stateWithPeers
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-            let _ = attemptNavigationImpl?()
+            if attemptNavigationImpl?() ?? true {
+                dismissImpl?()
+            }
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(currentPreset == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             let state = stateValue.with { $0 }

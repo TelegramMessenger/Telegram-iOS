@@ -122,7 +122,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                         self.durationNode.attributedText = convertedText
                         let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
-                        self.durationNode.frame = CGRect(x: 7.0 + inset, y: 2.0, width: durationSize.width, height: durationSize.height)
+                        self.durationNode.frame = CGRect(x: 7.0 + inset, y: 3.0, width: durationSize.width, height: durationSize.height)
                         currentContentSize = CGSize(width: widthForString(text.string) + 14.0 + inset, height: 18.0)
                     
                         if let iconNode = self.iconNode {
@@ -188,7 +188,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
                         }
                         
-                        let durationFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 2.0, width: durationSize.width, height: durationSize.height)
+                        let durationFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 3.0, width: durationSize.width, height: durationSize.height)
                         self.durationNode.bounds = CGRect(origin: CGPoint(), size: durationFrame.size)
                         textTransition.updatePosition(node: self.durationNode, position: durationFrame.center)
                         

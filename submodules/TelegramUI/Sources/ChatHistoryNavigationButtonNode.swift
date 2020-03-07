@@ -89,6 +89,7 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
             
             if let string = self.badgeTextNode.attributedText?.string {
                 self.badgeTextNode.attributedText = NSAttributedString(string: string, font: badgeFont, textColor: theme.chat.historyNavigation.badgeTextColor)
+                self.badgeTextNode.redrawIfPossible()
             }
         }
     }

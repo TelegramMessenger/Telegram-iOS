@@ -770,7 +770,7 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         
         super.init(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: updatedPresentationData |> map(ItemListPresentationData.init(_:)), state: state, tabBarItem: tabBarItem)
         
-        self.hasTabBarItemContextAction = true
+        self.tabBarItemContextActionType = .always
         
         self.accountsAndPeersDisposable = (accountsAndPeers
         |> deliverOnMainQueue).start(next: { [weak self] value in

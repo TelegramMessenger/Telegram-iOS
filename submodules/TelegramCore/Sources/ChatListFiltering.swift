@@ -172,7 +172,7 @@ extension ChatListFilter {
                     categories: ChatListFilterPeerCategories(apiFlags: flags),
                     excludeMuted: (flags & (1 << 11)) != 0,
                     excludeRead: (flags & (1 << 12)) != 0,
-                    excludeArchived: false,
+                    excludeArchived: (flags & (1 << 13)) != 0,
                     includePeers: includePeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
@@ -209,6 +209,9 @@ extension ChatListFilter {
         }
         if self.data.excludeRead {
             flags |= 1 << 12
+        }
+        if self.data.excludeArchived {
+            flags |= 1 << 13
         }
         flags |= self.data.categories.apiFlags
         return .dialogFilter(flags: flags, id: self.id, title: self.title, includePeers: self.data.includePeers.compactMap { peerId -> Api.InputPeer? in

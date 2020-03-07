@@ -167,7 +167,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
-        self.hasTabBarItemContextAction = true
+        self.tabBarItemContextActionType = .whenActive
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -2260,16 +2260,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     guard let strongSelf = self else {
                         return
                     }
-                    if presetList.isEmpty {
-                        if let navigationController = strongSelf.navigationController as? NavigationController {
-                            var viewControllers = navigationController.viewControllers
-                            //viewControllers.append(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in }))
-                            viewControllers.append(chatListFilterPresetController(context: strongSelf.context, currentPreset: nil, updated: { _ in }))
-                            navigationController.setViewControllers(viewControllers, animated: true)
-                        }
-                    } else {
-                        strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in }))
-                    }
+                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in }))
                 })
             })))
             

@@ -387,6 +387,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     private var reorderingItemPosition: (initial: CGFloat, offset: CGFloat)?
     private var reorderingAutoScrollAnimator: ConstantDisplayLinkAnimator?
     private var reorderedItemIds: [ChatListFilterTabEntryId]?
+    private lazy var hapticFeedback = { HapticFeedback() }()
     
     private var currentParams: (size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, transitionFraction: CGFloat, presentationData: PresentationData)?
     
@@ -443,6 +444,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             for (id, itemNode) in strongSelf.itemNodes {
                 let itemFrame = itemNode.view.convert(itemNode.bounds, to: strongSelf.view)
                 if itemFrame.contains(point) {
+                    strongSelf.hapticFeedback.impact()
+                    
                     strongSelf.reorderingItem = id
                     itemNode.frame = itemFrame
                     strongSelf.reorderingAutoScrollAnimator = ConstantDisplayLinkAnimator(update: {
@@ -507,6 +510,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                                 targetIndex = max(1, min(reorderedItemIds.count - 1, itemIndex))
                             }
                             if targetIndex != currentItemIndex {
+                                strongSelf.hapticFeedback.tap()
+                                
                                 var updatedReorderedItemIds = reorderedItemIds
                                 if targetIndex > currentItemIndex {
                                     updatedReorderedItemIds.insert(reorderingItem, at: targetIndex + 1)

@@ -393,7 +393,7 @@ open class TabBarController: ViewController {
             }
         }
         self.controllers = controllers
-        self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ TabBarNodeItem(item: $0.tabBarItem, hasContext: $0.hasTabBarItemContextAction) })
+        self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ TabBarNodeItem(item: $0.tabBarItem, contextActionType: $0.tabBarItemContextActionType) })
         
         let signals = combineLatest(self.controllers.map({ $0.tabBarItem }).map { tabBarItem -> Signal<Bool, NoError> in
             if let tabBarItem = tabBarItem, tabBarItem.image == nil {

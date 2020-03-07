@@ -197,6 +197,12 @@ public class ImmediateTextNode: TextNode {
 }
 
 public class ASTextNode: ImmediateTextNode {
+    override public var attributedText: NSAttributedString? {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
     override public init() {
         super.init()
         

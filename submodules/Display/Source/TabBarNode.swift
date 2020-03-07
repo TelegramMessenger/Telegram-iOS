@@ -102,6 +102,7 @@ private final class TabBarItemNode: ASDisplayNode {
     let contextImageNode: ASImageNode
     let contextTextImageNode: ASImageNode
     var contentWidth: CGFloat?
+    var isSelected: Bool = false
     
     var swiped: ((TabBarItemSwipeDirection) -> Void)?
     
@@ -253,10 +254,24 @@ private final class TabBarNodeContainer {
             }
             contextAction(strongSelf.imageNode.extractedContainerNode, gesture)
         }
-        imageNode.swiped = { [weak self] direction in
+        imageNode.swiped = { [weak imageNode] direction in
+            guard let imageNode = imageNode, imageNode.isSelected else {
+                return
+            }
             swipeAction(direction)
         }
-        imageNode.containerNode.isGestureEnabled = item.hasContext
+        imageNode.containerNode.isGestureEnabled = item.contextActionType != .none
+        let contextActionType = item.contextActionType
+        imageNode.containerNode.shouldBegin = { [weak imageNode] _ in
+            switch contextActionType {
+            case .none:
+                return false
+            case .always:
+                return true
+            case .whenActive:
+                return imageNode?.isSelected ?? false
+            }
+        }
     }
     
     deinit {
@@ -269,11 +284,11 @@ private final class TabBarNodeContainer {
 
 final class TabBarNodeItem {
     let item: UITabBarItem
-    let hasContext: Bool
+    let contextActionType: TabBarItemContextActionType
     
-    init(item: UITabBarItem, hasContext: Bool) {
+    init(item: UITabBarItem, contextActionType: TabBarItemContextActionType) {
         self.item = item
-        self.hasContext = hasContext
+        self.contextActionType = contextActionType
     }
 }
 
@@ -429,6 +444,7 @@ class TabBarNode: ASDisplayNode {
                 node.imageNode.image = image
                 node.accessibilityLabel = item.item.title
                 node.contentWidth = max(contentWidth, imageContentWidth)
+                node.isSelected = true
             } else {
                 let (textImage, contentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
                 let (image, imageContentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
@@ -436,6 +452,7 @@ class TabBarNode: ASDisplayNode {
                 node.accessibilityLabel = item.item.title
                 node.imageNode.image = image
                 node.contentWidth = max(contentWidth, imageContentWidth)
+                node.isSelected = false
             }
             container.badgeBackgroundNode.image = self.badgeImage
             node.extractedContainerNode.contentNode.addSubnode(container.badgeContainerNode)
@@ -468,6 +485,7 @@ class TabBarNode: ASDisplayNode {
                 node.contextTextImageNode.image = contextTextImage
                 node.contextImageNode.image = contextImage
                 node.contentWidth = max(contentWidth, imageContentWidth)
+                node.isSelected = true
             } else {
                 let (textImage, contentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
                 let (image, imageContentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarIconColor, horizontal: self.horizontal, imageMode: true, centered: self.centered)
@@ -479,6 +497,7 @@ class TabBarNode: ASDisplayNode {
                 node.contextTextImageNode.image = contextTextImage
                 node.contextImageNode.image = contextImage
                 node.contentWidth = max(contentWidth, imageContentWidth)
+                node.isSelected = false
             }
             
             let updatedImageSize = node.imageNode.image?.size ?? CGSize()
