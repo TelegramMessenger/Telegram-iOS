@@ -420,14 +420,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.modalContainers.append(modalContainer)
                 if !modalContainer.isReady {
                     modalContainer.isReadyUpdated = { [weak self, weak modalContainer] in
-                        guard let strongSelf = self, let modalContainer = modalContainer else {
+                        guard let strongSelf = self, let _ = modalContainer else {
                             return
                         }
                         strongSelf.updateContainersNonReentrant(transition: .animated(duration: 0.5, curve: .spring))
                     }
                 }
                 modalContainer.updateDismissProgress = { [weak self, weak modalContainer] _, transition in
-                    guard let strongSelf = self, let modalContainer = modalContainer else {
+                    guard let strongSelf = self, let _ = modalContainer else {
                         return
                     }
                     strongSelf.updateContainersNonReentrant(transition: transition)
@@ -454,7 +454,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     container.view.endEditing(true)
                 }
                 
-                transition = container.dismiss(transition: transition, completion: { [weak self, weak container] in
+                transition = container.dismiss(transition: transition, completion: { [weak container] in
                     container?.removeFromSupernode()
                 })
             }

@@ -437,7 +437,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                         return
                     }
                     for controller in strongSelf.container.controllers {
-                        controller.viewWillDisappear(transition.isAnimated)
+                        controller.viewDidDisappear(transition.isAnimated)
                     }
                     completion()
                 })

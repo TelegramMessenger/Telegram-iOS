@@ -528,7 +528,7 @@ final class MutableChatListView {
         
     }
     
-    func firstHole() -> ChatListHole? {
+    func firstHole() -> (PeerGroupId, ChatListHole)? {
         return self.sampledState.hole
     }
     

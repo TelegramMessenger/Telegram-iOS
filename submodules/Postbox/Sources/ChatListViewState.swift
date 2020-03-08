@@ -99,7 +99,7 @@ private final class ChatListViewSpaceState {
         self.filterPredicate = filterPredicate
         self.summaryComponents = summaryComponents
         self.halfLimit = halfLimit
-        self.orderedEntries = OrderedChatListViewEntries(lowerOrAtAnchor: [], higherThanAnchor: [])
+        self.orderedEntries = OrderedChatListViewEntries(anchorIndex: anchorIndex.index, lowerOrAtAnchor: [], higherThanAnchor: [])
         self.fillSpace(postbox: postbox)
     }
     
@@ -142,7 +142,7 @@ private final class ChatListViewSpaceState {
                         if let lastMessage = lowerOrAtAnchorMessages.min(by: { $0.entryIndex < $1.entryIndex }) {
                             nextLowerIndex = lastMessage.entryIndex.predecessor
                         } else {
-                            nextLowerIndex = resolvedAnchorIndex
+                            nextLowerIndex = min(resolvedAnchorIndex, self.anchorIndex)
                         }
                         var loadedLowerMessages = Array(loadedMessages.filter({ $0.entryIndex <= nextLowerIndex }).reversed())
                         let lowerLimit = self.halfLimit - lowerOrAtAnchorMessages.count
@@ -156,9 +156,9 @@ private final class ChatListViewSpaceState {
                         if let lastMessage = higherThanAnchorMessages.max(by: { $0.entryIndex < $1.entryIndex }) {
                             nextHigherIndex = lastMessage.entryIndex.successor
                         } else {
-                            nextHigherIndex = resolvedAnchorIndex
+                            nextHigherIndex = max(resolvedAnchorIndex, self.anchorIndex.successor)
                         }
-                        var loadedHigherMessages = loadedMessages.filter({ $0.entryIndex >= nextHigherIndex })
+                        var loadedHigherMessages = loadedMessages.filter({ $0.entryIndex > nextHigherIndex })
                         let higherLimit = self.halfLimit - higherThanAnchorMessages.count
                         if loadedHigherMessages.count > higherLimit {
                             loadedHigherMessages.removeLast(loadedHigherMessages.count - higherLimit)
@@ -198,7 +198,7 @@ private final class ChatListViewSpaceState {
             assert(Set(allIndices).count == allIndices.count)
             assert(allIndices.sorted() == allIndices)
             
-            let entries = OrderedChatListViewEntries(lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
+            let entries = OrderedChatListViewEntries(anchorIndex: self.anchorIndex.index, lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
             self.orderedEntries = entries
         }
     }
@@ -571,12 +571,18 @@ private extension MutableChatListEntry {
 }
 
 private struct OrderedChatListViewEntries {
+    private let anchorIndex: ChatListIndex
+    
     private(set) var lowerOrAtAnchor: [MutableChatListEntry]
     private(set) var higherThanAnchor: [MutableChatListEntry]
     
     private(set) var reverseIndices: [PeerId: [MutableChatListEntryIndex]] = [:]
     
-    fileprivate init(lowerOrAtAnchor: [MutableChatListEntry], higherThanAnchor: [MutableChatListEntry]) {
+    fileprivate init(anchorIndex: ChatListIndex, lowerOrAtAnchor: [MutableChatListEntry], higherThanAnchor: [MutableChatListEntry]) {
+        self.anchorIndex = anchorIndex
+        assert(!lowerOrAtAnchor.contains(where: { $0.index > anchorIndex }))
+        assert(!higherThanAnchor.contains(where: { $0.index <= anchorIndex }))
+        
         self.lowerOrAtAnchor = lowerOrAtAnchor
         self.higherThanAnchor = higherThanAnchor
         
@@ -601,6 +607,8 @@ private struct OrderedChatListViewEntries {
     }
     
     mutating func setLowerOrAtAnchorAtArrayIndex(_ index: Int, to value: MutableChatListEntry) {
+        assert(value.index <= self.anchorIndex)
+        
         let previousIndex = self.lowerOrAtAnchor[index].entryIndex
         let updatedIndex = value.entryIndex
         let previousPeerId = self.lowerOrAtAnchor[index].messagePeerId
@@ -626,6 +634,8 @@ private struct OrderedChatListViewEntries {
     }
     
     mutating func setHigherThanAnchorAtArrayIndex(_ index: Int, to value: MutableChatListEntry) {
+        assert(value.index > self.anchorIndex)
+        
         let previousIndex = self.higherThanAnchor[index].entryIndex
         let updatedIndex = value.entryIndex
         let previousPeerId = self.higherThanAnchor[index].messagePeerId
@@ -651,6 +661,7 @@ private struct OrderedChatListViewEntries {
     }
     
     mutating func insertLowerOrAtAnchorAtArrayIndex(_ index: Int, value: MutableChatListEntry) {
+        assert(value.index <= self.anchorIndex)
         self.lowerOrAtAnchor.insert(value, at: index)
         
         if let peerId = value.messagePeerId {
@@ -663,6 +674,7 @@ private struct OrderedChatListViewEntries {
     }
     
     mutating func insertHigherThanAnchorAtArrayIndex(_ index: Int, value: MutableChatListEntry) {
+        assert(value.index > self.anchorIndex)
         self.higherThanAnchor.insert(value, at: index)
         
         if let peerId = value.messagePeerId {
@@ -736,11 +748,13 @@ private struct OrderedChatListViewEntries {
     mutating func update(index: MutableChatListEntryIndex, _ f: (MutableChatListEntry) -> MutableChatListEntry?) -> Bool {
         if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.entryIndex }, searchItem: index) {
             if let updated = f(self.lowerOrAtAnchor[entryIndex]) {
+                assert(updated.index == self.lowerOrAtAnchor[entryIndex].index)
                 self.setLowerOrAtAnchorAtArrayIndex(entryIndex, to: updated)
                 return true
             }
         } else if let entryIndex = binarySearch(self.higherThanAnchor, extract: { $0.entryIndex }, searchItem: index) {
             if let updated = f(self.higherThanAnchor[entryIndex]) {
+                assert(updated.index == self.lowerOrAtAnchor[entryIndex].index)
                 self.setHigherThanAnchorAtArrayIndex(entryIndex, to: updated)
                 return true
             }
@@ -766,9 +780,9 @@ final class ChatListViewSample {
     let lower: MutableChatListEntry?
     let upper: MutableChatListEntry?
     let anchorIndex: ChatListIndex
-    let hole: ChatListHole?
+    let hole: (PeerGroupId, ChatListHole)?
     
-    fileprivate init(entries: [MutableChatListEntry], lower: MutableChatListEntry?, upper: MutableChatListEntry?, anchorIndex: ChatListIndex, hole: ChatListHole?) {
+    fileprivate init(entries: [MutableChatListEntry], lower: MutableChatListEntry?, upper: MutableChatListEntry?, anchorIndex: ChatListIndex, hole: (PeerGroupId, ChatListHole)?) {
         self.entries = entries
         self.lower = lower
         self.upper = upper
@@ -814,7 +828,9 @@ struct ChatListViewState {
         }
         
         var backwardsResult: [(ChatListViewSpace, Int)] = []
+        var backwardsResultIndices: [ChatListIndex] = []
         var result: [(ChatListViewSpace, Int)] = []
+        var resultIndices: [ChatListIndex] = []
         
         while true {
             var minSpace: ChatListViewSpace?
@@ -831,6 +847,7 @@ struct ChatListViewState {
             }
             if let minSpace = minSpace {
                 backwardsResult.append((minSpace, previousAnchorIndices[minSpace]!))
+                backwardsResultIndices.append(self.stateBySpace[minSpace]!.orderedEntries.lowerOrAtAnchor[previousAnchorIndices[minSpace]!].index)
                 previousAnchorIndices[minSpace]! -= 1
                 if backwardsResult.count == self.halfLimit {
                     break
@@ -857,6 +874,7 @@ struct ChatListViewState {
             }
             if let maxSpace = maxSpace {
                 result.append((maxSpace, nextAnchorIndices[maxSpace]!))
+                resultIndices.append(self.stateBySpace[maxSpace]!.orderedEntries.higherThanAnchor[nextAnchorIndices[maxSpace]!].index)
                 nextAnchorIndices[maxSpace]! += 1
                 if result.count == self.halfLimit {
                     break
@@ -867,16 +885,25 @@ struct ChatListViewState {
                 break
             }
         }
+        
+        backwardsResultIndices.reverse()
+        assert(backwardsResultIndices.sorted() == backwardsResultIndices)
+        assert(resultIndices.sorted() == resultIndices)
+        let combinedIndices = (backwardsResultIndices + resultIndices)
+        assert(combinedIndices.sorted() == combinedIndices)
+        
         return (backwardsResult.reversed(), result)
     }
     
     func sample(postbox: Postbox) -> ChatListViewSample {
         let combinedSpacesAndIndicesByDirection = self.sampleIndices()
         
-        var result: [MutableChatListEntry] = []
+        var result: [(ChatListViewSpace, MutableChatListEntry)] = []
         
         var sampledHoleIndices: [Int] = []
         var sampledAnchorBoundaryIndex: Int?
+        
+        var sampledHoleChatListIndices = Set<ChatListIndex>()
         
         let directions = [combinedSpacesAndIndicesByDirection.lowerOrAtAnchor, combinedSpacesAndIndicesByDirection.higherThanAnchor]
         for directionIndex in 0 ..< directions.count {
@@ -934,20 +961,26 @@ struct ChatListViewState {
                     } else {
                         self.stateBySpace[space]!.orderedEntries.setHigherThanAnchorAtArrayIndex(listIndex, to: updatedEntry)
                     }
-                    result.append(updatedEntry)
+                    result.append((space, updatedEntry))
                 case .MessageEntry:
-                    result.append(entry)
+                    result.append((space, entry))
                 case .HoleEntry:
-                    sampledHoleIndices.append(result.count)
-                    
-                    result.append(entry)
+                    if !sampledHoleChatListIndices.contains(entry.index) {
+                        sampledHoleChatListIndices.insert(entry.index)
+                        sampledHoleIndices.append(result.count)
+                        
+                        result.append((space, entry))
+                    }
                 }
             }
         }
         
-        let allIndices = result.map { $0.entryIndex }
+        let allIndices = result.map { $0.1.entryIndex }
+        let allIndicesSorted = allIndices.sorted()
+        for i in 0 ..< allIndicesSorted.count {
+            assert(allIndicesSorted[i] == allIndices[i])
+        }
         assert(Set(allIndices).count == allIndices.count)
-        assert(allIndices.sorted() == allIndices)
         
         var sampledHoleIndex: Int?
         if !sampledHoleIndices.isEmpty {
@@ -968,10 +1001,11 @@ struct ChatListViewState {
             }
         }
         
-        var sampledHole: ChatListHole?
+        var sampledHole: (ChatListViewSpace, ChatListHole)?
         if let index = sampledHoleIndex {
-            if case let .HoleEntry(hole) = result[index] {
-                sampledHole = hole
+            let (space, entry) = result[index]
+            if case let .HoleEntry(hole) = entry {
+                sampledHole = (space, hole)
             } else {
                 assertionFailure()
             }
@@ -979,16 +1013,21 @@ struct ChatListViewState {
         
         var lower: MutableChatListEntry?
         if combinedSpacesAndIndicesByDirection.lowerOrAtAnchor.count >= self.halfLimit {
-            lower = result[0]
+            lower = result[0].1
             result.removeFirst()
         }
         
         var upper: MutableChatListEntry?
         if combinedSpacesAndIndicesByDirection.higherThanAnchor.count >= self.halfLimit {
-            upper = result.last
+            upper = result.last?.1
             result.removeLast()
         }
         
-        return ChatListViewSample(entries: result, lower: lower, upper: upper, anchorIndex: self.anchorIndex.index, hole: sampledHole)
+        return ChatListViewSample(entries: result.map { $0.1 }, lower: lower, upper: upper, anchorIndex: self.anchorIndex.index, hole: sampledHole.flatMap { space, hole in
+            switch space {
+            case let .group(groupId, _):
+                return (groupId, hole)
+            }
+        })
     }
 }
