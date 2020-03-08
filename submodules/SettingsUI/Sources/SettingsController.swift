@@ -1263,7 +1263,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            pushControllerImpl?(chatListFilterPresetListController(context: context, updated: { _ in }))
+            let controller = chatListFilterPresetListController(context: context, mode: .default)
+            pushControllerImpl?(controller)
         })
     })
     

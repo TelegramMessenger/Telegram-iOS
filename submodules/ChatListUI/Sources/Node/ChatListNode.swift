@@ -1474,7 +1474,7 @@ public final class ChatListNode: ListView {
         }
         var scrollToItem: ListViewScrollToItem?
         switch self.visibleContentOffset() {
-        case let .known(value) where abs(value) < navigationBarSearchContentHeight:
+        case let .known(value) where abs(value) < navigationBarSearchContentHeight - 1.0:
             if isNavigationHidden {
                 scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
             }

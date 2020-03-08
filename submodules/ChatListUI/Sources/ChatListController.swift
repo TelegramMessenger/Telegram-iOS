@@ -134,7 +134,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private var presentationDataDisposable: Disposable?
     
     private let stateDisposable = MetaDisposable()
-    private var filterDisposable = MetaDisposable()
+    private let filterDisposable = MetaDisposable()
+    private let featuredFiltersDisposable = MetaDisposable()
+    private var processedFeaturedFilters = false
     
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
@@ -298,8 +300,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             isRoot = true
                             
                             if isReorderingTabs {
-                                let rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
-                                strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                                strongSelf.navigationItem.rightBarButtonItem = nil
                             } else {
                                 let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
                                 rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
@@ -307,7 +308,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             }
                             
                             if isReorderingTabs {
-                                strongSelf.navigationItem.leftBarButtonItem = nil
+                                let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
+                                strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
                             } else {
                                 let editItem: UIBarButtonItem
                                 if state.editing {
@@ -616,6 +618,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.presentationDataDisposable?.dispose()
         self.stateDisposable.dispose()
         self.filterDisposable.dispose()
+        self.featuredFiltersDisposable.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -999,6 +1002,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         
         self.didAppear = true
         
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
+        
         guard case .root = self.groupId else {
             return
         }
@@ -1088,14 +1093,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.context.account.postbox, languageCode: suggestedLocalization.languageCode).start()
                 }
             }))
-            
-            Queue.mainQueue().after(1.0, {
-                if let _ = self.validLayout, let parentController = self.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: self) {
-                    let absoluteFrame = sourceFrame
-                    //TODO:localize
-                    //parentController.present(TooltipScreen(text: "Hold the Chats icon for quick access to the list of chat filters.", location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0)), in: .current)
-                }
-            })
         }
         
         self.chatListDisplayNode.containerNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
@@ -1117,10 +1114,52 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 return true
             })
         }
+        
+        if !self.processedFeaturedFilters {
+            self.featuredFiltersDisposable.set((
+                self.context.account.postbox.transaction { transaction -> ChatListFiltersFeaturedState? in
+                    return transaction.getPreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState) as? ChatListFiltersFeaturedState
+                }
+                |> delay(1.0, queue: .mainQueue())
+                |> deliverOnMainQueue
+            ).start(next: { [weak self] featuredState in
+                guard let strongSelf = self, let featuredState = featuredState else {
+                    return
+                }
+                strongSelf.processedFeaturedFilters = true
+                if !featuredState.isSeen && !featuredState.filters.isEmpty {
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                        if let state = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState {
+                            return !state.filters.isEmpty
+                        } else {
+                            return false
+                        }
+                    }
+                    |> deliverOnMainQueue).start(next: { hasFilters in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
+                            let absoluteFrame = sourceFrame
+                            //TODO:localize
+                            let text: String
+                            if hasFilters {
+                                text = "Hold on 'Chats' to edit folders and switch between views."
+                            } else {
+                                text = "Hold to organize your chats with folders."
+                            }
+                            parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0)), in: .current)
+                        }
+                    })
+                }
+            }))
+        }
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
         
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
@@ -1128,6 +1167,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
             return true
         })
+        
+        self.featuredFiltersDisposable.set(nil)
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -1368,12 +1409,33 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = updateChatListFilterSettingsInteractively(postbox: strongSelf.context.account.postbox, { settings in
-                        var settings = settings
-                        settings.filters = settings.filters.filter({ $0.id != id })
-                        return settings
-                    }).start()
-                    let _ = replaceRemoteChatListFilters(account: strongSelf.context.account).start()
+                    
+                    let commit: () -> Void = {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == id {
+                            if strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing {
+                                    strongSelf.donePressed()
+                            }
+                        }
+                        
+                        let _ = updateChatListFilterSettingsInteractively(postbox: strongSelf.context.account.postbox, { settings in
+                            var settings = settings
+                            settings.filters = settings.filters.filter({ $0.id != id })
+                            return settings
+                        }).start()
+                        let _ = replaceRemoteChatListFilters(account: strongSelf.context.account).start()
+                    }
+                    
+                    if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == id {
+                        strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: .all, completion: {
+                            commit()
+                        })
+                    } else {
+                        commit()
+                    }
                 })
             ]),
             ActionSheetItemGroup(items: [
@@ -2232,7 +2294,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     private func openFilterSettings() {
-        self.push(chatListFilterPresetListController(context: self.context, updated: { _ in
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
+        self.push(chatListFilterPresetListController(context: self.context, mode: .modal, dismissed: { [weak self] in
+            self?.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
         }))
     }
     
@@ -2250,6 +2314,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 return
             }
             
+            let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
+            
             let (_, filterItems) = filterItemsAndTotalCount
             
             var items: [ContextMenuItem] = []
@@ -2260,7 +2326,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in }))
+                    strongSelf.openFilterSettings()
                 })
             })))
             

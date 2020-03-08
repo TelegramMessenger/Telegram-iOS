@@ -405,13 +405,24 @@ bazel_app_arm64:
 	--output_groups=+dsyms \
 	--verbose_failures
 
-bazel_project: kill_xcode
+bazel_prepare_development_build:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/prepare-build.sh development
+
+bazel_project: kill_xcode bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
 	build-system/generate-xcode-project.sh
 
-bazel_soft_project:
+bazel_soft_project: bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/generate-xcode-project.sh
+
+bazel_opt_project: bazel_prepare_development_build
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	GENERATE_OPT_PROJECT=1 \
 	build-system/generate-xcode-project.sh
 

@@ -433,6 +433,12 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
                 positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height), beginWithCurrentState: true, completion: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    for controller in strongSelf.container.controllers {
+                        controller.viewWillDisappear(transition.isAnimated)
+                    }
                     completion()
                 })
                 return positionTransition

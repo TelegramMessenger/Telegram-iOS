@@ -27,6 +27,7 @@ load(
     "telegram_version",
     "telegram_bundle_id",
     "telegram_aps_environment",
+    "telegram_team_id",
 )
 
 config_setting(
@@ -231,6 +232,11 @@ official_apple_pay_merchants = [
     "merchant.telegram.tranzzo.test",
 ]
 
+official_bundle_ids = [
+    "ph.telegra.Telegraph",
+    "org.telegram.Telegram-iOS",
+]
+
 apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else ""
 
 apple_pay_merchants_fragment = "" if apple_pay_merchants == "" else """
@@ -241,6 +247,12 @@ apple_pay_merchants_fragment = "" if apple_pay_merchants == "" else """
 ]) + "\n" + """
 </array>
 """
+
+official_unrestricted_voip_fragment = """
+<key>com.apple.developer.pushkit.unrestricted-voip</key>
+<true/>
+"""
+unrestricted_voip_fragment = official_unrestricted_voip_fragment if telegram_bundle_id in official_bundle_ids else ""
 
 telegram_entitlements_template = """
     <key>com.apple.developer.icloud-services</key>
@@ -265,15 +277,16 @@ telegram_entitlements_template = """
     <array>
         <string>group.{telegram_bundle_id}</string>
     </array>
-    <key>com.apple.developer.pushkit.unrestricted-voip</key>
-    <true/>
-""" + apple_pay_merchants_fragment
+    <key>application-identifier</key>
+    <string>{telegram_team_id}.{telegram_bundle_id}</string>
+""" + apple_pay_merchants_fragment + unrestricted_voip_fragment
 
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
     template = telegram_entitlements_template.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_team_id = telegram_team_id,
         telegram_aps_environment = telegram_aps_environment,
     )
 )

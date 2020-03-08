@@ -329,8 +329,11 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
     }
 }
 
-func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
-    return requestChatListFilters(postbox: postbox, network: network)
+func managedChatListFilters(postbox: Postbox, network: Network) -> Disposable {
+    let disposables = DisposableSet()
+    disposables.add(updateChatListFeaturedFilters(postbox: postbox, network: network).start())
+    
+    disposables.add((requestChatListFilters(postbox: postbox, network: network)
     |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
         return .complete()
     }
@@ -343,7 +346,9 @@ func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Never,
             })
         }
         |> ignoreValues
-    }
+    }).start())
+    
+    return disposables
 }
 
 public func replaceRemoteChatListFilters(account: Account) -> Signal<Never, NoError> {
@@ -461,3 +466,116 @@ public func updateChatListFilterSettingsInteractively(postbox: Postbox, _ f: @es
     }
 }
 
+public struct ChatListFeaturedFilter: PostboxCoding, Equatable {
+    public var title: String
+    public var description: String
+    public var data: ChatListFilterData
+    
+    fileprivate init(
+        title: String,
+        description: String,
+        data: ChatListFilterData
+    ) {
+        self.title = title
+        self.description = description
+        self.data = data
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.title = decoder.decodeStringForKey("title", orElse: "")
+        self.description = decoder.decodeStringForKey("description", orElse: "")
+        self.data = ChatListFilterData(
+            categories: ChatListFilterPeerCategories(rawValue: decoder.decodeInt32ForKey("categories", orElse: 0)),
+            excludeMuted: decoder.decodeInt32ForKey("excludeMuted", orElse: 0) != 0,
+            excludeRead: decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0,
+            excludeArchived: decoder.decodeInt32ForKey("excludeArchived", orElse: 0) != 0,
+            includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init),
+            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init)
+        )
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.title, forKey: "title")
+        encoder.encodeString(self.description, forKey: "description")
+        encoder.encodeInt32(self.data.categories.rawValue, forKey: "categories")
+        encoder.encodeInt32(self.data.excludeMuted ? 1 : 0, forKey: "excludeMuted")
+        encoder.encodeInt32(self.data.excludeRead ? 1 : 0, forKey: "excludeRead")
+        encoder.encodeInt32(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
+        encoder.encodeInt64Array(self.data.includePeers.map { $0.toInt64() }, forKey: "includePeers")
+        encoder.encodeInt64Array(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
+    }
+}
+
+public struct ChatListFiltersFeaturedState: PreferencesEntry, Equatable {
+    public var filters: [ChatListFeaturedFilter]
+    public var isSeen: Bool
+    
+    fileprivate init(filters: [ChatListFeaturedFilter], isSeen: Bool) {
+        self.filters = filters
+        self.isSeen = isSeen
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.filters = decoder.decodeObjectArrayWithDecoderForKey("filters")
+        self.isSeen = decoder.decodeInt32ForKey("isSeen", orElse: 0) != 0
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObjectArray(self.filters, forKey: "filters")
+        encoder.encodeInt32(self.isSeen ? 1 : 0, forKey: "isSeen")
+    }
+    
+    public func isEqual(to: PreferencesEntry) -> Bool {
+        if let to = to as? ChatListFiltersFeaturedState, self == to {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+public func markChatListFeaturedFiltersAsSeen(postbox: Postbox) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState, { entry in
+            guard var state = entry as? ChatListFiltersFeaturedState else {
+                return entry
+            }
+            state.isSeen = true
+            return state
+        })
+    }
+    |> ignoreValues
+}
+
+public func unmarkChatListFeaturedFiltersAsSeen(transaction: Transaction) {
+    transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState, { entry in
+        guard var state = entry as? ChatListFiltersFeaturedState else {
+            return entry
+        }
+        state.isSeen = false
+        return state
+    })
+}
+
+public func updateChatListFeaturedFilters(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    return network.request(Api.functions.messages.getSuggestedDialogFilters())
+    |> `catch` { _ -> Signal<[Api.DialogFilterSuggested], NoError> in
+        return .single([])
+    }
+    |> mapToSignal { result -> Signal<Never, NoError> in
+        return postbox.transaction { transaction -> Void in
+            transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState, { entry in
+                var state = entry as? ChatListFiltersFeaturedState ?? ChatListFiltersFeaturedState(filters: [], isSeen: false)
+                state.filters = result.map { item -> ChatListFeaturedFilter in
+                    switch item {
+                    case let .dialogFilterSuggested(filter, description):
+                        let parsedFilter = ChatListFilter(apiFilter: filter)
+                        return ChatListFeaturedFilter(title: parsedFilter.title, description: description, data: parsedFilter.data)
+                    }
+                }
+                return state
+            })
+        }
+        |> ignoreValues
+    }
+}

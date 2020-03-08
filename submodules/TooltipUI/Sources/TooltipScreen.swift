@@ -77,7 +77,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             transition.updateFrame(node: self.arrowNode, frame: CGRect(origin: CGPoint(x: floor(arrowCenterX - arrowSize.width / 2.0), y: backgroundFrame.height), size: arrowSize))
         }
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: contentVerticalInset), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: floor((backgroundHeight - textSize.height) / 2.0)), size: textSize))
         
         transition.updateFrame(node: self.animatedStickerNode, frame: CGRect(origin: CGPoint(x: contentInset - animationInset, y: floor((backgroundHeight - animationSize.height) / 2.0) - animationInset), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0)))
         self.animatedStickerNode.updateLayout(size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
@@ -90,7 +90,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 eventIsPresses = event.type == .presses
             }
             if event.type == .touches || eventIsPresses {
-                self.requestDismiss()
+                //self.requestDismiss()
                 return nil
             }
         }
@@ -144,6 +144,10 @@ public final class TooltipScreen: ViewController {
         super.viewDidAppear(animated)
         
         self.controllerNode.animateIn()
+        
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 5.0, execute: { [weak self] in
+            self?.dismiss()
+        })
     }
     
     override public func loadDisplayNode() {

@@ -27,6 +27,7 @@ prepare_build_variables () {
 		BUILD_NUMBER \
 		APP_VERSION \
 		BUNDLE_ID \
+		DEVELOPMENT_TEAM \
 		API_ID \
 		API_HASH \
 		APP_CENTER_ID \
@@ -57,6 +58,7 @@ prepare_build_variables () {
 	echo "telegram_version = \"$APP_VERSION\"" >> "$VARIABLES_PATH"
 	echo "telegram_bundle_id = \"$BUNDLE_ID\"" >> "$VARIABLES_PATH"	
 	echo "telegram_api_id = \"$API_ID\"" >> "$VARIABLES_PATH"
+	echo "telegram_team_id = \"$DEVELOPMENT_TEAM\"" >> "$VARIABLES_PATH"
 	echo "telegram_api_hash = \"$API_HASH\"" >> "$VARIABLES_PATH"
 	echo "telegram_app_center_id = \"$APP_CENTER_ID\"" >> "$VARIABLES_PATH"
 	echo "telegram_is_internal_build = \"$IS_INTERNAL_BUILD\"" >> "$VARIABLES_PATH"

@@ -391,6 +391,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 if let context = arguments.context {
                     let _ = (context.account.postbox.transaction { transaction -> Void in
                         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedPollResults)
+                        unmarkChatListFeaturedFiltersAsSeen(transaction: transaction)
                     }).start()
                 }
             })

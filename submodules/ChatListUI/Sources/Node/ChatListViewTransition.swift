@@ -71,7 +71,6 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         
         var options: ListViewDeleteAndInsertOptions = []
         var maxAnimatedInsertionIndex = -1
-        var stationaryItemRange: (Int, Int)?
         var scrollToItem: ListViewScrollToItem?
         
         switch reason {
@@ -168,7 +167,17 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         
         var fromEmptyView = false
         if let fromView = fromView {
-            if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
+            var wasSingleHeader = false
+            if fromView.filteredEntries.count == 1, case .HeaderEntry = fromView.filteredEntries[0] {
+                wasSingleHeader = true
+            }
+            var isSingleHeader = false
+            if toView.filteredEntries.count == 1, case .HeaderEntry = toView.filteredEntries[0] {
+                isSingleHeader = true
+            }
+            if (wasSingleHeader || isSingleHeader), case .interactiveChanges = reason {
+                let _ = options.insert(.AnimateInsertion)
+            } else if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
                 options.remove(.AnimateInsertion)
                 options.remove(.AnimateAlpha)
                 fromEmptyView = true
@@ -182,7 +191,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             adjustScrollToFirstItem = true
         }
         
-        subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, adjustScrollToFirstItem: adjustScrollToFirstItem))
+        subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: nil, adjustScrollToFirstItem: adjustScrollToFirstItem))
         subscriber.putCompletion()
         
         return EmptyDisposable

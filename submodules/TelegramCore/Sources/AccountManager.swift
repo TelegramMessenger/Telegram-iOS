@@ -155,6 +155,7 @@ private var declaredEncodables: Void = {
     declareEncodable(ChatListFiltersState.self, f: { ChatListFiltersState(decoder: $0) })
     declareEncodable(PeersNearbyState.self, f: { PeersNearbyState(decoder: $0) })
     declareEncodable(TelegramMediaDice.self, f: { TelegramMediaDice(decoder: $0) })
+    declareEncodable(ChatListFiltersFeaturedState.self, f: { ChatListFiltersFeaturedState(decoder: $0) })
     
     return
 }()

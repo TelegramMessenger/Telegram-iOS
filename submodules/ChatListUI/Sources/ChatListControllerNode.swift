@@ -89,6 +89,8 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         emptyNode.frame = emptyNodeFrame
                         emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
                     }
+                    emptyNode.alpha = 0.0
+                    transition.updateAlpha(node: emptyNode, alpha: 1.0)
                 }
                 if !isLoading {
                     strongSelf.becameEmpty(filter)
@@ -148,6 +150,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var transitionFractionOffset: CGFloat = 0.0
     private var disableItemNodeOperationsWhileAnimating: Bool = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, isReorderingFilters: Bool, isEditing: Bool)?
+    
+    private var enableAdjacentFilterLoading: Bool = false
     
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
@@ -458,7 +462,17 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func switchToFilter(id: ChatListFilterTabEntryId) {
+    func updateEnableAdjacentFilterLoading(_ value: Bool) {
+        if value != self.enableAdjacentFilterLoading {
+            self.enableAdjacentFilterLoading = value
+            
+            if self.enableAdjacentFilterLoading, let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout {
+                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: .immediate)
+            }
+        }
+    }
+    
+    func switchToFilter(id: ChatListFilterTabEntryId, completion: (() -> Void)? = nil) {
         guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
             return
         }
@@ -472,6 +486,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: transition)
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
+                completion?()
             } else if self.pendingItemNode == nil {
                 let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[index].filter, previewing: self.previewing, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
                     self?.filterBecameEmpty(filter)
@@ -549,6 +564,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         strongSelf.currentItemFilterUpdated?(strongSelf.currentItemFilter, strongSelf.transitionFraction, transition, false)
                     }
+                    
+                    completion?()
                 }))
             }
         }
@@ -574,7 +591,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let id = self.availableFilters[i].id
                 validNodeIds.append(id)
                 
-                if self.itemNodes[id] == nil && !self.disableItemNodeOperationsWhileAnimating {
+                if self.itemNodes[id] == nil && self.enableAdjacentFilterLoading && !self.disableItemNodeOperationsWhileAnimating {
                     let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[i].filter, previewing: self.previewing, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
                         self?.filterBecameEmpty(filter)
                     }, emptyAction: { [weak self] filter in
