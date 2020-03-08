@@ -474,7 +474,12 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
     }
     
-    private func deleteEntry(_ entry: AvatarGalleryEntry) {
+    private func deleteEntry(_ rawEntry: AvatarGalleryEntry) {
+        var entry = rawEntry
+        if case .topImage = entry, !self.entries.isEmpty {
+            entry = self.entries[0]
+        }
+        
         switch entry {
             case .topImage:
                 if self.peer.id == self.context.account.peerId {
