@@ -22,6 +22,9 @@ internal:
     - bash buildbox/deploy-telegram.sh hockeyapp
   environment:
     name: internal
+  artifacts:
+    paths:
+      - build/artifacts/Telegram.DSYMs.zip
 
 beta_testflight:
   tags:
