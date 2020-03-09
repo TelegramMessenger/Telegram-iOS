@@ -174,16 +174,14 @@ public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {
 public extension PeerSummaryCounterTags {
     static let contact = PeerSummaryCounterTags(rawValue: 1 << 3)
     static let nonContact = PeerSummaryCounterTags(rawValue: 1 << 4)
-    static let smallGroup = PeerSummaryCounterTags(rawValue: 1 << 5)
-    static let largeGroup = PeerSummaryCounterTags(rawValue: 1 << 6)
+    static let group = PeerSummaryCounterTags(rawValue: 1 << 5)
     static let bot = PeerSummaryCounterTags(rawValue: 1 << 7)
     static let channel = PeerSummaryCounterTags(rawValue: 1 << 8)
     
     static let all: PeerSummaryCounterTags = [
         .contact,
         .nonContact,
-        .smallGroup,
-        .largeGroup,
+        .group,
         .bot,
         .channel
     ]

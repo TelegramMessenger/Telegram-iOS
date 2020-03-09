@@ -15,9 +15,6 @@ public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChan
     |> take(1)
     |> castError(JoinChannelError.self)
     |> mapToSignal { peer -> Signal<RenderedChannelParticipant?, JoinChannelError> in
-        #if DEBUG
-        return .fail(.tooMuchJoined)
-        #endif
         if let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
             |> mapError { error -> JoinChannelError in

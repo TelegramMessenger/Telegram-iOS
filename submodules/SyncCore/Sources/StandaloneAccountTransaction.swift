@@ -28,7 +28,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 return .nonContact
             }
         } else if let _ = peer as? TelegramGroup {
-            return .smallGroup
+            return .group
         } else if let _ = peer as? TelegramSecretChat {
             return .nonContact
         } else if let channel = peer as? TelegramChannel {
@@ -37,9 +37,9 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 return .channel
             case .group:
                 if channel.username != nil {
-                    return .largeGroup
+                    return .group
                 } else {
-                    return .smallGroup
+                    return .group
                 }
             }
         } else {
