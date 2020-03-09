@@ -25,6 +25,7 @@ internal:
   artifacts:
     paths:
       - build/artifacts/Telegram.DSYMs.zip
+    expire_in: 1 week
 
 beta_testflight:
   tags:
@@ -41,7 +42,7 @@ beta_testflight:
   artifacts:
     paths:
       - build/artifacts
-    expire_in: 1 week
+    expire_in: 3 weeks
 
 deploy_beta_testflight:
   tags:
