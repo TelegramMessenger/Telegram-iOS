@@ -275,7 +275,7 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if !transaction.currentUpdatedPeerNotificationSettings.isEmpty, let filterPredicate = self.filterPredicate, case let .group(groupId, _) = self.space {
+        if !transaction.currentUpdatedPeerNotificationSettings.isEmpty, let filterPredicate = self.filterPredicate, case let .group(groupId, pinned) = self.space {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
             let _ = self.orderedEntries.mutableScan { entry in
                 let entryPeer: Peer
@@ -333,16 +333,19 @@ private final class ChatListViewSpaceState {
                     if wasIncluded != isIncluded {
                         if isIncluded {
                             for peer in peers {
-                                let tableEntry: ChatListIntermediateEntry?
-                                tableEntry = postbox.chatListTable.getEntry(peerId: peer.id, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable)
+                                let tableEntry = postbox.chatListTable.getEntry(groupId: groupId, peerId: peer.id, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable)
                                 if let entry = tableEntry {
-                                    switch entry {
-                                    case let .message(index, messageIndex):
-                                        if self.add(entry: .IntermediateMessageEntry(index: index, messageIndex: messageIndex)) {
-                                            hasUpdates = true
+                                    if pinned.include == (entry.index.pinningIndex != nil) {
+                                        if self.orderedEntries.indicesForPeerId(peer.id) == nil {
+                                            switch entry {
+                                            case let .message(index, messageIndex):
+                                                if self.add(entry: .IntermediateMessageEntry(index: index, messageIndex: messageIndex)) {
+                                                    hasUpdates = true
+                                                }
+                                            default:
+                                                break
+                                            }
                                         }
-                                    default:
-                                        break
                                     }
                                 }
                             }
@@ -980,7 +983,27 @@ struct ChatListViewState {
         for i in 0 ..< allIndicesSorted.count {
             assert(allIndicesSorted[i] == allIndices[i])
         }
-        assert(Set(allIndices).count == allIndices.count)
+        
+        if Set(allIndices).count != allIndices.count {
+            var seenIndices = Set<MutableChatListEntryIndex>()
+            var updatedResult: [(ChatListViewSpace, MutableChatListEntry)] = []
+            for item in result {
+                if !seenIndices.contains(item.1.entryIndex) {
+                    seenIndices.insert(item.1.entryIndex)
+                    updatedResult.append(item)
+                }
+            }
+            result = updatedResult
+            
+            let allIndices = result.map { $0.1.entryIndex }
+            let allIndicesSorted = allIndices.sorted()
+            for i in 0 ..< allIndicesSorted.count {
+                assert(allIndicesSorted[i] == allIndices[i])
+            }
+            assert(Set(allIndices).count == allIndices.count)
+            
+            assert(false)
+        }
         
         var sampledHoleIndex: Int?
         if !sampledHoleIndices.isEmpty {

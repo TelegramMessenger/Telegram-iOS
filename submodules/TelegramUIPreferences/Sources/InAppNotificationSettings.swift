@@ -68,11 +68,9 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
                     resultTags.insert(.contact)
                     resultTags.insert(.nonContact)
                     resultTags.insert(.bot)
-                    resultTags.insert(.smallGroup)
-                    resultTags.insert(.largeGroup)
+                    resultTags.insert(.group)
                 } else if legacyTag == .publicGroups {
-                    resultTags.insert(.smallGroup)
-                    resultTags.insert(.largeGroup)
+                    resultTags.insert(.group)
                 } else if legacyTag == .channels {
                     resultTags.insert(.channel)
                 }

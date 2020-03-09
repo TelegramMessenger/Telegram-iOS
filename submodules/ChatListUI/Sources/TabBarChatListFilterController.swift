@@ -89,7 +89,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                     tags.append(.nonContact)
                 }
                 if filter.data.categories.contains(.groups) {
-                    tags.append(.smallGroup)
+                    tags.append(.group)
                 }
                 if filter.data.categories.contains(.bots) {
                     tags.append(.bot)

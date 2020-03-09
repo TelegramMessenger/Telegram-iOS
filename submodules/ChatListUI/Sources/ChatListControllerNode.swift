@@ -49,17 +49,240 @@ enum ChatListContainerNodeFilter: Equatable {
     }
 }
 
+private final class ShimmerEffectNode: ASDisplayNode {
+    private var currentBackgroundColor: UIColor?
+    private var currentForegroundColor: UIColor?
+    private let imageNodeContainer: ASDisplayNode
+    private let imageNode: ASImageNode
+    
+    private var absoluteLocation: (CGRect, CGSize)?
+    private var isCurrentlyInHierarchy = false
+    private var shouldBeAnimating = false
+    
+    override init() {
+        self.imageNodeContainer = ASDisplayNode()
+        self.imageNodeContainer.isLayerBacked = true
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.isLayerBacked = true
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.displayWithoutProcessing = true
+        self.imageNode.contentMode = .scaleToFill
+        
+        super.init()
+        
+        self.isLayerBacked = true
+        self.clipsToBounds = true
+        
+        self.imageNodeContainer.addSubnode(self.imageNode)
+        self.addSubnode(self.imageNodeContainer)
+    }
+    
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimation()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimation()
+    }
+    
+    func update(backgroundColor: UIColor, foregroundColor: UIColor) {
+        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor) {
+            return
+        }
+        self.currentBackgroundColor = backgroundColor
+        self.currentForegroundColor = foregroundColor
+        
+        self.imageNode.image = generateImage(CGSize(width: 4.0, height: 320.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+            
+            context.clip(to: CGRect(origin: CGPoint(), size: size))
+            
+            let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
+            let peakColor = foregroundColor.cgColor
+            
+            var locations: [CGFloat] = [0.0, 0.5, 1.0]
+            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
+            
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+            
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        })
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        if let absoluteLocation = self.absoluteLocation, absoluteLocation.0 == rect && absoluteLocation.1 == containerSize {
+            return
+        }
+        let sizeUpdated = self.absoluteLocation?.1 != containerSize
+        let frameUpdated = self.absoluteLocation?.0 != rect
+        self.absoluteLocation = (rect, containerSize)
+        
+        if sizeUpdated {
+            if self.shouldBeAnimating {
+                self.imageNode.layer.removeAnimation(forKey: "shimmer")
+                self.addImageAnimation()
+            }
+        }
+        
+        if frameUpdated {
+            self.imageNodeContainer.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+        }
+        
+        self.updateAnimation()
+    }
+    
+    private func updateAnimation() {
+        let shouldBeAnimating = self.isCurrentlyInHierarchy && self.absoluteLocation != nil
+        if shouldBeAnimating != self.shouldBeAnimating {
+            self.shouldBeAnimating = shouldBeAnimating
+            if shouldBeAnimating {
+                self.addImageAnimation()
+            } else {
+                self.imageNode.layer.removeAnimation(forKey: "shimmer")
+            }
+        }
+    }
+    
+    private func addImageAnimation() {
+        guard let containerSize = self.absoluteLocation?.1 else {
+            return
+        }
+        let gradientHeight: CGFloat = 250.0
+        self.imageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -gradientHeight), size: CGSize(width: containerSize.width, height: gradientHeight))
+        let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.height + gradientHeight) as NSNumber, keyPath: "position.y", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+        animation.repeatCount = Float.infinity
+        animation.beginTime = 1.0
+        self.imageNode.layer.add(animation, forKey: "shimmer")
+    }
+}
+
+private final class ChatListShimmerNode: ASDisplayNode {
+    private let backgroundColorNode: ASDisplayNode
+    private let effectNode: ShimmerEffectNode
+    private let maskNode: ASImageNode
+    private var currentParams: (size: CGSize, presentationData: PresentationData)?
+    
+    override init() {
+        self.backgroundColorNode = ASDisplayNode()
+        self.effectNode = ShimmerEffectNode()
+        self.maskNode = ASImageNode()
+        
+        super.init()
+        
+        self.isUserInteractionEnabled = false
+        
+        self.addSubnode(self.backgroundColorNode)
+        self.addSubnode(self.effectNode)
+        self.addSubnode(self.maskNode)
+    }
+    
+    func update(context: AccountContext, size: CGSize, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+        if self.currentParams?.size != size || self.currentParams?.presentationData !== presentationData {
+            self.currentParams = (size, presentationData)
+            
+            let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
+            
+            let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let timestamp1: Int32 = 100000
+            let peers = SimpleDictionary<PeerId, Peer>()
+            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, additionalCategorySelected: { _ in
+            }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, activateChatPreview: { _, _, gesture in
+                gesture?.cancel()
+            }, present: { _ in })
+            
+            let items = (0 ..< 2).map { _ -> ChatListItem in
+                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, isInFilter: false, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: []), peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+            }
+            
+            var itemNodes: [ChatListItemNode] = []
+            for i in 0 ..< items.count {
+                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: (i == items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                    if let itemNode = node as? ChatListItemNode {
+                        itemNodes.append(itemNode)
+                    }
+                    apply().1(ListViewItemApply(isOnScreen: true))
+                })
+            }
+            
+            self.backgroundColorNode.backgroundColor = presentationData.theme.list.mediaPlaceholderColor
+            
+            self.maskNode.image = generateImage(size, rotatedContext: { size, context in
+                context.setFillColor(presentationData.theme.chatList.backgroundColor.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                
+                var currentY: CGFloat = 0.0
+                let fakeLabelPlaceholderHeight: CGFloat = 8.0
+                
+                func fillLabelPlaceholderRect(origin: CGPoint, width: CGFloat) {
+                    let startPoint = origin
+                    let diameter = fakeLabelPlaceholderHeight
+                    context.fillEllipse(in: CGRect(origin: startPoint, size: CGSize(width: diameter, height: diameter)))
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: startPoint.x + width - diameter, y: startPoint.y), size: CGSize(width: diameter, height: diameter)))
+                    context.fill(CGRect(origin: CGPoint(x: startPoint.x + diameter / 2.0, y: startPoint.y), size: CGSize(width: width - diameter, height: diameter)))
+                }
+                
+                while currentY < size.height {
+                    let sampleIndex = 0
+                    let itemHeight: CGFloat = itemNodes[sampleIndex].contentSize.height
+                    
+                    context.setBlendMode(.copy)
+                    context.setFillColor(UIColor.clear.cgColor)
+                    
+                    context.fillEllipse(in: itemNodes[sampleIndex].avatarNode.frame.offsetBy(dx: 0.0, dy: currentY))
+                    let titleFrame = itemNodes[sampleIndex].titleNode.frame.offsetBy(dx: 0.0, dy: currentY)
+                    fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: floor(titleFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 60.0)
+                    
+                    fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: currentY + itemHeight - floor(itemNodes[sampleIndex].titleNode.frame.midY - fakeLabelPlaceholderHeight / 2.0) - fakeLabelPlaceholderHeight), width: 60.0)
+                    
+                    fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: currentY + floor((itemHeight - fakeLabelPlaceholderHeight) / 2.0)), width: 120.0)
+                    fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX + 120.0 + 10.0, y: currentY + floor((itemHeight - fakeLabelPlaceholderHeight) / 2.0)), width: 60.0)
+                    
+                    let dateFrame = itemNodes[sampleIndex].dateNode.frame.offsetBy(dx: 0.0, dy: currentY)
+                    fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: dateFrame.minY), width: 30.0)
+                    
+                    context.setBlendMode(.normal)
+                    context.setFillColor(presentationData.theme.chatList.itemSeparatorColor.cgColor)
+                    context.fill(itemNodes[sampleIndex].separatorNode.frame.offsetBy(dx: 0.0, dy: currentY))
+                    
+                    currentY += itemHeight
+                }
+            })
+            
+            self.effectNode.update(backgroundColor: presentationData.theme.list.mediaPlaceholderColor, foregroundColor: presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4))
+            self.effectNode.updateAbsoluteRect(CGRect(origin: CGPoint(), size: size), within: size)
+        }
+        transition.updateFrame(node: self.backgroundColorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+        transition.updateFrame(node: self.maskNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+        transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+    }
+}
+
 private final class ChatListContainerItemNode: ASDisplayNode {
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let becameEmpty: (ChatListFilter?) -> Void
     private let emptyAction: (ChatListFilter?) -> Void
     
+    var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    private var floatingHeaderOffset: CGFloat?
+    
     private var emptyNode: ChatListEmptyNode?
+    var emptyShimmerEffectNode: ChatListShimmerNode?
     let listNode: ChatListNode
     
     private var validLayout: (CGSize, UIEdgeInsets, CGFloat)?
     
     init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter?, previewing: Bool, presentationData: PresentationData, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.becameEmpty = becameEmpty
         self.emptyAction = emptyAction
@@ -74,23 +297,35 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
+            var needsShimmerNode = false
             switch isEmptyState {
             case let .empty(isLoading):
-                if let currentNode = strongSelf.emptyNode {
-                    currentNode.updateIsLoading(isLoading)
-                } else {
-                    let emptyNode = ChatListEmptyNode(isFilter: filter != nil, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
-                        self?.emptyAction(filter)
-                    })
-                    strongSelf.emptyNode = emptyNode
-                    strongSelf.addSubnode(emptyNode)
-                    if let (size, insets, _) = strongSelf.validLayout {
-                        let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
-                        emptyNode.frame = emptyNodeFrame
-                        emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
+                if isLoading {
+                    needsShimmerNode = true
+                    
+                    if let emptyNode = strongSelf.emptyNode {
+                        strongSelf.emptyNode = nil
+                        transition.updateAlpha(node: emptyNode, alpha: 0.0, completion: { [weak emptyNode] _ in
+                            emptyNode?.removeFromSupernode()
+                        })
                     }
-                    emptyNode.alpha = 0.0
-                    transition.updateAlpha(node: emptyNode, alpha: 1.0)
+                } else {
+                    if let currentNode = strongSelf.emptyNode {
+                        currentNode.updateIsLoading(isLoading)
+                    } else {
+                        let emptyNode = ChatListEmptyNode(isFilter: filter != nil, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
+                            self?.emptyAction(filter)
+                        })
+                        strongSelf.emptyNode = emptyNode
+                        strongSelf.addSubnode(emptyNode)
+                        if let (size, insets, _) = strongSelf.validLayout {
+                            let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
+                            emptyNode.frame = emptyNodeFrame
+                            emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
+                        }
+                        emptyNode.alpha = 0.0
+                        transition.updateAlpha(node: emptyNode, alpha: 1.0)
+                    }
                 }
                 if !isLoading {
                     strongSelf.becameEmpty(filter)
@@ -103,7 +338,45 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     })
                 }
             }
+            if needsShimmerNode {
+                if strongSelf.emptyShimmerEffectNode == nil {
+                    let emptyShimmerEffectNode = ChatListShimmerNode()
+                    strongSelf.emptyShimmerEffectNode = emptyShimmerEffectNode
+                    strongSelf.addSubnode(emptyShimmerEffectNode)
+                    if let (size, insets, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
+                        strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: .immediate)
+                    }
+                }
+            } else if let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
+                strongSelf.emptyShimmerEffectNode = nil
+                let emptyNodeTransition = transition.isAnimated ? transition : .animated(duration: 0.3, curve: .easeInOut)
+                emptyNodeTransition.updateAlpha(node: emptyShimmerEffectNode, alpha: 0.0, completion: { [weak emptyShimmerEffectNode] _ in
+                    emptyShimmerEffectNode?.removeFromSupernode()
+                })
+            }
         }
+        
+        self.listNode.contentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contentOffsetChanged?(offset)
+        }
+        
+        self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.floatingHeaderOffset = offset
+            if let (size, insets, _) = strongSelf.validLayout, let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
+                strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: transition)
+            }
+        }
+    }
+    
+    private func layoutEmptyShimmerEffectNode(node: ChatListShimmerNode, size: CGSize, insets: UIEdgeInsets, verticalOffset: CGFloat, transition: ContainedViewLayoutTransition) {
+        node.update(context: self.context, size: size, presentationData: self.presentationData, transition: .immediate)
+        transition.updateFrameAdditive(node: node, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: size))
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -178,16 +451,16 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private func applyItemNodeAsCurrent(id: ChatListFilterTabEntryId, itemNode: ChatListContainerItemNode) {
         if let previousItemNode = self.currentItemNodeValue {
             previousItemNode.listNode.activateSearch = nil
-            previousItemNode.listNode.presentAlert =  nil
-            previousItemNode.listNode.present =  nil
-            previousItemNode.listNode.toggleArchivedFolderHiddenByDefault =  nil
-            previousItemNode.listNode.deletePeerChat =  nil
+            previousItemNode.listNode.presentAlert = nil
+            previousItemNode.listNode.present = nil
+            previousItemNode.listNode.toggleArchivedFolderHiddenByDefault = nil
+            previousItemNode.listNode.deletePeerChat = nil
             previousItemNode.listNode.peerSelected = nil
-            previousItemNode.listNode.groupSelected =  nil
-            previousItemNode.listNode.updatePeerGrouping =  nil
-            previousItemNode.listNode.contentOffsetChanged =  nil
-            previousItemNode.listNode.contentScrollingEnded =  nil
-            previousItemNode.listNode.activateChatPreview =  nil
+            previousItemNode.listNode.groupSelected = nil
+            previousItemNode.listNode.updatePeerGrouping = nil
+            previousItemNode.listNode.contentOffsetChanged = nil
+            previousItemNode.listNode.contentScrollingEnded = nil
+            previousItemNode.listNode.activateChatPreview = nil
             previousItemNode.listNode.addedVisibleChatsWithPeerIds = nil
             
             previousItemNode.accessibilityElementsHidden = true
@@ -219,7 +492,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.updatePeerGrouping = { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
         }
-        itemNode.listNode.contentOffsetChanged = { [weak self] offset in
+        itemNode.contentOffsetChanged = { [weak self] offset in
             self?.contentOffsetChanged?(offset)
         }
         itemNode.listNode.contentScrollingEnded = { [weak self] listView in

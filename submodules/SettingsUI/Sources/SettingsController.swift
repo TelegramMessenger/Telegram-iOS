@@ -707,7 +707,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         }
         if enableFilters {
             //TODO:localize
-            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/ChatListFilters")?.precomposed(), "Chat Filters", ""))
+            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/ChatListFilters")?.precomposed(), "Chat Folders", ""))
         }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)

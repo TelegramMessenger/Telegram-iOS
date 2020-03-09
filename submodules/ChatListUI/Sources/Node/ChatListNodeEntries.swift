@@ -305,7 +305,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: updatedCombinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, presence: peerPresence, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false, hasFailedMessages: hasFailed, isContact: isContact))
             case let .HoleEntry(hole):
                 if hole.index.timestamp == Int32.max - 1 {
-                    return ([], true)
+                    return ([.HeaderEntry], true)
                 }
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
         }
@@ -357,9 +357,9 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
     }
 
     if result.count >= 1, case .HoleEntry = result[result.count - 1] {
-        return ([], true)
+        return ([.HeaderEntry], true)
     } else if result.count == 1, case .HoleEntry = result[0] {
-        return ([], true)
+        return ([.HeaderEntry], true)
     }
     return (result, false)
 }

@@ -1364,19 +1364,36 @@ public final class ChatListNode: ListView {
                     }
                     
                     var isEmpty = false
+                    var isLoading = false
                     if transition.chatListView.filteredEntries.isEmpty {
                         isEmpty = true
                     } else {
                         if transition.chatListView.filteredEntries.count <= 2 {
                             isEmpty = true
-                            loop: for entry in transition.chatListView.filteredEntries {
+                            loop1: for entry in transition.chatListView.filteredEntries {
                                 switch entry {
-                                case .GroupReferenceEntry, .HeaderEntry:
+                                case .GroupReferenceEntry, .HeaderEntry, .HoleEntry:
                                     break
                                 default:
                                     isEmpty = false
-                                    break loop
+                                    break loop1
                                 }
+                            }
+                            isLoading = true
+                            var hasHoles = false
+                            loop2: for entry in transition.chatListView.filteredEntries {
+                                switch entry {
+                                case .HoleEntry:
+                                    hasHoles = true
+                                case .HeaderEntry:
+                                    break
+                                default:
+                                    isLoading = false
+                                    break loop2
+                                }
+                            }
+                            if !hasHoles {
+                                isLoading = false
                             }
                         }
                     }
@@ -1385,7 +1402,7 @@ public final class ChatListNode: ListView {
                     if transition.chatListView.isLoading {
                         isEmptyState = .empty(isLoading: true)
                     } else if isEmpty {
-                        isEmptyState = .empty(isLoading: false)
+                        isEmptyState = .empty(isLoading: isLoading)
                     } else {
                         var containsChats = false
                         loop: for entry in transition.chatListView.filteredEntries {

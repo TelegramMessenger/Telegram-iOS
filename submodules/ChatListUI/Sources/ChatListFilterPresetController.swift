@@ -314,6 +314,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.updateState { current in
                     var state = current
                     state.name = value
+                    state.changedName = true
                     return state
                 }
             }, action: {}, cleared: {
@@ -389,6 +390,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
 
 private struct ChatListFilterPresetControllerState: Equatable {
     var name: String
+    var changedName: Bool
     var includeCategories: ChatListFilterPeerCategories
     var excludeMuted: Bool
     var excludeRead: Bool
@@ -431,8 +433,8 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         entries.append(.screenHeader)
     }
     
-    entries.append(.nameHeader("FILTER NAME"))
-    entries.append(.name(placeholder: "Filter Name", value: state.name))
+    entries.append(.nameHeader("FOLDER NAME"))
+    entries.append(.name(placeholder: "Folder Name", value: state.name))
     
     entries.append(.includePeersHeader("INCLUDED CHATS"))
     entries.append(.addIncludePeer(title: "Add Chats"))
@@ -683,6 +685,49 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
     return controller
 }
 
+enum ChatListFilterType {
+    case generic
+    case unmuted
+    case unread
+    case channels
+    case groups
+    case bots
+    case contacts
+    case nonContacts
+}
+
+func chatListFilterType(_ filter: ChatListFilter) -> ChatListFilterType {
+    let filterType: ChatListFilterType
+    if filter.data.includePeers.isEmpty {
+        if filter.data.categories == .all {
+            if filter.data.excludeRead {
+                filterType = .unread
+            } else if filter.data.excludeMuted {
+                filterType = .unmuted
+            } else {
+                filterType = .generic
+            }
+        } else {
+            if filter.data.categories == .channels {
+                filterType = .channels
+            } else if filter.data.categories == .groups {
+                filterType = .groups
+            } else if filter.data.categories == .bots {
+                filterType = .bots
+            } else if filter.data.categories == .contacts {
+                filterType = .contacts
+            } else if filter.data.categories == .nonContacts {
+                filterType = .nonContacts
+            } else {
+                filterType = .generic
+            }
+        }
+    } else {
+        filterType = .generic
+    }
+    return filterType
+}
+
 func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilter?, updated: @escaping ([ChatListFilter]) -> Void) -> ViewController {
     let initialName: String
     if let currentPreset = currentPreset {
@@ -690,11 +735,35 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     } else {
         initialName = "New Folder"
     }
-    let initialState = ChatListFilterPresetControllerState(name: initialName, includeCategories: currentPreset?.data.categories ?? [], excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, excludeArchived: currentPreset?.data.excludeArchived ?? false, additionallyIncludePeers: currentPreset?.data.includePeers ?? [], additionallyExcludePeers: currentPreset?.data.excludePeers ?? [])
+    let initialState = ChatListFilterPresetControllerState(name: initialName, changedName: currentPreset != nil, includeCategories: currentPreset?.data.categories ?? [], excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, excludeArchived: currentPreset?.data.excludeArchived ?? false, additionallyIncludePeers: currentPreset?.data.includePeers ?? [], additionallyExcludePeers: currentPreset?.data.excludePeers ?? [])
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
+        statePromise.set(stateValue.modify { current in
+            var state = f(current)
+            if !state.changedName {
+                let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
+                switch chatListFilterType(filter) {
+                case .generic:
+                    state.name = initialName
+                case .unmuted:
+                    state.name = "Not Muted"
+                case .unread:
+                    state.name = "Unread"
+                case .channels:
+                    state.name = "Channels"
+                case .groups:
+                    state.name = "Groups"
+                case .bots:
+                    state.name = "Bots"
+                case .contacts:
+                    state.name = "Contacts"
+                case .nonContacts:
+                    state.name = "Non-Contacts"
+                }
+            }
+            return state
+        })
     }
     var skipStateAnimation = false
     

@@ -524,7 +524,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 var items: [ContextMenuItem] = []
                 //TODO:localization
-                items.append(.action(ContextMenuActionItem(text: "Edit Filter", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: "Edit Folder", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                 }, action: { c, f in
                     c.dismiss(completion: {
@@ -2376,44 +2376,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 items.append(.separator)
                 
                 for preset in presetList {
-                    enum ChatListFilterType {
-                        case generic
-                        case unmuted
-                        case unread
-                        case channels
-                        case groups
-                        case bots
-                        case contacts
-                        case nonContacts
-                    }
-                    let filterType: ChatListFilterType
-                    if preset.data.includePeers.isEmpty {
-                        if preset.data.categories == .all {
-                            if preset.data.excludeRead {
-                                filterType = .unread
-                            } else if preset.data.excludeMuted {
-                                filterType = .unmuted
-                            } else {
-                                filterType = .generic
-                            }
-                        } else {
-                            if preset.data.categories == .channels {
-                                filterType = .channels
-                            } else if preset.data.categories == .groups {
-                                filterType = .groups
-                            } else if preset.data.categories == .bots {
-                                filterType = .bots
-                            } else if preset.data.categories == .contacts {
-                                filterType = .contacts
-                            } else if preset.data.categories == .nonContacts {
-                                filterType = .nonContacts
-                            } else {
-                                filterType = .generic
-                            }
-                        }
-                    } else {
-                        filterType = .generic
-                    }
+                    let filterType = chatListFilterType(preset)
                     var badge = ""
                     for item in filterItems {
                         if item.0.id == preset.id && item.1 != 0 {

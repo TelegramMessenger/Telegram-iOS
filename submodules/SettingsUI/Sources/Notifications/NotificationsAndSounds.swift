@@ -27,27 +27,21 @@ private struct CounterTagSettings: OptionSet {
     init(summaryTags: PeerSummaryCounterTags) {
         var result = CounterTagSettings()
         if summaryTags.contains(.contact) {
-            result.insert(.regularChatsAndPrivateGroups)
+            result.insert(.regularChatsAndGroups)
         }
         if summaryTags.contains(.channel) {
             result.insert(.channels)
-        }
-        if summaryTags.contains(.largeGroup) {
-            result.insert(.publicGroups)
         }
         self = result
     }
     
     func toSumaryTags() -> PeerSummaryCounterTags {
         var result = PeerSummaryCounterTags()
-        if self.contains(.regularChatsAndPrivateGroups) {
+        if self.contains(.regularChatsAndGroups) {
             result.insert(.contact)
             result.insert(.nonContact)
             result.insert(.bot)
-            result.insert(.smallGroup)
-        }
-        if self.contains(.publicGroups) {
-            result.insert(.largeGroup)
+            result.insert(.group)
         }
         if self.contains(.channels) {
             result.insert(.channel)
@@ -55,9 +49,8 @@ private struct CounterTagSettings: OptionSet {
         return result
     }
     
-    static let regularChatsAndPrivateGroups = CounterTagSettings(rawValue: 1 << 0)
-    static let publicGroups = CounterTagSettings(rawValue: 1 << 1)
-    static let channels = CounterTagSettings(rawValue: 1 << 2)
+    static let regularChatsAndGroups = CounterTagSettings(rawValue: 1 << 0)
+    static let channels = CounterTagSettings(rawValue: 1 << 1)
 }
 
 private final class NotificationsAndSoundsArguments {
@@ -154,7 +147,6 @@ public enum NotificationsAndSoundsEntryTag: ItemListItemTag {
     case inAppVibrate
     case inAppPreviews
     case displayNamesOnLockscreen
-    case includePublicGroups
     case includeChannels
     case unreadCountCategory
     case joinedNotifications
@@ -208,7 +200,6 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     case displayNamesOnLockscreenInfo(PresentationTheme, String)
     
     case badgeHeader(PresentationTheme, String)
-    case includePublicGroups(PresentationTheme, String, Bool)
     case includeChannels(PresentationTheme, String, Bool)
     case unreadCountCategory(PresentationTheme, String, Bool)
     case unreadCountCategoryInfo(PresentationTheme, String)
@@ -235,7 +226,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsSection.inApp.rawValue
             case .displayNamesOnLockscreen, .displayNamesOnLockscreenInfo:
                 return NotificationsAndSoundsSection.displayNamesOnLockscreen.rawValue
-            case .badgeHeader, .includePublicGroups, .includeChannels, .unreadCountCategory, .unreadCountCategoryInfo:
+            case .badgeHeader, .includeChannels, .unreadCountCategory, .unreadCountCategoryInfo:
                 return NotificationsAndSoundsSection.badge.rawValue
             case .joinedNotifications, .joinedNotificationsInfo:
                 return NotificationsAndSoundsSection.joinedNotifications.rawValue
@@ -306,8 +297,6 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return 28
             case .badgeHeader:
                 return 29
-            case .includePublicGroups:
-                return 31
             case .includeChannels:
                 return 32
             case .unreadCountCategory:
@@ -349,8 +338,6 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsEntryTag.inAppPreviews
             case .displayNamesOnLockscreen:
                 return NotificationsAndSoundsEntryTag.displayNamesOnLockscreen
-            case .includePublicGroups:
-                return NotificationsAndSoundsEntryTag.includePublicGroups
             case .includeChannels:
                 return NotificationsAndSoundsEntryTag.includeChannels
             case .unreadCountCategory:
@@ -546,12 +533,6 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .includePublicGroups(lhsTheme, lhsText, lhsValue):
-                if case let .includePublicGroups(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
             case let .includeChannels(lhsTheme, lhsText, lhsValue):
                 if case let .includeChannels(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -719,10 +700,6 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .badgeHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .includePublicGroups(theme, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateIncludeTag(.publicGroups, updatedValue)
-                }, tag: self.tag)
             case let .includeChannels(theme, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateIncludeTag(.channels, updatedValue)
@@ -825,7 +802,6 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     
     let counterTagSettings = CounterTagSettings(summaryTags: inAppSettings.totalUnreadCountIncludeTags)
     
-    entries.append(.includePublicGroups(presentationData.theme, presentationData.strings.Notifications_Badge_IncludePublicGroups, counterTagSettings.contains(.publicGroups)))
     entries.append(.includeChannels(presentationData.theme, presentationData.strings.Notifications_Badge_IncludeChannels, counterTagSettings.contains(.channels)))
     entries.append(.unreadCountCategory(presentationData.theme, presentationData.strings.Notifications_Badge_CountUnreadMessages, inAppSettings.totalUnreadCountDisplayCategory == .messages))
     entries.append(.unreadCountCategoryInfo(presentationData.theme, inAppSettings.totalUnreadCountDisplayCategory == .chats ? presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOff : presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOn))

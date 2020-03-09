@@ -5352,7 +5352,7 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.EmptyChatFilterList" = "No chats currently\nmatch this filter.";
 
 "ChatList.EmptyChatListNewMessage" = "New Message";
-"ChatList.EmptyChatListEditFilter" = "Edit Filter";
+"ChatList.EmptyChatListEditFilter" = "Edit Folder";
 
 "Stats.Overview" = "OVERVIEW";
 "Stats.Followers" = "Followers";

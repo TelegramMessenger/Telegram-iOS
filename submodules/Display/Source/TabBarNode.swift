@@ -156,12 +156,12 @@ private final class TabBarItemNode: ASDisplayNode {
             transition.updateAlpha(node: strongSelf.contextTextImageNode, alpha: isExtracted ? 1.0 : 0.0)
         }
         
-        let leftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
+        /*let leftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
         leftSwipe.direction = .left
         self.containerNode.view.addGestureRecognizer(leftSwipe)
         let rightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
         rightSwipe.direction = .right
-        self.containerNode.view.addGestureRecognizer(rightSwipe)
+        self.containerNode.view.addGestureRecognizer(rightSwipe)*/
     }
     
     @objc private func swipeGesture(_ gesture: UISwipeGestureRecognizer) {
