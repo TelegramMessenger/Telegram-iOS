@@ -878,6 +878,7 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
 
 private final class SettingsTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
+    let ignoreContentTouches: Bool = true
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode

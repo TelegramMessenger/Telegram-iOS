@@ -174,6 +174,13 @@ open class TabBarController: ViewController {
         }
     }
     
+    public func isPointInsideContentArea(point: CGPoint) -> Bool {
+        if point.y < self.tabBarControllerNode.tabBarNode.frame.minY {
+            return true
+        }
+        return false
+    }
+    
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {

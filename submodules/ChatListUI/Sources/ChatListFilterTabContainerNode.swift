@@ -785,7 +785,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             
             if let previousSelectedFrame = self.previousSelectedFrame {
                 let previousContentOffsetX = max(0.0, min(previousContentWidth - previousScrollBounds.width, floor(previousSelectedFrame.midX - previousScrollBounds.width / 2.0)))
-                focusOnSelectedFilter = abs(previousContentOffsetX - previousScrollBounds.minX) < 1.0
+                if abs(previousContentOffsetX - previousScrollBounds.minX) < 1.0 {
+                    focusOnSelectedFilter = true
+                }
             }
             
             if focusOnSelectedFilter && self.reorderingItem == nil {

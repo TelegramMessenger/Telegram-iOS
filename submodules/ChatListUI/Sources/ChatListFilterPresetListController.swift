@@ -52,6 +52,7 @@ private enum ChatListFilterPresetListEntryStableId: Hashable {
     case screenHeader
     case suggestedListHeader
     case suggestedPreset(ChatListFilterData)
+    case suggestedAddCustom
     case listHeader
     case preset(Int32)
     case addItem
@@ -70,6 +71,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     case screenHeader(String)
     case suggestedListHeader(String)
     case suggestedPreset(index: PresetIndex, title: String, label: String, preset: ChatListFilterData)
+    case suggestedAddCustom(String)
     case listHeader(String)
     case preset(index: PresetIndex, title: String, label: String, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool)
     case addItem(text: String, isEditing: Bool)
@@ -79,7 +81,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
         switch self {
         case .screenHeader:
             return ChatListFilterPresetListSection.screenHeader.rawValue
-        case .suggestedListHeader, .suggestedPreset:
+        case .suggestedListHeader, .suggestedPreset, .suggestedAddCustom:
             return ChatListFilterPresetListSection.suggested.rawValue
         case .listHeader, .preset, .addItem, .listFooter:
             return ChatListFilterPresetListSection.list.rawValue
@@ -102,6 +104,8 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return 1002
         case let .suggestedPreset(suggestedPreset):
             return 1003 + suggestedPreset.index.value
+        case .suggestedAddCustom:
+            return 2000
         }
     }
     
@@ -113,6 +117,8 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return .suggestedListHeader
         case let .suggestedPreset(suggestedPreset):
             return .suggestedPreset(suggestedPreset.preset)
+        case .suggestedAddCustom:
+            return .suggestedAddCustom
         case .listHeader:
             return .listHeader
         case let .preset(preset):
@@ -139,6 +145,10 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return ChatListFilterPresetListSuggestedItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, installAction: {
                 arguments.addSuggestedPresed(title, preset)
             }, tag: nil)
+        case let .suggestedAddCustom(text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: nil, title: text, sectionId: self.section, height: .generic, editing: false, action: {
+                arguments.addNew()
+            })
         case let .listHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
         case let .preset(_, title, label, preset, canBeReordered, canBeDeleted, isEditing):
@@ -183,6 +193,7 @@ private func filtersWithAppliedOrder(filters: [(ChatListFilter, Int)], order: [I
 private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
+    
     entries.append(.screenHeader("Create folders for different groups of chats and\nquickly switch between them."))
     
     let filteredSuggestedFilters = suggestedFilters.filter { suggestedFilter in
@@ -194,20 +205,25 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
         return true
     }
     
-    entries.append(.listHeader("FOLDERS"))
-    
-    for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
-        entries.append(.preset(index: PresetIndex(value: entries.count), title: filter.title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
+    if !filters.isEmpty || suggestedFilters.isEmpty {
+        entries.append(.listHeader("FOLDERS"))
+        
+        for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
+            entries.append(.preset(index: PresetIndex(value: entries.count), title: filter.title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
+        }
+        if filters.count < 10 {
+            entries.append(.addItem(text: "Create New Folder", isEditing: state.isEditing))
+        }
+        entries.append(.listFooter("Tap \"Edit\" to change the order or delete folders."))
     }
-    if filters.count < 10 {
-        entries.append(.addItem(text: "Create New Folder", isEditing: state.isEditing))
-    }
-    entries.append(.listFooter("Tap \"Edit\" to change the order or delete folders."))
     
     if !filteredSuggestedFilters.isEmpty {
         entries.append(.suggestedListHeader("RECOMMENDED FOLDERS"))
         for filter in filteredSuggestedFilters {
             entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title, label: filter.description, preset: filter.data))
+        }
+        if filters.isEmpty {
+            entries.append(.suggestedAddCustom("Add Custom Folder"))
         }
     }
     
@@ -332,7 +348,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 dismissImpl?()
             })
         }
-        let rightNavigationButton: ItemListNavigationButton
+        let rightNavigationButton: ItemListNavigationButton?
         if state.isEditing {
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                 let _ = (updatedFilterOrder.get()
@@ -381,7 +397,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     }
                 })
             })
-        } else {
+        } else if !filtersWithCountsValue.isEmpty {
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                 updateState { state in
                     var state = state
@@ -389,6 +405,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     return state
                 }
             })
+        } else {
+            rightNavigationButton = nil
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Folders"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

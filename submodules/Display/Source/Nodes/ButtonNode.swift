@@ -5,6 +5,7 @@ import AsyncDisplayKit
 open class ASButtonNode: ASControlNode {
     public let titleNode: ImmediateTextNode
     public let highlightedTitleNode: ImmediateTextNode
+    public let disabledTitleNode: ImmediateTextNode
     public let imageNode: ASImageNode
     public let disabledImageNode: ASImageNode
     public let backgroundImageNode: ASImageNode
@@ -48,6 +49,7 @@ open class ASButtonNode: ASControlNode {
     
     private var calculatedTitleSize: CGSize = CGSize()
     private var calculatedHighlightedTitleSize: CGSize = CGSize()
+    private var calculatedDisabledTitleSize: CGSize = CGSize()
     
     override public init() {
         self.titleNode = ImmediateTextNode()
@@ -57,6 +59,10 @@ open class ASButtonNode: ASControlNode {
         self.highlightedTitleNode = ImmediateTextNode()
         self.highlightedTitleNode.isUserInteractionEnabled = false
         self.highlightedTitleNode.displaysAsynchronously = false
+        
+        self.disabledTitleNode = ImmediateTextNode()
+        self.disabledTitleNode.isUserInteractionEnabled = false
+        self.disabledTitleNode.displaysAsynchronously = false
         
         self.imageNode = ASImageNode()
         self.imageNode.isUserInteractionEnabled = false
@@ -86,6 +92,8 @@ open class ASButtonNode: ASControlNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.highlightedTitleNode)
         self.highlightedTitleNode.isHidden = true
+        self.addSubnode(self.disabledTitleNode)
+        self.disabledTitleNode.isHidden = true
         self.addSubnode(self.imageNode)
         self.addSubnode(self.disabledImageNode)
         self.disabledImageNode.isHidden = true
@@ -108,6 +116,7 @@ open class ASButtonNode: ASControlNode {
         self.calculatedTitleSize = normalTitleSize
         let highlightedTitleSize = self.highlightedTitleNode.updateLayout(CGSize(width: widthForTitle, height: max(1.0, constrainedSize.height - verticalInsets)))
         self.calculatedHighlightedTitleSize = highlightedTitleSize
+        self.calculatedDisabledTitleSize = self.disabledTitleNode.updateLayout(CGSize(width: widthForTitle, height: max(1.0, constrainedSize.height - verticalInsets)))
         
         let titleSize = CGSize(width: max(normalTitleSize.width, highlightedTitleSize.width), height: max(normalTitleSize.height, highlightedTitleSize.height))
         
@@ -161,6 +170,17 @@ open class ASButtonNode: ASControlNode {
                 self.setNeedsLayout()
             }
             self.highlightedTitleNode.attributedText = title
+        } else if state == .disabled {
+            if let attributedText = self.disabledTitleNode.attributedText {
+                if !attributedText.isEqual(to: title) {
+                    self.invalidateCalculatedLayout()
+                    self.setNeedsLayout()
+                }
+            } else {
+                self.invalidateCalculatedLayout()
+                self.setNeedsLayout()
+            }
+            self.disabledTitleNode.attributedText = title
         } else {
             if let attributedText = self.titleNode.attributedText {
                 if !attributedText.isEqual(to: title) {
@@ -178,6 +198,8 @@ open class ASButtonNode: ASControlNode {
     open func attributedTitle(for state: UIControl.State) -> NSAttributedString? {
         if state == .highlighted || state == .selected {
             return self.highlightedTitleNode.attributedText
+        } else if state == .disabled {
+            return self.disabledTitleNode.attributedText
         } else {
             return self.titleNode.attributedText
         }
@@ -255,6 +277,14 @@ open class ASButtonNode: ASControlNode {
     override open var isEnabled: Bool {
         didSet {
             if self.isEnabled != oldValue {
+                if self.isEnabled || self.disabledTitleNode.attributedText == nil {
+                    self.titleNode.isHidden = false
+                    self.disabledTitleNode.isHidden = true
+                } else {
+                    self.titleNode.isHidden = true
+                    self.disabledTitleNode.isHidden = false
+                }
+                
                 if self.isEnabled || self.disabledImageNode.image == nil {
                     self.imageNode.isHidden = false
                     self.disabledImageNode.isHidden = true
@@ -275,6 +305,7 @@ open class ASButtonNode: ASControlNode {
         
         let titleOrigin: CGPoint
         let highlightedTitleOrigin: CGPoint
+        let disabledTitleOrigin: CGPoint
         let imageOrigin: CGPoint
         
         if self.laysOutHorizontally {
@@ -282,14 +313,17 @@ open class ASButtonNode: ASControlNode {
             case .left:
                 titleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
                 highlightedTitleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                disabledTitleOrigin = CGPoint(x: contentRect.minX, y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
                 imageOrigin = CGPoint(x: titleOrigin.x + self.calculatedTitleSize.width + self.contentSpacing, y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
             case .right:
                 titleOrigin = CGPoint(x: contentRect.maxX - self.calculatedTitleSize.width, y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
                 highlightedTitleOrigin = CGPoint(x: contentRect.maxX - self.calculatedHighlightedTitleSize.width, y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                disabledTitleOrigin = CGPoint(x: contentRect.maxX - self.calculatedDisabledTitleSize.width, y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
                 imageOrigin = CGPoint(x: titleOrigin.x - self.contentSpacing - imageSize.width, y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
             default:
-                titleOrigin = CGPoint(x: contentRect.minY + floor((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
+                titleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
                 highlightedTitleOrigin = CGPoint(x: floor((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                disabledTitleOrigin = CGPoint(x: floor((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
                 imageOrigin = CGPoint(x: floor((contentRect.width - imageSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
             }
         } else {
@@ -300,11 +334,13 @@ open class ASButtonNode: ASControlNode {
             let contentY = contentRect.minY + floor((contentRect.height - contentHeight) / 2.0)
             titleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedTitleSize.height)
             highlightedTitleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedHighlightedTitleSize.height)
+            disabledTitleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentY + contentHeight - self.calculatedDisabledTitleSize.height)
             imageOrigin = CGPoint(x: floor((contentRect.width - imageSize.width) / 2.0), y: contentY)
         }
         
         self.titleNode.frame = CGRect(origin: titleOrigin, size: self.calculatedTitleSize)
         self.highlightedTitleNode.frame = CGRect(origin: highlightedTitleOrigin, size: self.calculatedHighlightedTitleSize)
+        self.disabledTitleNode.frame = CGRect(origin: disabledTitleOrigin, size: self.calculatedDisabledTitleSize)
         self.imageNode.frame = CGRect(origin: imageOrigin, size: imageSize)
         self.disabledImageNode.frame = CGRect(origin: imageOrigin, size: imageSize)
         

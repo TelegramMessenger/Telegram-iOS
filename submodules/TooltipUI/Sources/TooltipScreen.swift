@@ -8,6 +8,7 @@ import AppBundle
 
 private final class TooltipScreenNode: ViewControllerTracingNode {
     private let location: CGPoint
+    private let shouldDismissOnTouch: (CGPoint) -> Bool
     private let requestDismiss: () -> Void
     
     private let containerNode: ASDisplayNode
@@ -16,8 +17,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let animatedStickerNode: AnimatedStickerNode
     private let textNode: ImmediateTextNode
     
-    init(text: String, location: CGPoint, requestDismiss: @escaping () -> Void) {
+    init(text: String, location: CGPoint, shouldDismissOnTouch: @escaping (CGPoint) -> Bool, requestDismiss: @escaping () -> Void) {
         self.location = location
+        self.shouldDismissOnTouch = shouldDismissOnTouch
         self.requestDismiss = requestDismiss
         
         self.containerNode = ASDisplayNode()
@@ -90,7 +92,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 eventIsPresses = event.type == .presses
             }
             if event.type == .touches || eventIsPresses {
-                //self.requestDismiss()
+                if self.shouldDismissOnTouch(point) {
+                    self.requestDismiss()
+                }
                 return nil
             }
         }
@@ -119,6 +123,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
 public final class TooltipScreen: ViewController {
     private let text: String
     private let location: CGPoint
+    private let shouldDismissOnTouch: (CGPoint) -> Bool
     
     private var controllerNode: TooltipScreenNode {
         return self.displayNode as! TooltipScreenNode
@@ -127,9 +132,10 @@ public final class TooltipScreen: ViewController {
     private var validLayout: ContainerViewLayout?
     private var isDismissed: Bool = false
     
-    public init(text: String, location: CGPoint) {
+    public init(text: String, location: CGPoint, shouldDismissOnTouch: @escaping (CGPoint) -> Bool) {
         self.text = text
         self.location = location
+        self.shouldDismissOnTouch = shouldDismissOnTouch
         
         super.init(navigationBarPresentationData: nil)
         
@@ -151,7 +157,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(text: self.text, location: self.location, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(text: self.text, location: self.location, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

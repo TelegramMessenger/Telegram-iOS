@@ -315,6 +315,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             
             for i in 0 ..< self.itemNodes.count {
                 let itemNode = self.itemNodes[i]
+                let _ = itemNode.measure(itemSize)
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: itemSize.width * CGFloat(i), y: (size.height - itemSize.height) / 2.0), size: itemSize))
                 
                 let isSelected = selectedIndex == i

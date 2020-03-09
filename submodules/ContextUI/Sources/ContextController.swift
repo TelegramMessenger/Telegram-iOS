@@ -1363,12 +1363,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let maybeContentNode = self.contentContainerNode.contentNode {
             switch maybeContentNode {
             case let .extracted(contentParentNode, _):
-                let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
-                if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
-                    if result is TextSelectionNodeView {
-                        return result
-                    } else if contentParentNode.contentRect.contains(contentPoint) {
-                        return contentParentNode.contentNode.view
+                if case let .extracted(source) = self.source {
+                    if !source.ignoreContentTouches {
+                        let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
+                        if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
+                            if result is TextSelectionNodeView {
+                                return result
+                            } else if contentParentNode.contentRect.contains(contentPoint) {
+                                return contentParentNode.contentNode.view
+                            }
+                        }
                     }
                 }
             case let .controller(controller):
@@ -1429,6 +1433,7 @@ public final class ContextControllerPutBackViewInfo {
 
 public protocol ContextExtractedContentSource: class {
     var keepInPlace: Bool { get }
+    var ignoreContentTouches: Bool { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?

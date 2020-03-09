@@ -6,6 +6,7 @@ import Postbox
 
 final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
     
     private weak var chatNode: ChatControllerNode?
     private let message: Message
