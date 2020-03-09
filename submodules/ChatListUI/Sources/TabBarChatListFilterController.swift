@@ -42,23 +42,11 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
         
         return combineLatest(queue: context.account.postbox.queue,
             context.account.postbox.combinedView(keys: keys),
-            context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+            Signal<Bool, NoError>.single(true)
         )
-        |> map { view, sharedData -> (Int, [(ChatListFilter, Int)]) in
+        |> map { view, _ -> (Int, [(ChatListFilter, Int)]) in
             guard let unreadCounts = view.views[unreadKey] as? UnreadMessageCountsView else {
                 return (0, [])
-            }
-            
-            let inAppSettings: InAppNotificationSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
-                inAppSettings = value
-            } else {
-                inAppSettings = .defaultSettings
-            }
-            let type: RenderedTotalUnreadCountType
-            switch inAppSettings.totalUnreadCountDisplayStyle {
-            case .filtered:
-                type = .filtered
             }
             
             var result: [(ChatListFilter, Int)] = []
@@ -70,6 +58,8 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                 switch entry {
                 case let .total(_, totalStateValue):
                     totalState = totalStateValue
+                case let .totalInGroup(groupId, totalGroupState):
+                    break
                 case let .peer(peerId, state):
                     if let state = state, state.isUnread {
                         if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer {
@@ -88,10 +78,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                 }
             }
             
-            var totalBadge = 0
-            if let totalState = totalState {
-                totalBadge = Int(totalState.count(for: inAppSettings.totalUnreadCountDisplayStyle.category, in: inAppSettings.totalUnreadCountDisplayCategory.statsType, with: inAppSettings.totalUnreadCountIncludeTags))
-            }
+            let totalBadge = 0
             
             for filter in filters {
                 var tags: [PeerSummaryCounterTags] = []

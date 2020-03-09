@@ -294,6 +294,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         
                         let title = !state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(state.selectedPeerIds.count)) : defaultTitle
                         strongSelf.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+                    } else if isReorderingTabs {
+                        if strongSelf.groupId == .root {
+                            strongSelf.navigationItem.rightBarButtonItem = nil
+                        }
+                        let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
+                        strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
+                        
+                        let (_, connectsViaProxy) = proxy
+                        switch networkState {
+                        case .waitingForNetwork:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        case let .connecting(proxy):
+                            var text = strongSelf.presentationData.strings.State_Connecting
+                            if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
+                                text = strongSelf.presentationData.strings.State_ConnectingToProxy
+                            }
+                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        case .updating:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        case .online:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        }
                     } else {
                         var isRoot = false
                         if case .root = strongSelf.groupId {
@@ -908,7 +930,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             case let .peer(peer):
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList, chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList(isFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil), chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
@@ -1148,7 +1170,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             } else {
                                 text = "Hold to organize your chats with folders."
                             }
-                            parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0)), in: .current)
+                            parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
+                                guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                                    return true
+                                }
+                                if parentController.isPointInsideContentArea(point: point) {
+                                    return false
+                                }
+                                return true
+                            }), in: .current)
                         }
                     })
                 }
@@ -2450,6 +2480,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
 
 private final class ChatListTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
+    let ignoreContentTouches: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -2470,6 +2501,7 @@ private final class ChatListTabBarContextExtractedContentSource: ContextExtracte
 
 private final class ChatListHeaderBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode

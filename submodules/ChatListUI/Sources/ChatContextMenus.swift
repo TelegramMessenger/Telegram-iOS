@@ -18,7 +18,7 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
         var items: [ContextMenuItem] = []
         
         if !transaction.getUnreadChatListPeerIds(groupId: groupId, filterPredicate: nil).isEmpty {
-            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] _, f in
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 let _ = (context.account.postbox.transaction { transaction in
                     markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId, filterPredicate: nil)
                 }
@@ -40,7 +40,7 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
 }
 
 enum ChatContextMenuSource {
-    case chatList
+    case chatList(isFilter: Bool)
     case search(ChatListSearchContextActionSource)
 }
 
@@ -146,20 +146,22 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                 })))
             }
             
-            let isPinned = index.pinningIndex != nil
-            items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                let _ = (toggleItemPinned(postbox: context.account.postbox, groupId: group, itemId: .peer(peerId))
-                |> deliverOnMainQueue).start(next: { result in
-                    switch result {
-                    case .done:
-                        break
-                    case let .limitExceeded(maxCount):
-                        break
-                        //strongSelf.presentAlert?(strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0)
-                    }
-                    f(.default)
-                })
-            })))
+            if case .chatList(false) = source {
+                let isPinned = index.pinningIndex != nil
+                items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    let _ = (toggleItemPinned(postbox: context.account.postbox, groupId: group, itemId: .peer(peerId))
+                    |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                        case .done:
+                            break
+                        case let .limitExceeded(maxCount):
+                            break
+                            //strongSelf.presentAlert?(strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0)
+                        }
+                        f(.default)
+                    })
+                })))
+            }
         
             if !isSavedMessages, let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
                 var isMuted = false

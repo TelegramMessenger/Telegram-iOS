@@ -849,6 +849,44 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     }
     
     var attemptNavigationImpl: (() -> Bool)?
+    var applyImpl: (() -> Void)? = {
+        let state = stateValue.with { $0 }
+        let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
+        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
+            var preset = preset
+            if currentPreset == nil {
+                preset.id = max(2, settings.filters.map({ $0.id + 1 }).max() ?? 2)
+            }
+            var settings = settings
+            if let _ = currentPreset {
+                var found = false
+                for i in 0 ..< settings.filters.count {
+                    if settings.filters[i].id == preset.id {
+                        settings.filters[i] = preset
+                        found = true
+                    }
+                }
+                if !found {
+                    settings.filters = settings.filters.filter { listFilter in
+                        if listFilter.title == preset.title && listFilter.data == preset.data {
+                            return false
+                        }
+                        return true
+                    }
+                    settings.filters.append(preset)
+                }
+            } else {
+                settings.filters.append(preset)
+            }
+            return settings
+        })
+        |> deliverOnMainQueue).start(next: { settings in
+            updated(settings.filters)
+            dismissImpl?()
+            
+            let _ = replaceRemoteChatListFilters(account: context.account).start()
+        })
+    }
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
@@ -864,42 +902,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             }
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(currentPreset == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
-            let state = stateValue.with { $0 }
-            let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
-            let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
-                var preset = preset
-                if currentPreset == nil {
-                    preset.id = max(2, settings.filters.map({ $0.id + 1 }).max() ?? 2)
-                }
-                var settings = settings
-                if let _ = currentPreset {
-                    var found = false
-                    for i in 0 ..< settings.filters.count {
-                        if settings.filters[i].id == preset.id {
-                            settings.filters[i] = preset
-                            found = true
-                        }
-                    }
-                    if !found {
-                        settings.filters = settings.filters.filter { listFilter in
-                            if listFilter.title == preset.title && listFilter.data == preset.data {
-                                return false
-                            }
-                            return true
-                        }
-                        settings.filters.append(preset)
-                    }
-                } else {
-                    settings.filters.append(preset)
-                }
-                return settings
-            })
-            |> deliverOnMainQueue).start(next: { settings in
-                updated(settings.filters)
-                dismissImpl?()
-                
-                let _ = replaceRemoteChatListFilters(account: context.account).start()
-            })
+            applyImpl?()
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? "Folder" : "Create Folder"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -935,8 +938,12 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     }
     let displaySaveAlert: () -> Void = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: nil, text: "Are you sure you want to discard this folder?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-            dismissImpl?()
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: "You have changed the filter. Apply changes?", actions: [
+            TextAlertAction(type: .genericAction, title: "Discard", action: {
+                dismissImpl?()
+            }),
+            TextAlertAction(type: .defaultAction, title: "Apply", action: {
+            applyImpl?()
         })]), nil)
     }
     attemptNavigationImpl = {
