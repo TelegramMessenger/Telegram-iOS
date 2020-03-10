@@ -272,7 +272,6 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private let becameEmpty: (ChatListFilter?) -> Void
     private let emptyAction: (ChatListFilter?) -> Void
     
-    var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     private var floatingHeaderOffset: CGFloat?
     
     private var emptyNode: ChatListEmptyNode?
@@ -354,13 +353,6 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     emptyShimmerEffectNode?.removeFromSupernode()
                 })
             }
-        }
-        
-        self.listNode.contentOffsetChanged = { [weak self] offset in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.contentOffsetChanged?(offset)
         }
         
         self.listNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
@@ -492,7 +484,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.updatePeerGrouping = { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
         }
-        itemNode.contentOffsetChanged = { [weak self] offset in
+        itemNode.listNode.contentOffsetChanged = { [weak self] offset in
             self?.contentOffsetChanged?(offset)
         }
         itemNode.listNode.contentScrollingEnded = { [weak self] listView in
