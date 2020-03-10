@@ -436,6 +436,7 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
             )
             |> castError(RequestChatListFiltersError.self)
             |> mapToSignal { _ -> Signal<[ChatListFilter], RequestChatListFiltersError> in
+                return .complete()
             }
             |> then(
                 .single(filters)
