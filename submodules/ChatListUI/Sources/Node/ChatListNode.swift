@@ -1243,15 +1243,10 @@ public final class ChatListNode: ListView {
     }
     
     private func resetFilter() {
-        if let chatListFilter = chatListFilter {
-            let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.chatListFilters]))
-            self.updatedFilterDisposable.set((context.account.postbox.combinedView(keys: [preferencesKey])
-            |> map { view -> ChatListFilter? in
-                guard let preferencesView = view.views[preferencesKey] as? PreferencesView else {
-                    return nil
-                }
-                let filersState = preferencesView.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
-                for filter in filersState.filters {
+        if let chatListFilter = self.chatListFilter {
+            self.updatedFilterDisposable.set((updatedChatListFilters(postbox: self.context.account.postbox)
+            |> map { filters -> ChatListFilter? in
+                for filter in filters {
                     if filter.id == chatListFilter.id {
                         return filter
                     }

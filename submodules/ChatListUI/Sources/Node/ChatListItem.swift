@@ -1665,7 +1665,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: self.bounds.size.height - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - editingOffset, height: self.bounds.size.height - 12.0 - 9.0))
             
             let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + offset, dy: 0.0)
             

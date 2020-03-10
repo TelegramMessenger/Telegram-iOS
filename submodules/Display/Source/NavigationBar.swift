@@ -873,8 +873,14 @@ open class NavigationBar: ASDisplayNode {
                         let initialX: CGFloat = backButtonInset
                         let finalX: CGFloat = floor((size.width - backButtonSize.width) / 2.0) - size.width
                         
-                        self.backButtonNode.frame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
-                        self.backButtonNode.alpha = (1.0 - progress) * (1.0 - progress)
+                        let backButtonFrame = CGRect(origin: CGPoint(x: initialX * (1.0 - progress) + finalX * progress, y: contentVerticalOrigin + floor((nominalHeight - backButtonSize.height) / 2.0)), size: backButtonSize)
+                        if self.backButtonNode.frame != backButtonFrame {
+                            self.backButtonNode.frame = backButtonFrame
+                        }
+                        let backButtonAlpha = self.backButtonNode.alpha
+                        if self.backButtonNode.alpha != backButtonAlpha {
+                            self.backButtonNode.alpha = backButtonAlpha
+                        }
                     
                         if let transitionTitleNode = self.transitionTitleNode {
                             let transitionTitleSize = transitionTitleNode.measure(CGSize(width: size.width, height: nominalHeight))

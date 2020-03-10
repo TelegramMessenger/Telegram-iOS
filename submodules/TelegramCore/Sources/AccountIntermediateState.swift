@@ -97,6 +97,9 @@ enum AccountStateMutationOperation {
     case UpdatePeerChatInclusion(peerId: PeerId, groupId: PeerGroupId, changedGroup: Bool)
     case UpdatePeersNearby([PeerNearby])
     case UpdateTheme(TelegramTheme)
+    case SyncChatListFilters
+    case UpdateChatListFilterOrder(order: [Int32])
+    case UpdateChatListFilter(id: Int32, filter: Api.DialogFilter?)
 }
 
 struct AccountMutableState {
@@ -408,9 +411,21 @@ struct AccountMutableState {
         self.addOperation(.UpdateCall(call))
     }
     
+    mutating func addSyncChatListFilters() {
+        self.addOperation(.SyncChatListFilters)
+    }
+    
+    mutating func addUpdateChatListFilterOrder(order: [Int32]) {
+        self.addOperation(.UpdateChatListFilterOrder(order: order))
+    }
+    
+    mutating func addUpdateChatListFilter(id: Int32, filter: Api.DialogFilter?) {
+        self.addOperation(.UpdateChatListFilter(id: id, filter: filter))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {

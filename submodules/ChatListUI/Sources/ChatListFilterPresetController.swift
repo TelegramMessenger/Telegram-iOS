@@ -574,21 +574,19 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
         
         if applyAutomatically {
-            let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
-                var settings = settings
-                for i in 0 ..< settings.filters.count {
-                    if settings.filters[i].id == filter.id {
-                        settings.filters[i].data.categories = categories
-                        settings.filters[i].data.includePeers = includePeers
-                        settings.filters[i].data.excludePeers = settings.filters[i].data.excludePeers.filter { !settings.filters[i].data.includePeers.contains($0) }
+            let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                var filters = filters
+                for i in 0 ..< filters.count {
+                    if filters[i].id == filter.id {
+                        filters[i].data.categories = categories
+                        filters[i].data.includePeers = includePeers
+                        filters[i].data.excludePeers = filters[i].data.excludePeers.filter { !filters[i].data.includePeers.contains($0) }
                     }
                 }
-                return settings
+                return filters
             })
-            |> deliverOnMainQueue).start(next: { settings in
+            |> deliverOnMainQueue).start(next: { _ in
                 controller?.dismiss()
-                
-                let _ = replaceRemoteChatListFilters(account: context.account).start()
             })
         } else {
             var filter = filter
@@ -653,23 +651,21 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         excludePeers.sort()
         
         if applyAutomatically {
-            let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
-                var settings = settings
-                for i in 0 ..< settings.filters.count {
-                    if settings.filters[i].id == filter.id {
-                        settings.filters[i].data.excludeMuted = additionalCategoryIds.contains(AdditionalExcludeCategoryId.muted.rawValue)
-                        settings.filters[i].data.excludeRead = additionalCategoryIds.contains(AdditionalExcludeCategoryId.read.rawValue)
-                        settings.filters[i].data.excludeArchived = additionalCategoryIds.contains(AdditionalExcludeCategoryId.archived.rawValue)
-                        settings.filters[i].data.excludePeers = excludePeers
-                        settings.filters[i].data.includePeers = settings.filters[i].data.includePeers.filter { !settings.filters[i].data.excludePeers.contains($0) }
+            let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                var filters = filters
+                for i in 0 ..< filters.count {
+                    if filters[i].id == filter.id {
+                        filters[i].data.excludeMuted = additionalCategoryIds.contains(AdditionalExcludeCategoryId.muted.rawValue)
+                        filters[i].data.excludeRead = additionalCategoryIds.contains(AdditionalExcludeCategoryId.read.rawValue)
+                        filters[i].data.excludeArchived = additionalCategoryIds.contains(AdditionalExcludeCategoryId.archived.rawValue)
+                        filters[i].data.excludePeers = excludePeers
+                        filters[i].data.includePeers = filters[i].data.includePeers.filter { !filters[i].data.excludePeers.contains($0) }
                     }
                 }
-                return settings
+                return filters
             })
-            |> deliverOnMainQueue).start(next: { settings in
+            |> deliverOnMainQueue).start(next: { _ in
                 controller?.dismiss()
-                
-                let _ = replaceRemoteChatListFilters(account: context.account).start()
             })
         } else {
             var filter = filter
@@ -921,39 +917,37 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     var applyImpl: (() -> Void)? = {
         let state = stateValue.with { $0 }
         let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
-        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
             var preset = preset
             if currentPreset == nil {
-                preset.id = max(2, settings.filters.map({ $0.id + 1 }).max() ?? 2)
+                preset.id = max(2, filters.map({ $0.id + 1 }).max() ?? 2)
             }
-            var settings = settings
+            var filters = filters
             if let _ = currentPreset {
                 var found = false
-                for i in 0 ..< settings.filters.count {
-                    if settings.filters[i].id == preset.id {
-                        settings.filters[i] = preset
+                for i in 0 ..< filters.count {
+                    if filters[i].id == preset.id {
+                        filters[i] = preset
                         found = true
                     }
                 }
                 if !found {
-                    settings.filters = settings.filters.filter { listFilter in
+                    filters = filters.filter { listFilter in
                         if listFilter.title == preset.title && listFilter.data == preset.data {
                             return false
                         }
                         return true
                     }
-                    settings.filters.append(preset)
+                    filters.append(preset)
                 }
             } else {
-                settings.filters.append(preset)
+                filters.append(preset)
             }
-            return settings
+            return filters
         })
-        |> deliverOnMainQueue).start(next: { settings in
-            updated(settings.filters)
+        |> deliverOnMainQueue).start(next: { filters in
+            updated(filters)
             dismissImpl?()
-            
-            let _ = replaceRemoteChatListFilters(account: context.account).start()
         })
     }
     

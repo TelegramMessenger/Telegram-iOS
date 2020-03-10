@@ -11,15 +11,7 @@ import TelegramUIPreferences
 import TelegramCore
 
 func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int)]), NoError> {
-    let preferencesKey: PostboxViewKey = .preferences(keys: [PreferencesKeys.chatListFilters])
-    return context.account.postbox.combinedView(keys: [preferencesKey])
-    |> map { combinedView -> [ChatListFilter] in
-        if let filtersState = (combinedView.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState {
-            return filtersState.filters
-        } else {
-            return []
-        }
-    }
+    return updatedChatListFilters(postbox: context.account.postbox)
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int)]), NoError> in
         var unreadCountItems: [UnreadMessageCountsItem] = []

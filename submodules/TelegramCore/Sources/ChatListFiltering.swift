@@ -226,8 +226,8 @@ public enum RequestUpdateChatListFilterError {
     case generic
 }
 
-public func requestUpdateChatListFilter(account: Account, id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
-    return account.postbox.transaction { transaction -> Api.DialogFilter? in
+public func requestUpdateChatListFilter(postbox: Postbox, network: Network, id: Int32, filter: ChatListFilter?) -> Signal<Never, RequestUpdateChatListFilterError> {
+    return postbox.transaction { transaction -> Api.DialogFilter? in
         return filter?.apiFilter(transaction: transaction)
     }
     |> castError(RequestUpdateChatListFilterError.self)
@@ -236,7 +236,7 @@ public func requestUpdateChatListFilter(account: Account, id: Int32, filter: Cha
         if inputFilter != nil {
             flags |= 1 << 0
         }
-        return account.network.request(Api.functions.messages.updateDialogFilter(flags: flags, id: id, filter: inputFilter))
+        return network.request(Api.functions.messages.updateDialogFilter(flags: flags, id: id, filter: inputFilter))
         |> mapError { _ -> RequestUpdateChatListFilterError in
             return .generic
         }
@@ -324,118 +324,143 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
         |> castError(RequestChatListFiltersError.self)
         |> mapToSignal { filtersAndMissingPeers -> Signal<[ChatListFilter], RequestChatListFiltersError> in
             let (filters, missingPeers) = filtersAndMissingPeers
-            return .single(filters)
-        }
-    }
-}
-
-func managedChatListFilters(postbox: Postbox, network: Network) -> Disposable {
-    let disposables = DisposableSet()
-    disposables.add(updateChatListFeaturedFilters(postbox: postbox, network: network).start())
-    
-    disposables.add((requestChatListFilters(postbox: postbox, network: network)
-    |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
-        return .complete()
-    }
-    |> mapToSignal { filters -> Signal<Never, NoError> in
-        return postbox.transaction { transaction in
-            transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
-                var settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
-                settings.filters = filters
-                return settings
-            })
-        }
-        |> ignoreValues
-    }).start())
-    
-    return disposables
-}
-
-public func replaceRemoteChatListFilters(account: Account) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> [ChatListFilter] in
-        let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-        return settings.filters
-    }
-    |> mapToSignal { filters -> Signal<Never, NoError> in
-        return requestChatListFilters(postbox: account.postbox, network: account.network)
-        |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
-            return .complete()
-        }
-        |> mapToSignal { remoteFilters -> Signal<Never, NoError> in
-            var deleteSignals: [Signal<Never, NoError>] = []
-            for filter in remoteFilters {
-                if !filters.contains(where: { $0.id == filter.id }) {
-                    deleteSignals.append(requestUpdateChatListFilter(account: account, id: filter.id, filter: nil)
-                    |> `catch` { _ -> Signal<Never, NoError> in
-                        return .complete()
-                    }
-                    |> ignoreValues)
+            
+            var missingUsers: [Api.InputUser] = []
+            var missingChannels: [Api.InputChannel] = []
+            var missingGroups: [Int32] = []
+            for peer in missingPeers {
+                switch peer {
+                case let .inputPeerUser(userId, accessHash):
+                    missingUsers.append(.inputUser(userId: userId, accessHash: accessHash))
+                case .inputPeerSelf:
+                    missingUsers.append(.inputUserSelf)
+                case let .inputPeerChannel(channelId, accessHash):
+                    missingChannels.append(.inputChannel(channelId: channelId, accessHash: accessHash))
+                case let .inputPeerChat(id):
+                    missingGroups.append(id)
+                case .inputPeerEmpty:
+                    break
                 }
             }
             
-            let addFilters = account.postbox.transaction { transaction -> [(Int32, ChatListFilter)] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters.map { filter -> (Int32, ChatListFilter) in
-                    return (filter.id, filter)
+            let resolveMissingUsers: Signal<Never, NoError>
+            if !missingUsers.isEmpty {
+                resolveMissingUsers = network.request(Api.functions.users.getUsers(id: missingUsers))
+                |> `catch` { _ -> Signal<[Api.User], NoError> in
+                    return .single([])
                 }
-            }
-            |> mapToSignal { filters -> Signal<Never, NoError> in
-                var signals: [Signal<Never, NoError>] = []
-                for (id, filter) in filters {
-                    if !remoteFilters.contains(filter) {
-                        signals.append(requestUpdateChatListFilter(account: account, id: id, filter: filter)
-                        |> `catch` { _ -> Signal<Never, NoError> in
-                            return .complete()
+                |> mapToSignal { users -> Signal<Never, NoError> in
+                    return postbox.transaction { transaction -> Void in
+                        var peers: [Peer] = []
+                        for user in users {
+                            peers.append(TelegramUser(user: user))
                         }
-                        |> ignoreValues)
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                            return updated
+                        })
                     }
-                }
-                return combineLatest(signals)
-                |> ignoreValues
-            }
-            
-            let reorderFilters: Signal<Never, NoError>
-            if remoteFilters.map({ $0.id }) != filters.map({ $0.id }) {
-                reorderFilters = account.network.request(Api.functions.messages.updateDialogFiltersOrder(order: filters.map { $0.id }))
-                |> ignoreValues
-                |> `catch` { _ -> Signal<Never, NoError> in
-                    return .complete()
+                    |> ignoreValues
                 }
             } else {
-                reorderFilters = .complete()
+                resolveMissingUsers = .complete()
             }
             
-            return combineLatest(
-                deleteSignals
+            let resolveMissingChannels: Signal<Never, NoError>
+            if !missingChannels.isEmpty {
+                resolveMissingChannels = network.request(Api.functions.channels.getChannels(id: missingChannels))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Chats?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Never, NoError> in
+                    return postbox.transaction { transaction -> Void in
+                        if let result = result {
+                            var peers: [Peer] = []
+                            switch result {
+                            case .chats(let chats), .chatsSlice(_, let chats):
+                                for chat in chats {
+                                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                        peers.append(peer)
+                                    }
+                                }
+                            }
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                                return updated
+                            })
+                        }
+                    }
+                    |> ignoreValues
+                }
+            } else {
+                resolveMissingChannels = .complete()
+            }
+            
+            let resolveMissingGroups: Signal<Never, NoError>
+            if !missingGroups.isEmpty {
+                resolveMissingGroups = network.request(Api.functions.messages.getChats(id: missingGroups))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Chats?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Never, NoError> in
+                    return postbox.transaction { transaction -> Void in
+                        if let result = result {
+                            var peers: [Peer] = []
+                            switch result {
+                            case .chats(let chats), .chatsSlice(_, let chats):
+                                for chat in chats {
+                                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                        peers.append(peer)
+                                    }
+                                }
+                            }
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                                return updated
+                            })
+                        }
+                    }
+                    |> ignoreValues
+                }
+            } else {
+                resolveMissingGroups = .complete()
+            }
+            
+            return (
+                resolveMissingUsers
             )
-            |> ignoreValues
             |> then(
-                addFilters
+                resolveMissingChannels
             )
             |> then(
-                reorderFilters
+                resolveMissingGroups
+            )
+            |> castError(RequestChatListFiltersError.self)
+            |> mapToSignal { _ -> Signal<[ChatListFilter], RequestChatListFiltersError> in
+            }
+            |> then(
+                .single(filters)
             )
         }
     }
 }
 
-public struct ChatListFiltersState: PreferencesEntry, Equatable {
-    public var filters: [ChatListFilter]
-    public var remoteFilters: [ChatListFilter]?
+struct ChatListFiltersState: PreferencesEntry, Equatable {
+    var filters: [ChatListFilter]
+    var remoteFilters: [ChatListFilter]?
     
-    public static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
+    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
     
-    public init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?) {
+    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?) {
         self.filters = filters
         self.remoteFilters = remoteFilters
     }
     
-    public init(decoder: PostboxDecoder) {
+    init(decoder: PostboxDecoder) {
         self.filters = decoder.decodeObjectArrayWithDecoderForKey("filters")
         self.remoteFilters = decoder.decodeOptionalObjectArrayWithDecoderForKey("remoteFilters")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.filters, forKey: "filters")
         if let remoteFilters = self.remoteFilters {
             encoder.encodeObjectArray(remoteFilters, forKey: "remoteFilters")
@@ -444,7 +469,7 @@ public struct ChatListFiltersState: PreferencesEntry, Equatable {
         }
     }
     
-    public func isEqual(to: PreferencesEntry) -> Bool {
+    func isEqual(to: PreferencesEntry) -> Bool {
         if let to = to as? ChatListFiltersState, self == to {
             return true
         } else {
@@ -453,17 +478,61 @@ public struct ChatListFiltersState: PreferencesEntry, Equatable {
     }
 }
 
-public func updateChatListFilterSettingsInteractively(postbox: Postbox, _ f: @escaping (ChatListFiltersState) -> ChatListFiltersState) -> Signal<ChatListFiltersState, NoError> {
-    return postbox.transaction { transaction -> ChatListFiltersState in
-        var result: ChatListFiltersState?
-        transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
-            let settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
-            let updated = f(settings)
-            result = updated
-            return updated
-        })
-        return result ?? .default
+public func generateNewChatListFilterId(filters: [ChatListFilter]) -> Int32 {
+    while true {
+        let id = Int32(2 + arc4random_uniform(255 - 2))
+        if !filters.contains(where: { $0.id == id }) {
+            return id
+        }
     }
+}
+
+public func updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping ([ChatListFilter]) -> [ChatListFilter]) -> Signal<[ChatListFilter], NoError> {
+    return postbox.transaction { transaction -> [ChatListFilter] in
+        var updated: [ChatListFilter] = []
+        var hasUpdates = false
+        transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
+            var state = entry as? ChatListFiltersState ?? ChatListFiltersState.default
+            let updatedFilters = f(state.filters)
+            if updatedFilters != state.filters {
+                state.filters = updatedFilters
+                hasUpdates = true
+            }
+            updated = updatedFilters
+            return state
+        })
+        if hasUpdates {
+            requestChatListFiltersSync(transaction: transaction)
+        }
+        return updated
+    }
+}
+
+public func updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
+    return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
+    |> map { preferences -> [ChatListFilter] in
+        let filtersState = preferences.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
+        return filtersState.filters
+    }
+    |> distinctUntilChanged
+}
+
+public func currentChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
+    return postbox.transaction { transaction -> [ChatListFilter] in
+        let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
+        return settings.filters
+    }
+}
+
+func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersState) -> ChatListFiltersState) -> ChatListFiltersState {
+    var result: ChatListFiltersState?
+    transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
+        let settings = entry as? ChatListFiltersState ?? ChatListFiltersState.default
+        let updated = f(settings)
+        result = updated
+        return updated
+    })
+    return result ?? .default
 }
 
 public struct ChatListFeaturedFilter: PostboxCoding, Equatable {
@@ -577,5 +646,295 @@ public func updateChatListFeaturedFilters(postbox: Postbox, network: Network) ->
             })
         }
         |> ignoreValues
+    }
+}
+
+private enum SynchronizeChatListFiltersOperationContentType: Int32 {
+    case add
+    case remove
+    case sync
+}
+
+private enum SynchronizeChatListFiltersOperationContent: PostboxCoding {
+    case sync
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
+        case SynchronizeChatListFiltersOperationContentType.sync.rawValue:
+            self = .sync
+        default:
+            assertionFailure()
+            self = .sync
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+        case .sync:
+            encoder.encodeInt32(SynchronizeChatListFiltersOperationContentType.sync.rawValue, forKey: "r")
+        }
+    }
+}
+
+final class SynchronizeChatListFiltersOperation: PostboxCoding {
+    fileprivate let content: SynchronizeChatListFiltersOperationContent
+    
+    fileprivate init(content: SynchronizeChatListFiltersOperationContent) {
+        self.content = content
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.content = decoder.decodeObjectForKey("c", decoder: { SynchronizeChatListFiltersOperationContent(decoder: $0) }) as! SynchronizeChatListFiltersOperationContent
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.content, forKey: "c")
+    }
+}
+
+
+private final class ManagedSynchronizeChatListFiltersOperationsHelper {
+    var operationDisposables: [Int32: Disposable] = [:]
+    
+    func update(_ entries: [PeerMergedOperationLogEntry]) -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) {
+        var disposeOperations: [Disposable] = []
+        var beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)] = []
+        
+        var hasRunningOperationForPeerId = Set<PeerId>()
+        var validMergedIndices = Set<Int32>()
+        for entry in entries {
+            if !hasRunningOperationForPeerId.contains(entry.peerId) {
+                hasRunningOperationForPeerId.insert(entry.peerId)
+                validMergedIndices.insert(entry.mergedIndex)
+                
+                if self.operationDisposables[entry.mergedIndex] == nil {
+                    let disposable = MetaDisposable()
+                    beginOperations.append((entry, disposable))
+                    self.operationDisposables[entry.mergedIndex] = disposable
+                }
+            }
+        }
+        
+        var removeMergedIndices: [Int32] = []
+        for (mergedIndex, disposable) in self.operationDisposables {
+            if !validMergedIndices.contains(mergedIndex) {
+                removeMergedIndices.append(mergedIndex)
+                disposeOperations.append(disposable)
+            }
+        }
+        
+        for mergedIndex in removeMergedIndices {
+            self.operationDisposables.removeValue(forKey: mergedIndex)
+        }
+        
+        return (disposeOperations, beginOperations)
+    }
+    
+    func reset() -> [Disposable] {
+        let disposables = Array(self.operationDisposables.values)
+        self.operationDisposables.removeAll()
+        return disposables
+    }
+}
+
+private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Never, NoError>) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
+        var result: PeerMergedOperationLogEntry?
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+            if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeChatListFiltersOperation  {
+                result = entry.mergedEntry!
+                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
+            } else {
+                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
+            }
+        })
+        
+        return f(transaction, result)
+    }
+    |> switchToLatest
+}
+
+func requestChatListFiltersSync(transaction: Transaction) {
+    let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatListFilters
+    let peerId = PeerId(namespace: 0, id: 0)
+    
+    var topOperation: (SynchronizeChatListFiltersOperation, Int32)?
+    transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
+        if let operation = entry.contents as? SynchronizeChatListFiltersOperation {
+            topOperation = (operation, entry.tagLocalIndex)
+        }
+        return false
+    })
+    
+    if let (topOperation, topLocalIndex) = topOperation, case .sync = topOperation.content {
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
+    }
+    
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeChatListFiltersOperation(content: .sync))
+}
+
+func managedChatListFilters(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let updateFeaturedDisposable = updateChatListFeaturedFilters(postbox: postbox, network: network).start()
+        let _ = postbox.transaction({ transaction in
+            requestChatListFiltersSync(transaction: transaction)
+        }).start()
+        
+        let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatListFilters
+        
+        let helper = Atomic<ManagedSynchronizeChatListFiltersOperationsHelper>(value: ManagedSynchronizeChatListFiltersOperationsHelper())
+        
+        let disposable = postbox.mergedOperationLogView(tag: tag, limit: 10).start(next: { view in
+            let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
+                return helper.update(view.entries)
+            }
+            
+            for disposable in disposeOperations {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in beginOperations {
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Never, NoError> in
+                    if let entry = entry {
+                        if let operation = entry.contents as? SynchronizeChatListFiltersOperation {
+                            return synchronizeChatListFilters(transaction: transaction, postbox: postbox, network: network, operation: operation)
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                    return .complete()
+                })
+                |> then(
+                    postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    }
+                    |> ignoreValues
+                )
+                
+                disposable.set(signal.start())
+            }
+        })
+        
+        return ActionDisposable {
+            updateFeaturedDisposable.dispose()
+            
+            let disposables = helper.with { helper -> [Disposable] in
+                return helper.reset()
+            }
+            for disposable in disposables {
+                disposable.dispose()
+            }
+            disposable.dispose()
+        }
+    }
+}
+
+private func synchronizeChatListFilters(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeChatListFiltersOperation) -> Signal<Never, NoError> {
+    switch operation.content {
+    case .sync:
+        let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
+        let localFilters = settings.filters
+        let locallyKnownRemoteFilters = settings.remoteFilters ?? []
+        
+        return requestChatListFilters(postbox: postbox, network: network)
+        |> `catch` { _ -> Signal<[ChatListFilter], NoError> in
+            return .complete()
+        }
+        |> mapToSignal { remoteFilters -> Signal<Never, NoError> in
+            if localFilters == locallyKnownRemoteFilters {
+                return postbox.transaction { transaction -> Void in
+                    let _ = updateChatListFiltersState(transaction: transaction, { state in
+                        var state = state
+                        state.filters = remoteFilters
+                        state.remoteFilters = state.filters
+                        return state
+                    })
+                }
+                |> ignoreValues
+            }
+            
+            let locallyKnownRemoteFilterIds = locallyKnownRemoteFilters.map { $0.id }
+            
+            let remoteFilterIds = remoteFilters.map { $0.id }
+            let remotelyAddedFilters = Set(remoteFilterIds).subtracting(Set(locallyKnownRemoteFilterIds))
+            let remotelyRemovedFilters = Set(Set(locallyKnownRemoteFilterIds)).subtracting(remoteFilterIds)
+            
+            var mergedFilters = localFilters
+            
+            for id in remotelyRemovedFilters {
+                mergedFilters.removeAll(where: { $0.id == id })
+            }
+            
+            for id in remotelyAddedFilters {
+                if let filter = remoteFilters.first(where: { $0.id == id }) {
+                    if let index = mergedFilters.firstIndex(where: { $0.id == id }) {
+                        mergedFilters[index] = filter
+                    } else {
+                        mergedFilters.append(filter)
+                    }
+                }
+            }
+            
+            let mergedFilterIds = mergedFilters.map { $0.id }
+            
+            var deleteSignals: Signal<Never, NoError> = .complete()
+            for filter in remoteFilters {
+                if !mergedFilterIds.contains(where: { $0 == filter.id }) {
+                    deleteSignals = deleteSignals
+                    |> then(
+                        requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: nil)
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
+                        |> ignoreValues
+                    )
+                }
+            }
+            
+            var addSignals: Signal<Never, NoError> = .complete()
+            for filter in mergedFilters {
+                if !remoteFilters.contains(where: { $0.id == filter.id }) {
+                    addSignals = addSignals
+                    |> then(
+                        requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: filter)
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
+                        |> ignoreValues
+                    )
+                }
+            }
+            
+            let localFilterIds = localFilters.map { $0.id }
+            let reorderFilters: Signal<Never, NoError>
+            if mergedFilterIds != remoteFilterIds {
+                reorderFilters = network.request(Api.functions.messages.updateDialogFiltersOrder(order: mergedFilters.map { $0.id }))
+                |> ignoreValues
+                |> `catch` { _ -> Signal<Never, NoError> in
+                    return .complete()
+                }
+            } else {
+                reorderFilters = .complete()
+            }
+            
+            return deleteSignals
+            |> then(
+                addSignals
+            )
+            |> then(
+                reorderFilters
+            )
+            |> then(
+                postbox.transaction { transaction -> Void in
+                    let _ = updateChatListFiltersState(transaction: transaction, { state in
+                        var state = state
+                        state.filters = mergedFilters
+                        state.remoteFilters = state.filters
+                        return state
+                    })
+                }
+                |> ignoreValues
+            )
+        }
     }
 }

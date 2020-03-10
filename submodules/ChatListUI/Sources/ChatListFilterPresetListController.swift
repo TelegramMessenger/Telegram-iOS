@@ -248,13 +248,13 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let arguments = ChatListFilterPresetListControllerArguments(context: context,
     addSuggestedPresed: { title, data in
-        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.filters.insert(ChatListFilter(id: max(2, settings.filters.map({ $0.id + 1 }).max() ?? 2), title: title, data: data), at: 0)
-            return settings
+        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+            var filters = filters
+            let id = generateNewChatListFilterId(filters: filters)
+            filters.insert(ChatListFilter(id: id, title: title, data: data), at: 0)
+            return filters
         })
-        |> deliverOnMainQueue).start(next: { settings in
-            let _ = replaceRemoteChatListFilters(account: context.account).start()
+        |> deliverOnMainQueue).start(next: { _ in
         })
     }, openPreset: { preset in
         pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: { _ in }))
@@ -269,25 +269,20 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             return state
         }
     }, removePreset: { id in
-        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            if let index = settings.filters.firstIndex(where: { $0.id == id }) {
-                settings.filters.remove(at: index)
+        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+            var filters = filters
+            if let index = filters.firstIndex(where: { $0.id == id }) {
+                filters.remove(at: index)
             }
-            return settings
+            return filters
         })
-        |> deliverOnMainQueue).start(next: { settings in
-            let _ = replaceRemoteChatListFilters(account: context.account).start()
+        |> deliverOnMainQueue).start(next: { _ in
         })
     })
     
     let chatCountCache = Atomic<[ChatListFilterData: Int]>(value: [:])
     
-    let filtersWithCountsSignal = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
-    |> map { preferences -> [ChatListFilter] in
-        let filtersState = preferences.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
-        return filtersState.filters
-    }
+    let filtersWithCountsSignal = updatedChatListFilters(postbox: context.account.postbox)
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
         return .single(filters.map { filter -> (ChatListFilter, Int) in
@@ -355,24 +350,20 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
                     if let updatedFilterOrderValue = updatedFilterOrderValue {
-                        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { filtersState in
-                            var filtersState = filtersState
-                            
+                        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
                             var updatedFilters: [ChatListFilter] = []
                             for id in updatedFilterOrderValue {
-                                if let index = filtersState.filters.firstIndex(where: { $0.id == id }) {
-                                    updatedFilters.append(filtersState.filters[index])
+                                if let index = filters.firstIndex(where: { $0.id == id }) {
+                                    updatedFilters.append(filters[index])
                                 }
                             }
-                            for filter in filtersState.filters {
+                            for filter in filters {
                                 if !updatedFilters.contains(where: { $0.id == filter.id }) {
                                     updatedFilters.append(filter)
                                 }
                             }
                             
-                            filtersState.filters = updatedFilters
-                            
-                            return filtersState
+                            return updatedFilters
                         })
                         |> deliverOnMainQueue).start(next: { _ in
                             filtersWithCounts.set(filtersWithCountsSignal)
@@ -425,7 +416,6 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         controller.navigationPresentation = .modal
     }
     controller.didDisappear = { _ in
-        let _ = replaceRemoteChatListFilters(account: context.account).start()
         dismissed?()
     }
     pushControllerImpl = { [weak controller] c in

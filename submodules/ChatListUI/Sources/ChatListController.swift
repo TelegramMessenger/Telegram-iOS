@@ -468,10 +468,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters
-            }
+            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
             |> deliverOnMainQueue).start(next: { [weak self] filters in
                 guard let strongSelf = self else {
                     return
@@ -514,10 +511,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters
-            }
+            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
             |> deliverOnMainQueue).start(next: { [weak self] filters in
                 guard let strongSelf = self else {
                     return
@@ -531,10 +525,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         guard let strongSelf = self else {
                             return
                         }
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                            let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                            return settings.filters
-                        }
+                        let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
                         |> deliverOnMainQueue).start(next: { presetList in
                             guard let strongSelf = self else {
                                 return
@@ -563,10 +554,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             guard let strongSelf = self else {
                                 return
                             }
-                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                                return settings.filters
-                            }
+                            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
                             |> deliverOnMainQueue).start(next: { presetList in
                                 guard let strongSelf = self else {
                                     return
@@ -1150,17 +1138,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 strongSelf.processedFeaturedFilters = true
                 if !featuredState.isSeen && !featuredState.filters.isEmpty {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                        if let state = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState {
-                            return !state.filters.isEmpty
-                        } else {
-                            return false
-                        }
-                    }
-                    |> deliverOnMainQueue).start(next: { hasFilters in
+                    let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                    |> deliverOnMainQueue).start(next: { filters in
                         guard let strongSelf = self else {
                             return
                         }
+                        let hasFilters = !filters.isEmpty
                         if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
                             let absoluteFrame = sourceFrame
                             //TODO:localize
@@ -1295,29 +1278,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     @objc private func reorderingDonePressed() {
         if let reorderedFilterIds = self.tabContainerNode.reorderedFilterIds {
-            let _ = (updateChatListFilterSettingsInteractively(postbox: self.context.account.postbox, { state in
-                var state = state
+            let _ = (updateChatListFiltersInteractively(postbox: self.context.account.postbox, { stateFilters in
                 var updatedFilters: [ChatListFilter] = []
                 for id in reorderedFilterIds {
-                    if let index = state.filters.firstIndex(where: { $0.id == id }) {
-                        updatedFilters.append(state.filters[index])
+                    if let index = stateFilters.firstIndex(where: { $0.id == id }) {
+                        updatedFilters.append(stateFilters[index])
                     }
                 }
-                updatedFilters.append(contentsOf: state.filters.compactMap { filter -> ChatListFilter? in
+                updatedFilters.append(contentsOf: stateFilters.compactMap { filter -> ChatListFilter? in
                     if !updatedFilters.contains(where: { $0.id == filter.id }) {
                         return filter
                     } else {
                         return nil
                     }
                 })
-                state.filters = updatedFilters
-                return state
+                return updatedFilters
             })
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
-                let _ = replaceRemoteChatListFilters(account: strongSelf.context.account).start()
                 strongSelf.reloadFilters(firstUpdate: {
                     guard let strongSelf = self else {
                         return
@@ -1451,12 +1431,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             }
                         }
                         
-                        let _ = updateChatListFilterSettingsInteractively(postbox: strongSelf.context.account.postbox, { settings in
-                            var settings = settings
-                            settings.filters = settings.filters.filter({ $0.id != id })
-                            return settings
+                        let _ = updateChatListFiltersInteractively(postbox: strongSelf.context.account.postbox, { filters in
+                            return filters.filter({ $0.id != id })
                         }).start()
-                        let _ = replaceRemoteChatListFilters(account: strongSelf.context.account).start()
                     }
                     
                     if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == id {
@@ -2332,10 +2309,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
         let _ = (combineLatest(queue: .mainQueue(),
-            self.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters
-            },
+            currentChatListFilters(postbox: self.context.account.postbox),
             chatListFilterItems(context: self.context)
             |> take(1)
         )
@@ -2350,7 +2324,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             
             var items: [ContextMenuItem] = []
             items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? "Add Folder" : "Edit Folders", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: presetList.isEmpty ? "Chat/Context Menu/Add" : "Chat/Context Menu/ItemList"), color: theme.contextMenu.primaryColor)
             }, action: { c, f in
                 c.dismiss(completion: {
                     guard let strongSelf = self else {

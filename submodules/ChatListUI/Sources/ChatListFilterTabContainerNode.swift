@@ -697,10 +697,10 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         
         let minSpacing: CGFloat = 26.0
         
-        let sideInset: CGFloat = 16.0
-        var leftOffset: CGFloat = sideInset
+        let resolvedSideInset: CGFloat = 16.0 + sideInset
+        var leftOffset: CGFloat = resolvedSideInset
         
-        var longTitlesWidth: CGFloat = sideInset
+        var longTitlesWidth: CGFloat = resolvedSideInset
         for i in 0 ..< tabSizes.count {
             let (itemId, paneNodeSize, paneNodeShortSize, paneNode, wasAdded) = tabSizes[i]
             longTitlesWidth += paneNodeSize.width
@@ -708,7 +708,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 longTitlesWidth += minSpacing
             }
         }
-        longTitlesWidth += sideInset
+        longTitlesWidth += resolvedSideInset
         let useShortTitles = longTitlesWidth > size.width
         
         for i in 0 ..< tabSizes.count {
@@ -746,7 +746,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             leftOffset += paneNodeSize.width + minSpacing
         }
         leftOffset -= minSpacing
-        leftOffset += sideInset
+        leftOffset += resolvedSideInset
         
         self.scrollNode.view.contentSize = CGSize(width: leftOffset, height: size.height)
         

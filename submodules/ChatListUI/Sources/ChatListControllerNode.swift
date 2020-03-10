@@ -539,20 +539,10 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.applyItemNodeAsCurrent(id: .all, itemNode: itemNode)
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let strongSelf = self, let index = strongSelf.availableFilters.firstIndex(where: { $0.id == strongSelf.selectedId }) else {
+            guard let strongSelf = self, strongSelf.availableFilters.count > 1 else {
                 return []
             }
-            var directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
-            if strongSelf.availableFilters.count > 1 {
-                if index == 0 {
-                    directions.remove(.rightCenter)
-                }
-                if index == strongSelf.availableFilters.count - 1 {
-                    directions.remove(.leftCenter)
-                }
-            } else {
-                directions = []
-            }
+            let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
             return directions
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
         panRecognizer.delegate = self
@@ -601,11 +591,21 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout, let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {
                 let translation = recognizer.translation(in: self.view)
                 var transitionFraction = translation.x / layout.size.width
-                if selectedIndex <= 0 {
-                    transitionFraction = min(0.0, transitionFraction)
+                
+                func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                    let bandedOffset = offset - bandingStart
+                    let range: CGFloat = 600.0
+                    let coefficient: CGFloat = 0.4
+                    return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
-                if selectedIndex >= self.availableFilters.count - 1 {
-                    transitionFraction = max(0.0, transitionFraction)
+                
+                if selectedIndex <= 0 && translation.x > 0.0 {
+                    let overscroll = translation.x
+                    transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
+                }
+                if selectedIndex >= self.availableFilters.count - 1 && translation.x < 0.0 {
+                    let overscroll = -translation.x
+                    transitionFraction = -rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                 }
                 self.transitionFraction = transitionFraction + self.transitionFractionOffset
                 if let currentItemNode = self.currentItemNodeValue {

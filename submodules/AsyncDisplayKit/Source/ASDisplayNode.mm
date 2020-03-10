@@ -498,7 +498,9 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
   ASAssertLocked(__instanceLock__);
   
   UIView *view = nil;
+  bool initializedWithCustomView = false;
   if (_viewBlock) {
+    initializedWithCustomView = true;
     view = _viewBlock();
     ASDisplayNodeAssertNotNil(view, @"View block returned nil");
     ASDisplayNodeAssert(![view isKindOfClass:[_ASDisplayView class]], @"View block should return a synchronously displayed view");
@@ -516,6 +518,19 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
     if ([_viewClass isSubclassOfClass:[UIImageView class]]) {
       _flags.canClearContentsOfLayer = NO;
       _flags.canCallSetNeedsDisplayOfLayer = NO;
+    }
+      
+    if (initializedWithCustomView) {
+        static dispatch_once_t onceToken;
+        static IMP defaultMethod = NULL;
+        dispatch_once(&onceToken, ^{
+             defaultMethod = [[UIView class] instanceMethodForSelector:@selector(drawRect:)];
+        });
+        if ([[view class] instanceMethodForSelector:@selector(drawRect:)] != defaultMethod) {
+        } else {
+          _flags.canClearContentsOfLayer = NO;
+          _flags.canCallSetNeedsDisplayOfLayer = NO;
+        }
     }
       
     // UIActivityIndicator

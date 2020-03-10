@@ -1492,6 +1492,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Hide
+        self.lockOrientation = true
     }
     
     required init(coder aDecoder: NSCoder) {
