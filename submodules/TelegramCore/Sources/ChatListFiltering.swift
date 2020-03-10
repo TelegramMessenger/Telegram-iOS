@@ -893,7 +893,13 @@ private func synchronizeChatListFilters(transaction: Transaction, postbox: Postb
             
             var addSignals: Signal<Never, NoError> = .complete()
             for filter in mergedFilters {
-                if !remoteFilters.contains(where: { $0.id == filter.id }) {
+                let updated: Bool
+                if let index = remoteFilters.firstIndex(where: { $0.id == filter.id }) {
+                    updated = remoteFilters[index] != filter
+                } else {
+                    updated = true
+                }
+                if updated {
                     addSignals = addSignals
                     |> then(
                         requestUpdateChatListFilter(postbox: postbox, network: network, id: filter.id, filter: filter)
@@ -905,7 +911,6 @@ private func synchronizeChatListFilters(transaction: Transaction, postbox: Postb
                 }
             }
             
-            let localFilterIds = localFilters.map { $0.id }
             let reorderFilters: Signal<Never, NoError>
             if mergedFilterIds != remoteFilterIds {
                 reorderFilters = network.request(Api.functions.messages.updateDialogFiltersOrder(order: mergedFilters.map { $0.id }))

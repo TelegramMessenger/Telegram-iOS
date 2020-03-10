@@ -30,6 +30,7 @@ struct ChatListNodeListViewTransition {
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
     let adjustScrollToFirstItem: Bool
+    let animateCrossfade: Bool
 }
 
 final class ChatListHighlightedLocation {
@@ -349,7 +350,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
 }
 
 private func mappedChatListNodeViewListTransition(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, isInFilter: Bool, mode: ChatListNodeMode, transition: ChatListNodeViewTransition) -> ChatListNodeListViewTransition {
-    return ChatListNodeListViewTransition(chatListView: transition.chatListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, isInFilter: isInFilter, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, isInFilter: isInFilter, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, adjustScrollToFirstItem: transition.adjustScrollToFirstItem)
+    return ChatListNodeListViewTransition(chatListView: transition.chatListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, isInFilter: isInFilter, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, isInFilter: isInFilter, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, adjustScrollToFirstItem: transition.adjustScrollToFirstItem, animateCrossfade: transition.animateCrossfade)
 }
 
 private final class ChatListOpaqueTransactionState {
@@ -1428,7 +1429,7 @@ public final class ChatListNode: ListView {
                     }
                     
                     var isEmptyUpdate: ContainedViewLayoutTransition = .immediate
-                    if transition.options.contains(.AnimateInsertion) {
+                    if transition.options.contains(.AnimateInsertion) || transition.animateCrossfade {
                         isEmptyUpdate = .animated(duration: 0.25, curve: .easeInOut)
                     }
                     

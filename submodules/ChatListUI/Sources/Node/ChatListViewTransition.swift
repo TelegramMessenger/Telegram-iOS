@@ -45,6 +45,7 @@ struct ChatListNodeViewTransition {
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
     let adjustScrollToFirstItem: Bool
+    let animateCrossfade: Bool
 }
 
 enum ChatListNodeViewScrollPosition {
@@ -166,6 +167,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         }
         
         var fromEmptyView = false
+        var animateCrossfade = false
         if let fromView = fromView {
             var wasSingleHeader = false
             if fromView.filteredEntries.count == 1, case .HeaderEntry = fromView.filteredEntries[0] {
@@ -176,7 +178,15 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 isSingleHeader = true
             }
             if (wasSingleHeader || isSingleHeader), case .interactiveChanges = reason {
-                let _ = options.insert(.AnimateInsertion)
+                if wasSingleHeader != isSingleHeader {
+                    if wasSingleHeader {
+                        animateCrossfade = true
+                        options.remove(.AnimateInsertion)
+                        options.remove(.AnimateAlpha)
+                    } else {
+                        let _ = options.insert(.AnimateInsertion)
+                    }
+                }
             } else if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
                 options.remove(.AnimateInsertion)
                 options.remove(.AnimateAlpha)
@@ -191,7 +201,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             adjustScrollToFirstItem = true
         }
         
-        subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: nil, adjustScrollToFirstItem: adjustScrollToFirstItem))
+        subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: nil, adjustScrollToFirstItem: adjustScrollToFirstItem, animateCrossfade: animateCrossfade))
         subscriber.putCompletion()
         
         return EmptyDisposable
