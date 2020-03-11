@@ -78,11 +78,12 @@ public func webpagePreviewWithProgress(account: Account, url: String, webpageId:
 public func actualizedWebpage(postbox: Postbox, network: Network, webpage: TelegramMediaWebpage) -> Signal<TelegramMediaWebpage, NoError> {
     if case let .Loaded(content) = webpage.content {
         return network.request(Api.functions.messages.getWebPage(url: content.url, hash: content.hash))
-            |> `catch` { _ -> Signal<Api.WebPage, NoError> in
-                return .single(.webPageNotModified)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.WebPage?, NoError> in
+                return .single(nil)
             }
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
-                if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
+                if let result = result, let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                     return postbox.transaction { transaction -> TelegramMediaWebpage in
                         updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: updatedWebpage)
                         return updatedWebpage
@@ -99,11 +100,12 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
 func updatedRemoteWebpage(postbox: Postbox, network: Network, webPage: WebpageReference) -> Signal<TelegramMediaWebpage?, NoError> {
     if case let .webPage(id, url) = webPage.content {
         return network.request(Api.functions.messages.getWebPage(url: url, hash: 0))
-        |> `catch` { _ -> Signal<Api.WebPage, NoError> in
-            return .single(.webPageNotModified)
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.WebPage?, NoError> in
+            return .single(nil)
         }
         |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
-            if let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId.id == id {
+            if let result = result, let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId.id == id {
                 return postbox.transaction { transaction -> TelegramMediaWebpage? in
                     if transaction.getMedia(updatedWebpage.webpageId) != nil {
                         updateMessageMedia(transaction: transaction, id: updatedWebpage.webpageId, media: updatedWebpage)
