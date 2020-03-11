@@ -720,9 +720,21 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     func updateAvailableFilters(_ availableFilters: [ChatListContainerNodeFilter]) {
         if self.availableFilters != availableFilters {
-            self.availableFilters = availableFilters
-            if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout {
-                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: .immediate)
+            let apply: () -> Void = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.availableFilters = availableFilters
+                if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout {
+                    strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: .immediate)
+                }
+            }
+            if !availableFilters.contains(where: { $0.id == self.selectedId }) {
+                self.switchToFilter(id: .all, completion: {
+                    apply()
+                })
+            } else {
+                apply()
             }
         }
     }

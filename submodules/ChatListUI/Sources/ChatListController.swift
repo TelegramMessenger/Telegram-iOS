@@ -1136,35 +1136,42 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 guard let strongSelf = self, let featuredState = featuredState else {
                     return
                 }
-                strongSelf.processedFeaturedFilters = true
-                if !featuredState.isSeen && !featuredState.filters.isEmpty {
-                    let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
-                    |> deliverOnMainQueue).start(next: { filters in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let hasFilters = !filters.isEmpty
-                        if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
-                            let absoluteFrame = sourceFrame
-                            //TODO:localize
-                            let text: String
-                            if hasFilters {
-                                text = "Hold on 'Chats' to edit folders and switch between views."
-                            } else {
-                                text = "Hold to organize your chats with folders."
+                
+                let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                |> deliverOnMainQueue).start(next: { filters in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.processedFeaturedFilters = true
+                    if !featuredState.isSeen && !featuredState.filters.isEmpty && filters.isEmpty {
+                        let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                        |> deliverOnMainQueue).start(next: { filters in
+                            guard let strongSelf = self else {
+                                return
                             }
-                            parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
-                                guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                            let hasFilters = !filters.isEmpty
+                            if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
+                                let absoluteFrame = sourceFrame
+                                //TODO:localize
+                                let text: String
+                                if hasFilters {
+                                    text = "Hold on 'Chats' to edit folders and switch between views."
+                                } else {
+                                    text = "Hold to organize your chats with folders."
+                                }
+                                parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
+                                    guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                                        return true
+                                    }
+                                    if parentController.isPointInsideContentArea(point: point) {
+                                        return false
+                                    }
                                     return true
-                                }
-                                if parentController.isPointInsideContentArea(point: point) {
-                                    return false
-                                }
-                                return true
-                            }), in: .current)
-                        }
-                    })
-                }
+                                }), in: .current)
+                            }
+                        })
+                    }
+                })
             }))
         }
     }
