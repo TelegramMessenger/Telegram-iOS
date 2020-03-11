@@ -217,7 +217,7 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
         entries.append(.listFooter("Tap \"Edit\" to change the order or delete folders."))
     }
     
-    if !filteredSuggestedFilters.isEmpty {
+    if !filteredSuggestedFilters.isEmpty && filters.count < 10 {
         entries.append(.suggestedListHeader("RECOMMENDED FOLDERS"))
         for filter in filteredSuggestedFilters {
             entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title, label: filter.description, preset: filter.data))
@@ -492,4 +492,3 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     return controller
 }
-
