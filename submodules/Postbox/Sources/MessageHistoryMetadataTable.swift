@@ -11,6 +11,7 @@ private enum MetadataPrefix: Int8 {
     case ShouldReindexUnreadCounts = 8
     case PeerHistoryInitialized = 9
     case ShouldReindexUnreadCountsState = 10
+    case TotalUnreadCountStates = 11
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -58,8 +59,8 @@ final class MessageHistoryMetadataTable: Table {
     private var nextMessageStableId: UInt32?
     private var nextMessageStableIdUpdated = false
     
-    private var chatListTotalUnreadState: ChatListTotalUnreadState?
-    private var chatListTotalUnreadStateUpdated = false
+    private var chatListTotalUnreadStates: [PeerGroupId: ChatListTotalUnreadState] = [:]
+    private var updatedChatListTotalUnreadStates = Set<PeerGroupId>()
     
     private var nextPeerOperationLogIndex: UInt32?
     private var nextPeerOperationLogIndexUpdated = false
@@ -97,6 +98,23 @@ final class MessageHistoryMetadataTable: Table {
         let key = ValueBoxKey(length: 1)
         key.setInt8(0, value: prefix.rawValue)
         return key
+    }
+    
+    private func totalUnreadCountStateKey(groupId: PeerGroupId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1 + 4)
+        key.setInt8(0, value: MetadataPrefix.TotalUnreadCountStates.rawValue)
+        key.setInt32(1, value: groupId.rawValue)
+        return key
+    }
+    
+    private func totalUnreadCountLowerBound() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1)
+        key.setInt8(0, value: MetadataPrefix.TotalUnreadCountStates.rawValue)
+        return key
+    }
+    
+    private func totalUnreadCountUpperBound() -> ValueBoxKey {
+        return self.totalUnreadCountLowerBound().successor
     }
     
     func setInitializedChatList(groupId: PeerGroupId) {
@@ -283,28 +301,38 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getChatListTotalUnreadState() -> ChatListTotalUnreadState {
-        if let cached = self.chatListTotalUnreadState {
+    func removeAllTotalUnreadStates() {
+        var groupIds: [PeerGroupId] = []
+        self.valueBox.range(self.table, start: self.totalUnreadCountLowerBound(), end: self.totalUnreadCountUpperBound(), keys: { key in
+            let groupId = key.getInt32(1)
+            groupIds.append(PeerGroupId(rawValue: groupId))
+            return true
+        }, limit: 0)
+        for groupId in groupIds {
+            self.setTotalUnreadState(groupId: groupId, state: ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
+        }
+    }
+    
+    func getTotalUnreadState(groupId: PeerGroupId) -> ChatListTotalUnreadState {
+        if let cached = self.chatListTotalUnreadStates[groupId] {
             return cached
         } else {
-            if let value = self.valueBox.get(self.table, key: self.key(.ChatListTotalUnreadState)), let state = PostboxDecoder(buffer: value).decodeObjectForKey("_", decoder: {
-                ChatListTotalUnreadState(decoder: $0)
-            }) as? ChatListTotalUnreadState {
-                self.chatListTotalUnreadState = state
+            if let value = self.valueBox.get(self.table, key: self.totalUnreadCountStateKey(groupId: groupId)), let state = PostboxDecoder(buffer: value).decodeObjectForKey("_", decoder: { ChatListTotalUnreadState(decoder: $0) }) as? ChatListTotalUnreadState {
+                self.chatListTotalUnreadStates[groupId] = state
                 return state
             } else {
                 let state = ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
-                self.chatListTotalUnreadState = state
+                self.chatListTotalUnreadStates[groupId] = state
                 return state
             }
         }
     }
     
-    func setChatListTotalUnreadState(_ state: ChatListTotalUnreadState) {
-        let current = self.getChatListTotalUnreadState()
+    func setTotalUnreadState(groupId: PeerGroupId, state: ChatListTotalUnreadState) {
+        let current = self.getTotalUnreadState(groupId: groupId)
         if current != state {
-            self.chatListTotalUnreadState = state
-            self.chatListTotalUnreadStateUpdated = true
+            self.chatListTotalUnreadStates[groupId] = state
+            self.updatedChatListTotalUnreadStates.insert(groupId)
         }
     }
     
@@ -315,8 +343,8 @@ final class MessageHistoryMetadataTable: Table {
         self.updatedPeerNextMessageIdByNamespace.removeAll()
         self.nextMessageStableId = nil
         self.nextMessageStableIdUpdated = false
-        self.chatListTotalUnreadState = nil
-        self.chatListTotalUnreadStateUpdated = false
+        self.chatListTotalUnreadStates.removeAll()
+        self.updatedChatListTotalUnreadStates.removeAll()
     }
     
     override func beforeCommit() {
@@ -351,13 +379,13 @@ final class MessageHistoryMetadataTable: Table {
             }
         }
         
-        if self.chatListTotalUnreadStateUpdated {
-            if let state = self.chatListTotalUnreadState {
+        for groupId in self.updatedChatListTotalUnreadStates {
+            if let state = self.chatListTotalUnreadStates[groupId] {
                 let buffer = PostboxEncoder()
                 buffer.encodeObject(state, forKey: "_")
-                self.valueBox.set(self.table, key: self.key(.ChatListTotalUnreadState), value: buffer.readBufferNoCopy())
+                self.valueBox.set(self.table, key: self.totalUnreadCountStateKey(groupId: groupId), value: buffer.readBufferNoCopy())
             }
-            self.chatListTotalUnreadStateUpdated = false
+            self.updatedChatListTotalUnreadStates.removeAll()
         }
     }
 }

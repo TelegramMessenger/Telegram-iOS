@@ -137,9 +137,9 @@ private func parseNotificationSettings(valueBox: ValueBox, table: ValueBoxTable,
             value.skip(Int(length))
         }
         if let pending = pending {
-            return !pending.isRemovedFromTotalUnreadCount
+            return !pending.isRemovedFromTotalUnreadCount(default: false)
         } else if let current = current {
-            return !current.isRemovedFromTotalUnreadCount
+            return !current.isRemovedFromTotalUnreadCount(default: false)
         } else {
             return false
         }
@@ -154,12 +154,10 @@ private func getReadStateCount(valueBox: ValueBox, table: ValueBoxTable, peerId:
     if let value = valueBox.get(table, key: key) {
         var count: Int32 = 0
         value.read(&count, offset: 0, length: 4)
-        var stateByNamespace: [MessageId.Namespace: PeerReadState] = [:]
         for _ in 0 ..< count {
             var namespaceId: Int32 = 0
             value.read(&namespaceId, offset: 0, length: 4)
             
-            let state: PeerReadState
             var kind: Int8 = 0
             value.read(&kind, offset: 0, length: 1)
             if kind == 0 {

@@ -174,7 +174,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 
                 var isMuted = false
                 if let notificationSettings = peer.notificationSettings {
-                    isMuted = notificationSettings.isRemovedFromTotalUnreadCount
+                    isMuted = notificationSettings.isRemovedFromTotalUnreadCount(default: false)
                 }
                 var badge: ContactsPeerItemBadge?
                 if peer.unreadCount > 0 {

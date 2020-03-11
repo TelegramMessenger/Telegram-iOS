@@ -727,7 +727,7 @@ final class ChatListTable: Table {
     
     func allPeerIds(groupId: PeerGroupId) -> [PeerId] {
         var peerIds: [PeerId] = []
-        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
             let (_, _, messageIndex, type) = extractKey(key)
             if type == ChatListEntryType.message.rawValue {
                 peerIds.append(messageIndex.id.peerId)
@@ -792,6 +792,8 @@ final class ChatListTable: Table {
         let lower: ValueBoxKey
         let upper: ValueBoxKey
         
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+        
         switch position {
             case let .earlier(index):
                 upper = self.upperBound(groupId: groupId)
@@ -825,10 +827,17 @@ final class ChatListTable: Table {
                             } else {
                                 notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
                             }
-                        }
-                        if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
-                            result = index
-                            return false
+                            let isRemovedFromTotalUnreadCount: Bool
+                            if let notificationSettings = notificationSettings {
+                                isRemovedFromTotalUnreadCount = notificationSettings.isRemovedFromTotalUnreadCount(default: !globalNotificationSettings.defaultIncludePeer(peer: peer))
+                            } else {
+                                isRemovedFromTotalUnreadCount = !globalNotificationSettings.defaultIncludePeer(peer: peer)
+                            }
+                            
+                            if !isRemovedFromTotalUnreadCount {
+                                result = index
+                                return false
+                            }
                         }
                     } else {
                         result = index

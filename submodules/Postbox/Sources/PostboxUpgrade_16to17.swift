@@ -137,9 +137,9 @@ private func parseNotificationSettings(valueBox: ValueBox, table: ValueBoxTable,
             value.skip(Int(length))
         }
         if let pending = pending {
-            return !pending.isRemovedFromTotalUnreadCount
+            return !pending.isRemovedFromTotalUnreadCount(default: false)
         } else if let current = current {
-            return !current.isRemovedFromTotalUnreadCount
+            return !current.isRemovedFromTotalUnreadCount(default: false)
         } else {
             return false
         }

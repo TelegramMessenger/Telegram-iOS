@@ -22,8 +22,10 @@ public final class SeedConfiguration {
     public let messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>
     public let defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState]
     public let chatMessagesNamespaces: Set<MessageId.Namespace>
+    public let globalNotificationSettingsPreferencesKey: ValueBoxKey
+    public let defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings
     
-    public init(globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>, initializeChatListWithHole: (topLevel: ChatListHole?, groups: ChatListHole?), messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]], existingMessageTags: MessageTags, messageTagsWithSummary: MessageTags, existingGlobalMessageTags: GlobalMessageTags, peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace], peerSummaryCounterTags: @escaping (Peer, Bool) -> PeerSummaryCounterTags, additionalChatListIndexNamespace: MessageId.Namespace?, messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>, defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState], chatMessagesNamespaces: Set<MessageId.Namespace>) {
+    public init(globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>, initializeChatListWithHole: (topLevel: ChatListHole?, groups: ChatListHole?), messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]], existingMessageTags: MessageTags, messageTagsWithSummary: MessageTags, existingGlobalMessageTags: GlobalMessageTags, peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace], peerSummaryCounterTags: @escaping (Peer, Bool) -> PeerSummaryCounterTags, additionalChatListIndexNamespace: MessageId.Namespace?, messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>, defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState], chatMessagesNamespaces: Set<MessageId.Namespace>, globalNotificationSettingsPreferencesKey: ValueBoxKey, defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings) {
         self.globalMessageIdsPeerIdNamespaces = globalMessageIdsPeerIdNamespaces
         self.initializeChatListWithHole = initializeChatListWithHole
         self.messageHoles = messageHoles
@@ -35,5 +37,7 @@ public final class SeedConfiguration {
         self.messageNamespacesRequiringGroupStatsValidation = messageNamespacesRequiringGroupStatsValidation
         self.defaultMessageNamespaceReadStates = defaultMessageNamespaceReadStates
         self.chatMessagesNamespaces = chatMessagesNamespaces
+        self.globalNotificationSettingsPreferencesKey = globalNotificationSettingsPreferencesKey
+        self.defaultGlobalNotificationSettings = defaultGlobalNotificationSettings
     }
 }
