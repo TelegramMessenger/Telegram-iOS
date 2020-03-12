@@ -19,9 +19,270 @@ import TelegramAnimatedStickerNode
 import Emoji
 import Markdown
 
+import RLottieBinding
+import AppBundle
+import GZip
+
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
+
+private final class ManagedAnimationState {
+    let item: ManagedAnimationItem
+    
+    private let instance: LottieInstance
+    
+    let frameCount: Int
+    let fps: Double
+    
+    var relativeTime: Double = 0.0
+    var frameIndex: Int?
+    
+    private let renderContext: DrawingContext
+    
+    init?(displaySize: CGSize, item: ManagedAnimationItem, current: ManagedAnimationState?) {
+        let resolvedInstance: LottieInstance
+        let renderContext: DrawingContext
+        
+        if let current = current {
+            resolvedInstance = current.instance
+            renderContext = current.renderContext
+        } else {
+            guard let path = item.source.path else {
+                return nil
+            }
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                return nil
+            }
+            guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
+                return nil
+            }
+            guard let instance = LottieInstance(data: unpackedData, cacheKey: item.source.cacheKey) else {
+                return nil
+            }
+            resolvedInstance = instance
+            renderContext = DrawingContext(size: displaySize, scale: UIScreenScale, premultiplied: true, clear: true)
+        }
+        
+        self.item = item
+        self.instance = resolvedInstance
+        self.renderContext = renderContext
+        
+        self.frameCount = Int(self.instance.frameCount)
+        self.fps = Double(self.instance.frameRate)
+    }
+    
+    func draw() -> UIImage? {
+        self.instance.renderFrame(with: Int32(self.frameIndex ?? 0), into: self.renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(self.renderContext.size.width * self.renderContext.scale), height: Int32(self.renderContext.size.height * self.renderContext.scale), bytesPerRow: Int32(self.renderContext.bytesPerRow))
+        return self.renderContext.generateImage()
+    }
+}
+
+struct ManagedAnimationFrameRange: Equatable {
+    var startFrame: Int
+    var endFrame: Int
+}
+
+enum ManagedAnimationSource: Equatable {
+    case local(String)
+    case resource(MediaBox, MediaResource)
+    
+    var cacheKey: String {
+        switch self {
+            case let .local(name):
+                return name
+            case let .resource(mediaBox, resource):
+                return resource.id.uniqueId
+        }
+    }
+    
+    var path: String? {
+        switch self {
+            case let .local(name):
+                return getAppBundle().path(forResource: name, ofType: "tgs")
+            case let .resource(mediaBox, resource):
+                return mediaBox.completedResourcePath(resource)
+        }
+    }
+    
+    static func == (lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
+        switch lhs {
+            case let .local(lhsPath):
+                if case let .local(rhsPath) = rhs, lhsPath == rhsPath {
+                    return true
+                } else {
+                    return false
+                }
+            case let .resource(lhsMediaBox, lhsResource):
+                if case let .resource(rhsMediaBox, rhsResource) = rhs, lhsMediaBox === rhsMediaBox, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
+struct ManagedAnimationItem: Equatable {
+    let source: ManagedAnimationSource
+    var frames: ManagedAnimationFrameRange
+    var duration: Double
+}
+
+class ManagedAnimationNode: ASDisplayNode {
+    let intrinsicSize: CGSize
+    
+    private let imageNode: ASImageNode
+    private let displayLink: CADisplayLink
+    
+    fileprivate var state: ManagedAnimationState?
+    fileprivate var trackStack: [ManagedAnimationItem] = []
+    fileprivate var didTryAdvancingState = false
+    
+    init(size: CGSize) {
+        self.intrinsicSize = size
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.displayWithoutProcessing = true
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
+        
+        final class DisplayLinkTarget: NSObject {
+            private let f: () -> Void
+            
+            init(_ f: @escaping () -> Void) {
+                self.f = f
+            }
+            
+            @objc func event() {
+                self.f()
+            }
+        }
+        var displayLinkUpdate: (() -> Void)?
+        self.displayLink = CADisplayLink(target: DisplayLinkTarget {
+            displayLinkUpdate?()
+        }, selector: #selector(DisplayLinkTarget.event))
+        
+        super.init()
+        
+        self.addSubnode(self.imageNode)
+        
+        self.displayLink.add(to: RunLoop.main, forMode: .common)
+        
+        displayLinkUpdate = { [weak self] in
+            self?.updateAnimation()
+        }
+    }
+    
+    func advanceState() {
+        guard !self.trackStack.isEmpty else {
+            return
+        }
+        
+        let item = self.trackStack.removeFirst()
+        
+        if let state = self.state, state.item.source == item.source {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+        } else {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil)
+        }
+        
+        self.didTryAdvancingState = false
+    }
+    
+    fileprivate func updateAnimation() {
+        if self.state == nil {
+            self.advanceState()
+        }
+        
+        guard let state = self.state else {
+            return
+        }
+        let timestamp = CACurrentMediaTime()
+        
+        let fps = state.fps
+        let frameRange = state.item.frames
+        
+        let duration: Double = state.item.duration
+        var t = state.relativeTime / duration
+        t = max(0.0, t)
+        t = min(1.0, t)
+        
+        let frameOffset = Int(Double(frameRange.startFrame) * (1.0 - t) + Double(frameRange.endFrame) * t)
+        let lowerBound: Int = 0
+        let upperBound = state.frameCount - 1
+        let frameIndex = max(lowerBound, min(upperBound, frameOffset))
+        
+        if state.frameIndex != frameIndex {
+            state.frameIndex = frameIndex
+            if let image = state.draw() {
+                self.imageNode.image = image
+            }
+        }
+        
+        var animationAdvancement: Double = 1.0 / 60.0
+        animationAdvancement *= Double(min(2, self.trackStack.count + 1))
+        
+        state.relativeTime += animationAdvancement
+        
+        if state.relativeTime >= duration && !self.didTryAdvancingState {
+            self.didTryAdvancingState = true
+            self.advanceState()
+        }
+    }
+    
+    func trackTo(item: ManagedAnimationItem) {
+        self.trackStack.append(item)
+        self.didTryAdvancingState = false
+        self.updateAnimation()
+    }
+}
+
+enum ManagedDiceAnimationState: Equatable {
+    case rolling
+    case value(Int)
+}
+
+final class ManagedDiceAnimationNode: ManagedAnimationNode {
+    private let context: AccountContext
+    private var diceState: ManagedDiceAnimationState = .rolling
+    private let disposable = MetaDisposable()
+    
+    init(context: AccountContext) {
+        self.context = context
+        
+        super.init(size: CGSize(width: 136.0, height: 136.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func setState(_ diceState: ManagedDiceAnimationState) {
+        let previousState = self.diceState
+        self.diceState = diceState
+        
+        switch previousState {
+            case .rolling:
+                switch diceState {
+                    case let .value(value):
+                        self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                    case .rolling:
+                        break
+                }
+            case let .value(currentValue):
+                switch diceState {
+                    case .rolling:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                    case let .value(value):
+                        break
+                }
+        }
+    }
+}
+
 
 private class ChatMessageHeartbeatHaptic {
     private var hapticFeedback = HapticFeedback()
@@ -257,7 +518,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if self.telegramFile == nil {
             var emojiFile: TelegramMediaFile?
             
-            if emoji == "🎲" {
+            if false && emoji == "🎲" {
                 var pointsValue: Int
                 if let value = item.controllerInteraction.seenDicePointsValue[item.message.id] {
                     pointsValue = value
@@ -901,27 +1162,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let _ = self.emojiFile {
                     let (emoji, fitz) = item.message.text.basicEmoji
                     if emoji == "🎲" {
-                        if !self.animationNode.isPlaying {
-                            var pointsValue = Int(arc4random_uniform(6))
-                            item.controllerInteraction.seenDicePointsValue[item.message.id] = pointsValue
-                            item.controllerInteraction.seenOneTimeAnimatedMedia.remove(item.message.id)
-                            
-                            var emojiFile: TelegramMediaFile?
-                            if let diceEmojis = item.associatedData.animatedEmojiStickers[emoji] {
-                                emojiFile = diceEmojis[pointsValue].file
-                            }
-                            
-                            self.emojiFile = emojiFile
-                            if let emojiFile = emojiFile {
-                                let dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
-                                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: nil, thumbnail: false))
-                                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
-                            }
-                            self.isPlaying = false
-                            self.didSetUpAnimationNode = false
-                            self.updateVisibility()
-                            self.animationNode.playIfNeeded()
-                        }
+
                     } else {
                         var startTime: Signal<Double, NoError>
                         if self.animationNode.playIfNeeded() {

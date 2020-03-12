@@ -21,7 +21,7 @@ static_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/MergeLists:MergeLists",
-        "//submodules/Charts:Charts",
+        "//submodules/GraphUI:GraphUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

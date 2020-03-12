@@ -742,7 +742,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 var cancelImpl: (() -> Void)?
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let progressSignal = Signal<Never, NoError> { subscriber in
-                                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                         cancelImpl?()
                                     }))
                                     presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -869,7 +869,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         var cancelImpl: (() -> Void)?
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         let progressSignal = Signal<Never, NoError> { subscriber in
-                            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                 cancelImpl?()
                             }))
                             presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

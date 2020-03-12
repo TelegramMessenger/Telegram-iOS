@@ -194,7 +194,7 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
             
             let badgeTextNode = ImmediateTextNode()
             badgeTextNode.displaysAsynchronously = false
-            badgeTextNode.attributedText = NSAttributedString(string: "\(i + 1)", font: badgeFont, textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor)
+            badgeTextNode.attributedText = NSAttributedString(string: "\(i + 1)", font: badgeFont, textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .natural)
             badgeTextNode.maximumNumberOfLines = 0
             badgeTextNode.lineSpacing = 0.1
             badgeTextNodes.append(badgeTextNode)
@@ -313,6 +313,8 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         var iconOffset = CGPoint()
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        
+        let hasRTL = self.badgeTextNodes.first?.cachedLayout?.hasRTL ?? false
         
         var badgeTextSizes: [CGSize] = []
         var textSizes: [CGSize] = []

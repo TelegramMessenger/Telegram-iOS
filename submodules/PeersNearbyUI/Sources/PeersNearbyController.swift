@@ -325,7 +325,7 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNe
     
     if let data = data, !data.users.isEmpty {
         var index: Int32 = 0
-        var users = data.users
+        var users = data.users.filter { $0.peer.0.id != data.accountPeerId }
         var effectiveExpanded = expanded
         if users.count > maxUsersDisplayedLimit && !expanded {
             users = Array(users.prefix(Int(maxUsersDisplayedLimit)))
@@ -334,10 +334,8 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNe
         }
         
         for user in users {
-            if user.peer.0.id != data.accountPeerId {
-                entries.append(.user(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, user))
-                index += 1
-            }
+            entries.append(.user(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, user))
+            index += 1
         }
         
         if !effectiveExpanded {
@@ -493,7 +491,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
 
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             presentControllerImpl?(controller, nil)

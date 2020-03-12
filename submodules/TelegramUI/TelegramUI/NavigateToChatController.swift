@@ -14,48 +14,49 @@ import SettingsUI
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
     var isFirst = true
-    for controller in params.navigationController.viewControllers.reversed() {
-        if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
-            if let updateTextInputState = params.updateTextInputState {
-                controller.updateTextInputState(updateTextInputState)
+    if params.useExisting {
+        for controller in params.navigationController.viewControllers.reversed() {
+            if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
+                if let updateTextInputState = params.updateTextInputState {
+                    controller.updateTextInputState(updateTextInputState)
+                }
+                if let subject = params.subject, case let .message(messageId) = subject {
+                    let navigationController = params.navigationController
+                    let animated = params.animated
+                    controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in
+                        if let navigationController = navigationController, let controller = controller {
+                            let _ = navigationController.popToViewController(controller, animated: animated)
+                        }
+                    }, customPresentProgress: { [weak navigationController] c, a in
+                        (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
+                    })
+                } else if params.scrollToEndIfExists && isFirst {
+                    controller.scrollToEndOfHistory()
+                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    params.completion()
+                } else if params.activateMessageSearch {
+                    controller.activateSearch()
+                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    params.completion()
+                } else {
+                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    params.completion()
+                }
+                controller.purposefulAction = params.purposefulAction
+                if params.activateInput {
+                    controller.activateInput()
+                }
+                if let botStart = params.botStart {
+                    controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
+                        return state.updatedBotStartPayload(botStart.payload)
+                    })
+                }
+                found = true
+                break
             }
-            if let subject = params.subject, case let .message(messageId) = subject {
-                let navigationController = params.navigationController
-                let animated = params.animated
-                controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in
-                    if let navigationController = navigationController, let controller = controller {
-                        let _ = navigationController.popToViewController(controller, animated: animated)
-                    }
-                }, customPresentProgress: { [weak navigationController] c, a in
-                    (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
-                })
-            } else if params.scrollToEndIfExists && isFirst {
-                controller.scrollToEndOfHistory()
-                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                params.completion()
-            } else if params.activateMessageSearch {
-                controller.activateSearch()
-                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                params.completion()
-            } else {
-                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                params.completion()
-            }
-            controller.purposefulAction = params.purposefulAction
-            if params.activateInput {
-                controller.activateInput()
-            }
-            if let botStart = params.botStart {
-                controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
-                    return state.updatedBotStartPayload(botStart.payload)
-                })
-            }
-            found = true
-            break
+            isFirst = false
         }
-        isFirst = false
     }
-    
     if !found {
         let controller: ChatControllerImpl
         if let chatController = params.chatController as? ChatControllerImpl {

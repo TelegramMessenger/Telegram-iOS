@@ -8,18 +8,18 @@ import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
-import Charts
+import GraphUI
 
 class StatsGraphItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let graph: ChannelStatsGraph
     let type: ChartType
     let height: CGFloat
-    let getDetailsData: ((Date, (String?) -> Void) -> Void)?
+    let getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, height: CGFloat = 0.0, getDetailsData: ((Date, (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, height: CGFloat = 0.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
@@ -69,6 +69,7 @@ class StatsGraphItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     let chartNode: ChartNode
     
@@ -78,6 +79,8 @@ class StatsGraphItemNode: ListViewItemNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
+        
+        self.maskNode = ASImageNode()
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -92,6 +95,14 @@ class StatsGraphItemNode: ListViewItemNode {
         self.clipsToBounds = true
         
         self.addSubnode(self.chartNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+    
+        self.chartNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
+            return point.x > 30.0
+        }
     }
     
     func asyncLayout() -> (_ item: StatsGraphItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -153,7 +164,9 @@ class StatsGraphItemNode: ListViewItemNode {
                         if strongSelf.bottomStripeNode.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                         }
-                        
+                        if strongSelf.maskNode.supernode != nil {
+                            strongSelf.maskNode.removeFromSupernode()
+                        }
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     case .blocks:
                         if strongSelf.backgroundNode.supernode == nil {
@@ -165,23 +178,34 @@ class StatsGraphItemNode: ListViewItemNode {
                         if strongSelf.bottomStripeNode.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                         }
+                        if strongSelf.maskNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        }
+                        let hasCorners = itemListHasRoundedBlockLayout(params)
+                        var hasTopCorners = false
+                        var hasBottomCorners = false
                         switch neighbors.top {
-                        case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
-                        default:
-                            strongSelf.topStripeNode.isHidden = false
+                            case .sameSection(false):
+                                strongSelf.topStripeNode.isHidden = true
+                            default:
+                                hasTopCorners = true
+                                strongSelf.topStripeNode.isHidden = hasCorners
                         }
                         let bottomStripeInset: CGFloat
                         switch neighbors.bottom {
-                        case .sameSection(false):
-                            bottomStripeInset = leftInset
-                        default:
-                            bottomStripeInset = 0.0
+                            case .sameSection(false):
+                                bottomStripeInset = leftInset
+                            default:
+                                bottomStripeInset = 0.0
+                                hasBottomCorners = true
+                                strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 400.0))
+                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 500.0))
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }

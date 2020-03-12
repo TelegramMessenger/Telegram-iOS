@@ -14,7 +14,7 @@ func openEditSettings(context: AccountContext, accountsAndPeers: Signal<((Accoun
     var cancelImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let progressSignal = Signal<Never, NoError> { subscriber in
-        let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
             cancelImpl?()
         }))
         presentController(controller, nil)

@@ -613,12 +613,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         |> distinctUntilChanged
-        
-        let animatedEmojiStickers = loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false)
-        |> map { result -> [String: [StickerPackItem]] in
-            switch result {
+                
+        let animatedEmojiStickers = combineLatest(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false), loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice, forceActualized: false))
+        |> map { animatedEmoji, dice -> [String: [StickerPackItem]] in
+            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+            switch animatedEmoji {
                 case let .result(_, items, _):
-                    var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
                     for case let item as StickerPackItem in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
                             animatedEmojiStickers[emoji.basicEmoji.0] = [item]
@@ -628,22 +628,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                     }
-                    
-                    if let path = getAppBundle().path(forResource: "Dice_1", ofType: "tgs") {
-                        var dices: [StickerPackItem] = []
-                        for i in 1...6 {
-                            let path = path.replacingOccurrences(of: "_1", with: "_\(i)")
-                            let id = arc4random64()
-                            let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: id)
-                            dices.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(i), id: Int64(i)), file: TelegramMediaFile(fileId: MediaId(namespace: 10, id: Int64(i)), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/x-tgsticker", size: nil, attributes: []), indexKeys: []))
-                        }
-                        animatedEmojiStickers["🎲".strippedEmoji] = dices
-                    }
-                    
-                    return animatedEmojiStickers
                 default:
-                    return [:]
+                    break
             }
+            switch dice {
+                case let .result(_, items, _):
+                    var diceStickers: [StickerPackItem] = []
+                    for case let item as StickerPackItem in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            diceStickers.append(item)
+                        }
+                    }
+                    animatedEmojiStickers["🎲".strippedEmoji] = diceStickers
+                default:
+                    break
+            }
+            return animatedEmojiStickers
         }
         
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)

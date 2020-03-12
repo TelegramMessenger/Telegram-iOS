@@ -9502,8 +9502,8 @@ public extension Api {
     public enum WebPage: TypeConstructorDescription {
         case webPageEmpty(id: Int64)
         case webPagePending(id: Int64, date: Int32)
-        case webPageNotModified
         case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?, attributes: [Api.WebPageAttribute]?)
+        case webPageNotModified(flags: Int32, cachedPageViews: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -9519,12 +9519,6 @@ public extension Api {
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
-                    break
-                case .webPageNotModified:
-                    if boxed {
-                        buffer.appendInt32(-2054908813)
-                    }
-                    
                     break
                 case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
                     if boxed {
@@ -9554,6 +9548,13 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+                case .webPageNotModified(let flags, let cachedPageViews):
+                    if boxed {
+                        buffer.appendInt32(1930545681)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(cachedPageViews!, buffer: buffer, boxed: false)}
+                    break
     }
     }
     
@@ -9563,10 +9564,10 @@ public extension Api {
                 return ("webPageEmpty", [("id", id)])
                 case .webPagePending(let id, let date):
                 return ("webPagePending", [("id", id), ("date", date)])
-                case .webPageNotModified:
-                return ("webPageNotModified", [])
                 case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
                 return ("webPage", [("flags", flags), ("id", id), ("url", url), ("displayUrl", displayUrl), ("hash", hash), ("type", type), ("siteName", siteName), ("title", title), ("description", description), ("photo", photo), ("embedUrl", embedUrl), ("embedType", embedType), ("embedWidth", embedWidth), ("embedHeight", embedHeight), ("duration", duration), ("author", author), ("document", document), ("cachedPage", cachedPage), ("attributes", attributes)])
+                case .webPageNotModified(let flags, let cachedPageViews):
+                return ("webPageNotModified", [("flags", flags), ("cachedPageViews", cachedPageViews)])
     }
     }
     
@@ -9594,9 +9595,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-        public static func parse_webPageNotModified(_ reader: BufferReader) -> WebPage? {
-            return Api.WebPage.webPageNotModified
         }
         public static func parse_webPage(_ reader: BufferReader) -> WebPage? {
             var _1: Int32?
@@ -9666,6 +9664,20 @@ public extension Api {
             let _c19 = (Int(_1!) & Int(1 << 12) == 0) || _19 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 {
                 return Api.WebPage.webPage(flags: _1!, id: _2!, url: _3!, displayUrl: _4!, hash: _5!, type: _6, siteName: _7, title: _8, description: _9, photo: _10, embedUrl: _11, embedType: _12, embedWidth: _13, embedHeight: _14, duration: _15, author: _16, document: _17, cachedPage: _18, attributes: _19)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webPageNotModified(_ reader: BufferReader) -> WebPage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.WebPage.webPageNotModified(flags: _1!, cachedPageViews: _2)
             }
             else {
                 return nil
@@ -13722,13 +13734,13 @@ public extension Api {
     
     }
     public enum Page: TypeConstructorDescription {
-        case page(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
+        case page(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document], views: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .page(let flags, let url, let blocks, let photos, let documents):
+                case .page(let flags, let url, let blocks, let photos, let documents, let views):
                     if boxed {
-                        buffer.appendInt32(-1366746132)
+                        buffer.appendInt32(-1738178803)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(url, buffer: buffer, boxed: false)
@@ -13747,14 +13759,15 @@ public extension Api {
                     for item in documents {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(views!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .page(let flags, let url, let blocks, let photos, let documents):
-                return ("page", [("flags", flags), ("url", url), ("blocks", blocks), ("photos", photos), ("documents", documents)])
+                case .page(let flags, let url, let blocks, let photos, let documents, let views):
+                return ("page", [("flags", flags), ("url", url), ("blocks", blocks), ("photos", photos), ("documents", documents), ("views", views)])
     }
     }
     
@@ -13775,13 +13788,16 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.Page.page(flags: _1!, url: _2!, blocks: _3!, photos: _4!, documents: _5!)
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.Page.page(flags: _1!, url: _2!, blocks: _3!, photos: _4!, documents: _5!, views: _6)
             }
             else {
                 return nil

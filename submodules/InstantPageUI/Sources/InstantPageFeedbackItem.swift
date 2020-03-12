@@ -30,7 +30,7 @@ final class InstantPageFeedbackItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if node is InstantPageFeedbackNode {
+        if let node = node as? InstantPageFeedbackNode, case let .Loaded(content) = node.webPage.content, case let .Loaded(updatedContent) = self.webPage.content, content.instantPage?.views == updatedContent.instantPage?.views {
             return true
         }
         return false

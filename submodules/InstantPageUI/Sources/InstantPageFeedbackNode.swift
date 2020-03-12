@@ -11,12 +11,13 @@ import AccountContext
 
 final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     private let context: AccountContext
-    private let webPage: TelegramMediaWebpage
+    let webPage: TelegramMediaWebpage
     private let openUrl: (InstantPageUrlItem) -> Void
     
     private let highlightedBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightableButtonNode
     private let labelNode: ASTextNode
+    private let viewsNode: ASTextNode
     
     private let resolveDisposable = MetaDisposable()
     
@@ -34,23 +35,32 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
         self.labelNode = ASTextNode()
         self.labelNode.isLayerBacked = true
         self.labelNode.maximumNumberOfLines = 2
+      
+        self.viewsNode = ASTextNode()
+        self.viewsNode.isLayerBacked = true
+        self.viewsNode.maximumNumberOfLines = 2
         
         super.init()
+        
+        if case let .Loaded(content) = webPage.content, let views = content.instantPage?.views {
+            self.viewsNode.attributedText = NSAttributedString(string: strings.InstantPage_Views(views), font: Font.regular(13.0), textColor: theme.panelSecondaryColor)
+        }
         
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.labelNode)
+        self.addSubnode(self.viewsNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.highlightedBackgroundNode.alpha = 1.0
+                    strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.labelNode.alpha = 0.4
                 } else {
-                    strongSelf.highlightedBackgroundNode.alpha = 0.0
-                    strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    strongSelf.labelNode.alpha = 1.0
+                    strongSelf.labelNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -74,14 +84,18 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
         super.layout()
         
         let size = self.bounds.size
-        let inset: CGFloat = 15.0
+        let inset: CGFloat = 16.0
         
         self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: size.height + UIScreenPixel))
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        
+        let viewsSize = self.viewsNode.measure(CGSize(width: size.width - inset * 2.0, height: size.height))
+        self.viewsNode.frame = CGRect(origin: CGPoint(x: inset, y: floorToScreenPixels((size.height - viewsSize.height) / 2.0)), size: viewsSize)
         
         let labelSize = self.labelNode.measure(CGSize(width: size.width - inset * 2.0, height: size.height))
+        self.labelNode.frame = CGRect(origin: CGPoint(x: size.width - labelSize.width - inset, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         
-        self.labelNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: size.width - labelSize.width - inset * 2.0, y: 0.0), size: size)
     }
     
     func updateIsVisible(_ isVisible: Bool) {
@@ -100,6 +114,7 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
         self.backgroundColor = theme.panelBackgroundColor
         self.highlightedBackgroundNode.backgroundColor = theme.panelHighlightedBackgroundColor
-        self.labelNode.attributedText = NSAttributedString(string: strings.InstantPage_FeedbackButton, font: Font.regular(13.0), textColor: theme.panelSecondaryColor)
+        self.labelNode.attributedText = NSAttributedString(string: strings.InstantPage_FeedbackButtonShort, font: Font.regular(13.0), textColor: theme.panelSecondaryColor)
+        self.viewsNode.attributedText = NSAttributedString(string: self.viewsNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: theme.panelSecondaryColor)
     }
 }

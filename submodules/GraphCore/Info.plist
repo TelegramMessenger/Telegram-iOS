@@ -18,7 +18,5 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2020 Telegram. All rights reserved.</string>
 </dict>
 </plist>

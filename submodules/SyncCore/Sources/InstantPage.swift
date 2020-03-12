@@ -844,13 +844,15 @@ public final class InstantPage: PostboxCoding, Equatable {
     public let isComplete: Bool
     public let rtl: Bool
     public let url: String
+    public let views: Int32?
     
-    public init(blocks: [InstantPageBlock], media: [MediaId: Media], isComplete: Bool, rtl: Bool, url: String) {
+    public init(blocks: [InstantPageBlock], media: [MediaId: Media], isComplete: Bool, rtl: Bool, url: String, views: Int32?) {
         self.blocks = blocks
         self.media = media
         self.isComplete = isComplete
         self.rtl = rtl
         self.url = url
+        self.views = views
     }
     
     public init(decoder: PostboxDecoder) {
@@ -859,6 +861,7 @@ public final class InstantPage: PostboxCoding, Equatable {
         self.isComplete = decoder.decodeInt32ForKey("c", orElse: 0) != 0
         self.rtl = decoder.decodeInt32ForKey("r", orElse: 0) != 0
         self.url = decoder.decodeStringForKey("url", orElse: "")
+        self.views = decoder.decodeOptionalInt32ForKey("v")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -867,6 +870,11 @@ public final class InstantPage: PostboxCoding, Equatable {
         encoder.encodeInt32(self.isComplete ? 1 : 0, forKey: "c")
         encoder.encodeInt32(self.rtl ? 1 : 0, forKey: "r")
         encoder.encodeString(self.url, forKey: "url")
+        if let views = self.views {
+            encoder.encodeInt32(views, forKey: "v")
+        } else {
+            encoder.encodeNil(forKey: "v")
+        }
     }
     
     public static func ==(lhs: InstantPage, rhs: InstantPage) -> Bool {
@@ -893,6 +901,9 @@ public final class InstantPage: PostboxCoding, Equatable {
             return false
         }
         if lhs.url != rhs.url {
+            return false
+        }
+        if lhs.views != rhs.views {
             return false
         }
         return true

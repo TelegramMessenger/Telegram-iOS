@@ -726,6 +726,11 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         result.append(.more)
     } else if let channel = peer as? TelegramChannel {
         var displayLeave = !channel.flags.contains(.isCreator)
+        var canViewStats = false
+        if let cachedChannelData = cachedData as? CachedChannelData {
+            canViewStats = cachedChannelData.flags.contains(.canViewStats)
+        }
+        
         switch channel.info {
         case .broadcast:
             if !channel.flags.contains(.isCreator) {
@@ -744,6 +749,10 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             displayLeave = false
         }
         
+        if canViewStats {
+            displayLeave = false
+        }
+        
         result.append(.mute)
         result.append(.search)
         if displayLeave {
@@ -755,6 +764,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                 displayMore = false
             }
         }
+        
         if displayMore {
             result.append(.more)
         }

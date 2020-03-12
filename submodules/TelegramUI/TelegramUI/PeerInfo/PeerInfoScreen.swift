@@ -2705,7 +2705,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.view.endEditing(true)
         
-        controller.push(channelStatsController(context: self.context, peer: peer, cachedPeerData: cachedData))
+        controller.push(channelStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData))
     }
     
     private func openReport(user: Bool) {

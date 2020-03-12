@@ -175,6 +175,7 @@ extension InstantPage {
         let isComplete: Bool
         let rtl: Bool
         let url: String
+        let views: Int32?
         switch apiPage {
             case let .page(page):
                 url = page.url
@@ -183,6 +184,7 @@ extension InstantPage {
                 files = page.documents
                 isComplete = (page.flags & (1 << 0)) == 0
                 rtl = (page.flags & (1 << 1)) != 0
+                views = page.views
         }
         var media: [MediaId: Media] = [:]
         for photo in photos {
@@ -195,6 +197,6 @@ extension InstantPage {
                 media[id] = file
             }
         }
-        self.init(blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), media: media, isComplete: isComplete, rtl: rtl, url: url)
+        self.init(blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), media: media, isComplete: isComplete, rtl: rtl, url: url, views: views)
     }
 }
