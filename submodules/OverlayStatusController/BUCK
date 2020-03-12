@@ -12,16 +12,10 @@ static_library(
     name = "OverlayStatusController",
     srcs = glob([
         "Sources/**/*.swift",
-	"Sources/**/*.m",
-    ]),
-    headers = glob([
-        "Sources/**/*.h",
-    ]),
-    exported_headers = glob([
-        "Sources/**/*.h",
     ]),
     deps = [
     	"//submodules/Display:Display#shared",
+        "//submodules/OverlayStatusController/Impl:OverlayStatusControllerImpl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

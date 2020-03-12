@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "TsFileLog.h"
 
@@ -24,8 +24,10 @@ namespace td {
 namespace detail {
 class TsFileLog : public LogInterface {
  public:
-  Status init(string path) {
+  Status init(string path, td::int64 rotate_threshold, bool redirect_stderr) {
     path_ = std::move(path);
+    rotate_threshold_ = rotate_threshold;
+    redirect_stderr_ = redirect_stderr;
     for (int i = 0; i < (int)logs_.size(); i++) {
       logs_[i].id = i;
     }
@@ -54,6 +56,8 @@ class TsFileLog : public LogInterface {
     int id;
   };
   static constexpr int MAX_THREAD_ID = 128;
+  td::int64 rotate_threshold_;
+  bool redirect_stderr_;
   std::string path_;
   std::array<Info, MAX_THREAD_ID> logs_;
 
@@ -70,7 +74,7 @@ class TsFileLog : public LogInterface {
   }
 
   Status init_info(Info *info) {
-    TRY_STATUS(info->log.init(get_path(info), std::numeric_limits<int64>::max(), info->id == 0));
+    TRY_STATUS(info->log.init(get_path(info), std::numeric_limits<int64>::max(), info->id == 0 && redirect_stderr_));
     info->is_inited = true;
     return Status::OK();
   }
@@ -92,9 +96,9 @@ class TsFileLog : public LogInterface {
 };
 }  // namespace detail
 
-Result<td::unique_ptr<LogInterface>> TsFileLog::create(string path) {
+Result<td::unique_ptr<LogInterface>> TsFileLog::create(string path, td::int64 rotate_threshold, bool redirect_stderr) {
   auto res = td::make_unique<detail::TsFileLog>();
-  TRY_STATUS(res->init(path));
+  TRY_STATUS(res->init(path, rotate_threshold, redirect_stderr));
   return std::move(res);
 }
 }  // namespace td

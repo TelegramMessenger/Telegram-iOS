@@ -126,8 +126,10 @@ public final class PresentationThemeRootNavigationBar {
     public let segmentedForegroundColor: UIColor
     public let segmentedTextColor: UIColor
     public let segmentedDividerColor: UIColor
+    public let clearButtonBackgroundColor: UIColor
+    public let clearButtonForegroundColor: UIColor
     
-    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor, segmentedBackgroundColor: UIColor, segmentedForegroundColor: UIColor, segmentedTextColor: UIColor, segmentedDividerColor: UIColor) {
+    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor, segmentedBackgroundColor: UIColor, segmentedForegroundColor: UIColor, segmentedTextColor: UIColor, segmentedDividerColor: UIColor, clearButtonBackgroundColor: UIColor, clearButtonForegroundColor: UIColor) {
         self.buttonColor = buttonColor
         self.disabledButtonColor = disabledButtonColor
         self.primaryTextColor = primaryTextColor
@@ -143,10 +145,14 @@ public final class PresentationThemeRootNavigationBar {
         self.segmentedForegroundColor = segmentedForegroundColor
         self.segmentedTextColor = segmentedTextColor
         self.segmentedDividerColor = segmentedDividerColor
+        self.clearButtonBackgroundColor = clearButtonBackgroundColor
+        self.clearButtonForegroundColor = clearButtonForegroundColor
     }
     
-    public func withUpdated(buttonColor: UIColor? = nil, disabledButtonColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, controlColor: UIColor? = nil, accentTextColor: UIColor? = nil, backgroundColor: UIColor? = nil, separatorColor: UIColor? = nil, badgeBackgroundColor: UIColor? = nil, badgeStrokeColor: UIColor? = nil, badgeTextColor: UIColor? = nil, segmentedBackgroundColor: UIColor? = nil, segmentedForegroundColor: UIColor? = nil, segmentedTextColor: UIColor? = nil, segmentedDividerColor: UIColor? = nil) -> PresentationThemeRootNavigationBar {
-        return PresentationThemeRootNavigationBar(buttonColor: buttonColor ?? self.buttonColor, disabledButtonColor: disabledButtonColor ?? self.disabledButtonColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, controlColor: controlColor ?? self.controlColor, accentTextColor: accentTextColor ?? self.accentTextColor, backgroundColor: backgroundColor ?? self.backgroundColor, separatorColor: separatorColor ?? self.separatorColor, badgeBackgroundColor: badgeBackgroundColor ?? self.badgeBackgroundColor, badgeStrokeColor: badgeStrokeColor ?? self.badgeStrokeColor, badgeTextColor: badgeTextColor ?? self.badgeTextColor, segmentedBackgroundColor: segmentedBackgroundColor ?? self.segmentedBackgroundColor, segmentedForegroundColor: segmentedForegroundColor ?? self.segmentedForegroundColor, segmentedTextColor: segmentedTextColor ?? self.segmentedTextColor, segmentedDividerColor: segmentedDividerColor ?? self.segmentedDividerColor)
+    public func withUpdated(buttonColor: UIColor? = nil, disabledButtonColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, controlColor: UIColor? = nil, accentTextColor: UIColor? = nil, backgroundColor: UIColor? = nil, separatorColor: UIColor? = nil, badgeBackgroundColor: UIColor? = nil, badgeStrokeColor: UIColor? = nil, badgeTextColor: UIColor? = nil, segmentedBackgroundColor: UIColor? = nil, segmentedForegroundColor: UIColor? = nil, segmentedTextColor: UIColor? = nil, segmentedDividerColor: UIColor? = nil, clearButtonBackgroundColor: UIColor? = nil, clearButtonForegroundColor: UIColor? = nil) -> PresentationThemeRootNavigationBar {
+        let resolvedClearButtonBackgroundColor = clearButtonBackgroundColor ?? self.clearButtonBackgroundColor
+        let resolvedClearButtonForegroundColor = clearButtonForegroundColor ?? self.clearButtonForegroundColor
+        return PresentationThemeRootNavigationBar(buttonColor: buttonColor ?? self.buttonColor, disabledButtonColor: disabledButtonColor ?? self.disabledButtonColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, controlColor: controlColor ?? self.controlColor, accentTextColor: accentTextColor ?? self.accentTextColor, backgroundColor: backgroundColor ?? self.backgroundColor, separatorColor: separatorColor ?? self.separatorColor, badgeBackgroundColor: badgeBackgroundColor ?? self.badgeBackgroundColor, badgeStrokeColor: badgeStrokeColor ?? self.badgeStrokeColor, badgeTextColor: badgeTextColor ?? self.badgeTextColor, segmentedBackgroundColor: segmentedBackgroundColor ?? self.segmentedBackgroundColor, segmentedForegroundColor: segmentedForegroundColor ?? self.segmentedForegroundColor, segmentedTextColor: segmentedTextColor ?? self.segmentedTextColor, segmentedDividerColor: segmentedDividerColor ?? self.segmentedDividerColor, clearButtonBackgroundColor: resolvedClearButtonBackgroundColor, clearButtonForegroundColor: resolvedClearButtonForegroundColor)
     }
 }
 

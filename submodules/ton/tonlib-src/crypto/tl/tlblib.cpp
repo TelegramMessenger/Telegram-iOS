@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <tl/tlblib.hpp>
 
@@ -32,6 +32,12 @@ const NatWidth t_Nat{32};
 
 const Anything t_Anything;
 const RefAnything t_RefCell;
+
+std::string TLB::get_type_name() const {
+  std::ostringstream os;
+  print_type(os);
+  return os.str();
+}
 
 bool Bool::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
   int t = get_tag(cs);
@@ -108,45 +114,51 @@ bool TupleT::skip(vm::CellSlice& cs) const {
   return !i;
 }
 
-bool TupleT::validate_skip(vm::CellSlice& cs, bool weak) const {
+bool TupleT::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   int i = n;
   for (; i > 0; --i) {
-    if (!X.validate_skip(cs, weak)) {
+    if (!X.validate_skip(ops, cs, weak)) {
       break;
     }
   }
   return !i;
 }
 
-bool TLB::validate_ref_internal(Ref<vm::Cell> cell_ref, bool weak) const {
+bool TLB::validate_ref_internal(int* ops, Ref<vm::Cell> cell_ref, bool weak) const {
+  if (ops && --*ops < 0) {
+    return false;
+  }
   bool is_special;
   auto cs = load_cell_slice_special(std::move(cell_ref), is_special);
-  return always_special() ? is_special : (is_special ? weak : (validate_skip(cs) && cs.empty_ext()));
+  return always_special() ? is_special : (is_special ? weak : (validate_skip(ops, cs) && cs.empty_ext()));
 }
 
 bool TLB::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
   pp.open("raw@");
   pp << *this << ' ';
   vm::CellSlice cs_copy{cs};
-  if (!validate_skip(cs) || !cs_copy.cut_tail(cs)) {
+  int size_limit = pp.limit;
+  if (!validate_skip(&size_limit, cs) || !cs_copy.cut_tail(cs)) {
     return pp.fail("invalid value");
   }
   pp.raw_nl();
-  cs_copy.print_rec(pp.os, pp.indent);
-  return pp.mkindent() && pp.close();
+  return (cs_copy.print_rec(pp.os, &pp.limit, pp.indent) && pp.mkindent() && pp.close()) ||
+         pp.fail("raw value too long");
 }
 
 bool TLB::print_special(PrettyPrinter& pp, vm::CellSlice& cs) const {
   pp.open("raw@");
   pp << *this << ' ';
   pp.raw_nl();
-  cs.print_rec(pp.os, pp.indent);
-  return pp.mkindent() && pp.close();
+  return (cs.print_rec(pp.os, &pp.limit, pp.indent) && pp.mkindent() && pp.close()) || pp.fail("raw value too long");
 }
 
 bool TLB::print_ref(PrettyPrinter& pp, Ref<vm::Cell> cell_ref) const {
   if (cell_ref.is_null()) {
     return pp.fail("null cell reference");
+  }
+  if (!pp.register_recursive_call()) {
+    return pp.fail("too many recursive calls while printing a TL-B value");
   }
   bool is_special;
   auto cs = load_cell_slice_special(std::move(cell_ref), is_special);
@@ -157,18 +169,21 @@ bool TLB::print_ref(PrettyPrinter& pp, Ref<vm::Cell> cell_ref) const {
   }
 }
 
-bool TLB::print_skip(std::ostream& os, vm::CellSlice& cs, int indent) const {
+bool TLB::print_skip(std::ostream& os, vm::CellSlice& cs, int indent, int rec_limit) const {
   PrettyPrinter pp{os, indent};
+  pp.set_limit(rec_limit);
   return pp.fail_unless(print_skip(pp, cs));
 }
 
-bool TLB::print(std::ostream& os, const vm::CellSlice& cs, int indent) const {
+bool TLB::print(std::ostream& os, const vm::CellSlice& cs, int indent, int rec_limit) const {
   PrettyPrinter pp{os, indent};
+  pp.set_limit(rec_limit);
   return pp.fail_unless(print(pp, cs));
 }
 
-bool TLB::print_ref(std::ostream& os, Ref<vm::Cell> cell_ref, int indent) const {
+bool TLB::print_ref(std::ostream& os, Ref<vm::Cell> cell_ref, int indent, int rec_limit) const {
   PrettyPrinter pp{os, indent};
+  pp.set_limit(rec_limit);
   return pp.fail_unless(print_ref(pp, std::move(cell_ref)));
 }
 
@@ -207,7 +222,7 @@ PrettyPrinter::~PrettyPrinter() {
 }
 
 bool PrettyPrinter::fail(std::string msg) {
-  os << "<FATAL: " << msg << ">";
+  os << "<FATAL: " << msg << ">" << std::endl;
   failed = true;
   return false;
 }
@@ -337,6 +352,27 @@ bool PrettyPrinter::fetch_uint256_field(vm::CellSlice& cs, int n) {
 bool PrettyPrinter::fetch_uint256_field(vm::CellSlice& cs, int n, std::string name) {
   os << ' ' << name << ':';
   return out_integer(cs.fetch_int256(n, false));
+}
+
+}  // namespace tlb
+
+namespace tlb {
+
+bool TypenameLookup::register_types(typename TypenameLookup::register_func_t func) {
+  return func([this](const char* name, const TLB* tp) { return register_type(name, tp); });
+}
+
+bool TypenameLookup::register_type(const char* name, const TLB* tp) {
+  if (!name || !tp) {
+    return false;
+  }
+  auto res = types.emplace(name, tp);
+  return res.second;
+}
+
+const TLB* TypenameLookup::lookup(std::string str) const {
+  auto it = types.find(str);
+  return it != types.end() ? it->second : nullptr;
 }
 
 }  // namespace tlb

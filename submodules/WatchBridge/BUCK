@@ -4,14 +4,7 @@ static_library(
     name = "WatchBridge",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/**/*.m",
     ]),
-    headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/WatchBridge.h"]),
-    exported_headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/WatchBridge.h"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
@@ -29,6 +22,7 @@ static_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyUI:LegacyUI",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/WatchBridge/Impl:WatchBridgeImpl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

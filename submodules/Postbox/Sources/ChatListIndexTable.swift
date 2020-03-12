@@ -175,18 +175,18 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
     }
     
-    func commitWithTransaction(postbox: Postbox, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [(Peer?, Peer)], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedRootUnreadState: inout ChatListTotalUnreadState?, updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
+    func commitWithTransaction(postbox: Postbox, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [((Peer, Bool)?, (Peer, Bool))], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedRootUnreadState: inout ChatListTotalUnreadState?, updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
         var updatedPeerTags: [PeerId: (previous: PeerSummaryCounterTags, updated: PeerSummaryCounterTags)] = [:]
         for (previous, updated) in updatedPeers {
             let previousTags: PeerSummaryCounterTags
-            if let previous = previous {
-                previousTags = postbox.seedConfiguration.peerSummaryCounterTags(previous)
+            if let (previous, previousIsContact) = previous {
+                previousTags = postbox.seedConfiguration.peerSummaryCounterTags(previous, previousIsContact)
             } else {
                 previousTags = []
             }
-            let updatedTags = postbox.seedConfiguration.peerSummaryCounterTags(updated)
+            let updatedTags = postbox.seedConfiguration.peerSummaryCounterTags(updated.0, updated.1)
             if previousTags != updatedTags {
-                updatedPeerTags[updated.id] = (previousTags, updatedTags)
+                updatedPeerTags[updated.0.id] = (previousTags, updatedTags)
             }
         }
         
@@ -348,6 +348,7 @@ final class ChatListIndexTable: Table {
                 guard let peer = postbox.peerTable.get(peerId) else {
                     continue
                 }
+                let isContact = postbox.contactsTable.isContact(peerId: peerId)
                 let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
                 let initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
                 let currentReadState = postbox.readStateTable.getCombinedState(peerId)
@@ -435,7 +436,7 @@ final class ChatListIndexTable: Table {
                     }
                     
                     if var currentTotalRootUnreadState = totalRootUnreadState {
-                        var keptTags: PeerSummaryCounterTags = postbox.seedConfiguration.peerSummaryCounterTags(peer)
+                        var keptTags: PeerSummaryCounterTags = postbox.seedConfiguration.peerSummaryCounterTags(peer, isContact)
                         if let (removedTags, addedTags) = updatedPeerTags[peerId] {
                             keptTags.remove(removedTags)
                             keptTags.remove(addedTags)
@@ -583,6 +584,7 @@ final class ChatListIndexTable: Table {
             guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {
                 continue
             }
+            let isContact = postbox.contactsTable.isContact(peerId: peerId)
             let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
             let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId)
             let inclusion = self.get(peerId: peerId)
@@ -590,7 +592,7 @@ final class ChatListIndexTable: Table {
                 if case .root = groupId {
                     let peerMessageCount = combinedState.count
                     
-                    let summaryTags = postbox.seedConfiguration.peerSummaryCounterTags(peer)
+                    let summaryTags = postbox.seedConfiguration.peerSummaryCounterTags(peer, isContact)
                     for tag in summaryTags {
                         if rootState.absoluteCounters[tag] == nil {
                             rootState.absoluteCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)

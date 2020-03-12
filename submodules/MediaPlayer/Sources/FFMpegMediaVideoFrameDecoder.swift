@@ -1,7 +1,6 @@
 import CoreMedia
 import Accelerate
-import FFMpeg
-import Accelerate
+import FFMpegBinding
 
 private let bufferCount = 32
 

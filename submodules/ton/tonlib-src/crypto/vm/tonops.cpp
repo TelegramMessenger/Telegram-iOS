@@ -14,15 +14,15 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <functional>
 #include "vm/tonops.h"
 #include "vm/log.h"
 #include "vm/opctable.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
 #include "vm/excno.hpp"
+#include "vm/vm.h"
 #include "vm/dict.h"
 #include "Ed25519.h"
 
@@ -77,7 +77,7 @@ int exec_set_gas_limit(VmState* st) {
 
 int exec_commit(VmState* st) {
   VM_LOG(st) << "execute COMMIT";
-  st->commit();
+  st->force_commit();
   return 0;
 }
 
@@ -165,6 +165,8 @@ int exec_set_global_common(VmState* st, unsigned idx) {
   if (idx >= 255) {
     throw VmError{Excno::range_chk, "tuple index out of range"};
   }
+  static auto empty_tuple = Ref<Tuple>{true};
+  st->set_c7(empty_tuple);  // optimization; use only if no exception can be thrown until true set_c7()
   auto tpay = tuple_extend_set_index(tuple, idx, std::move(x));
   if (tpay > 0) {
     st->consume_tuple_gas(tpay);
@@ -193,7 +195,8 @@ void register_ton_config_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0xf823, 16, "NOW", std::bind(exec_get_param, _1, 3, "NOW")))
       .insert(OpcodeInstr::mksimple(0xf824, 16, "BLOCKLT", std::bind(exec_get_param, _1, 4, "BLOCKLT")))
       .insert(OpcodeInstr::mksimple(0xf825, 16, "LTIME", std::bind(exec_get_param, _1, 5, "LTIME")))
-      .insert(OpcodeInstr::mkfixedrange(0xf826, 0xf828, 16, 4, instr::dump_1c("GETPARAM "), exec_get_var_param))
+      .insert(OpcodeInstr::mksimple(0xf826, 16, "RANDSEED", std::bind(exec_get_param, _1, 6, "RANDSEED")))
+      .insert(OpcodeInstr::mksimple(0xf827, 16, "BALANCE", std::bind(exec_get_param, _1, 7, "BALANCE")))
       .insert(OpcodeInstr::mksimple(0xf828, 16, "MYADDR", std::bind(exec_get_param, _1, 8, "MYADDR")))
       .insert(OpcodeInstr::mksimple(0xf829, 16, "CONFIGROOT", std::bind(exec_get_param, _1, 9, "CONFIGROOT")))
       .insert(OpcodeInstr::mkfixedrange(0xf82a, 0xf830, 16, 4, instr::dump_1c("GETPARAM "), exec_get_var_param))
@@ -204,6 +207,112 @@ void register_ton_config_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mkfixedrange(0xf841, 0xf860, 16, 5, instr::dump_1c_and(31, "GETGLOB "), exec_get_global))
       .insert(OpcodeInstr::mksimple(0xf860, 16, "SETGLOBVAR", exec_set_global_var))
       .insert(OpcodeInstr::mkfixedrange(0xf861, 0xf880, 16, 5, instr::dump_1c_and(31, "SETGLOB "), exec_set_global));
+}
+
+static constexpr int randseed_idx = 6;
+
+td::RefInt256 generate_randu256(VmState* st) {
+  auto tuple = st->get_c7();
+  auto t1 = tuple_index(*tuple, 0).as_tuple_range(255);
+  if (t1.is_null()) {
+    throw VmError{Excno::type_chk, "intermediate value is not a tuple"};
+  }
+  auto seedv = tuple_index(*t1, randseed_idx).as_int();
+  if (seedv.is_null()) {
+    throw VmError{Excno::type_chk, "random seed is not an integer"};
+  }
+  unsigned char seed[32];
+  if (!seedv->export_bytes(seed, 32, false)) {
+    throw VmError{Excno::range_chk, "random seed out of range"};
+  }
+  unsigned char hash[64];
+  digest::hash_str<digest::SHA512>(hash, seed, 32);
+  if (!seedv.write().import_bytes(hash, 32, false)) {
+    throw VmError{Excno::range_chk, "cannot store new random seed"};
+  }
+  td::RefInt256 res{true};
+  if (!res.write().import_bytes(hash + 32, 32, false)) {
+    throw VmError{Excno::range_chk, "cannot store new random number"};
+  }
+  static auto empty_tuple = Ref<Tuple>{true};
+  st->set_c7(empty_tuple);  // optimization; use only if no exception can be thrown until true set_c7()
+  tuple.write()[0].clear();
+  t1.write().at(randseed_idx) = std::move(seedv);
+  st->consume_tuple_gas(t1);
+  tuple.write().at(0) = std::move(t1);
+  st->consume_tuple_gas(tuple);
+  st->set_c7(std::move(tuple));
+  return res;
+}
+
+int exec_randu256(VmState* st) {
+  VM_LOG(st) << "execute RANDU256";
+  st->get_stack().push_int(generate_randu256(st));
+  return 0;
+}
+
+int exec_rand_int(VmState* st) {
+  VM_LOG(st) << "execute RAND";
+  auto& stack = st->get_stack();
+  stack.check_underflow(1);
+  auto x = stack.pop_int_finite();
+  auto y = generate_randu256(st);
+  typename td::BigInt256::DoubleInt tmp{0};
+  tmp.add_mul(*x, *y);
+  tmp.rshift(256, -1).normalize();
+  stack.push_int(td::make_refint(tmp));
+  return 0;
+}
+
+int exec_set_rand(VmState* st, bool mix) {
+  VM_LOG(st) << "execute " << (mix ? "ADDRAND" : "SETRAND");
+  auto& stack = st->get_stack();
+  stack.check_underflow(1);
+  auto x = stack.pop_int_finite();
+  if (!x->unsigned_fits_bits(256)) {
+    throw VmError{Excno::range_chk, "new random seed out of range"};
+  }
+  auto tuple = st->get_c7();
+  auto t1 = tuple_index(*tuple, 0).as_tuple_range(255);
+  if (t1.is_null()) {
+    throw VmError{Excno::type_chk, "intermediate value is not a tuple"};
+  }
+  if (mix) {
+    auto seedv = tuple_index(*t1, randseed_idx).as_int();
+    if (seedv.is_null()) {
+      throw VmError{Excno::type_chk, "random seed is not an integer"};
+    }
+    unsigned char buffer[64], hash[32];
+    if (!std::move(seedv)->export_bytes(buffer, 32, false)) {
+      throw VmError{Excno::range_chk, "random seed out of range"};
+    }
+    if (!x->export_bytes(buffer + 32, 32, false)) {
+      throw VmError{Excno::range_chk, "mixed seed value out of range"};
+    }
+    digest::hash_str<digest::SHA256>(hash, buffer, 64);
+    if (!x.write().import_bytes(hash, 32, false)) {
+      throw VmError{Excno::range_chk, "new random seed value out of range"};
+    }
+  }
+  static auto empty_tuple = Ref<Tuple>{true};
+  st->set_c7(empty_tuple);  // optimization; use only if no exception can be thrown until true set_c7()
+  tuple.write()[0].clear();
+  auto tpay = tuple_extend_set_index(t1, randseed_idx, std::move(x));
+  if (tpay > 0) {
+    st->consume_tuple_gas(tpay);
+  }
+  tuple.unique_write()[0] = std::move(t1);
+  st->consume_tuple_gas(tuple);
+  st->set_c7(std::move(tuple));
+  return 0;
+}
+
+void register_prng_ops(OpcodeTable& cp0) {
+  using namespace std::placeholders;
+  cp0.insert(OpcodeInstr::mksimple(0xf810, 16, "RANDU256", exec_randu256))
+      .insert(OpcodeInstr::mksimple(0xf811, 16, "RAND", exec_rand_int))
+      .insert(OpcodeInstr::mksimple(0xf814, 16, "SETRAND", std::bind(exec_set_rand, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xf815, 16, "ADDRAND", std::bind(exec_set_rand, _1, true)));
 }
 
 int exec_compute_hash(VmState* st, int mode) {
@@ -286,6 +395,83 @@ void register_ton_crypto_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0xf902, 16, "SHA256U", exec_compute_sha256))
       .insert(OpcodeInstr::mksimple(0xf910, 16, "CHKSIGNU", std::bind(exec_ed25519_check_signature, _1, false)))
       .insert(OpcodeInstr::mksimple(0xf911, 16, "CHKSIGNS", std::bind(exec_ed25519_check_signature, _1, true)));
+}
+
+struct VmStorageStat {
+  td::uint64 cells{0}, bits{0}, refs{0}, limit;
+  td::HashSet<CellHash> visited;
+  VmStorageStat(td::uint64 _limit) : limit(_limit) {
+  }
+  bool add_storage(Ref<Cell> cell);
+  bool add_storage(const CellSlice& cs);
+  bool check_visited(const CellHash& cell_hash) {
+    return visited.insert(cell_hash).second;
+  }
+  bool check_visited(const Ref<Cell>& cell) {
+    return check_visited(cell->get_hash());
+  }
+};
+
+bool VmStorageStat::add_storage(Ref<Cell> cell) {
+  if (cell.is_null() || !check_visited(cell)) {
+    return true;
+  }
+  if (cells >= limit) {
+    return false;
+  }
+  ++cells;
+  bool special;
+  auto cs = load_cell_slice_special(std::move(cell), special);
+  return cs.is_valid() && add_storage(std::move(cs));
+}
+
+bool VmStorageStat::add_storage(const CellSlice& cs) {
+  bits += cs.size();
+  refs += cs.size_refs();
+  for (unsigned i = 0; i < cs.size_refs(); i++) {
+    if (!add_storage(cs.prefetch_ref(i))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int exec_compute_data_size(VmState* st, int mode) {
+  VM_LOG(st) << (mode & 2 ? 'S' : 'C') << "DATASIZE" << (mode & 1 ? "Q" : "");
+  Stack& stack = st->get_stack();
+  stack.check_underflow(2);
+  auto bound = stack.pop_int();
+  Ref<Cell> cell;
+  Ref<CellSlice> cs;
+  if (mode & 2) {
+    cs = stack.pop_cellslice();
+  } else {
+    cell = stack.pop_maybe_cell();
+  }
+  if (!bound->is_valid() || bound->sgn() < 0) {
+    throw VmError{Excno::range_chk, "finite non-negative integer expected"};
+  }
+  VmStorageStat stat{bound->unsigned_fits_bits(63) ? bound->to_long() : (1ULL << 63) - 1};
+  bool ok = (mode & 2 ? stat.add_storage(cs.write()) : stat.add_storage(std::move(cell)));
+  if (ok) {
+    stack.push_smallint(stat.cells);
+    stack.push_smallint(stat.bits);
+    stack.push_smallint(stat.refs);
+  } else if (!(mode & 1)) {
+    throw VmError{Excno::cell_ov, "scanned too many cells"};
+  }
+  if (mode & 1) {
+    stack.push_bool(ok);
+  }
+  return 0;
+}
+
+void register_ton_misc_ops(OpcodeTable& cp0) {
+  using namespace std::placeholders;
+  cp0.insert(OpcodeInstr::mksimple(0xf940, 16, "CDATASIZEQ", std::bind(exec_compute_data_size, _1, 1)))
+      .insert(OpcodeInstr::mksimple(0xf941, 16, "CDATASIZE", std::bind(exec_compute_data_size, _1, 0)))
+      .insert(OpcodeInstr::mksimple(0xf942, 16, "SDATASIZEQ", std::bind(exec_compute_data_size, _1, 3)))
+      .insert(OpcodeInstr::mksimple(0xf943, 16, "SDATASIZE", std::bind(exec_compute_data_size, _1, 2)));
 }
 
 int exec_load_var_integer(VmState* st, int len_bits, bool sgnd, bool quiet) {
@@ -421,15 +607,15 @@ bool parse_maybe_anycast(CellSlice& cs, StackEntry& res) {
 bool parse_message_addr(CellSlice& cs, std::vector<StackEntry>& res) {
   res.clear();
   switch ((unsigned)cs.fetch_ulong(2)) {
-    case 0:                                      // addr_none$00 = MsgAddressExt;
-      res.emplace_back(td::RefInt256{true, 0});  // -> (0)
+    case 0:                                 // addr_none$00 = MsgAddressExt;
+      res.emplace_back(td::zero_refint());  // -> (0)
       return true;
     case 1: {  // addr_extern$01
       unsigned len;
       Ref<CellSlice> addr;
       if (cs.fetch_uint_to(9, len)               // len:(## 9)
           && cs.fetch_subslice_to(len, addr)) {  // external_address:(bits len) = MsgAddressExt;
-        res.emplace_back(td::RefInt256{true, 1});
+        res.emplace_back(td::make_refint(1));
         res.emplace_back(std::move(addr));
         return true;
       }
@@ -442,9 +628,9 @@ bool parse_message_addr(CellSlice& cs, std::vector<StackEntry>& res) {
       if (parse_maybe_anycast(cs, v)             // anycast:(Maybe Anycast)
           && cs.fetch_int_to(8, workchain)       // workchain_id:int8
           && cs.fetch_subslice_to(256, addr)) {  // address:bits256  = MsgAddressInt;
-        res.emplace_back(td::RefInt256{true, 2});
+        res.emplace_back(td::make_refint(2));
         res.emplace_back(std::move(v));
-        res.emplace_back(td::RefInt256{true, workchain});
+        res.emplace_back(td::make_refint(workchain));
         res.emplace_back(std::move(addr));
         return true;
       }
@@ -458,9 +644,9 @@ bool parse_message_addr(CellSlice& cs, std::vector<StackEntry>& res) {
           && cs.fetch_uint_to(9, len)            // addr_len:(## 9)
           && cs.fetch_int_to(32, workchain)      // workchain_id:int32
           && cs.fetch_subslice_to(len, addr)) {  // address:(bits addr_len) = MsgAddressInt;
-        res.emplace_back(td::RefInt256{true, 3});
+        res.emplace_back(td::make_refint(3));
         res.emplace_back(std::move(v));
-        res.emplace_back(td::RefInt256{true, workchain});
+        res.emplace_back(td::make_refint(workchain));
         res.emplace_back(std::move(addr));
         return true;
       }
@@ -625,26 +811,24 @@ bool store_grams(CellBuilder& cb, td::RefInt256 value) {
 }
 
 int exec_reserve_raw(VmState* st, int mode) {
-  VM_LOG(st) << "execute RESERVERAW" << (mode & 1 ? "X" : "");
+  VM_LOG(st) << "execute RAWRESERVE" << (mode & 1 ? "X" : "");
   Stack& stack = st->get_stack();
-  stack.check_underflow(2);
-  int f = stack.pop_smallint_range(3);
-  td::RefInt256 x;
-  Ref<CellSlice> csr;
+  stack.check_underflow(2 + (mode & 1));
+  int f = stack.pop_smallint_range(15);
+  Ref<Cell> y;
   if (mode & 1) {
-    csr = stack.pop_cellslice();
-  } else {
-    x = stack.pop_int_finite();
-    if (td::sgn(x) < 0) {
-      throw VmError{Excno::range_chk, "amount of nanograms must be non-negative"};
-    }
+    y = stack.pop_maybe_cell();
+  }
+  auto x = stack.pop_int_finite();
+  if (td::sgn(x) < 0) {
+    throw VmError{Excno::range_chk, "amount of nanograms must be non-negative"};
   }
   CellBuilder cb;
   if (!(cb.store_ref_bool(get_actions(st))     // out_list$_ {n:#} prev:^(OutList n)
         && cb.store_long_bool(0x36e6b809, 32)  // action_reserve_currency#36e6b809
         && cb.store_long_bool(f, 8)            // mode:(## 8)
-        && (mode & 1 ? cb.append_cellslice_bool(std::move(csr))
-                     : (store_grams(cb, std::move(x)) && cb.store_bool_bool(false))))) {
+        && store_grams(cb, std::move(x))       //
+        && cb.store_maybe_ref(std::move(y)))) {
     throw VmError{Excno::cell_ov, "cannot serialize raw reserved currency amount into an output action cell"};
   }
   return install_output_action(st, cb.finalize());
@@ -662,19 +846,58 @@ int exec_set_code(VmState* st) {
   return install_output_action(st, cb.finalize());
 }
 
+int exec_set_lib_code(VmState* st) {
+  VM_LOG(st) << "execute SETLIBCODE";
+  Stack& stack = st->get_stack();
+  stack.check_underflow(2);
+  int mode = stack.pop_smallint_range(2);
+  auto code = stack.pop_cell();
+  CellBuilder cb;
+  if (!(cb.store_ref_bool(get_actions(st))         // out_list$_ {n:#} prev:^(OutList n)
+        && cb.store_long_bool(0x26fa1dd4, 32)      // action_change_library#26fa1dd4
+        && cb.store_long_bool(mode * 2 + 1, 8)     // mode:(## 7) { mode <= 2 }
+        && cb.store_ref_bool(std::move(code)))) {  // libref:LibRef = OutAction;
+    throw VmError{Excno::cell_ov, "cannot serialize new library code into an output action cell"};
+  }
+  return install_output_action(st, cb.finalize());
+}
+
+int exec_change_lib(VmState* st) {
+  VM_LOG(st) << "execute CHANGELIB";
+  Stack& stack = st->get_stack();
+  stack.check_underflow(2);
+  int mode = stack.pop_smallint_range(2);
+  auto hash = stack.pop_int_finite();
+  if (!hash->unsigned_fits_bits(256)) {
+    throw VmError{Excno::range_chk, "library hash must be non-negative"};
+  }
+  CellBuilder cb;
+  if (!(cb.store_ref_bool(get_actions(st))             // out_list$_ {n:#} prev:^(OutList n)
+        && cb.store_long_bool(0x26fa1dd4, 32)          // action_change_library#26fa1dd4
+        && cb.store_long_bool(mode * 2, 8)             // mode:(## 7) { mode <= 2 }
+        && cb.store_int256_bool(hash, 256, false))) {  // libref:LibRef = OutAction;
+    throw VmError{Excno::cell_ov, "cannot serialize library hash into an output action cell"};
+  }
+  return install_output_action(st, cb.finalize());
+}
+
 void register_ton_message_ops(OpcodeTable& cp0) {
   using namespace std::placeholders;
   cp0.insert(OpcodeInstr::mksimple(0xfb00, 16, "SENDRAWMSG", exec_send_raw_message))
-      .insert(OpcodeInstr::mksimple(0xfb02, 16, "RESERVERAW", std::bind(exec_reserve_raw, _1, 0)))
-      .insert(OpcodeInstr::mksimple(0xfb03, 16, "RESERVERAWX", std::bind(exec_reserve_raw, _1, 1)))
-      .insert(OpcodeInstr::mksimple(0xfb04, 16, "SETCODE", exec_set_code));
+      .insert(OpcodeInstr::mksimple(0xfb02, 16, "RAWRESERVE", std::bind(exec_reserve_raw, _1, 0)))
+      .insert(OpcodeInstr::mksimple(0xfb03, 16, "RAWRESERVEX", std::bind(exec_reserve_raw, _1, 1)))
+      .insert(OpcodeInstr::mksimple(0xfb04, 16, "SETCODE", exec_set_code))
+      .insert(OpcodeInstr::mksimple(0xfb06, 16, "SETLIBCODE", exec_set_lib_code))
+      .insert(OpcodeInstr::mksimple(0xfb07, 16, "CHANGELIB", exec_change_lib));
 }
 
 void register_ton_ops(OpcodeTable& cp0) {
   register_basic_gas_ops(cp0);
   register_ton_gas_ops(cp0);
+  register_prng_ops(cp0);
   register_ton_config_ops(cp0);
   register_ton_crypto_ops(cp0);
+  register_ton_misc_ops(cp0);
   register_ton_currency_address_ops(cp0);
   register_ton_message_ops(cp0);
 }

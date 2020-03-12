@@ -456,8 +456,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
             }
-            var leftInset: CGFloat = 65.0 + params.leftInset
-            let rightInset: CGFloat = 10.0 + params.rightInset
+            let leftInset: CGFloat = 65.0 + params.leftInset
+            var rightInset: CGFloat = 10.0 + params.rightInset
             
             let updatedSelectionNode: CheckNode?
             var isSelected = false
@@ -465,7 +465,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             case .none:
                 updatedSelectionNode = nil
             case let .selectable(selected):
-                leftInset += 28.0
+                rightInset += 38.0
                 isSelected = selected
                 
                 let selectionNode: CheckNode
@@ -849,7 +849,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                                 updatedSelectionNode.setIsChecked(isSelected, animated: animated)
                                 
-                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 6.0, y: floor((nodeLayout.contentSize.height - 32.0) / 2.0)), size: CGSize(width: 32.0, height: 32.0))
+                                updatedSelectionNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 32.0 - 12.0, y: floor((nodeLayout.contentSize.height - 32.0) / 2.0)), size: CGSize(width: 32.0, height: 32.0))
                             } else if let selectionNode = strongSelf.selectionNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil

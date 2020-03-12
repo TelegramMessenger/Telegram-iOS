@@ -1003,6 +1003,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self?.listNode.clearHighlightAnimated(true)
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
+        }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             self?.view.endEditing(true)
             if let peer = message.peers[message.id.peerId] {

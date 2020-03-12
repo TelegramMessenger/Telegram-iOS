@@ -1,0 +1,76 @@
+load("//Config:buck_rule_macros.bzl", "static_library", "glob_map", "glob_sub_map", "merge_maps")
+
+static_library(
+    name = "TgVoip",
+    srcs = glob([
+        "Sources/**/*.m",
+        "Sources/**/*.mm",
+        "Sources/**/*.h",
+        "libtgvoip/*.m",
+        "libtgvoip/*.mm",
+        "libtgvoip/*.cpp",
+        "libtgvoip/audio/*.cpp",
+        "libtgvoip/video/*.cpp",
+        "libtgvoip/os/darwin/*.m",
+        "libtgvoip/os/darwin/*.mm",
+        "libtgvoip/os/darwin/*.cpp",
+        "libtgvoip/os/posix/*.cpp",
+        "libtgvoip/webrtc_dsp/**/*.c",
+        "libtgvoip/webrtc_dsp/**/*.cc",
+        "libtgvoip/webrtc_dsp/**/*.cpp",
+    ], exclude = ["libtgvoip/os/darwin/*OSX*"]),
+    has_cpp = True,
+    headers = merge_maps([
+        glob_sub_map("libtgvoip/", [
+            "libtgvoip/*.h",
+            "libtgvoip/*.hpp",
+            "libtgvoip/audio/*.h",
+            "libtgvoip/audio/*.hpp",
+            "libtgvoip/video/*.h",
+            "libtgvoip/video/*.hpp",
+        ]),
+        glob_sub_map("libtgvoip/", [
+            "libtgvoip/os/darwin/*.h",
+        ], exclude = ["libtgvoip/os/darwin/*OSX*"]),
+        glob_sub_map("libtgvoip/webrtc_dsp/", [
+            "libtgvoip/webrtc_dsp/**/*.h",
+        ]),
+    ]),
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    platform_compiler_flags = [
+        ('arm.*', [
+            '-DTGVOIP_USE_CUSTOM_CRYPTO',
+            '-DTGVOIP_USE_INSTALLED_OPUS',
+            '-DWEBRTC_APM_DEBUG_DUMP=0',
+            '-DWEBRTC_POSIX',
+            '-DTGVOIP_HAVE_TGLOG',
+            '-DWEBRTC_NS_FLOAT',
+            '-DWEBRTC_IOS',
+            '-DWEBRTC_HAS_NEON',
+        ]),
+        ('.*', [
+            '-DTGVOIP_USE_CUSTOM_CRYPTO',
+            '-DTGVOIP_USE_INSTALLED_OPUS',
+            '-DWEBRTC_APM_DEBUG_DUMP=0',
+            '-DWEBRTC_POSIX',
+            '-DTGVOIP_HAVE_TGLOG',
+            '-DWEBRTC_NS_FLOAT',
+            '-DWEBRTC_IOS',
+        ]),
+    ],
+    deps = [
+        "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/Opus:opus",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/AudioToolbox.framework",
+        "$SDKROOT/System/Library/Frameworks/VideoToolbox.framework",
+        "$SDKROOT/System/Library/Frameworks/CoreTelephony.framework",
+        "$SDKROOT/System/Library/Frameworks/CoreMedia.framework",
+        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
+    ],
+)

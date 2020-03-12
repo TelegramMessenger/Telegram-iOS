@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "adnl/adnl-ext-client.h"
@@ -50,6 +50,7 @@ class TestNode : public td::actor::Actor {
   bool readline_enabled_ = true;
   bool server_ok_ = false;
   td::int32 liteserver_idx_ = -1;
+  int print_limit_ = 1024;
 
   bool ready_ = false;
   bool inited_ = false;
@@ -65,6 +66,9 @@ class TestNode : public td::actor::Actor {
 
   ton::BlockIdExt last_block_id_, last_state_id_;
   td::BufferSlice last_block_data_, last_state_data_;
+
+  ton::StdSmcAddress dns_root_;
+  bool dns_root_queried_{false};
 
   std::string line_;
   const char *parse_ptr_, *parse_end_;
@@ -93,6 +97,9 @@ class TestNode : public td::actor::Actor {
   };
 
   void run_init_queries();
+  char cur() const {
+    return *parse_ptr_;
+  }
   bool get_server_time();
   bool get_server_version(int mode = 0);
   void got_server_version(td::Result<td::BufferSlice> res, int mode);
@@ -114,16 +121,32 @@ class TestNode : public td::actor::Actor {
                          td::BufferSlice shard_proof, td::BufferSlice proof, td::BufferSlice state,
                          ton::WorkchainId workchain, ton::StdSmcAddress addr, std::string filename, int mode);
   bool parse_run_method(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt ref_blkid,
-                        std::string method_name);
-  void run_smc_method(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, ton::BlockIdExt shard_blk,
+                        std::string method_name, bool ext_mode);
+  bool start_run_method(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt ref_blkid,
+                        std::string method_name, std::vector<vm::StackEntry> params, int mode,
+                        td::Promise<std::vector<vm::StackEntry>> promise);
+  void run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt blk, ton::BlockIdExt shard_blk,
                       td::BufferSlice shard_proof, td::BufferSlice proof, td::BufferSlice state,
                       ton::WorkchainId workchain, ton::StdSmcAddress addr, std::string method,
-                      std::vector<vm::StackEntry> params);
+                      std::vector<vm::StackEntry> params, td::BufferSlice remote_c7, td::BufferSlice remote_libs,
+                      td::BufferSlice remote_result, int remote_exit_code,
+                      td::Promise<std::vector<vm::StackEntry>> promise);
+  bool register_config_param4(Ref<vm::Cell> value);
+  bool dns_resolve_start(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt blkid, std::string domain,
+                         int cat, int mode);
+  bool dns_resolve_send(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt blkid, std::string domain,
+                        std::string qdomain, int cat, int mode);
+  void dns_resolve_finish(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt blkid,
+                          std::string domain, std::string qdomain, int cat, int mode, int used_bits,
+                          Ref<vm::Cell> value);
+  bool show_dns_record(std::ostream& os, int cat, Ref<vm::Cell> value, bool raw_dump);
   bool get_all_shards(bool use_last = true, ton::BlockIdExt blkid = {});
   void got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::BufferSlice data);
-  bool get_config_params(ton::BlockIdExt blkid, int mode = 0, std::string filename = "");
+  bool get_config_params(ton::BlockIdExt blkid, td::Promise<td::Unit> do_after, int mode = 0, std::string filename = "",
+                         std::vector<int> params = {});
   void got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, td::BufferSlice state_proof,
-                         td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params);
+                         td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params,
+                         td::Promise<td::Unit> do_after);
   bool get_block(ton::BlockIdExt blk, bool dump = false);
   void got_block(ton::BlockIdExt blkid, td::BufferSlice data, bool dump);
   bool get_state(ton::BlockIdExt blk, bool dump = false);
@@ -150,10 +173,18 @@ class TestNode : public td::actor::Actor {
                               std::vector<TransId> trans, td::BufferSlice proof);
   bool get_block_proof(ton::BlockIdExt from, ton::BlockIdExt to, int mode);
   void got_block_proof(ton::BlockIdExt from, ton::BlockIdExt to, int mode, td::BufferSlice res);
+  bool get_creator_stats(ton::BlockIdExt blkid, int mode, unsigned req_count, ton::Bits256 start_after,
+                         ton::UnixTime min_utime);
+  void got_creator_stats(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, int req_mode, int mode,
+                         td::Bits256 start_after, ton::UnixTime min_utime, td::BufferSlice state_proof,
+                         td::BufferSlice data_proof, int count, int req_count, bool complete);
+  // parser
   bool do_parse_line();
   bool show_help(std::string command);
-  std::string get_word(char delim = ' ');
+  td::Slice get_word(char delim = ' ');
+  td::Slice get_word_ext(const char* delims, const char* specials = nullptr);
   bool get_word_to(std::string& str, char delim = ' ');
+  bool get_word_to(td::Slice& str, char delim = ' ');
   int skipspc();
   std::string get_line_tail(bool remove_spaces = true) const;
   bool eoln() const;
@@ -161,25 +192,31 @@ class TestNode : public td::actor::Actor {
   bool set_error(td::Status error);
   bool set_error(std::string err_msg);
   void show_context() const;
-  bool parse_account_addr(ton::WorkchainId& wc, ton::StdSmcAddress& addr);
+  bool parse_account_addr(ton::WorkchainId& wc, ton::StdSmcAddress& addr, bool allow_none = false);
   static int parse_hex_digit(int c);
   static bool parse_hash(const char* str, ton::Bits256& hash);
-  static bool convert_uint64(std::string word, td::uint64& val);
-  static bool convert_int64(std::string word, td::int64& val);
-  static bool convert_uint32(std::string word, td::uint32& val);
-  static bool convert_int32(std::string word, td::int32& val);
-  static bool convert_shard_id(std::string str, ton::ShardIdFull& shard);
+  static bool parse_hash(td::Slice str, ton::Bits256& hash);
+  static bool convert_uint64(td::Slice word, td::uint64& val);
+  static bool convert_int64(td::Slice word, td::int64& val);
+  static bool convert_uint32(td::Slice word, td::uint32& val);
+  static bool convert_int32(td::Slice word, td::int32& val);
+  static bool convert_shard_id(td::Slice str, ton::ShardIdFull& shard);
+  static td::int64 compute_method_id(std::string method);
   bool parse_hash(ton::Bits256& hash);
   bool parse_lt(ton::LogicalTime& lt);
   bool parse_uint32(td::uint32& val);
+  bool parse_int32(td::int32& val);
+  bool parse_int16(int& val);
   bool parse_shard_id(ton::ShardIdFull& shard);
   bool parse_block_id_ext(ton::BlockIdExt& blkid, bool allow_incomplete = false);
   bool parse_block_id_ext(std::string blk_id_string, ton::BlockIdExt& blkid, bool allow_incomplete = false) const;
   bool parse_stack_value(td::Slice str, vm::StackEntry& value);
   bool parse_stack_value(vm::StackEntry& value);
+  bool parse_stack_values(std::vector<vm::StackEntry>& values);
   bool register_blkid(const ton::BlockIdExt& blkid);
   bool show_new_blkids(bool all = false);
   bool complete_blkid(ton::BlockId partial_blkid, ton::BlockIdExt& complete_blkid) const;
+  td::Promise<td::Unit> trivial_promise();
 
  public:
   void conn_ready() {
@@ -221,6 +258,11 @@ class TestNode : public td::actor::Actor {
   void set_fail_timeout(td::Timestamp ts) {
     fail_timeout_ = ts;
     alarm_timestamp().relax(fail_timeout_);
+  }
+  void set_print_limit(int plimit) {
+    if (plimit >= 0) {
+      print_limit_ = plimit;
+    }
   }
   void add_cmd(td::BufferSlice data) {
     ex_mode_ = true;

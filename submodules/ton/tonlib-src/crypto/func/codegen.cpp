@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "func.h"
 
@@ -84,7 +84,9 @@ void Stack::forget_const() {
 
 void Stack::issue_pop(int i) {
   validate(i);
-  o << AsmOp::Pop(i);
+  if (output_enabled()) {
+    o << AsmOp::Pop(i);
+  }
   at(i) = get(0);
   s.pop_back();
   modified();
@@ -92,7 +94,9 @@ void Stack::issue_pop(int i) {
 
 void Stack::issue_push(int i) {
   validate(i);
-  o << AsmOp::Push(i);
+  if (output_enabled()) {
+    o << AsmOp::Push(i);
+  }
   s.push_back(get(i));
   modified();
 }
@@ -101,7 +105,9 @@ void Stack::issue_xchg(int i, int j) {
   validate(i);
   validate(j);
   if (i != j && get(i) != get(j)) {
-    o << AsmOp::Xchg(i, j);
+    if (output_enabled()) {
+      o << AsmOp::Xchg(i, j);
+    }
     std::swap(at(i), at(j));
     modified();
   }
@@ -182,6 +188,10 @@ void Stack::enforce_state(const StackLayout& req_stack) {
     var_idx_t x = req_stack[i];
     if (i < depth() && s[i].first == x) {
       continue;
+    }
+    while (depth() > 0 && std::find(req_stack.cbegin(), req_stack.cend(), get(0).first) == req_stack.cend()) {
+      // current TOS entry is unused in req_stack, drop it
+      issue_pop(0);
     }
     int j = find(x);
     if (j >= depth() - i) {
@@ -292,27 +302,61 @@ bool Op::generate_code_step(Stack& stack) {
       }
       return true;
     }
-    case _GlobVar: {
-      assert(left.size() == 1);
-      auto p = next_var_info[left[0]];
-      if (!p || p->is_unused() || disabled()) {
+    case _GlobVar:
+      if (dynamic_cast<const SymValGlobVar*>(fun_ref->value)) {
+        bool used = false;
+        for (auto i : left) {
+          auto p = next_var_info[i];
+          if (p && !p->is_unused()) {
+            used = true;
+          }
+        }
+        if (!used || disabled()) {
+          return true;
+        }
+        std::string name = sym::symbols.get_name(fun_ref->sym_idx);
+        stack.o << AsmOp::Custom(name + " GETGLOB", 0, 1);
+        if (left.size() != 1) {
+          assert(left.size() <= 15);
+          stack.o << AsmOp::UnTuple((int)left.size());
+        }
+        for (auto i : left) {
+          stack.push_new_var(i);
+        }
+        return true;
+      } else {
+        assert(left.size() == 1);
+        auto p = next_var_info[left[0]];
+        if (!p || p->is_unused() || disabled()) {
+          return true;
+        }
+        stack.o << "CONT:<{";
+        stack.o.indent();
+        auto func = dynamic_cast<SymValAsmFunc*>(fun_ref->value);
+        if (func) {
+          // TODO: create and compile a true lambda instead of this (so that arg_order and ret_order would work correctly)
+          std::vector<VarDescr> args0, res;
+          TypeExpr::remove_indirect(func->sym_type);
+          assert(func->get_type()->is_map());
+          auto wr = func->get_type()->args.at(0)->get_width();
+          auto wl = func->get_type()->args.at(1)->get_width();
+          assert(wl >= 0 && wr >= 0);
+          for (int i = 0; i < wl; i++) {
+            res.emplace_back(0);
+          }
+          for (int i = 0; i < wr; i++) {
+            args0.emplace_back(0);
+          }
+          func->compile(stack.o, res, args0);  // compile res := f (args0)
+        } else {
+          std::string name = sym::symbols.get_name(fun_ref->sym_idx);
+          stack.o << AsmOp::Custom(name + " CALLDICT", (int)right.size(), (int)left.size());
+        }
+        stack.o.undent();
+        stack.o << "}>";
+        stack.push_new_var(left.at(0));
         return true;
       }
-      auto func = dynamic_cast<const SymValAsmFunc*>(fun_ref->value);
-      if (func) {
-        std::vector<VarDescr> res;
-        res.reserve(left.size());
-        for (var_idx_t i : left) {
-          res.emplace_back(i);
-        }
-        func->compile(stack.o, res, args);  // compile res := f (args)
-      } else {
-        std::string name = sym::symbols.get_name(fun_ref->sym_idx);
-        stack.o << AsmOp::Custom(name + " CALLDICT", (int)right.size(), (int)left.size());
-      }
-      stack.push_new_var(left[0]);
-      return true;
-    }
     case _Let: {
       assert(left.size() == right.size());
       int i = 0;
@@ -349,6 +393,32 @@ bool Op::generate_code_step(Stack& stack) {
         if (active[k]) {
           stack.assign_var(left[k], --i);
         }
+      }
+      return true;
+    }
+    case _Tuple:
+    case _UnTuple: {
+      if (disabled()) {
+        return true;
+      }
+      std::vector<bool> last;
+      for (var_idx_t x : right) {
+        last.push_back(var_info[x] && var_info[x]->is_last());
+      }
+      stack.rearrange_top(right, std::move(last));
+      stack.opt_show();
+      int k = (int)stack.depth() - (int)right.size();
+      assert(k >= 0);
+      if (cl == _Tuple) {
+        stack.o << AsmOp::Tuple((int)right.size());
+        assert(left.size() == 1);
+      } else {
+        stack.o << AsmOp::UnTuple((int)left.size());
+        assert(right.size() == 1);
+      }
+      stack.s.resize(k);
+      for (int i = 0; i < (int)left.size(); i++) {
+        stack.push_new_var(left.at(i));
       }
       return true;
     }
@@ -395,7 +465,9 @@ bool Op::generate_code_step(Stack& stack) {
         assert(stack.s[k + i].first == right1[i]);
       }
       if (cl == _CallInd) {
-        stack.o << exec_arg_op("CALLARGS", (int)right.size() - 1, (int)right.size(), (int)left.size());
+        // TODO: replace with exec_arg2_op()
+        stack.o << exec_arg2_op("CALLXARGS", (int)right.size() - 1, (int)left.size(), (int)right.size(),
+                                (int)left.size());
       } else {
         auto func = dynamic_cast<const SymValAsmFunc*>(fun_ref->value);
         if (func) {
@@ -418,6 +490,32 @@ bool Op::generate_code_step(Stack& stack) {
         int j = ret_order ? ret_order->at(i) : i;
         stack.push_new_var(left.at(j));
       }
+      return true;
+    }
+    case _SetGlob: {
+      assert(fun_ref && dynamic_cast<const SymValGlobVar*>(fun_ref->value));
+      std::vector<bool> last;
+      for (var_idx_t x : right) {
+        last.push_back(var_info[x] && var_info[x]->is_last());
+      }
+      stack.rearrange_top(right, std::move(last));
+      stack.opt_show();
+      int k = (int)stack.depth() - (int)right.size();
+      assert(k >= 0);
+      for (int i = 0; i < (int)right.size(); i++) {
+        if (stack.s[k + i].first != right[i]) {
+          std::cerr << stack.o;
+        }
+        assert(stack.s[k + i].first == right[i]);
+      }
+      if (right.size() > 1) {
+        stack.o << AsmOp::Tuple((int)right.size());
+      }
+      if (!right.empty()) {
+        std::string name = sym::symbols.get_name(fun_ref->sym_idx);
+        stack.o << AsmOp::Custom(name + " SETGLOB", 1, 0);
+      }
+      stack.s.resize(k);
       return true;
     }
     case _If: {
@@ -448,7 +546,9 @@ bool Op::generate_code_step(Stack& stack) {
         }
         stack.o << "IF:<{";
         stack.o.indent();
-        Stack stack_copy{stack};
+        Stack stack_copy{stack}, stack_target{stack};
+        stack_target.disable_output();
+        stack_target.drop_vars_except(next->var_info);
         block0->generate_code_all(stack_copy);
         stack_copy.drop_vars_except(var_info);
         stack_copy.opt_show();
@@ -457,7 +557,8 @@ bool Op::generate_code_step(Stack& stack) {
           stack.o << "}>";
           return true;
         }
-        stack_copy.drop_vars_except(next->var_info);
+        // stack_copy.drop_vars_except(next->var_info);
+        stack_copy.enforce_state(stack_target.vars());
         stack_copy.opt_show();
         if (stack_copy.vars() == stack.vars()) {
           stack.o.undent();
@@ -487,7 +588,9 @@ bool Op::generate_code_step(Stack& stack) {
         }
         stack.o << "IFNOT:<{";
         stack.o.indent();
-        Stack stack_copy{stack};
+        Stack stack_copy{stack}, stack_target{stack};
+        stack_target.disable_output();
+        stack_target.drop_vars_except(next->var_info);
         block1->generate_code_all(stack_copy);
         stack_copy.drop_vars_except(var_info);
         stack_copy.opt_show();
@@ -497,7 +600,8 @@ bool Op::generate_code_step(Stack& stack) {
           stack.merge_const(stack_copy);
           return true;
         }
-        stack_copy.drop_vars_except(next->var_info);
+        // stack_copy.drop_vars_except(next->var_info);
+        stack_copy.enforce_state(stack_target.vars());
         stack_copy.opt_show();
         if (stack_copy.vars() == stack.vars()) {
           stack.o.undent();

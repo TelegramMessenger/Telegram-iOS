@@ -14,13 +14,15 @@ import ItemListPeerActionItem
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext
     
+    let addSuggestedPresed: (String, ChatListFilterData) -> Void
     let openPreset: (ChatListFilter) -> Void
     let addNew: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
     let removePreset: (Int32) -> Void
     
-    init(context: AccountContext, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
+    init(context: AccountContext, addSuggestedPresed: @escaping (String, ChatListFilterData) -> Void, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
         self.context = context
+        self.addSuggestedPresed = addSuggestedPresed
         self.openPreset = openPreset
         self.addNew = addNew
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
@@ -29,6 +31,8 @@ private final class ChatListFilterPresetListControllerArguments {
 }
 
 private enum ChatListFilterPresetListSection: Int32 {
+    case screenHeader
+    case suggested
     case list
 }
 
@@ -45,20 +49,40 @@ private func stringForUserCount(_ peers: [PeerId: SelectivePrivacyPeer], strings
 }
 
 private enum ChatListFilterPresetListEntryStableId: Hashable {
+    case screenHeader
+    case suggestedListHeader
+    case suggestedPreset(ChatListFilterData)
+    case suggestedAddCustom
     case listHeader
     case preset(Int32)
     case addItem
     case listFooter
 }
 
+private struct PresetIndex: Equatable {
+    let value: Int
+    
+    static func ==(lhs: PresetIndex, rhs: PresetIndex) -> Bool {
+        return true
+    }
+}
+
 private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
+    case screenHeader(String)
+    case suggestedListHeader(String)
+    case suggestedPreset(index: PresetIndex, title: String, label: String, preset: ChatListFilterData)
+    case suggestedAddCustom(String)
     case listHeader(String)
-    case preset(index: Int, title: String?, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool)
+    case preset(index: PresetIndex, title: String, label: String, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool)
     case addItem(text: String, isEditing: Bool)
     case listFooter(String)
     
     var section: ItemListSectionId {
         switch self {
+        case .screenHeader:
+            return ChatListFilterPresetListSection.screenHeader.rawValue
+        case .suggestedListHeader, .suggestedPreset, .suggestedAddCustom:
+            return ChatListFilterPresetListSection.suggested.rawValue
         case .listHeader, .preset, .addItem, .listFooter:
             return ChatListFilterPresetListSection.list.rawValue
         }
@@ -66,19 +90,35 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     
     var sortId: Int {
         switch self {
+        case .screenHeader:
+            return 0
         case .listHeader:
-            return 2
+            return 100
         case let .preset(preset):
-            return 3 + preset.index
+            return 101 + preset.index.value
         case .addItem:
             return 1000
         case .listFooter:
             return 1001
+        case .suggestedListHeader:
+            return 1002
+        case let .suggestedPreset(suggestedPreset):
+            return 1003 + suggestedPreset.index.value
+        case .suggestedAddCustom:
+            return 2000
         }
     }
     
     var stableId: ChatListFilterPresetListEntryStableId {
         switch self {
+        case .screenHeader:
+            return .screenHeader
+        case .suggestedListHeader:
+            return .suggestedListHeader
+        case let .suggestedPreset(suggestedPreset):
+            return .suggestedPreset(suggestedPreset.preset)
+        case .suggestedAddCustom:
+            return .suggestedAddCustom
         case .listHeader:
             return .listHeader
         case let .preset(preset):
@@ -97,10 +137,22 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChatListFilterPresetListControllerArguments
         switch self {
+        case let .screenHeader(text):
+            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .folders, sectionId: self.section)
+        case let .suggestedListHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
+        case let .suggestedPreset(_, title, label, preset):
+            return ChatListFilterPresetListSuggestedItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, installAction: {
+                arguments.addSuggestedPresed(title, preset)
+            }, tag: nil)
+        case let .suggestedAddCustom(text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: nil, title: text, sectionId: self.section, height: .generic, editing: false, action: {
+                arguments.addNew()
+            })
         case let .listHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
-        case let .preset(index, title, preset, canBeReordered, canBeDeleted, isEditing):
-            return ChatListFilterPresetListItem(presentationData: presentationData, preset: preset, title: title ?? "", editing: ChatListFilterPresetListItemEditing(editable: true, editing: isEditing, revealed: false), canBeReordered: canBeReordered, canBeDeleted: canBeDeleted, sectionId: self.section, action: {
+        case let .preset(_, title, label, preset, canBeReordered, canBeDeleted, isEditing):
+            return ChatListFilterPresetListItem(presentationData: presentationData, preset: preset, title: title, label: label, editing: ChatListFilterPresetListItemEditing(editable: true, editing: isEditing, revealed: false), canBeReordered: canBeReordered, canBeDeleted: canBeDeleted, sectionId: self.section, action: {
                 arguments.openPreset(preset)
             }, setItemWithRevealedOptions: { lhs, rhs in
                 arguments.setItemWithRevealedOptions(lhs, rhs)
@@ -122,22 +174,68 @@ private struct ChatListFilterPresetListControllerState: Equatable {
     var revealedPreset: Int32? = nil
 }
 
-private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filtersState: ChatListFiltersState, settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
+private func filtersWithAppliedOrder(filters: [(ChatListFilter, Int)], order: [Int32]?) -> [(ChatListFilter, Int)] {
+    let sortedFilters: [(ChatListFilter, Int)]
+    if let updatedFilterOrder = order {
+        var updatedFilters: [(ChatListFilter, Int)] = []
+        for id in updatedFilterOrder {
+            if let index = filters.firstIndex(where: { $0.0.id == id }) {
+                updatedFilters.append(filters[index])
+            }
+        }
+        sortedFilters = updatedFilters
+    } else {
+        sortedFilters = filters
+    }
+    return sortedFilters
+}
+
+private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
-    entries.append(.listHeader("FILTERS"))
-    for preset in filtersState.filters {
-        entries.append(.preset(index: entries.count, title: preset.title, preset: preset, canBeReordered: filtersState.filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
+    
+    entries.append(.screenHeader("Create folders for different groups of chats and\nquickly switch between them."))
+    
+    let filteredSuggestedFilters = suggestedFilters.filter { suggestedFilter in
+        for (filter, _) in filters {
+            if filter.data == suggestedFilter.data {
+                return false
+            }
+        }
+        return true
     }
-    if filtersState.filters.count < 10 {
-        entries.append(.addItem(text: "Create New Filter", isEditing: state.isEditing))
+    
+    if !filters.isEmpty || suggestedFilters.isEmpty {
+        entries.append(.listHeader("FOLDERS"))
+        
+        for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
+            entries.append(.preset(index: PresetIndex(value: entries.count), title: filter.title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
+        }
+        if filters.count < 10 {
+            entries.append(.addItem(text: "Create New Folder", isEditing: state.isEditing))
+        }
+        entries.append(.listFooter("Tap \"Edit\" to change the order or delete folders."))
     }
-    entries.append(.listFooter("Tap \"Edit\" to change the order or delete filters."))
+    
+    if !filteredSuggestedFilters.isEmpty && filters.count < 10 {
+        entries.append(.suggestedListHeader("RECOMMENDED FOLDERS"))
+        for filter in filteredSuggestedFilters {
+            entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title, label: filter.description, preset: filter.data))
+        }
+        if filters.isEmpty {
+            entries.append(.suggestedAddCustom("Add Custom Folder"))
+        }
+    }
     
     return entries
 }
 
-func chatListFilterPresetListController(context: AccountContext, updated: @escaping ([ChatListFilter]) -> Void) -> ViewController {
+public enum ChatListFilterPresetListControllerMode {
+    case `default`
+    case modal
+}
+
+public func chatListFilterPresetListController(context: AccountContext, mode: ChatListFilterPresetListControllerMode, dismissed: (() -> Void)? = nil) -> ViewController {
     let initialState = ChatListFilterPresetListControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -147,12 +245,21 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
     
     var dismissImpl: (() -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
-    let arguments = ChatListFilterPresetListControllerArguments(context: context, openPreset: { preset in
-        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: updated))
+    let arguments = ChatListFilterPresetListControllerArguments(context: context,
+    addSuggestedPresed: { title, data in
+        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+            var filters = filters
+            let id = generateNewChatListFilterId(filters: filters)
+            filters.insert(ChatListFilter(id: id, title: title, data: data), at: 0)
+            return filters
+        })
+        |> deliverOnMainQueue).start(next: { _ in
+        })
+    }, openPreset: { preset in
+        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: { _ in }))
     }, addNew: {
-        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: updated))
+        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: { _ in }))
     }, setItemWithRevealedOptions: { preset, fromPreset in
         updateState { state in
             var state = state
@@ -162,42 +269,126 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
             return state
         }
     }, removePreset: { id in
-        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            if let index = settings.filters.index(where: { $0.id == id }) {
-                settings.filters.remove(at: index)
+        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+            var filters = filters
+            if let index = filters.firstIndex(where: { $0.id == id }) {
+                filters.remove(at: index)
             }
-            return settings
+            return filters
         })
-        |> deliverOnMainQueue).start(next: { settings in
-            updated(settings.filters)
+        |> deliverOnMainQueue).start(next: { _ in
         })
     })
     
-    let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFilters, ApplicationSpecificPreferencesKeys.chatListFilterSettings])
+    let chatCountCache = Atomic<[ChatListFilterData: Int]>(value: [:])
+    
+    let filtersWithCountsSignal = updatedChatListFilters(postbox: context.account.postbox)
+    |> distinctUntilChanged
+    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
+        return .single(filters.map { filter -> (ChatListFilter, Int) in
+            return (filter, 0)
+        })
+        /*return context.account.postbox.transaction { transaction -> [(ChatListFilter, Int)] in
+            return filters.map { filter -> (ChatListFilter, Int) in
+                let count: Int
+                if let cachedValue = chatCountCache.with({ dict -> Int? in
+                    return dict[filter.data]
+                }) {
+                    count = cachedValue
+                } else {
+                    count = transaction.getChatCountMatchingPredicate(chatListFilterPredicate(filter: filter.data))
+                    let _ = chatCountCache.modify { dict in
+                        var dict = dict
+                        dict[filter.data] = count
+                        return dict
+                    }
+                }
+                return (filter, count)
+            }
+        }*/
+    }
+    
+    let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
+    |> map { preferences -> [ChatListFeaturedFilter] in
+        guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState] as? ChatListFiltersFeaturedState else {
+            return []
+        }
+        return state.filters
+    }
+    |> distinctUntilChanged
+    
+    let filtersWithCounts = Promise<[(ChatListFilter, Int)]>()
+    filtersWithCounts.set(filtersWithCountsSignal)
+    
+    let updatedFilterOrder = Promise<[Int32]?>(nil)
+    
+    let preferences = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatListFilterSettings])
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         statePromise.get(),
-        preferences
+        filtersWithCounts.get(),
+        preferences,
+        updatedFilterOrder.get(),
+        featuredFilters
     )
-    |> map { presentationData, state, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let filtersState = preferences.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
+    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings] as? ChatListFilterSettings ?? ChatListFilterSettings.default
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Close), style: .regular, enabled: true, action: {
-            let _ = replaceRemoteChatListFilters(account: context.account).start()
-            dismissImpl?()
-        })
-        let rightNavigationButton: ItemListNavigationButton
+        let leftNavigationButton: ItemListNavigationButton?
+        switch mode {
+        case .default:
+            leftNavigationButton = nil
+        case .modal:
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Close), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+        }
+        let rightNavigationButton: ItemListNavigationButton?
         if state.isEditing {
-             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                updateState { state in
-                    var state = state
-                    state.isEditing = false
-                    return state
-                }
-             })
-        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                let _ = (updatedFilterOrder.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
+                    if let updatedFilterOrderValue = updatedFilterOrderValue {
+                        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                            var updatedFilters: [ChatListFilter] = []
+                            for id in updatedFilterOrderValue {
+                                if let index = filters.firstIndex(where: { $0.id == id }) {
+                                    updatedFilters.append(filters[index])
+                                }
+                            }
+                            for filter in filters {
+                                if !updatedFilters.contains(where: { $0.id == filter.id }) {
+                                    updatedFilters.append(filter)
+                                }
+                            }
+                            
+                            return updatedFilters
+                        })
+                        |> deliverOnMainQueue).start(next: { _ in
+                            filtersWithCounts.set(filtersWithCountsSignal)
+                            let _ = (filtersWithCounts.get()
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                updatedFilterOrder?.set(.single(nil))
+                                
+                                updateState { state in
+                                    var state = state
+                                    state.isEditing = false
+                                    return state
+                                }
+                            })
+                        })
+                    } else {
+                        updateState { state in
+                            var state = state
+                            state.isEditing = false
+                            return state
+                        }
+                    }
+                })
+            })
+        } else if !filtersWithCountsValue.isEmpty {
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                 updateState { state in
                     var state = state
@@ -205,10 +396,12 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
                     return state
                 }
             })
+        } else {
+            rightNavigationButton = nil
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Filters"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filtersState: filtersState, settings: filterSettings), style: .blocks, animateChanges: true)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Folders"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, settings: filterSettings), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }
@@ -216,12 +409,17 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
     }
     
     let controller = ItemListController(context: context, state: signal)
-    controller.navigationPresentation = .modal
+    switch mode {
+    case .default:
+        controller.navigationPresentation = .default
+    case .modal:
+        controller.navigationPresentation = .modal
+    }
+    controller.didDisappear = { _ in
+        dismissed?()
+    }
     pushControllerImpl = { [weak controller] c in
         controller?.push(c)
-    }
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()
@@ -249,39 +447,48 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
             afterAll = true
         }
 
-        return updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { filtersState in
-            var filtersState = filtersState
-            if let index = filtersState.filters.firstIndex(where: { $0.id == fromFilter.preset.id }) {
-                filtersState.filters.remove(at: index)
+        return combineLatest(
+            updatedFilterOrder.get() |> take(1),
+            filtersWithCounts.get() |> take(1)
+        )
+        |> mapToSignal { updatedFilterOrderValue, filtersWithCountsValue -> Signal<Bool, NoError> in
+            var filters = filtersWithAppliedOrder(filters: filtersWithCountsValue, order: updatedFilterOrderValue).map { $0.0 }
+            let initialOrder = filters.map { $0.id }
+            
+            if let index = filters.firstIndex(where: { $0.id == fromFilter.preset.id }) {
+                filters.remove(at: index)
             }
             if let referenceFilter = referenceFilter {
                 var inserted = false
-                for i in 0 ..< filtersState.filters.count {
-                    if filtersState.filters[i].id == referenceFilter.id {
+                for i in 0 ..< filters.count {
+                    if filters[i].id == referenceFilter.id {
                         if fromIndex < toIndex {
-                            filtersState.filters.insert(fromFilter.preset, at: i + 1)
+                            filters.insert(fromFilter.preset, at: i + 1)
                         } else {
-                            filtersState.filters.insert(fromFilter.preset, at: i)
+                            filters.insert(fromFilter.preset, at: i)
                         }
                         inserted = true
                         break
                     }
                 }
                 if !inserted {
-                    filtersState.filters.append(fromFilter.preset)
+                    filters.append(fromFilter.preset)
                 }
             } else if beforeAll {
-                filtersState.filters.insert(fromFilter.preset, at: 0)
+                filters.insert(fromFilter.preset, at: 0)
             } else if afterAll {
-                filtersState.filters.append(fromFilter.preset)
+                filters.append(fromFilter.preset)
             }
-            return filtersState
-        })
-        |> map { _ -> Bool in
-            return false
+            
+            let updatedOrder = filters.map { $0.id }
+            if initialOrder != updatedOrder {
+                updatedFilterOrder.set(.single(updatedOrder))
+                return .single(true)
+            } else {
+                return .single(false)
+            }
         }
     })
     
     return controller
 }
-

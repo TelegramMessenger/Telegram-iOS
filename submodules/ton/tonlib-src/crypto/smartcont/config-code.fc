@@ -9,10 +9,9 @@
 
 (cell, int, int, cell) load_data() inline {
   var cs = get_data().begin_parse();
-  var (cfg_dict, stored_seqno, public_key) = (cs~load_ref(), cs~load_uint(32), cs~load_uint(256));
-  var vote_dict = cs.slice_empty?() ? new_dict() : cs~load_dict(); 
+  var res = (cs~load_ref(), cs~load_uint(32), cs~load_uint(256), cs~load_dict());
   cs.end_parse();
-  return (cfg_dict, stored_seqno, public_key, vote_dict);
+  return res;
 }
 
 () store_data(cfg_dict, stored_seqno, public_key, vote_dict) impure inline {
@@ -26,7 +25,7 @@
 
 (int, int) check_validator_set(cell vset) {
   var cs = vset.begin_parse();
-  throw_if(9, (cs~load_uint(8) - 0x11) & -2);  ;; validators#11 or validators_ext#12
+  throw_unless(9, cs~load_uint(8) == 0x12);  ;; validators_ext#12 only
   int utime_since = cs~load_uint(32);
   int utime_until = cs~load_uint(32);
   int total = cs~load_uint(16);
@@ -103,7 +102,7 @@
   .end_cell(), 0);
 }
 
-() after_code_upgrade(slice param, cell old_code) impure method_id(1666) {
+() after_code_upgrade(slice param, cont old_code) impure method_id(1666) {
 }
 
 _ perform_action(cfg_dict, public_key, action, cs) {
@@ -119,7 +118,7 @@ _ perform_action(cfg_dict, public_key, action, cs) {
     var new_code = cs~load_ref();
     set_code(new_code);
     var old_code = get_c3();
-    set_c3(new_code);
+    set_c3(new_code.begin_parse().bless());
     after_code_upgrade(cs, old_code);
     throw(0);
     return (cfg_dict, public_key);
@@ -138,16 +137,21 @@ _ perform_action(cfg_dict, public_key, action, cs) {
   }
 }
 
-slice get_validator_descr(int idx) inline_ref {
+(slice, int) get_validator_descr(int idx) inline_ref {
   var vset = config_param(34);
   if (vset.null?()) {
-    return null();
+    return (null(), 0);
   }
   var cs = begin_parse(vset);
-  cs~skip_bits(8 + 32 + 32 + 16 + 16);
+  ;; validators_ext#12 utime_since:uint32 utime_until:uint32 
+  ;; total:(## 16) main:(## 16) { main <= total } { main >= 1 } 
+  ;; total_weight:uint64
+  throw_unless(40, cs~load_uint(8) == 0x12);
+  cs~skip_bits(32 + 32 + 16 + 16);
+  int total_weight = cs~load_uint(64);
   var dict = begin_cell().store_slice(cs).end_cell();
   var (value, _) = dict.udict_get?(16, idx);
-  return value;
+  return (value, total_weight);
 }
 
 (int, int) unpack_validator_descr(slice cs) inline {
@@ -159,33 +163,51 @@ slice get_validator_descr(int idx) inline_ref {
   return (cs~load_uint(256), cs~load_uint(64));
 }
 
-slice create_new_entry(cs) inline {
-  return begin_cell().store_int(false, 1).store_uint(0, 64).store_uint(0, 256).store_slice(cs).end_cell().begin_parse();
+(cell, int, int, slice) new_proposal(cs) inline {
+  return (null(), 0, 0, cs);
 }
 
-(cell, int, int, slice) unpack_suggestion(slice cs) inline {
+(cell, int, int, slice) unpack_proposal(slice cs) inline {
   return (cs~load_dict(), cs~load_uint(64), cs~load_uint(256), cs);
 }
 
-builder pack_suggestion(cell voters, int sum_weight, int vset_id, slice body) inline {
+builder pack_proposal(cell voters, int sum_weight, int vset_id, slice body) inline {
   return begin_cell().store_dict(voters).store_uint(sum_weight, 64).store_uint(vset_id, 256).store_slice(body);
 }
 
-cell register_vote(vote_dict, action, cs, idx, weight) {
+(cell, slice) register_vote(vote_dict, action, cs, idx, weight, total_weight, cur_vset_id) {
   int hash = 0;
+  int found? = 0;
   var entry = null();
   if (action & 1) {
     hash = slice_hash(cs);
-    (entry, var found?) = vote_dict.udict_get?(256, hash);
-    ifnot (found?) {
-      entry = create_new_entry(cs);
-    }
+    (entry, found?) = vote_dict.udict_get?(256, hash);
   } else {
     hash = cs.preload_uint(256);
-    (entry, var found?) = vote_dict.udict_get?(256, hash);
+    (entry, found?) = vote_dict.udict_get?(256, hash);
     throw_unless(42, found?);
   }
-  return vote_dict;
+  var (voters, sum_weight, vset_id, body) = found? ? unpack_proposal(entry) : (null(), 0, cur_vset_id, cs);
+  if (vset_id != cur_vset_id) {
+    voters = null();
+    sum_weight = 0;
+    vset_id = cur_vset_id;
+  }
+  var (_, found?) = voters.udict_get?(16, idx);
+  ifnot (found?) {
+    voters~udict_set_builder(16, idx, begin_cell().store_uint(32, now()));
+    sum_weight += weight;
+    if (sum_weight * 3 > total_weight * 2) {
+      ;; proposal accepted
+      vote_dict~udict_delete?(256, hash);
+      return (vote_dict, body);
+    } else {
+      vote_dict~udict_set_builder(256, hash, pack_proposal(voters, sum_weight, cur_vset_id, body));
+      return (vote_dict, null());
+    }
+  } else {
+    return (vote_dict, null());
+  }
 }
 
 () recv_external(slice in_msg) impure {
@@ -199,15 +221,19 @@ cell register_vote(vote_dict, action, cs, idx, weight) {
   throw_unless(33, msg_seqno == stored_seqno);
   ifnot ((action - 0x566f7465) & -2) {
     var idx = cs~load_uint(16);
-    var vdescr = get_validator_descr(idx);
+    var (vdescr, total_weight) = get_validator_descr(idx);
     var (val_pubkey, weight) = unpack_validator_descr(vdescr);
     throw_unless(34, check_signature(slice_hash(in_msg), signature, val_pubkey));
     accept_message();
     stored_seqno += 1;
     store_data(cfg_dict, stored_seqno, public_key, vote_dict);
     commit();
-    vote_dict = register_vote(vote_dict, action, cs, idx, weight);
+    (vote_dict, var accepted) = register_vote(vote_dict, action, cs, idx, weight, total_weight, config_param(34).cell_hash());
     store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+    ifnot (accepted.null?()) {
+      (cfg_dict, public_key) = perform_action(cfg_dict, public_key, accepted~load_uint(32), accepted);
+      store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+    }
     return ();
   }
   throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
@@ -231,7 +257,7 @@ cell register_vote(vote_dict, action, cs, idx, weight) {
     if (ds.slice_bits() >= 40) {
       var tag = ds~load_uint(8);
       var since = ds.preload_uint(32);
-      if ((tag == 0x11) & (since >= now())) {
+      if ((since <= now()) & (tag == 0x12)) {
         ;; next validator set becomes active!
         var cur_vset = cfg_dict~idict_set_get_ref(kl, 34, next_vset);  ;; next_vset -> cur_vset
         cfg_dict~idict_set_get_ref(kl, 32, cur_vset);   ;; cur_vset -> prev_vset
@@ -240,4 +266,8 @@ cell register_vote(vote_dict, action, cs, idx, weight) {
     }
   }
   set_data(begin_cell().store_ref(cfg_dict).store_slice(cs).end_cell());
+}
+
+int seqno() impure method_id {
+  return get_data().begin_parse().preload_uint(32);
 }

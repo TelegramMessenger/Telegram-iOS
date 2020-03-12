@@ -102,13 +102,15 @@ unsigned long long get_special_value(std::string str) {
   unsigned long long val = 0;
   int bits = 0;
   if (str[0] == '#') {
-    while (i < n) {
-      int c = str[i++];
+    for (; i < n; i++) {
+      int c = str[i];
       if (c == '_') {
         break;
       }
       if (c >= '0' && c <= '9') {
         c -= '0';
+      } else if (c >= 'A' && c <= 'F') {
+        c -= 'A' - 10;
       } else if (c >= 'a' && c <= 'f') {
         c -= 'a' - 10;
       } else {
@@ -144,6 +146,9 @@ unsigned long long get_special_value(std::string str) {
   if (i == n - 1 && bits) {
     // trailing _
     while (bits && !((val >> (64 - bits)) & 1)) {
+      --bits;
+    }
+    if (bits) {
       --bits;
     }
   }

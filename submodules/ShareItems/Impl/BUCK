@@ -1,0 +1,27 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ShareItemsImpl",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ]),
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    deps = [
+        "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/MimeTypes:MimeTypes",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/MobileCoreServices.framework",
+        "$SDKROOT/System/Library/Frameworks/AddressBook.framework",
+        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
+        "$SDKROOT/System/Library/Frameworks/PassKit.framework",
+    ],
+)

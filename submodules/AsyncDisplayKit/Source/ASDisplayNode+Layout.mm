@@ -10,15 +10,12 @@
 #import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASCollections.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import <AsyncDisplayKit/ASDisplayNodeInternal.h>
+#import "ASDisplayNodeInternal.h"
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASLayout.h>
-#import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
-#import <AsyncDisplayKit/ASLog.h>
-#import <AsyncDisplayKit/ASNodeController+Beta.h>
-#import <AsyncDisplayKit/ASDisplayNode+Yoga.h>
+#import "ASLayoutElementStylePrivate.h"
 #import <AsyncDisplayKit/NSArray+Diffing.h>
 
 using AS::MutexLocker;
@@ -97,7 +94,6 @@ using AS::MutexLocker;
     layout = [self calculateLayoutThatFits:constrainedSize
                           restrictedToSize:self.style.size
                       relativeToParentSize:parentSize];
-    as_log_verbose(ASLayoutLog(), "Established pending layout for %@ in %s", self, sel_getName(_cmd));
     _pendingDisplayNodeLayout = ASDisplayNodeLayout(layout, constrainedSize, parentSize,version);
     ASDisplayNodeAssertNotNil(layout, @"-[ASDisplayNode layoutThatFits:parentSize:] newly calculated layout should not be nil! %@", self);
   }
@@ -230,8 +226,6 @@ ASLayoutElementStyleExtensibilityForwarding
   ASDisplayNodeAssertThreadAffinity(self);
   ASAssertUnlocked(__instanceLock__);
 
-  as_activity_create_for_scope("Set needs layout from above");
-
   // Mark the node for layout in the next layout pass
   [self setNeedsLayout];
   
@@ -346,13 +340,6 @@ ASLayoutElementStyleExtensibilityForwarding
   if (!pendingLayoutIsPreferred && calculatedLayoutIsReusable) {
     return;
   }
-
-  as_activity_create_for_scope("Update node layout for current bounds");
-  as_log_verbose(ASLayoutLog(), "Node %@, bounds size %@, calculatedSize %@, calculatedIsDirty %d",
-                 self,
-                 NSStringFromCGSize(boundsSizeForLayout),
-                 NSStringFromCGSize(_calculatedDisplayNodeLayout.layout.size),
-                 _calculatedDisplayNodeLayout.version < _layoutVersion);
   // _calculatedDisplayNodeLayout is not reusable we need to transition to a new one
   [self cancelLayoutTransition];
 
@@ -372,18 +359,13 @@ ASLayoutElementStyleExtensibilityForwarding
   // If our bounds size is different than it, or invalid, recalculate.  Use #define to avoid nullptr->
   BOOL pendingLayoutApplicable = NO;
   if (nextLayout.layout == nil) {
-    as_log_verbose(ASLayoutLog(), "No pending layout.");
   } else if (!nextLayout.isValid(_layoutVersion)) {
-    as_log_verbose(ASLayoutLog(), "Pending layout is stale.");
   } else if (layoutSizeDifferentFromBounds) {
-    as_log_verbose(ASLayoutLog(), "Pending layout size %@ doesn't match bounds size.", NSStringFromCGSize(nextLayout.layout.size));
   } else {
-    as_log_verbose(ASLayoutLog(), "Using pending layout %@.", nextLayout.layout);
     pendingLayoutApplicable = YES;
   }
 
   if (!pendingLayoutApplicable) {
-    as_log_verbose(ASLayoutLog(), "Measuring with previous constrained size.");
     // Use the last known constrainedSize passed from a parent during layout (if never, use bounds).
     NSUInteger version = _layoutVersion;
     ASSizeRange constrainedSize = [self _locked_constrainedSizeForLayoutPass];
@@ -404,7 +386,6 @@ ASLayoutElementStyleExtensibilityForwarding
   // This can occur for either pre-calculated or newly-calculated layouts.
   if (nextLayout.requestedLayoutFromAbove == NO
       && CGSizeEqualToSize(boundsSizeForLayout, nextLayout.layout.size) == NO) {
-    as_log_verbose(ASLayoutLog(), "Layout size doesn't match bounds size. Requesting layout from above.");
     // The layout that we have specifies that this node (self) would like to be a different size
     // than it currently is.  Because that size has been computed within the constrainedSize, we
     // expect that calling setNeedsLayoutFromAbove will result in our parent resizing us to this.
@@ -579,13 +560,10 @@ ASLayoutElementStyleExtensibilityForwarding
                 measurementCompletion:(void(^)())completion
 {
   ASDisplayNodeAssertMainThread();
-  as_activity_create_for_scope("Transition node layout");
-  as_log_debug(ASLayoutLog(), "Transition layout for %@ sizeRange %@ anim %d asyncMeasure %d", self, NSStringFromASSizeRange(constrainedSize), animated, shouldMeasureAsync);
   
   if (constrainedSize.max.width <= 0.0 || constrainedSize.max.height <= 0.0) {
     // Using CGSizeZero for the sizeRange can cause negative values in client layout code.
     // Most likely called transitionLayout: without providing a size, before first layout pass.
-    as_log_verbose(ASLayoutLog(), "Ignoring transition due to bad size range.");
     return;
   }
     
@@ -613,12 +591,10 @@ ASLayoutElementStyleExtensibilityForwarding
 
   // Every new layout transition has a transition id associated to check in subsequent transitions for cancelling
   int32_t transitionID = [self _startNewTransition];
-  as_log_verbose(ASLayoutLog(), "Transition ID is %d", transitionID);
   // NOTE: This block captures self. It's cheaper than hitting the weak table.
   asdisplaynode_iscancelled_block_t isCancelled = ^{
     BOOL result = (_transitionID != transitionID);
     if (result) {
-      as_log_verbose(ASLayoutLog(), "Transition %d canceled, superseded by %d", transitionID, _transitionID.load());
     }
     return result;
   };
@@ -666,7 +642,6 @@ ASLayoutElementStyleExtensibilityForwarding
       if (isCancelled()) {
         return;
       }
-      as_activity_create_for_scope("Commit layout transition");
       ASLayoutTransition *pendingLayoutTransition;
       _ASTransitionContext *pendingLayoutTransitionContext;
       {
@@ -694,7 +669,6 @@ ASLayoutElementStyleExtensibilityForwarding
       
       // Apply complete layout transitions for all subnodes
       {
-        as_activity_create_for_scope("Complete pending layout transitions for subtree");
         ASDisplayNodePerformBlockOnEverySubnode(self, NO, ^(ASDisplayNode * _Nonnull node) {
           [node _completePendingLayoutTransition];
           node.hierarchyState &= (~ASHierarchyStateLayoutPending);
@@ -713,7 +687,6 @@ ASLayoutElementStyleExtensibilityForwarding
       
       // Kick off animating the layout transition
       {
-        as_activity_create_for_scope("Animate layout transition");
         [self animateLayoutTransition:pendingLayoutTransitionContext];
       }
       

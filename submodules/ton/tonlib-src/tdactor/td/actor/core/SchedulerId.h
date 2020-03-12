@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -26,8 +26,7 @@ namespace actor {
 namespace core {
 class SchedulerId {
  public:
-  SchedulerId() : id_(-1) {
-  }
+  SchedulerId() = default;
   explicit SchedulerId(uint8 id) : id_(id) {
   }
   bool is_valid() const {
@@ -42,7 +41,27 @@ class SchedulerId {
   }
 
  private:
-  int32 id_{0};
+  int32 id_{-1};
+};
+
+class CpuWorkerId {
+ public:
+  CpuWorkerId() = default;
+  explicit CpuWorkerId(uint8 id) : id_(id) {
+  }
+  bool is_valid() const {
+    return id_ >= 0;
+  }
+  uint8 value() const {
+    CHECK(is_valid());
+    return static_cast<uint8>(id_);
+  }
+  bool operator==(CpuWorkerId other) const {
+    return id_ == other.id_;
+  }
+
+ private:
+  int32 id_{-1};
 };
 }  // namespace core
 }  // namespace actor

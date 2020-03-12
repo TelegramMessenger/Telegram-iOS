@@ -3,22 +3,17 @@ import Postbox
 import SwiftSignalKit
 
 public struct ChatListFilterSettings: Equatable, PreferencesEntry {
-    public var displayTabs: Bool
-    
     public static var `default`: ChatListFilterSettings {
-        return ChatListFilterSettings(displayTabs: true)
+        return ChatListFilterSettings()
     }
     
-    public init(displayTabs: Bool) {
-        self.displayTabs = displayTabs
+    public init() {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.displayTabs = decoder.decodeInt32ForKey("displayTabs", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.displayTabs ? 1 : 0, forKey: "displayTabs")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

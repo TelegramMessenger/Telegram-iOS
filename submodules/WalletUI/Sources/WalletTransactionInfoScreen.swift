@@ -106,11 +106,25 @@ private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> S
                 if !text.isEmpty {
                     text.append("\n\n")
                 }
-                text.append(message.textMessage)
+                switch message.contents {
+                case .raw:
+                    break
+                case .encryptedText:
+                    text.append("<encrypted>")
+                case let .plainText(plainText):
+                    text.append(plainText)
+                }
             }
         } else {
             if let inMessage = walletTransaction.inMessage {
-                text = inMessage.textMessage
+                switch inMessage.contents {
+                case .raw:
+                    text = ""
+                case .encryptedText:
+                    text = "<encrypted>"
+                case let .plainText(plainText):
+                    text = plainText
+                }
             }
         }
         return text

@@ -402,26 +402,32 @@ extension PresentationThemeRootNavigationBar: Codable {
         case segmentedFg
         case segmentedText
         case segmentedDivider
+        case clearButtonBackground
+        case clearButtonForeground
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.init(buttonColor: try decodeColor(values, .button),
-                  disabledButtonColor: try decodeColor(values, .disabledButton),
-                  primaryTextColor: try decodeColor(values, .primaryText),
-                  secondaryTextColor: try decodeColor(values, .secondaryText),
-                  controlColor: try decodeColor(values, .control),
-                  accentTextColor: try decodeColor(values, .accentText),
-                  backgroundColor: try decodeColor(values, .background),
-                  separatorColor: try decodeColor(values, .separator),
-                  badgeBackgroundColor: try decodeColor(values, .badgeFill),
-                  badgeStrokeColor: try decodeColor(values, .badgeStroke),
-                  badgeTextColor: try decodeColor(values, .badgeText),
-                  segmentedBackgroundColor: try decodeColor(values, .segmentedBg, decoder: decoder, fallbackKey: "root.searchBar.inputFill"),
-                  segmentedForegroundColor: try decodeColor(values, .segmentedFg, decoder: decoder, fallbackKey: "root.navBar.background"),
-                  segmentedTextColor: try decodeColor(values, .segmentedText, decoder: decoder, fallbackKey: "root.navBar.primaryText"),
-                  segmentedDividerColor: try decodeColor(values, .segmentedDivider, decoder: decoder, fallbackKey: "root.list.freeInputField.stroke"))
+        self.init(
+            buttonColor: try decodeColor(values, .button),
+            disabledButtonColor: try decodeColor(values, .disabledButton),
+            primaryTextColor: try decodeColor(values, .primaryText),
+            secondaryTextColor: try decodeColor(values, .secondaryText),
+            controlColor: try decodeColor(values, .control),
+            accentTextColor: try decodeColor(values, .accentText),
+            backgroundColor: try decodeColor(values, .background),
+            separatorColor: try decodeColor(values, .separator),
+            badgeBackgroundColor: try decodeColor(values, .badgeFill),
+            badgeStrokeColor: try decodeColor(values, .badgeStroke),
+            badgeTextColor: try decodeColor(values, .badgeText),
+            segmentedBackgroundColor: try decodeColor(values, .segmentedBg, decoder: decoder, fallbackKey: "root.searchBar.inputFill"),
+            segmentedForegroundColor: try decodeColor(values, .segmentedFg, decoder: decoder, fallbackKey: "root.navBar.background"),
+            segmentedTextColor: try decodeColor(values, .segmentedText, decoder: decoder, fallbackKey: "root.navBar.primaryText"),
+            segmentedDividerColor: try decodeColor(values, .segmentedDivider, decoder: decoder, fallbackKey: "list.freeInputField.stroke"),
+            clearButtonBackgroundColor: try decodeColor(values, .clearButtonBackground, decoder: decoder, fallbackKey: "list.freeInputField.bg"),
+            clearButtonForegroundColor: try decodeColor(values, .clearButtonForeground, decoder: decoder, fallbackKey: "list.freeInputField.primary")
+        )
     }
     
     public func encode(to encoder: Encoder) throws {

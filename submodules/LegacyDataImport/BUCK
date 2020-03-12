@@ -4,14 +4,7 @@ static_library(
     name = "LegacyDataImport",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/*.m",
     ]),
-    headers = glob([
-    	"Sources/*.h",
-    ], exclude = ["Sources/LegacyDataImport.h"]),
-    exported_headers = glob([
-    	"Sources/*.h",
-    ], exclude = ["Sources/LegacyDataImport.h"]),
     deps = [
 	    "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
@@ -21,6 +14,7 @@ static_library(
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     	"//submodules/RadialStatusNode:RadialStatusNode",
     	"//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/LegacyDataImport/Impl:LegacyDataImportImpl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

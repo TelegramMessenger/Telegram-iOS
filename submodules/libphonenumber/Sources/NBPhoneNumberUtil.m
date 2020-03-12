@@ -6,9 +6,9 @@
 //  Copyright (c) 2015년 ohtalk.me. All rights reserved.
 //
 
-#import "NBPhoneNumberUtil.h"
-#import "NBPhoneNumberDefines.h"
-#import "NBPhoneNumber.h"
+#import <libphonenumber/NBPhoneNumberUtil.h>
+#import <libphonenumber/NBPhoneNumberDefines.h>
+#import <libphonenumber/NBPhoneNumber.h>
 #import "NBNumberFormat.h"
 #import "NBPhoneNumberDesc.h"
 #import "NBPhoneMetaData.h"

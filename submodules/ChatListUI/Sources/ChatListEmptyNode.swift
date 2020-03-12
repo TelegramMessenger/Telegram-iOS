@@ -8,138 +8,6 @@ import AppBundle
 import SolidRoundedButtonNode
 import ActivityIndicator
 
-final class ChatListEmptyNodeContainer: ASDisplayNode {
-    private var currentNode: ChatListEmptyNode?
-    
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
-    private var validLayout: CGSize?
-    
-    var action: (() -> Void)?
-    
-    init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
-        
-        super.init()
-    }
-    
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
-        
-        if let currentNode = self.currentNode {
-            currentNode.updateThemeAndStrings(theme: theme, strings: strings)
-        }
-    }
-    
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
-        
-        if let currentNode = self.currentNode {
-            currentNode.updateLayout(size: size, transition: transition)
-        }
-    }
-    
-    func update(state: ChatListNodeEmptyState, isFilter: Bool, direction: ChatListNodePaneSwitchAnimationDirection?, transition: ContainedViewLayoutTransition) {
-        switch state {
-        case let .empty(isLoading):
-            if let direction = direction {
-                let previousNode = self.currentNode
-                let currentNode = ChatListEmptyNode(isFilter: isFilter, isLoading: isLoading, theme: self.theme, strings: self.strings, action: { [weak self] in
-                    self?.action?()
-                })
-                self.currentNode = currentNode
-                if let size = self.validLayout {
-                    currentNode.frame = CGRect(origin: CGPoint(), size: size)
-                    currentNode.updateLayout(size: size, transition: .immediate)
-                }
-                self.addSubnode(currentNode)
-                if case .animated = transition, let size = self.validLayout {
-                    let offset: CGFloat
-                    switch direction {
-                    case .left:
-                        offset = -size.width
-                    case .right:
-                        offset = size.width
-                    }
-                    if let previousNode = previousNode {
-                        previousNode.frame = self.bounds.offsetBy(dx: offset, dy: 0.0)
-                    }
-                    transition.animateHorizontalOffsetAdditive(node: self, offset: offset, completion: { [weak previousNode] in
-                        previousNode?.removeFromSupernode()
-                    })
-                } else {
-                    previousNode?.removeFromSupernode()
-                }
-            } else {
-                if let previousNode = self.currentNode, previousNode.isFilter != isFilter {
-                    let currentNode = ChatListEmptyNode(isFilter: isFilter, isLoading: isLoading, theme: self.theme, strings: self.strings, action: { [weak self] in
-                        self?.action?()
-                    })
-                    self.currentNode = currentNode
-                    if let size = self.validLayout {
-                        currentNode.frame = CGRect(origin: CGPoint(), size: size)
-                        currentNode.updateLayout(size: size, transition: .immediate)
-                    }
-                    self.addSubnode(currentNode)
-                    currentNode.alpha = 0.0
-                    transition.updateAlpha(node: currentNode, alpha: 1.0)
-                    transition.updateAlpha(node: previousNode, alpha: 0.0, completion: { [weak previousNode] _ in
-                        previousNode?.removeFromSupernode()
-                    })
-                } else if let currentNode = self.currentNode {
-                    currentNode.updateIsLoading(isLoading)
-                } else {
-                    let currentNode = ChatListEmptyNode(isFilter: isFilter, isLoading: isLoading, theme: self.theme, strings: self.strings, action: { [weak self] in
-                        self?.action?()
-                    })
-                    self.currentNode = currentNode
-                    if let size = self.validLayout {
-                        currentNode.frame = CGRect(origin: CGPoint(), size: size)
-                        currentNode.updateLayout(size: size, transition: .immediate)
-                    }
-                    self.addSubnode(currentNode)
-                    currentNode.alpha = 0.0
-                    transition.updateAlpha(node: currentNode, alpha: 1.0)
-                }
-            }
-        case .notEmpty:
-            if let previousNode = self.currentNode {
-                self.currentNode = nil
-                if let direction = direction {
-                    if case .animated = transition, let size = self.validLayout {
-                        let offset: CGFloat
-                        switch direction {
-                        case .left:
-                            offset = -size.width
-                        case .right:
-                            offset = size.width
-                        }
-                        previousNode.frame = self.bounds.offsetBy(dx: offset, dy: 0.0)
-                        transition.animateHorizontalOffsetAdditive(node: self, offset: offset, completion: { [weak previousNode] in
-                            previousNode?.removeFromSupernode()
-                        })
-                    } else {
-                        previousNode.removeFromSupernode()
-                    }
-                } else {
-                    transition.updateAlpha(node: previousNode, alpha: 0.0, completion: { [weak previousNode] _ in
-                        previousNode?.removeFromSupernode()
-                    })
-                }
-            }
-        }
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let currentNode = self.currentNode {
-            return currentNode.view.hitTest(self.view.convert(point, to: currentNode.view), with: event)
-        }
-        return nil
-    }
-}
-
 final class ChatListEmptyNode: ASDisplayNode {
     let isFilter: Bool
     private(set) var isLoading: Bool
@@ -174,6 +42,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.addSubnode(self.animationNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.buttonNode)
+        self.addSubnode(self.activityIndicator)
         
         let animationName: String
         if isFilter {

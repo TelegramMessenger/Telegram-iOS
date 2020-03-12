@@ -338,6 +338,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
     dict[-1798033689] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilterEmpty($0) }
     dict[-847783593] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilter($0) }
+    dict[2004110666] = { return Api.DialogFilterSuggested.parse_dialogFilterSuggested($0) }
     dict[326715557] = { return Api.auth.PasswordRecovery.parse_passwordRecovery($0) }
     dict[-1803769784] = { return Api.messages.BotResults.parse_botResults($0) }
     dict[1928391342] = { return Api.InputDocument.parse_inputDocumentEmpty($0) }
@@ -604,7 +605,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1551583367] = { return Api.ReceivedNotifyMessage.parse_receivedNotifyMessage($0) }
     dict[-57668565] = { return Api.ChatParticipants.parse_chatParticipantsForbidden($0) }
     dict[1061556205] = { return Api.ChatParticipants.parse_chatParticipants($0) }
-    dict[351868460] = { return Api.DialogFilter.parse_dialogFilter($0) }
+    dict[1687327098] = { return Api.DialogFilter.parse_dialogFilter($0) }
     dict[-1056001329] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsSaved($0) }
     dict[873977640] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentials($0) }
     dict[178373535] = { return Api.InputPaymentCredentials.parse_inputPaymentCredentialsApplePay($0) }
@@ -1051,6 +1052,8 @@ public struct Api {
             case let _1 as Api.contacts.Contacts:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelMessagesFilter:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.DialogFilterSuggested:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.auth.PasswordRecovery:
                 _1.serialize(buffer, boxed)

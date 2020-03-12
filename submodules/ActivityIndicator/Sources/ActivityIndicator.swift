@@ -92,7 +92,6 @@ public final class ActivityIndicator: ASDisplayNode {
         
         self.indicatorNode = ASImageNode()
         self.indicatorNode.isLayerBacked = true
-        self.indicatorNode.displayWithoutProcessing = true
         self.indicatorNode.displaysAsynchronously = false
         
         super.init()

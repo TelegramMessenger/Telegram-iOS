@@ -5,12 +5,9 @@ static_library(
     srcs = glob([
         "Sources/*.m",
     ]),
-    headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/YuvConversion.h"]),
     exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/YuvConversion.h"]),
+        "PublicHeaders/**/*.h",
+    ]),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/Accelerate.framework",

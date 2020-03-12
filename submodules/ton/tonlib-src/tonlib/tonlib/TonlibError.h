@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 
 #pragma once
@@ -32,6 +32,7 @@
 // INVALID_ACCOUNT_ADDRESS
 // INVALID_CONFIG
 // INVALID_PEM_KEY
+// INVALID_REVISION
 // MESSAGE_TOO_LONG
 // EMPTY_FIELD
 // INVALID_FIELD
@@ -39,6 +40,7 @@
 // ACCOUNT_NOT_INITED
 // ACCOUNT_TYPE_UNKNOWN
 // ACCOUNT_TYPE_UNEXPECTED
+// ACCOUNT_ACTION_UNSUPPORTED
 // VALIDATE_ACCOUNT_STATE
 // VALIDATE_TRANSACTION
 // VALIDATE_ZERO_STATE
@@ -79,6 +81,9 @@ struct TonlibError {
   static td::Status InvalidPemKey() {
     return td::Status::Error(400, "INVALID_PEM_KEY");
   }
+  static td::Status InvalidRevision() {
+    return td::Status::Error(400, "INVALID_REVISION");
+  }
   static td::Status NeedConfig() {
     return td::Status::Error(400, "NeedConfig");
   }
@@ -86,13 +91,16 @@ struct TonlibError {
     return td::Status::Error(400, "MESSAGE_TOO_LONG");
   }
   static td::Status EmptyField(td::Slice field_name) {
-    return td::Status::Error(400, PSLICE() << "EMPTY_FIELD: Field " << field_name << " must not be emtpy");
+    return td::Status::Error(400, PSLICE() << "EMPTY_FIELD: Field " << field_name << " must not be empty");
   }
   static td::Status InvalidField(td::Slice field_name, td::Slice reason) {
     return td::Status::Error(400, PSLICE() << "INVALID_FIELD: Field " << field_name << " has invalid value " << reason);
   }
   static td::Status DangerousTransaction(td::Slice reason) {
     return td::Status::Error(400, PSLICE() << "DANGEROUS_TRANSACTION: " << reason);
+  }
+  static td::Status MessageEncryption(td::Slice reason) {
+    return td::Status::Error(400, PSLICE() << "MESSAGE_ENCRYPTION: " << reason);
   }
   static td::Status AccountNotInited() {
     return td::Status::Error(400, "ACCOUNT_NOT_INITED");
@@ -102,6 +110,9 @@ struct TonlibError {
   }
   static td::Status AccountTypeUnexpected(td::Slice expected) {
     return td::Status::Error(400, PSLICE() << "ACCOUNT_TYPE_UNEXPECTED: not a " << expected);
+  }
+  static td::Status AccountActionUnsupported(td::Slice action) {
+    return td::Status::Error(400, PSLICE() << "ACCOUNT_ACTION_UNSUPPORTED: " << action);
   }
   static td::Status Internal() {
     return td::Status::Error(500, "INTERNAL");

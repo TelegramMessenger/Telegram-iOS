@@ -1,10 +1,12 @@
 import Foundation
+import UIKit
 import Postbox
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import SwiftSignalKit
+import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
@@ -262,6 +264,7 @@ public enum PeerInfoControllerMode {
     case generic
     case calls(messages: [Message])
     case nearbyPeer
+    case group(PeerId)
 }
 
 public enum ContactListActionItemInlineIconPosition {

@@ -1,0 +1,43 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "LocationUI",
+    module_name = "LocationUI",
+    srcs = glob([
+		"Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/ShareController:ShareController",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/LegacyUI:LegacyUI",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/LocationResources:LocationResources",
+        "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
+        "//submodules/Geocoding:Geocoding",
+        "//submodules/ItemListVenueItem:ItemListVenueItem",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/SearchBarNode:SearchBarNode",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/DeviceAccess:DeviceAccess",
+        "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

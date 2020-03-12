@@ -1,0 +1,15 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "OverlayStatusControllerImpl",
+    srcs = glob([
+        "Sources/**/*.m",
+    ]),
+    exported_headers = glob([
+        "Sources/**/*.h",
+    ]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

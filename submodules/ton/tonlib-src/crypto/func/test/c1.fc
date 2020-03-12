@@ -1,0 +1,37 @@
+global int x, y, z;
+global (cell, slice) y;
+global ((int, int) -> int) op;
+
+_ get() {
+  var t = z + 1;
+  return x;
+}
+
+_ pre_next() {
+  return x + 1;
+}
+
+() init() impure {
+  ;; global x;
+  x = 0;
+}
+
+int next() impure {
+  ;; global x;
+  return x += 1;
+}
+
+_ set_y(x, w) {
+  y = (w, x);
+}
+
+_ get_y() impure {
+  return y;
+}
+
+int main(int c) {
+  init();
+  c += next();
+  return c + pre_next();
+}
+

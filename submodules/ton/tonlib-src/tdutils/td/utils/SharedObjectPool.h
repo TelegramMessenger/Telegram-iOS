@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -49,9 +49,7 @@ class AtomicRefCnt {
 };
 
 template <class DataT, class DeleterT>
-class SharedPtrRaw
-    : public DeleterT
-    , private MpscLinkQueueImpl::Node {
+class SharedPtrRaw : public DeleterT, private MpscLinkQueueImpl::Node {
  public:
   explicit SharedPtrRaw(DeleterT deleter) : DeleterT(std::move(deleter)), ref_cnt_{0}, option_magic_(Magic) {
   }
@@ -100,6 +98,7 @@ template <class T, class DeleterT = std::default_delete<T>>
 class SharedPtr {
  public:
   using Raw = detail::SharedPtrRaw<T, DeleterT>;
+  struct acquire_t {};
   SharedPtr() = default;
   ~SharedPtr() {
     if (!raw_) {
@@ -111,6 +110,8 @@ class SharedPtr {
     if (raw_) {
       raw_->inc();
     }
+  }
+  SharedPtr(acquire_t, Raw *raw) : raw_(raw) {
   }
   SharedPtr(const SharedPtr &other) : SharedPtr(other.raw_) {
   }

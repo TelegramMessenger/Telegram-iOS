@@ -14,19 +14,23 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <functional>
 #include "vm/debugops.h"
 #include "vm/log.h"
 #include "vm/opctable.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
 #include "vm/excno.hpp"
+#include "vm/vm.h"
 
 namespace vm {
 
-bool vm_debug_enabled = true;
+bool vm_debug_enabled = false;
+
+void set_debug_enabled(bool enable_debug) {
+  vm_debug_enabled = enable_debug;
+}
 
 int exec_dummy_debug(VmState* st, int args) {
   VM_LOG(st) << "execute DEBUG " << (args & 0xff);
@@ -66,6 +70,9 @@ int compute_len_debug_str(const CellSlice& cs, unsigned args, int pfx_bits) {
 
 int exec_dump_stack(VmState* st) {
   VM_LOG(st) << "execute DUMPSTK";
+  if (!vm_debug_enabled) {
+    return 0;
+  }
   Stack& stack = st->get_stack();
   int d = stack.depth();
   std::cerr << "#DEBUG#: stack(" << d << " values) : ";
@@ -74,7 +81,8 @@ int exec_dump_stack(VmState* st) {
     d = 255;
   }
   for (int i = d; i > 0; i--) {
-    std::cerr << stack[i - 1].to_string() << " ";
+    stack[i - 1].print_list(std::cerr);
+    std::cerr << ' ';
   }
   std::cerr << std::endl;
   return 0;
@@ -83,9 +91,14 @@ int exec_dump_stack(VmState* st) {
 int exec_dump_value(VmState* st, unsigned arg) {
   arg &= 15;
   VM_LOG(st) << "execute DUMP s" << arg;
+  if (!vm_debug_enabled) {
+    return 0;
+  }
   Stack& stack = st->get_stack();
   if ((int)arg < stack.depth()) {
-    std::cerr << "#DEBUG#: s" << arg << " = " << stack[arg].to_string() << std::endl;
+    std::cerr << "#DEBUG#: s" << arg << " = ";
+    stack[arg].print_list(std::cerr);
+    std::cerr << std::endl;
   } else {
     std::cerr << "#DEBUG#: s" << arg << " is absent" << std::endl;
   }

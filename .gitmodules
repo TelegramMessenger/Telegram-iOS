@@ -1,4 +1,19 @@
 
 [submodule "submodules/rlottie/rlottie"]
 	path = submodules/rlottie/rlottie
-url=../rlottie.git
+	url=../rlottie.git
+[submodule "build-system/bazel-rules/rules_apple"]
+	path = build-system/bazel-rules/rules_apple
+    url=https://github.com/ali-fareed/rules_apple.git
+[submodule "build-system/bazel-rules/rules_swift"]
+	path = build-system/bazel-rules/rules_swift
+	url = https://github.com/bazelbuild/rules_swift.git
+[submodule "build-system/bazel-rules/apple_support"]
+	path = build-system/bazel-rules/apple_support
+	url = https://github.com/bazelbuild/apple_support.git
+[submodule "submodules/TgVoip/libtgvoip"]
+	path = submodules/TgVoip/libtgvoip
+	url = https://github.com/telegramdesktop/libtgvoip.git
+[submodule "build-system/tulsi"]
+	path = build-system/tulsi
+	url = https://github.com/ali-fareed/tulsi.git

@@ -1,0 +1,24 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "WatchBridgeAudioImpl",
+    srcs = glob([
+        "Sources/**/*.m",
+        "Sources/**/*.mm",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ]),
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SSignalKit:SSignalKit",
+        "//submodules/OpusBinding:OpusBinding",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
+        "$SDKROOT/System/Library/Frameworks/AudioToolbox.framework",
+    ],
+)

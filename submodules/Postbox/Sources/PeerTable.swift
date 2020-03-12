@@ -50,11 +50,12 @@ final class PeerTable: Table {
         assert(self.updatedInitialPeers.isEmpty)
     }
     
-    func transactionUpdatedPeers() -> [(Peer?, Peer)] {
-        var result: [(Peer?, Peer)] = []
+    func transactionUpdatedPeers(contactsTable: ContactTable) -> [((Peer, Bool)?, (Peer, Bool))] {
+        var result: [((Peer, Bool)?, (Peer, Bool))] = []
         for (peerId, initialPeer) in self.updatedInitialPeers {
             if let peer = self.get(peerId) {
-                result.append((initialPeer, peer))
+                let isContact = contactsTable.isContact(peerId: peerId)
+                result.append((initialPeer.flatMap { ($0, isContact) }, (peer, isContact)))
             } else {
                 assertionFailure()
             }

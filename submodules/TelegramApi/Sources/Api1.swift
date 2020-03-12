@@ -10299,6 +10299,46 @@ public extension Api {
         }
     
     }
+    public enum DialogFilterSuggested: TypeConstructorDescription {
+        case dialogFilterSuggested(filter: Api.DialogFilter, description: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .dialogFilterSuggested(let filter, let description):
+                    if boxed {
+                        buffer.appendInt32(2004110666)
+                    }
+                    filter.serialize(buffer, true)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dialogFilterSuggested(let filter, let description):
+                return ("dialogFilterSuggested", [("filter", filter), ("description", description)])
+    }
+    }
+    
+        public static func parse_dialogFilterSuggested(_ reader: BufferReader) -> DialogFilterSuggested? {
+            var _1: Api.DialogFilter?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.DialogFilter
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.DialogFilterSuggested.dialogFilterSuggested(filter: _1!, description: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InputDocument: TypeConstructorDescription {
         case inputDocumentEmpty
         case inputDocument(id: Int64, accessHash: Int64, fileReference: Buffer)
@@ -17236,13 +17276,13 @@ public extension Api {
     
     }
     public enum DialogFilter: TypeConstructorDescription {
-        case dialogFilter(flags: Int32, id: Int32, title: String, includePeers: [Api.InputPeer])
+        case dialogFilter(flags: Int32, id: Int32, title: String, includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers):
+                case .dialogFilter(let flags, let id, let title, let includePeers, let excludePeers):
                     if boxed {
-                        buffer.appendInt32(351868460)
+                        buffer.appendInt32(1687327098)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -17252,14 +17292,19 @@ public extension Api {
                     for item in includePeers {
                         item.serialize(buffer, true)
                     }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(excludePeers.count))
+                    for item in excludePeers {
+                        item.serialize(buffer, true)
+                    }
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers):
-                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("includePeers", includePeers)])
+                case .dialogFilter(let flags, let id, let title, let includePeers, let excludePeers):
+                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("includePeers", includePeers), ("excludePeers", excludePeers)])
     }
     }
     
@@ -17274,12 +17319,17 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
             }
+            var _5: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, includePeers: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, includePeers: _4!, excludePeers: _5!)
             }
             else {
                 return nil

@@ -38,11 +38,7 @@ class MemoryKeyValue : public KeyValue {
   std::string stats() const override;
 
  private:
-  class Cmp : public std::less<> {
-   public:
-    using is_transparent = void;
-  };
-  std::map<std::string, std::string, Cmp> map_;
+  std::map<std::string, std::string, std::less<>> map_;
   int64 get_count_{0};
 };
 }  // namespace td

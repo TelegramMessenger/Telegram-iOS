@@ -30,7 +30,7 @@ slice do_verify_message(slice in_msg, int seqno, int public_key) {
   (int stored_seqno, int public_key) = load_state();
   var cs = do_verify_message(in_msg, stored_seqno, public_key);
   accept_message();
-  cs~touch_slice();
+  cs~touch();
   if (cs.slice_refs()) {
     var mode = cs~load_uint(8);
     send_raw_message(cs~load_ref(), mode);
@@ -45,6 +45,11 @@ int seqno() method_id {
   return get_data().begin_parse().preload_uint(32);
 }
 
+int get_public_key() method_id {
+  var (seqno, public_key) = load_state();
+  return public_key;
+}
+
 cell create_init_state(int public_key) method_id {
   return create_state(0, public_key);
 }
@@ -57,11 +62,7 @@ cell prepare_send_message(int mode, cell msg) method_id {
   return prepare_send_message_with_seqno(mode, msg, seqno());
 }
 
-
 slice verify_message(slice msg) method_id {
   var (stored_seqno, public_key) = load_state();
   return do_verify_message(msg, stored_seqno, public_key);
 }
-
-
-

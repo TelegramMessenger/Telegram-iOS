@@ -60,6 +60,21 @@ final class ContactTable: Table {
         self.peerIds = nil
     }
     
+    func transactionUpdatedPeers() -> [PeerId: (Bool, Bool)] {
+        var result: [PeerId: (Bool, Bool)] = [:]
+        if let peerIdsBeforeModification = self.peerIdsBeforeModification {
+            if let peerIds = self.peerIds {
+                let removedPeerIds = peerIdsBeforeModification.subtracting(peerIds)
+                let addedPeerIds = peerIds.subtracting(peerIdsBeforeModification)
+                
+                for peerId in removedPeerIds.union(addedPeerIds) {
+                    result[peerId] = (removedPeerIds.contains(peerId), addedPeerIds.contains(peerId))
+                }
+            }
+        }
+        return result
+    }
+    
     override func beforeCommit() {
         if let peerIdsBeforeModification = self.peerIdsBeforeModification {
             if let peerIds = self.peerIds {

@@ -32,7 +32,7 @@ namespace sym {
 typedef int var_idx_t;
 
 struct SymValBase {
-  enum { _Param, _Var, _Func, _Typename };
+  enum { _Param, _Var, _Func, _Typename, _GlobVar };
   int type;
   int idx;
   SymValBase(int _type, int _idx) : type(_type), idx(_idx) {

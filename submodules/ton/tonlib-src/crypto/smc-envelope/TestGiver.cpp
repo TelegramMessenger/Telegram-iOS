@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "TestGiver.h"
 #include "GenericAccount.h"
@@ -35,14 +35,23 @@ vm::CellHash TestGiver::get_init_code_hash() noexcept {
   //return vm::CellHash::from_slice(td::base64_decode("YV/IANhoI22HVeatFh6S5LbCHp+5OilARfzW+VQPZgQ=").move_as_ok());
 }
 
-td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gramms, td::Slice message,
-                                                 const block::StdAddress& dest_address) noexcept {
+td::Ref<vm::Cell> TestGiver::make_a_gift_message_static(td::uint32 seqno, td::Span<Gift> gifts) noexcept {
+  CHECK(gifts.size() <= max_gifts_size);
+
   vm::CellBuilder cb;
-  GenericAccount::store_int_message(cb, dest_address, gramms);
-  cb.store_bytes("\0\0\0\0", 4);
-  vm::CellString::store(cb, message, 35 * 8).ensure();
-  auto message_inner = cb.finalize();
-  return vm::CellBuilder().store_long(seqno, 32).store_long(1, 8).store_ref(message_inner).finalize();
+  cb.store_long(seqno, 32);
+
+  for (auto& gift : gifts) {
+    td::int32 send_mode = 1;
+    auto gramms = gift.gramms;
+    vm::CellBuilder cbi;
+    GenericAccount::store_int_message(cbi, gift.destination, gramms);
+    store_gift_message(cbi, gift);
+    auto message_inner = cbi.finalize();
+    cb.store_long(send_mode, 8).store_ref(std::move(message_inner));
+  }
+
+  return cb.finalize();
 }
 
 td::Result<td::uint32> TestGiver::get_seqno() const {

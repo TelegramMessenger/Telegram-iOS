@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import SwiftSignalKit
+import AsyncDisplayKit
 import Display
 import TelegramCore
 import SyncCore
@@ -21,21 +22,20 @@ import ContextUI
 import AppBundle
 import LocalizedPeerData
 import TelegramIntents
+import TooltipUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
+    if listNode.scroller.isDragging {
+        return false
+    }
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
-        let scrollToItem: ListViewScrollToItem
-        let targetProgress: CGFloat
+        let offset: CGFloat
         if searchNode.expansionProgress < 0.6 {
-            scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: nil), directionHint: .Up)
-            targetProgress = 0.0
+            offset = navigationBarSearchContentHeight
         } else {
-            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up)
-            targetProgress = 1.0
+            offset = 0.0
         }
-        searchNode.updateExpansionProgress(targetProgress, animated: true)
-        
-        listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        let _ = listNode.scrollToOffsetFromTop(offset)
         return true
     } else if searchNode.expansionProgress == 1.0 {
         var sortItemNode: ListViewItemNode?
@@ -120,6 +120,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private var badgeDisposable: Disposable?
     private var badgeIconDisposable: Disposable?
     
+    private var didAppear = false
     private var dismissSearchOnDisappear = false
         
     private var passcodeLockTooltipDisposable = MetaDisposable()
@@ -133,18 +134,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private var presentationDataDisposable: Disposable?
     
     private let stateDisposable = MetaDisposable()
-    private var filterDisposable: Disposable?
+    private let filterDisposable = MetaDisposable()
+    private let featuredFiltersDisposable = MetaDisposable()
+    private var processedFeaturedFilters = false
+    
+    private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
     private let tabContainerNode: ChatListFilterTabContainerNode
-    private var tabContainerData: ([ChatListFilterTabEntry], ChatListFilterTabEntryId)?
-    
-    private let chatListFilterValue = Promise<ChatListFilter?>()
+    private var tabContainerData: [ChatListFilterTabEntry]?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
-            self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(data as? ChatLocation, progress: progress, transition: transition)
+            self.chatListDisplayNode.containerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
         }
     }
     
@@ -166,13 +169,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
-        self.hasTabBarItemContextAction = true
+        self.tabBarItemContextActionType = .whenActive
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         let title: String
         if let filter = self.filter {
-            title = filter.title ?? ""
+            title = filter.title
         } else if self.groupId == .root {
             title = self.presentationData.strings.DialogList_Title
             self.navigationBar?.item = nil
@@ -232,35 +235,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             if strongSelf.chatListDisplayNode.searchDisplayController != nil {
                 strongSelf.deactivateSearch(animated: true)
             } else {
-                switch strongSelf.chatListDisplayNode.chatListNode.visibleContentOffset() {
+                switch strongSelf.chatListDisplayNode.containerNode.currentItemNode.visibleContentOffset() {
                 case .none, .unknown:
                     if let searchContentNode = strongSelf.searchContentNode {
                         searchContentNode.updateExpansionProgress(1.0, animated: true)
                     }
-                    strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.scrollToPosition(.top)
                 case let .known(offset):
-                    if offset <= navigationBarSearchContentHeight + 1.0 {
+                    if offset <= navigationBarSearchContentHeight + 1.0 && strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil {
                         strongSelf.tabContainerNode.tabSelected?(.all)
                     } else {
                         if let searchContentNode = strongSelf.searchContentNode {
                             searchContentNode.updateExpansionProgress(1.0, animated: true)
                         }
-                        strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.scrollToPosition(.top)
                     }
                 }
-            }
-        }
-        self.longTapWithTabBar = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.chatListDisplayNode.searchDisplayController != nil {
-                strongSelf.deactivateSearch(animated: true)
-            } else {
-                if let searchContentNode = strongSelf.searchContentNode {
-                    searchContentNode.updateExpansionProgress(1.0, animated: true)
-                }
-                strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.auto)
             }
         }
         
@@ -287,35 +277,71 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 context.account.networkState,
                 hasProxy,
                 passcode,
-                self.chatListDisplayNode.chatListNode.state
-            ).start(next: { [weak self] networkState, proxy, passcode, state in
+                self.chatListDisplayNode.containerNode.currentItemState,
+                self.isReorderingTabsValue.get()
+            ).start(next: { [weak self] networkState, proxy, passcode, state, isReorderingTabs in
                 if let strongSelf = self {
                     let defaultTitle: String
                     if strongSelf.groupId == .root {
-                        if let chatListFilter = strongSelf.filter {
-                            let title: String = chatListFilter.title ?? strongSelf.presentationData.strings.DialogList_Title
-                            defaultTitle = title
-                        } else {
-                            defaultTitle = strongSelf.presentationData.strings.DialogList_Title
-                        }
+                        defaultTitle = strongSelf.presentationData.strings.DialogList_Title
                     } else {
                         defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
                     }
                     if state.editing {
-                        if strongSelf.groupId == .root && strongSelf.filter == nil {
+                        if strongSelf.groupId == .root {
                             strongSelf.navigationItem.rightBarButtonItem = nil
                         }
                         
                         let title = !state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(state.selectedPeerIds.count)) : defaultTitle
                         strongSelf.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+                    } else if isReorderingTabs {
+                        if strongSelf.groupId == .root {
+                            strongSelf.navigationItem.rightBarButtonItem = nil
+                        }
+                        let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
+                        strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
+                        
+                        let (_, connectsViaProxy) = proxy
+                        switch networkState {
+                        case .waitingForNetwork:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        case let .connecting(proxy):
+                            var text = strongSelf.presentationData.strings.State_Connecting
+                            if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
+                                text = strongSelf.presentationData.strings.State_ConnectingToProxy
+                            }
+                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        case .updating:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        case .online:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                        }
                     } else {
                         var isRoot = false
                         if case .root = strongSelf.groupId {
                             isRoot = true
-                            if strongSelf.filter == nil {
+                            
+                            if isReorderingTabs {
+                                strongSelf.navigationItem.rightBarButtonItem = nil
+                            } else {
                                 let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
                                 rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
                                 strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                            }
+                            
+                            if isReorderingTabs {
+                                let leftBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.reorderingDonePressed))
+                                strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
+                            } else {
+                                let editItem: UIBarButtonItem
+                                if state.editing {
+                                    editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(strongSelf.donePressed))
+                                    editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Done
+                                } else {
+                                    editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
+                                    editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
+                                }
+                                strongSelf.navigationItem.leftBarButtonItem = editItem
                             }
                         }
                         
@@ -419,85 +445,34 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
-        if self.filter == nil {
-            let preferencesKey: PostboxViewKey = .preferences(keys: Set([
-                ApplicationSpecificPreferencesKeys.chatListFilterSettings
-            ]))
-            let filterItems = chatListFilterItems(context: context)
-            |> map { totalCount, items -> [ChatListFilterTabEntry] in
-                var result: [ChatListFilterTabEntry] = []
-                result.append(.all(unreadCount: totalCount))
-                for (filter, unreadCount) in items {
-                    result.append(.filter(id: filter.id, text: filter.title ?? "", unreadCount: unreadCount))
-                }
-                return result
-            }
-            |> distinctUntilChanged
-            self.filterDisposable = (combineLatest(queue: .mainQueue(),
-                    context.account.postbox.combinedView(keys: [
-                    preferencesKey
-                ]),
-                filterItems,
-                self.chatListFilterValue.get() |> map { $0?.id } |> distinctUntilChanged
-            )
-            |> deliverOnMainQueue).start(next: { [weak self] combinedView, filterItems, selectedFilter in
+        if self.filter == nil, case .root = self.groupId {
+            self.chatListDisplayNode.containerNode.currentItemFilterUpdated = { [weak self] filter, fraction, transition, force in
                 guard let strongSelf = self else {
                     return
                 }
-                var filterSettings: ChatListFilterSettings = .default
-                if let preferencesView = combinedView.views[preferencesKey] as? PreferencesView {
-                    if let value = preferencesView.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings] as? ChatListFilterSettings {
-                        filterSettings = value
-                    }
+                guard let layout = strongSelf.validLayout else {
+                    return
                 }
-                
-                var resolvedItems = filterItems
-                if !filterSettings.displayTabs || groupId != .root {
-                    resolvedItems = []
+                guard let tabContainerData = strongSelf.tabContainerData else {
+                    return
                 }
-                
-                var wasEmpty = false
-                if let tabContainerData = strongSelf.tabContainerData {
-                    wasEmpty = tabContainerData.0.count <= 1
-                } else {
-                    wasEmpty = true
+                if force {
+                    strongSelf.tabContainerNode.cancelAnimations()
                 }
-                let selectedEntryId: ChatListFilterTabEntryId = selectedFilter.flatMap { .filter($0) } ?? .all
-                strongSelf.tabContainerData = (resolvedItems, selectedEntryId)
-                
-                let isEmpty = resolvedItems.count <= 1
-                
-                if wasEmpty != isEmpty {
-                    strongSelf.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
-                    if let parentController = strongSelf.parent as? TabBarController {
-                        parentController.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
-                    }
-                }
-                
-                if let layout = strongSelf.validLayout {
-                    if wasEmpty != isEmpty {
-                        strongSelf.containerLayoutUpdated(layout, transition: .immediate)
-                        (strongSelf.parent as? TabBarController)?.updateLayout()
-                    } else {
-                        strongSelf.tabContainerNode.update(size: CGSize(width: layout.size.width, height: NavigationBar.defaultSecondaryContentHeight), sideInset: layout.safeInsets.left, filters: resolvedItems, selectedFilter: selectedEntryId, presentationData: strongSelf.presentationData, transition: .animated(duration: 0.4, curve: .spring))
-                    }
-                }
-            })
+                strongSelf.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: tabContainerData, selectedFilter: filter, isReordering: strongSelf.chatListDisplayNode.isReorderingFilters || strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing, isEditing: false, transitionFraction: fraction, presentationData: strongSelf.presentationData, transition: transition)
+            }
+            self.reloadFilters()
         }
         
         self.tabContainerNode.tabSelected = { [weak self] id in
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters
-            }
+            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
             |> deliverOnMainQueue).start(next: { [weak self] filters in
                 guard let strongSelf = self else {
                     return
                 }
-                let previousFilter = strongSelf.chatListDisplayNode.chatListNode.chatListFilter
                 let updatedFilter: ChatListFilter?
                 switch id {
                 case .all:
@@ -518,27 +493,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         updatedFilter = nil
                     }
                 }
-                if previousFilter?.id != updatedFilter?.id {
-                    var paneSwitchAnimationDirection: ChatListNodePaneSwitchAnimationDirection?
-                    if let previousId = previousFilter?.id, let updatedId = updatedFilter?.id, let previousIndex = filters.index(where: { $0.id == previousId }), let updatedIndex = filters.index(where: { $0.id == updatedId }) {
-                        if previousIndex > updatedIndex {
-                            paneSwitchAnimationDirection = .right
-                        } else {
-                            paneSwitchAnimationDirection = .left
-                        }
-                    } else if (previousFilter != nil) != (updatedFilter != nil) {
-                        if previousFilter != nil {
-                            paneSwitchAnimationDirection = .right
-                        } else {
-                            paneSwitchAnimationDirection = .left
-                        }
-                    }
-                    if let direction = paneSwitchAnimationDirection {
-                        strongSelf.chatListDisplayNode.chatListNode.paneSwitchAnimation = (direction, .animated(duration: 0.4, curve: .spring))
-                    }
-                }
-                strongSelf.chatListDisplayNode.chatListNode.updateFilter(updatedFilter)
+                strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: updatedFilter.flatMap { .filter($0.id) } ?? .all)
             })
+        }
+        
+        self.tabContainerNode.tabRequestedDeletion = { [weak self] id in
+            if case let .filter(id) = id {
+                self?.askForFilterRemoval(id: id)
+            }
         }
         
         self.tabContainerNode.addFilter = { [weak self] in
@@ -549,47 +511,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self else {
                 return
             }
-            var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Edit, icon: { _ in
-                return nil
-            }, action: { c, f in
-                c.dismiss(completion: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                        let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                        return settings.filters
-                    }
-                    |> deliverOnMainQueue).start(next: { presetList in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        var found = false
-                        for filter in presetList {
-                            if filter.id == id {
-                                strongSelf.push(chatListFilterPresetController(context: strongSelf.context, currentPreset: filter, updated: { _ in }))
-                                f(.dismissWithoutContent)
-                                found = true
-                                break
-                            }
-                        }
-                    })
-                })
-            })))
-            if let chatListFilter = strongSelf.chatListDisplayNode.chatListNode.chatListFilter, chatListFilter.includePeers.count < 100 {
+            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+            |> deliverOnMainQueue).start(next: { [weak self] filters in
+                guard let strongSelf = self else {
+                    return
+                }
+                var items: [ContextMenuItem] = []
                 //TODO:localization
-                items.append(.action(ContextMenuActionItem(text: "Add Chats", icon: { _ in
-                    return nil
+                items.append(.action(ContextMenuActionItem(text: "Edit Folder", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                 }, action: { c, f in
                     c.dismiss(completion: {
                         guard let strongSelf = self else {
                             return
                         }
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                            let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                            return settings.filters
-                        }
+                        let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
                         |> deliverOnMainQueue).start(next: { presetList in
                             guard let strongSelf = self else {
                                 return
@@ -597,19 +533,84 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             var found = false
                             for filter in presetList {
                                 if filter.id == id {
-                                    strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter))
+                                    strongSelf.push(chatListFilterPresetController(context: strongSelf.context, currentPreset: filter, updated: { _ in }))
                                     f(.dismissWithoutContent)
                                     found = true
                                     break
                                 }
                             }
+                            if !found {
+                                f(.default)
+                            }
                         })
                     })
                 })))
-            }
-            
-            let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode)), items: .single(items), reactionItems: [], recognizer: nil, gesture: gesture)
-            strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+                if let filter = filters.first(where: { $0.id == id }), filter.data.includePeers.count < 100 {
+                    //TODO:localization
+                    items.append(.action(ContextMenuActionItem(text: "Add Chats", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, f in
+                        c.dismiss(completion: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                            |> deliverOnMainQueue).start(next: { presetList in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                var found = false
+                                for filter in presetList {
+                                    if filter.id == id {
+                                        strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter))
+                                        f(.dismissWithoutContent)
+                                        found = true
+                                        break
+                                    }
+                                }
+                                if !found {
+                                    f(.default)
+                                }
+                            })
+                        })
+                    })))
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { c, f in
+                        c.dismiss(completion: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.askForFilterRemoval(id: id)
+                        })
+                    })))
+                    
+                    if filters.count > 1 {
+                        items.append(.separator)
+                        items.append(.action(ContextMenuActionItem(text: "Reorder Tabs", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, f in
+                            //f(.default)
+                            c.dismiss(completion: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.chatListDisplayNode.isReorderingFilters = true
+                                strongSelf.isReorderingTabsValue.set(true)
+                                strongSelf.searchContentNode?.setIsEnabled(false, animated: true)
+                                if let layout = strongSelf.validLayout {
+                                    strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                }
+                            })
+                        })))
+                    }
+                }
+                
+                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode)), items: .single(items), reactionItems: [], recognizer: nil, gesture: gesture)
+                strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+            })
         }
     }
 
@@ -626,7 +627,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.suggestLocalizationDisposable.dispose()
         self.presentationDataDisposable?.dispose()
         self.stateDisposable.dispose()
-        self.filterDisposable?.dispose()
+        self.filterDisposable.dispose()
+        self.featuredFiltersDisposable.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -642,11 +644,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
-        var editing = false
-        self.chatListDisplayNode.chatListNode.updateState { state in
-            editing = state.editing
-            return state
-        }
+        let editing = self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing
         let editItem: UIBarButtonItem
         if editing {
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
@@ -669,6 +667,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
+        if let layout = self.validLayout {
+            self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData ?? [], selectedFilter: self.chatListDisplayNode.containerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing, isEditing: false, transitionFraction: self.chatListDisplayNode.containerNode.transitionFraction, presentationData: self.presentationData, transition: .immediate)
+        }
+        
         if self.isNodeLoaded {
             self.chatListDisplayNode.updatePresentationData(self.presentationData)
         }
@@ -676,7 +678,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     override public func loadDisplayNode() {
         self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, filter: self.filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
-        self.chatListFilterValue.set(self.chatListDisplayNode.chatListNode.appliedChatListFilterSignal)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -684,37 +685,37 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             self?.deactivateSearch(animated: true)
         }
         
-        self.chatListDisplayNode.chatListNode.activateSearch = { [weak self] in
+        self.chatListDisplayNode.containerNode.activateSearch = { [weak self] in
             self?.activateSearch()
         }
         
-        self.chatListDisplayNode.chatListNode.presentAlert = { [weak self] text in
+        self.chatListDisplayNode.containerNode.presentAlert = { [weak self] text in
             if let strongSelf = self {
                 self?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         }
         
-        self.chatListDisplayNode.chatListNode.present = { [weak self] c in
+        self.chatListDisplayNode.containerNode.present = { [weak self] c in
             if let strongSelf = self {
-                self?.present(c, in: .window(.root))
+                strongSelf.present(c, in: .window(.root))
             }
         }
         
-        self.chatListDisplayNode.chatListNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
+        self.chatListDisplayNode.containerNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.toggleArchivedFolderHiddenByDefault()
         }
         
-        self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
+        self.chatListDisplayNode.containerNode.deletePeerChat = { [weak self] peerId in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.deletePeerChat(peerId: peerId)
         }
         
-        self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId, animated, isAd in
+        self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, animated, isAd in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     if isAd {
@@ -738,37 +739,37 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         scrollToEndIfExists = true
                     }
                     
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
-                        self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
+                        self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                     }))
                 }
             }
         }
         
-        self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
+        self.chatListDisplayNode.containerNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
                     chatListController.navigationPresentation = .master
                     navigationController.pushViewController(chatListController)
-                    strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                 }
             }
         }
         
-        self.chatListDisplayNode.chatListNode.updatePeerGrouping = { [weak self] peerId, group in
+        self.chatListDisplayNode.containerNode.updatePeerGrouping = { [weak self] peerId, group in
             guard let strongSelf = self else {
                 return
             }
             if group {
                 strongSelf.archiveChats(peerIds: [peerId])
             } else {
-                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
                 let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.archive : .root).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                 })
             }
         }
@@ -786,7 +787,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(messageId), purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
-                            strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         }
                     }
                 }))
@@ -815,7 +816,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
-                            strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         }
                     }
                 }))
@@ -860,14 +861,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
-        self.chatListDisplayNode.dismissSelf = { [weak self] in
+        self.chatListDisplayNode.dismissSelfIfCompletedPresentation = { [weak self] in
             guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
+                return
+            }
+            if !strongSelf.didAppear {
                 return
             }
             navigationController.filterController(strongSelf, animated: true)
         }
         
-        self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
+        self.chatListDisplayNode.containerNode.contentOffsetChanged = { [weak self] offset in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
                 var offset = offset
                 if validLayout.inVoiceOver {
@@ -877,7 +881,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
-        self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
+        self.chatListDisplayNode.containerNode.contentScrollingEnded = { [weak self] listView in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 return fixListNodeScrolling(listView, searchNode: searchContentNode)
             } else {
@@ -885,19 +889,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
-        self.chatListDisplayNode.isEmptyUpdated = { [weak self] isEmpty in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let _ = strongSelf.validLayout {
-                if isEmpty {
-                    //searchContentNode.updateListVisibleContentOffset(.known(0.0))
-                }
-            }
-        }
-        
         self.chatListDisplayNode.emptyListAction = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            if let filter = strongSelf.chatListDisplayNode.chatListNode.chatListFilter {
+            if let filter = strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter {
                 strongSelf.push(chatListFilterPresetController(context: strongSelf.context, currentPreset: filter, updated: { _ in }))
             } else {
                 strongSelf.composePressed()
@@ -908,7 +904,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             self?.toolbarActionSelected(action: action)
         }
         
-        self.chatListDisplayNode.chatListNode.activateChatPreview = { [weak self] item, node, gesture in
+        self.chatListDisplayNode.containerNode.activateChatPreview = { [weak self] item, node, gesture in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return
@@ -922,7 +918,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             case let .peer(peer):
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList, chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList(isFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil), chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
@@ -940,7 +936,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         let context = self.context
-        let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
+        let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.containerNode.currentItemState
         |> map { state -> Set<PeerId>? in
             if !state.editing {
                 return nil
@@ -988,7 +984,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             }
                         }
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: strongSelf.chatListDisplayNode.chatListNode.chatListFilter != nil ? nil : ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled))
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil ? nil : ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled))
                 }
             } else {
                 if let (options, peerIds) = peerIdsAndOptions {
@@ -1006,13 +1002,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
         }))
         
-        self.ready.set(self.chatListDisplayNode.chatListNode.ready)
+        self.ready.set(self.chatListDisplayNode.containerNode.ready)
         
         self.displayNodeDidLoad()
     }
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        self.didAppear = true
+        
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
         
         guard case .root = self.groupId else {
             return
@@ -1105,7 +1105,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }))
         }
         
-        self.chatListDisplayNode.chatListNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
+        self.chatListDisplayNode.containerNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
             guard let strongSelf = self else {
                 return
             }
@@ -1124,10 +1124,62 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 return true
             })
         }
+        
+        if !self.processedFeaturedFilters {
+            self.featuredFiltersDisposable.set((
+                self.context.account.postbox.transaction { transaction -> ChatListFiltersFeaturedState? in
+                    return transaction.getPreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState) as? ChatListFiltersFeaturedState
+                }
+                |> delay(1.0, queue: .mainQueue())
+                |> deliverOnMainQueue
+            ).start(next: { [weak self] featuredState in
+                guard let strongSelf = self, let featuredState = featuredState else {
+                    return
+                }
+                
+                let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                |> deliverOnMainQueue).start(next: { filters in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.processedFeaturedFilters = true
+                    if !featuredState.isSeen && !featuredState.filters.isEmpty && filters.isEmpty {
+                        let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                        |> deliverOnMainQueue).start(next: { filters in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let hasFilters = !filters.isEmpty
+                            if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
+                                let absoluteFrame = sourceFrame
+                                //TODO:localize
+                                let text: String
+                                if hasFilters {
+                                    text = "Hold on 'Chats' to edit folders and switch between views."
+                                } else {
+                                    text = "Hold to organize your chats with folders."
+                                }
+                                parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
+                                    guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                                        return true
+                                    }
+                                    if parentController.isPointInsideContentArea(point: point) {
+                                        return false
+                                    }
+                                    return true
+                                }), in: .current)
+                            }
+                        })
+                    }
+                })
+            }))
+        }
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
         
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
@@ -1135,6 +1187,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
             return true
         })
+        
+        self.featuredFiltersDisposable.set(nil)
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -1145,7 +1199,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             self.deactivateSearch(animated: false)
         }
         
-        self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+        self.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -1155,19 +1209,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         
         self.validLayout = layout
         
-        var tabContainerOffset: CGFloat = 0.0
-        if !self.displayNavigationBar {
-            tabContainerOffset += layout.statusBarHeight ?? 0.0
-            tabContainerOffset += 44.0 + 44.0 + 44.0
-        }
-        
-        transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.visualNavigationInsetHeight - self.additionalHeight - NavigationBar.defaultSecondaryContentHeight + tabContainerOffset), size: CGSize(width: layout.size.width, height: NavigationBar.defaultSecondaryContentHeight)))
-        self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: NavigationBar.defaultSecondaryContentHeight), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.tabContainerData?.1, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        self.updateLayout(layout: layout, transition: transition)
         
         if let searchContentNode = self.searchContentNode, layout.inVoiceOver != wasInVoiceOver {
             searchContentNode.updateListVisibleContentOffset(.known(0.0))
-            self.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+            self.chatListDisplayNode.scrollToTop()
         }
+    }
+    
+    private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        var tabContainerOffset: CGFloat = 0.0
+        if !self.displayNavigationBar {
+            tabContainerOffset += layout.statusBarHeight ?? 0.0
+            tabContainerOffset += 44.0 + 20.0
+        }
+        
+        transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.visualNavigationInsetHeight - self.additionalHeight - 46.0 + tabContainerOffset), size: CGSize(width: layout.size.width, height: 46.0)))
+        self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData ?? [], selectedFilter: self.chatListDisplayNode.containerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing, isEditing: false, transitionFraction: self.chatListDisplayNode.containerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
         self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, visualNavigationHeight: self.visualNavigationInsetHeight, cleanNavigationBarHeight: self.cleanNavigationHeight, transition: transition)
     }
@@ -1188,15 +1246,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         self.searchContentNode?.setIsEnabled(false, animated: true)
         
-        self.chatListDisplayNode.chatListNode.updateState { state in
+        self.chatListDisplayNode.containerNode.updateState { state in
             var state = state
             state.editing = true
             state.peerIdWithRevealedOptions = nil
             return state
         }
+        self.chatListDisplayNode.isEditing = true
+        if let layout = self.validLayout {
+            self.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
     }
     
     @objc private func donePressed() {
+        self.reorderingDonePressed()
+        
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         if case .root = self.groupId, self.filter == nil {
@@ -1206,18 +1270,200 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(nil, transition: .animated(duration: 0.4, curve: .spring))
         self.searchContentNode?.setIsEnabled(true, animated: true)
-        self.chatListDisplayNode.chatListNode.updateState { state in
+        self.chatListDisplayNode.containerNode.updateState { state in
             var state = state
             state.editing = false
             state.peerIdWithRevealedOptions = nil
             state.selectedPeerIds.removeAll()
             return state
         }
+        self.chatListDisplayNode.isEditing = false
+        if let layout = self.validLayout {
+            self.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+    }
+    
+    @objc private func reorderingDonePressed() {
+        if let reorderedFilterIds = self.tabContainerNode.reorderedFilterIds {
+            let _ = (updateChatListFiltersInteractively(postbox: self.context.account.postbox, { stateFilters in
+                var updatedFilters: [ChatListFilter] = []
+                for id in reorderedFilterIds {
+                    if let index = stateFilters.firstIndex(where: { $0.id == id }) {
+                        updatedFilters.append(stateFilters[index])
+                    }
+                }
+                updatedFilters.append(contentsOf: stateFilters.compactMap { filter -> ChatListFilter? in
+                    if !updatedFilters.contains(where: { $0.id == filter.id }) {
+                        return filter
+                    } else {
+                        return nil
+                    }
+                })
+                return updatedFilters
+            })
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.reloadFilters(firstUpdate: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatListDisplayNode.isReorderingFilters = false
+                    strongSelf.isReorderingTabsValue.set(false)
+                    strongSelf.searchContentNode?.setIsEnabled(true, animated: true)
+                    if let layout = strongSelf.validLayout {
+                        strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    }
+                })
+            })
+        }
+    }
+    
+    private func reloadFilters(firstUpdate: (() -> Void)? = nil) {
+        let preferencesKey: PostboxViewKey = .preferences(keys: Set([
+            ApplicationSpecificPreferencesKeys.chatListFilterSettings
+        ]))
+        let filterItems = chatListFilterItems(context: self.context)
+        var notifiedFirstUpdate = false
+        self.filterDisposable.set((combineLatest(queue: .mainQueue(),
+                context.account.postbox.combinedView(keys: [
+                preferencesKey
+            ]),
+            filterItems
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] _, countAndFilterItems in
+            guard let strongSelf = self else {
+                return
+            }
+            let (_, items) = countAndFilterItems
+            var filterItems: [ChatListFilterTabEntry] = []
+            filterItems.append(.all(unreadCount: 0))
+            for (filter, unreadCount) in items {
+                filterItems.append(.filter(id: filter.id, text: filter.title, unreadCount: unreadCount))
+            }
+            
+            var resolvedItems = filterItems
+            if strongSelf.groupId != .root {
+                resolvedItems = []
+            }
+            
+            var wasEmpty = false
+            if let tabContainerData = strongSelf.tabContainerData {
+                wasEmpty = tabContainerData.count <= 1
+            } else {
+                wasEmpty = true
+            }
+            var selectedEntryId = strongSelf.chatListDisplayNode.containerNode.currentItemFilter
+            var resetCurrentEntry = false
+            if !resolvedItems.contains(where: { $0.id == selectedEntryId }) {
+                resetCurrentEntry = true
+                if let tabContainerData = strongSelf.tabContainerData {
+                    var found = false
+                    if let index = tabContainerData.firstIndex(where: { $0.id == selectedEntryId }) {
+                        for i in (0 ..< index - 1).reversed() {
+                            if resolvedItems.contains(where: { $0.id == tabContainerData[i].id }) {
+                                selectedEntryId = tabContainerData[i].id
+                                found = true
+                                break
+                            }
+                        }
+                    }
+                    if !found {
+                        selectedEntryId = .all
+                    }
+                } else {
+                    selectedEntryId = .all
+                }
+            }
+            strongSelf.tabContainerData = resolvedItems
+            var availableFilters: [ChatListContainerNodeFilter] = []
+            availableFilters.append(.all)
+            for item in items {
+                availableFilters.append(.filter(item.0))
+            }
+            strongSelf.chatListDisplayNode.containerNode.updateAvailableFilters(availableFilters)
+            
+            let isEmpty = resolvedItems.count <= 1
+            
+            if wasEmpty != isEmpty {
+                strongSelf.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
+                if let parentController = strongSelf.parent as? TabBarController {
+                    parentController.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
+                }
+            }
+            
+            if let layout = strongSelf.validLayout {
+                if wasEmpty != isEmpty {
+                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                    (strongSelf.parent as? TabBarController)?.updateLayout()
+                } else {
+                    strongSelf.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: resolvedItems, selectedFilter: selectedEntryId, isReordering: strongSelf.chatListDisplayNode.isReorderingFilters || strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing, isEditing: false, transitionFraction: strongSelf.chatListDisplayNode.containerNode.transitionFraction, presentationData: strongSelf.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+                }
+            }
+            
+            if !notifiedFirstUpdate {
+                notifiedFirstUpdate = true
+                firstUpdate?()
+            }
+            
+            if resetCurrentEntry {
+                strongSelf.tabContainerNode.tabSelected?(selectedEntryId)
+            }
+        }))
+    }
+    
+    private func askForFilterRemoval(id: Int32) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        
+        //TODO:localization
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: "This will remove the filter, your chats will not be deleted."),
+                ActionSheetButtonItem(title: "Remove", color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    let commit: () -> Void = {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == id {
+                            if strongSelf.chatListDisplayNode.containerNode.currentItemNode.currentState.editing {
+                                    strongSelf.donePressed()
+                            }
+                        }
+                        
+                        let _ = updateChatListFiltersInteractively(postbox: strongSelf.context.account.postbox, { filters in
+                            return filters.filter({ $0.id != id })
+                        }).start()
+                    }
+                    
+                    if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == id {
+                        strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: .all, completion: {
+                            commit()
+                        })
+                    } else {
+                        commit()
+                    }
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        self.present(actionSheet, in: .window(.root))
     }
     
     public func activateSearch() {
         if self.displayNavigationBar {
-            let _ = (self.chatListDisplayNode.chatListNode.contentsReady
+            let _ = (self.chatListDisplayNode.containerNode.currentItemNode.contentsReady
             |> take(1)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 guard let strongSelf = self else {
@@ -1303,10 +1549,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             return nil
         }
         
-        let listLocation = self.view.convert(location, to: self.chatListDisplayNode.chatListNode.view)
+        let listLocation = self.view.convert(location, to: self.chatListDisplayNode.containerNode.currentItemNode.view)
         
         var selectedNode: ChatListItemNode?
-        self.chatListDisplayNode.chatListNode.forEachItemNode { itemNode in
+        self.chatListDisplayNode.containerNode.currentItemNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatListItemNode, itemNode.frame.contains(listLocation), !itemNode.isDisplayingRevealedOptions {
                 selectedNode = itemNode
             }
@@ -1346,12 +1592,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 chatController.updatePresentationMode(.standard(previewing: false))
                 if let navigationController = self.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false))
-                    self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                    self.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                 }
             } else if let chatListController = viewControllerToCommit as? ChatListController {
                 if let navigationController = self.navigationController as? NavigationController {
                     navigationController.pushViewController(chatListController, animated: false, completion: {})
-                    self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                    self.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                 }
             }
         }
@@ -1373,22 +1619,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         let inputShortcuts: [KeyShortcut] = [
             KeyShortcut(title: strings.KeyCommand_JumpToPreviousChat, input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: false))
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.selectChat(.previous(unread: false))
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_JumpToNextChat, input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.next(unread: false))
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.selectChat(.next(unread: false))
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_JumpToPreviousUnreadChat, input: UIKeyCommand.inputUpArrow, modifiers: [.alternate, .shift], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: true))
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.selectChat(.previous(unread: true))
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_JumpToNextUnreadChat, input: UIKeyCommand.inputDownArrow, modifiers: [.alternate, .shift], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.next(unread: true))
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.selectChat(.next(unread: true))
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_NewMessage, input: "N", modifiers: [.command], action: { [weak self] in
@@ -1403,9 +1649,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         let openChat: (Int) -> Void = { [weak self] index in
             if let strongSelf = self {
                 if index == 0 {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.peerId(strongSelf.context.account.peerId))
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.selectChat(.peerId(strongSelf.context.account.peerId))
                 } else {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.index(index - 1))
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.selectChat(.index(index - 1))
                 }
             }
         }
@@ -1420,11 +1666,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {
-        let peerIds = self.chatListDisplayNode.chatListNode.currentState.selectedPeerIds
+        let peerIds = self.chatListDisplayNode.containerNode.currentItemNode.currentState.selectedPeerIds
         if case .left = action {
             let signal: Signal<Void, NoError>
+            var completion: (() -> Void)?
             let context = self.context
             if !peerIds.isEmpty {
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                completion = { [weak self] in
+                    self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                }
                 signal = self.context.account.postbox.transaction { transaction -> Void in
                     for peerId in peerIds {
                         togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
@@ -1433,12 +1684,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             } else {
                 let groupId = self.groupId
                 signal = self.context.account.postbox.transaction { transaction -> Void in
-                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId, filterPredicate: self.chatListDisplayNode.chatListNode.chatListFilter.flatMap(chatListFilterPredicate))
+                    let filterPredicate = (self.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.data).flatMap(chatListFilterPredicate)
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId, filterPredicate: filterPredicate)
+                    if let filterPredicate = filterPredicate {
+                        for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
+                            markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: additionalGroupId, filterPredicate: filterPredicate)
+                        }
+                    }
                 }
             }
             let _ = (signal
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.donePressed()
+                completion?()
             })
         } else if case .right = action, !peerIds.isEmpty {
             let actionSheet = ActionSheetController(presentationData: self.presentationData)
@@ -1450,7 +1708,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     return
                 }
                 
-                strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                     var state = state
                     for peerId in peerIds {
                         state.pendingRemovalPeerIds.insert(peerId)
@@ -1494,15 +1752,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         |> deliverOnMainQueue).start()
                         return true
                     } else if value == .undo {
-                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
-                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                             var state = state
                             for peerId in peerIds {
                                 state.pendingRemovalPeerIds.remove(peerId)
                             }
                             return state
                         })
-                        self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                        self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
                         return true
                     }
                     return false
@@ -1526,7 +1784,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 self.archiveChats(peerIds: Array(peerIds))
             } else {
                 if !peerIds.isEmpty {
-                    self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                    self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
                     let _ = (self.context.account.postbox.transaction { transaction -> Void in
                         for peerId in peerIds {
                             updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
@@ -1536,7 +1794,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                         strongSelf.donePressed()
                     })
                 }
@@ -1559,7 +1817,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.chatListDisplayNode.chatListNode.updateState { state in
+            strongSelf.chatListDisplayNode.containerNode.updateState { state in
                 var state = state
                 if value {
                     state.archiveShouldBeTemporaryRevealed = false
@@ -1677,7 +1935,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                                 var state = state
                                 state.pendingClearHistoryPeerIds.insert(peer.peerId)
                                 return state
@@ -1698,7 +1956,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                                             var state = state
                                             state.pendingClearHistoryPeerIds.remove(peer.peerId)
                                             return state
@@ -1706,7 +1964,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                     })
                                     return true
                                 } else if value == .undo {
-                                    strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                    strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                                         var state = state
                                         state.pendingClearHistoryPeerIds.remove(peer.peerId)
                                         return state
@@ -1870,7 +2128,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             return
         }
         let postbox = self.context.account.postbox
-        self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds[0])
+        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds[0])
         let _ = (ApplicationSpecificNotice.incrementArchiveChatTips(accountManager: self.context.sharedContext.accountManager, count: 1)
         |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
             let _ = (postbox.transaction { transaction -> Void in
@@ -1882,7 +2140,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         
                 for peerId in peerIds {
                     deleteSendMessageIntents(peerId: peerId)
@@ -1893,7 +2151,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         return false
                     }
                     if value == .undo {
-                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds[0])
+                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds[0])
                         let _ = (postbox.transaction { transaction -> Void in
                             for peerId in peerIds {
                                 updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
@@ -1903,7 +2161,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                         })
                         return true
                     } else {
@@ -1949,13 +2207,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         let peerId = peer.peerId
-        self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-        self.chatListDisplayNode.chatListNode.updateState({ state in
+        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
+        self.chatListDisplayNode.containerNode.updateState({ state in
             var state = state
             state.pendingRemovalPeerIds.insert(peer.peerId)
             return state
         })
-        self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         let statusText: String
         if let channel = chatPeer as? TelegramChannel {
             if deleteGloballyIfPossible {
@@ -1999,7 +2257,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 return false
             }
             if value == .commit {
-                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
                 if let channel = chatPeer as? TelegramChannel {
                     strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
                 }
@@ -2007,25 +2265,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                    strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                         var state = state
                         state.pendingRemovalPeerIds.remove(peer.peerId)
                         return state
                     })
-                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                     
                     deleteSendMessageIntents(peerId: peerId)
                 })
                 completion()
                 return true
             } else if value == .undo {
-                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
+                strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                     var state = state
                     state.pendingRemovalPeerIds.remove(peer.peerId)
                     return state
                 })
-                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                 return true
             }
             return false
@@ -2050,45 +2308,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     private func openFilterSettings() {
-        self.push(chatListFilterPresetListController(context: self.context, updated: { _ in
+        self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(false)
+        self.push(chatListFilterPresetListController(context: self.context, mode: .modal, dismissed: { [weak self] in
+            self?.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
         }))
-    }
-    
-    public func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
-        if self.isNodeLoaded {
-            let _ = (self.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] presetList in
-                guard let strongSelf = self else {
-                    return
-                }
-                let controller = TabBarChatListFilterController(context: strongSelf.context, sourceNodes: sourceNodes, presetList: presetList, currentPreset: strongSelf.chatListDisplayNode.chatListNode.chatListFilter, setup: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in
-                    }))
-                }, updatePreset: { value in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let value = value {
-                        strongSelf.tabContainerNode.tabSelected?(.filter(value.id))
-                    }
-                })
-                strongSelf.context.sharedContext.mainWindow?.present(controller, on: .root)
-            })
-        }
     }
     
     override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
         let _ = (combineLatest(queue: .mainQueue(),
-            self.context.account.postbox.transaction { transaction -> [ChatListFilter] in
-                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
-                return settings.filters
-            },
+            currentChatListFilters(postbox: self.context.account.postbox),
             chatListFilterItems(context: self.context)
             |> take(1)
         )
@@ -2097,78 +2325,46 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 return
             }
             
+            let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
+            
             let (_, filterItems) = filterItemsAndTotalCount
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? "Add Filter" : "Edit Filters", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? "Add Folder" : "Edit Folders", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: presetList.isEmpty ? "Chat/Context Menu/Add" : "Chat/Context Menu/ItemList"), color: theme.contextMenu.primaryColor)
             }, action: { c, f in
                 c.dismiss(completion: {
                     guard let strongSelf = self else {
                         return
                     }
-                    if presetList.isEmpty {
-                        if let navigationController = strongSelf.navigationController as? NavigationController {
-                            var viewControllers = navigationController.viewControllers
-                            //viewControllers.append(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in }))
-                            viewControllers.append(chatListFilterPresetController(context: strongSelf.context, currentPreset: nil, updated: { _ in }))
-                            navigationController.setViewControllers(viewControllers, animated: true)
-                        }
-                    } else {
-                        strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { _ in }))
-                    }
+                    strongSelf.openFilterSettings()
                 })
             })))
+            
+            if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil {
+                items.append(.action(ContextMenuActionItem(text: "All Chats", icon: { theme in
+                    return nil
+                }, action: { c, f in
+                    f(.dismissWithoutContent)
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.tabContainerNode.tabSelected?(.all)
+                })))
+            }
             
             if !presetList.isEmpty {
                 items.append(.separator)
                 
                 for preset in presetList {
-                    enum ChatListFilterType {
-                        case generic
-                        case unmuted
-                        case unread
-                        case channels
-                        case groups
-                        case bots
-                        case secretChats
-                        case privateChats
-                    }
-                    let filterType: ChatListFilterType
-                    if preset.includePeers.isEmpty {
-                        if preset.categories == .all {
-                            if preset.excludeRead {
-                                filterType = .unread
-                            } else if preset.excludeMuted {
-                                filterType = .unmuted
-                            } else {
-                                filterType = .generic
-                            }
-                        } else {
-                            if preset.categories == .channels {
-                                filterType = .channels
-                            } else if preset.categories.isSubset(of: [.publicGroups, .privateGroups]) {
-                                filterType = .groups
-                            } else if preset.categories == .bots {
-                                filterType = .bots
-                            } else if preset.categories == .secretChats {
-                                filterType = .secretChats
-                            } else if preset.categories == .privateChats {
-                                filterType = .privateChats
-                            } else {
-                                filterType = .generic
-                            }
-                        }
-                    } else {
-                        filterType = .generic
-                    }
+                    let filterType = chatListFilterType(preset)
                     var badge = ""
                     for item in filterItems {
                         if item.0.id == preset.id && item.1 != 0 {
                             badge = "\(item.1)"
                         }
                     }
-                    items.append(.action(ContextMenuActionItem(text: preset.title ?? "", badge: badge, icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: preset.title, badge: badge, icon: { theme in
                         let imageName: String
                         switch filterType {
                         case .generic:
@@ -2183,10 +2379,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             imageName = "Chat/Context Menu/Groups"
                         case .bots:
                             imageName = "Chat/Context Menu/Bots"
-                        case .secretChats:
-                            imageName = "Chat/Context Menu/Timer"
-                        case .privateChats:
+                        case .contacts:
                             imageName = "Chat/Context Menu/User"
+                        case .nonContacts:
+                            imageName = "Chat/Context Menu/UnknownUser"
                         }
                         return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
                     }, action: { _, f in
@@ -2203,10 +2399,32 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
         })
     }
+    
+    override public func tabBarItemSwipeAction(direction: TabBarItemSwipeDirection) {
+        guard let entries = self.tabContainerData, var index = entries.firstIndex(where: { $0.id == self.chatListDisplayNode.containerNode.currentItemFilter }) else {
+            return
+        }
+        switch direction {
+        case .right:
+            if index == 0 {
+                index = entries.count - 1
+            } else {
+                index -= 1
+            }
+        case .left:
+            if index == entries.count - 1 {
+                index = 0
+            } else {
+                index += 1
+            }
+        }
+        self.tabContainerNode.tabSelected?(entries[index].id)
+    }
 }
 
 private final class ChatListTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
+    let ignoreContentTouches: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -2227,6 +2445,7 @@ private final class ChatListTabBarContextExtractedContentSource: ContextExtracte
 
 private final class ChatListHeaderBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = true
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode

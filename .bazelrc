@@ -1,0 +1,14 @@
+build --experimental_guard_against_concurrent_changes
+
+build --strategy=Genrule=local
+build --apple_platform_type=ios
+build --cxxopt='-std=c++14'
+build --copt='-w'
+build --swiftcopt='-Xcc'
+build --swiftcopt='-w'
+build --spawn_strategy=local
+build --strategy=SwiftCompile=local
+build --features=debug_prefix_map_pwd_is_dot
+build --features=swift.cacheable_swiftmodules
+build --features=swift.debug_prefix_map
+

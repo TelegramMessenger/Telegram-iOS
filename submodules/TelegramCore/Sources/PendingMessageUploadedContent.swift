@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
-
+import CryptoUtils
 import SyncCore
 
 enum PendingMessageUploadedContent {

@@ -38,12 +38,15 @@ class MerkleProof {
   static Ref<Cell> virtualize(Ref<Cell> cell, int virtualization);
 
   static Ref<Cell> combine(Ref<Cell> a, Ref<Cell> b);
+  static Ref<Cell> combine_fast(Ref<Cell> a, Ref<Cell> b);
 
   // works with upwrapped proofs
   // works fine with cell of non-zero level, but this is not supported (yet?) in MerkeProof special cell
   static Ref<Cell> generate_raw(Ref<Cell> cell, IsPrunnedFunction is_prunned);
   static Ref<Cell> generate_raw(Ref<Cell> cell, CellUsageTree *usage_tree);
   static Ref<Cell> virtualize_raw(Ref<Cell> cell, Cell::VirtualizationParameters virt);
+  static Ref<Cell> combine_raw(Ref<Cell> a, Ref<Cell> b);
+  static Ref<Cell> combine_fast_raw(Ref<Cell> a, Ref<Cell> b);
 };
 
 class MerkleProofBuilder {

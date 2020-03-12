@@ -14,13 +14,13 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
 #include "vm/cells.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
+#include "vm/vm.h"
 
 #include "td/utils/optional.h"
 #include "td/utils/crypto.h"
@@ -90,6 +90,14 @@ class SmartContract : public td::CntObject {
       this->ignore_chksig = ignore_chksig;
       return std::move(*this);
     }
+
+    td::Result<td::int32> get_method_id() const {
+      if (!method_id) {
+        return td::Status::Error("Args has no method id");
+      }
+      return method_id.value();
+    }
+    td::Result<td::BufferSlice> get_serialized_stack();
   };
 
   Answer run_method(Args args = {});

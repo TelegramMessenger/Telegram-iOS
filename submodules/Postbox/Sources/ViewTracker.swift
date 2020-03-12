@@ -455,7 +455,7 @@ final class ViewTracker {
         
         for (view, _) in self.chatListViews.copyItems() {
             if let hole = view.firstHole() {
-                firstHoles.insert(ChatListHolesEntry(groupId: view.groupId, hole: hole))
+                firstHoles.insert(ChatListHolesEntry(groupId: hole.0, hole: hole.1))
             }
         }
     

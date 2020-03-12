@@ -1,4 +1,4 @@
-#import "BuildConfigExtra.h"
+#import <BuildConfigExtra/BuildConfigExtra.h>
 
 #include <mach-o/arch.h>
 #include <mach-o/loader.h>

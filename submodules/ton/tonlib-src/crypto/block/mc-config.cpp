@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "mc-config.h"
 #include "block/block.h"
@@ -567,6 +567,21 @@ td::Result<GasLimitsPrices> Config::do_get_gas_limits_prices(td::Ref<vm::Cell> c
   }
   return res;
 }
+
+td::Result<ton::StdSmcAddress> Config::get_dns_root_addr() const {
+  auto cell = get_config_param(4);
+  if (cell.is_null()) {
+    return td::Status::Error(PSLICE() << "configuration parameter " << 4 << " with dns root address is absent");
+  }
+  auto cs = vm::load_cell_slice(std::move(cell));
+  if (cs.size() != 0x100) {
+    return td::Status::Error(PSLICE() << "configuration parameter " << 4 << " with dns root address has wrong size");
+  }
+  ton::StdSmcAddress res;
+  CHECK(cs.fetch_bits_to(res));
+  return res;
+}
+
 td::Result<GasLimitsPrices> Config::get_gas_limits_prices(bool is_masterchain) const {
   auto id = is_masterchain ? 20 : 21;
   auto cell = get_config_param(id);
@@ -752,8 +767,8 @@ Ref<McShardDescr> McShardDescr::from_block(Ref<vm::Cell> block_root, Ref<vm::Cel
     return {};
   }
   // TODO: use a suitable vm::MerkleUpdate method here
-  vm::CellSlice cs(vm::NoVm(), rec.state_update);
-  if (cs.special_type() != vm::Cell::SpecialType::MerkleUpdate) {
+  vm::CellSlice cs(vm::NoVmSpec(), rec.state_update);
+  if (!cs.is_valid() || cs.special_type() != vm::Cell::SpecialType::MerkleUpdate) {
     LOG(ERROR) << "state update in a block is not a Merkle update";
     return {};
   }
@@ -870,7 +885,7 @@ bool ShardConfig::get_shard_hash_raw_from(vm::Dictionary& dict, vm::CellSlice& c
   unsigned long long z = id.shard, m = std::numeric_limits<unsigned long long>::max();
   int len = id.pfx_len();
   while (true) {
-    cs.load(vm::NoVmOrd{}, leaf ? root : std::move(root));
+    cs.load(vm::NoVmOrd(), leaf ? root : std::move(root));
     int t = (int)cs.fetch_ulong(1);
     if (t < 0) {
       return false;  // throw DictError ?
@@ -1108,7 +1123,7 @@ std::vector<ton::BlockId> ShardConfig::get_shard_hash_ids(
             std::stack<std::pair<Ref<vm::Cell>, unsigned long long>> stack;
             stack.emplace(cs_ref->prefetch_ref(), ton::shardIdAll);
             while (!stack.empty()) {
-              vm::CellSlice cs{vm::NoVm{}, std::move(stack.top().first)};
+              vm::CellSlice cs{vm::NoVmOrd(), std::move(stack.top().first)};
               unsigned long long shard = stack.top().second;
               stack.pop();
               int t = (int)cs.fetch_ulong(1);
@@ -1224,7 +1239,7 @@ bool ShardConfig::new_workchain(ton::WorkchainId workchain, ton::BlockSeqno reg_
          cb.store_zeroes_bool(
              1 + 5 +
              5)  // split_merge_at:FutureSplitMerge fees_collected:CurrencyCollection funds_created:CurrencyCollection
-         && cb.finalize_to(cell) && block::gen::t_BinTree_ShardDescr.validate_ref(cell) &&
+         && cb.finalize_to(cell) && block::gen::t_BinTree_ShardDescr.validate_ref(1024, cell) &&
          shard_hashes_dict_->set_ref(td::BitArray<32>{workchain}, std::move(cell), vm::Dictionary::SetMode::Add);
 }
 
@@ -1454,7 +1469,7 @@ static bool btree_set(Ref<vm::Cell>& root, ton::ShardId shard, Ref<vm::Cell> val
 }
 
 bool ShardConfig::set_shard_info(ton::ShardIdFull shard, Ref<vm::Cell> value) {
-  if (!gen::t_BinTree_ShardDescr.validate_ref(value)) {
+  if (!gen::t_BinTree_ShardDescr.validate_ref(1024, value)) {
     LOG(ERROR) << "attempting to store an invalid (BinTree ShardDescr) at shard configuration position "
                << shard.to_str();
     gen::t_BinTree_ShardDescr.print_ref(std::cerr, value);
@@ -1708,6 +1723,30 @@ std::vector<ton::ValidatorDescr> Config::compute_total_validator_set(int next) c
     return {};
   }
   return res.move_as_ok()->export_validator_set();
+}
+
+td::Result<std::pair<ton::UnixTime, ton::UnixTime>> Config::unpack_validator_set_start_stop(Ref<vm::Cell> vset_root) {
+  if (vset_root.is_null()) {
+    return td::Status::Error("validator set absent");
+  }
+  gen::ValidatorSet::Record_validators_ext rec;
+  if (tlb::unpack_cell(vset_root, rec)) {
+    return std::pair<ton::UnixTime, ton::UnixTime>(rec.utime_since, rec.utime_until);
+  }
+  gen::ValidatorSet::Record_validators rec0;
+  if (tlb::unpack_cell(std::move(vset_root), rec0)) {
+    return std::pair<ton::UnixTime, ton::UnixTime>(rec0.utime_since, rec0.utime_until);
+  }
+  return td::Status::Error("validator set is invalid");
+}
+
+std::pair<ton::UnixTime, ton::UnixTime> Config::get_validator_set_start_stop(int next) const {
+  auto res = unpack_validator_set_start_stop(get_config_param(next < 0 ? 32 : (next ? 36 : 34)));
+  if (res.is_error()) {
+    return {0, 0};
+  } else {
+    return res.move_as_ok();
+  }
 }
 
 bool WorkchainInfo::unpack(ton::WorkchainId wc, vm::CellSlice& cs) {

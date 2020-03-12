@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -46,6 +46,9 @@ class KeyStorage {
   struct ExportedEncryptedKey {
     td::SecureString data;
   };
+  struct ExportedUnencryptedKey {
+    td::SecureString data;
+  };
   struct PrivateKey {
     td::SecureString private_key;
   };
@@ -57,6 +60,7 @@ class KeyStorage {
   td::Result<ExportedKey> export_key(InputKey input_key);
   td::Result<ExportedPemKey> export_pem_key(InputKey input_key, td::Slice key_password);
   td::Result<ExportedEncryptedKey> export_encrypted_key(InputKey input_key, td::Slice key_password);
+  td::Result<ExportedUnencryptedKey> export_unencrypted_key(InputKey input_key);
   td::Result<Key> change_local_password(InputKey input_key, td::Slice new_local_password);
 
   td::Status delete_key(const Key& key);
@@ -66,6 +70,7 @@ class KeyStorage {
   td::Result<Key> import_pem_key(td::Slice local_password, td::Slice key_password, ExportedPemKey exported_key);
   td::Result<Key> import_encrypted_key(td::Slice local_password, td::Slice key_password,
                                        ExportedEncryptedKey exported_key);
+  td::Result<Key> import_unencrypted_key(td::Slice local_password, ExportedUnencryptedKey exported_key);
 
   td::Result<PrivateKey> load_private_key(InputKey input_key);
 

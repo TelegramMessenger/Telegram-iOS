@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "func.h"
 
@@ -46,6 +46,8 @@ void define_keywords() {
       .add_kw_char(';')
       .add_kw_char('(')
       .add_kw_char(')')
+      .add_kw_char('[')
+      .add_kw_char(']')
       .add_kw_char('{')
       .add_kw_char('}')
       .add_kw_char('=')
@@ -113,10 +115,12 @@ void define_keywords() {
       .add_keyword("forall", Kw::_Forall);
 
   sym::symbols.add_keyword("extern", Kw::_Extern)
+      .add_keyword("global", Kw::_Global)
       .add_keyword("asm", Kw::_Asm)
       .add_keyword("impure", Kw::_Impure)
       .add_keyword("inline", Kw::_Inline)
       .add_keyword("inline_ref", Kw::_InlineRef)
+      .add_keyword("auto_apply", Kw::_AutoApply)
       .add_keyword("method_id", Kw::_MethodId)
       .add_keyword("operator", Kw::_Operator)
       .add_keyword("infix", Kw::_Infix)

@@ -1,5 +1,7 @@
 import Foundation
 
+import RaiseToListenImpl
+
 public final class RaiseToListenManager {
     private let activator: RaiseToListenActivator
     

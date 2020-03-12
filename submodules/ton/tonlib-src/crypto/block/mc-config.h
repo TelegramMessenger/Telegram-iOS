@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with TON Blockchain.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "common/refcnt.hpp"
@@ -50,7 +50,7 @@ struct ValidatorDescr {
       : pubkey(_pubkey), weight(_weight), cum_weight(_cum_weight) {
     adnl_addr.set_zero();
   }
-  bool operator<(td::uint64 wt_pos) const& {
+  bool operator<(td::uint64 wt_pos) const & {
     return cum_weight < wt_pos;
   }
 };
@@ -534,6 +534,7 @@ class Config {
   bool create_stats_enabled() const {
     return has_capability(ton::capCreateStatsEnabled);
   }
+  td::Result<ton::StdSmcAddress> get_dns_root_addr() const;
   bool set_block_id_ext(const ton::BlockIdExt& block_id_ext);
   td::Result<std::vector<ton::StdSmcAddress>> get_special_smartcontracts(bool without_config = false) const;
   bool is_special_smartcontract(const ton::StdSmcAddress& addr) const;
@@ -558,6 +559,7 @@ class Config {
   const ValidatorSet* get_cur_validator_set() const {
     return cur_validators_.get();
   }
+  std::pair<ton::UnixTime, ton::UnixTime> get_validator_set_start_stop(int next = 0) const;
   ton::ValidatorSessionConfig get_consensus_config() const;
   bool foreach_config_param(std::function<bool(int, Ref<vm::Cell>)> scan_func) const;
   Ref<WorkchainInfo> get_workchain_info(ton::WorkchainId workchain_id) const;
@@ -577,6 +579,7 @@ class Config {
   static td::Result<std::unique_ptr<Config>> unpack_config(Ref<vm::CellSlice> config_csr, int mode = 0);
   static td::Result<std::unique_ptr<Config>> extract_from_state(Ref<vm::Cell> mc_state_root, int mode = 0);
   static td::Result<std::unique_ptr<Config>> extract_from_key_block(Ref<vm::Cell> key_block_root, int mode = 0);
+  static td::Result<std::pair<ton::UnixTime, ton::UnixTime>> unpack_validator_set_start_stop(Ref<vm::Cell> root);
 
  protected:
   Config(int _mode) : mode(_mode) {

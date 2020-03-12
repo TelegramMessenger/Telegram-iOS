@@ -14,6 +14,7 @@ import AccountContext
 import DeviceLocationManager
 import Geocoding
 import WallpaperResources
+import Sunrise
 
 private enum TriggerMode {
     case system

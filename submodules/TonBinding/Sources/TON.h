@@ -39,15 +39,43 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@protocol TONTransactionMessageContents <NSObject>
+
+@end
+
+@interface TONTransactionMessageContentsRawData : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull data;
+
+- (instancetype)initWithData:(NSData * _Nonnull)data;
+
+@end
+
+@interface TONTransactionMessageContentsPlainText : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) NSString * _Nonnull text;
+
+- (instancetype)initWithText:(NSString * _Nonnull)text;
+
+@end
+
+@interface TONTransactionMessageContentsEncryptedText : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull data;
+
+- (instancetype)initWithData:(NSData * _Nonnull)data;
+
+@end
+
 @interface TONTransactionMessage : NSObject
 
 @property (nonatomic, readonly) int64_t value;
 @property (nonatomic, strong, readonly) NSString * _Nonnull source;
 @property (nonatomic, strong, readonly) NSString * _Nonnull destination;
-@property (nonatomic, strong, readonly) NSString * _Nonnull textMessage;
+@property (nonatomic, strong, readonly) id<TONTransactionMessageContents> _Nonnull contents;
 @property (nonatomic, strong, readonly) NSData * _Nonnull bodyHash;
 
-- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage bodyHash:(NSData * _Nonnull)bodyHash;
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination contents:(id<TONTransactionMessageContents> _Nonnull)contents bodyHash:(NSData * _Nonnull)bodyHash;
 
 @end
 
@@ -87,10 +115,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TONSendGramsQueryFees : NSObject
 
-@property (nonatomic, strong, readonly) TONFees *sourceFees;
-@property (nonatomic, strong, readonly) TONFees *destinationFees;
+@property (nonatomic, strong, readonly) TONFees * _Nonnull sourceFees;
+@property (nonatomic, strong, readonly) NSArray<TONFees *> * _Nonnull destinationFees;
 
-- (instancetype)initWithSourceFees:(TONFees *)sourceFees destinationFees:(TONFees *)destinationFees;
+- (instancetype)initWithSourceFees:(TONFees * _Nonnull)sourceFees destinationFees:(NSArray<TONFees *> * _Nonnull)destinationFees;
 
 @end
 
@@ -131,8 +159,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId;
 - (SSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
-- (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout;
+- (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount comment:(NSData *)comment encryptComment:(bool)encryptComment forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
+- (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount comment:(NSData *)comment encryptComment:(bool)encryptComment forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout;
 - (SSignal *)estimateSendGramsQueryFees:(TONPreparedSendGramsQuery *)preparedQuery;
 - (SSignal *)commitPreparedSendGramsQuery:(TONPreparedSendGramsQuery *)preparedQuery;
 - (SSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
@@ -140,6 +168,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (SSignal *)deleteKey:(TONKey *)key;
 - (SSignal *)deleteAllKeys;
 - (SSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash;
+- (SSignal *)decryptMessagesWithKey:(TONKey * _Nonnull)key localPassword:(NSData * _Nonnull)localPassword messages:(NSArray<NSData *> * _Nonnull)messages;
 
 - (NSData *)encrypt:(NSData *)decryptedData secret:(NSData *)data;
 - (NSData * __nullable)decrypt:(NSData *)encryptedData secret:(NSData *)data;

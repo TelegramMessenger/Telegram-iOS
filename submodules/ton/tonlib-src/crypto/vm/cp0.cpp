@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "cp0.h"
 #include "opctable.h"
@@ -29,7 +29,8 @@
 
 namespace vm {
 
-const OpcodeTable* init_op_cp0() {
+const OpcodeTable* init_op_cp0(bool enable_debug) {
+  set_debug_enabled(enable_debug);
   static const OpcodeTable* static_op_cp0 = [] {
     auto op_cp0 = new OpcodeTable("TEST CODEPAGE", Codepage::test_cp);
     register_stack_ops(*op_cp0);         // stackops.cpp

@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 private enum SecretChatOutgoingFileValue: Int32 {

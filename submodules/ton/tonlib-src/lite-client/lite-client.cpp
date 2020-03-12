@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "lite-client.h"
 
@@ -55,10 +55,13 @@
 #include "vm/boc.h"
 #include "vm/cellops.h"
 #include "vm/cells/MerkleProof.h"
-#include "vm/continuation.h"
+#include "vm/vm.h"
 #include "vm/cp0.h"
+#include "vm/memo.h"
 #include "ton/ton-shard.h"
 #include "openssl/rand.hpp"
+#include "crypto/vm/utils.h"
+#include "crypto/common/util.h"
 
 #if TD_DARWIN || TD_LINUX
 #include <unistd.h>
@@ -140,6 +143,8 @@ void TestNode::got_result() {
     parse_line(std::move(data));
   }
   if (ex_mode_ && !running_queries_ && ex_queries_.size() == 0) {
+    std::cout.flush();
+    std::cerr.flush();
     std::_Exit(0);
   }
 }
@@ -175,6 +180,14 @@ bool TestNode::envelope_send_query(td::BufferSlice query, td::Promise<td::Buffer
   td::actor::send_closure(client_, &ton::adnl::AdnlExtClient::send_query, "query", std::move(b),
                           td::Timestamp::in(10.0), std::move(P));
   return true;
+}
+
+td::Promise<td::Unit> TestNode::trivial_promise() {
+  return td::PromiseCreator::lambda([Self = actor_id(this)](td::Result<td::Unit> res) {
+    if (res.is_error()) {
+      LOG(ERROR) << "error: " << res.move_as_error();
+    }
+  });
 }
 
 bool TestNode::register_blkid(const ton::BlockIdExt& blkid) {
@@ -497,7 +510,7 @@ void TestNode::run_init_queries() {
   get_server_version(0x100);
 }
 
-std::string TestNode::get_word(char delim) {
+td::Slice TestNode::get_word(char delim) {
   if (delim == ' ' || !delim) {
     skipspc();
   }
@@ -506,10 +519,33 @@ std::string TestNode::get_word(char delim) {
     ptr++;
   }
   std::swap(ptr, parse_ptr_);
-  return std::string{ptr, parse_ptr_};
+  return td::Slice{ptr, parse_ptr_};
+}
+
+td::Slice TestNode::get_word_ext(const char* delims, const char* specials) {
+  if (delims[0] == ' ') {
+    skipspc();
+  }
+  const char* ptr = parse_ptr_;
+  while (ptr < parse_end_ && !strchr(delims, *ptr)) {
+    if (specials && strchr(specials, *ptr)) {
+      if (ptr == parse_ptr_) {
+        ptr++;
+      }
+      break;
+    }
+    ptr++;
+  }
+  std::swap(ptr, parse_ptr_);
+  return td::Slice{ptr, parse_ptr_};
 }
 
 bool TestNode::get_word_to(std::string& str, char delim) {
+  str = get_word(delim).str();
+  return !str.empty();
+}
+
+bool TestNode::get_word_to(td::Slice& str, char delim) {
   str = get_word(delim);
   return !str.empty();
 }
@@ -545,16 +581,21 @@ bool TestNode::seekeoln() {
   return eoln();
 }
 
-bool TestNode::parse_account_addr(ton::WorkchainId& wc, ton::StdSmcAddress& addr) {
-  return block::parse_std_account_addr(get_word(), wc, addr) || set_error("cannot parse account address");
+bool TestNode::parse_account_addr(ton::WorkchainId& wc, ton::StdSmcAddress& addr, bool allow_none) {
+  auto word = get_word();
+  if (allow_none && (word == "none" || word == "root")) {
+    wc = ton::workchainInvalid;
+    return true;
+  }
+  return block::parse_std_account_addr(word, wc, addr) || set_error("cannot parse account address");
 }
 
-bool TestNode::convert_uint64(std::string word, td::uint64& val) {
+bool TestNode::convert_uint64(td::Slice word, td::uint64& val) {
   val = ~0ULL;
   if (word.empty()) {
     return false;
   }
-  const char* ptr = word.c_str();
+  const char* ptr = word.data();
   char* end = nullptr;
   val = std::strtoull(ptr, &end, 10);
   if (end == ptr + word.size()) {
@@ -565,12 +606,12 @@ bool TestNode::convert_uint64(std::string word, td::uint64& val) {
   }
 }
 
-bool TestNode::convert_int64(std::string word, td::int64& val) {
+bool TestNode::convert_int64(td::Slice word, td::int64& val) {
   val = (~0ULL << 63);
   if (word.empty()) {
     return false;
   }
-  const char* ptr = word.c_str();
+  const char* ptr = word.data();
   char* end = nullptr;
   val = std::strtoll(ptr, &end, 10);
   if (end == ptr + word.size()) {
@@ -581,7 +622,7 @@ bool TestNode::convert_int64(std::string word, td::int64& val) {
   }
 }
 
-bool TestNode::convert_uint32(std::string word, td::uint32& val) {
+bool TestNode::convert_uint32(td::Slice word, td::uint32& val) {
   td::uint64 tmp;
   if (convert_uint64(word, tmp) && (td::uint32)tmp == tmp) {
     val = (td::uint32)tmp;
@@ -591,7 +632,7 @@ bool TestNode::convert_uint32(std::string word, td::uint32& val) {
   }
 }
 
-bool TestNode::convert_int32(std::string word, td::int32& val) {
+bool TestNode::convert_int32(td::Slice word, td::int32& val) {
   td::int64 tmp;
   if (convert_int64(word, tmp) && (td::int32)tmp == tmp) {
     val = (td::int32)tmp;
@@ -607,6 +648,14 @@ bool TestNode::parse_lt(ton::LogicalTime& lt) {
 
 bool TestNode::parse_uint32(td::uint32& val) {
   return convert_uint32(get_word(), val) || set_error("cannot parse 32-bit unsigned integer");
+}
+
+bool TestNode::parse_int32(td::int32& val) {
+  return convert_int32(get_word(), val) || set_error("cannot parse 32-bit integer");
+}
+
+bool TestNode::parse_int16(int& val) {
+  return (convert_int32(get_word(), val) && val == (td::int16)val) || set_error("cannot parse 16-bit integer");
 }
 
 bool TestNode::set_error(td::Status error) {
@@ -629,6 +678,10 @@ int TestNode::parse_hex_digit(int c) {
     return c - 'a' + 10;
   }
   return -1;
+}
+
+bool TestNode::parse_hash(td::Slice str, ton::Bits256& hash) {
+  return str.size() == 64 && parse_hash(str.data(), hash);
 }
 
 bool TestNode::parse_hash(const char* str, ton::Bits256& hash) {
@@ -690,15 +743,15 @@ bool TestNode::parse_block_id_ext(std::string blkid_str, ton::BlockIdExt& blkid,
 }
 
 bool TestNode::parse_block_id_ext(ton::BlockIdExt& blk, bool allow_incomplete) {
-  return parse_block_id_ext(get_word(), blk, allow_incomplete) || set_error("cannot parse BlockIdExt");
+  return parse_block_id_ext(get_word().str(), blk, allow_incomplete) || set_error("cannot parse BlockIdExt");
 }
 
 bool TestNode::parse_hash(ton::Bits256& hash) {
   auto word = get_word();
-  return (!word.empty() && parse_hash(word.c_str(), hash)) || set_error("cannot parse hash");
+  return parse_hash(word, hash) || set_error("cannot parse hash");
 }
 
-bool TestNode::convert_shard_id(std::string str, ton::ShardIdFull& shard) {
+bool TestNode::convert_shard_id(td::Slice str, ton::ShardIdFull& shard) {
   shard.workchain = ton::workchainInvalid;
   shard.shard = 0;
   auto pos = str.find(':');
@@ -727,54 +780,6 @@ bool TestNode::convert_shard_id(std::string str, ton::ShardIdFull& shard) {
 
 bool TestNode::parse_shard_id(ton::ShardIdFull& shard) {
   return convert_shard_id(get_word(), shard) || set_error("cannot parse full shard identifier or prefix");
-}
-
-bool TestNode::parse_stack_value(td::Slice str, vm::StackEntry& value) {
-  if (str.empty() || str.size() > 65535) {
-    return false;
-  }
-  int l = (int)str.size();
-  if (str[0] == '"') {
-    vm::CellBuilder cb;
-    if (l == 1 || str.back() != '"' || l >= 127 + 2 || !cb.store_bytes_bool(str.data() + 1, l - 2)) {
-      return false;
-    }
-    value = vm::StackEntry{vm::load_cell_slice_ref(cb.finalize())};
-    return true;
-  }
-  if (l >= 3 && (str[0] == 'x' || str[0] == 'b') && str[1] == '{' && str.back() == '}') {
-    unsigned char buff[128];
-    int bits =
-        (str[0] == 'x')
-            ? (int)td::bitstring::parse_bitstring_hex_literal(buff, sizeof(buff), str.begin() + 2, str.end() - 1)
-            : (int)td::bitstring::parse_bitstring_binary_literal(buff, sizeof(buff), str.begin() + 2, str.end() - 1);
-    if (bits < 0) {
-      return false;
-    }
-    value =
-        vm::StackEntry{Ref<vm::CellSlice>{true, vm::CellBuilder().store_bits(td::ConstBitPtr{buff}, bits).finalize()}};
-    return true;
-  }
-  auto num = td::RefInt256{true};
-  auto& x = num.unique_write();
-  if (l >= 3 && str[0] == '0' && str[1] == 'x') {
-    if (x.parse_hex(str.data() + 2, l - 2) != l - 2) {
-      return false;
-    }
-  } else if (l >= 4 && str[0] == '-' && str[1] == '0' && str[2] == 'x') {
-    if (x.parse_hex(str.data() + 3, l - 3) != l - 3) {
-      return false;
-    }
-    x.negate().normalize();
-  } else if (!l || x.parse_dec(str.data(), l) != l) {
-    return false;
-  }
-  value = vm::StackEntry{std::move(num)};
-  return true;
-}
-
-bool TestNode::parse_stack_value(vm::StackEntry& value) {
-  return parse_stack_value(td::Slice{get_word()}, value) || set_error("invalid vm stack value");
 }
 
 bool TestNode::set_error(std::string err_msg) {
@@ -820,8 +825,12 @@ bool TestNode::show_help(std::string command) {
          "saveaccount[code|data] <filename> <addr> [<block-id-ext>]\tSaves into specified file the most recent state "
          "(StateInit) or just the code or data of specified account; <addr> is in "
          "[<workchain>:]<hex-or-base64-addr> format\n"
-         "runmethod <addr> [<block-id-ext>] <method-id> <params>...\tRuns GET method <method-id> of account <addr> "
+         "runmethod[full] <addr> [<block-id-ext>] <method-id> <params>...\tRuns GET method <method-id> of account "
+         "<addr> "
          "with specified parameters\n"
+         "dnsresolve [<block-id-ext>] <domain> [<category>]\tResolves a domain starting from root dns smart contract\n"
+         "dnsresolvestep <addr> [<block-id-ext>] <domain> [<category>]\tResolves a subdomain using dns smart contract "
+         "<addr>\n"
          "allshards [<block-id-ext>]\tShows shard configuration from the most recent masterchain "
          "state or from masterchain state corresponding to <block-id-ext>\n"
          "getconfig [<param>...]\tShows specified or all configuration parameters from the latest masterchain state\n"
@@ -848,6 +857,11 @@ bool TestNode::show_help(std::string command) {
          "header\n"
          "byutime <workchain> <shard-prefix> <utime>\tLooks up a block by workchain, shard and creation time, and "
          "shows its header\n"
+         "creatorstats <block-id-ext> [<count> [<start-pubkey>]]\tLists block creator statistics by validator public "
+         "key\n"
+         "recentcreatorstats <block-id-ext> <start-utime> [<count> [<start-pubkey>]]\tLists block creator statistics "
+         "updated after <start-utime> by validator public "
+         "key\n"
          "known\tShows the list of all known block ids\n"
          "privkey <filename>\tLoads a private key from file\n"
          "help [<command>]\tThis help\n"
@@ -865,7 +879,7 @@ bool TestNode::do_parse_line() {
   ton::BlockSeqno seqno{};
   ton::UnixTime utime{};
   unsigned count{};
-  std::string word = get_word();
+  std::string word = get_word().str();
   skipspc();
   if (word == "time") {
     return eoln() && get_server_time();
@@ -886,21 +900,30 @@ bool TestNode::do_parse_line() {
            (seekeoln()
                 ? get_account_state(workchain, addr, mc_last_id_, filename, mode)
                 : parse_block_id_ext(blkid) && seekeoln() && get_account_state(workchain, addr, blkid, filename, mode));
-  } else if (word == "runmethod") {
+  } else if (word == "runmethod" || word == "runmethodx" || word == "runmethodfull") {
     std::string method;
     return parse_account_addr(workchain, addr) && get_word_to(method) &&
            (parse_block_id_ext(method, blkid) ? get_word_to(method) : (blkid = mc_last_id_).is_valid()) &&
-           parse_run_method(workchain, addr, blkid, method);
+           parse_run_method(workchain, addr, blkid, method, word.size() <= 10);
+  } else if (word == "dnsresolve" || word == "dnsresolvestep") {
+    workchain = ton::workchainInvalid;
+    bool step = (word.size() > 10);
+    std::string domain;
+    int cat = 0;
+    return (!step || parse_account_addr(workchain, addr)) && get_word_to(domain) &&
+           (parse_block_id_ext(domain, blkid) ? get_word_to(domain) : (blkid = mc_last_id_).is_valid()) &&
+           (seekeoln() || parse_int16(cat)) && seekeoln() &&
+           dns_resolve_start(workchain, addr, blkid, domain, cat, step);
   } else if (word == "allshards") {
     return eoln() ? get_all_shards() : (parse_block_id_ext(blkid) && seekeoln() && get_all_shards(false, blkid));
   } else if (word == "saveconfig") {
     blkid = mc_last_id_;
     std::string filename;
     return get_word_to(filename) && (seekeoln() || parse_block_id_ext(blkid)) && seekeoln() &&
-           get_config_params(blkid, -1, filename);
+           get_config_params(blkid, trivial_promise(), -1, filename);
   } else if (word == "getconfig" || word == "getconfigfrom") {
     blkid = mc_last_id_;
-    return (word == "getconfig" || parse_block_id_ext(blkid)) && get_config_params(blkid, 0);
+    return (word == "getconfig" || parse_block_id_ext(blkid)) && get_config_params(blkid, trivial_promise(), 0);
   } else if (word == "getblock") {
     return parse_block_id_ext(blkid) && seekeoln() && get_block(blkid, false);
   } else if (word == "dumpblock") {
@@ -935,6 +958,12 @@ bool TestNode::do_parse_line() {
     return parse_shard_id(shard) && parse_uint32(utime) && seekeoln() && lookup_block(shard, 4, utime);
   } else if (word == "bylt") {
     return parse_shard_id(shard) && parse_lt(lt) && seekeoln() && lookup_block(shard, 2, lt);
+  } else if (word == "creatorstats" || word == "recentcreatorstats") {
+    count = 1000;
+    int mode = (word == "recentcreatorstats" ? 4 : 0);
+    return parse_block_id_ext(blkid) && (!mode || parse_uint32(utime)) && (seekeoln() || parse_uint32(count)) &&
+           (seekeoln() || (parse_hash(hash) && (mode |= 1))) && seekeoln() &&
+           get_creator_stats(blkid, mode, count, hash, utime);
   } else if (word == "known") {
     return eoln() && show_new_blkids(true);
   } else if (word == "quit" && eoln()) {
@@ -1024,16 +1053,32 @@ bool TestNode::get_account_state(ton::WorkchainId workchain, ton::StdSmcAddress 
   });
 }
 
-bool TestNode::parse_run_method(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt ref_blkid,
-                                std::string method_name) {
-  std::vector<vm::StackEntry> params;
-  while (!seekeoln()) {
-    vm::StackEntry param;
-    if (!parse_stack_value(param)) {
-      return false;
-    }
-    params.push_back(std::move(param));
+td::int64 TestNode::compute_method_id(std::string method) {
+  td::int64 method_id;
+  if (!convert_int64(method, method_id)) {
+    method_id = (td::crc16(td::Slice{method}) & 0xffff) | 0x10000;
   }
+  return method_id;
+}
+
+bool TestNode::parse_run_method(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt ref_blkid,
+                                std::string method_name, bool ext_mode) {
+  auto R = vm::parse_stack_entries(td::Slice(parse_ptr_, parse_end_));
+  if (R.is_error()) {
+    return set_error(R.move_as_error().to_string());
+  }
+  parse_ptr_ = parse_end_;
+  auto P = td::PromiseCreator::lambda([](td::Result<std::vector<vm::StackEntry>> R) {
+    if (R.is_error()) {
+      LOG(ERROR) << R.move_as_error();
+    }
+  });
+  return start_run_method(workchain, addr, ref_blkid, method_name, R.move_as_ok(), ext_mode ? 0x1f : 0, std::move(P));
+}
+
+bool TestNode::start_run_method(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt ref_blkid,
+                                std::string method_name, std::vector<vm::StackEntry> params, int mode,
+                                td::Promise<std::vector<vm::StackEntry>> promise) {
   if (!ref_blkid.is_valid()) {
     return set_error("must obtain last block information before making other queries");
   }
@@ -1041,28 +1086,308 @@ bool TestNode::parse_run_method(ton::WorkchainId workchain, ton::StdSmcAddress a
     return set_error("server connection not ready");
   }
   auto a = ton::create_tl_object<ton::lite_api::liteServer_accountId>(workchain, addr);
-  auto b = ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getAccountState>(
-                                        ton::create_tl_lite_block_id(ref_blkid), std::move(a)),
-                                    true);
-  LOG(INFO) << "requesting account state for " << workchain << ":" << addr.to_hex() << " with respect to "
-            << ref_blkid.to_str() << " to run method " << method_name << " with " << params.size() << " parameters";
-  return envelope_send_query(
-      std::move(b), [ Self = actor_id(this), workchain, addr, ref_blkid, method_name,
-                      params = std::move(params) ](td::Result<td::BufferSlice> R) mutable {
+  if (!mode) {
+    auto b = ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getAccountState>(
+                                          ton::create_tl_lite_block_id(ref_blkid), std::move(a)),
+                                      true);
+    LOG(INFO) << "requesting account state for " << workchain << ":" << addr.to_hex() << " with respect to "
+              << ref_blkid.to_str() << " to run method " << method_name << " with " << params.size() << " parameters";
+    return envelope_send_query(std::move(b), [
+      Self = actor_id(this), workchain, addr, ref_blkid, method_name, params = std::move(params),
+      promise = std::move(promise)
+    ](td::Result<td::BufferSlice> R) mutable {
+      if (R.is_error()) {
+        promise.set_error(R.move_as_error());
+        return;
+      }
+      auto F = ton::fetch_tl_object<ton::lite_api::liteServer_accountState>(R.move_as_ok(), true);
+      if (F.is_error()) {
+        LOG(ERROR) << "cannot parse answer to liteServer.getAccountState";
+        promise.set_error(td::Status::Error("cannot parse answer to liteServer.getAccountState"));
+      } else {
+        auto f = F.move_as_ok();
+        td::actor::send_closure_later(Self, &TestNode::run_smc_method, 0, ref_blkid, ton::create_block_id(f->id_),
+                                      ton::create_block_id(f->shardblk_), std::move(f->shard_proof_),
+                                      std::move(f->proof_), std::move(f->state_), workchain, addr, method_name,
+                                      std::move(params), td::BufferSlice(), td::BufferSlice(), td::BufferSlice(),
+                                      -0x10000, std::move(promise));
+      }
+    });
+  } else {
+    td::int64 method_id = compute_method_id(method_name);
+    // set serialization limits
+    vm::FakeVmStateLimits fstate(1000);  // limit recursive (de)serialization calls
+    vm::VmStateInterface::Guard guard(&fstate);
+    // serialize parameters
+    vm::CellBuilder cb;
+    Ref<vm::Cell> cell;
+    if (!(vm::Stack{params}.serialize(cb) && cb.finalize_to(cell))) {
+      return set_error("cannot serialize stack with get-method parameters");
+    }
+    auto stk = vm::std_boc_serialize(std::move(cell));
+    if (stk.is_error()) {
+      return set_error("cannot serialize stack with get-method parameters : "s + stk.move_as_error().to_string());
+    }
+    auto b = ton::serialize_tl_object(
+        ton::create_tl_object<ton::lite_api::liteServer_runSmcMethod>(mode, ton::create_tl_lite_block_id(ref_blkid),
+                                                                      std::move(a), method_id, stk.move_as_ok()),
+        true);
+    LOG(INFO) << "requesting remote get-method execution for " << workchain << ":" << addr.to_hex()
+              << " with respect to " << ref_blkid.to_str() << " to run method " << method_name << " with "
+              << params.size() << " parameters";
+    return envelope_send_query(std::move(b), [
+      Self = actor_id(this), workchain, addr, ref_blkid, method_name, mode, params = std::move(params),
+      promise = std::move(promise)
+    ](td::Result<td::BufferSlice> R) mutable {
+      if (R.is_error()) {
+        promise.set_error(R.move_as_error());
+        return;
+      }
+      auto F = ton::fetch_tl_object<ton::lite_api::liteServer_runMethodResult>(R.move_as_ok(), true);
+      if (F.is_error()) {
+        LOG(ERROR) << "cannot parse answer to liteServer.runSmcMethod";
+        promise.set_error(td::Status::Error("cannot parse answer to liteServer.runSmcMethod"));
+      } else {
+        auto f = F.move_as_ok();
+        td::actor::send_closure_later(Self, &TestNode::run_smc_method, mode, ref_blkid, ton::create_block_id(f->id_),
+                                      ton::create_block_id(f->shardblk_), std::move(f->shard_proof_),
+                                      std::move(f->proof_), std::move(f->state_proof_), workchain, addr, method_name,
+                                      std::move(params), std::move(f->init_c7_), std::move(f->lib_extras_),
+                                      std::move(f->result_), f->exit_code_, std::move(promise));
+      }
+    });
+  }
+}
+
+bool TestNode::dns_resolve_start(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt blkid,
+                                 std::string domain, int cat, int mode) {
+  if (domain.size() > 1023) {
+    return set_error("domain name too long");
+  }
+  if (domain.size() >= 2 && domain[0] == '"' && domain.back() == '"') {
+    domain.erase(0, 1);
+    domain.pop_back();
+  }
+  std::vector<std::string> components;
+  std::size_t i, p = 0;
+  for (i = 0; i < domain.size(); i++) {
+    if (!domain[i] || (unsigned char)domain[i] >= 0xfe || (unsigned char)domain[i] <= ' ') {
+      return set_error("invalid characters in a domain name");
+    }
+    if (domain[i] == '.') {
+      if (i == p) {
+        return set_error("domain name cannot have an empty component");
+      }
+      components.emplace_back(domain, p, i - p);
+      p = i + 1;
+    }
+  }
+  if (i > p) {
+    components.emplace_back(domain, p, i - p);
+  }
+  std::string qdomain, qdomain0;
+  while (!components.empty()) {
+    qdomain += components.back();
+    qdomain += '\0';
+    components.pop_back();
+  }
+
+  if (!(ready_ && !client_.empty())) {
+    return set_error("server connection not ready");
+  }
+
+  if (workchain == ton::workchainInvalid) {
+    if (dns_root_queried_) {
+      workchain = ton::masterchainId;
+      addr = dns_root_;
+    } else {
+      auto P = td::PromiseCreator::lambda([this, blkid, domain, cat, mode](td::Result<td::Unit> R) {
         if (R.is_error()) {
-          return;
-        }
-        auto F = ton::fetch_tl_object<ton::lite_api::liteServer_accountState>(R.move_as_ok(), true);
-        if (F.is_error()) {
-          LOG(ERROR) << "cannot parse answer to liteServer.getAccountState";
+          LOG(ERROR) << "cannot obtain root dns address from configuration: " << R.move_as_error();
+        } else if (dns_root_queried_) {
+          dns_resolve_start(ton::masterchainId, dns_root_, blkid, domain, cat, mode);
         } else {
-          auto f = F.move_as_ok();
-          td::actor::send_closure_later(Self, &TestNode::run_smc_method, ref_blkid, ton::create_block_id(f->id_),
-                                        ton::create_block_id(f->shardblk_), std::move(f->shard_proof_),
-                                        std::move(f->proof_), std::move(f->state_), workchain, addr, method_name,
-                                        std::move(params));
+          LOG(ERROR) << "cannot obtain root dns address from configuration parameter #4";
         }
       });
+      return get_config_params(mc_last_id_, std::move(P), 0x5000, "", {4});
+    }
+  }
+  return dns_resolve_send(workchain, addr, blkid, domain, qdomain, cat, mode);
+}
+
+bool TestNode::dns_resolve_send(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt blkid,
+                                std::string domain, std::string qdomain, int cat, int mode) {
+  LOG(INFO) << "dns_resolve for '" << domain << "' category=" << cat << " mode=" << mode
+            << " starting from smart contract " << workchain << ":" << addr.to_hex() << " with respect to block "
+            << blkid.to_str();
+  std::string qdomain0;
+  if (qdomain.size() <= 127) {
+    qdomain0 = qdomain;
+  } else {
+    qdomain0 = std::string{qdomain, 0, 127};
+    qdomain[125] = '\xff';
+    qdomain[126] = '\x0';
+  }
+  vm::CellBuilder cb;
+  Ref<vm::Cell> cell;
+  if (!(cb.store_bytes_bool(td::Slice(qdomain0)) && cb.finalize_to(cell))) {
+    return set_error("cannot store domain name into slice");
+  }
+  std::vector<vm::StackEntry> params;
+  params.emplace_back(vm::load_cell_slice_ref(std::move(cell)));
+  params.emplace_back(td::make_refint(cat));
+  auto P = td::PromiseCreator::lambda([this, workchain, addr, blkid, domain, qdomain, cat,
+                                       mode](td::Result<std::vector<vm::StackEntry>> R) {
+    if (R.is_error()) {
+      LOG(ERROR) << R.move_as_error();
+      return;
+    }
+    auto S = R.move_as_ok();
+    if (S.size() < 2 || !S[S.size() - 2].is_int() || !(S.back().is_cell() || S.back().is_null())) {
+      LOG(ERROR) << "dnsresolve did not return a value of type (int,cell)";
+      return;
+    }
+    auto cell = S.back().as_cell();
+    S.pop_back();
+    auto x = S.back().as_int();
+    S.clear();
+    if (!x->signed_fits_bits(32)) {
+      LOG(ERROR) << "invalid integer result of dnsresolve (" << x << ")";
+      return;
+    }
+    return dns_resolve_finish(workchain, addr, blkid, domain, qdomain, cat, mode, (int)x->to_long(), std::move(cell));
+  });
+  return start_run_method(workchain, addr, blkid, "dnsresolve", std::move(params), 0x1f, std::move(P));
+}
+
+bool TestNode::show_dns_record(std::ostream& os, int cat, Ref<vm::Cell> value, bool raw_dump) {
+  if (raw_dump) {
+    bool ok = show_dns_record(os, cat, value, false);
+    if (!ok) {
+      os << "cannot parse dns record; raw value: ";
+      vm::load_cell_slice(value).print_rec(print_limit_, os);
+    }
+    return ok;
+  }
+  if (value.is_null()) {
+    os << "(null)";
+    return true;
+  }
+  // block::gen::t_DNSRecord.print_ref(print_limit_, os, value);
+  if (!block::gen::t_DNSRecord.validate_ref(value)) {
+    return false;
+  }
+  block::gen::t_DNSRecord.print_ref(print_limit_, os, value);
+  auto cs = vm::load_cell_slice(value);
+  auto tag = block::gen::t_DNSRecord.get_tag(cs);
+  ton::WorkchainId wc;
+  ton::StdSmcAddress addr;
+  switch (tag) {
+    case block::gen::DNSRecord::dns_adnl_address: {
+      block::gen::DNSRecord::Record_dns_adnl_address rec;
+      if (tlb::unpack_exact(cs, rec)) {
+        os << "\n\tadnl address " << rec.adnl_addr.to_hex() << " = " << td::adnl_id_encode(rec.adnl_addr, true);
+      }
+      break;
+    }
+    case block::gen::DNSRecord::dns_smc_address: {
+      block::gen::DNSRecord::Record_dns_smc_address rec;
+      if (tlb::unpack_exact(cs, rec) && block::tlb::t_MsgAddressInt.extract_std_address(rec.smc_addr, wc, addr)) {
+        os << "\tsmart contract " << wc << ":" << addr.to_hex() << " = " << block::StdAddress{wc, addr}.rserialize(true);
+      }
+      break;
+    }
+    case block::gen::DNSRecord::dns_next_resolver: {
+      block::gen::DNSRecord::Record_dns_next_resolver rec;
+      if (tlb::unpack_exact(cs, rec) && block::tlb::t_MsgAddressInt.extract_std_address(rec.resolver, wc, addr)) {
+        os << "\tnext resolver " << wc << ":" << addr.to_hex() << " = " << block::StdAddress{wc, addr}.rserialize(true);
+      }
+      break;
+    }
+  }
+  return true;
+}
+
+void TestNode::dns_resolve_finish(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt blkid,
+                                  std::string domain, std::string qdomain, int cat, int mode, int used_bits,
+                                  Ref<vm::Cell> value) {
+  if (used_bits <= 0) {
+    td::TerminalIO::out() << "domain '" << domain << "' not found" << std::endl;
+    return;
+  }
+  if ((used_bits & 7) || (unsigned)used_bits > 8 * std::min<std::size_t>(qdomain.size(), 126)) {
+    LOG(ERROR) << "too many bits used (" << used_bits << " out of " << qdomain.size() * 8 << ")";
+    return;
+  }
+  int pos = (used_bits >> 3);
+  if (qdomain[pos - 1]) {
+    LOG(ERROR) << "domain split not at a component boundary";
+    return;
+  }
+  bool end = ((std::size_t)pos == qdomain.size());
+  if (!end) {
+    LOG(INFO) << "partial information obtained";
+    if (value.is_null()) {
+      td::TerminalIO::out() << "domain '" << domain << "' not found: no next resolver" << std::endl;
+      return;
+    }
+    Ref<vm::CellSlice> nx_address;
+    ton::WorkchainId nx_wc;
+    ton::StdSmcAddress nx_addr;
+    if (!(block::gen::t_DNSRecord.cell_unpack_dns_next_resolver(value, nx_address) &&
+          block::tlb::t_MsgAddressInt.extract_std_address(std::move(nx_address), nx_wc, nx_addr))) {
+      LOG(ERROR) << "cannot parse next resolver info for " << domain.substr(qdomain.size() - pos);
+      std::ostringstream out;
+      vm::load_cell_slice(value).print_rec(print_limit_, out);
+      td::TerminalIO::err() << out.str() << std::endl;
+      return;
+    }
+    LOG(INFO) << "next resolver is " << nx_wc << ":" << nx_addr.to_hex();
+    if ((mode & 1)) {
+      return;  // no recursive resolving
+    }
+    if (!(dns_resolve_send(nx_wc, nx_addr, blkid, domain, qdomain.substr(pos), cat, mode))) {
+      LOG(ERROR) << "cannot send next dns query";
+      return;
+    }
+    LOG(INFO) << "recursive dns query to '" << domain.substr(qdomain.size() - pos) << "' sent";
+    return;
+  }
+  auto out = td::TerminalIO::out();
+  out << "Result for domain '" << domain << "' category " << cat << (cat ? "" : " (all categories)") << std::endl;
+  try {
+    if (value.not_null()) {
+      std::ostringstream os0;
+      vm::load_cell_slice(value).print_rec(print_limit_, os0);
+      out << "raw data: " << os0.str() << std::endl;
+    }
+    if (!cat) {
+      vm::Dictionary dict{value, 16};
+      if (!dict.check_for_each([this, &out](Ref<vm::CellSlice> cs, td::ConstBitPtr key, int n) {
+            CHECK(n == 16);
+            int x = (int)key.get_int(16);
+            if (cs.is_null() || cs->size_ext() != 0x10000) {
+              out << "category #" << x << " : value is not a reference" << std::endl;
+              return false;
+            }
+            std::ostringstream os;
+            (void)show_dns_record(os, x, cs->prefetch_ref(), true);
+            out << "category #" << x << " : " << os.str() << std::endl;
+            return true;
+          })) {
+        out << "invalid dns record dictionary" << std::endl;
+      }
+    } else {
+      std::ostringstream os;
+      (void)show_dns_record(os, cat, value, true);
+      out << "category #" << cat << " : " << os.str() << std::endl;
+    }
+  } catch (vm::VmError& err) {
+    LOG(ERROR) << "vm error while traversing dns resolve result: " << err.get_msg();
+  } catch (vm::VmVirtError& err) {
+    LOG(ERROR) << "vm virtualization error while traversing dns resolve result: " << err.get_msg();
+  }
 }
 
 bool TestNode::get_one_transaction(ton::BlockIdExt blkid, ton::WorkchainId workchain, ton::StdSmcAddress addr,
@@ -1150,8 +1475,8 @@ void TestNode::got_account_state(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, t
     if (info.root.not_null()) {
       out << "account state is ";
       std::ostringstream outp;
-      block::gen::t_Account.print_ref(outp, info.root);
-      vm::load_cell_slice(info.root).print_rec(outp);
+      block::gen::t_Account.print_ref(print_limit_, outp, info.root);
+      vm::load_cell_slice(info.root).print_rec(print_limit_, outp);
       out << outp.str();
       out << "last transaction lt = " << info.last_trans_lt << " hash = " << info.last_trans_hash.to_hex() << std::endl;
       block::gen::Account::Record_account acc;
@@ -1223,87 +1548,152 @@ void TestNode::got_account_state(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, t
   }
 }
 
-void TestNode::run_smc_method(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, ton::BlockIdExt shard_blk,
+void TestNode::run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt blk, ton::BlockIdExt shard_blk,
                               td::BufferSlice shard_proof, td::BufferSlice proof, td::BufferSlice state,
                               ton::WorkchainId workchain, ton::StdSmcAddress addr, std::string method,
-                              std::vector<vm::StackEntry> params) {
-  LOG(INFO) << "got account state for " << workchain << ":" << addr.to_hex() << " with respect to blocks "
-            << blk.to_str() << (shard_blk == blk ? "" : std::string{" and "} + shard_blk.to_str());
-  block::AccountState account_state;
-  account_state.blk = blk;
-  account_state.shard_blk = shard_blk;
-  account_state.shard_proof = std::move(shard_proof);
-  account_state.proof = std::move(proof);
-  account_state.state = std::move(state);
-  auto r_info = account_state.validate(ref_blk, block::StdAddress(workchain, addr));
-  if (r_info.is_error()) {
-    LOG(ERROR) << r_info.error().message();
-    return;
-  }
+                              std::vector<vm::StackEntry> params, td::BufferSlice remote_c7,
+                              td::BufferSlice remote_libs, td::BufferSlice remote_result, int remote_exit_code,
+                              td::Promise<std::vector<vm::StackEntry>> promise) {
+  LOG(INFO) << "got (partial) account state with mode=" << mode << " for " << workchain << ":" << addr.to_hex()
+            << " with respect to blocks " << blk.to_str()
+            << (shard_blk == blk ? "" : std::string{" and "} + shard_blk.to_str());
   auto out = td::TerminalIO::out();
-  auto info = r_info.move_as_ok();
-  if (info.root.is_null()) {
-    LOG(ERROR) << "account state of " << workchain << ":" << addr.to_hex() << " is empty (cannot run method `" << method
-               << "`)";
-    return;
-  }
-  block::gen::Account::Record_account acc;
-  block::gen::AccountStorage::Record store;
-  block::CurrencyCollection balance;
-  if (!(tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store) &&
-        balance.validate_unpack(store.balance))) {
-    LOG(ERROR) << "error unpacking account state";
-    return;
-  }
-  int tag = block::gen::t_AccountState.get_tag(*store.state);
-  switch (tag) {
-    case block::gen::AccountState::account_uninit:
-      LOG(ERROR) << "account " << workchain << ":" << addr.to_hex() << " not initialized yet (cannot run any methods)";
+  try {
+    block::AccountState account_state;
+    account_state.blk = blk;
+    account_state.shard_blk = shard_blk;
+    account_state.shard_proof = std::move(shard_proof);
+    account_state.proof = std::move(proof);
+    LOG(DEBUG) << "serialized state is " << state.size() << " bytes";
+    LOG(DEBUG) << "serialized remote c7 is " << remote_c7.size() << " bytes";
+    account_state.state = std::move(state);
+    account_state.is_virtualized = (mode > 0);
+    auto r_info = account_state.validate(ref_blk, block::StdAddress(workchain, addr));
+    if (r_info.is_error()) {
+      LOG(ERROR) << r_info.error().message();
+      promise.set_error(r_info.move_as_error());
       return;
-    case block::gen::AccountState::account_frozen:
-      LOG(ERROR) << "account " << workchain << ":" << addr.to_hex() << " frozen (cannot run any methods)";
+    }
+    auto out = td::TerminalIO::out();
+    auto info = r_info.move_as_ok();
+    if (info.root.is_null()) {
+      LOG(ERROR) << "account state of " << workchain << ":" << addr.to_hex() << " is empty (cannot run method `"
+                 << method << "`)";
+      promise.set_error(td::Status::Error(PSLICE() << "account state of " << workchain << ":" << addr.to_hex()
+                                                   << " is empty (cannot run method `" << method << "`)"));
       return;
-  }
-  CHECK(store.state.write().fetch_ulong(1) == 1);  // account_init$1 _:StateInit = AccountState;
-  block::gen::StateInit::Record state_init;
-  CHECK(tlb::csr_unpack(store.state, state_init));
-  auto code = state_init.code->prefetch_ref();
-  auto data = state_init.data->prefetch_ref();
-  auto stack = td::make_ref<vm::Stack>(std::move(params));
-  td::int64 method_id;
-  if (!convert_int64(method, method_id)) {
-    method_id = (td::crc16(td::Slice{method}) & 0xffff) | 0x10000;
-  }
-  stack.write().push_smallint(method_id);
-  {
-    std::ostringstream os;
-    os << "arguments: ";
-    stack->dump(os);
-    out << os.str();
-  }
-  long long gas_limit = vm::GasLimits::infty;
-  // OstreamLogger ostream_logger(ctx.error_stream);
-  // auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
-  vm::GasLimits gas{gas_limit};
-  LOG(DEBUG) << "creating VM";
-  vm::VmState vm{code, std::move(stack), gas, 1, data, vm::VmLog()};
-  vm.set_c7(liteclient::prepare_vm_c7(info.gen_utime, info.gen_lt, acc.addr, balance));  // tuple with SmartContractInfo
-  // vm.incr_stack_trace(1);    // enable stack dump after each step
-  LOG(INFO) << "starting VM to run method `" << method << "` (" << method_id << ") of smart contract " << workchain
-            << ":" << addr.to_hex();
-  int exit_code = ~vm.run();
-  LOG(DEBUG) << "VM terminated with exit code " << exit_code;
-  if (exit_code != 0) {
-    LOG(ERROR) << "VM terminated with error code " << exit_code;
-    out << "result: error " << exit_code << std::endl;
-    return;
-  }
-  stack = vm.get_stack_ref();
-  {
-    std::ostringstream os;
-    os << "result: ";
-    stack->dump(os);
-    out << os.str();
+    }
+    if (false) {
+      // DEBUG (dump state)
+      std::ostringstream os;
+      vm::CellSlice{vm::NoVm(), info.true_root}.print_rec(print_limit_, os);
+      out << "dump of account state (proof): " << os.str() << std::endl;
+    }
+    // set deserialization limits
+    vm::FakeVmStateLimits fstate(1000);  // limit recursive (de)serialization calls
+    vm::VmStateInterface::Guard guard(&fstate);
+    if (false && remote_c7.size()) {
+      // DEBUG (dump remote_c7)
+      auto r_c7 = vm::std_boc_deserialize(remote_c7).move_as_ok();
+      std::ostringstream os;
+      vm::StackEntry val;
+      bool ok = val.deserialize(r_c7);
+      val.dump(os);
+      // os << std::endl;
+      // block::gen::t_VmStackValue.print_ref(print_limit_, os, r_c7);
+      // os << std::endl;
+      // vm::CellSlice{vm::NoVmOrd(), r_c7}.print_rec(print_limit_, os);
+      out << "remote_c7 (deserialized=" << ok << "): " << os.str() << std::endl;
+    }
+    block::gen::Account::Record_account acc;
+    block::gen::AccountStorage::Record store;
+    block::CurrencyCollection balance;
+    if (!(tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store) &&
+          balance.validate_unpack(store.balance))) {
+      LOG(ERROR) << "error unpacking account state";
+      promise.set_error(td::Status::Error("error unpacking account state"));
+      return;
+    }
+    int tag = block::gen::t_AccountState.get_tag(*store.state);
+    switch (tag) {
+      case block::gen::AccountState::account_uninit:
+        LOG(ERROR) << "account " << workchain << ":" << addr.to_hex()
+                   << " not initialized yet (cannot run any methods)";
+        return;
+      case block::gen::AccountState::account_frozen:
+        LOG(ERROR) << "account " << workchain << ":" << addr.to_hex() << " frozen (cannot run any methods)";
+        return;
+    }
+    CHECK(store.state.write().fetch_ulong(1) == 1);  // account_init$1 _:StateInit = AccountState;
+    block::gen::StateInit::Record state_init;
+    CHECK(tlb::csr_unpack(store.state, state_init));
+    auto code = state_init.code->prefetch_ref();
+    auto data = state_init.data->prefetch_ref();
+    auto stack = td::make_ref<vm::Stack>(std::move(params));
+    td::int64 method_id = compute_method_id(method);
+    stack.write().push_smallint(method_id);
+    {
+      std::ostringstream os;
+      os << "arguments: ";
+      stack->dump(os, 3);
+      out << os.str();
+    }
+    long long gas_limit = vm::GasLimits::infty;
+    // OstreamLogger ostream_logger(ctx.error_stream);
+    // auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
+    vm::GasLimits gas{gas_limit};
+    LOG(DEBUG) << "creating VM";
+    vm::VmState vm{code, std::move(stack), gas, 1, data, vm::VmLog()};
+    vm.set_c7(liteclient::prepare_vm_c7(info.gen_utime, info.gen_lt, td::make_ref<vm::CellSlice>(acc.addr->clone()),
+                                        balance));  // tuple with SmartContractInfo
+    // vm.incr_stack_trace(1);    // enable stack dump after each step
+    LOG(INFO) << "starting VM to run method `" << method << "` (" << method_id << ") of smart contract " << workchain
+              << ":" << addr.to_hex();
+    int exit_code = ~vm.run();
+    LOG(DEBUG) << "VM terminated with exit code " << exit_code;
+    if (mode > 0) {
+      LOG(DEBUG) << "remote VM exit code is " << remote_exit_code;
+    }
+    if (exit_code != 0) {
+      LOG(ERROR) << "VM terminated with error code " << exit_code;
+      out << "result: error " << exit_code << std::endl;
+      promise.set_error(td::Status::Error(PSLICE() << "VM terminated with non-zero exit code " << exit_code));
+      return;
+    }
+    stack = vm.get_stack_ref();
+    {
+      std::ostringstream os;
+      os << "result: ";
+      stack->dump(os, 3);
+      out << os.str();
+    }
+    if (mode & 4) {
+      if (remote_result.empty()) {
+        out << "remote result: <none>, exit code " << remote_exit_code;
+      } else {
+        auto res = vm::std_boc_deserialize(std::move(remote_result));
+        if (res.is_error()) {
+          LOG(ERROR) << "cannot deserialize remote VM result boc: " << res.move_as_error();
+          return;
+        }
+        auto cs = vm::load_cell_slice(res.move_as_ok());
+        Ref<vm::Stack> remote_stack;
+        if (!(vm::Stack::deserialize_to(cs, remote_stack, 0) && cs.empty_ext())) {
+          LOG(ERROR) << "remote VM result boc cannot be deserialized as a VmStack";
+          return;
+        }
+        std::ostringstream os;
+        os << "remote result (not to be trusted): ";
+        remote_stack->dump(os, 3);
+        out << os.str();
+      }
+    }
+    out.flush();
+    promise.set_result(stack->extract_contents());
+  } catch (vm::VmVirtError& err) {
+    out << "virtualization error while parsing runSmcMethod result: " << err.get_msg();
+  } catch (vm::VmError& err) {
+    out << "error while parsing runSmcMethod result: " << err.get_msg();
   }
 }
 
@@ -1386,8 +1776,8 @@ void TestNode::got_one_transaction(ton::BlockIdExt req_blkid, ton::BlockIdExt bl
   } else {
     out << "transaction is ";
     std::ostringstream outp;
-    block::gen::t_Transaction.print_ref(outp, root);
-    vm::load_cell_slice(root).print_rec(outp);
+    block::gen::t_Transaction.print_ref(print_limit_, outp, root, 0);
+    vm::load_cell_slice(root).print_rec(print_limit_, outp);
     out << outp.str();
   }
 }
@@ -1512,8 +1902,8 @@ void TestNode::got_last_transactions(std::vector<ton::BlockIdExt> blkids, td::Bu
     out << "transaction #" << c << " from block " << blkid.to_str() << (dump ? " is " : "\n");
     if (dump) {
       std::ostringstream outp;
-      block::gen::t_Transaction.print_ref(outp, info.transaction);
-      vm::load_cell_slice(info.transaction).print_rec(outp);
+      block::gen::t_Transaction.print_ref(print_limit_, outp, info.transaction);
+      vm::load_cell_slice(info.transaction).print_rec(print_limit_, outp);
       out << outp.str();
     }
     block::gen::Transaction::Record trans;
@@ -1641,8 +2031,8 @@ void TestNode::got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::Bu
     auto out = td::TerminalIO::out();
     out << "shard configuration is ";
     std::ostringstream outp;
-    block::gen::t_ShardHashes.print_ref(outp, root);
-    vm::load_cell_slice(root).print_rec(outp);
+    block::gen::t_ShardHashes.print_ref(print_limit_, outp, root);
+    vm::load_cell_slice(root).print_rec(print_limit_, outp);
     out << outp.str();
     block::ShardConfig sh_conf;
     if (!sh_conf.unpack(vm::load_cell_slice_ref(root))) {
@@ -1665,26 +2055,35 @@ void TestNode::got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::Bu
   show_new_blkids();
 }
 
-bool TestNode::get_config_params(ton::BlockIdExt blkid, int mode, std::string filename) {
-  std::vector<int> params;
-  if (mode >= 0 && !seekeoln()) {
+bool TestNode::get_config_params(ton::BlockIdExt blkid, td::Promise<td::Unit> do_after, int mode, std::string filename,
+                                 std::vector<int> params) {
+  if (mode < 0) {
+    mode = 0x8000;
+  }
+  if (!(mode & 0x9000) && !seekeoln()) {
     mode |= 0x1000;
     while (!seekeoln()) {
       int x;
       if (!convert_int32(get_word(), x)) {
+        do_after.set_error(td::Status::Error("integer configuration parameter id expected"));
         return set_error("integer configuration parameter id expected");
       }
       params.push_back(x);
     }
   }
   if (!(ready_ && !client_.empty())) {
+    do_after.set_error(td::Status::Error("integer configuration parameter id expected"));
     return set_error("server connection not ready");
   }
   if (!blkid.is_masterchain_ext()) {
+    do_after.set_error(td::Status::Error("integer configuration parameter id expected"));
     return set_error("only masterchain blocks contain configuration");
   }
+  if (blkid == mc_last_id_) {
+    mode |= 0x2000;
+  }
   auto params_copy = params;
-  auto b = (mode & 0x3000) == 0x1000
+  auto b = (mode & 0x1000)
                ? ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getConfigParams>(
                                               0, ton::create_tl_lite_block_id(blkid), std::move(params_copy)),
                                           true)
@@ -1693,9 +2092,11 @@ bool TestNode::get_config_params(ton::BlockIdExt blkid, int mode, std::string fi
                                           true);
   LOG(INFO) << "requesting " << params.size() << " configuration parameters with respect to masterchain block "
             << blkid.to_str();
-  return envelope_send_query(std::move(b), [ Self = actor_id(this), mode, filename, blkid,
-                                             params = std::move(params) ](td::Result<td::BufferSlice> R) mutable {
+  return envelope_send_query(std::move(b), [
+    Self = actor_id(this), mode, filename, blkid, params = std::move(params), do_after = std::move(do_after)
+  ](td::Result<td::BufferSlice> R) mutable {
     if (R.is_error()) {
+      do_after.set_error(R.move_as_error());
       return;
     }
     auto F = ton::fetch_tl_object<ton::lite_api::liteServer_configInfo>(R.move_as_ok(), true);
@@ -1705,13 +2106,14 @@ bool TestNode::get_config_params(ton::BlockIdExt blkid, int mode, std::string fi
       auto f = F.move_as_ok();
       td::actor::send_closure_later(Self, &TestNode::got_config_params, blkid, ton::create_block_id(f->id_),
                                     std::move(f->state_proof_), std::move(f->config_proof_), mode, filename,
-                                    std::move(params));
+                                    std::move(params), std::move(do_after));
     }
   });
 }
 
 void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, td::BufferSlice state_proof,
-                                 td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params) {
+                                 td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params,
+                                 td::Promise<td::Unit> do_after) {
   LOG(INFO) << "got configuration parameters";
   if (!blkid.is_masterchain_ext()) {
     LOG(ERROR) << "reference block " << blkid.to_str() << " for the configuration is not a valid masterchain block";
@@ -1734,7 +2136,7 @@ void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blki
       return;
     }
     auto config = res.move_as_ok();
-    if (mode < 0) {
+    if (mode & 0x8000) {
       auto F = vm::std_boc_serialize(config->get_root_cell(), 2);
       if (F.is_error()) {
         LOG(ERROR) << "cannot serialize configuration: " << F.move_as_error().to_string();
@@ -1760,26 +2162,32 @@ void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blki
         } else {
           std::ostringstream os;
           if (i >= 0) {
-            block::gen::ConfigParam{i}.print_ref(os, value);
+            block::gen::ConfigParam{i}.print_ref(print_limit_, os, value);
             os << std::endl;
           }
-          vm::load_cell_slice(value).print_rec(os);
+          vm::load_cell_slice(value).print_rec(print_limit_, os);
           out << os.str() << std::endl;
+          if (i == 4 && (mode & 0x2000)) {
+            register_config_param4(value);
+          }
         }
       }
     } else {
-      config->foreach_config_param([&out](int i, Ref<vm::Cell> value) {
+      config->foreach_config_param([this, &out, mode](int i, Ref<vm::Cell> value) {
         out << "ConfigParam(" << i << ") = ";
         if (value.is_null()) {
           out << "(null)\n";
         } else {
           std::ostringstream os;
           if (i >= 0) {
-            block::gen::ConfigParam{i}.print_ref(os, value);
+            block::gen::ConfigParam{i}.print_ref(print_limit_, os, value);
             os << std::endl;
           }
-          vm::load_cell_slice(value).print_rec(os);
+          vm::load_cell_slice(value).print_rec(print_limit_, os);
           out << os.str() << std::endl;
+          if (i == 4 && (mode & 0x2000)) {
+            register_config_param4(value);
+          }
         }
         return true;
       });
@@ -1788,6 +2196,25 @@ void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blki
     LOG(ERROR) << "error while traversing configuration: " << err.get_msg();
   } catch (vm::VmVirtError& err) {
     LOG(ERROR) << "virtualization error while traversing configuration: " << err.get_msg();
+  }
+  do_after.set_result(td::Unit());
+}
+
+bool TestNode::register_config_param4(Ref<vm::Cell> value) {
+  if (value.is_null()) {
+    return false;
+  }
+  vm::CellSlice cs{vm::NoVmOrd(), std::move(value)};
+  ton::StdSmcAddress addr;
+  if (cs.size_ext() == 256 && cs.fetch_bits_to(addr)) {
+    dns_root_queried_ = true;
+    if (dns_root_ != addr) {
+      dns_root_ = addr;
+      LOG(INFO) << "dns root set to -1:" << addr.to_hex();
+    }
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -1882,8 +2309,8 @@ void TestNode::got_block(ton::BlockIdExt blkid, td::BufferSlice data, bool dump)
     auto out = td::TerminalIO::out();
     out << "block contents is ";
     std::ostringstream outp;
-    block::gen::t_Block.print_ref(outp, root);
-    vm::load_cell_slice(root).print_rec(outp);
+    block::gen::t_Block.print_ref(print_limit_, outp, root);
+    vm::load_cell_slice(root).print_rec(print_limit_, outp);
     out << outp.str();
     show_block_header(blkid, std::move(root), 0xffff);
   } else {
@@ -1938,8 +2365,8 @@ void TestNode::got_state(ton::BlockIdExt blkid, ton::RootHash root_hash, ton::Fi
     auto out = td::TerminalIO::out();
     out << "shard state contents is ";
     std::ostringstream outp;
-    block::gen::t_ShardState.print_ref(outp, root);
-    vm::load_cell_slice(root).print_rec(outp);
+    block::gen::t_ShardState.print_ref(print_limit_, outp, root);
+    vm::load_cell_slice(root).print_rec(print_limit_, outp);
     out << outp.str();
     show_state_header(blkid, std::move(root), 0xffff);
   } else {
@@ -2073,8 +2500,8 @@ void TestNode::got_block_header(ton::BlockIdExt blkid, td::BufferSlice data, int
   }
   auto root = res.move_as_ok();
   std::ostringstream outp;
-  vm::CellSlice cs{vm::NoVm{}, root};
-  cs.print_rec(outp);
+  vm::CellSlice cs{vm::NoVm(), root};
+  cs.print_rec(print_limit_, outp);
   td::TerminalIO::out() << outp.str();
   try {
     auto virt_root = vm::MerkleProof::virtualize(root, 1);
@@ -2173,6 +2600,107 @@ void TestNode::got_block_proof(ton::BlockIdExt from, ton::BlockIdExt to, int mod
   show_new_blkids();
 }
 
+bool TestNode::get_creator_stats(ton::BlockIdExt blkid, int mode, unsigned req_count, ton::Bits256 start_after,
+                                 ton::UnixTime min_utime) {
+  if (!(ready_ && !client_.empty())) {
+    return set_error("server connection not ready");
+  }
+  if (!blkid.is_masterchain_ext()) {
+    return set_error("only masterchain blocks contain block creator statistics");
+  }
+  if (!(mode & 1)) {
+    start_after.set_zero();
+  }
+  auto b = ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getValidatorStats>(
+                                        mode, ton::create_tl_lite_block_id(blkid), req_count, start_after, min_utime),
+                                    true);
+  LOG(INFO) << "requesting up to " << req_count << " block creator stats records with respect to masterchain block "
+            << blkid.to_str() << " starting from validator public key " << start_after.to_hex() << " created after "
+            << min_utime << " (mode=" << mode << ")";
+  return envelope_send_query(std::move(b), [ Self = actor_id(this), mode, blkid, req_count, start_after,
+                                             min_utime ](td::Result<td::BufferSlice> R) {
+    if (R.is_error()) {
+      return;
+    }
+    auto F = ton::fetch_tl_object<ton::lite_api::liteServer_validatorStats>(R.move_as_ok(), true);
+    if (F.is_error()) {
+      LOG(ERROR) << "cannot parse answer to liteServer.getValidatorStats";
+    } else {
+      auto f = F.move_as_ok();
+      td::actor::send_closure_later(Self, &TestNode::got_creator_stats, blkid, ton::create_block_id(f->id_), mode,
+                                    f->mode_, start_after, min_utime, std::move(f->state_proof_),
+                                    std::move(f->data_proof_), f->count_, req_count, f->complete_);
+    }
+  });
+}
+
+void TestNode::got_creator_stats(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, int req_mode, int mode,
+                                 td::Bits256 start_after, ton::UnixTime min_utime, td::BufferSlice state_proof,
+                                 td::BufferSlice data_proof, int count, int req_count, bool complete) {
+  LOG(INFO) << "got answer to getValidatorStats query: " << count << " records out of " << req_count << ", "
+            << (complete ? "complete" : "incomplete");
+  if (!blkid.is_masterchain_ext()) {
+    LOG(ERROR) << "reference block " << blkid.to_str()
+               << " for block creator statistics is not a valid masterchain block";
+    return;
+  }
+  if (count > req_count) {
+    LOG(ERROR) << "obtained " << count << " answers to getValidatorStats query, but only " << req_count
+               << " were requested";
+    return;
+  }
+  if (blkid != req_blkid) {
+    LOG(ERROR) << "answer to getValidatorStats refers to masterchain block " << blkid.to_str()
+               << " different from requested " << req_blkid.to_str();
+    return;
+  }
+  auto R = block::check_extract_state_proof(blkid, state_proof.as_slice(), data_proof.as_slice());
+  if (R.is_error()) {
+    LOG(ERROR) << "masterchain state proof for " << blkid.to_str() << " is invalid : " << R.move_as_error().to_string();
+    return;
+  }
+  bool allow_eq = (mode & 3) != 1;
+  ton::Bits256 key{start_after};
+  std::ostringstream os;
+  try {
+    auto dict = block::get_block_create_stats_dict(R.move_as_ok());
+    if (!dict) {
+      LOG(ERROR) << "cannot extract BlockCreateStats from mc state";
+      return;
+    }
+    for (int i = 0; i < count + (int)complete; i++) {
+      auto v = dict->lookup_nearest_key(key, true, allow_eq);
+      if (v.is_null()) {
+        if (i != count) {
+          LOG(ERROR) << "could fetch only " << i << " CreatorStats entries out of " << count
+                     << " declared in answer to getValidatorStats";
+          return;
+        }
+        break;
+      }
+      block::DiscountedCounter mc_cnt, shard_cnt;
+      if (!block::unpack_CreatorStats(std::move(v), mc_cnt, shard_cnt)) {
+        LOG(ERROR) << "invalid CreatorStats record with key " << key.to_hex();
+        return;
+      }
+      if (mc_cnt.modified_since(min_utime) || shard_cnt.modified_since(min_utime)) {
+        os << key.to_hex() << " mc_cnt:" << mc_cnt << " shard_cnt:" << shard_cnt << std::endl;
+      }
+      allow_eq = false;
+    }
+    if (complete) {
+      os << "(complete)" << std::endl;
+    } else {
+      os << "(incomplete, repeat query from " << key.to_hex() << " )" << std::endl;
+    }
+    td::TerminalIO::out() << os.str();
+  } catch (vm::VmError& err) {
+    LOG(ERROR) << "error while traversing block creator stats: " << err.get_msg();
+  } catch (vm::VmVirtError& err) {
+    LOG(ERROR) << "virtualization error while traversing block creator stats: " << err.get_msg();
+  }
+}
+
 int main(int argc, char* argv[]) {
   SET_VERBOSITY_LEVEL(verbosity_INFO);
   td::set_default_failure_signal_handler();
@@ -2204,6 +2732,11 @@ int main(int argc, char* argv[]) {
   p.add_option('D', "db", "root for dbs", [&](td::Slice fname) {
     td::actor::send_closure(x, &TestNode::set_db_root, fname.str());
     return td::Status::OK();
+  });
+  p.add_option('L', "print-limit", "sets maximum count of recursively printed objects", [&](td::Slice arg) {
+    auto plimit = td::to_integer<int>(arg);
+    td::actor::send_closure(x, &TestNode::set_print_limit, plimit);
+    return plimit >= 0 ? td::Status::OK() : td::Status::Error("printing limit must be non-negative");
   });
   p.add_option('v', "verbosity", "set verbosity level", [&](td::Slice arg) {
     verbosity = td::to_integer<int>(arg);
@@ -2257,7 +2790,7 @@ int main(int argc, char* argv[]) {
   });
 #endif
 
-  vm::init_op_cp0();
+  vm::init_op_cp0(true);  // enable vm debug
 
   td::actor::Scheduler scheduler({2});
 

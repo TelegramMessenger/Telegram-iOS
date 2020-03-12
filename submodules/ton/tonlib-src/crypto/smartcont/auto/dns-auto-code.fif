@@ -1,0 +1,949 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/dns-auto-code.fc` 
+PROGRAM{
+  DECLPROC load_data
+  DECLPROC load_prices
+  DECLPROC store_data
+  DECLPROC send_message
+  DECLPROC send_error
+  DECLPROC send_ok
+  DECLPROC housekeeping
+  DECLPROC calcprice_internal
+  DECLPROC check_owner
+  DECLPROC perform_ctl_op
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  DECLPROC dnsdictlookup
+  123660 DECLMETHOD dnsresolve
+  87450 DECLMETHOD getexpirationx
+  110574 DECLMETHOD getexpiration
+  67418 DECLMETHOD getstdperiod
+  109522 DECLMETHOD getppr
+  108994 DECLMETHOD getppc
+  113123 DECLMETHOD getppb
+  113304 DECLMETHOD calcprice
+  85700 DECLMETHOD calcregprice
+  DECLGLOBVAR query_info
+  load_data PROCREF:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    LDREF	//  _3 cs
+    LDDICT	//  _3 _5 cs
+    LDDICT	//  _3 _5 _7 cs
+    30 LDU	//  _3 _5 _7 _10 cs
+    LDGRAMS	//  _3 _5 _7 _10 _13 cs
+    LDGRAMS	//  _3 _5 _7 _10 _13 _15 cs
+    LDGRAMS	//  _3 _5 _7 _10 _13 _15 _17 cs
+    4 -ROLL	//  _3 _5 _7 cs _10 _13 _15 _17
+    4 TUPLE	//  _3 _5 _7 cs _9
+    SWAP	//  _3 _5 _7 _9 cs
+    32 LDU	//  _3 _5 _7 _9 _19 cs
+    32 LDU	//  _3 _5 _7 _9 _19 _42 _41
+    DROP	//  _3 _5 _7 _9 _19 _22
+  }>
+  load_prices PROCREF:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    LDREF	//  _19 _18
+    NIP	//  cs
+    LDDICT	//  _21 _20
+    NIP	//  cs
+    LDDICT	//  _23 _22
+    NIP	//  cs
+    30 LDU	//  _9 cs
+    LDGRAMS	//  _9 _12 cs
+    LDGRAMS	//  _9 _12 _14 cs
+    LDGRAMS	//  _9 _12 _14 _31 _30
+    DROP	//  _9 _12 _14 _16
+  }>
+  store_data PROC:<{
+    //  ctl dd gc prices nhk lhk
+    s0 s2 XCHG	//  ctl dd gc lhk nhk prices
+    4 UNTUPLE	//  ctl dd gc lhk nhk sp ppr ppc ppb
+    s0 s8 XCHG
+    NEWC	//  ppb dd gc lhk nhk sp ppr ppc ctl _11
+    STREF	//  ppb dd gc lhk nhk sp ppr ppc _12
+    s1 s7 XCHG	//  ppb ppc gc lhk nhk sp ppr dd _12
+    STDICT	//  ppb ppc gc lhk nhk sp ppr _13
+    s1 s5 XCHG	//  ppb ppc ppr lhk nhk sp gc _13
+    STDICT	//  ppb ppc ppr lhk nhk sp _14
+    30 STU	//  ppb ppc ppr lhk nhk _16
+    s0 s3 XCHG2	//  ppb ppc nhk lhk _16 ppr
+    STGRAMS	//  ppb ppc nhk lhk _17
+    s0 s3 XCHG2	//  ppb lhk nhk _17 ppc
+    STGRAMS	//  ppb lhk nhk _18
+    s0 s3 XCHG2	//  nhk lhk _18 ppb
+    STGRAMS	//  nhk lhk _19
+    s1 s2 XCHG	//  lhk nhk _19
+    32 STU	//  lhk _21
+    32 STU	//  _23
+    ENDC	//  _24
+    c4 POP
+  }>
+  send_message PROC:<{
+    //  addr tag query_id body grams mode
+    0 PUSHINT	//  addr tag query_id body grams mode _7=0
+    24 PUSHINT	//  addr tag query_id body grams mode _7=0 _8=24
+    NEWC	//  addr tag query_id body grams mode _7=0 _8=24 _9
+    6 STU	//  addr tag query_id body grams mode _7=0 _11
+    s0 s7 XCHG2	//  _7=0 tag query_id body grams mode _11 addr
+    STSLICER	//  _7=0 tag query_id body grams mode _12
+    ROT	//  _7=0 tag query_id body mode _12 grams
+    STGRAMS	//  _7=0 tag query_id body mode _13
+    s1 s5 XCHG	//  mode tag query_id body _7=0 _13
+    107 STU	//  mode tag query_id body _27
+    s1 s3 XCHG	//  mode body query_id tag _27
+    32 STU	//  mode body query_id _29
+    64 STU	//  mode body msg
+    OVER	//  mode body msg body
+    -1 GTINT	//  mode body msg _33
+    IF:<{	//  mode body msg
+      32 STU	//  mode msg
+    }>ELSE<{
+      NIP	//  mode msg
+    }>
+    ENDC	//  mode _37
+    SWAP	//  _37 mode
+    SENDRAWMSG
+  }>
+  send_error PROC:<{
+    //  error_code
+    query_info GETGLOB
+    UNTRIPLE	//  error_code addr query_id op
+    s2 s3 XCHG
+    0 PUSHINT
+    64 PUSHINT	//  addr error_code query_id op _5=0 _6=64
+    send_message CALLDICT
+  }>
+  send_ok PROC:<{
+    //  price
+    4 PUSHINT	//  price _1=4
+    RAWRESERVE
+    query_info GETGLOB
+    UNTRIPLE	//  addr query_id op
+    4016791929 PUSHINT	//  addr query_id op _7=4016791929
+    -ROT
+    0 PUSHINT
+    7 PUSHPOW2	//  addr _7=4016791929 query_id op _8=0 _9=128
+    send_message CALLDICT
+  }>
+  housekeeping PROC:<{
+    //  ctl dd gc prices nhk lhk max_steps
+    NOW	//  ctl dd gc prices nhk lhk max_steps n
+    s2 PUSH	//  ctl dd gc prices nhk lhk max_steps n lhk
+    60 ADDCONST	//  ctl dd gc prices nhk lhk max_steps n _10
+    s4 s(-1) PUXC	//  ctl dd gc prices nhk lhk max_steps n nhk _10
+    MAX	//  ctl dd gc prices nhk lhk max_steps n _11
+    s1 s(-1) PUXC	//  ctl dd gc prices nhk lhk max_steps n n _11
+    LESS	//  ctl dd gc prices nhk lhk max_steps n _12
+    IFJMP:<{	//  ctl dd gc prices nhk lhk max_steps n
+      2DROP	//  ctl dd gc prices nhk lhk
+      store_data CALLDICT
+    }>	//  ctl dd gc prices nhk lhk max_steps n
+    s2 POP	//  ctl dd gc prices nhk n max_steps
+    s4 PUSH
+    8 PUSHPOW2	//  ctl dd gc prices nhk n max_steps gc _17=256
+    DICTUMIN
+    NULLSWAPIFNOT2	//  ctl dd gc prices nhk n max_steps _63 _62 _64
+    s2 POP	//  ctl dd gc prices nhk n max_steps found? mkey
+    WHILE:<{
+      s1 s2 XCPU	//  ctl dd gc prices nhk n max_steps mkey found? max_steps
+      AND	//  ctl dd gc prices nhk n max_steps mkey _19
+    }>DO<{	//  ctl dd gc prices nhk n max_steps mkey
+      s3 POP	//  ctl dd gc prices mkey n max_steps
+      s2 PUSH	//  ctl dd gc prices mkey n max_steps mkey
+      224 RSHIFT#	//  ctl dd gc prices mkey n max_steps nhk
+      s0 s2 PUSH2	//  ctl dd gc prices mkey n max_steps nhk nhk n
+      LESS	//  ctl dd gc prices mkey n max_steps nhk _24
+      IF:<{	//  ctl dd gc prices mkey n max_steps nhk
+        DROP	//  ctl dd gc prices mkey n max_steps
+        s2 PUSH	//  ctl dd gc prices mkey n max_steps mkey
+        224 MODPOW2#	//  ctl dd gc prices mkey n max_steps key
+        s0 s6 PUSH2
+        224 PUSHINT	//  ctl dd gc prices mkey n max_steps key key dd _35
+        DICTUGET
+        NULLSWAPIFNOT	//  ctl dd gc prices mkey n max_steps key val found?
+        IF:<{	//  ctl dd gc prices mkey n max_steps key val
+          32 PLDU	//  ctl dd gc prices mkey n max_steps key exp
+          s3 PUSH	//  ctl dd gc prices mkey n max_steps key exp n
+          LEQ	//  ctl dd gc prices mkey n max_steps key _40
+          IF:<{	//  ctl dd gc prices mkey n max_steps key
+            s0 s6 XCHG2
+            224 PUSHINT	//  ctl max_steps gc prices mkey n key dd _44
+            DICTUDEL	//  ctl max_steps gc prices mkey n _67 _68
+            DROP	//  ctl max_steps gc prices mkey n dd
+            s0 s5 XCHG	//  ctl dd gc prices mkey n max_steps
+          }>ELSE<{
+            DROP	//  ctl dd gc prices mkey n max_steps
+          }>
+        }>ELSE<{
+          2DROP	//  ctl dd gc prices mkey n max_steps
+        }>
+        s2 s4 XCHG2
+        8 PUSHPOW2	//  ctl dd max_steps prices n mkey gc _47=256
+        DICTUDEL	//  ctl dd max_steps prices n _69 _70
+        DROP	//  ctl dd max_steps prices n gc
+        DUP
+        8 PUSHPOW2	//  ctl dd max_steps prices n gc gc _50=256
+        DICTUMIN
+        NULLSWAPIFNOT2	//  ctl dd max_steps prices n gc _72 _71 _73
+        s2 POP	//  ctl dd max_steps prices n gc found? mkey
+        OVER	//  ctl dd max_steps prices n gc found? mkey found?
+        IF:<{	//  ctl dd max_steps prices n gc found? mkey
+          DUP	//  ctl dd max_steps prices n gc found? mkey mkey
+          224 RSHIFT#	//  ctl dd max_steps prices n gc found? mkey _52
+        }>ELSE<{	//  ctl dd max_steps prices n gc found? mkey
+          32 PUSHPOW2DEC	//  ctl dd max_steps prices n gc found? mkey _52=4294967295
+        }>	//  ctl dd max_steps prices n gc found? mkey nhk
+        s0 s6 XCHG	//  ctl dd nhk prices n gc found? mkey max_steps
+        DEC	//  ctl dd nhk prices n gc found? mkey max_steps
+      }>ELSE<{	//  ctl dd gc prices mkey n max_steps nhk
+        s5 s1 s5 XCHG3
+        s0 s3 XCHG
+        FALSE
+        s0 s2 XCHG	//  ctl dd nhk prices n gc found? mkey max_steps
+      }>
+      s3 s6 XCHG
+      s3 s4 XCHG
+      -ROT	//  ctl dd gc prices nhk n max_steps found? mkey
+    }>	//  ctl dd gc prices nhk n max_steps mkey
+    2DROP	//  ctl dd gc prices nhk n
+    store_data CALLDICT
+  }>
+  calcprice_internal PROCREF:<{
+    //  domain data ppc ppb
+    s0 s2 XCHG
+    100 PUSHINT	//  domain ppb ppc data _7=100
+    CDATASIZE	//  domain ppb ppc _24 _25 _26
+    s2 POP	//  domain ppb ppc refs bits
+    s0 s4 XCHG	//  bits ppb ppc refs domain
+    SBITS	//  bits ppb ppc refs _9
+    1 LSHIFT#	//  bits ppb ppc refs _11
+    192 PUSHINT	//  bits ppb ppc refs _11 _16
+    ADD	//  bits ppb ppc refs _17
+    s1 s4 XCHG	//  refs ppb ppc bits _17
+    ADD	//  refs ppb ppc bits
+    s0 s3 XCHG	//  bits ppb ppc refs
+    2 ADDCONST	//  bits ppb ppc _20
+    MUL	//  bits ppb _21
+    s0 s2 XCHG	//  _21 ppb bits
+    MUL	//  _21 _22
+    ADD	//  _23
+  }>
+  check_owner PROCREF:<{
+    //  cat_table owner_info src_wc src_addr strict
+    s0 s4 XCHG	//  strict owner_info src_wc src_addr cat_table
+    ISNULL	//  strict owner_info src_wc src_addr _5
+    s4 s(-1) PUXC	//  strict owner_info src_wc src_addr strict _5
+    AND	//  strict owner_info src_wc src_addr _6
+    IFJMP:<{	//  strict owner_info src_wc src_addr
+      4 BLKDROP	// 
+      4000281702 PUSHINT	//  _7=4000281702
+    }>	//  strict owner_info src_wc src_addr
+    s2 PUSH	//  strict owner_info src_wc src_addr owner_info
+    ISNULL	//  strict owner_info src_wc src_addr _8
+    IFJMP:<{	//  strict owner_info src_wc src_addr
+      3 BLKDROP	//  strict
+      4000263474 PUSHINT	//  strict _9=4000263474
+      AND	//  _10
+    }>	//  strict owner_info src_wc src_addr
+    s3 POP	//  src_addr owner_info src_wc
+    3798033458 PUSHINT	//  src_addr owner_info src_wc ERR_BAD2=3798033458
+    s0 s2 XCHG	//  src_addr ERR_BAD2=3798033458 src_wc owner_info
+    CTOS	//  src_addr ERR_BAD2=3798033458 src_wc sown
+    DUP	//  src_addr ERR_BAD2=3798033458 src_wc sown sown
+    SBITS	//  src_addr ERR_BAD2=3798033458 src_wc sown _15
+    283 PUSHINT	//  src_addr ERR_BAD2=3798033458 src_wc sown _15 _22
+    LESS	//  src_addr ERR_BAD2=3798033458 src_wc sown _23
+    IFJMP:<{	//  src_addr ERR_BAD2=3798033458 src_wc sown
+      s2 s3 XCHG
+      3 BLKDROP	//  ERR_BAD2=3798033458
+    }>	//  src_addr ERR_BAD2=3798033458 src_wc sown
+    19 LDU	//  src_addr ERR_BAD2=3798033458 src_wc _24 sown
+    SWAP
+    327324 PUSHINT	//  src_addr ERR_BAD2=3798033458 src_wc sown _24 _33
+    NEQ	//  src_addr ERR_BAD2=3798033458 src_wc sown _34
+    IFJMP:<{	//  src_addr ERR_BAD2=3798033458 src_wc sown
+      s2 s3 XCHG
+      3 BLKDROP	//  ERR_BAD2=3798033458
+    }>	//  src_addr ERR_BAD2=3798033458 src_wc sown
+    1 2 BLKDROP2	//  src_addr src_wc sown
+    8 LDI	//  src_addr src_wc _37 sown
+    256 PLDU	//  src_addr src_wc owner_wc owner_addr
+    s0 s2 XCHG	//  src_addr owner_addr owner_wc src_wc
+    NEQ	//  src_addr owner_addr _42
+    s0 s2 XCHG	//  _42 owner_addr src_addr
+    NEQ	//  _42 _43
+    OR	//  _44
+    IFJMP:<{	// 
+      4000282478 PUSHINT	//  _45=4000282478
+    }>	// 
+    0 PUSHINT	//  _46=0
+  }>
+  perform_ctl_op PROCREF:<{
+    //  op src_wc src_addr in_msg
+    load_data INLINECALLDICT	//  op src_wc src_addr in_msg ctl domdata gc prices nhk lhk
+    s5 PUSH	//  op src_wc src_addr in_msg ctl domdata gc prices nhk lhk ctl
+    CTOS	//  op src_wc src_addr in_msg ctl domdata gc prices nhk lhk cs
+    8 LDI	//  op src_wc src_addr in_msg ctl domdata gc prices nhk lhk _13 cs
+    s0 s10 XCHG	//  op cs src_addr in_msg ctl domdata gc prices nhk lhk _13 src_wc
+    NEQ	//  op cs src_addr in_msg ctl domdata gc prices nhk lhk _16
+    s0 s9 XCHG	//  op _16 src_addr in_msg ctl domdata gc prices nhk lhk cs
+    256 LDU	//  op _16 src_addr in_msg ctl domdata gc prices nhk lhk _75 _74
+    DROP	//  op _16 src_addr in_msg ctl domdata gc prices nhk lhk _17
+    s0 s8 XCHG2	//  op _16 lhk in_msg ctl domdata gc prices nhk _17 src_addr
+    NEQ	//  op _16 lhk in_msg ctl domdata gc prices nhk _20
+    s1 s8 XCHG	//  op nhk lhk in_msg ctl domdata gc prices _16 _20
+    OR	//  op nhk lhk in_msg ctl domdata gc prices _21
+    IFJMP:<{	//  op nhk lhk in_msg ctl domdata gc prices
+      8 BLKDROP	// 
+      4000282478 PUSHINT	//  _22=4000282478
+      send_error CALLDICT
+    }>	//  op nhk lhk in_msg ctl domdata gc prices
+    s7 PUSH
+    1130909810 PUSHINT	//  op nhk lhk in_msg ctl domdata gc prices op _24=1130909810
+    EQUAL	//  op nhk lhk in_msg ctl domdata gc prices _25
+    IFJMP:<{	//  op nhk lhk in_msg ctl domdata gc prices
+      DROP
+      s6 POP	//  gc nhk lhk in_msg ctl domdata
+      s0 s2 XCHG	//  gc nhk lhk domdata ctl in_msg
+      32 LDU	//  gc nhk lhk domdata ctl _30 in_msg
+      LDGRAMS	//  gc nhk lhk domdata ctl _30 _33 in_msg
+      LDGRAMS	//  gc nhk lhk domdata ctl _30 _33 _35 in_msg
+      LDGRAMS	//  gc nhk lhk domdata ctl stdper ppr ppc ppb in_msg
+      ENDS
+      4 TUPLE	//  gc nhk lhk domdata ctl _40
+      s0 s4 s4 XCHG3
+      s0 s5 XCHG
+      s0 s3 XCHG	//  ctl domdata gc _40 nhk lhk
+      store_data CALLDICT
+      0 PUSHINT	//  _42=0
+      send_ok CALLDICT
+    }>	//  op nhk lhk in_msg ctl domdata gc prices
+    s4 POP
+    s4 POP	//  op nhk gc prices ctl domdata
+    s0 s5 XCHG
+    1128555884 PUSHINT	//  domdata nhk gc prices ctl op _44=1128555884
+    EQUAL	//  domdata nhk gc prices ctl _45
+    IFJMP:<{	//  domdata nhk gc prices ctl
+      s4 PUSH	//  domdata nhk gc prices ctl domdata
+      ISNULL	//  domdata nhk gc prices ctl _46
+      IFNOT:<{	//  domdata nhk gc prices ctl
+        s0 s4 XCHG
+        s0 s3 XCHG
+        1 PUSHINT
+        -1 PUSHINT	//  ctl domdata gc prices nhk _47=1 _48=-1
+        housekeeping CALLDICT
+      }>ELSE<{
+        5 BLKDROP	// 
+      }>
+      load_data INLINECALLDICT	//  _84 _85 _86 _87 _88 _89
+      s4 s5 XCHG
+      5 BLKDROP	//  domdata
+      ISNULL	//  _51
+      IFNOTJMP:<{	// 
+        4000605549 PUSHINT	//  _52=4000605549
+        send_error CALLDICT
+      }>	// 
+      query_info GETGLOB
+      UNTRIPLE	//  addr query_id op
+      4016791929 PUSHINT	//  addr query_id op _58=4016791929
+      -ROT
+      0 PUSHINT
+      160 PUSHINT	//  addr _58=4016791929 query_id op _59=0 _62
+      send_message CALLDICT
+    }>	//  domdata nhk gc prices ctl
+    5 BLKDROP	// 
+    32 PUSHPOW2DEC	//  _64=4294967295
+    send_error CALLDICT
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_cell in_msg
+    DUP	//  msg_value in_msg_cell in_msg in_msg
+    SBITS	//  msg_value in_msg_cell in_msg _3
+    32 LESSINT	//  msg_value in_msg_cell in_msg _5
+    IFJMP:<{	//  msg_value in_msg_cell in_msg
+      3 BLKDROP	// 
+    }>	//  msg_value in_msg_cell in_msg
+    SWAP	//  msg_value in_msg in_msg_cell
+    CTOS	//  msg_value in_msg cs
+    4 LDU	//  msg_value in_msg flags cs
+    SWAP
+    1 PUSHINT	//  msg_value in_msg cs flags _12=1
+    AND	//  msg_value in_msg cs _13
+    IFJMP:<{	//  msg_value in_msg cs
+      3 BLKDROP	// 
+    }>	//  msg_value in_msg cs
+    LDMSGADDR	//  msg_value in_msg _327 _326
+    DROP	//  msg_value in_msg s_addr
+    DUP	//  msg_value in_msg s_addr s_addr
+    REWRITESTDADDR	//  msg_value in_msg s_addr src_wc src_addr
+    s0 s3 XCHG	//  msg_value src_addr s_addr src_wc in_msg
+    32 LDU	//  msg_value src_addr s_addr src_wc op in_msg
+    OVER	//  msg_value src_addr s_addr src_wc op in_msg op
+    IFNOTJMP:<{	//  msg_value src_addr s_addr src_wc op in_msg
+      6 BLKDROP	// 
+    }>	//  msg_value src_addr s_addr src_wc op in_msg
+    0 PUSHINT	//  msg_value src_addr s_addr src_wc op in_msg query_id=0
+    OVER	//  msg_value src_addr s_addr src_wc op in_msg query_id=0 in_msg
+    SBITS	//  msg_value src_addr s_addr src_wc op in_msg query_id=0 _26
+    63 GTINT	//  msg_value src_addr s_addr src_wc op in_msg query_id=0 _28
+    IF:<{	//  msg_value src_addr s_addr src_wc op in_msg query_id=0
+      DROP	//  msg_value src_addr s_addr src_wc op in_msg
+      64 LDU	//  msg_value src_addr s_addr src_wc op query_id in_msg
+      SWAP	//  msg_value src_addr s_addr src_wc op in_msg query_id
+    }>	//  msg_value src_addr s_addr src_wc op in_msg query_id
+    s4 s0 s2 XC2PU	//  msg_value src_addr in_msg src_wc op s_addr query_id op
+    TRIPLE
+    query_info SETGLOB
+    DUP
+    31 PUSHPOW2	//  msg_value src_addr in_msg src_wc op op _34
+    AND	//  msg_value src_addr in_msg src_wc op _35
+    IFJMP:<{	//  msg_value src_addr in_msg src_wc op
+      5 BLKDROP	// 
+    }>	//  msg_value src_addr in_msg src_wc op
+    DUP	//  msg_value src_addr in_msg src_wc op op
+    24 RSHIFT#	//  msg_value src_addr in_msg src_wc op _37
+    67 EQINT	//  msg_value src_addr in_msg src_wc op _39
+    IFJMP:<{	//  msg_value src_addr in_msg src_wc op
+      s4 POP	//  op src_addr in_msg src_wc
+      -ROT	//  op src_wc src_addr in_msg
+      perform_ctl_op INLINECALLDICT
+    }>	//  msg_value src_addr in_msg src_wc op
+    DUP
+    1919248228 PUSHINT	//  msg_value src_addr in_msg src_wc op op _42=1919248228
+    EQUAL	//  msg_value src_addr in_msg src_wc op _45
+    OVER
+    1886547820 PUSHINT	//  msg_value src_addr in_msg src_wc op _45 op _46=1886547820
+    EQUAL	//  msg_value src_addr in_msg src_wc op _45 _47
+    1 LSHIFT#	//  msg_value src_addr in_msg src_wc op _45 _49
+    ADD	//  msg_value src_addr in_msg src_wc op _50
+    OVER
+    1970300004 PUSHINT	//  msg_value src_addr in_msg src_wc op _50 op _51=1970300004
+    EQUAL	//  msg_value src_addr in_msg src_wc op _50 _52
+    2 LSHIFT#	//  msg_value src_addr in_msg src_wc op _50 _54
+    ADD	//  msg_value src_addr in_msg src_wc op _55
+    SWAP
+    1735354211 PUSHINT	//  msg_value src_addr in_msg src_wc _55 op _56=1735354211
+    EQUAL	//  msg_value src_addr in_msg src_wc _55 _57
+    3 LSHIFT#	//  msg_value src_addr in_msg src_wc _55 _59
+    ADD	//  msg_value src_addr in_msg src_wc qt
+    DUP	//  msg_value src_addr in_msg src_wc qt qt
+    IFNOTJMP:<{	//  msg_value src_addr in_msg src_wc qt
+      5 BLKDROP	// 
+      32 PUSHPOW2DEC	//  _61=4294967295
+      send_error CALLDICT
+    }>	//  msg_value src_addr in_msg src_wc qt
+    NEGATE	//  msg_value src_addr in_msg src_wc qt
+    load_data INLINECALLDICT	//  msg_value src_addr in_msg src_wc qt ctl domdata gc prices nhk lhk
+    s6 PUSH	//  msg_value src_addr in_msg src_wc qt ctl domdata gc prices nhk lhk qt
+    8 EQINT	//  msg_value src_addr in_msg src_wc qt ctl domdata gc prices nhk lhk _72
+    IFJMP:<{	//  msg_value src_addr in_msg src_wc qt ctl domdata gc prices nhk lhk
+      DROP
+      s5 POP
+      s5 POP
+      s6 POP
+      s6 POP	//  domdata gc in_msg prices nhk ctl
+      s0 s3 XCHG	//  domdata gc ctl prices nhk in_msg
+      32 LDI	//  domdata gc ctl prices nhk _341 _340
+      DROP	//  domdata gc ctl prices nhk max_steps
+      s3 s5 XCHG
+      s3 s4 XCHG
+      1 PUSHINT
+      SWAP	//  ctl domdata gc prices nhk _77=1 max_steps
+      housekeeping CALLDICT
+      4016791929 PUSHINT	//  _79=4016791929
+      send_error CALLDICT
+    }>	//  msg_value src_addr in_msg src_wc qt ctl domdata gc prices nhk lhk
+    s0 s8 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg
+    LDOPTREF	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk domain_cell in_msg
+    OVER	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk domain_cell in_msg domain_cell
+    ISNULL	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk domain_cell in_msg _88
+    IF:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk domain_cell in_msg
+      NIP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg
+      6 LDU	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk bytes in_msg
+      OVER	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk bytes in_msg bytes
+      0 EQINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk bytes in_msg fail
+      s0 s2 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail in_msg bytes
+      3 LSHIFT#	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail in_msg _97
+      LDSLICEX	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail domain in_msg
+    }>ELSE<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk domain_cell in_msg
+      SWAP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain_cell
+      CTOS	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain
+      DUP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain domain
+      SBITREFS	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain bits refs
+      SWAP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain refs bits
+      -8 ADDCONST	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain refs _104
+      -121 PUSHINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain refs _104 _107
+      AND	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain refs _108
+      OR	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain fail
+      s0 s2 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail domain in_msg
+    }>
+    s2 PUSH	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail domain in_msg fail
+    IFNOT:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail domain in_msg
+      s2 POP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain
+      DUP
+      8 PUSHINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain domain _110=8
+      SDCUTLAST	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain _111
+      8 PLDU	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain fail
+      s0 s2 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail domain in_msg
+    }>	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk fail domain in_msg
+    s0 s2 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain fail
+    IFJMP:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain
+      12 BLKDROP	// 
+      4000275504 PUSHINT	//  _114=4000275504
+      send_error CALLDICT
+    }>	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain
+    NOW	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n
+    PUSHNULL	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n _120
+    DUP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info
+    0 PUSHINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info _124=0
+    s0 s0 s4 PUSH3	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key=0 zeros=0 exp=0 tail
+    DUP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key=0 zeros=0 exp=0 tail tail
+    SBITS	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key=0 zeros=0 exp=0 tail _126
+    3 RSHIFTC#	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key=0 zeros=0 exp=0 tail _128
+    REPEAT:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail
+      PUSHNULL
+      s6 POP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail
+      8 LDU	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp _131 tail
+      SWAP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail _131
+      0 EQINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail z
+      s3 s3 XCPU	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key z exp tail zeros z
+      SUB	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key z exp tail zeros
+      s0 s3 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail z
+      IF:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail
+        s3 POP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp
+        s2 PUSH	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp tail
+        SBITS	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp _137
+        s7 s(-1) PUXC	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp domain _137
+        SDSKIPLAST	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp _138
+        SHA256U	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp _139
+        32 RSHIFT#	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp key
+        s0 s12 PUSH2
+        224 PUSHINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp key key domdata _146
+        DICTUGET
+        NULLSWAPIFNOT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp key val found?
+        IF:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp key val
+          1 2 BLKDROP2	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key val
+          32 LDU	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp val
+          s1 s7 PUSH2	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp val exp n
+          GEQ	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp val _151
+          IF:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp val
+            LDREF	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp cat_table val
+            ENDS
+            -2 PUSHINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp cat_table _158=-2
+            SWAP
+            16 PUSHINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp _158=-2 cat_table _159=16
+            DICTIGETREF	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp cown ok
+            IF:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp cown
+              s5 POP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp
+            }>ELSE<{
+              DROP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp
+            }>
+          }>ELSE<{
+            DROP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros key exp
+          }>
+          SWAP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp key
+        }>ELSE<{
+          DROP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info tail zeros exp key
+        }>
+        s0 s3 XCHG	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail
+      }>	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp tail
+    }>
+    DROP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key zeros exp
+    SWAP	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key exp zeros
+    4 GTINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key exp _162
+    IFJMP:<{	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key exp
+      15 BLKDROP
+      2DROP	// 
+      4017511472 PUSHINT	//  _163=4017511472
+      send_error CALLDICT
+    }>	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key exp
+    s12 PUSH	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key exp qt
+    1 NEQINT	//  msg_value src_addr lhk src_wc qt ctl domdata gc prices nhk in_msg domain n cat_table owner_info key exp _167
+    s4 PUSH
+    s0 s4 XCHG
+    s15 s1 s3 XCHG3
+    s0 17 s() XCHG
+    SWAP	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table cat_table owner_info src_wc src_addr _167
+    check_owner INLINECALLDICT	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err
+    DUP	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err err
+    IFJMP:<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err
+      s0 s14 XCHG
+      14 BLKDROP	//  err
+      send_error CALLDICT
+    }>	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err
+    DROP	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table
+    s9 PUSH	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table qt
+    2 NEQINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table _173
+    IF:<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table
+      s0 s3 XCHG	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n in_msg
+      LDREF	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n _361 _360
+      DROP	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data
+      DUP	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data data
+      DICTEMPTY	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _176
+      IFNOT:<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data
+        -2 PUSHINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _179=-2
+        OVER
+        16 PUSHINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _179=-2 data _180=16
+        DICTIGETREF	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data oinfo ok
+        IF:<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data oinfo
+          CTOS	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data cs
+          DUP	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data cs cs
+          SBITS	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data cs _185
+          283 PUSHINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data cs _185 _192
+          GEQ	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data cs _193
+          31 THROWIFNOT
+          19 PLDU	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _197
+          327324 PUSHINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _197 _202
+          EQUAL	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _203
+          31 THROWIFNOT
+        }>ELSE<{
+          DROP	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data
+        }>
+        DUP
+        16 PUSHINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data data _208=16
+        DICTIMIN
+        NULLSWAPIFNOT2	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _365 _364 _366
+        2 1 BLKDROP2	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data minok
+        OVER
+        16 PUSHINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data minok data _213=16
+        DICTIMAX
+        NULLSWAPIFNOT2	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data minok _368 _367 _369
+        2 1 BLKDROP2	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data minok maxok
+        AND	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data _216
+        31 THROWIFNOT
+      }>	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data
+    }>ELSE<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table
+      s3 POP	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n
+      s2 PUSH	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data
+    }>
+    s5 PUSH	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data prices
+    4 UNTUPLE	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data stdper ppr ppc ppb
+    s3 PUSH	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data stdper ppr ppc ppb stdper
+    IFNOTJMP:<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data stdper ppr ppc ppb
+      15 BLKDROP
+      3 BLKDROP	// 
+      3545187910 PUSHINT	//  _223=3545187910
+      send_error CALLDICT
+    }>	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table domain n data stdper ppr ppc ppb
+    s4 PUSH
+    s3 s7 XCHG
+    -ROT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table ppr n data stdper domain data ppc ppb
+    calcprice_internal INLINECALLDICT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table ppr n data stdper _226
+    s11 PUSH	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table ppr n data stdper _226 qt
+    4 NEQINT	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table ppr n data stdper _226 _228
+    s1 s5 XCHG	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table _226 n data stdper ppr _228
+    AND	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table _226 n data stdper _229
+    s1 s4 XCHG	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data _226 _229
+    ADD	//  msg_value key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data price
+    s0 s14 XCHG
+    30 PUSHPOW2	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data msg_value _233
+    SUB	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data _234
+    s14 PUSH	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data _234 price
+    LESS	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data _235
+    IFJMP:<{	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
+      14 BLKDROP	// 
+      3883023472 PUSHINT	//  _236=3883023472
+      send_error CALLDICT
+    }>	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
+    s9 PUSH	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data qt
+    2 EQINT	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data _243
+    IFJMP:<{	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
+      s3 POP
+      s8 POP	//  price key lhk exp n ctl domdata gc prices nhk data stdper
+      s7 s7 XCPU	//  price key lhk exp stdper ctl domdata gc prices nhk data n stdper
+      ADD	//  price key lhk exp stdper ctl domdata gc prices nhk data _244
+      s8 s(-1) PUXC	//  price key lhk exp stdper ctl domdata gc prices nhk data exp _244
+      GREATER	//  price key lhk exp stdper ctl domdata gc prices nhk data _245
+      IFJMP:<{	//  price key lhk exp stdper ctl domdata gc prices nhk data
+        11 BLKDROP	// 
+        4083511919 PUSHINT	//  _246=4083511919
+        send_error CALLDICT
+      }>	//  price key lhk exp stdper ctl domdata gc prices nhk data
+      s7 s6 PUSH2	//  price key lhk exp stdper ctl domdata gc prices nhk data exp stdper
+      ADD	//  price key lhk exp stdper ctl domdata gc prices nhk data _249
+      NEWC	//  price key lhk exp stdper ctl domdata gc prices nhk data _249 _250
+      32 STU	//  price key lhk exp stdper ctl domdata gc prices nhk data _252
+      STREF	//  price key lhk exp stdper ctl domdata gc prices nhk _253
+      s0 s9 s4 XCPUXC
+      224 PUSHINT	//  price key lhk exp stdper ctl nhk gc prices _253 key domdata _256
+      DICTUSETB	//  price key lhk exp stdper ctl nhk gc prices domdata
+      s0 s6 XCHG	//  price key lhk domdata stdper ctl nhk gc prices exp
+      224 LSHIFT#	//  price key lhk domdata stdper ctl nhk gc prices _262
+      s0 s8 XCHG2	//  price prices lhk domdata stdper ctl nhk gc _262 key
+      ADD	//  price prices lhk domdata stdper ctl nhk gc gckeyO
+      s0 s4 XCHG	//  price prices lhk domdata gckeyO ctl nhk gc stdper
+      224 LSHIFT#	//  price prices lhk domdata gckeyO ctl nhk gc _268
+      s4 s(-1) PUXC	//  price prices lhk domdata gckeyO ctl nhk gc gckeyO _268
+      ADD	//  price prices lhk domdata gckeyO ctl nhk gc gckeyN
+      s4 s4 XCHG2
+      8 PUSHPOW2	//  price prices lhk domdata gckeyN ctl nhk gckeyO gc _271=256
+      DICTUDEL	//  price prices lhk domdata gckeyN ctl nhk _376 _377
+      DROP	//  price prices lhk domdata gckeyN ctl nhk gc
+      NEWC	//  price prices lhk domdata gckeyN ctl nhk gc _274
+      s0 s4 s4 XCHG3
+      8 PUSHPOW2	//  price prices lhk domdata nhk ctl _274 gckeyN gc _275=256
+      DICTUSETB	//  price prices lhk domdata nhk ctl gc
+      s0 s3 XCHG
+      s5 s5 s4 XCHG3
+      1 PUSHINT	//  price ctl domdata gc prices nhk lhk _277=1
+      housekeeping CALLDICT
+      send_ok CALLDICT
+    }>	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
+    s9 PUSH	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data qt
+    1 EQINT	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data _281
+    IFJMP:<{	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
+      s9 POP
+      s9 POP	//  price key lhk n data ctl domdata gc prices nhk cat_table stdper
+      SWAP	//  price key lhk n data ctl domdata gc prices nhk stdper cat_table
+      ISNULL	//  price key lhk n data ctl domdata gc prices nhk stdper _282
+      IFNOTJMP:<{	//  price key lhk n data ctl domdata gc prices nhk stdper
+        11 BLKDROP	// 
+        3781980773 PUSHINT	//  _283=3781980773
+        send_error CALLDICT
+      }>	//  price key lhk n data ctl domdata gc prices nhk stdper
+      s1 s7 XCHG	//  price key lhk nhk data ctl domdata gc prices n stdper
+      ADD	//  price key lhk nhk data ctl domdata gc prices expires_at
+      DUP
+      NEWC	//  price key lhk nhk data ctl domdata gc prices expires_at expires_at _288
+      32 STU	//  price key lhk nhk data ctl domdata gc prices expires_at _290
+      s1 s6 XCHG	//  price key lhk nhk expires_at ctl domdata gc prices data _290
+      STREF	//  price key lhk nhk expires_at ctl domdata gc prices _291
+      s0 s8 s3 XCPUXC
+      224 PUSHINT	//  price key lhk nhk expires_at ctl prices gc _291 key domdata _294
+      DICTUSETB	//  price key lhk nhk expires_at ctl prices gc domdata
+      s4 PUSH	//  price key lhk nhk expires_at ctl prices gc domdata expires_at
+      224 LSHIFT#	//  price key lhk nhk expires_at ctl prices gc domdata _300
+      s0 s8 XCHG2	//  price domdata lhk nhk expires_at ctl prices gc _300 key
+      OR	//  price domdata lhk nhk expires_at ctl prices gc gckey
+      NEWC	//  price domdata lhk nhk expires_at ctl prices gc gckey _303
+      s0 s2 XCHG
+      8 PUSHPOW2	//  price domdata lhk nhk expires_at ctl prices _303 gckey gc _304=256
+      DICTUSETB	//  price domdata lhk nhk expires_at ctl prices gc
+      s4 s3 XCHG2	//  price domdata lhk prices gc ctl nhk expires_at
+      MIN	//  price domdata lhk prices gc ctl _306
+      s1 s5 XCHG
+      s3 s0 s4 XCHG3
+      1 PUSHINT	//  price ctl domdata gc prices _306 lhk _307=1
+      housekeeping CALLDICT
+      send_ok CALLDICT
+    }>	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
+    s0 s3 XCHG
+    3 BLKDROP	//  price key lhk exp qt ctl domdata gc prices nhk data
+    s0 s6 XCHG	//  price key lhk exp data ctl domdata gc prices nhk qt
+    4 EQINT	//  price key lhk exp data ctl domdata gc prices nhk _311
+    IFJMP:<{	//  price key lhk exp data ctl domdata gc prices nhk
+      s0 s6 XCHG
+      NEWC	//  price key lhk nhk data ctl domdata gc prices exp _313
+      32 STU	//  price key lhk nhk data ctl domdata gc prices _315
+      s1 s5 XCHG	//  price key lhk nhk prices ctl domdata gc data _315
+      STREF	//  price key lhk nhk prices ctl domdata gc _316
+      s7 s2 XCHG2
+      224 PUSHINT	//  price gc lhk nhk prices ctl _316 key domdata _319
+      DICTUSETB	//  price gc lhk nhk prices ctl domdata
+      s5 s4 XCHG2
+      s1 s3 XCHG
+      1 PUSHINT	//  price ctl domdata gc prices nhk lhk _321=1
+      housekeeping CALLDICT
+      send_ok CALLDICT
+    }>	//  price key lhk exp data ctl domdata gc prices nhk
+    10 BLKDROP	// 
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    DROP	// 
+    load_data INLINECALLDICT	//  _12 _13 _14 _15 _16 _17
+    NIP	//  ctl dd gc prices lhk
+    IFNOTJMP:<{	//  ctl dd gc prices
+      ACCEPT
+      32 PUSHPOW2DEC	//  ctl dd gc prices _9=4294967295
+      NOW	//  ctl dd gc prices _9=4294967295 _10
+      store_data CALLDICT
+    }>	//  ctl dd gc prices
+    4 BLKDROP	// 
+  }>
+  dnsdictlookup PROCREF:<{
+    //  domain nowtime
+    OVER	//  domain nowtime domain
+    SBITREFS	//  domain nowtime bits refs
+    OVER
+    7 PUSHINT	//  domain nowtime bits refs bits _6=7
+    AND	//  domain nowtime bits refs _7
+    OR	//  domain nowtime bits _8
+    30 THROWIF
+    DUP	//  domain nowtime bits bits
+    IFNOTJMP:<{	//  domain nowtime bits
+      3 BLKDROP	// 
+      0 PUSHINT	//  _10=0
+      PUSHNULL	//  _10=0 _11
+      OVER	//  _10=0 _11 _12=0
+      PUSHNULL	//  _10=0 _11 _12=0 _13
+    }>	//  domain nowtime bits
+    s2 PUSH
+    8 PUSHINT	//  domain nowtime bits domain _15=8
+    SDCUTLAST	//  domain nowtime bits _16
+    8 PLDU	//  domain nowtime bits domain_last_byte
+    IF:<{	//  domain nowtime bits
+      0 PUSHINT	//  domain nowtime bits _19=0
+      NEWC	//  domain nowtime bits _19=0 _20
+      s0 s4 XCHG2	//  _19=0 nowtime bits _20 domain
+      STSLICER	//  _19=0 nowtime bits _21
+      s1 s3 XCHG	//  bits nowtime _19=0 _21
+      8 STU	//  bits nowtime _23
+      ENDC	//  bits nowtime _24
+      CTOS	//  bits nowtime domain
+      s0 s2 XCHG	//  domain nowtime bits
+      8 ADDCONST	//  domain nowtime bits
+    }>	//  domain nowtime bits
+    DUP	//  domain nowtime bits bits
+    8 EQINT	//  domain nowtime bits _29
+    IFJMP:<{	//  domain nowtime bits
+      3 BLKDROP	// 
+      0 PUSHINT	//  _30=0
+      PUSHNULL	//  _30=0 _31
+      OVER	//  _30=0 _31 _32=0
+      PUSHNULL	//  _30=0 _31 _32=0 _33
+    }>	//  domain nowtime bits
+    c4 PUSH	//  domain nowtime bits _35
+    CTOS	//  domain nowtime bits ds
+    LDREF	//  domain nowtime bits _87 _86
+    NIP	//  domain nowtime bits ds
+    LDDICT	//  domain nowtime bits _89 _88
+    DROP	//  domain nowtime bits root
+    PUSHNULL	//  domain nowtime bits root val
+    -1 PUSHINT	//  domain nowtime bits root val tail_bits=-1
+    s5 PUSH	//  domain nowtime bits root val tail_bits=-1 tail
+    s0 s4 XCHG	//  domain nowtime tail root val tail_bits=-1 bits
+    3 RSHIFT#	//  domain nowtime tail root val tail_bits=-1 _49
+    REPEAT:<{	//  domain nowtime tail root val tail_bits
+      s0 s3 XCHG	//  domain nowtime tail_bits root val tail
+      8 LDU	//  domain nowtime tail_bits root val _50 tail
+      SWAP	//  domain nowtime tail_bits root val tail _50
+      0 EQINT	//  domain nowtime tail_bits root val tail _54
+      IF:<{	//  domain nowtime tail_bits root val tail
+        DUP	//  domain nowtime tail_bits root val tail tail
+        SBITS	//  domain nowtime tail_bits root val tail _56
+        s6 s(-1) PUXC	//  domain nowtime tail_bits root val tail domain _56
+        SDSKIPLAST	//  domain nowtime tail_bits root val tail _57
+        SHA256U	//  domain nowtime tail_bits root val tail _58
+        32 RSHIFT#	//  domain nowtime tail_bits root val tail key
+        s3 PUSH
+        224 PUSHINT	//  domain nowtime tail_bits root val tail key root _65
+        DICTUGET
+        NULLSWAPIFNOT	//  domain nowtime tail_bits root val tail v found?
+        IF:<{	//  domain nowtime tail_bits root val tail v
+          DUP	//  domain nowtime tail_bits root val tail v v
+          32 PLDU	//  domain nowtime tail_bits root val tail v _68
+          s6 PUSH	//  domain nowtime tail_bits root val tail v _68 nowtime
+          GEQ	//  domain nowtime tail_bits root val tail v _69
+          IF:<{	//  domain nowtime tail_bits root val tail v
+            s2 POP
+            s3 POP	//  domain nowtime tail root val
+            s2 PUSH	//  domain nowtime tail root val tail
+            SBITS	//  domain nowtime tail root val tail_bits
+            s0 s3 XCHG	//  domain nowtime tail_bits root val tail
+          }>ELSE<{
+            DROP	//  domain nowtime tail_bits root val tail
+          }>
+        }>ELSE<{
+          DROP	//  domain nowtime tail_bits root val tail
+        }>
+      }>	//  domain nowtime tail_bits root val tail
+      s0 s3 XCHG	//  domain nowtime tail root val tail_bits
+    }>
+    2 2 BLKDROP2
+    s2 POP	//  domain tail_bits val
+    DUP	//  domain tail_bits val val
+    ISNULL	//  domain tail_bits val _71
+    IFJMP:<{	//  domain tail_bits val
+      3 BLKDROP	// 
+      0 PUSHINT	//  _72=0
+      PUSHNULL	//  _72=0 _73
+      OVER	//  _72=0 _73 _74=0
+      PUSHNULL	//  _72=0 _73 _74=0 _75
+    }>	//  domain tail_bits val
+    32 LDU	//  domain tail_bits _76 val
+    LDREF	//  domain tail_bits _76 _97 _96
+    DROP	//  domain tail_bits _76 _79
+    s2 PUSH	//  domain tail_bits _76 _79 tail_bits
+    0 EQINT	//  domain tail_bits _76 _79 _82
+    s4 s3 XCHG2	//  _79 _82 _76 domain tail_bits
+    SDSKIPLAST	//  _79 _82 _76 _83
+    s3 s3 s0 XCHG3	//  _76 _79 _82 _83
+  }>
+  dnsresolve PROC:<{
+    //  domain category
+    NOW	//  domain category _6
+    s1 s2 XCHG	//  category domain _6
+    dnsdictlookup INLINECALLDICT	//  category exp cat_table exact? pfx
+    s0 s3 XCHG	//  category pfx cat_table exact? exp
+    IFNOTJMP:<{	//  category pfx cat_table exact?
+      4 BLKDROP	// 
+      0 PUSHINT	//  _8=0
+      PUSHNULL	//  _8=0 _9
+    }>	//  category pfx cat_table exact?
+    IFNOT:<{	//  category pfx cat_table
+      -1 PUSHINT
+      s3 POP	//  category=-1 pfx cat_table
+    }>	//  category pfx cat_table
+    SWAP	//  category cat_table pfx
+    SBITS	//  category cat_table pfx_bits
+    s2 PUSH	//  category cat_table pfx_bits category
+    IFJMP:<{	//  category cat_table pfx_bits
+      -ROT
+      16 PUSHINT	//  pfx_bits category cat_table _14=16
+      DICTIGETOPTREF	//  pfx_bits cat_found
+    }>	//  category cat_table pfx_bits
+    s2 POP	//  pfx_bits cat_table
+  }>
+  getexpirationx PROC:<{
+    //  domain nowtime
+    dnsdictlookup INLINECALLDICT	//  _7 _8 _9 _10
+    3 BLKDROP	//  exp
+  }>
+  getexpiration PROC:<{
+    //  domain
+    NOW	//  domain _1
+    getexpirationx INLINECALLDICT	//  _2
+  }>
+  getstdperiod PROC:<{
+    // 
+    load_prices INLINECALLDICT	//  _5 _6 _7 _8
+    3 BLKDROP	//  stdper
+  }>
+  getppr PROC:<{
+    // 
+    load_prices INLINECALLDICT	//  _5 _6 _7 _8
+    s2 s3 XCHG
+    3 BLKDROP	//  ppr
+  }>
+  getppc PROC:<{
+    // 
+    load_prices INLINECALLDICT	//  _5 _6 _7 _8
+    s1 s3 XCHG
+    3 BLKDROP	//  ppc
+  }>
+  getppb PROC:<{
+    // 
+    load_prices INLINECALLDICT	//  _5 _6 _7 _8
+    s0 s3 XCHG
+    3 BLKDROP	//  ppb
+  }>
+  calcprice PROC:<{
+    //  domain val
+    load_prices INLINECALLDICT	//  domain val _8 _9 _10 _11
+    2 2 BLKDROP2	//  domain val ppc ppb
+    calcprice_internal INLINECALLDICT	//  _7
+  }>
+  calcregprice PROC:<{
+    //  domain val
+    load_prices INLINECALLDICT	//  domain val _9 _10 _11 _12
+    s3 POP	//  domain val ppb ppr ppc
+    s3 s4 XCHG
+    s4 s0 s4 XCHG3	//  ppr domain val ppc ppb
+    calcprice_internal INLINECALLDICT	//  ppr _7
+    ADD	//  _8
+  }>
+}END>c

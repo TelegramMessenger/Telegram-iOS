@@ -20,6 +20,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let preset: ChatListFilter
     let title: String
+    let label: String
     let editing: ChatListFilterPresetListItemEditing
     let canBeReordered: Bool
     let canBeDeleted: Bool
@@ -32,6 +33,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         presentationData: ItemListPresentationData,
         preset: ChatListFilter,
         title: String,
+        label: String,
         editing: ChatListFilterPresetListItemEditing,
         canBeReordered: Bool,
         canBeDeleted: Bool,
@@ -43,6 +45,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         self.presentationData = presentationData
         self.preset = preset
         self.title = title
+        self.label = label
         self.editing = editing
         self.canBeReordered = canBeReordered
         self.canBeDeleted = canBeDeleted
@@ -108,6 +111,8 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
     private let maskNode: ASImageNode
     
     private let titleNode: TextNode
+    private let labelNode: TextNode
+    private let arrowNode: ASImageNode
     
     private let activateArea: AccessibilityAreaNode
     
@@ -141,6 +146,14 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
+        self.labelNode = TextNode()
+        self.labelNode.isUserInteractionEnabled = false
+        
+        self.arrowNode = ASImageNode()
+        self.arrowNode.displayWithoutProcessing = true
+        self.arrowNode.displaysAsynchronously = false
+        self.arrowNode.isLayerBacked = true
+        
         self.activateArea = AccessibilityAreaNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -149,6 +162,8 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.labelNode)
+        self.addSubnode(self.arrowNode)
         self.addSubnode(self.activateArea)
         
         self.activateArea.activate = { [weak self] in
@@ -159,6 +174,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
     
     func asyncLayout() -> (_ item: ChatListFilterPresetListItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
@@ -166,9 +182,11 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
+            var updateArrowImage: UIImage?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
+                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
             }
             
             let peerRevealOptions: [ItemListRevealOption]
@@ -187,20 +205,26 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             var editingOffset: CGFloat = 0.0
             var reorderInset: CGFloat = 0.0
             
-            if item.editing.editing && item.canBeReordered {
+            if item.editing.editing {
                 let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0
                 
-                let reorderSizeAndApply = reorderControlLayout(item.presentationData.theme)
-                reorderControlSizeAndApply = reorderSizeAndApply
-                reorderInset = reorderSizeAndApply.0
+                if item.canBeReordered {
+                    let reorderSizeAndApply = reorderControlLayout(item.presentationData.theme)
+                    reorderControlSizeAndApply = reorderSizeAndApply
+                    reorderInset = reorderSizeAndApply.0
+                }
             }
             
             let leftInset: CGFloat = 16.0 + params.leftInset
             let rightInset: CGFloat = params.rightInset + max(reorderInset, 55.0)
+            let rightArrowInset: CGFloat = 34.0 + params.rightInset
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let labelConstrain: CGFloat = params.width - params.rightInset - leftInset - 40.0 - titleLayout.size.width - 10.0
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: titleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 11.0 * 2.0)
@@ -280,6 +304,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     }
                     
                     let _ = titleApply()
+                    let _ = labelApply()
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -325,6 +350,20 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 11.0), size: titleLayout.size))
+                    
+                    let labelFrame = CGRect(origin: CGPoint(x: params.width - rightArrowInset - labelLayout.size.width + revealOffset, y: 11.0), size: labelLayout.size)
+                    strongSelf.labelNode.frame = labelFrame
+                    
+                    transition.updateAlpha(node: strongSelf.labelNode, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
+                    transition.updateAlpha(node: strongSelf.arrowNode, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
+                    
+                    if let updateArrowImage = updateArrowImage {
+                        strongSelf.arrowNode.image = updateArrowImage
+                    }
+                    
+                    if let arrowImage = strongSelf.arrowNode.image {
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                    }
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     
@@ -393,6 +432,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         }
         
         let leftInset: CGFloat = 16.0 + params.leftInset
+        let rightArrowInset: CGFloat = 34.0 + params.rightInset
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
@@ -405,6 +445,14 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         }
         
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + offset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
+        
+        var labelFrame = self.labelNode.frame
+        labelFrame.origin.x = params.width - rightArrowInset - labelFrame.width + revealOffset
+        transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        
+        var arrowFrame = self.arrowNode.frame
+        arrowFrame.origin.x = params.width - params.rightInset - 7.0 - arrowFrame.width + revealOffset
+        transition.updateFrame(node: self.arrowNode, frame: arrowFrame)
     }
     
     override func revealOptionsInteractivelyOpened() {

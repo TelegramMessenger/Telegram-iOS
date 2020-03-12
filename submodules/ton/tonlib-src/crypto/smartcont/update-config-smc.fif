@@ -1,7 +1,7 @@
 #!/usr/bin/fift -s
 "TonUtil.fif" include
 
-{ ."usage: " @' $0 type ." <filename-base> <seqno> [<savefile>]" cr
+{ ."usage: " $0 type ." <filename-base> <seqno> [<savefile>]" cr
   ."Creates a request to simple configuration smart contract requesting to change configuration smart contract code to the one currently stored in auto/config-code.fif, "
   ."with private key loaded from file <filename-base>.pk, "
   ."and saves it into <savefile>.boc ('config-query.boc' by default)" cr 1 halt
@@ -9,15 +9,16 @@
 $# dup 2 < swap 3 > or ' usage if
 
 "config-master" constant file-base
-0 constant seqno
+0 constant qseqno
 -1 constant idx
 true constant bounce
 "auto/config-code.fif" constant config-source
 100 constant interval  // valid for 100 seconds
 
+3 :$1..n
 $1 =: file-base
-$2 parse-int =: seqno
-def? $3 { @' $3 } { "config-query" } cond constant savefile
+$2 parse-int =: qseqno
+$3 "config-query" replace-if-null constant savefile
 
 file-base +".addr" load-address
 2dup 2constant config_addr
@@ -30,7 +31,7 @@ config-source include
 dup <s csr. cr
 
 // create a message
-<b x{4e436f64} s, seqno 32 u, now interval + 32 u, swap ref, b>
+<b x{4e436f64} s, qseqno 32 u, now interval + 32 u, swap ref, b>
 dup ."signing message: " <s csr. cr
 dup hashu config_pk ed25519_sign_uint
 <b b{1000100} s, config_addr addr, 0 Gram, b{00} s,

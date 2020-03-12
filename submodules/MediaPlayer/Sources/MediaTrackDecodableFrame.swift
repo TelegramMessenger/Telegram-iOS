@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import FFMpeg
+import FFMpegBinding
 
 public enum MediaTrackFrameType {
     case video

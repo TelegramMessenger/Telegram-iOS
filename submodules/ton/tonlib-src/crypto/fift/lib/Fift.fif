@@ -79,12 +79,15 @@ variable base
 { char ) word "$" swap $+ 1 { find 0= abort"undefined parameter" execute } } ::_ $(
 // b s -- ?
 { sbitrefs rot brembitrefs rot >= -rot <= and } : s-fits?
+// b s x -- ?
+{ swap sbitrefs -rot + rot brembitrefs -rot <= -rot <= and } : s-fits-with?
 { 0 swap ! } : 0!
 { tuck @ + swap ! } : +!
 { tuck @ swap - swap ! } : -!
 { 1 swap +! } : 1+!
 { -1 swap +! } : 1-!
 { null swap ! } : null!
+{ not 2 pick @ and xor swap ! } : ~!
 0 tuple constant nil
 { 1 tuple } : single
 { 2 tuple } : pair
@@ -111,3 +114,20 @@ variable base
 { true (atom) drop } : atom
 { bl word atom 1 'nop } ::_ `
 { hole dup 1 { @ execute } does create } : recursive
+{ 0 { 1+ dup 1 ' $() does over (.) "$" swap $+ 0 (create) } rot times drop } : :$1..n
+{ 10 hold } : +cr
+{ 9 hold } : +tab
+{ "" swap { 0 word 2dup $cmp } { rot swap $+ +cr swap } while 2drop } : scan-until-word
+{ 0 word -trailing scan-until-word 1 'nop } ::_ $<<
+{ 0x40 runvmx } : runvmcode
+{ 0x48 runvmx } : gasrunvmcode
+{ 0x43 runvmx } : runvmdict
+{ 0x4b runvmx } : gasrunvmdict
+{ 0x45 runvmx } : runvm
+{ 0x4d runvmx } : gasrunvm
+{ 0x55 runvmx } : runvmctx
+{ 0x5d runvmx } : gasrunvmctx
+{ 0x75 runvmx } : runvmctxact
+{ 0x7d runvmx } : gasrunvmctxact
+{ 0x35 runvmx } : runvmctxactq
+{ 0x3d runvmx } : gasrunvmctxactq

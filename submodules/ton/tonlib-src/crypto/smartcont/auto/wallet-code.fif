@@ -3,6 +3,7 @@ PROGRAM{
   DECLPROC recv_internal
   DECLPROC recv_external
   85143 DECLMETHOD seqno
+  78748 DECLMETHOD get_public_key
   recv_internal PROC:<{
     //  in_msg
     DROP	// 
@@ -55,5 +56,13 @@ PROGRAM{
     c4 PUSH	//  _0
     CTOS	//  _1
     32 PLDU	//  _3
+  }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    32 LDU	//  _9 _8
+    NIP	//  cs
+    256 PLDU	//  _7
   }>
 }END>c

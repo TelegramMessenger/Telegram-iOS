@@ -56,6 +56,7 @@ set(TDUTILS_SOURCE
   td/utils/port/MemoryMapping.cpp
   td/utils/port/path.cpp
   td/utils/port/PollFlags.cpp
+  td/utils/port/rlimit.cpp
   td/utils/port/ServerSocketFd.cpp
   td/utils/port/signals.cpp
   td/utils/port/sleep.cpp
@@ -129,6 +130,7 @@ set(TDUTILS_SOURCE
   td/utils/port/Poll.h
   td/utils/port/PollBase.h
   td/utils/port/PollFlags.h
+  td/utils/port/rlimit.h
   td/utils/port/RwMutex.h
   td/utils/port/ServerSocketFd.h
   td/utils/port/signals.h
@@ -228,6 +230,7 @@ set(TDUTILS_SOURCE
   td/utils/SpinLock.h
   td/utils/StackAllocator.h
   td/utils/Status.h
+  td/utils/StealingQueue.h
   td/utils/Storer.h
   td/utils/StorerBase.h
   td/utils/StringBuilder.h
@@ -279,6 +282,7 @@ set(TDUTILS_TEST_SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/test/pq.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/SharedObjectPool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/SharedSlice.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/StealingQueue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/variant.cpp
   PARENT_SCOPE
 )

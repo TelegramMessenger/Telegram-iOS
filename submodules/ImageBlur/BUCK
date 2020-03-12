@@ -4,14 +4,10 @@ static_library(
     name = "ImageBlur",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/*.m",
     ]),
-    headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/ImageBlur.h"]),
-    exported_headers = glob([
-        "Sources/*.h",
-    ], exclude = ["Sources/ImageBlur.h"]),
+    deps = [
+        "//submodules/FastBlur:FastBlur",
+    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",

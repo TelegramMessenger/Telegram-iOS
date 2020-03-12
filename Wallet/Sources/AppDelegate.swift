@@ -765,7 +765,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                                     beginWithController(infoScreen)
                                 })
                             } else {
-                                let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(record.info, nil), walletCreatedPreloadState: nil)
+                                let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(walletInfo: record.info, words: nil), walletCreatedPreloadState: nil)
                                 beginWithController(createdScreen)
                             }
                         } else {

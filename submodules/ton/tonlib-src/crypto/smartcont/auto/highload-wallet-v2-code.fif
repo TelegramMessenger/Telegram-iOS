@@ -3,6 +3,7 @@ PROGRAM{
   DECLPROC recv_internal
   DECLPROC recv_external
   117746 DECLMETHOD processed?
+  78748 DECLMETHOD get_public_key
   recv_internal PROC:<{
     //  in_msg
     DROP	// 
@@ -49,8 +50,7 @@ PROGRAM{
       OVER
       16 PUSHINT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict i dict _62=16
       DICTIGETNEXT
-      NULLSWAPIFNOT
-      NULLSWAPIFNOT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f
+      NULLSWAPIFNOT2	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f
       DUP	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f f
       IF:<{	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f
         s0 s2 XCHG	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i cs
@@ -76,10 +76,9 @@ PROGRAM{
       DUP
       64 PUSHINT	//  last_cleaned public_key stored_subwallet bound old_queries old_queries _85=64
       DICTUREMMIN
-      NULLSWAPIFNOT
-      NULLSWAPIFNOT	//  last_cleaned public_key stored_subwallet bound old_queries _126 _128 _127 _129
-      s2 POP	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' f i
-      s1 s0 XCPU	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f f
+      NULLSWAPIFNOT2	//  last_cleaned public_key stored_subwallet bound old_queries _126 _128 _127 _129
+      1 2 BLKDROP2	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
+      DUP	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f f
       IF:<{	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
         DROP	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i
         s0 s3 PUSH2	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i i bound
@@ -89,16 +88,15 @@ PROGRAM{
       IF:<{	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
         s3 POP
         s6 POP	//  last_cleaned public_key stored_subwallet bound f old_queries
+        SWAP	//  last_cleaned public_key stored_subwallet bound old_queries f
       }>ELSE<{
-        s3 s1 s3 XCHG3
-        2DROP	//  last_cleaned public_key stored_subwallet bound f old_queries
+        2 1 BLKDROP2	//  last_cleaned public_key stored_subwallet bound old_queries f
       }>
-      SWAP	//  last_cleaned public_key stored_subwallet bound old_queries f
       NOT	//  last_cleaned public_key stored_subwallet bound old_queries _90
     }>	//  last_cleaned public_key stored_subwallet bound old_queries
     NIP	//  last_cleaned public_key stored_subwallet old_queries
-    NEWC	//  last_cleaned public_key stored_subwallet old_queries _91
-    s1 s2 XCHG	//  last_cleaned public_key old_queries stored_subwallet _91
+    SWAP
+    NEWC	//  last_cleaned public_key old_queries stored_subwallet _91
     32 STU	//  last_cleaned public_key old_queries _93
     s1 s3 XCHG	//  old_queries public_key last_cleaned _93
     64 STU	//  old_queries public_key _95
@@ -130,5 +128,13 @@ PROGRAM{
       LEQ	//  _26
       NEGATE	//  _24
     }>
+  }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    96 LDU	//  _11 _10
+    NIP	//  cs
+    256 PLDU	//  _9
   }>
 }END>c

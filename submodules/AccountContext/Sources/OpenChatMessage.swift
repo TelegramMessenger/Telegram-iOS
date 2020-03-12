@@ -5,6 +5,7 @@ import TelegramCore
 import SyncCore
 import SwiftSignalKit
 import Display
+import AsyncDisplayKit
 
 public enum ChatControllerInteractionOpenMessageMode {
     case `default`

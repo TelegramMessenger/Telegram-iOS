@@ -1,0 +1,131 @@
+library GetOpt  // Simple command-line options parser
+"Lists.fif" include
+
+// May be used as follows:
+// begin-options
+//   "h" { ."Help Message" 0 halt } short-option
+//   "v" { parse-int =: verbosity } short-option-arg
+//   "i" "--interactive" { true =: interactive } short-long-option
+// parse-options
+
+// ( l -- l')  computes tail of list l if non-empty; else ()
+{ dup null? ' cdr ifnot } : safe-cdr
+// ( l c -- l')  deletes first c elements from list l
+{ ' safe-cdr swap times } : list-delete-first
+// ( l n c -- l' )  deletes c elements starting from n-th in list l
+recursive list-delete-range {
+  dup 0<= { 2drop } {
+  over 0<= { nip list-delete-first } {
+  swap 1- swap rot uncons 2swap list-delete-range cons
+  } cond } cond
+} swap !
+// ( n c -- )  deletes $n .. $(n+c-1) from the argument list $*
+{ swap 1- $* @ swap rot list-delete-range $* ! } : $*del.. 
+// ( s s' -- ? )  checks whether s' is a prefix of s
+{ tuck $len over $len over >= { $| drop $= } { 2drop drop false } cond
+} : $pfx?
+// ( s -- ? )  checks whether s is an option (a string beginning with '-')
+{ dup $len 1 > { "-" $pfx? } { drop false } cond } : is-opt?
+// ( s -- ? )  checks whether s is a digit option
+{ 2 $| drop 1 $| nip $>B 8 B>u@ dup 57 <= swap 48 >= and } : is-digit-opt?
+0 box constant disable-digit-opts
+// ( l -- s i or 0 )  finds first string in l beginning with '-'
+{ 0 { 1+ over null? { 2drop 0 true } {
+  swap uncons over is-opt?
+  { disable-digit-opts @ { over is-digit-opt? not } { true } cond } { false } cond
+  { drop swap true } { nip swap false } cond
+  } cond } until
+} : list-find-opt
+// ( -- s i or 0 )  finds first option in cmdline args
+{ $* @ list-find-opt } : first-opt
+' second : get-opt-flags
+' first : get-opt-exec
+// ( s t -- ? )  checks whether short/long option s matches description t
+{ third $= } : short-option-matches
+{ dup get-opt-flags 4 and 0= 3 + [] $=
+} : long-option-matches
+// ( t -- s -1 or 0 )  extracts help message from description
+{ dup get-opt-flags 4 and 0= 4 + over count over >
+  { [] true } { 2drop false } cond
+} : get-opt-help
+// ( s l -- t -1 or 0 )  finds short/long option s in list l
+{ swap 1 { swap short-option-matches } does assoc-gen
+} : lookup-short-option
+{ swap 1 { swap long-option-matches } does assoc-gen
+} : lookup-long-option
+// ( s -- s' null or s' s'' )  Splits long option --opt=arg at '='
+{ dup "=" $pos 1+ ?dup { tuck $| swap rot 1- $| drop swap } { null } cond
+} : split-longopt
+// ( l -- f or 0 )  Extracts global option flags from first entry of l
+{ dup null? { drop 0 } { car get-opt-flags -256 and } cond
+} : get-global-option-flags
+variable options-list
+// ( l -- i or 0 ) 
+// parses command line arguments according to option description list l
+// and returns index i of first incorrect option
+{ dup options-list ! get-global-option-flags
+  256 and disable-digit-opts !
+  { first-opt dup 0= { true } {
+    swap dup "--" $pfx? {  // i s
+      dup $len 2 = { drop dup 1 $*del.. 0 true } {
+      split-longopt swap options-list @
+      lookup-long-option not { drop true } { // i s' t f
+      dup get-opt-exec swap get-opt-flags 3 and // i s' e f'
+      2 pick null? { dup 1 = } { dup 0= negate } cond  // i s' e f' f''
+      dup 1 = { 2drop 2drop true } {
+      { drop nip over 1+ $() swap execute 2 $*del.. false } {
+      ' nip ifnot execute 1 $*del.. false
+    } cond } cond } cond } cond } { // i s
+      1 $| nip {
+        dup $len 0= { drop 1 $*del.. false true } {
+        1 $| swap options-list @  // i s' s l
+        lookup-short-option not { drop true true } { // i s' t
+        dup get-opt-exec swap get-opt-flags 3 and  // i s' e f'
+        ?dup 0= { execute false } {
+        2 pick $len { drop execute "" false } {
+        2 = { nip null swap execute "" false } {  // i e
+        nip over 1+ $() swap execute 2 $*del.. false true
+      } cond } cond } cond } cond } cond } until
+    } cond
+  } cond } until
+} : getopt
+// ( t -- )  Displays help message for one option
+{ dup get-opt-flags dup 4 and 2 pick third swap {
+    ."-" type ."/" over 3 [] type } {
+    dup $len { dup "--" $pfx? { ."-" } ifnot type } {
+    drop ."usage: " $0 type
+  } cond } cond
+  dup 3 and ?dup {
+    2 = { ."[=<optarg>]" } { ."=<optarg>" } cond
+  } if
+  8 and { 9 emit } ifnot
+  get-opt-help { type } { ."No help available" } cond cr
+} : show-opt-help
+// ( -- )  Displays options help message according to options-list
+{ options-list @ { dup null? not } {
+    uncons swap show-opt-help
+  } while drop
+} : show-options-help
+// ( l -- )  Parses options and throws an error on failure
+{ getopt ?dup {
+  $() "cannot parse command line options near `" swap $+ +"`"
+  show-options-help abort } if
+} : run-getopt
+anon constant opt-list-marker
+' opt-list-marker : begin-options
+{ opt-list-marker list-until-marker } : end-options
+{ end-options run-getopt } : parse-options
+// ( s e -- o )  Creates short/long option s with execution token e
+{ 0 rot triple } dup : short-option : long-option
+// ( s s' e -- o ) Creates a combined short option s and long option s' with execution token e
+{ 4 2swap 4 tuple } : short-long-option
+{ 1 rot triple } dup : short-option-arg : long-option-arg
+{ 2 rot triple } dup : short-option-?arg : long-option-?arg
+{ 5 2swap 4 tuple } : short-long-option-arg
+{ 6 2swap 4 tuple } : short-long-option-?arg
+// ( o s -- s' )  Adds help message to option
+' , : option-help
+// ( s f -- o )  Creates a generic help message
+{ swap 'nop rot "" 3 roll 4 tuple } : generic-help-setopt
+{ 0 generic-help-setopt } : generic-help
+256 constant disable-digit-options

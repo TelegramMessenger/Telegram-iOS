@@ -46,6 +46,9 @@ td::Result<std::string> load_Lists_fif(std::string dir = "") {
 td::Result<std::string> load_Lisp_fif(std::string dir = "") {
   return load_source("Lisp.fif", dir);
 }
+td::Result<std::string> load_GetOpt_fif(std::string dir = "") {
+  return load_source("GetOpt.fif", dir);
+}
 
 class MemoryFileLoader : public fift::FileLoader {
  public:
@@ -114,6 +117,10 @@ td::Result<fift::SourceLookup> create_source_lookup(std::string main, bool need_
     {
       TRY_RESULT(f, load_TonUtil_fif(dir));
       loader->add_file("/TonUtil.fif", std::move(f));
+    }
+    {
+      TRY_RESULT(f, load_GetOpt_fif(dir));
+      loader->add_file("/GetOpt.fif", std::move(f));
     }
   }
   if (need_lisp) {

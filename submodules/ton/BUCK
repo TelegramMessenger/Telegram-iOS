@@ -42,14 +42,14 @@ ton_lib_flags = ["-l" + name for name in ton_lib_names]
 genrule(
     name = "ton_build",
     srcs = [
-        "build-ton.sh",
+        "build-ton-buck.sh",
         "tonlib-src",
-        "iOS.cmake"
+        "iOS-buck.cmake"
     ],
     bash =
 """
     export PATH=\"$PATH:$(location //third-party/cmake:cmake)/cmake-3.16.0/bin\"
-    sh $SRCDIR/build-ton.sh $OUT $SRCDIR $(location //submodules/openssl:openssl_build_merged)
+    sh $SRCDIR/build-ton-buck.sh $OUT $SRCDIR $(location //submodules/openssl:openssl_build_merged)
 """,
     out = "ton",
     visibility = [

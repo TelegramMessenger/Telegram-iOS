@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramApi
+import NetworkLogging
 
 private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
 
@@ -61,6 +62,7 @@ public func registerLoggingFunctions() {
         }
     })
     setTelegramApiLogger({ what in
+        Logger.shared.log("Api", what as String)
         Logger.shared.shortLog("Api", what as String)
     })
 }

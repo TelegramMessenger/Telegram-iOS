@@ -222,6 +222,10 @@ public final class SqliteValueBox: ValueBox {
         let path = basePath + "/db_sqlite"
         
         #if DEBUG
+        print("Instance \(self) opening sqlite at \(path)")
+        #endif
+        
+        #if DEBUG
         let exists = FileManager.default.fileExists(atPath: path)
         postboxLog("Opening \(path), exists: \(exists)")
         if exists {
@@ -1501,12 +1505,54 @@ public final class SqliteValueBox: ValueBox {
     public func filteredRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: (ValueBoxKey, ReadBuffer) -> ValueBoxFilterResult, limit: Int) {
         var currentStart = start
         var acceptedCount = 0
-        while acceptedCount < limit {
+        while true {
+            if limit > 0 && acceptedCount >= limit {
+                break
+            }
             var hadStop = false
             var lastKey: ValueBoxKey?
             self.range(table, start: currentStart, end: end, values: { key, value in
                 lastKey = key
                 let result = values(key, value)
+                switch result {
+                case .accept:
+                    acceptedCount += 1
+                    if limit > 0 && acceptedCount >= limit {
+                        hadStop = true
+                        return false
+                    } else {
+                        return true
+                    }
+                case .skip:
+                    return true
+                case .stop:
+                    hadStop = true
+                    return false
+                }
+            }, limit: limit)
+            if let lastKey = lastKey {
+                currentStart = lastKey
+            } else {
+                break
+            }
+            if hadStop {
+                break
+            }
+        }
+    }
+    
+    public func filteredRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: (ValueBoxKey) -> ValueBoxFilterResult, limit: Int) {
+        var currentStart = start
+        var acceptedCount = 0
+        while true {
+            if limit > 0 && acceptedCount >= limit {
+                break
+            }
+            var hadStop = false
+            var lastKey: ValueBoxKey?
+            self.range(table, start: currentStart, end: end, keys: { key in
+                lastKey = key
+                let result = keys(key)
                 switch result {
                 case .accept:
                     acceptedCount += 1

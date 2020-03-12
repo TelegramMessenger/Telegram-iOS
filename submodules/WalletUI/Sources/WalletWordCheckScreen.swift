@@ -2137,7 +2137,7 @@ public final class WalletWordCheckScreen: ViewController {
                             return true
                         }
                         let _ = confirmWalletExported(storage: strongSelf.context.storage, publicKey: walletInfo.publicKey).start()
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo: walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }
@@ -2205,7 +2205,7 @@ public final class WalletWordCheckScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                            controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo: walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                             strongSelf.view.endEditing(true)
                             navigationController.setViewControllers(controllers, animated: true)
                         }
@@ -2894,7 +2894,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - buttonWidth) / 2.0), y: max(contentHeight + buttonSpacing, availableAreaSize.height - bottomInset - buttonHeight)), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         transition.animateView {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.insets(options: [.input]).bottom + 30.0, right: 0.0)

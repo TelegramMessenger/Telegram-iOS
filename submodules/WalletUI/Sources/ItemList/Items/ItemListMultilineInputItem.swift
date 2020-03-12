@@ -316,6 +316,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                     switch neighbors.bottom {
                         case .sameSection(false):
                             bottomStripeInset = leftInset
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             hasBottomCorners = true
@@ -327,7 +328,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
                     if strongSelf.textNode.attributedPlaceholderText == nil || !strongSelf.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
@@ -393,7 +394,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         let textBottomInset: CGFloat = 11.0
         
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-        self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: self.bottomStripeNode.frame.minX, y: contentSize.height), size: CGSize(width: self.bottomStripeNode.frame.size.width, height: separatorHeight))
+        self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: self.bottomStripeNode.frame.minX, y: contentSize.height - separatorHeight), size: CGSize(width: self.bottomStripeNode.frame.size.width, height: separatorHeight))
         
         self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, params.width - leftInset - params.rightInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
     }

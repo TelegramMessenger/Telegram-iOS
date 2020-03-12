@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -94,6 +94,12 @@ class SpanImpl {
   }
   InnerT *end() const {
     return data_ + size_;
+  }
+  auto rbegin() const {
+    return std::reverse_iterator<InnerT *>(end());
+  }
+  auto rend() const {
+    return std::reverse_iterator<InnerT *>(begin());
   }
   size_t size() const {
     return size_;

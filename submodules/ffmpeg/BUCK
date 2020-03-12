@@ -1,4 +1,4 @@
-load("//Config:buck_rule_macros.bzl", "static_library", "gen_header_targets")
+load("//Config:buck_rule_macros.bzl", "static_library", "gen_header_targets", "merge_maps")
 
 ffmpeg_header_paths = [
     "libavutil/hwcontext.h",
@@ -111,11 +111,11 @@ library_archs = "arm64 armv7 x86_64"
 genrule(
     name = "libffmpeg_build",
     srcs = glob([
-        "FFMpeg/**/*",
-    ], exclude = ["FFMpeg/**/.*"]),
+        "Sources/FFMpeg/**/*",
+    ], exclude = ["Sources/FFMpeg/**/.*"]),
     bash =
         "PATH=\"$PATH:$(location //third-party/yasm:yasm)/yasm-1.3.0/build\" " +
-        "$SRCDIR/FFMpeg/build-ffmpeg.sh release \"" + library_archs + "\" $OUT $SRCDIR/FFMpeg",
+        "$SRCDIR/Sources/FFMpeg/build-ffmpeg-buck.sh release \"" + library_archs + "\" $OUT $SRCDIR/Sources/FFMpeg",
     out = "libffmpeg",
     visibility = [
         "//submodules/ffmpeg:FFMpeg",
@@ -159,13 +159,12 @@ apple_library(
 )
 
 static_library(
-    name = "FFMpeg",
-    srcs = glob([
-        "FFMpeg/*.m",
-    ]),
-    headers = ffmpeg_header_targets,
-    exported_headers = glob([
-        "FFMpeg/*.h",
+    name = "ffmpeg",
+    exported_headers = merge_maps([
+        {
+            "ffmpeg/ffmpeg.h": "PublicHeaders/ffmpeg/ffmpeg.h",
+        },
+        ffmpeg_header_targets,
     ]),
     deps = [
         ":libffmpeg_build",

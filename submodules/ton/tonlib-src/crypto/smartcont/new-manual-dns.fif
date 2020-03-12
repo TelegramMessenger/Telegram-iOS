@@ -1,0 +1,63 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+
+Basechain =: wc   // create smart contract in basechain
+65536 =: timeout
+"new-dns-query.boc" =: savefile
+variable dns-dict  dictnew dns-dict !
+
+begin-options
+     " <filename-base> <contract-id> [-w<workchain>] [-t<timeout>] [-o<savefile-boc>]" +cr +tab
+    +"Creates a new manual dns smart contract with 32-bit identifier <contract-id> managed by private key <filename-base>.pk, "
+    +"and saves it into <savefile-boc> ('" savefile $+ +"' by default)"
+    disable-digit-options generic-help-setopt
+  "w" "--workchain" { parse-workchain-id =: wc } short-long-option-arg
+    "Selects workchain to create smart contract (" wc (.) $+ +" by default)" option-help
+  "t" "--timeout" { parse-int =: timeout } short-long-option-arg
+    "Sets expiration timeout for the initialization message in seconds (" timeout (.) $+ +" by default)" option-help
+  "o" "--output" { =: savefile } short-long-option-arg
+    "Sets output file for generated initialization message ('" savefile $+ +"' by default)" option-help
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# 2 <> ' usage if
+2 :$1..n
+$1 =: file-base
+$2 parse-int dup =: contract-id
+32 fits ' usage ifnot
+{ contract-id (.) $+ } : +contractid
+
+."Creating new manual DNS smart contract in workchain " wc .
+."with contract id " contract-id . cr
+
+// Create new manual DNS; source code included from `auto/dns-manual-code.fif`
+"auto/dns-manual-code.fif" include
+// code
+<b contract-id 32 i, 0 64 u,
+   file-base +".pk" load-generate-keypair
+   constant wallet_pk
+   B, dns-dict @ dict, false 1 i,
+b> // data
+null // no libraries
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant wallet_addr
+."new manual DNS smartcontract address = " 2dup .addr cr
+2dup file-base +"-dns" +contractid +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+now timeout + 32 << 1- dup =: query_id
+."Init query_id is " dup . ."(0x" X._ .")" cr
+<b contract-id 32 i, query_id 64 u, 0 6 u, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint rot
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, swap B, swap <s s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile tuck B>file
+."(Saved dns smart-contract creating query to file " type .")" cr

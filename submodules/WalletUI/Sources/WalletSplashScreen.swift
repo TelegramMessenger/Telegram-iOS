@@ -19,11 +19,11 @@ public enum WalletSecureStorageResetReason {
 
 public enum WalletSplashMode {
     case intro
-    case created(WalletInfo, [String]?)
-    case success(WalletInfo)
+    case created(walletInfo: WalletInfo, words: [String]?)
+    case success(walletInfo: WalletInfo)
     case restoreFailed
-    case sending(WalletInfo, String, Int64, Data, Int64, Data)
-    case sent(WalletInfo, Int64)
+    case sending(walletInfo: WalletInfo, address: String, amount: Int64, comment: Data, encryptComment: Bool, randomId: Int64, serverSalt: Data)
+    case sent(walletInfo: WalletInfo, amount: Int64)
     case secureStorageNotAvailable
     case secureStorageReset(WalletSecureStorageResetReason)
 }
@@ -52,7 +52,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -63,7 +63,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -82,14 +82,14 @@ public final class WalletSplashScreen: ViewController {
         
         switch self.mode {
         case let .intro: self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_ImportExisting, style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
-        case let .sending(walletInfo, address, amount, textMessage, randomId, serverSalt):
+        case let .sending(walletInfo, address, amount, comment, encryptComment, randomId, serverSalt):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
             let _ = (self.context.keychain.decrypt(walletInfo.encryptedSecret)
             |> deliverOnMainQueue).start(next: { [weak self] decryptedSecret in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, randomId: randomId, serverSalt: serverSalt)
+                strongSelf.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, comment: comment, encryptComment: encryptComment, forceIfDestinationNotInitialized: true, randomId: randomId, serverSalt: serverSalt)
             }, error: { [weak self] error in
                 guard let strongSelf = self else {
                     return
@@ -133,8 +133,8 @@ public final class WalletSplashScreen: ViewController {
         self.push(WalletWordCheckScreen(context: self.context, mode: .import, walletCreatedPreloadState: nil))
     }
     
-    private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
-        let _ = (sendGramsFromWallet(storage: self.context.storage, tonInstance: self.context.tonInstance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+    private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, comment: Data, encryptComment: Bool, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
+        let _ = (sendGramsFromWallet(storage: self.context.storage, tonInstance: self.context.tonInstance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, comment: comment, encryptComment: encryptComment, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
         |> deliverOnMainQueue).start(next: { [weak self] sentTransaction in
             guard let strongSelf = self else {
                 return
@@ -142,7 +142,7 @@ public final class WalletSplashScreen: ViewController {
             
             strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Wallet_WordImport_Continue, style: .plain, target: strongSelf, action: #selector(strongSelf.sendGramsContinuePressed)), animated: false)
             
-            let check = getCombinedWalletState(storage: strongSelf.context.storage, subject: .wallet(walletInfo), tonInstance: strongSelf.context.tonInstance)
+            let check = getCombinedWalletState(storage: strongSelf.context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: strongSelf.context.tonInstance, onlyCached: false)
             |> mapToSignal { state -> Signal<Bool, GetCombinedWalletStateError> in
                 switch state {
                 case .cached:
@@ -183,7 +183,7 @@ public final class WalletSplashScreen: ViewController {
                                 controllers.append(controller)
                             }
                         }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo: walletInfo, amount: amount), walletCreatedPreloadState: nil))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     })
@@ -208,7 +208,7 @@ public final class WalletSplashScreen: ViewController {
                                 controllers.append(controller)
                             }
                         }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo: walletInfo, amount: amount), walletCreatedPreloadState: nil))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     })
@@ -246,7 +246,7 @@ public final class WalletSplashScreen: ViewController {
                             }
                         }),
                         TextAlertAction(type: .defaultAction, title: "Send Anyway", action: {
-                            self?.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, randomId: randomId, serverSalt: serverSalt)
+                            self?.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, comment: comment, encryptComment: encryptComment, forceIfDestinationNotInitialized: true, randomId: randomId, serverSalt: serverSalt)
                         })
                     ])
                     strongSelf.present(controller, in: .window(.root))
@@ -333,7 +333,7 @@ public final class WalletSplashScreen: ViewController {
                             return
                         }
                         controller.dismiss()
-                        (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, mode: .created(walletInfo, wordList), walletCreatedPreloadState: nil), animated: true)
+                        (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, mode: .created(walletInfo: walletInfo, words: wordList), walletCreatedPreloadState: nil), animated: true)
                     }, error: { _ in
                         displayError()
                     })
@@ -360,7 +360,7 @@ public final class WalletSplashScreen: ViewController {
                                     return
                                 }
                                 
-                                strongSelf.mode = .created(walletInfo, wordList)
+                                strongSelf.mode = .created(walletInfo: walletInfo, words: wordList)
                                 strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                             }, error: { _ in
                                 guard let strongSelf = self else {

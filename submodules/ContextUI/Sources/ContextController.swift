@@ -747,7 +747,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.withoutBlurDimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
             }
             
-            self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
+            self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
                 completedActionsNode = true
                 intermediateCompletion()
             })
@@ -1363,12 +1363,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let maybeContentNode = self.contentContainerNode.contentNode {
             switch maybeContentNode {
             case let .extracted(contentParentNode, _):
-                let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
-                if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
-                    if result is TextSelectionNodeView {
-                        return result
-                    } else if contentParentNode.contentRect.contains(contentPoint) {
-                        return contentParentNode.contentNode.view
+                if case let .extracted(source) = self.source {
+                    if !source.ignoreContentTouches {
+                        let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
+                        if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
+                            if result is TextSelectionNodeView {
+                                return result
+                            } else if contentParentNode.contentRect.contains(contentPoint) {
+                                return contentParentNode.contentNode.view
+                            }
+                        }
                     }
                 }
             case let .controller(controller):
@@ -1429,6 +1433,7 @@ public final class ContextControllerPutBackViewInfo {
 
 public protocol ContextExtractedContentSource: class {
     var keepInPlace: Bool { get }
+    var ignoreContentTouches: Bool { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?
@@ -1487,6 +1492,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Hide
+        self.lockOrientation = true
     }
     
     required init(coder aDecoder: NSCoder) {

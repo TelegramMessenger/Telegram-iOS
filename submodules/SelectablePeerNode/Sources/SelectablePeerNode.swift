@@ -155,7 +155,7 @@ public final class SelectablePeerNode: ASDisplayNode {
                 overrideImage = .deletedIcon
             }
         }
-        self.textNode.maximumNumberOfLines = UInt(numberOfLines)
+        self.textNode.maximumNumberOfLines = numberOfLines
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
         self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
         

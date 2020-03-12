@@ -503,7 +503,9 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         segmentedBackgroundColor: mainInputColor,
         segmentedForegroundColor: mainBackgroundColor,
         segmentedTextColor: UIColor(rgb: 0xffffff),
-        segmentedDividerColor: mainSecondaryTextColor.withAlphaComponent(0.5)
+        segmentedDividerColor: mainSecondaryTextColor.withAlphaComponent(0.5),
+        clearButtonBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1),
+        clearButtonForegroundColor: UIColor(rgb: 0xffffff)
     )
 
     let navigationSearchBar = PresentationThemeNavigationSearchBar(

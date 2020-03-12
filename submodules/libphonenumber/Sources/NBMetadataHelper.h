@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "NBPhoneNumberDefines.h"
+#import <libphonenumber/NBPhoneNumberDefines.h>
 
 
 @class NBPhoneMetaData;

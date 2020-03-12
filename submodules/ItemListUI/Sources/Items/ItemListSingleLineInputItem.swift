@@ -38,6 +38,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let returnKeyType: UIReturnKeyType
     let spacing: CGFloat
     let clearType: ItemListSingleLineInputClearType
+    let maxLength: Int
     let enabled: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
@@ -45,9 +46,10 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let shouldUpdateText: (String) -> Bool
     let processPaste: ((String) -> String)?
     let updatedFocus: ((Bool) -> Void)?
+    let cleared: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, maxLength: Int = 0, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void, cleared: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
@@ -56,6 +58,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.returnKeyType = returnKeyType
         self.spacing = spacing
         self.clearType = clearType
+        self.maxLength = maxLength
         self.enabled = enabled
         self.tag = tag
         self.sectionId = sectionId
@@ -64,6 +67,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.processPaste = processPaste
         self.updatedFocus = updatedFocus
         self.action = action
+        self.cleared = cleared
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -420,6 +424,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     @objc private func clearButtonPressed() {
         self.textNode.textField.text = ""
         self.textUpdated("")
+        self.item?.cleared?()
     }
     
     private func textUpdated(_ text: String) {
@@ -436,6 +441,9 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         if let item = self.item {
             let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
             if !item.shouldUpdateText(newText) {
+                return false
+            }
+            if item.maxLength != 0 && newText.count > item.maxLength {
                 return false
             }
         }

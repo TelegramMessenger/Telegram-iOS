@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -44,6 +44,7 @@ class CellSlice : public td::CntObject {
  public:
   static constexpr long long fetch_long_eof = (static_cast<unsigned long long>(-1LL) << 63);
   static constexpr unsigned long long fetch_ulong_eof = (unsigned long long)-1LL;
+  enum { default_recursive_print_limit = 100 };
   struct CellReadError {};
 
   CellSlice(NoVm, Ref<Cell> cell_ref);
@@ -129,6 +130,7 @@ class CellSlice : public td::CntObject {
   const unsigned char* data() const {
     return cell->get_data();
   }
+  td::uint16 get_depth() const;
   td::ConstBitPtr data_bits() const {
     return td::ConstBitPtr{data(), (int)cur_pos()};
   }
@@ -137,6 +139,7 @@ class CellSlice : public td::CntObject {
   }
   unsigned get_cell_level() const;
   unsigned get_level() const;
+  Ref<Cell> get_base_cell() const;  // be careful with this one!
   int fetch_octet();
   int prefetch_octet() const;
   unsigned long long prefetch_ulong_top(unsigned& bits) const;
@@ -251,7 +254,9 @@ class CellSlice : public td::CntObject {
   bool contents_equal(const CellSlice& cs2) const;
   void dump(std::ostream& os, int level = 0, bool endl = true) const;
   void dump_hex(std::ostream& os, int mode = 0, bool endl = false) const;
-  void print_rec(std::ostream& os, int indent = 0) const;
+  bool print_rec(std::ostream& os, int indent = 0) const;
+  bool print_rec(std::ostream& os, int* limit, int indent = 0) const;
+  bool print_rec(int limit, std::ostream& os, int indent = 0) const;
   void error() const {
     throw CellReadError{};
   }
@@ -274,6 +279,7 @@ class CellSlice : public td::CntObject {
     offs = std::min(offs, size());
     return CellSlice{*this, size() - offs, size_refs(), offs, 0};
   }
+  CellSlice clone() const;
 
  private:
   void init_bits_refs();

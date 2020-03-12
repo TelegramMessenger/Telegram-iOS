@@ -1,0 +1,14 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "NumberPluralizationForm",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

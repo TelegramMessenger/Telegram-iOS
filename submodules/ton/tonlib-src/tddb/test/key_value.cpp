@@ -170,7 +170,11 @@ TEST(KeyValue, Bench) {
 TEST(KeyValue, Stress) {
   return;
   td::Slice db_name = "testdb";
-  td::RocksDb::destroy(db_name).ignore();
+  size_t N = 20;
+  auto db_name_i = [&](size_t i) { return PSTRING() << db_name << i; };
+  for (size_t i = 0; i < N; i++) {
+    td::RocksDb::destroy(db_name_i(i)).ignore();
+  }
 
   td::actor::Scheduler scheduler({6});
   auto watcher = td::create_shared_destructor([] { td::actor::SchedulerContext::get()->stop(); });
@@ -186,9 +190,13 @@ TEST(KeyValue, Stress) {
     void tear_down() override {
     }
     void loop() override {
+      if (stat_at_.is_in_past()) {
+        stat_at_ = td::Timestamp::in(10);
+        LOG(ERROR) << db_->stats();
+      }
       if (!kv_) {
-        kv_ = td::KeyValueAsync<td::UInt128, td::BufferSlice>(
-            std::make_unique<td::RocksDb>(td::RocksDb::open(db_name_).move_as_ok()));
+        db_ = std::make_shared<td::RocksDb>(td::RocksDb::open(db_name_).move_as_ok());
+        kv_ = td::KeyValueAsync<td::UInt128, td::BufferSlice>(db_);
         set_start_at_ = td::Timestamp::now();
       }
       if (next_set_ && next_set_.is_in_past()) {
@@ -207,6 +215,7 @@ TEST(KeyValue, Stress) {
 
    private:
     std::shared_ptr<td::Destructor> watcher_;
+    std::shared_ptr<td::RocksDb> db_;
     td::optional<td::KeyValueAsync<td::UInt128, td::BufferSlice>> kv_;
     std::string db_name_;
     int left_cnt_ = 1000000000;
@@ -214,6 +223,7 @@ TEST(KeyValue, Stress) {
     td::Timestamp next_set_ = td::Timestamp::now();
     td::Timestamp set_start_at_;
     td::Timestamp set_finish_at_;
+    td::Timestamp stat_at_ = td::Timestamp::in(10);
 
     void do_set() {
       td::UInt128 key = td::UInt128::zero();
@@ -236,8 +246,10 @@ TEST(KeyValue, Stress) {
       }
     }
   };
-  scheduler.run_in_context([watcher = std::move(watcher), &db_name]() mutable {
-    td::actor::create_actor<Worker>("Worker", watcher, db_name.str()).release();
+  scheduler.run_in_context([watcher = std::move(watcher), &db_name_i, &N]() mutable {
+    for (size_t i = 0; i < N; i++) {
+      td::actor::create_actor<Worker>("Worker", watcher, db_name_i(i)).release();
+    }
     watcher.reset();
   });
 

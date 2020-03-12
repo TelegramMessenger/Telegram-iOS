@@ -45,6 +45,7 @@ static_library(
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

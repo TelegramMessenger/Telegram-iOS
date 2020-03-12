@@ -165,6 +165,8 @@ x{68} @Defop DEPTH
 x{69} @Defop CHKDEPTH
 x{6A} @Defop ONLYTOPX
 x{6B} @Defop ONLYX
+{ over 0= abort"first argument must be non-zero"
+  <b x{6C} s, rot 4 u, swap 4 u, @addopb } : BLKDROP2
 
 // null primitives
 x{6D} dup @Defop NULL @Defop PUSHNULL
@@ -216,6 +218,10 @@ x{6FA0} @Defop NULLSWAPIF
 x{6FA1} @Defop NULLSWAPIFNOT
 x{6FA2} @Defop NULLROTRIF
 x{6FA3} @Defop NULLROTRIFNOT
+x{6FA4} @Defop NULLSWAPIF2
+x{6FA5} @Defop NULLSWAPIFNOT2
+x{6FA6} @Defop NULLROTRIF2
+x{6FA7} @Defop NULLROTRIFNOT2
 { <b x{6FB} s, rot 2 u, swap 2 u, @addopb } : INDEX2
 x{6FB4} @Defop CADR
 x{6FB5} @Defop CDDR
@@ -305,19 +311,21 @@ x{A90C} @Defop DIVMOD
 x{A90D} @Defop DIVMODR
 x{A90E} @Defop DIVMODC
 x{A925} @Defop RSHIFTR
+x{A926} @Defop RSHIFTC
 x{A935} @Defop(8u+1) RSHIFTR#
+x{A936} @Defop(8u+1) RSHIFTC#
 x{A938} @Defop(8u+1) MODPOW2#
 x{A984} @Defop MULDIV
 x{A985} @Defop MULDIVR
 x{A98C} @Defop MULDIVMOD
+x{A9A4} @Defop MULRSHIFT
+x{A9A5} @Defop MULRSHIFTR
+x{A9B4} @Defop(8u+1) MULRSHIFT#
+x{A9B5} @Defop(8u+1) MULRSHIFTR#
 x{A9C4} @Defop LSHIFTDIV
 x{A9C5} @Defop LSHIFTDIVR
 x{A9D4} @Defop(8u+1) LSHIFT#DIV
 x{A9D5} @Defop(8u+1) LSHIFT#DIVR
-x{A9E4} @Defop MULRSHIFT
-x{A9E5} @Defop MULRSHIFTR
-x{A9F4} @Defop(8u+1) MULRSHIFT#
-x{A9F5} @Defop(8u+1) MULRSHIFTR#
 x{AA} @Defop(8u+1) LSHIFT#
 x{AB} @Defop(8u+1) RSHIFT#
 x{AC} @Defop LSHIFT
@@ -458,6 +466,7 @@ x{CF28} @Defop STILE4
 x{CF29} @Defop STULE4
 x{CF2A} @Defop STILE8
 x{CF2B} @Defop STULE8
+x{CF30} @Defop BDEPTH
 x{CF31} @Defop BBITS
 x{CF32} @Defop BREFS
 x{CF33} @Defop BBITREFS
@@ -485,6 +494,7 @@ x{CF42} @Defop STSAME
 } : STSLICECONST
 x{CF81} @Defop STZERO
 x{CF83} @Defop STONE
+
 // cell deserialization (CellSlice primitives)
 x{D0} @Defop CTOS
 x{D1} @Defop ENDS
@@ -585,6 +595,8 @@ x{D75F} @Defop PLDULE8Q
 x{D760} @Defop LDZEROES
 x{D761} @Defop LDONES
 x{D762} @Defop LDSAME
+x{D764} @Defop SDEPTH
+x{D765} @Defop CDEPTH
 //
 // continuation / flow control primitives
 x{D8} dup @Defop EXECUTE @Defop CALLX
@@ -965,6 +977,11 @@ x{F4B5} @Defop SUBDICTRPGET
 x{F4B6} @Defop SUBDICTIRPGET
 x{F4B7} @Defop SUBDICTURPGET
 
+x{F4BC} @Defop DICTIGETJMPZ
+x{F4BD} @Defop DICTUGETJMPZ
+x{F4BE} @Defop DICTIGETEXECZ
+x{F4BF} @Defop DICTUGETEXECZ
+
 //
 // blockchain-specific primitives
 
@@ -972,12 +989,17 @@ x{F800} @Defop ACCEPT
 x{F801} @Defop SETGASLIMIT
 x{F80F} @Defop COMMIT
 
+x{F810} @Defop RANDU256
+x{F811} @Defop RAND
+x{F814} @Defop SETRAND
+x{F815} dup @Defop ADDRAND @Defop RANDOMIZE
+
 x{F82} @Defop(4u) GETPARAM
 x{F823} @Defop NOW
 x{F824} @Defop BLOCKLT
 x{F825} @Defop LTIME
-x{F826} @Defop BALANCE
-x{F827} @Defop RANDSEED
+x{F826} @Defop RANDSEED
+x{F827} @Defop BALANCE
 x{F828} @Defop MYADDR
 x{F829} @Defop CONFIGROOT
 x{F830} @Defop CONFIGDICT
@@ -994,6 +1016,11 @@ x{F901} @Defop HASHSU
 x{F902} @Defop SHA256U
 x{F910} @Defop CHKSIGNU
 x{F911} @Defop CHKSIGNS
+
+x{F940} @Defop CDATASIZEQ
+x{F941} @Defop CDATASIZE
+x{F942} @Defop SDATASIZEQ
+x{F943} @Defop SDATASIZE
 
 x{FA00} dup @Defop LDGRAMS @Defop LDVARUINT16
 x{FA01} @Defop LDVARINT16
@@ -1013,6 +1040,8 @@ x{FB00} @Defop SENDRAWMSG
 x{FB02} @Defop RAWRESERVE
 x{FB03} @Defop RAWRESERVEX
 x{FB04} @Defop SETCODE
+x{FB06} @Defop SETLIBCODE
+x{FB07} @Defop CHANGELIB
 
 //
 // debug primitives
@@ -1057,56 +1086,98 @@ x{FFF0} @Defop SETCPX
 variable @proccnt
 variable @proclist
 variable @procdict
+variable @procinfo
+variable @gvarcnt
+variable asm-mode  1 asm-mode !
 19 constant @procdictkeylen
-{ @proclist @ cons @proclist ! } : @proclistadd
-{ dup @procdictkeylen fits not abort"procedure index out of range"
-  1 'nop does swap dup @proclistadd 0 (create)
+32 constant @zcount
+{ pair @proclist @ cons @proclist ! } : @proclistadd
+{ @procinfo @ @procdictkeylen idict@ { 16 i@ } { 0 } cond } : @procinfo@
+{ <b rot 16 i, swap @procinfo @ @procdictkeylen b>idict!
+  not abort"cannot add key to procedure info dictionary"
+  @procinfo !
+} : @procinfo!
+// ( x v1 v2 -- )
+{ not 2 pick @procinfo@ and xor swap @procinfo! } : @procinfo~!
+// ( s i f -- )
+{ over @procdictkeylen fits not abort"procedure index out of range"
+  over swap dup @procinfo~!  2dup @proclistadd
+  1 'nop does swap 0 (create)
 } : @declproc
-{ @proccnt @ 1+ dup @proccnt ! @declproc } : @newproc
-{ 0 =: main  @proclist null!  @proccnt 0!
+{ 1 'nop does swap 0 (create) } : @declglobvar
+{ @proccnt @ 1+ dup @proccnt ! 1 @declproc } : @newproc
+{ @gvarcnt @ 1+ dup @gvarcnt ! @declglobvar } : @newglobvar
+{ 0 =: main  @proclist null!  @proccnt 0!  @gvarcnt 0!
   { bl word @newproc } : NEWPROC
   { bl word dup (def?) ' drop ' @newproc cond } : DECLPROC
   { bl word dup find
     { nip execute <> abort"method redefined with different id" }
-    { swap @declproc }
+    { swap 17 @declproc }
   cond } : DECLMETHOD
-  "main" @proclistadd
-  dictnew @procdict !
+  { bl word @newglobvar } : DECLGLOBVAR
+  "main" 0 @proclistadd
+  dictnew dup @procdict !
+  @procinfo !  16 0 @procinfo!
 } : PROGRAM{
 { over sbits < { s>c <b swap ref, b> <s } if } : @adj-long-proc
 { // i s l
-  @adj-long-proc swap @procdict @ @procdictkeylen
+  @adj-long-proc over @procdict @ @procdictkeylen
   idict!+ not abort"cannot define procedure, redefined?"
-  @procdict !
+  @procdict !  2 2 @procinfo~!
 } : @def-proc
+{ @procinfo @ null? not } : @have-procinfo?
+{ @have-procinfo? { 4 4 @procinfo~! } { drop } cond } : @proc-inlined
+{ @have-procinfo? { 8 8 @procinfo~! } { drop } cond } : @proc-called
 { 1000 @def-proc } : PROC
 { 0 @def-proc } : PROCREF
 { @procdict @ @procdictkeylen idict@ abort"procedure already defined"
 } : @fail-ifdef
+{ u@?+ { swap abort"first bits are not zeroes" } if } : @cut-zeroes
 { over @fail-ifdef
-  2 { rot @normal? rot b> <s swap @def-proc drop } does
-  null swap @doafter<{
+  2 { rot @normal? rot b> <s @zcount @cut-zeroes swap @def-proc drop } does
+  null swap @doafter<{ 0 @zcount u,
 } : @PROC:<{
 { 1000 @PROC:<{ } : PROC:<{
 { 0 @PROC:<{ } : PROCREF:<{
+{ dup @proc-called CALLDICT } dup : CALL : CALLDICT
+{ dup @proc-called JMPDICT } dup : JMP : JMPDICT
+{ dup @proc-called PREPAREDICT } dup : PREPARE : PREPAREDICT
 { dup @procdict @ @procdictkeylen idict@
-  { nip INLINE } { CALLDICT } cond
+  { swap @proc-inlined INLINE } { CALLDICT } cond
 } dup : INLINECALL : INLINECALLDICT
 { 0 @procdict @ @procdictkeylen idict@ not abort"`main` procedure not defined" drop
 } : @chkmaindef
+{ @procdict @ @procdictkeylen idict- drop @procdict ! } : @remove-proc
+{ ."Procedure `" over type ."` index=" 2 pick . ." flags=0x" dup x. cr } : @showprocinfo
+// ( proc_name proc_idx f -- )  f:+1=declared, +2=defined, +4=inlined, +8=called, +16=method
+{ // @showprocinfo
+  dup 0x1a and 2 = asm-mode @ 3 and and ?dup {
+    2 and {
+      over ."Warning: removing (inlined) procedure `" type ."` from call dictionary" cr
+    } if
+    2 pick @remove-proc
+  } if  // remove unused procs
+  dup 0xc and 0xc = asm-mode @ 4 and and {
+    over ."Warning: inline procedure `" type ."` is not always inlined" cr
+  } if
+  dup 0x1e and 2 = asm-mode @ 8 and and {
+    over ."Warning: procedure `" type ."` defined but not used" cr
+  } if
+  drop 2drop
+} : @chkprocdef
 { @chkmaindef
   @proclist @ { dup null? not } {
-    uncons swap dup find not
-    { +": undefined procedure name in list" abort } if
-    execute @procdict @ @procdictkeylen idict@ not
+    uncons swap unpair over find not
+    { drop +": undefined procedure name in list" abort } if
+    drop tuck @procdict @ @procdictkeylen idict@ not
     { +": procedure declared but left undefined" abort } if
-    drop (forget)
+    drop swap 2dup @procinfo@ @chkprocdef (forget)
   } while
-  drop @proclist null! @proccnt 0!
+  drop @proclist null! @procinfo null! @proccnt 0!
   @procdict dup @ swap null!
 } : }END
 forget @proclist  forget @proccnt
-{ }END <{ SETCP0 swap @procdictkeylen DICTPUSHCONST DICTIGETJMP 11 THROWARG }> } : }END>
+{ }END <{ SETCP0 swap @procdictkeylen DICTPUSHCONST DICTIGETJMPZ 11 THROWARG }> } : }END>
 { }END> b> } : }END>c
 { }END>c <s } : }END>s
 
@@ -1115,6 +1186,14 @@ forget @proclist  forget @proccnt
 -2 constant run_ticktock
 -3 constant split_prepare
 -4 constant split_install
+
+{ asm-mode 0 3 ~! } : asm-no-remove-unused
+{ asm-mode 1 1 ~! } : asm-remove-unused   // enabled by default
+{ asm-mode 3 3 ~! } : asm-warn-remove-unused
+{ asm-mode 4 4 ~! } : asm-warn-inline-mix
+{ asm-mode 0 4 ~! } : asm-no-warn-inline-mix  // disabled by default
+{ asm-mode 8 8 ~! } : asm-warn-unused
+{ asm-mode 0 8 ~! } : asm-no-warn-unused  // disabled by default
 
 // ( c -- )   add vm library for later use with runvmcode
 { <b over ref, b> <s swap hash vmlibs @ 256 udict! not abort"cannot add library" vmlibs ! } : add-lib

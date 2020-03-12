@@ -360,7 +360,9 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         segmentedBackgroundColor: UIColor(rgb: 0xe9e9e9),
         segmentedForegroundColor: UIColor(rgb: 0xf7f7f7),
         segmentedTextColor: UIColor(rgb: 0x000000),
-        segmentedDividerColor: UIColor(rgb: 0xd6d6dc)
+        segmentedDividerColor: UIColor(rgb: 0xd6d6dc),
+        clearButtonBackgroundColor: UIColor(rgb: 0xE3E3E3, alpha: 0.78),
+        clearButtonForegroundColor: UIColor(rgb: 0x7f7f7f)
     )
     
     let navigationSearchBar = PresentationThemeNavigationSearchBar(

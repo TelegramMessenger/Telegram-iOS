@@ -11,7 +11,7 @@ static_library(
     headers = glob([
         "Sources/**/*.h",
     ]),
-    exported_headers = [
-        "Sources/Svg.h",
-    ],
+    exported_headers = glob([
+        "PublicHeaders/**/*.h",
+    ]),
 )

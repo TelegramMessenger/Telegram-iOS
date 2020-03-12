@@ -79,11 +79,15 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
             var additionalLatestArchiveHole: ChatListHole?
             
             if let preferencesView = combinedView.views[filtersKey] as? PreferencesView, let filtersState = preferencesView.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState, !filtersState.filters.isEmpty {
-                if let topRootHole = combinedView.views[topRootHoleKey] as? AllChatListHolesView {
-                    additionalLatestHole = topRootHole.latestHole
+                if let topRootHole = combinedView.views[topRootHoleKey] as? AllChatListHolesView, let hole = topRootHole.latestHole {
+                    if !view.entries.contains(ChatListHolesEntry(groupId: .root, hole: hole)) {
+                        additionalLatestHole = hole
+                    }
                 }
-                if let topArchiveHole = combinedView.views[topArchiveHoleKey] as? AllChatListHolesView {
-                    additionalLatestArchiveHole = topArchiveHole.latestHole
+                if let topArchiveHole = combinedView.views[topArchiveHoleKey] as? AllChatListHolesView, let hole = topArchiveHole.latestHole {
+                    if !view.entries.contains(ChatListHolesEntry(groupId: Namespaces.PeerGroup.archive, hole: hole)) {
+                        additionalLatestArchiveHole = hole
+                    }
                 }
             }
             
@@ -104,7 +108,7 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
             }
             
             if let (hole, disposable) = addedAdditionalLatestArchiveHole {
-                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: .root, hole: hole).start())
+                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: Namespaces.PeerGroup.archive, hole: hole).start())
             }
         })
         

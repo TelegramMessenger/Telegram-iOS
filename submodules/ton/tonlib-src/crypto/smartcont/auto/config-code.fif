@@ -13,12 +13,13 @@ PROGRAM{
   DECLPROC perform_action
   DECLPROC get_validator_descr
   DECLPROC unpack_validator_descr
-  DECLPROC create_new_entry
-  DECLPROC unpack_suggestion
-  DECLPROC pack_suggestion
+  DECLPROC new_proposal
+  DECLPROC unpack_proposal
+  DECLPROC pack_proposal
   DECLPROC register_vote
   DECLPROC recv_external
   DECLPROC run_ticktock
+  85143 DECLMETHOD seqno
   set_conf_param PROC:<{
     //  index value
     c4 PUSH	//  index value _3
@@ -38,24 +39,16 @@ PROGRAM{
     // 
     c4 PUSH	//  _1
     CTOS	//  cs
-    LDREF	//  _6 cs
-    32 LDU	//  _6 _8 cs
-    256 LDU	//  cfg_dict stored_seqno public_key cs
-    DUP	//  cfg_dict stored_seqno public_key cs cs
-    SEMPTY	//  cfg_dict stored_seqno public_key cs _15
-    IF:<{	//  cfg_dict stored_seqno public_key cs
-      NEWDICT	//  cfg_dict stored_seqno public_key cs _16
-    }>ELSE<{	//  cfg_dict stored_seqno public_key cs
-      LDDICT	//  cfg_dict stored_seqno public_key _16 cs
-      SWAP	//  cfg_dict stored_seqno public_key cs _16
-    }>	//  cfg_dict stored_seqno public_key cs vote_dict
-    SWAP	//  cfg_dict stored_seqno public_key vote_dict cs
+    LDREF	//  _4 cs
+    32 LDU	//  _4 _6 cs
+    256 LDU	//  _4 _6 _9 cs
+    LDDICT	//  res res res res cs
     ENDS
   }>
   store_data PROC:<{
     //  cfg_dict stored_seqno public_key vote_dict
-    NEWC	//  cfg_dict stored_seqno public_key vote_dict _4
-    s1 s4 XCHG	//  vote_dict stored_seqno public_key cfg_dict _4
+    s0 s3 XCHG
+    NEWC	//  vote_dict stored_seqno public_key cfg_dict _4
     STREF	//  vote_dict stored_seqno public_key _5
     s1 s2 XCHG	//  vote_dict public_key stored_seqno _5
     32 STU	//  vote_dict public_key _7
@@ -69,19 +62,17 @@ PROGRAM{
     CTOS	//  cs
     8 LDU	//  _4 cs
     SWAP	//  cs _4
-    -17 ADDCONST	//  cs _8
-    -2 PUSHINT	//  cs _8 _9=-2
-    AND	//  cs _10
-    9 THROWIF
+    18 EQINT	//  cs _8
+    9 THROWIFNOT
     32 LDU	//  utime_since cs
     32 LDU	//  utime_since utime_until cs
     16 LDU	//  utime_since utime_until total cs
-    16 LDU	//  utime_since utime_until total _44 _43
+    16 LDU	//  utime_since utime_until total _42 _41
     DROP	//  utime_since utime_until total main
     DUP	//  utime_since utime_until total main main
-    0 GTINT	//  utime_since utime_until total main _30
+    0 GTINT	//  utime_since utime_until total main _28
     9 THROWIFNOT
-    GEQ	//  utime_since utime_until _33
+    GEQ	//  utime_since utime_until _31
     9 THROWIFNOT
   }>
   send_answer PROC:<{
@@ -139,8 +130,7 @@ PROGRAM{
     1314280276 PUSHINT	//  s_addr src_addr tag query_id in_msg tag _29=1314280276
     EQUAL	//  s_addr src_addr tag query_id in_msg _30
     IFJMP:<{	//  s_addr src_addr tag query_id in_msg
-      s2 POP	//  s_addr src_addr in_msg query_id
-      SWAP	//  s_addr src_addr query_id in_msg
+      1 2 BLKDROP2	//  s_addr src_addr query_id in_msg
       LDREF	//  s_addr src_addr query_id vset in_msg
       ENDS
       1 PUSHINT	//  s_addr src_addr query_id vset _36=1
@@ -162,17 +152,17 @@ PROGRAM{
         s2 POP	//  s_addr vset query_id
         OVER	//  s_addr vset query_id vset
         check_validator_set CALLDICT	//  s_addr vset query_id t_since t_until
-        OVER
-        NOW	//  s_addr vset query_id t_since t_until t_since t
+        NOW	//  s_addr vset query_id t_since t_until t
+        s2 s(-1) PUXC	//  s_addr vset query_id t_since t_until t_since t
         GREATER	//  s_addr vset query_id t_since t_until _53
         s0 s2 XCHG	//  s_addr vset query_id _53 t_until t_since
         GREATER	//  s_addr vset query_id _53 _54
         AND	//  s_addr vset query_id ok
-      }>ELSE<{
-        s0 s2 XCHG	//  s_addr vset query_id ok
-      }>
+        s0 s2 XCHG	//  s_addr ok query_id vset
+      }>	//  s_addr ok query_id vset
+      s0 s2 XCHG	//  s_addr vset query_id ok
       IFJMP:<{	//  s_addr vset query_id
-        36 PUSHINT	//  s_addr vset query_id _56=36
+        36 PUSHINT
         ROT	//  s_addr query_id _56=36 vset
         set_conf_param CALLDICT
         4000730955 PUSHINT	//  s_addr query_id _58=4000730955
@@ -248,23 +238,24 @@ PROGRAM{
       SETCODE
       c3 PUSH	//  cfg_dict public_key new_code cs old_code
       s0 s2 XCHG	//  cfg_dict public_key old_code cs new_code
+      CTOS	//  cfg_dict public_key old_code cs _25
+      BLESS	//  cfg_dict public_key old_code cs _26
       c3 POP
       SWAP	//  cfg_dict public_key cs old_code
       after_code_upgrade CALLDICT
       0 THROW
     }>	//  cfg_dict public_key action cs
     OVER
-    1348619041 PUSHINT	//  cfg_dict public_key action cs action _29=1348619041
-    EQUAL	//  cfg_dict public_key action cs _30
+    1348619041 PUSHINT	//  cfg_dict public_key action cs action _31=1348619041
+    EQUAL	//  cfg_dict public_key action cs _32
     IFJMP:<{	//  cfg_dict public_key action cs
-      NIP
-      NIP	//  cfg_dict cs
+      2 1 BLKDROP2	//  cfg_dict cs
       256 LDU	//  cfg_dict public_key cs
       ENDS
     }>	//  cfg_dict public_key action cs
     OVER
-    1313074949 PUSHINT	//  cfg_dict public_key action cs action _35=1313074949
-    EQUAL	//  cfg_dict public_key action cs _36
+    1313074949 PUSHINT	//  cfg_dict public_key action cs action _37=1313074949
+    EQUAL	//  cfg_dict public_key action cs _38
     IFJMP:<{	//  cfg_dict public_key action cs
       NIP	//  cfg_dict public_key cs
       change_elector_code CALLDICT
@@ -281,18 +272,26 @@ PROGRAM{
     IFJMP:<{	//  idx vset
       2DROP	// 
       PUSHNULL	//  _5
+      0 PUSHINT	//  _5 _6=0
     }>	//  idx vset
     CTOS	//  idx cs
-    104 PUSHINT	//  idx cs _17
+    8 LDU	//  idx _10 cs
+    SWAP	//  idx cs _10
+    18 EQINT	//  idx cs _14
+    40 THROWIFNOT
+    96 PUSHINT	//  idx cs _23
     SDSKIPFIRST	//  idx cs
-    NEWC	//  idx cs _20
-    SWAP	//  idx _20 cs
-    STSLICER	//  idx _21
-    ENDC	//  idx dict
-    16 PUSHINT	//  idx dict _25=16
+    64 LDU	//  idx total_weight cs
+    NEWC	//  idx total_weight cs _30
+    SWAP	//  idx total_weight _30 cs
+    STSLICER	//  idx total_weight _31
+    ENDC	//  idx total_weight dict
+    s1 s2 XCHG
+    16 PUSHINT	//  total_weight idx dict _35=16
     DICTUGET
-    NULLSWAPIFNOT	//  _27 _28
-    DROP	//  value
+    NULLSWAPIFNOT	//  total_weight _41 _42
+    DROP	//  total_weight value
+    SWAP	//  value total_weight
   }>
   unpack_validator_descr PROC:<{
     //  cs
@@ -312,30 +311,22 @@ PROGRAM{
     64 LDU	//  _18 _31 _30
     DROP	//  _18 _21
   }>
-  create_new_entry PROC:<{
+  new_proposal PROC:<{
     //  cs
-    0 PUSHINT	//  cs _1=0
-    DUP	//  cs _1=0 _2=0
-    FALSE	//  cs _1=0 _2=0 _3
-    NEWC	//  cs _1=0 _2=0 _3 _4
-    1 STI	//  cs _1=0 _2=0 _6
-    64 STU	//  cs _1=0 _8
-    256 STU	//  cs _10
-    SWAP	//  _10 cs
-    STSLICER	//  _11
-    ENDC	//  _12
-    CTOS	//  _13
+    PUSHNULL	//  cs _1
+    0 PUSHINT	//  cs _1 _2=0
+    s0 s1 s2 XCPUXC	//  _1 _2=0 _3=0 cs
   }>
-  unpack_suggestion PROC:<{
+  unpack_proposal PROC:<{
     //  cs
     LDDICT	//  _1 cs
     64 LDU	//  _1 _3 cs
     256 LDU	//  _1 _3 _6 cs
   }>
-  pack_suggestion PROC:<{
+  pack_proposal PROC:<{
     //  voters sum_weight vset_id body
-    NEWC	//  voters sum_weight vset_id body _4
-    s1 s4 XCHG	//  body sum_weight vset_id voters _4
+    s0 s3 XCHG
+    NEWC	//  body sum_weight vset_id voters _4
     STDICT	//  body sum_weight vset_id _5
     s1 s2 XCHG	//  body vset_id sum_weight _5
     64 STU	//  body vset_id _7
@@ -344,31 +335,87 @@ PROGRAM{
     STSLICER	//  _10
   }>
   register_vote PROC:<{
-    //  vote_dict action cs idx weight
-    2DROP	//  vote_dict action cs
-    SWAP
-    1 PUSHINT	//  vote_dict cs action _9=1
-    AND	//  vote_dict cs _10
-    IF:<{	//  vote_dict cs
-      DUP	//  vote_dict cs cs
-      HASHSU	//  vote_dict cs _11
-      NIP	//  vote_dict hash
-      OVER
-      8 PUSHPOW2	//  vote_dict hash vote_dict _13=256
+    //  vote_dict action cs idx weight total_weight cur_vset_id
+    s0 s5 XCHG
+    1 PUSHINT	//  vote_dict cur_vset_id cs idx weight total_weight action _13=1
+    AND	//  vote_dict cur_vset_id cs idx weight total_weight _14
+    IF:<{	//  vote_dict cur_vset_id cs idx weight total_weight
+      s3 PUSH	//  vote_dict cur_vset_id cs idx weight total_weight cs
+      HASHSU	//  vote_dict cur_vset_id cs idx weight total_weight hash
+      s0 s6 PUSH2
+      8 PUSHPOW2	//  vote_dict cur_vset_id cs idx weight total_weight hash hash vote_dict _16=256
       DICTUGET
-      NULLSWAPIFNOT	//  vote_dict _23 _24
-      NIP	//  vote_dict found?
-      IFNOT:<{	//  vote_dict
-      }>	//  vote_dict
-    }>ELSE<{	//  vote_dict cs
-      256 PLDU	//  vote_dict hash
-      OVER
-      8 PUSHPOW2	//  vote_dict hash vote_dict _19=256
+      NULLSWAPIFNOT	//  vote_dict cur_vset_id cs idx weight total_weight hash entry found?
+    }>ELSE<{	//  vote_dict cur_vset_id cs idx weight total_weight
+      s3 PUSH	//  vote_dict cur_vset_id cs idx weight total_weight cs
+      256 PLDU	//  vote_dict cur_vset_id cs idx weight total_weight hash
+      s0 s6 PUSH2
+      8 PUSHPOW2	//  vote_dict cur_vset_id cs idx weight total_weight hash hash vote_dict _20=256
       DICTUGET
-      NULLSWAPIFNOT	//  vote_dict _25 _26
-      NIP	//  vote_dict found?
+      NULLSWAPIFNOT	//  vote_dict cur_vset_id cs idx weight total_weight hash entry found?
+      DUP	//  vote_dict cur_vset_id cs idx weight total_weight hash entry found? found?
       42 THROWIFNOT
     }>
+    IF:<{	//  vote_dict cur_vset_id cs idx weight total_weight hash entry
+      s5 POP	//  vote_dict cur_vset_id entry idx weight total_weight hash
+      s0 s4 XCHG	//  vote_dict cur_vset_id hash idx weight total_weight entry
+      unpack_proposal INLINECALLDICT	//  vote_dict cur_vset_id hash idx weight total_weight _65 _66 _67 _68
+    }>ELSE<{	//  vote_dict cur_vset_id cs idx weight total_weight hash entry
+      DROP	//  vote_dict cur_vset_id cs idx weight total_weight hash
+      PUSHNULL	//  vote_dict cur_vset_id cs idx weight total_weight hash _30
+      s5 s0 s6 XC2PU
+      0 PUSHINT
+      s0 s1 s3 XCHG3	//  vote_dict cur_vset_id hash idx weight total_weight _65 _66 _67 _68
+    }>	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight vset_id body
+    s1 s8 XCPU	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body vset_id cur_vset_id
+    NEQ	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _32
+    IF:<{	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
+      NIP
+      PUSHNULL
+      s2 POP
+      0 PUSHINT
+      SWAP	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight=0 body
+    }>	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
+    s5 s2 PUSH2
+    16 PUSHINT	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body idx voters _37=16
+    DICTUGET
+    NULLSWAPIFNOT	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _73 _74
+    NIP	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body found?
+    IFJMP:<{	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
+      8 BLKDROP	//  vote_dict
+      PUSHNULL	//  vote_dict _60
+    }>	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
+    32 PUSHINT	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _40=32
+    NEWC	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _40=32 _41
+    NOW	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _40=32 _41 _42
+    STUX	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _43
+    s0 s6 s3 XCHG3
+    16 PUSHINT	//  vote_dict cur_vset_id hash body weight total_weight sum_weight _43 idx voters _44=16
+    DICTUSETB	//  vote_dict cur_vset_id hash body weight total_weight sum_weight voters
+    s0 s3 XCHG	//  vote_dict cur_vset_id hash body voters total_weight sum_weight weight
+    ADD	//  vote_dict cur_vset_id hash body voters total_weight sum_weight
+    DUP	//  vote_dict cur_vset_id hash body voters total_weight sum_weight sum_weight
+    3 MULCONST	//  vote_dict cur_vset_id hash body voters total_weight sum_weight _48
+    s0 s2 XCHG	//  vote_dict cur_vset_id hash body voters _48 sum_weight total_weight
+    1 LSHIFT#	//  vote_dict cur_vset_id hash body voters _48 sum_weight _50
+    s1 s2 XCHG	//  vote_dict cur_vset_id hash body voters sum_weight _48 _50
+    GREATER	//  vote_dict cur_vset_id hash body voters sum_weight _51
+    IFJMP:<{	//  vote_dict cur_vset_id hash body voters sum_weight
+      2DROP
+      1 2 BLKDROP2
+      s0 s2 XCHG
+      8 PUSHPOW2	//  body hash vote_dict _53=256
+      DICTUDEL	//  body _75 _76
+      DROP	//  body vote_dict
+      SWAP	//  vote_dict body
+    }>	//  vote_dict cur_vset_id hash body voters sum_weight
+    2SWAP
+    s1 s4 XCHG	//  vote_dict hash voters sum_weight cur_vset_id body
+    pack_proposal INLINECALLDICT	//  vote_dict hash _56
+    s0 s2 XCHG
+    8 PUSHPOW2	//  _56 hash vote_dict _57=256
+    DICTUSETB	//  vote_dict
+    PUSHNULL	//  vote_dict _59
   }>
   recv_external PROC:<{
     //  in_msg
@@ -395,29 +442,49 @@ PROGRAM{
       s0 s3 XCHG	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno cs
       16 LDU	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs
       OVER	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs idx
-      get_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs vdescr
-      unpack_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs val_pubkey weight
-      s0 s9 XCHG	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs val_pubkey in_msg
-      HASHSU	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs val_pubkey _44
-      s0 s10 s10 XCHG3	//  cs weight action vote_dict public_key cfg_dict stored_seqno idx _44 signature val_pubkey
-      CHKSIGNU	//  cs weight action vote_dict public_key cfg_dict stored_seqno idx _45
+      get_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs vdescr total_weight
+      SWAP	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs total_weight vdescr
+      unpack_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs total_weight val_pubkey weight
+      s0 s10 XCHG	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs total_weight val_pubkey in_msg
+      HASHSU	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs total_weight val_pubkey _45
+      s0 s11 s11 XCHG3	//  total_weight weight action vote_dict public_key cfg_dict stored_seqno idx cs _45 signature val_pubkey
+      CHKSIGNU	//  total_weight weight action vote_dict public_key cfg_dict stored_seqno idx cs _46
       34 THROWIFNOT
       ACCEPT
-      SWAP	//  cs weight action vote_dict public_key cfg_dict idx stored_seqno
-      INC	//  cs weight action vote_dict public_key cfg_dict idx stored_seqno
-      s2 s0 s3 PUSH3
-      s7 PUSH	//  cs weight action vote_dict public_key cfg_dict idx stored_seqno cfg_dict stored_seqno public_key vote_dict
+      s0 s2 XCHG	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno
+      INC	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno
+      s3 s0 s4 PUSH3
+      s8 PUSH	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno cfg_dict stored_seqno public_key vote_dict
       store_data INLINECALLDICT
       COMMIT
-      s3 s5 XCHG
-      s7 s1 s6 XCHG3	//  cfg_dict stored_seqno public_key vote_dict action cs idx weight
-      register_vote CALLDICT	//  cfg_dict stored_seqno public_key vote_dict
+      34 PUSHINT	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _54=34
+      CONFIGOPTPARAM	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _55
+      HASHCU	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _56
+      s5 s7 XCHG
+      s3 s4 XCHG
+      s2 s3 XCHG
+      s8 s9 s0 XCHG3	//  stored_seqno cfg_dict public_key vote_dict action cs idx weight total_weight _56
+      register_vote CALLDICT	//  stored_seqno cfg_dict public_key vote_dict accepted
+      s3 s4 s2 PUSH3
+      s4 PUSH	//  stored_seqno cfg_dict public_key vote_dict accepted cfg_dict stored_seqno public_key vote_dict
       store_data INLINECALLDICT
+      DUP	//  stored_seqno cfg_dict public_key vote_dict accepted accepted
+      ISNULL	//  stored_seqno cfg_dict public_key vote_dict accepted _59
+      IFNOT:<{	//  stored_seqno cfg_dict public_key vote_dict accepted
+        32 LDU	//  stored_seqno cfg_dict public_key vote_dict _60 accepted
+        s3 s4 XCHG
+        s2 s4 XCHG	//  stored_seqno vote_dict cfg_dict public_key _60 accepted
+        perform_action CALLDICT	//  stored_seqno vote_dict cfg_dict public_key
+        s3 s0 s3 XCHG3	//  cfg_dict stored_seqno public_key vote_dict
+        store_data INLINECALLDICT
+      }>ELSE<{
+        5 BLKDROP	// 
+      }>
     }>	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key
     s0 s6 XCHG	//  signature public_key action vote_dict cs cfg_dict stored_seqno in_msg
-    HASHSU	//  signature public_key action vote_dict cs cfg_dict stored_seqno _55
-    s0 s7 s6 XC2PU	//  stored_seqno public_key action vote_dict cs cfg_dict _55 signature public_key
-    CHKSIGNU	//  stored_seqno public_key action vote_dict cs cfg_dict _56
+    HASHSU	//  signature public_key action vote_dict cs cfg_dict stored_seqno _66
+    s0 s7 s6 XC2PU	//  stored_seqno public_key action vote_dict cs cfg_dict _66 signature public_key
+    CHKSIGNU	//  stored_seqno public_key action vote_dict cs cfg_dict _67
     34 THROWIFNOT
     ACCEPT
     s0 s5 XCHG	//  cfg_dict public_key action vote_dict cs stored_seqno
@@ -453,16 +520,15 @@ PROGRAM{
       IF:<{	//  cfg_dict cs kl=32 next_vset ds
         8 LDU	//  cfg_dict cs kl=32 next_vset tag ds
         32 PLDU	//  cfg_dict cs kl=32 next_vset tag since
-        SWAP	//  cfg_dict cs kl=32 next_vset since tag
-        17 EQINT	//  cfg_dict cs kl=32 next_vset since _26
-        NOW	//  cfg_dict cs kl=32 next_vset since _26 _27
-        s1 s2 XCHG	//  cfg_dict cs kl=32 next_vset _26 since _27
-        GEQ	//  cfg_dict cs kl=32 next_vset _26 _28
+        NOW	//  cfg_dict cs kl=32 next_vset tag since _25
+        LEQ	//  cfg_dict cs kl=32 next_vset tag _26
+        SWAP	//  cfg_dict cs kl=32 next_vset _26 tag
+        18 EQINT	//  cfg_dict cs kl=32 next_vset _26 _28
         AND	//  cfg_dict cs kl=32 next_vset _29
         IF:<{	//  cfg_dict cs kl=32 next_vset
-          SWAP
           34 PUSHINT
-          s0 s4 s4 XC2PU	//  kl=32 cs next_vset _32=34 cfg_dict kl=32
+          ROT
+          s4 s4 XCPU	//  kl=32 cs next_vset _32=34 cfg_dict kl=32
           DICTISETGETOPTREF	//  kl=32 cs cfg_dict cur_vset
           s3 s1 s0 PUXCPU	//  kl=32 cs cur_vset _35=32 cfg_dict kl=32
           DICTISETGETOPTREF	//  kl=32 cs _51 _52
@@ -471,23 +537,28 @@ PROGRAM{
           s0 s1 s3 XCHG3	//  cs _38=36 cfg_dict kl=32
           DICTIDEL	//  cs _53 _54
           DROP	//  cs cfg_dict
+          SWAP	//  cfg_dict cs
         }>ELSE<{
-          s2 s3 XCHG
-          2DROP	//  cs cfg_dict
+          2DROP	//  cfg_dict cs
         }>
       }>ELSE<{
-        s3 s4 XCHG
-        3 BLKDROP	//  cs cfg_dict
+        3 BLKDROP	//  cfg_dict cs
       }>
     }>ELSE<{
-      s2 s3 XCHG
-      2DROP	//  cs cfg_dict
+      2DROP	//  cfg_dict cs
     }>
+    SWAP
     NEWC	//  cs cfg_dict _40
     STREF	//  cs _41
     SWAP	//  _41 cs
     STSLICER	//  _42
     ENDC	//  _43
     c4 POP
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
   }>
 }END>c

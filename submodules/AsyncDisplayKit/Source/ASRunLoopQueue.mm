@@ -9,11 +9,10 @@
 
 #import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASConfigurationInternal.h>
-#import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
 #import <AsyncDisplayKit/ASThread.h>
-#import <AsyncDisplayKit/ASSignpost.h>
+#import "ASSignpost.h"
 #import <QuartzCore/QuartzCore.h>
 #import <cstdlib>
 #import <deque>
@@ -115,9 +114,6 @@ static void runLoopSourceCallback(void *info) {
   NSPointerArray *_internalQueue; // Use NSPointerArray so we can decide __strong or __weak per-instance.
   AS::RecursiveMutex _internalQueueLock;
 
-  // In order to not pollute the top-level activities, each queue has 1 root activity.
-  os_activity_t _rootActivity;
-
 #if ASRunLoopQueueLoggingEnabled
   NSTimer *_runloopQueueLoggingTimer;
 #endif
@@ -138,15 +134,6 @@ static void runLoopSourceCallback(void *info) {
     _queueConsumer = handlerBlock;
     _batchSize = 1;
     _ensureExclusiveMembership = YES;
-
-    // We don't want to pollute the top-level app activities with run loop batches, so we create one top-level
-    // activity per queue, and each batch activity joins that one instead.
-    _rootActivity = as_activity_create("Process run loop queue items", OS_ACTIVITY_NONE, OS_ACTIVITY_FLAG_DEFAULT);
-    {
-      // Log a message identifying this queue into the queue's root activity.
-      as_activity_scope_verbose(_rootActivity);
-      as_log_verbose(ASDisplayLog(), "Created run loop queue: %@", self);
-    }
     
     // Self is guaranteed to outlive the observer.  Without the high cost of a weak pointer,
     // __unsafe_unretained allows us to avoid flagging the memory cycle detector.
@@ -260,15 +247,10 @@ static void runLoopSourceCallback(void *info) {
   // itemsToProcess will be empty if _queueConsumer == nil so no need to check again.
   const auto count = itemsToProcess.size();
   if (count > 0) {
-    as_activity_scope_verbose(as_activity_create("Process run loop queue batch", _rootActivity, OS_ACTIVITY_FLAG_DEFAULT));
     const auto itemsEnd = itemsToProcess.cend();
     for (auto iterator = itemsToProcess.begin(); iterator < itemsEnd; iterator++) {
       __unsafe_unretained id value = *iterator;
       _queueConsumer(value, isQueueDrained && iterator == itemsEnd - 1);
-      as_log_verbose(ASDisplayLog(), "processed %@", value);
-    }
-    if (count > 1) {
-      as_log_verbose(ASDisplayLog(), "processed %lu items", (unsigned long)count);
     }
   }
 
@@ -339,7 +321,6 @@ ASSynthesizeLockingMethodsWithMutex(_internalQueueLock)
   AS::Mutex _internalQueueLock;
 
   // In order to not pollute the top-level activities, each queue has 1 root activity.
-  os_activity_t _rootActivity;
 
 #if ASRunLoopQueueLoggingEnabled
   NSTimer *_runloopQueueLoggingTimer;
@@ -367,15 +348,6 @@ dispatch_once_t _ASSharedCATransactionQueueOnceToken;
     static constexpr int kInternalQueueInitialCapacity = 64;
     _internalQueue.reserve(kInternalQueueInitialCapacity);
     _batchBuffer.reserve(kInternalQueueInitialCapacity);
-
-    // We don't want to pollute the top-level app activities with run loop batches, so we create one top-level
-    // activity per queue, and each batch activity joins that one instead.
-    _rootActivity = as_activity_create("Process run loop queue items", OS_ACTIVITY_NONE, OS_ACTIVITY_FLAG_DEFAULT);
-    {
-      // Log a message identifying this queue into the queue's root activity.
-      as_activity_scope_verbose(_rootActivity);
-      as_log_verbose(ASDisplayLog(), "Created run loop queue: %@", self);
-    }
 
     // Self is guaranteed to outlive the observer.  Without the high cost of a weak pointer,
     // __unsafe_unretained allows us to avoid flagging the memory cycle detector.
@@ -439,7 +411,6 @@ dispatch_once_t _ASSharedCATransactionQueueOnceToken;
   if (count == 0) {
     return;
   }
-  as_activity_scope_verbose(as_activity_create("Process run loop queue batch", _rootActivity, OS_ACTIVITY_FLAG_DEFAULT));
   ASSignpostStart(ASSignpostRunLoopQueueBatch);
   
   // Swap buffers, clear our hash table.
@@ -451,10 +422,8 @@ dispatch_once_t _ASSharedCATransactionQueueOnceToken;
   
   for (const id<ASCATransactionQueueObserving> &value : _batchBuffer) {
     [value prepareForCATransactionCommit];
-    as_log_verbose(ASDisplayLog(), "processed %@", value);
   }
   _batchBuffer.clear();
-  as_log_verbose(ASDisplayLog(), "processed %lu items", (unsigned long)count);
   ASSignpostEnd(ASSignpostRunLoopQueueBatch);
 }
 

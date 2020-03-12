@@ -3,6 +3,11 @@ import Foundation
 public struct ChatListHolesEntry: Hashable {
     public let groupId: PeerGroupId
     public let hole: ChatListHole
+    
+    public init(groupId: PeerGroupId, hole: ChatListHole) {
+        self.groupId = groupId
+        self.hole = hole
+    }
 }
 
 final class MutableChatListHolesView {
