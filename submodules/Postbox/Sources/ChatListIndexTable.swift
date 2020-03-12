@@ -417,12 +417,7 @@ final class ChatListIndexTable: Table {
                     } else if transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId) || transactionParticipationInTotalUnreadCountUpdates.removed.contains(notificationPeerId) {
                         currentFilteredValue = (0, false, false)
                     } else {
-                        let isRemovedFromTotalUnreadCount: Bool
-                        if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId) {
-                            isRemovedFromTotalUnreadCount = notificationSettings.isRemovedFromTotalUnreadCount(default: !globalNotificationSettings.defaultIncludePeer(peer: peer))
-                        } else {
-                            isRemovedFromTotalUnreadCount = !globalNotificationSettings.defaultIncludePeer(peer: peer)
-                        }
+                        let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationPeerId))
                         
                         if isRemovedFromTotalUnreadCount {
                             initialFilteredValue = (0, false, false)
@@ -609,12 +604,7 @@ final class ChatListIndexTable: Table {
                     totalStates[groupId]!.absoluteCounters[tag]!.messageCount = messageCount
                 }
                 
-                let isRemovedFromTotalUnreadCount: Bool
-                if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId) {
-                    isRemovedFromTotalUnreadCount = notificationSettings.isRemovedFromTotalUnreadCount(default: !globalNotificationSettings.defaultIncludePeer(peer: peer))
-                } else {
-                    isRemovedFromTotalUnreadCount = !globalNotificationSettings.defaultIncludePeer(peer: peer)
-                }
+                let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationPeerId))
                 
                 if !isRemovedFromTotalUnreadCount {
                     for tag in summaryTags {

@@ -199,25 +199,24 @@ final class PeerNotificationSettingsTable: Table {
         var added = Set<PeerId>()
         var removed = Set<PeerId>()
         
-        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+        var globalNotificationSettings: PostboxGlobalNotificationSettings?
         
         for (peerId, initialSettings) in self.updatedInitialSettings {
             guard let peer = postbox.peerTable.get(peerId) else {
                 continue
             }
-            let wasParticipating: Bool
-            if let initialEffective = initialSettings.effective {
-                wasParticipating = !initialEffective.isRemovedFromTotalUnreadCount(default: !globalNotificationSettings.defaultIncludePeer(peer: peer))
+            
+            let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
+            if let current = globalNotificationSettings {
+                globalNotificationSettingsValue = current
             } else {
-                wasParticipating = globalNotificationSettings.defaultIncludePeer(peer: peer)
+                globalNotificationSettingsValue = postbox.getGlobalNotificationSettings()
+                globalNotificationSettings = globalNotificationSettingsValue
             }
             
-            let isParticipating: Bool
-            if let resultEffective = self.cachedSettings[peerId]?.effective {
-                isParticipating = !resultEffective.isRemovedFromTotalUnreadCount(default: !globalNotificationSettings.defaultIncludePeer(peer: peer))
-            } else {
-                isParticipating = false
-            }
+            let wasParticipating = !resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: initialSettings.effective)
+            let isParticipating = !resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: self.cachedSettings[peerId]?.effective)
+            
             if wasParticipating != isParticipating {
                 if isParticipating {
                     added.insert(peerId)

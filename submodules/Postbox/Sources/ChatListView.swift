@@ -420,9 +420,15 @@ final class MutableChatListView {
     func replay(postbox: Postbox, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
-        if self.state.replay(postbox: postbox, transaction: transaction) {
+        if transaction.updatedGlobalNotificationSettings {
+            self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, filterPredicate: self.filterPredicate, summaryComponents: self.summaryComponents, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox)
             hasChanges = true
+        } else {
+            if self.state.replay(postbox: postbox, transaction: transaction) {
+                self.sampledState = self.state.sample(postbox: postbox)
+                hasChanges = true
+            }
         }
         
         if case .root = self.groupId, self.filterPredicate == nil {

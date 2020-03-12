@@ -2948,7 +2948,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     let currentInclusion = transaction.getPeerChatListInclusion(peerId)
                     if let groupId = currentInclusion.groupId, groupId == Namespaces.PeerGroup.archive {
                         if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                            if let notificationSettings = transaction.getPeerNotificationSettings(peer.regularPeerId) as? TelegramPeerNotificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount(default: !transaction.getGlobalNotificationSettings().defaultIncludePeer(peer: peer)) {
+                            let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: transaction.getGlobalNotificationSettings(), peer: peer, peerSettings: transaction.getPeerNotificationSettings(peer.regularPeerId))
+                            
+                            if !isRemovedFromTotalUnreadCount {
                                 transaction.updatePeerChatListInclusion(peerId, inclusion: currentInclusion.withGroupId(groupId: .root))
                             }
                         }

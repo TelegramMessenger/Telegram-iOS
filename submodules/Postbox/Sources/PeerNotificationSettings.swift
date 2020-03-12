@@ -44,3 +44,12 @@ public protocol PostboxGlobalNotificationSettings: PostboxCoding {
     
     func isEqualInDefaultPeerInclusion(other: PostboxGlobalNotificationSettings) -> Bool
 }
+
+public func resolvedIsRemovedFromTotalUnreadCount(globalSettings: PostboxGlobalNotificationSettings, peer: Peer, peerSettings: PeerNotificationSettings?) -> Bool {
+    let defaultValue = !globalSettings.defaultIncludePeer(peer: peer)
+    if let peerSettings = peerSettings {
+        return peerSettings.isRemovedFromTotalUnreadCount(default: defaultValue)
+    } else {
+        return defaultValue
+    }
+}
