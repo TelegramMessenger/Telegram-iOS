@@ -83,12 +83,13 @@ public func actualizedWebpage(postbox: Postbox, network: Network, webpage: Teleg
                 return .single(nil)
             }
             |> mapToSignal { result -> Signal<TelegramMediaWebpage, NoError> in
+                
                 if let result = result, let updatedWebpage = telegramMediaWebpageFromApiWebpage(result, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                     return postbox.transaction { transaction -> TelegramMediaWebpage in
                         updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: updatedWebpage)
                         return updatedWebpage
                     }
-                } else if case let .webPageNotModified(_, viewsValue) = result, let views = viewsValue, case let .Loaded(content) = webpage.content {
+                } else if let result = result, case let .webPageNotModified(_, viewsValue) = result, let views = viewsValue, case let .Loaded(content) = webpage.content {
                     let updatedContent: TelegramMediaWebpageContent = .Loaded(TelegramMediaWebpageLoadedContent(url: content.url, displayUrl: content.displayUrl, hash: content.hash, type: content.type, websiteName: content.websiteName, title: content.title, text: content.text, embedUrl: content.embedUrl, embedType: content.embedType, embedSize: content.embedSize, duration: content.duration, author: content.author, image: content.image, file: content.file, attributes: content.attributes, instantPage: content.instantPage.flatMap({ InstantPage(blocks: $0.blocks, media: $0.media, isComplete: $0.isComplete, rtl: $0.rtl, url: $0.url, views: views) })))
                     let updatedWebpage = TelegramMediaWebpage(webpageId: webpage.webpageId, content: updatedContent)
                     return postbox.transaction { transaction -> TelegramMediaWebpage in
