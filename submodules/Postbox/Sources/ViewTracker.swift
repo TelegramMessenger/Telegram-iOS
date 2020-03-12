@@ -351,21 +351,18 @@ final class ViewTracker {
             }
         }
         
-        if !transaction.chatListOperations.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentUpdatedPeers.isEmpty || !transaction.currentInvalidateMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentOperationsByPeerId.isEmpty || transaction.replacedAdditionalChatListItems != nil || !transaction.currentUpdatedPeerPresences.isEmpty ||
-            !transaction.updatedFailedMessagePeerIds.isEmpty {
-            for (mutableView, pipe) in self.chatListViews.copyItems() {
-                let context = MutableChatListViewReplayContext()
-                if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
-                    mutableView.complete(postbox: postbox, context: context)
-                    mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
-                        return self.getPeer(id)
-                    }, getPeerNotificationSettings: self.getPeerNotificationSettings, getPeerPresence: self.getPeerPresence)
-                    pipe.putNext((ChatListView(mutableView), .Generic))
-                }
+        for (mutableView, pipe) in self.chatListViews.copyItems() {
+            let context = MutableChatListViewReplayContext()
+            if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
+                mutableView.complete(postbox: postbox, context: context)
+                mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
+                    return self.getPeer(id)
+                }, getPeerNotificationSettings: self.getPeerNotificationSettings, getPeerPresence: self.getPeerPresence)
+                pipe.putNext((ChatListView(mutableView), .Generic))
             }
-            
-            self.updateTrackedChatListHoles()
         }
+        
+        self.updateTrackedChatListHoles()
         
         if updateTrackedHoles {
             self.updateTrackedHoles()

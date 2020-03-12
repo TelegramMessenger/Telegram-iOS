@@ -795,8 +795,9 @@ public final class Transaction {
                     let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
                     let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
                     let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId))
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, calculation: predicate.messageTagSummary)
                     
-                    if predicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact) {
+                    if predicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: messageTagSummaryResult) {
                         includedPeerIds[peer.id] = true
                         return true
                     } else {
@@ -919,6 +920,11 @@ public final class Transaction {
     public func replaceMessageTagSummary(peerId: PeerId, tagMask: MessageTags, namespace: MessageId.Namespace, count: Int32, maxId: MessageId.Id) {
         assert(!self.disposed)
         self.postbox?.replaceMessageTagSummary(peerId: peerId, tagMask: tagMask, namespace: namespace, count: count, maxId: maxId)
+    }
+    
+    public func getPendingMessageActionsSummary(peerId: PeerId, type: PendingMessageActionType, namespace: MessageId.Namespace) -> Int32? {
+        assert(!self.disposed)
+        return self.postbox?.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(peerId, namespace, type))
     }
     
     public func getMessageIndicesWithTag(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags) -> [MessageIndex] {

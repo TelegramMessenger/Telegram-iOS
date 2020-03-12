@@ -10,6 +10,51 @@ public struct GlobalMessageIdsNamespace: Hashable {
     }
 }
 
+public struct ChatListMessageTagSummaryResultComponent {
+    public let tag: MessageTags
+    public let namespace: MessageId.Namespace
+    
+    public init(tag: MessageTags, namespace: MessageId.Namespace) {
+        self.tag = tag
+        self.namespace = namespace
+    }
+}
+
+public struct ChatListMessageTagActionsSummaryResultComponent {
+    public let type: PendingMessageActionType
+    public let namespace: MessageId.Namespace
+    
+    public init(type: PendingMessageActionType, namespace: MessageId.Namespace) {
+        self.type = type
+        self.namespace = namespace
+    }
+}
+
+public struct ChatListMessageTagSummaryResultCalculation {
+    public let addCount: ChatListMessageTagSummaryResultComponent
+    public let subtractCount: ChatListMessageTagActionsSummaryResultComponent
+    
+    public init(addCount: ChatListMessageTagSummaryResultComponent, subtractCount: ChatListMessageTagActionsSummaryResultComponent) {
+        self.addCount = addCount
+        self.subtractCount = subtractCount
+    }
+}
+
+func resolveChatListMessageTagSummaryResultCalculation(addSummary: MessageHistoryTagNamespaceSummary?, subtractSummary: Int32?) -> Bool? {
+    let count = (addSummary?.count ?? 0) - (subtractSummary ?? 0)
+    return count > 0
+}
+
+func resolveChatListMessageTagSummaryResultCalculation(postbox: Postbox, peerId: PeerId, calculation: ChatListMessageTagSummaryResultCalculation?) -> Bool? {
+    guard let calculation = calculation else {
+        return nil
+    }
+    let addSummary = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: calculation.addCount.tag, peerId: peerId, namespace: calculation.addCount.namespace))
+    let subtractSummary = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(peerId, calculation.subtractCount.namespace, calculation.subtractCount.type))
+    let count = (addSummary?.count ?? 0) - subtractSummary
+    return count > 0
+}
+
 public final class SeedConfiguration {
     public let globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>
     public let initializeChatListWithHole: (topLevel: ChatListHole?, groups: ChatListHole?)

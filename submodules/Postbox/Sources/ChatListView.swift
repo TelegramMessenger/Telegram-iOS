@@ -253,17 +253,19 @@ private enum ChatListEntryType {
 public struct ChatListFilterPredicate {
     public var includePeerIds: Set<PeerId>
     public var excludePeerIds: Set<PeerId>
+    public var messageTagSummary: ChatListMessageTagSummaryResultCalculation?
     public var includeAdditionalPeerGroupIds: [PeerGroupId]
-    public var include: (Peer, Bool, Bool, Bool) -> Bool
+    public var include: (Peer, Bool, Bool, Bool, Bool?) -> Bool
     
-    public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, Bool, Bool, Bool) -> Bool) {
+    public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, messageTagSummary: ChatListMessageTagSummaryResultCalculation?, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, Bool, Bool, Bool, Bool?) -> Bool) {
         self.includePeerIds = includePeerIds
         self.excludePeerIds = excludePeerIds
+        self.messageTagSummary = messageTagSummary
         self.includeAdditionalPeerGroupIds = includeAdditionalPeerGroupIds
         self.include = include
     }
     
-    func includes(peer: Peer, groupId: PeerGroupId, isRemovedFromTotalUnreadCount: Bool, isUnread: Bool, isContact: Bool) -> Bool {
+    func includes(peer: Peer, groupId: PeerGroupId, isRemovedFromTotalUnreadCount: Bool, isUnread: Bool, isContact: Bool, messageTagSummaryResult: Bool?) -> Bool {
         let includePeerId = peer.associatedPeerId ?? peer.id
         if self.excludePeerIds.contains(includePeerId) {
             return false
@@ -276,7 +278,7 @@ public struct ChatListFilterPredicate {
                 return false
             }
         }
-        return self.include(peer, isRemovedFromTotalUnreadCount, isUnread, isContact)
+        return self.include(peer, isRemovedFromTotalUnreadCount, isUnread, isContact, messageTagSummaryResult)
     }
 }
 
@@ -420,7 +422,7 @@ final class MutableChatListView {
     func replay(postbox: Postbox, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
-        if transaction.updatedGlobalNotificationSettings {
+        if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
             self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, filterPredicate: self.filterPredicate, summaryComponents: self.summaryComponents, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox)
             hasChanges = true
@@ -630,53 +632,7 @@ public final class ChatListView {
                 assertionFailure()
             }
         }
-        /*if !mutableView.additionalMixedItemEntries.isEmpty || !mutableView.additionalMixedPinnedEntries.isEmpty {
-            var existingIds = Set<PeerId>()
-            for entry in entries {
-                if case let .MessageEntry(messageEntry) = entry {
-                    existingIds.insert(messageEntry.0.messageIndex.id.peerId)
-                }
-            }
-            for entry in mutableView.additionalMixedItemEntries {
-                if case let .MessageEntry(messageEntry) = entry {
-                    if !existingIds.contains(messageEntry.0.messageIndex.id.peerId) {
-                        switch entry {
-                        case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                            if let filterPredicate = mutableView.filterPredicate, let peerValue = peer.peer {
-                                if filterPredicate.includes(peer: peerValue, notificationSettings: notificationSettings, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, isArchived: true) {
-                                    existingIds.insert(messageEntry.0.messageIndex.id.peerId)
-                                    entries.append(.MessageEntry(ChatListIndex(pinningIndex: nil, messageIndex: index.messageIndex), message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact))
-                                }
-                            }
-                        case let .HoleEntry(hole):
-                            entries.append(.HoleEntry(hole))
-                        case .IntermediateMessageEntry:
-                            assertionFailure()
-                        }
-                    }
-                }
-            }
-            for entry in mutableView.additionalMixedPinnedEntries {
-                if case let .MessageEntry(messageEntry) = entry {
-                    if !existingIds.contains(messageEntry.0.messageIndex.id.peerId) {
-                        switch entry {
-                        case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                            if let filterPredicate = mutableView.filterPredicate, let peerValue = peer.peer {
-                                if filterPredicate.includes(peer: peerValue, notificationSettings: notificationSettings, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, isArchived: false) {
-                                    existingIds.insert(messageEntry.0.messageIndex.id.peerId)
-                                    entries.append(.MessageEntry(ChatListIndex(pinningIndex: nil, messageIndex: index.messageIndex), message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact))
-                                }
-                            }
-                        case let .HoleEntry(hole):
-                            entries.append(.HoleEntry(hole))
-                        case .IntermediateMessageEntry:
-                            assertionFailure()
-                        }
-                    }
-                }
-            }
-            entries.sort()
-        }*/
+        
         self.entries = entries
         self.earlierIndex = mutableView.sampledState.lower?.index
         self.laterIndex = mutableView.sampledState.upper?.index
