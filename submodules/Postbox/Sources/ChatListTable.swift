@@ -246,17 +246,21 @@ final class ChatListTable: Table {
     }
     
     func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+        
         var result: [PeerId] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
             let (_, _, messageIndex, _) = extractKey(key)
             if let state = postbox.readStateTable.getCombinedState(messageIndex.id.peerId), state.isUnread {
-                
                 let passFilter: Bool
                 if let filterPredicate = filterPredicate {
                     if let peer = postbox.peerTable.get(messageIndex.id.peerId) {
                         let isUnread = postbox.readStateTable.getCombinedState(messageIndex.id.peerId)?.isUnread ?? false
                         let isContact = postbox.contactsTable.isContact(peerId: messageIndex.id.peerId)
-                        if filterPredicate.includes(peer: peer, groupId: groupId, notificationSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId), isUnread: isUnread, isContact: isContact) {
+                        
+                        let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId))
+                        
+                        if filterPredicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact) {
                             passFilter = true
                         } else {
                             passFilter = false
@@ -727,7 +731,7 @@ final class ChatListTable: Table {
     
     func allPeerIds(groupId: PeerGroupId) -> [PeerId] {
         var peerIds: [PeerId] = []
-        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
             let (_, _, messageIndex, type) = extractKey(key)
             if type == ChatListEntryType.message.rawValue {
                 peerIds.append(messageIndex.id.peerId)
@@ -792,6 +796,8 @@ final class ChatListTable: Table {
         let lower: ValueBoxKey
         let upper: ValueBoxKey
         
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+        
         switch position {
             case let .earlier(index):
                 upper = self.upperBound(groupId: groupId)
@@ -818,17 +824,15 @@ final class ChatListTable: Table {
                 let peerId = index.messageIndex.id.peerId
                 if let readState = postbox.readStateTable.getCombinedState(peerId), readState.isUnread {
                     if filtered {
-                        var notificationSettings: PeerNotificationSettings?
                         if let peer = postbox.peerTable.get(peerId) {
-                            if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
-                                notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationSettingsPeerId)
-                            } else {
-                                notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+                            let notificationSettingsPeerId = peer.notificationSettingsPeerId ?? peerId
+                            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationSettingsPeerId)
+                            let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: notificationSettings)
+                            
+                            if !isRemovedFromTotalUnreadCount {
+                                result = index
+                                return false
                             }
-                        }
-                        if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
-                            result = index
-                            return false
                         }
                     } else {
                         result = index

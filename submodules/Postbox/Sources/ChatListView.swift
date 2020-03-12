@@ -88,7 +88,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
 }
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo, Bool, Bool)
+    case MessageEntry(index: ChatListIndex, message: Message?, readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, hasFailed: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     public var index: ChatListIndex {
@@ -102,9 +102,9 @@ public enum ChatListEntry: Comparable {
 
     public static func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
         switch lhs {
-            case let .MessageEntry(lhsIndex, lhsMessage, lhsReadState, lhsSettings, lhsEmbeddedState, lhsPeer, lhsPresence, lhsInfo, lhsHasFailed, lhsIsContact):
+            case let .MessageEntry(lhsIndex, lhsMessage, lhsReadState, lhsIsRemovedFromTotalUnreadCount, lhsEmbeddedState, lhsPeer, lhsPresence, lhsInfo, lhsHasFailed, lhsIsContact):
                 switch rhs {
-                    case let .MessageEntry(rhsIndex, rhsMessage, rhsReadState, rhsSettings, rhsEmbeddedState, rhsPeer, rhsPresence, rhsInfo, rhsHasFailed, rhsIsContact):
+                    case let .MessageEntry(rhsIndex, rhsMessage, rhsReadState, rhsIsRemovedFromTotalUnreadCount, rhsEmbeddedState, rhsPeer, rhsPresence, rhsInfo, rhsHasFailed, rhsIsContact):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -114,11 +114,7 @@ public enum ChatListEntry: Comparable {
                         if lhsMessage?.stableVersion != rhsMessage?.stableVersion {
                             return false
                         }
-                        if let lhsSettings = lhsSettings, let rhsSettings = rhsSettings {
-                            if !lhsSettings.isEqual(to: rhsSettings) {
-                                return false
-                            }
-                        } else if (lhsSettings != nil) != (rhsSettings != nil) {
+                        if lhsIsRemovedFromTotalUnreadCount != rhsIsRemovedFromTotalUnreadCount {
                             return false
                         }
                         if let lhsEmbeddedState = lhsEmbeddedState, let rhsEmbeddedState = rhsEmbeddedState {
@@ -184,7 +180,7 @@ public enum ChatListEntry: Comparable {
 
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(index: ChatListIndex, messageIndex: MessageIndex?)
-    case MessageEntry(index: ChatListIndex, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: ChatListMessageTagSummaryInfo, hasFailedMessages: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: ChatListMessageTagSummaryInfo, hasFailedMessages: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     init(_ intermediateEntry: ChatListIntermediateEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) {
@@ -200,7 +196,7 @@ enum MutableChatListEntry: Equatable {
         switch self {
             case let .IntermediateMessageEntry(intermediateMessageEntry):
                 return intermediateMessageEntry.index
-            case let .MessageEntry(index, _, _, _, _, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -258,16 +254,16 @@ public struct ChatListFilterPredicate {
     public var includePeerIds: Set<PeerId>
     public var excludePeerIds: Set<PeerId>
     public var includeAdditionalPeerGroupIds: [PeerGroupId]
-    public var include: (Peer, PeerNotificationSettings?, Bool, Bool) -> Bool
+    public var include: (Peer, Bool, Bool, Bool) -> Bool
     
-    public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, PeerNotificationSettings?, Bool, Bool) -> Bool) {
+    public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, Bool, Bool, Bool) -> Bool) {
         self.includePeerIds = includePeerIds
         self.excludePeerIds = excludePeerIds
         self.includeAdditionalPeerGroupIds = includeAdditionalPeerGroupIds
         self.include = include
     }
     
-    func includes(peer: Peer, groupId: PeerGroupId, notificationSettings: PeerNotificationSettings?, isUnread: Bool, isContact: Bool) -> Bool {
+    func includes(peer: Peer, groupId: PeerGroupId, isRemovedFromTotalUnreadCount: Bool, isUnread: Bool, isContact: Bool) -> Bool {
         let includePeerId = peer.associatedPeerId ?? peer.id
         if self.excludePeerIds.contains(includePeerId) {
             return false
@@ -280,7 +276,7 @@ public struct ChatListFilterPredicate {
                 return false
             }
         }
-        return self.include(peer, notificationSettings, isUnread, isContact)
+        return self.include(peer, isRemovedFromTotalUnreadCount, isUnread, isContact)
     }
 }
 
@@ -424,9 +420,15 @@ final class MutableChatListView {
     func replay(postbox: Postbox, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
-        if self.state.replay(postbox: postbox, transaction: transaction) {
+        if transaction.updatedGlobalNotificationSettings {
+            self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, filterPredicate: self.filterPredicate, summaryComponents: self.summaryComponents, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox)
             hasChanges = true
+        } else {
+            if self.state.replay(postbox: postbox, transaction: transaction) {
+                self.sampledState = self.state.sample(postbox: postbox)
+                hasChanges = true
+            }
         }
         
         if case .root = self.groupId, self.filterPredicate == nil {
@@ -620,8 +622,8 @@ public final class ChatListView {
         var entries: [ChatListEntry] = []
         for entry in mutableView.sampledState.entries {
             switch entry {
-            case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact))
+            case let .MessageEntry(index, message, combinedReadState, _, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
+                entries.append(.MessageEntry(index: index, message: message, readState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedState, renderedPeer: peer, presence: peerPresence, summaryInfo: summaryInfo, hasFailed: hasFailed, isContact: isContact))
             case let .HoleEntry(hole):
                 entries.append(.HoleEntry(hole))
             case .IntermediateMessageEntry:

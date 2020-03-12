@@ -25,9 +25,9 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
         self.entries = items.map { item in
             switch item {
             case let .total(preferencesKey):
-                return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getChatListTotalUnreadState())
+                return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: .root))
             case let .totalInGroup(groupId):
-                return .totalInGroup(groupId, ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
+                return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
             case let .peer(peerId):
                 return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
             }
@@ -52,18 +52,23 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
             }
         }
         
-        if transaction.currentUpdatedTotalUnreadState != nil || !transaction.alteredInitialPeerCombinedReadStates.isEmpty || updatedPreferencesEntry != nil {
+        if !transaction.currentUpdatedTotalUnreadStates.isEmpty || !transaction.alteredInitialPeerCombinedReadStates.isEmpty || updatedPreferencesEntry != nil {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
                 case let .total(keyAndEntry, state):
-                    if let updatedState = transaction.currentUpdatedTotalUnreadState {
+                    if let updatedState = transaction.currentUpdatedTotalUnreadStates[.root] {
                         if updatedState != state {
                             self.entries[i] = .total(keyAndEntry.flatMap({ ($0.0, updatedPreferencesEntry ?? $0.1) }), updatedState)
                             updated = true
                         }
                     }
                 case let .totalInGroup(groupId, state):
-                    break
+                    if let updatedState = transaction.currentUpdatedTotalUnreadStates[groupId] {
+                        if updatedState != state {
+                            self.entries[i] = .totalInGroup(groupId, updatedState)
+                            updated = true
+                        }
+                    }
                 case let .peer(peerId, _):
                     if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
                         self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))

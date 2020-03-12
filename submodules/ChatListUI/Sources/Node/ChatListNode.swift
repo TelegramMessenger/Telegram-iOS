@@ -169,10 +169,10 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         nodeInteraction.additionalCategorySelected(id)
                     }
                 ), directionHint: entry.directionHint)
-            case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd, hasFailedMessages, isContact):
+            case let .PeerEntry(index, presentationData, message, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd, hasFailedMessages, isContact):
                 switch mode {
                     case .chatList:
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, isInFilter: isInFilter, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, presence: presence, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities, isAd: isAd, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: hasFailedMessages), editing: editing, hasActiveRevealControls: hasActiveRevealControls, selected: selected, header: nil, enableContextActions: true, hiddenOffset: false, interaction: nodeInteraction), directionHint: entry.directionHint)
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, isInFilter: isInFilter, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, presence: presence, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities, isAd: isAd, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: hasFailedMessages), editing: editing, hasActiveRevealControls: hasActiveRevealControls, selected: selected, header: nil, enableContextActions: true, hiddenOffset: false, interaction: nodeInteraction), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: Peer?
@@ -276,10 +276,10 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
 private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, isInFilter: Bool, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
-            case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd, hasFailedMessages, isContact):
+            case let .PeerEntry(index, presentationData, message, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd, hasFailedMessages, isContact):
                 switch mode {
                     case .chatList:
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, isInFilter: isInFilter, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, notificationSettings: notificationSettings, presence: presence, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities, isAd: isAd, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: hasFailedMessages), editing: editing, hasActiveRevealControls: hasActiveRevealControls, selected: selected, header: nil, enableContextActions: true, hiddenOffset: false, interaction: nodeInteraction), directionHint: entry.directionHint)
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, isInFilter: isInFilter, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, presence: presence, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities, isAd: isAd, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: hasFailedMessages), editing: editing, hasActiveRevealControls: hasActiveRevealControls, selected: selected, header: nil, enableContextActions: true, hiddenOffset: false, interaction: nodeInteraction), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: Peer?
@@ -372,11 +372,6 @@ public enum ChatListGlobalScrollOption {
     case none
     case top
     case unread
-}
-
-private struct ChatListVisibleUnreadCounts: Equatable {
-    var raw: Int32 = 0
-    var filtered: Int32 = 0
 }
 
 public enum ChatListNodeScrollPosition {
@@ -477,15 +472,6 @@ public final class ChatListNode: ListView {
     
     public var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
-    
-    private let visibleUnreadCounts = ValuePromise<ChatListVisibleUnreadCounts>(ChatListVisibleUnreadCounts())
-    private var visibleUnreadCountsValue = ChatListVisibleUnreadCounts() {
-        didSet {
-            if self.visibleUnreadCountsValue != oldValue {
-                self.visibleUnreadCounts.set(self.visibleUnreadCountsValue)
-            }
-        }
-    }
     
     var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ContainedViewLayoutTransition) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmptyState?
@@ -900,8 +886,6 @@ public final class ChatListNode: ListView {
                     strongSelf.enqueueHistoryPreloadUpdate()
                 }
                 
-                var rawUnreadCount: Int32 = 0
-                var filteredUnreadCount: Int32 = 0
                 var archiveVisible = false
                 if let range = range.visibleRange {
                     let entryCount = chatListView.filteredEntries.count
@@ -911,14 +895,8 @@ public final class ChatListNode: ListView {
                             continue
                         }
                         switch chatListView.filteredEntries[entryCount - i - 1] {
-                            case let .PeerEntry(_, _, _, readState, notificationSettings, _, _, _, _, _, _, _, _, _, _, _):
-                                if let readState = readState {
-                                    let count = readState.count
-                                    rawUnreadCount += count
-                                    if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
-                                        filteredUnreadCount += count
-                                    }
-                                }
+                            case .PeerEntry:
+                                break
                             case .GroupReferenceEntry:
                                 archiveVisible = true
                             default:
@@ -926,10 +904,6 @@ public final class ChatListNode: ListView {
                         }
                     }
                 }
-                var visibleUnreadCountsValue = strongSelf.visibleUnreadCountsValue
-                visibleUnreadCountsValue.raw = rawUnreadCount
-                visibleUnreadCountsValue.filtered = filteredUnreadCount
-                strongSelf.visibleUnreadCountsValue = visibleUnreadCountsValue
                 if !archiveVisible && strongSelf.currentState.archiveShouldBeTemporaryRevealed {
                     strongSelf.updateState { state in
                         var state = state
@@ -1161,25 +1135,10 @@ public final class ChatListNode: ListView {
         
         self.scrollToTopOptionPromise.set(combineLatest(
             renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox) |> deliverOnMainQueue,
-            self.visibleUnreadCounts.get(),
             self.scrolledAtTop.get()
-        ) |> map { badge, visibleUnreadCounts, scrolledAtTop -> ChatListGlobalScrollOption in
+        ) |> map { badge, scrolledAtTop -> ChatListGlobalScrollOption in
             if scrolledAtTop {
-                if badge.0 != 0 {
-                    switch badge.1 {
-                        case .raw:
-                            if visibleUnreadCounts.raw < badge.0 {
-                                return .unread
-                            }
-                        case .filtered:
-                            if visibleUnreadCounts.filtered < badge.0 {
-                                return .unread
-                            }
-                    }
-                    return .none
-                } else {
-                    return .none
-                }
+                return .none
             } else {
                 return .top
             }

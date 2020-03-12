@@ -1339,8 +1339,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             let (_, items) = countAndFilterItems
             var filterItems: [ChatListFilterTabEntry] = []
             filterItems.append(.all(unreadCount: 0))
-            for (filter, unreadCount) in items {
-                filterItems.append(.filter(id: filter.id, text: filter.title, unreadCount: unreadCount))
+            for (filter, unreadCount, hasUnmutedUnread) in items {
+                filterItems.append(.filter(id: filter.id, text: filter.title, unread: ChatListFilterTabEntryUnreadCount(value: unreadCount, hasUnmuted: hasUnmutedUnread)))
             }
             
             var resolvedItems = filterItems

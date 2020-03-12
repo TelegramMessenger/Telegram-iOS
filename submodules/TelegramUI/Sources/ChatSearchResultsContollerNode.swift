@@ -78,7 +78,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
     public func item(context: AccountContext, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
             case let .message(message, peer, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, isInFilter: false, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: peer, combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true, displayAsMessage: true, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, isInFilter: false, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: peer, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true, displayAsMessage: true, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
         }
     }
 }

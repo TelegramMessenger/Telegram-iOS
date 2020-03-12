@@ -16,7 +16,6 @@ final class ViewTracker {
     private let getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?
     private let getCachedPeerData: (PeerId) -> CachedPeerData?
     private let getPeerPresence: (PeerId) -> PeerPresence?
-    private let getTotalUnreadState: () -> ChatListTotalUnreadState
     private let getPeerReadState: (PeerId) -> CombinedPeerReadState?
     private let operationLogGetOperations: (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry]
     private let operationLogGetTailIndex: (PeerOperationLogTag) -> Int32?
@@ -59,14 +58,13 @@ final class ViewTracker {
     private var failedMessageIdsViews = Bag<(MutableFailedMessageIdsView, ValuePipe<FailedMessageIdsView>)>()
 
     
-    init(queue: Queue, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadState: @escaping () -> ChatListTotalUnreadState, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    init(queue: Queue, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.renderMessage = renderMessage
         self.getPeer = getPeer
         self.getPeerNotificationSettings = getPeerNotificationSettings
         self.getCachedPeerData = getCachedPeerData
         self.getPeerPresence = getPeerPresence
-        self.getTotalUnreadState = getTotalUnreadState
         self.getPeerReadState = getPeerReadState
         self.operationLogGetOperations = operationLogGetOperations
         self.operationLogGetTailIndex = operationLogGetTailIndex
