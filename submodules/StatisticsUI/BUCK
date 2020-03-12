@@ -21,6 +21,7 @@ static_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/MergeLists:MergeLists",
+        "//submodules/PhotoResources:PhotoResources",
         "//submodules/GraphUI:GraphUI",
     ],
     frameworks = [
