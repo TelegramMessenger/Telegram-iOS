@@ -104,12 +104,21 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                 var hasUnmutedUnread = false
                 if let totalState = totalStates[.root] {
                     for tag in tags {
-                        if let value = totalState.absoluteCounters[tag] {
-                            count += Int(value.chatCount)
-                        }
-                        if let value = totalState.filteredCounters[tag] {
-                            if value.chatCount != 0 {
-                                hasUnmutedUnread = true
+                        if filter.data.excludeMuted {
+                            if let value = totalState.filteredCounters[tag] {
+                                if value.chatCount != 0 {
+                                    count += Int(value.chatCount)
+                                    hasUnmutedUnread = true
+                                }
+                            }
+                        } else {
+                            if let value = totalState.absoluteCounters[tag] {
+                                count += Int(value.chatCount)
+                            }
+                            if let value = totalState.filteredCounters[tag] {
+                                if value.chatCount != 0 {
+                                    hasUnmutedUnread = true
+                                }
                             }
                         }
                     }
@@ -117,12 +126,21 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                 if !filter.data.excludeArchived {
                     if let totalState = totalStates[Namespaces.PeerGroup.archive] {
                         for tag in tags {
-                            if let value = totalState.absoluteCounters[tag] {
-                                count += Int(value.chatCount)
-                            }
-                            if let value = totalState.filteredCounters[tag] {
-                                if value.chatCount != 0 {
-                                    hasUnmutedUnread = true
+                            if filter.data.excludeMuted {
+                                if let value = totalState.filteredCounters[tag] {
+                                    if value.chatCount != 0 {
+                                        count += Int(value.chatCount)
+                                        hasUnmutedUnread = true
+                                    }
+                                }
+                            } else {
+                                if let value = totalState.absoluteCounters[tag] {
+                                    count += Int(value.chatCount)
+                                }
+                                if let value = totalState.filteredCounters[tag] {
+                                    if value.chatCount != 0 {
+                                        hasUnmutedUnread = true
+                                    }
                                 }
                             }
                         }
