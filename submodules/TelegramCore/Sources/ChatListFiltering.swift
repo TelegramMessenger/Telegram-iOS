@@ -518,6 +518,23 @@ public func updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter],
     |> distinctUntilChanged
 }
 
+public func updatedChatListFiltersInfo(postbox: Postbox) -> Signal<(filters: [ChatListFilter], synchronized: Bool), NoError> {
+    return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
+    |> map { preferences -> (filters: [ChatListFilter], synchronized: Bool) in
+        let filtersState = preferences.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState ?? ChatListFiltersState.default
+        return (filtersState.filters, filtersState.remoteFilters != nil)
+    }
+    |> distinctUntilChanged(isEqual: { lhs, rhs -> Bool in
+        if lhs.filters != rhs.filters {
+            return false
+        }
+        if lhs.synchronized != rhs.synchronized {
+            return false
+        }
+        return true
+    })
+}
+
 public func currentChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
     return postbox.transaction { transaction -> [ChatListFilter] in
         let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default

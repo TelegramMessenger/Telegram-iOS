@@ -1717,30 +1717,29 @@ public final class ChatListNode: ListView {
     }
 }
 
-//TODO:localize
 private func statusStringForPeerType(strings: PresentationStrings, peer: Peer, isContact: Bool) -> String {
     if let user = peer as? TelegramUser {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
-            return "bot"
+            return strings.ChatList_PeerTypeBot
         } else if isContact {
-            return "contact"
+            return strings.ChatList_PeerTypeContact
         } else {
-            return "user"
+            return strings.ChatList_PeerTypeNonContact
         }
     } else if peer is TelegramSecretChat {
         if isContact {
-            return "contact"
+            return strings.ChatList_PeerTypeContact
         } else {
-            return "user"
+            return strings.ChatList_PeerTypeNonContact
         }
     } else if peer is TelegramGroup {
-        return "group"
+        return strings.ChatList_PeerTypeGroup
     } else if let channel = peer as? TelegramChannel {
         if case .group = channel.info {
-            return "group"
+            return strings.ChatList_PeerTypeGroup
         } else {
-            return "channel"
+            return strings.ChatList_PeerTypeChannel
         }
     }
-    return "user"
+    return strings.ChatList_PeerTypeNonContact
 }

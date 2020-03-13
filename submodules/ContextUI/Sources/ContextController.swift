@@ -38,16 +38,31 @@ public struct ContextMenuActionItemIconSource {
     }
 }
 
+public enum ContextMenuActionBadgeColor {
+    case accent
+    case inactive
+}
+
+public struct ContextMenuActionBadge {
+    public var value: String
+    public var color: ContextMenuActionBadgeColor
+    
+    public init(value: String, color: ContextMenuActionBadgeColor) {
+        self.value = value
+        self.color = color
+    }
+}
+
 public final class ContextMenuActionItem {
     public let text: String
     public let textColor: ContextMenuActionItemTextColor
     public let textLayout: ContextMenuActionItemTextLayout
-    public let badge: String
+    public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
     public let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, badge: String = "", icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.text = text
         self.textColor = textColor
         self.textLayout = textLayout

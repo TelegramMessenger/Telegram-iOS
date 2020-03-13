@@ -30,7 +30,7 @@ public enum ContactMultiselectionControllerMode {
     case groupCreation
     case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation
-    case chatSelection(selectedChats: Set<PeerId>, additionalCategories: ContactMultiselectionControllerAdditionalCategories?)
+    case chatSelection(title: String, selectedChats: Set<PeerId>, additionalCategories: ContactMultiselectionControllerAdditionalCategories?)
 }
 
 public enum ContactListFilter {

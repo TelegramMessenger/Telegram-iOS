@@ -165,8 +165,8 @@ swift_library(
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
-        "//submodules/WalletUI:WalletUIResources",
-        "//submodules/WalletUI:WalletUIAssets",
+        #"//submodules/WalletUI:WalletUIResources",
+        #"//submodules/WalletUI:WalletUIAssets",
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",

@@ -68,6 +68,10 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
+    func restartAnimation() {
+        self.animationNode.play()
+    }
+    
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         let string = NSMutableAttributedString(string: self.isFilter ? strings.ChatList_EmptyChatFilterList : strings.ChatList_EmptyChatList, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor)
         self.textNode.attributedText = string
