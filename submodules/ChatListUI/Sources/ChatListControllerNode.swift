@@ -542,6 +542,14 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             guard let strongSelf = self, strongSelf.availableFilters.count > 1 else {
                 return []
             }
+            switch strongSelf.currentItemNode.visibleContentOffset() {
+            case let .known(value):
+                if value < -1.0 {
+                    return []
+                }
+            case .none, .unknown:
+                break
+            }
             let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
             return directions
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
@@ -935,6 +943,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     
     let containerNode: ChatListContainerNode
+    private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     weak var controller: ChatListControllerImpl?
     
@@ -958,6 +967,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var dismissSelfIfCompletedPresentation: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
     var emptyListAction: (() -> Void)?
+    var cancelEditing: (() -> Void)?
 
     let debugListView = ListView()
     
@@ -1008,6 +1018,17 @@ final class ChatListControllerNode: ASDisplayNode {
         super.didLoad()
         
         (self.view as? ChatListControllerNodeView)?.controller = self.controller
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.tapRecognizer = tapRecognizer
+        self.view.addGestureRecognizer(tapRecognizer)
+        tapRecognizer.isEnabled = false
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.cancelEditing?()
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -1077,6 +1098,8 @@ final class ChatListControllerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.containerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, transition: transition)
+        
+        self.tapRecognizer?.isEnabled = self.isReorderingFilters
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: transition)

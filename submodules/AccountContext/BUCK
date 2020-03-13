@@ -16,7 +16,7 @@ static_library(
     	"//submodules/Postbox:Postbox#shared",
     	"//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
-        "//submodules/WalletCore:WalletCore",
+        #"//submodules/WalletCore:WalletCore",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

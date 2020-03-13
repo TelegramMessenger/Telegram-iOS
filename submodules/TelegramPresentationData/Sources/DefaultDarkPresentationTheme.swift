@@ -525,7 +525,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         destructiveColor: UIColor(rgb: 0xeb5545),
         badgeFillColor: UIColor(rgb: 0xeb5545),
         badgeForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
-        extractedContentTintColor: UIColor(rgb: 0x252525, alpha: 0.78)
+        extractedContentTintColor: UIColor(rgb: 0xffffff, alpha: 1.0)
     )
 
     let inAppNotification = PresentationThemeInAppNotification(

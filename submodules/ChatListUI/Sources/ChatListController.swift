@@ -517,8 +517,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     return
                 }
                 var items: [ContextMenuItem] = []
-                //TODO:localization
-                items.append(.action(ContextMenuActionItem(text: "Edit Folder", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_EditFolder, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                 }, action: { c, f in
                     c.dismiss(completion: {
@@ -546,8 +545,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     })
                 })))
                 if let filter = filters.first(where: { $0.id == id }), filter.data.includePeers.count < 100 {
-                    //TODO:localization
-                    items.append(.action(ContextMenuActionItem(text: "Add Chats", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_AddChatsToFolder, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                     }, action: { c, f in
                         c.dismiss(completion: {
@@ -574,8 +572,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             })
                         })
                     })))
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_RemoveFolder, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                     }, action: { c, f in
                         c.dismiss(completion: {
@@ -588,7 +586,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     
                     if filters.count > 1 {
                         items.append(.separator)
-                        items.append(.action(ContextMenuActionItem(text: "Reorder Tabs", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ReorderTabs, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                         }, action: { c, f in
                             //f(.default)
@@ -900,6 +898,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
+        self.chatListDisplayNode.cancelEditing = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.reorderingDonePressed()
+        }
+        
         self.chatListDisplayNode.toolbarActionSelected = { [weak self] action in
             self?.toolbarActionSelected(action: action)
         }
@@ -1152,12 +1157,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             let hasFilters = !filters.isEmpty
                             if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
                                 let absoluteFrame = sourceFrame
-                                //TODO:localize
                                 let text: String
                                 if hasFilters {
-                                    text = "Hold on 'Chats' to edit folders and switch between views."
+                                    text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
                                 } else {
-                                    text = "Hold to organize your chats with folders."
+                                    text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
                                 }
                                 parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
                                     guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
@@ -1416,11 +1420,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private func askForFilterRemoval(id: Int32) {
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         
-        //TODO:localization
         actionSheet.setItemGroups([
             ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: "This will remove the filter, your chats will not be deleted."),
-                ActionSheetButtonItem(title: "Remove", color: .destructive, action: { [weak self, weak actionSheet] in
+                ActionSheetTextItem(title: self.presentationData.strings.ChatList_RemoveFolderConfirmation),
+                ActionSheetButtonItem(title: self.presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
                     guard let strongSelf = self else {
@@ -2330,7 +2333,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             let (_, filterItems) = filterItemsAndTotalCount
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? "Add Folder" : "Edit Folders", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? strongSelf.presentationData.strings.ChatList_AddFolder : strongSelf.presentationData.strings.ChatList_EditFolders, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: presetList.isEmpty ? "Chat/Context Menu/Add" : "Chat/Context Menu/ItemList"), color: theme.contextMenu.primaryColor)
             }, action: { c, f in
                 c.dismiss(completion: {
@@ -2342,7 +2345,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             })))
             
             if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil {
-                items.append(.action(ContextMenuActionItem(text: "All Chats", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_FolderAllChats, icon: { theme in
                     return nil
                 }, action: { c, f in
                     f(.dismissWithoutContent)

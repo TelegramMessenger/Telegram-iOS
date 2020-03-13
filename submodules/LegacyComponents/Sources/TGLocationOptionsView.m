@@ -125,7 +125,7 @@
     [_mapModeControl setDividerImage:pallete.searchBarPallete.segmentedControlDividerImage forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
         
     [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateNormal];
-    [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentContrastColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateSelected];
+    [_mapModeControl setTitleTextAttributes:@{UITextAttributeTextColor:pallete.searchBarPallete.accentColor, UITextAttributeTextShadowColor: [UIColor clearColor], UITextAttributeFont: TGSystemFontOfSize(13)} forState:UIControlStateSelected];
 }
 
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event

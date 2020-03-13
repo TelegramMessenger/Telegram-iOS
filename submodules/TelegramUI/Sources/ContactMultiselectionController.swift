@@ -116,7 +116,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         })
         
         switch self.mode {
-        case let .chatSelection(selectedChats, _):
+        case let .chatSelection(_, selectedChats, additionalCategories):
             let _ = (self.context.account.postbox.transaction { transaction -> [Peer] in
                 return selectedChats.compactMap(transaction.getPeer)
             }
@@ -124,9 +124,16 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.contactsNode.editableTokens = peers.map { peer -> EditableTokenListToken in
-                    return EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                if let additionalCategories = additionalCategories {
+                    for i in 0 ..< additionalCategories.categories.count {
+                        if additionalCategories.selectedCategories.contains(additionalCategories.categories[i].id) {
+                            strongSelf.contactsNode.editableTokens.append(EditableTokenListToken(id: additionalCategories.categories[i].id, title: additionalCategories.categories[i].title, fixedPosition: i))
+                        }
+                    }
                 }
+                strongSelf.contactsNode.editableTokens.append(contentsOf: peers.map { peer -> EditableTokenListToken in
+                    return EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
+                })
                 strongSelf._peersReady.set(.single(true))
                 if strongSelf.isNodeLoaded {
                     strongSelf.requestLayout(transition: .immediate)
@@ -185,8 +192,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = false
-        case .chatSelection:
-            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.ChatListFilter_AddChatsTitle, counter: "")
+        case let .chatSelection(chatSelection):
+            self.titleView.title = CounterContollerTitle(title: chatSelection.title, counter: "")
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
             self.rightNavigationButton = rightNavigationButton
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
@@ -230,7 +237,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                                     displayCountAlert = true
                                     updatedState = updatedState.withToggledPeerId(.peer(peer.id))
                                 } else {
-                                    addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                    addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
                                 }
                             }
                             updatedCount = updatedState.selectedPeerIndices.count
@@ -247,7 +254,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                             state.selectedPeerIds.remove(peer.id)
                             removedTokenId = peer.id
                         } else {
-                            addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
                             state.selectedPeerIds.insert(peer.id)
                         }
                         updatedCount = state.selectedPeerIds.count
@@ -370,10 +377,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
         }
         
-        self.contactsNode.additionalCategorySelected = { [weak self] id in
+        self.contactsNode.removeSelectedCategory = { [weak self] id in
             guard let strongSelf = self else {
                 return
             }
+            var removedTokenId: AnyHashable?
             switch strongSelf.contactsNode.contentNode {
             case .contacts:
                 break
@@ -382,11 +390,76 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     var state = state
                     if state.selectedAdditionalCategoryIds.contains(id) {
                         state.selectedAdditionalCategoryIds.remove(id)
-                    } else {
-                        state.selectedAdditionalCategoryIds.insert(id)
+                        removedTokenId = id
                     }
                     return state
                 }
+                if let removedTokenId = removedTokenId {
+                    strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
+                        return token.id != removedTokenId
+                    }
+                }
+                strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+            }
+        }
+        
+        self.contactsNode.additionalCategorySelected = { [weak self] id in
+            guard let strongSelf = self else {
+                return
+            }
+            var addedToken: EditableTokenListToken?
+            var removedTokenId: AnyHashable?
+            switch strongSelf.contactsNode.contentNode {
+            case .contacts:
+                break
+            case let .chats(chatsNode):
+                var categoryToken: EditableTokenListToken?
+                if case let .chatSelection(_, _, additionalCategories) = strongSelf.mode {
+                    if let additionalCategories = additionalCategories {
+                        for i in 0 ..< additionalCategories.categories.count {
+                            if additionalCategories.categories[i].id == id {
+                                categoryToken = EditableTokenListToken(id: id, title: additionalCategories.categories[i].title, fixedPosition: i)
+                                break
+                            }
+                        }
+                    }
+                }
+                chatsNode.updateState { state in
+                    var state = state
+                    if state.selectedAdditionalCategoryIds.contains(id) {
+                        state.selectedAdditionalCategoryIds.remove(id)
+                        removedTokenId = id
+                    } else {
+                        state.selectedAdditionalCategoryIds.insert(id)
+                        addedToken = categoryToken
+                    }
+                    
+                    return state
+                }
+                if let addedToken = addedToken, let insertFixedIndex = addedToken.fixedPosition {
+                    var added = false
+                    for i in 0 ..< strongSelf.contactsNode.editableTokens.count {
+                        if let fixedIndex = strongSelf.contactsNode.editableTokens[i].fixedPosition {
+                            if fixedIndex > insertFixedIndex {
+                                strongSelf.contactsNode.editableTokens.insert(addedToken, at: i)
+                                added = true
+                                break
+                            }
+                        } else {
+                            strongSelf.contactsNode.editableTokens.insert(addedToken, at: i)
+                            added = true
+                            break
+                        }
+                    }
+                    if !added {
+                        strongSelf.contactsNode.editableTokens.append(addedToken)
+                    }
+                } else if let removedTokenId = removedTokenId {
+                    strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
+                        return token.id != removedTokenId
+                    }
+                }
+                strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
             }
         }
         

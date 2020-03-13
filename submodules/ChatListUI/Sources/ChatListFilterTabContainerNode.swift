@@ -373,7 +373,7 @@ enum ChatListFilterTabEntry: Equatable {
     func title(strings: PresentationStrings) -> String {
         switch self {
         case .all:
-            return "All Chats"
+            return strings.ChatList_Tabs_AllChats
         case let .filter(filter):
             return filter.text
         }
@@ -382,7 +382,7 @@ enum ChatListFilterTabEntry: Equatable {
     func shortTitle(strings: PresentationStrings) -> String {
         switch self {
         case .all:
-            return "All"
+            return strings.ChatList_Tabs_All
         case let .filter(filter):
             return filter.text
         }

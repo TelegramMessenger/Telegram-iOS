@@ -193,8 +193,7 @@ private func filtersWithAppliedOrder(filters: [(ChatListFilter, Int)], order: [I
 private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
-    
-    entries.append(.screenHeader("Create folders for different groups of chats and\nquickly switch between them."))
+    entries.append(.screenHeader(presentationData.strings.ChatListFolderSettings_Info))
     
     let filteredSuggestedFilters = suggestedFilters.filter { suggestedFilter in
         for (filter, _) in filters {
@@ -206,24 +205,24 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
     }
     
     if !filters.isEmpty || suggestedFilters.isEmpty {
-        entries.append(.listHeader("FOLDERS"))
+        entries.append(.listHeader(presentationData.strings.ChatListFolderSettings_FoldersSection))
         
         for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
             entries.append(.preset(index: PresetIndex(value: entries.count), title: filter.title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
         }
         if filters.count < 10 {
-            entries.append(.addItem(text: "Create New Folder", isEditing: state.isEditing))
+            entries.append(.addItem(text: presentationData.strings.ChatListFolderSettings_NewFolder, isEditing: state.isEditing))
         }
-        entries.append(.listFooter("Tap \"Edit\" to change the order or delete folders."))
+        entries.append(.listFooter(presentationData.strings.ChatListFolderSettings_EditFoldersInfo))
     }
     
     if !filteredSuggestedFilters.isEmpty && filters.count < 10 {
-        entries.append(.suggestedListHeader("RECOMMENDED FOLDERS"))
+        entries.append(.suggestedListHeader(presentationData.strings.ChatListFolderSettings_RecommendedFoldersSection))
         for filter in filteredSuggestedFilters {
             entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title, label: filter.description, preset: filter.data))
         }
         if filters.isEmpty {
-            entries.append(.suggestedAddCustom("Add Custom Folder"))
+            entries.append(.suggestedAddCustom(presentationData.strings.ChatListFolderSettings_RecommendedNewFolder))
         }
     }
     
@@ -400,7 +399,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             rightNavigationButton = nil
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Folders"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, settings: filterSettings), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))

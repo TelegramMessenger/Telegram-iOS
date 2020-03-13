@@ -706,8 +706,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? "" : "\(otherSessionCount + 1)"))
         }
         if enableFilters {
-            //TODO:localize
-            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/ChatListFilters")?.precomposed(), "Chat Folders", ""))
+            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/ChatListFilters")?.precomposed(), presentationData.strings.Settings_ChatFolders, ""))
         }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
