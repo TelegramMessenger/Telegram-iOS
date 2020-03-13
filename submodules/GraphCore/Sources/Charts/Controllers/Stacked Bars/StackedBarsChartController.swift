@@ -17,6 +17,12 @@ public class StackedBarsChartController: BaseChartController {
     let barsController: BarsComponentController
     let zoomedBarsController: BarsComponentController
     
+    override public var isZoomable: Bool {
+        didSet {
+            barsController.isZoomable = self.isZoomable
+        }
+    }
+    
     override public init(chartsCollection: ChartsCollection)  {
         let horizontalScalesRenderer = HorizontalScalesRenderer()
         let verticalScalesRenderer = VerticalScalesRenderer()
@@ -235,7 +241,7 @@ public class StackedBarsChartController: BaseChartController {
         switchToChart(chartsCollection: barsController.chartsCollection, isZoomed: false, animated: true)
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         if isZoomed {
             return zoomedBarsController.chartRangeFractionDidUpdated(rangeFraction)
         } else {
@@ -243,10 +249,10 @@ public class StackedBarsChartController: BaseChartController {
         }
     }
     
-    public override func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    public override func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
-        zoomedBarsController.apply(colorMode: colorMode, animated: animated)
-        barsController.apply(colorMode: colorMode, animated: animated)
+        zoomedBarsController.apply(theme: theme, animated: animated)
+        barsController.apply(theme: theme, animated: animated)
     }
 }

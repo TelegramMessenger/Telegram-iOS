@@ -147,7 +147,6 @@ class StatsOverviewItemNode: ListViewItemNode {
             let leftInset = params.leftInset
             let rightInset: CGFloat = params.rightInset
             var updatedTheme: PresentationTheme?
-            var updatedGraph: ChannelStatsGraph?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
@@ -214,16 +213,23 @@ class StatsOverviewItemNode: ListViewItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
+            let height: CGFloat
+            if item.stats.viewsPerPost.current.isZero && item.stats.sharesPerPost.current.isZero {
+                height = 64.0
+            } else {
+                height = 120.0
+            }
+            
             switch item.style {
                 case .plain:
                     itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 120.0)
+                    contentSize = CGSize(width: params.width, height: height)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 120.0)
+                    contentSize = CGSize(width: params.width, height: height)
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             

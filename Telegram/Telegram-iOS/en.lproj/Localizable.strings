@@ -5382,7 +5382,7 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.MessageForwards_0" = "%@ forwards";
 "Stats.MessageForwards_1" = "%@ forward";
 "Stats.MessageForwards_2" = "%@ forwards";
-"Stats.MessageForwards_3_10" = "%@ forwardss";
+"Stats.MessageForwards_3_10" = "%@ forwards";
 "Stats.MessageForwards_many" = "%@ forwards";
 "Stats.MessageForwards_any" = "%@ forwards";
 
@@ -5392,4 +5392,4 @@ Any member of this group will be able to see messages in the channel.";
 "InstantPage.Views_3_10" = "%@ views";
 "InstantPage.Views_many" = "%@ views";
 "InstantPage.Views_any" = "%@ views";
-"InstantPage.FeedbackButtonShort" = "Leave feedback";
+"InstantPage.FeedbackButtonShort" = "Wrong layout?";

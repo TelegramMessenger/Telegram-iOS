@@ -235,7 +235,7 @@ public class StepBarsChartController: BaseChartController {
         switchToChart(chartsCollection: barsController.chartsCollection, isZoomed: false, animated: true)
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         if isZoomed {
             return zoomedBarsController.chartRangeFractionDidUpdated(rangeFraction)
         } else {
@@ -243,11 +243,11 @@ public class StepBarsChartController: BaseChartController {
         }
     }
     
-    override public func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    override public func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
-        zoomedBarsController.apply(colorMode: colorMode, animated: animated)
-        barsController.apply(colorMode: colorMode, animated: animated)
+        zoomedBarsController.apply(theme: theme, animated: animated)
+        barsController.apply(theme: theme, animated: animated)
     }
 
     public override var drawChartVisibity: Bool {

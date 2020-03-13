@@ -226,19 +226,19 @@ class BarsComponentController: GeneralChartComponentController {
         
         mainBarsRenderer.setSelectedIndex(nil, animated: animated)
     }
-    override func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    override func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
-        horizontalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.axisXColor = colorMode.barChartStrongLinesColor
-        verticalScalesRenderer.horizontalLinesColor = colorMode.barChartStrongLinesColor
-        mainBarsRenderer.update(backgroundColor: colorMode.chartBackgroundColor, animated: false)
-        previewBarsChartRenderer.update(backgroundColor: colorMode.chartBackgroundColor, animated: false)
+        horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.axisXColor = theme.barChartStrongLinesColor
+        verticalScalesRenderer.horizontalLinesColor = theme.barChartStrongLinesColor
+        mainBarsRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
+        previewBarsChartRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
         
-        secondVerticalScalesRenderer?.labelsColor = colorMode.chartLabelsColor
-        secondVerticalScalesRenderer?.axisXColor = colorMode.barChartStrongLinesColor
-        secondVerticalScalesRenderer?.horizontalLinesColor = colorMode.barChartStrongLinesColor
+        secondVerticalScalesRenderer?.labelsColor = theme.chartLabelsColor
+        secondVerticalScalesRenderer?.axisXColor = theme.barChartStrongLinesColor
+        secondVerticalScalesRenderer?.horizontalLinesColor = theme.barChartStrongLinesColor
     }
     
     override func updateChartRangeTitle(animated: Bool) {

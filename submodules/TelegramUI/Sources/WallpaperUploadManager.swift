@@ -105,11 +105,8 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                         return result
                     }
                     
-                    let autoNightModeTriggered = presentationData.autoNightModeTriggered ?? false
+                    let autoNightModeTriggered = presentationData.autoNightModeTriggered
                     disposable.set(uploadSignal.start(next: { [weak self] status in
-                        guard let strongSelf = self else {
-                            return
-                        }
                         if case let .complete(wallpaper) = status {
                             let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                 if let resource = wallpaper.mainResource {

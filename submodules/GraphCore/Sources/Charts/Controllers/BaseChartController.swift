@@ -70,10 +70,11 @@ enum BaseConstants {
     }()
 }
 
-public class BaseChartController: GColorModeContainer {
+public class BaseChartController: ChartThemeContainer {
     //let performanceRenderer = PerformanceRenderer()
     var initialChartsCollection: ChartsCollection
     var isZoomed: Bool = false
+    public var isZoomable: Bool = true
 
     var chartTitle: String = ""
     
@@ -148,7 +149,7 @@ public class BaseChartController: GColorModeContainer {
         fatalError("Abstract")
     }
     
-    public func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         fatalError("Abstract")
     }
     
@@ -180,7 +181,7 @@ public class BaseChartController: GColorModeContainer {
         fatalError("Abstract")
     }
     
-    public func apply(colorMode: GColorMode, animated: Bool) {
+    public func apply(theme: ChartTheme, animated: Bool) {
         
     }
 }

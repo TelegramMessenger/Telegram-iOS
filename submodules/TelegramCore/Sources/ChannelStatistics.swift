@@ -41,7 +41,7 @@ public enum ChannelStatsGraph: Equatable {
         switch self {
             case let .OnDemand(token):
                 return token
-            case let .Loaded(token, data):
+            case let .Loaded(token, _):
                 return token
             default:
                 return nil

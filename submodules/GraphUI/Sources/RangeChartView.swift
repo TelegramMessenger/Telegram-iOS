@@ -48,6 +48,8 @@ class RangeChartView: UIControl {
     private var selectedMarkerInitialLocation: CGPoint?
     private var isBoundCropHighlighted: Bool = false
     private var isRangePagingEnabled: Bool = false
+    
+    private var targetTapLocation: CGPoint?
 
     public let chartView = ChartView()
     
@@ -154,6 +156,8 @@ class RangeChartView: UIControl {
             selectedMarkerInitialLocation = point
             isBoundCropHighlighted = true
         } else {
+            targetTapLocation = point
+            selectedMarkerHorizontalOffset = cropFrameView.frame.width / 2.0
             selectedMarker = nil
             selectedMarkerInitialLocation = nil
             return
@@ -175,11 +179,23 @@ class RangeChartView: UIControl {
             self._isTracking = true
         }
         
+        targetTapLocation = nil
+        
         sendActions(for: .valueChanged)
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard isEnabled else { return }
+        if let point = targetTapLocation {
+            let horizontalPosition = point.x - selectedMarkerHorizontalOffset
+            let fraction = fractionFor(offsetX: horizontalPosition)
+            updateMarkerOffset(.center, fraction: fraction)
+            
+            sendActions(for: .touchUpInside)
+            
+            self.targetTapLocation = nil
+            return
+        }
         guard let selectedMarker = selectedMarker else {
             touchedOutsideClosure?()
             return
@@ -204,6 +220,7 @@ class RangeChartView: UIControl {
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.targetTapLocation = nil
         self.selectedMarker = nil
         self.selectedMarkerInitialLocation = nil
         self.isBoundCropHighlighted = false
@@ -292,11 +309,11 @@ private extension RangeChartView {
     }
 }
 
-extension RangeChartView: GColorModeContainer {
-    func apply(colorMode: GColorMode, animated: Bool) {
+extension RangeChartView: ChartThemeContainer {
+    func apply(theme: ChartTheme, animated: Bool) {
         let colusre = {
-            self.lowerBoundTintView.backgroundColor = colorMode.rangeViewTintColor
-            self.upperBoundTintView.backgroundColor = colorMode.rangeViewTintColor
+            self.lowerBoundTintView.backgroundColor = theme.rangeViewTintColor
+            self.upperBoundTintView.backgroundColor = theme.rangeViewTintColor
         }
         
         

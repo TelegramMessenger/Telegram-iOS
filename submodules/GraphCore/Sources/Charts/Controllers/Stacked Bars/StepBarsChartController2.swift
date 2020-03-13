@@ -200,11 +200,14 @@ public class StepBarsChartController2: BaseChartController {
             dateString = BaseConstants.headerMediumRangeFormatter.string(from: closestDate)
         }
         let viewModel = ChartDetailsViewModel(title: dateString,
-                                              showArrow: !self.isZoomed,
+                                              showArrow: self.isZoomable && !self.isZoomed,
                                               showPrefixes: false,
                                               values: values,
                                               totalValue: nil,
-                                              tapAction: { [weak self] in })
+                                              tapAction: { [weak self] in },
+                                              hideAction: { [weak self] in
+                                                self?.setDetailsChartVisibleClosure?(false, true)
+        })
         return viewModel
     }
     
@@ -317,7 +320,7 @@ public class StepBarsChartController2: BaseChartController {
         self.setupChartCollection(chartsCollection: self.initialChartCollection, animated: true, isZoomed: false)
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool) {
         cancelChartInteraction()
               
         let horizontalRange = ClosedRange(uncheckedBounds:
@@ -360,15 +363,15 @@ public class StepBarsChartController2: BaseChartController {
         }
     }
     
-    override public func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    override public func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
         self.graphControllers.forEach { controller in
-            controller.verticalScalesRenderer.horizontalLinesColor = colorMode.chartHelperLinesColor
-            controller.lineBulletsRenderer.setInnerColor(colorMode.chartBackgroundColor, animated: animated)
-            controller.verticalScalesRenderer.axisXColor = colorMode.chartStrongLinesColor
+            controller.verticalScalesRenderer.horizontalLinesColor = theme.chartHelperLinesColor
+            controller.lineBulletsRenderer.setInnerColor(theme.chartBackgroundColor, animated: animated)
+            controller.verticalScalesRenderer.axisXColor = theme.chartStrongLinesColor
         }
-        verticalLineRenderer.linesColor = colorMode.chartStrongLinesColor
+        verticalLineRenderer.linesColor = theme.chartStrongLinesColor
     }
     
     public override var drawChartVisibity: Bool {

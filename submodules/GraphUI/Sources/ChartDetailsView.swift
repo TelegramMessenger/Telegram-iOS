@@ -15,20 +15,21 @@ private let verticalMargins: CGFloat = 8
 private var labelHeight: CGFloat = 18
 private var margin: CGFloat = 10
 private var prefixLabelWidth: CGFloat = 27
-private var textLabelWidth: CGFloat = 80
+private var textLabelWidth: CGFloat = 96
 private var valueLabelWidth: CGFloat = 65
 
 class ChartDetailsView: UIControl {
     let titleLabel = UILabel()
     let arrowView = UIImageView()
     let activityIndicator = UIActivityIndicatorView()
+    let arrowButton = UIButton()
     
     var prefixViews: [UILabel] = []
     var labelsViews: [UILabel] = []
     var valuesViews: [UILabel] = []
 
     private var viewModel: ChartDetailsViewModel?
-    private var colorMode: GColorMode = .day
+    private var theme: ChartTheme = ChartTheme.defaultDayTheme
         
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -36,13 +37,16 @@ class ChartDetailsView: UIControl {
         layer.cornerRadius = cornerRadius
         clipsToBounds = true
         
-        addTarget(self, action: #selector(didTap), for: .touchUpInside)
+        addTarget(self, action: #selector(didTapWhole), for: .touchUpInside)
         titleLabel.font = UIFont.systemFont(ofSize: 12, weight: .bold)
         arrowView.image = UIImage(bundleImageName: "Chart/arrow_right")
         arrowView.contentMode = .scaleAspectFill
 
+        arrowButton.addTarget(self, action: #selector(didTap), for: .touchUpInside)
+        
         addSubview(titleLabel)
         addSubview(arrowView)
+        addSubview(arrowButton)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -66,6 +70,8 @@ class ChartDetailsView: UIControl {
         }
         let labelsCount: Int = viewModel.values.count + ((viewModel.totalValue == nil) ? 0 : 1)
 
+        arrowButton.frame = CGRect(x: 0.0, y: 0.0, width: width, height: 30.0)
+        
         setLabelsCount(array: &prefixViews,
                        count: viewModel.showPrefixes ? labelsCount : 0,
                        font: UIFont.systemFont(ofSize: 12, weight: .bold))
@@ -82,14 +88,14 @@ class ChartDetailsView: UIControl {
                 var x: CGFloat = margin
                 if viewModel.showPrefixes {
                     let prefixLabel = self.prefixViews[index]
-                    prefixLabel.textColor = self.colorMode.chartDetailsTextColor
+                    prefixLabel.textColor = self.theme.chartDetailsTextColor
                     prefixLabel.setText(value.prefix, animated: false)
                     prefixLabel.frame = CGRect(x: x, y: y, width: prefixLabelWidth, height: labelHeight)
                     x += prefixLabelWidth + margin
                     prefixLabel.alpha = value.visible ? 1 : 0
                 }
                 let titleLabel = self.labelsViews[index]
-                titleLabel.setTextColor(self.colorMode.chartDetailsTextColor, animated: false)
+                titleLabel.setTextColor(self.theme.chartDetailsTextColor, animated: false)
                 titleLabel.setText(value.title, animated: false)
                 titleLabel.frame = CGRect(x: x, y: y, width: textLabelWidth, height: labelHeight)
                 titleLabel.alpha = value.visible ? 1 : 0
@@ -109,21 +115,21 @@ class ChartDetailsView: UIControl {
                 var x: CGFloat = margin
                 if viewModel.showPrefixes {
                     let prefixLabel = self.prefixViews[viewModel.values.count]
-                    prefixLabel.textColor = self.colorMode.chartDetailsTextColor
+                    prefixLabel.textColor = self.theme.chartDetailsTextColor
                     prefixLabel.setText(value.prefix, animated: false)
                     prefixLabel.frame = CGRect(x: x, y: y, width: prefixLabelWidth, height: labelHeight)
                     prefixLabel.alpha = value.visible ? 1 : 0
                     x += prefixLabelWidth + margin
                 }
                 let titleLabel = self.labelsViews[viewModel.values.count]
-                titleLabel.setTextColor(self.colorMode.chartDetailsTextColor, animated: false)
+                titleLabel.setTextColor(self.theme.chartDetailsTextColor, animated: false)
                 titleLabel.setText(value.title, animated: false)
                 titleLabel.frame = CGRect(x: x, y: y, width: textLabelWidth, height: labelHeight)
                 titleLabel.alpha = value.visible ? 1 : 0
                 x += textLabelWidth
                 
                 let valueLabel = self.valuesViews[viewModel.values.count]
-                valueLabel.setTextColor(self.colorMode.chartDetailsTextColor, animated: false)
+                valueLabel.setTextColor(self.theme.chartDetailsTextColor, animated: false)
                 valueLabel.setText(value.value, animated: false)
                 valueLabel.frame = CGRect(x: x, y: y, width: valueLabelWidth, height: labelHeight)
                 valueLabel.alpha = value.visible ? 1 : 0
@@ -154,6 +160,10 @@ class ChartDetailsView: UIControl {
         viewModel?.tapAction?()
     }
     
+    @objc private func didTapWhole() {
+        viewModel?.hideAction?()
+    }
+    
     func setLabelsCount(array: inout [UILabel],
                         count: Int,
                         font: UIFont,
@@ -172,16 +182,16 @@ class ChartDetailsView: UIControl {
     }
 }
 
-extension ChartDetailsView: GColorModeContainer {
-    func apply(colorMode: GColorMode, animated: Bool) {
-        self.colorMode = colorMode
-        self.titleLabel.setTextColor(colorMode.chartDetailsTextColor, animated: animated)
+extension ChartDetailsView: ChartThemeContainer {
+    func apply(theme: ChartTheme, animated: Bool) {
+        self.theme = theme
+        self.titleLabel.setTextColor(theme.chartDetailsTextColor, animated: animated)
         if let viewModel = self.viewModel {
             self.setup(viewModel: viewModel, animated: animated)
         }
         UIView.perform(animated: animated) {
-            self.arrowView.tintColor = colorMode.chartDetailsArrowColor
-            self.backgroundColor = colorMode.chartDetailsViewColor
+            self.arrowView.tintColor = theme.chartDetailsArrowColor
+            self.backgroundColor = theme.chartDetailsViewColor
         }
     }
 }

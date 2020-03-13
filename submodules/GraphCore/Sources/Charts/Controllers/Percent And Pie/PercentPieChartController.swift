@@ -281,7 +281,7 @@ public class PercentPieChartController: BaseChartController {
         })
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         if isZoomed {
             return pieController.chartRangeFractionDidUpdated(rangeFraction)
         } else {
@@ -289,11 +289,11 @@ public class PercentPieChartController: BaseChartController {
         }
     }
     
-    public override func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    public override func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
-        pieController.apply(colorMode: colorMode, animated: animated)
-        percentController.apply(colorMode: colorMode, animated: animated)
-        transitionRenderer.backgroundColor = colorMode.chartBackgroundColor
+        pieController.apply(theme: theme, animated: animated)
+        percentController.apply(theme: theme, animated: animated)
+        transitionRenderer.backgroundColor = theme.chartBackgroundColor
     }
 }

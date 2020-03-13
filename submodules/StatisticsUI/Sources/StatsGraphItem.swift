@@ -8,7 +8,9 @@ import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
+import GraphCore
 import GraphUI
+import ActivityIndicator
 
 class StatsGraphItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
@@ -72,6 +74,7 @@ class StatsGraphItemNode: ListViewItemNode {
     private let maskNode: ASImageNode
     
     let chartNode: ChartNode
+    private let activityIndicator: ActivityIndicator
     
     private var item: StatsGraphItem?
         
@@ -89,12 +92,15 @@ class StatsGraphItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
       
         self.chartNode = ChartNode()
+        self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0, 2.0, false))
+        self.activityIndicator.isHidden = true
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.clipsToBounds = true
         
         self.addSubnode(self.chartNode)
+        self.addSubnode(self.activityIndicator)
     }
     
     override func didLoad() {
@@ -201,21 +207,36 @@ class StatsGraphItemNode: ListViewItemNode {
                                 strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 500.0))
+                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 750.0))
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
+                        
+                        strongSelf.activityIndicator.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - 16.0) / 2.0), y: floor((layout.size.height - 16.0) / 2.0)), size: CGSize(width: 16.0, height: 16.0))
                     }
                     
-                    if let updatedGraph = updatedGraph, case let .Loaded(_, data) = updatedGraph {
-                        strongSelf.chartNode.setup(data, type: item.type, getDetailsData: { [weak self] date, completion in
-                            if let strongSelf = self, let item = strongSelf.item {
-                                item.getDetailsData?(date, completion)
-                            }
-                        })
+                    strongSelf.activityIndicator.type = .custom(item.presentationData.theme.list.itemSecondaryTextColor, 16.0, 2.0, false)
+                    
+                    if let updatedGraph = updatedGraph {
+                        if case let .Loaded(_, data) = updatedGraph {
+                            strongSelf.chartNode.setup(data, type: item.type, getDetailsData: { [weak self] date, completion in
+                                if let strongSelf = self, let item = strongSelf.item {
+                                    item.getDetailsData?(date, completion)
+                                }
+                            })
+                            strongSelf.activityIndicator.isHidden = true
+                            strongSelf.chartNode.isHidden = false
+                        } else if case .OnDemand = updatedGraph {
+                            strongSelf.activityIndicator.isHidden = false
+                            strongSelf.chartNode.isHidden = true
+                        }
+                    }
+                    
+                    if let updatedTheme = updatedTheme {
+                        strongSelf.chartNode.setupTheme(ChartTheme(presentationTheme: updatedTheme))
                     }
                 }
             })

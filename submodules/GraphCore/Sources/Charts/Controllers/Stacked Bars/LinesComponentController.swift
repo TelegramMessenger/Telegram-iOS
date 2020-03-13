@@ -202,14 +202,14 @@ class LinesComponentController: GeneralChartComponentController {
         lineBulletsRenderer.isEnabled = false
     }
     
-    override func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    override func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
-        horizontalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.axisXColor = colorMode.chartStrongLinesColor
-        verticalScalesRenderer.horizontalLinesColor = colorMode.chartHelperLinesColor
-        lineBulletsRenderer.setInnerColor(colorMode.chartBackgroundColor, animated: animated)
-        verticalLineRenderer.linesColor = colorMode.chartStrongLinesColor
+        horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.axisXColor = theme.chartStrongLinesColor
+        verticalScalesRenderer.horizontalLinesColor = theme.chartHelperLinesColor
+        lineBulletsRenderer.setInnerColor(theme.chartBackgroundColor, animated: animated)
+        verticalLineRenderer.linesColor = theme.chartStrongLinesColor
     }
 }

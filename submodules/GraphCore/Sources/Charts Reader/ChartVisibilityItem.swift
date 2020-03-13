@@ -74,20 +74,23 @@ public struct ChartDetailsViewModel {
     public internal(set) var values: [Value]
     public internal(set) var totalValue: Value?
     public internal(set) var tapAction: (() -> Void)?
+    public internal(set) var hideAction: (() -> Void)?
     
-    static let blank = ChartDetailsViewModel(title: "", showArrow: false, showPrefixes: false, values: [], totalValue: nil, tapAction: nil)
+    static let blank = ChartDetailsViewModel(title: "", showArrow: false, showPrefixes: false, values: [], totalValue: nil, tapAction: nil, hideAction: nil)
     public init(title: String,
     showArrow: Bool,
     showPrefixes: Bool,
     values: [Value],
     totalValue: Value?,
-    tapAction: (() -> Void)?) {
+    tapAction: (() -> Void)?,
+    hideAction: (() -> Void)?) {
         self.title = title
         self.showArrow = showArrow
         self.showPrefixes = showPrefixes
         self.values = values
         self.totalValue = totalValue
         self.tapAction = tapAction
+        self.hideAction = hideAction
     }
     
 }

@@ -199,7 +199,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         self.setupChartCollection(chartsCollection: initialChartCollection, animated: true, isZoomed: false)
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         cancelChartInteraction()
         
         let horizontalRange = ClosedRange(uncheckedBounds:
@@ -297,14 +297,14 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         }
     }
     
-    public override func apply(colorMode: GColorMode, animated: Bool) {
-        horizontalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalLineRenderer.linesColor = colorMode.chartStrongLinesColor
+    public override func apply(theme: ChartTheme, animated: Bool) {
+        horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalLineRenderer.linesColor = theme.chartStrongLinesColor
 
         for controller in graphControllers {
-            controller.verticalScalesRenderer.horizontalLinesColor = colorMode.chartHelperLinesColor
-            controller.lineBulletsRenderer.setInnerColor(colorMode.chartBackgroundColor, animated: animated)
-            controller.verticalScalesRenderer.axisXColor = colorMode.chartStrongLinesColor
+            controller.verticalScalesRenderer.horizontalLinesColor = theme.chartHelperLinesColor
+            controller.lineBulletsRenderer.setInnerColor(theme.chartBackgroundColor, animated: animated)
+            controller.verticalScalesRenderer.axisXColor = theme.chartStrongLinesColor
         }
     }
 }

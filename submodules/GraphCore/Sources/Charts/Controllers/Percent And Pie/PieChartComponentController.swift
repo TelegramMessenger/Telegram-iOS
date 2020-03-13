@@ -156,7 +156,8 @@ class PieChartComponentController: GeneralChartComponentController {
                                                                                    color: pieItem.color,
                                                                                    visible: true)],
                                               totalValue: nil,
-                                              tapAction: nil)
+                                              tapAction: nil,
+                                              hideAction: nil)
         return viewModel
     }
     
