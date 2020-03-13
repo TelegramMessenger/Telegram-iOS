@@ -33,8 +33,23 @@ public enum PeerNotificationSettingsBehavior: PostboxCoding {
 }
 
 public protocol PeerNotificationSettings: PostboxCoding {
-    var isRemovedFromTotalUnreadCount: Bool { get }
+    func isRemovedFromTotalUnreadCount(`default`: Bool) -> Bool
     var behavior: PeerNotificationSettingsBehavior { get }
     
     func isEqual(to: PeerNotificationSettings) -> Bool
+}
+
+public protocol PostboxGlobalNotificationSettings: PostboxCoding {
+    func defaultIncludePeer(peer: Peer) -> Bool
+    
+    func isEqualInDefaultPeerInclusion(other: PostboxGlobalNotificationSettings) -> Bool
+}
+
+public func resolvedIsRemovedFromTotalUnreadCount(globalSettings: PostboxGlobalNotificationSettings, peer: Peer, peerSettings: PeerNotificationSettings?) -> Bool {
+    let defaultValue = !globalSettings.defaultIncludePeer(peer: peer)
+    if let peerSettings = peerSettings {
+        return peerSettings.isRemovedFromTotalUnreadCount(default: defaultValue)
+    } else {
+        return defaultValue
+    }
 }

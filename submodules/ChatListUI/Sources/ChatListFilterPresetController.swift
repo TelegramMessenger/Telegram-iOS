@@ -144,15 +144,15 @@ private enum ChatListFilterIncludeCategory: Int32, CaseIterable {
     func title(strings: PresentationStrings) -> String {
         switch self {
         case .contacts:
-            return "Contacts"
+            return strings.ChatListFolder_CategoryContacts
         case .nonContacts:
-            return "Non-Contacts"
+            return strings.ChatListFolder_CategoryNonContacts
         case .groups:
-            return "Groups"
+            return strings.ChatListFolder_CategoryGroups
         case .channels:
-            return "Channels"
+            return strings.ChatListFolder_CategoryChannels
         case .bots:
-            return "Bots"
+            return strings.ChatListFolder_CategoryBots
         }
     }
 }
@@ -165,11 +165,11 @@ private enum ChatListFilterExcludeCategory: Int32, CaseIterable {
     func title(strings: PresentationStrings) -> String {
         switch self {
         case .muted:
-            return "Muted"
+            return strings.ChatListFolder_CategoryMuted
         case .read:
-            return "Read"
+            return strings.ChatListFolder_CategoryRead
         case .archived:
-            return "Archived"
+            return strings.ChatListFolder_CategoryArchived
         }
     }
 }
@@ -425,7 +425,6 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
-//TODO:localization
 private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [RenderedPeer], excludePeers: [RenderedPeer]) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
@@ -433,11 +432,11 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         entries.append(.screenHeader)
     }
     
-    entries.append(.nameHeader("FOLDER NAME"))
-    entries.append(.name(placeholder: "Folder Name", value: state.name))
+    entries.append(.nameHeader(presentationData.strings.ChatListFolder_NameSectionHeader))
+    entries.append(.name(placeholder: presentationData.strings.ChatListFolder_NamePlaceholder, value: state.name))
     
-    entries.append(.includePeersHeader("INCLUDED CHATS"))
-    entries.append(.addIncludePeer(title: "Add Chats"))
+    entries.append(.includePeersHeader(presentationData.strings.ChatListFolder_IncludedSectionHeader))
+    entries.append(.addIncludePeer(title: presentationData.strings.ChatListFolder_AddChats))
     
     var includeCategoryIndex = 0
     for category in ChatListFilterIncludeCategory.allCases {
@@ -451,10 +450,10 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         entries.append(.includePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
     }
     
-    entries.append(.includePeerInfo("Choose chats and types of chats that will appear in this filter."))
+    entries.append(.includePeerInfo(presentationData.strings.ChatListFolder_IncludeSectionInfo))
     
-    entries.append(.excludePeersHeader("EXCLUDED CHATS"))
-    entries.append(.addExcludePeer(title: "Add Chats"))
+    entries.append(.excludePeersHeader(presentationData.strings.ChatListFolder_ExcludedSectionHeader))
+    entries.append(.addExcludePeer(title: presentationData.strings.ChatListFolder_AddChats))
     
     var excludeCategoryIndex = 0
     for category in ChatListFilterExcludeCategory.allCases {
@@ -478,7 +477,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         entries.append(.excludePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
     }
     
-    entries.append(.excludePeerInfo("Choose chats and types of chats that will never appear in the filter."))
+    entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
     
     return entries
 }
@@ -502,31 +501,32 @@ func chatListFilterAddChatsController(context: AccountContext, filter: ChatListF
 }
     
 private func internalChatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, applyAutomatically: Bool, updated: @escaping (ChatListFilter) -> Void) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let additionalCategories: [ChatListNodeAdditionalCategory] = [
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.contacts.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: .white), color: .blue),
-            title: "Contacts"
+            title: presentationData.strings.ChatListFolder_CategoryContacts
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.nonContacts.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/UnknownUser"), color: .white), color: .yellow),
-            title: "Non-Contacts"
+            title: presentationData.strings.ChatListFolder_CategoryNonContacts
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.groups.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: .white), color: .green),
-            title: "Groups"
+            title: presentationData.strings.ChatListFolder_CategoryGroups
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.channels.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: .white), color: .red),
-            title: "Channels"
+            title: presentationData.strings.ChatListFolder_CategoryChannels
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.bots.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: .white), color: .violet),
-            title: "Bots"
+            title: presentationData.strings.ChatListFolder_CategoryBots
         )
     ]
     var selectedCategories = Set<Int>()
@@ -543,7 +543,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(selectedChats: Set(filter.data.includePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filter.data.includePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -601,21 +601,22 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
 }
 
 private func internalChatListFilterExcludeChatsController(context: AccountContext, filter: ChatListFilter, applyAutomatically: Bool, updated: @escaping (ChatListFilter) -> Void) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let additionalCategories: [ChatListNodeAdditionalCategory] = [
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.muted.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: .white), color: .red),
-            title: "Muted"
+            title: presentationData.strings.ChatListFolder_CategoryMuted
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.read.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: .white), color: .blue),
-            title: "Read"
+            title: presentationData.strings.ChatListFolder_CategoryRead
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.archived.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: .white), color: .yellow),
-            title: "Archived"
+            title: presentationData.strings.ChatListFolder_CategoryArchived
         ),
     ]
     var selectedCategories = Set<Int>()
@@ -629,7 +630,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         selectedCategories.insert(AdditionalExcludeCategoryId.archived.rawValue)
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(selectedChats: Set(filter.data.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filter.data.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -729,7 +730,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     if let currentPreset = currentPreset {
         initialName = currentPreset.title
     } else {
-        initialName = "New Folder"
+        initialName = ""
     }
     let initialState = ChatListFilterPresetControllerState(name: initialName, changedName: currentPreset != nil, includeCategories: currentPreset?.data.categories ?? [], excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, excludeArchived: currentPreset?.data.excludeArchived ?? false, additionallyIncludePeers: currentPreset?.data.includePeers ?? [], additionallyExcludePeers: currentPreset?.data.excludePeers ?? [])
     let stateValue = Atomic(value: initialState)
@@ -738,24 +739,25 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         statePromise.set(stateValue.modify { current in
             var state = f(current)
             if !state.changedName {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
                 switch chatListFilterType(filter) {
                 case .generic:
                     state.name = initialName
                 case .unmuted:
-                    state.name = "Not Muted"
+                    state.name = presentationData.strings.ChatListFolder_NameNonMuted
                 case .unread:
-                    state.name = "Unread"
+                    state.name = presentationData.strings.ChatListFolder_NameUnread
                 case .channels:
-                    state.name = "Channels"
+                    state.name = presentationData.strings.ChatListFolder_NameChannels
                 case .groups:
-                    state.name = "Groups"
+                    state.name = presentationData.strings.ChatListFolder_NameGroups
                 case .bots:
-                    state.name = "Bots"
+                    state.name = presentationData.strings.ChatListFolder_NameBots
                 case .contacts:
-                    state.name = "Contacts"
+                    state.name = presentationData.strings.ChatListFolder_NameContacts
                 case .nonContacts:
-                    state.name = "Non-Contacts"
+                    state.name = presentationData.strings.ChatListFolder_NameNonContacts
                 }
             }
             return state
@@ -968,7 +970,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             applyImpl?()
         })
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? "Edit Folder" : "Create Folder"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         
@@ -1001,12 +1003,11 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     }
     let displaySaveAlert: () -> Void = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: nil, text: "You have changed the filter. Apply changes?", actions: [
-            TextAlertAction(type: .genericAction, title: "Discard", action: {
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.ChatListFolder_DiscardConfirmation, actions: [
+            TextAlertAction(type: .genericAction, title: presentationData.strings.ChatListFolder_DiscardDiscard, action: {
                 dismissImpl?()
             }),
-            TextAlertAction(type: .defaultAction, title: "Apply", action: {
-            applyImpl?()
+            TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatListFolder_DiscardCancel, action: {
         })]), nil)
     }
     attemptNavigationImpl = {

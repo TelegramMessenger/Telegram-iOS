@@ -55,6 +55,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((ContactListPeerId) -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
     var removeSelectedPeer: ((ContactListPeerId) -> Void)?
+    var removeSelectedCategory: ((Int) -> Void)?
     var additionalCategorySelected: ((Int) -> Void)?
     
     var editableTokens: [EditableTokenListToken] = []
@@ -83,9 +84,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        if case let .chatSelection(selectedChats, additionalCategories) = mode {
-            placeholder = self.presentationData.strings.Common_Search
-            let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: [.excludeSavedMessages], isSelecting: true, additionalCategories: additionalCategories?.categories ?? []), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+        if case let .chatSelection(_, selectedChats, additionalCategories) = mode {
+            placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
+            let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSavedMessages], isSelecting: true, additionalCategories: additionalCategories?.categories ?? []), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
             chatListNode.updateState { state in
                 var state = state
                 for peerId in selectedChats {
@@ -136,7 +137,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         let searchText = ValuePromise<String>()
         
         self.tokenListNode.deleteToken = { [weak self] id in
-            self?.removeSelectedPeer?(ContactListPeerId.peer(id as! PeerId))
+            if let id = id as? PeerId {
+                self?.removeSelectedPeer?(ContactListPeerId.peer(id))
+            } else if let id = id as? Int {
+                self?.removeSelectedCategory?(id)
+            }
         }
         
         self.tokenListNode.textUpdated = { [weak self] text in

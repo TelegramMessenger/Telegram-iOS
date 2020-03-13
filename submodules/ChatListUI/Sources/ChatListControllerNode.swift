@@ -200,7 +200,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             }, present: { _ in })
             
             let items = (0 ..< 2).map { _ -> ChatListItem in
-                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, isInFilter: false, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: []), peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, isInFilter: false, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: []), peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -274,19 +274,19 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     
     private var floatingHeaderOffset: CGFloat?
     
-    private var emptyNode: ChatListEmptyNode?
+    private(set) var emptyNode: ChatListEmptyNode?
     var emptyShimmerEffectNode: ChatListShimmerNode?
     let listNode: ChatListNode
     
     private var validLayout: (CGSize, UIEdgeInsets, CGFloat)?
     
-    init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter?, previewing: Bool, presentationData: PresentationData, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
+    init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.becameEmpty = becameEmpty
         self.emptyAction = emptyAction
         
-        self.listNode = ChatListNode(context: context, groupId: groupId, chatListFilter: filter, previewing: previewing, controlsHistoryPreload: false, mode: .chatList, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.listNode = ChatListNode(context: context, groupId: groupId, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         super.init()
         
@@ -401,6 +401,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let groupId: PeerGroupId
     private let previewing: Bool
+    private let controlsHistoryPreload: Bool
     private let filterBecameEmpty: (ChatListFilter?) -> Void
     private let filterEmptyAction: (ChatListFilter?) -> Void
     
@@ -498,6 +499,10 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         
         self.currentItemStateValue.set(itemNode.listNode.state)
+        
+        if self.controlsHistoryPreload {
+            self.context.account.viewTracker.chatListPreloadItems.set(itemNode.listNode.preloadItems.get())
+        }
     }
     
     var activateSearch: (() -> Void)?
@@ -513,12 +518,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([PeerId]) -> Void)?
     
-    init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
+    init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
         self.groupId = groupId
         self.previewing = previewing
         self.filterBecameEmpty = filterBecameEmpty
         self.filterEmptyAction = filterEmptyAction
+        self.controlsHistoryPreload = controlsHistoryPreload
         
         self.presentationData = presentationData
         
@@ -526,7 +532,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         
         super.init()
         
-        let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: nil, previewing: self.previewing, presentationData: presentationData, becameEmpty: { [weak self] filter in
+        let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: nil, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: presentationData, becameEmpty: { [weak self] filter in
             self?.filterBecameEmpty(filter)
         }, emptyAction: { [weak self] filter in
             self?.filterEmptyAction(filter)
@@ -541,6 +547,14 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
             guard let strongSelf = self, strongSelf.availableFilters.count > 1 else {
                 return []
+            }
+            switch strongSelf.currentItemNode.visibleContentOffset() {
+            case let .known(value):
+                if value < -1.0 {
+                    return []
+                }
+            case .none, .unknown:
+                break
             }
             let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
             return directions
@@ -575,6 +589,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         case .began:
             self.transitionFractionOffset = 0.0
             if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
+                for (id, itemNode) in self.itemNodes {
+                    if id != selectedId {
+                        itemNode.emptyNode?.restartAnimation()
+                    }
+                }
                 if let presentationLayer = itemNode.layer.presentation() {
                     self.transitionFraction = presentationLayer.frame.minX / layout.size.width
                     self.transitionFractionOffset = self.transitionFraction
@@ -765,7 +784,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
                 completion?()
             } else if self.pendingItemNode == nil {
-                let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[index].filter, previewing: self.previewing, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
+                let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[index].filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
                     self?.filterBecameEmpty(filter)
                 }, emptyAction: { [weak self] filter in
                     self?.filterEmptyAction(filter)
@@ -869,7 +888,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 validNodeIds.append(id)
                 
                 if self.itemNodes[id] == nil && self.enableAdjacentFilterLoading && !self.disableItemNodeOperationsWhileAnimating {
-                    let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[i].filter, previewing: self.previewing, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
+                    let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[i].filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
                         self?.filterBecameEmpty(filter)
                     }, emptyAction: { [weak self] filter in
                         self?.filterEmptyAction(filter)
@@ -935,6 +954,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     
     let containerNode: ChatListContainerNode
+    private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     weak var controller: ChatListControllerImpl?
     
@@ -958,6 +978,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var dismissSelfIfCompletedPresentation: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
     var emptyListAction: (() -> Void)?
+    var cancelEditing: (() -> Void)?
 
     let debugListView = ListView()
     
@@ -968,7 +989,7 @@ final class ChatListControllerNode: ASDisplayNode {
         
         var filterBecameEmpty: ((ChatListFilter?) -> Void)?
         var filterEmptyAction: ((ChatListFilter?) -> Void)?
-        self.containerNode = ChatListContainerNode(context: context, groupId: groupId, previewing: previewing, presentationData: presentationData, filterBecameEmpty: { filter in
+        self.containerNode = ChatListContainerNode(context: context, groupId: groupId, previewing: previewing, controlsHistoryPreload: controlsHistoryPreload, presentationData: presentationData, filterBecameEmpty: { filter in
             filterBecameEmpty?(filter)
         }, filterEmptyAction: { filter in
             filterEmptyAction?(filter)
@@ -1008,6 +1029,17 @@ final class ChatListControllerNode: ASDisplayNode {
         super.didLoad()
         
         (self.view as? ChatListControllerNodeView)?.controller = self.controller
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.tapRecognizer = tapRecognizer
+        self.view.addGestureRecognizer(tapRecognizer)
+        tapRecognizer.isEnabled = false
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.cancelEditing?()
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -1077,6 +1109,8 @@ final class ChatListControllerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.containerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, transition: transition)
+        
+        self.tapRecognizer?.isEnabled = self.isReorderingFilters
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: transition)

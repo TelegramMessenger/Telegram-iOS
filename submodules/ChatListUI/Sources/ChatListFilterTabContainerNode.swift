@@ -68,7 +68,9 @@ private final class ItemNode: ASDisplayNode {
     private let shortTitleNode: ImmediateTextNode
     private let badgeContainerNode: ASDisplayNode
     private let badgeTextNode: ImmediateTextNode
-    private let badgeBackgroundNode: ASImageNode
+    private let badgeBackgroundActiveNode: ASImageNode
+    private let badgeBackgroundInactiveNode: ASImageNode
+    
     private var deleteButtonNode: ItemNodeDeleteButtonNode?
     private let buttonNode: HighlightTrackingButtonNode
     
@@ -101,9 +103,14 @@ private final class ItemNode: ASDisplayNode {
         self.badgeTextNode = ImmediateTextNode()
         self.badgeTextNode.displaysAsynchronously = false
         
-        self.badgeBackgroundNode = ASImageNode()
-        self.badgeBackgroundNode.displaysAsynchronously = false
-        self.badgeBackgroundNode.displayWithoutProcessing = true
+        self.badgeBackgroundActiveNode = ASImageNode()
+        self.badgeBackgroundActiveNode.displaysAsynchronously = false
+        self.badgeBackgroundActiveNode.displayWithoutProcessing = true
+        
+        self.badgeBackgroundInactiveNode = ASImageNode()
+        self.badgeBackgroundInactiveNode.displaysAsynchronously = false
+        self.badgeBackgroundInactiveNode.displayWithoutProcessing = true
+        self.badgeBackgroundInactiveNode.isHidden = true
         
         self.buttonNode = HighlightTrackingButtonNode()
         
@@ -112,7 +119,8 @@ private final class ItemNode: ASDisplayNode {
         self.extractedContainerNode.contentNode.addSubnode(self.extractedBackgroundNode)
         self.extractedContainerNode.contentNode.addSubnode(self.titleNode)
         self.extractedContainerNode.contentNode.addSubnode(self.shortTitleNode)
-        self.badgeContainerNode.addSubnode(self.badgeBackgroundNode)
+        self.badgeContainerNode.addSubnode(self.badgeBackgroundActiveNode)
+        self.badgeContainerNode.addSubnode(self.badgeBackgroundInactiveNode)
         self.badgeContainerNode.addSubnode(self.badgeTextNode)
         self.extractedContainerNode.contentNode.addSubnode(self.badgeContainerNode)
         self.extractedContainerNode.contentNode.addSubnode(self.buttonNode)
@@ -150,11 +158,12 @@ private final class ItemNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateText(title: String, shortTitle: String, unreadCount: Int, isNoFilter: Bool, isSelected: Bool, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func updateText(title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, isSelected: Bool, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
-            self.badgeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.list.itemCheckColors.fillColor)
+            self.badgeBackgroundActiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeActiveBackgroundColor)
+            self.badgeBackgroundInactiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor)
         }
         
         self.containerNode.isGestureEnabled = !isNoFilter && !isEditing && !isReordering
@@ -191,6 +200,8 @@ private final class ItemNode: ASDisplayNode {
         self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
         if unreadCount != 0 {
             self.badgeTextNode.attributedText = NSAttributedString(string: "\(unreadCount)", font: Font.regular(14.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
+            self.badgeBackgroundActiveNode.isHidden = !isSelected && !unreadHasUnmuted
+            self.badgeBackgroundInactiveNode.isHidden = isSelected || unreadHasUnmuted
         }
         
         if self.isReordering != isReordering {
@@ -222,7 +233,8 @@ private final class ItemNode: ASDisplayNode {
         let badgeInset: CGFloat = 4.0
         let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width + 5.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
         self.badgeContainerNode.frame = badgeBackgroundFrame
-        self.badgeBackgroundNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
+        self.badgeBackgroundActiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
+        self.badgeBackgroundInactiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
         self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((badgeBackgroundFrame.width - badgeSize.width) / 2.0), y: floor((badgeBackgroundFrame.height - badgeSize.height) / 2.0)), size: badgeSize)
         
         let width: CGFloat
@@ -340,9 +352,14 @@ enum ChatListFilterTabEntryId: Hashable {
     case filter(Int32)
 }
 
+struct ChatListFilterTabEntryUnreadCount: Equatable {
+    let value: Int
+    let hasUnmuted: Bool
+}
+
 enum ChatListFilterTabEntry: Equatable {
     case all(unreadCount: Int)
-    case filter(id: Int32, text: String, unreadCount: Int)
+    case filter(id: Int32, text: String, unread: ChatListFilterTabEntryUnreadCount)
     
     var id: ChatListFilterTabEntryId {
         switch self {
@@ -356,7 +373,7 @@ enum ChatListFilterTabEntry: Equatable {
     func title(strings: PresentationStrings) -> String {
         switch self {
         case .all:
-            return "All Chats"
+            return strings.ChatList_Tabs_AllChats
         case let .filter(filter):
             return filter.text
         }
@@ -365,7 +382,7 @@ enum ChatListFilterTabEntry: Equatable {
     func shortTitle(strings: PresentationStrings) -> String {
         switch self {
         case .all:
-            return "All"
+            return strings.ChatList_Tabs_All
         case let .filter(filter):
             return filter.text
         }
@@ -637,18 +654,21 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 self.itemNodes[filter.id] = itemNode
             }
             let unreadCount: Int
+            let unreadHasUnmuted: Bool
             var isNoFilter: Bool = false
             switch filter {
             case let .all(count):
                 unreadCount = count
+                unreadHasUnmuted = true
                 isNoFilter = true
             case let .filter(filter):
-                unreadCount = filter.unreadCount
+                unreadCount = filter.unread.value
+                unreadHasUnmuted = filter.unread.hasUnmuted
             }
             if !wasAdded && (itemNode.unreadCount != 0) != (unreadCount != 0) {
                 badgeAnimations[filter.id] = (unreadCount != 0) ? .in : .out
             }
-            itemNode.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, isNoFilter: isNoFilter, isSelected: selectedFilter == filter.id, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            itemNode.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, isSelected: selectedFilter == filter.id, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {

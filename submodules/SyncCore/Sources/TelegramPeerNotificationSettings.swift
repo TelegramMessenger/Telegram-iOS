@@ -145,14 +145,14 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: .default)
     }
     
-    public var isRemovedFromTotalUnreadCount: Bool {
+    public func isRemovedFromTotalUnreadCount(`default`: Bool) -> Bool {
         switch self.muteState {
             case .unmuted:
                 return false
             case .muted:
                 return true
             case .default:
-                return false
+                return `default`
         }
     }
     

@@ -20,7 +20,7 @@ import ChatListSearchItemNode
 import ContextUI
 
 public enum ChatListItemContent {
-    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
+    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
     case groupReference(groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
@@ -667,7 +667,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let contentPeer: ContentPeer
             let combinedReadState: CombinedPeerReadState?
             let unreadCount: (count: Int32, unread: Bool, muted: Bool, mutedCount: Int32?)
-            let notificationSettings: PeerNotificationSettings?
+            let isRemovedFromTotalUnreadCount: Bool
             let peerPresence: PeerPresence?
             let embeddedState: PeerChatListEmbeddedInterfaceState?
             let summaryInfo: ChatListMessageTagSummaryInfo
@@ -680,19 +680,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge, displayAsMessageValue, hasFailedMessagesValue):
+                case let .peer(messageValue, peerValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge, displayAsMessageValue, hasFailedMessagesValue):
                     message = messageValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
                     if let combinedReadState = combinedReadState, !isAdValue && !ignoreUnreadBadge {
-                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false, nil)
+                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, isRemovedFromTotalUnreadCountValue, nil)
                     } else {
                         unreadCount = (0, false, false, nil)
                     }
                     if isAdValue {
-                        notificationSettings = nil
+                        isRemovedFromTotalUnreadCount = false
                     } else {
-                        notificationSettings = notificationSettingsValue
+                        isRemovedFromTotalUnreadCount = isRemovedFromTotalUnreadCountValue
                     }
                     peerPresence = peerPresenceValue
                     embeddedState = embeddedStateValue
@@ -710,7 +710,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     message = messageValue
                     combinedReadState = nil
-                    notificationSettings = nil
+                    isRemovedFromTotalUnreadCount = false
                     embeddedState = nil
                     summaryInfo = ChatListMessageTagSummaryInfo()
                     inputActivities = nil
@@ -1038,12 +1038,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            var isMuted = false
-            if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                    isMuted = true
-                    currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.presentationData.theme)
-                }
+            var isMuted = isRemovedFromTotalUnreadCount
+            if isMuted {
+                currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.presentationData.theme)
             }
             
             let statusWidth: CGFloat

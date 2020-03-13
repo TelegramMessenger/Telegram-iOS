@@ -444,6 +444,12 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                 return false
             }
             if item.maxLength != 0 && newText.count > item.maxLength {
+                self.textNode.layer.addShakeAnimation()
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.error()
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                    let _ = hapticFeedback
+                })
                 return false
             }
         }

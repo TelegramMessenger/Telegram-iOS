@@ -4,14 +4,7 @@ static_library(
     name = "LegacyMediaPickerUI",
     srcs = glob([
         "Sources/**/*.swift",
-        "Sources/**/*.m",
     ]),
-    headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/LegacyMediaPickerUI.h"]),
-    exported_headers = glob([
-        "Sources/**/*.h",
-    ], exclude = ["Sources/LegacyMediaPickerUI.h"]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
@@ -27,6 +20,7 @@ static_library(
         "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//submodules/LegacyMediaPickerUI/LegacyImageProcessors:LegacyImageProcessors",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-public struct HistoryPreloadIndex: Comparable, CustomStringConvertible {
+public struct HistoryPreloadIndex: Hashable, Comparable, CustomStringConvertible {
     public let index: ChatListIndex?
     public let hasUnread: Bool
     public let isMuted: Bool
@@ -59,16 +59,8 @@ private struct HistoryPreloadHole: Hashable, Comparable, CustomStringConvertible
     let preloadIndex: HistoryPreloadIndex
     let hole: MessageOfInterestHole
     
-    static func ==(lhs: HistoryPreloadHole, rhs: HistoryPreloadHole) -> Bool {
-        return lhs.preloadIndex == rhs.preloadIndex && lhs.hole == rhs.hole
-    }
-    
     static func <(lhs: HistoryPreloadHole, rhs: HistoryPreloadHole) -> Bool {
         return lhs.preloadIndex < rhs.preloadIndex
-    }
-    
-    var hashValue: Int {
-        return self.preloadIndex.index.hashValue &* 31 &+ self.hole.hashValue
     }
     
     var description: String {
@@ -242,6 +234,18 @@ private final class AdditionalPreloadPeerIdsContext {
     }
 }
 
+public struct ChatHistoryPreloadItem {
+    public let index: ChatListIndex
+    public let isMuted: Bool
+    public let hasUnread: Bool
+    
+    public init(index: ChatListIndex, isMuted: Bool, hasUnread: Bool) {
+        self.index = index
+        self.isMuted = isMuted
+        self.hasUnread = hasUnread
+    }
+}
+
 final class ChatHistoryPreloadManager {
     private let queue = Queue()
     
@@ -266,12 +270,14 @@ final class ChatHistoryPreloadManager {
     }
     
     private let additionalPreloadPeerIdsContext:  QueueLocalObject<AdditionalPreloadPeerIdsContext>
+    private let preloadItemsSignal: Signal<[ChatHistoryPreloadItem], NoError>
     
-    init(postbox: Postbox, network: Network, accountPeerId: PeerId, networkState: Signal<AccountNetworkState, NoError>) {
+    init(postbox: Postbox, network: Network, accountPeerId: PeerId, networkState: Signal<AccountNetworkState, NoError>, preloadItemsSignal: Signal<[ChatHistoryPreloadItem], NoError>) {
         self.postbox = postbox
         self.network = network
         self.accountPeerId = accountPeerId
         self.download.set(network.background())
+        self.preloadItemsSignal = preloadItemsSignal
         
         let queue = Queue.mainQueue()
         self.additionalPreloadPeerIdsContext = QueueLocalObject(queue: queue, generate: {
@@ -324,31 +330,35 @@ final class ChatHistoryPreloadManager {
             }
             return disposable
         }
-        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), self.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()), additionalPeerIds)
-        |> delay(1.0, queue: .mainQueue())
-        |> deliverOnMainQueue).start(next: { [weak self] view, additionalPeerIds in
-            guard let strongSelf = self else {
-                return
-            }
-            #if DEBUG
-            return
-            #endif
-            
-            var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
+        
+        /*let signal = self.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
+        |> map { view -> [ChatHistoryPreloadItem] in
+            var result: [ChatHistoryPreloadItem] = []
             for entry in view.0.entries {
-                if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _, _, _) = entry {
+                if case let .MessageEntry(index, _, readState, isMuted, _, _, _, _, _, _) = entry {
                     var hasUnread = false
                     if let readState = readState {
                         hasUnread = readState.count != 0
                     }
-                    var isMuted = false
-                    if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                            isMuted = true
-                        }
-                    }
-                    indices.append((ChatHistoryPreloadIndex(index: index, entity: .peer(index.messageIndex.id.peerId)), hasUnread, isMuted))
+                    result.append(ChatHistoryPreloadItem(index: index, isMuted: isMuted, hasUnread: hasUnread))
                 }
+            }
+            return result
+        }*/
+        
+        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), self.preloadItemsSignal, additionalPeerIds)
+        |> delay(1.0, queue: .mainQueue())
+        |> deliverOnMainQueue).start(next: { [weak self] loadItems, additionalPeerIds in
+            guard let strongSelf = self else {
+                return
+            }
+            #if DEBUG
+            //return
+            #endif
+            
+            var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
+            for item in loadItems {
+                indices.append((ChatHistoryPreloadIndex(index: item.index, entity: .peer(item.index.messageIndex.id.peerId)), item.hasUnread, item.isMuted))
             }
             
             strongSelf.update(indices: indices, additionalPeerIds: additionalPeerIds)

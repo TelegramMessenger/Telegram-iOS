@@ -706,8 +706,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? "" : "\(otherSessionCount + 1)"))
         }
         if enableFilters {
-            //TODO:localize
-            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/ChatListFilters")?.precomposed(), "Chat Folders", ""))
+            entries.append(.filters(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/ChatListFilters")?.precomposed(), presentationData.strings.Settings_ChatFolders, ""))
         }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
@@ -862,7 +861,7 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         
         for account in other {
             let id = account.0.id
-            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? "\(account.2)" : "", icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
+            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
                 guard let strongSelf = self else {
                     return
                 }

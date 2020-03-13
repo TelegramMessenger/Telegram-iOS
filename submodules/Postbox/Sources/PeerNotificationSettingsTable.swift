@@ -199,20 +199,24 @@ final class PeerNotificationSettingsTable: Table {
         var added = Set<PeerId>()
         var removed = Set<PeerId>()
         
+        var globalNotificationSettings: PostboxGlobalNotificationSettings?
+        
         for (peerId, initialSettings) in self.updatedInitialSettings {
             guard let peer = postbox.peerTable.get(peerId) else {
                 continue
             }
-            var wasParticipating = false
-            let include = shouldPeerParticipateInUnreadCountStats(peer: peer)
             
-            if include, let initialEffective = initialSettings.effective {
-                wasParticipating = !initialEffective.isRemovedFromTotalUnreadCount
+            let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
+            if let current = globalNotificationSettings {
+                globalNotificationSettingsValue = current
+            } else {
+                globalNotificationSettingsValue = postbox.getGlobalNotificationSettings()
+                globalNotificationSettings = globalNotificationSettingsValue
             }
-            var isParticipating = false
-            if include, let resultEffective = self.cachedSettings[peerId]?.effective {
-                isParticipating = !resultEffective.isRemovedFromTotalUnreadCount
-            }
+            
+            let wasParticipating = !resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: initialSettings.effective)
+            let isParticipating = !resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: self.cachedSettings[peerId]?.effective)
+            
             if wasParticipating != isParticipating {
                 if isParticipating {
                     added.insert(peerId)

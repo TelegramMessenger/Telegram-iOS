@@ -60,7 +60,7 @@ public struct GlobalNotificationSettingsSet: PostboxCoding, Equatable {
     }
 }
 
-public struct GlobalNotificationSettings: PreferencesEntry, Equatable {
+public struct GlobalNotificationSettings: PreferencesEntry, Equatable, PostboxGlobalNotificationSettings {
     public var toBeSynchronized: GlobalNotificationSettingsSet?
     public var remote: GlobalNotificationSettingsSet
     
@@ -72,6 +72,44 @@ public struct GlobalNotificationSettings: PreferencesEntry, Equatable {
         } else {
             return self.remote
         }
+    }
+    
+    public func defaultIncludePeer(peer: Peer) -> Bool {
+        let settings = self.effective
+        if peer is TelegramUser || peer is TelegramSecretChat {
+            return settings.privateChats.enabled
+        } else if peer is TelegramGroup {
+            return settings.groupChats.enabled
+        } else if let channel = peer as? TelegramChannel {
+            switch channel.info {
+            case .group:
+                return settings.groupChats.enabled
+            case .broadcast:
+                return settings.channels.enabled
+            }
+        } else {
+            return false
+        }
+    }
+    
+    public func isEqualInDefaultPeerInclusion(other: PostboxGlobalNotificationSettings) -> Bool {
+        guard let other = other as? GlobalNotificationSettings else {
+            return false
+        }
+        let settings = self.effective
+        let otherSettings = other.effective
+        
+        if settings.privateChats.enabled != otherSettings.privateChats.enabled {
+            return false
+        }
+        if settings.groupChats.enabled != otherSettings.groupChats.enabled {
+            return false
+        }
+        if settings.channels.enabled != otherSettings.channels.enabled {
+            return false
+        }
+        
+        return true
     }
     
     public init(toBeSynchronized: GlobalNotificationSettingsSet?, remote: GlobalNotificationSettingsSet) {

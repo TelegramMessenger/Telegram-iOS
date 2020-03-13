@@ -2736,7 +2736,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: peerReadStateData.totalState ?? ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
                     
                     var globalRemainingUnreadChatCount = count
-                    if !notificationSettings.isRemovedFromTotalUnreadCount && peerReadStateData.unreadCount > 0 {
+                    if !notificationSettings.isRemovedFromTotalUnreadCount(default: false) && peerReadStateData.unreadCount > 0 {
                         if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
                             globalRemainingUnreadChatCount -= peerReadStateData.unreadCount
                         } else {
@@ -4432,7 +4432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
                                 var globalRemainingUnreadChatCount = totalChatCount
-                                if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
+                                if !notificationSettings.isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
                                     if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
                                         globalRemainingUnreadChatCount -= unreadCount
                                     } else {

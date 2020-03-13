@@ -799,10 +799,8 @@ open class NavigationBar: ASDisplayNode {
     }
     
     private func requestLayout() {
-        if self.transitionState == nil {
-            self.requestedLayout = true
-            self.setNeedsLayout()
-        }
+        self.requestedLayout = true
+        self.setNeedsLayout()
     }
     
     override open func layout() {

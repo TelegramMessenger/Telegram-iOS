@@ -106,8 +106,7 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         case .chats:
             self.sectionHeaderNode.title = strings.Cache_ByPeerHeader.uppercased()
         case .chatTypes:
-            //TODO:localize
-            self.sectionHeaderNode.title = "CHAT TYPES"
+            self.sectionHeaderNode.title = strings.ChatList_ChatTypesSection.uppercased()
         }
         
         self.sectionHeaderNode.action = actionTitle
@@ -157,8 +156,7 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         case .chats:
             self.sectionHeaderNode.title = strings.Cache_ByPeerHeader.uppercased()
         case .chatTypes:
-            //TODO:localize
-            self.sectionHeaderNode.title = "CHAT TYPES"
+            self.sectionHeaderNode.title = strings.ChatList_ChatTypesSection.uppercased()
         }
         
         self.sectionHeaderNode.action = actionTitle

@@ -16,7 +16,6 @@ final class ViewTracker {
     private let getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?
     private let getCachedPeerData: (PeerId) -> CachedPeerData?
     private let getPeerPresence: (PeerId) -> PeerPresence?
-    private let getTotalUnreadState: () -> ChatListTotalUnreadState
     private let getPeerReadState: (PeerId) -> CombinedPeerReadState?
     private let operationLogGetOperations: (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry]
     private let operationLogGetTailIndex: (PeerOperationLogTag) -> Int32?
@@ -59,14 +58,13 @@ final class ViewTracker {
     private var failedMessageIdsViews = Bag<(MutableFailedMessageIdsView, ValuePipe<FailedMessageIdsView>)>()
 
     
-    init(queue: Queue, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadState: @escaping () -> ChatListTotalUnreadState, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    init(queue: Queue, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.renderMessage = renderMessage
         self.getPeer = getPeer
         self.getPeerNotificationSettings = getPeerNotificationSettings
         self.getCachedPeerData = getCachedPeerData
         self.getPeerPresence = getPeerPresence
-        self.getTotalUnreadState = getTotalUnreadState
         self.getPeerReadState = getPeerReadState
         self.operationLogGetOperations = operationLogGetOperations
         self.operationLogGetTailIndex = operationLogGetTailIndex
@@ -353,21 +351,18 @@ final class ViewTracker {
             }
         }
         
-        if !transaction.chatListOperations.isEmpty || !transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.currentUpdatedPeers.isEmpty || !transaction.currentInvalidateMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentOperationsByPeerId.isEmpty || transaction.replacedAdditionalChatListItems != nil || !transaction.currentUpdatedPeerPresences.isEmpty ||
-            !transaction.updatedFailedMessagePeerIds.isEmpty {
-            for (mutableView, pipe) in self.chatListViews.copyItems() {
-                let context = MutableChatListViewReplayContext()
-                if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
-                    mutableView.complete(postbox: postbox, context: context)
-                    mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
-                        return self.getPeer(id)
-                    }, getPeerNotificationSettings: self.getPeerNotificationSettings, getPeerPresence: self.getPeerPresence)
-                    pipe.putNext((ChatListView(mutableView), .Generic))
-                }
+        for (mutableView, pipe) in self.chatListViews.copyItems() {
+            let context = MutableChatListViewReplayContext()
+            if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
+                mutableView.complete(postbox: postbox, context: context)
+                mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
+                    return self.getPeer(id)
+                }, getPeerNotificationSettings: self.getPeerNotificationSettings, getPeerPresence: self.getPeerPresence)
+                pipe.putNext((ChatListView(mutableView), .Generic))
             }
-            
-            self.updateTrackedChatListHoles()
         }
+        
+        self.updateTrackedChatListHoles()
         
         if updateTrackedHoles {
             self.updateTrackedHoles()

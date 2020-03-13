@@ -7,6 +7,7 @@ import TelegramPresentationData
 struct EditableTokenListToken {
     let id: AnyHashable
     let title: String
+    let fixedPosition: Int?
 }
 
 private let caretIndicatorImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(rgb: 0x3350ee))
@@ -203,7 +204,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             self.selectedTokenId = nil
         }
         
-        let sideInset: CGFloat = 4.0 + leftInset
+        let sideInset: CGFloat = 12.0 + leftInset
         let verticalInset: CGFloat = 6.0
         
         let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
@@ -251,8 +252,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                     let previousFrame = tokenNode.frame
                     if !previousFrame.origin.y.isEqual(to: tokenFrame.origin.y) && previousFrame.size.width.isEqual(to: tokenFrame.size.width) {
                         let initialStartPosition = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                        let initialEndPosition = CGPoint(x: -previousFrame.size.width / 2.0, y: previousFrame.midY)
-                        let targetStartPosition = CGPoint(x: width + tokenFrame.size.width, y: tokenFrame.midY)
+                        let initialEndPosition = CGPoint(x: previousFrame.midY > tokenFrame.midY ? -previousFrame.size.width / 2.0 : width, y: previousFrame.midY)
+                        let targetStartPosition = CGPoint(x: (previousFrame.midY > tokenFrame.midY ? (width + tokenFrame.size.width) : -tokenFrame.size.width), y: tokenFrame.midY)
                         let targetEndPosition = CGPoint(x: tokenFrame.midX, y: tokenFrame.midY)
                         tokenNode.frame = tokenFrame
                         
