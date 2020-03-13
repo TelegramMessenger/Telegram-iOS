@@ -212,9 +212,7 @@ private func requestStats(postbox: Postbox, network: Network, datacenterId: Int3
         |> map { result -> ChannelStats? in
             return ChannelStats(apiBroadcastStats: result, peerId: peerId)
         }
-        |> `catch` { _ -> Signal<ChannelStats?, NoError> in
-            return .single(nil)
-        }
+        |> retryRequest
     }
 }
 
