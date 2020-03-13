@@ -5439,7 +5439,7 @@ Any member of this group will be able to see messages in the channel.";
 "ChatListFolder.AddChats" = "Add Chats";
 "ChatListFolder.IncludeSectionInfo" = "Choose chats and types of chats that will appear in this folder.";
 "ChatListFolder.ExcludedSectionHeader" = "EXCLUDED CHATS";
-"ChatListFolder.ExcludeSectionInfo" = "Choose chats and types of chats that will never appear in the folder.";
+"ChatListFolder.ExcludeSectionInfo" = "Choose chats and types of chats that will never appear in this folder.";
 "ChatListFolder.NameNonMuted" = "Not Muted";
 "ChatListFolder.NameUnread" = "Unread";
 "ChatListFolder.NameChannels" = "Channels";

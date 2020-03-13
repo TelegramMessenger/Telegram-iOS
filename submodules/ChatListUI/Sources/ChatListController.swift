@@ -1148,7 +1148,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         return
                     }
                     strongSelf.processedFeaturedFilters = true
-                    if !featuredState.isSeen && !featuredState.filters.isEmpty && filters.isEmpty {
+                    if !featuredState.isSeen && !featuredState.filters.isEmpty {
                         let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
                         |> deliverOnMainQueue).start(next: { filters in
                             guard let strongSelf = self else {

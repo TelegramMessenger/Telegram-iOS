@@ -200,8 +200,8 @@ private final class ItemNode: ASDisplayNode {
         self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
         if unreadCount != 0 {
             self.badgeTextNode.attributedText = NSAttributedString(string: "\(unreadCount)", font: Font.regular(14.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
-            self.badgeBackgroundActiveNode.isHidden = !unreadHasUnmuted
-            self.badgeBackgroundInactiveNode.isHidden = unreadHasUnmuted
+            self.badgeBackgroundActiveNode.isHidden = !isSelected && !unreadHasUnmuted
+            self.badgeBackgroundInactiveNode.isHidden = isSelected || unreadHasUnmuted
         }
         
         if self.isReordering != isReordering {

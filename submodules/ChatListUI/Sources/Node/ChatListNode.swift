@@ -386,7 +386,7 @@ public enum ChatListNodeEmptyState: Equatable {
 }
 
 public final class ChatListNode: ListView {
-    private let controlsHistoryPreload: Bool
+    private let fillPreloadItems: Bool
     private let context: AccountContext
     private let groupId: PeerGroupId
     private let mode: ChatListNodeMode
@@ -485,12 +485,14 @@ public final class ChatListNode: ListView {
     
     private var hapticFeedback: HapticFeedback?
     
-    public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    let preloadItems = Promise<[ChatHistoryPreloadItem]>([])
+    
+    public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
         self.chatListFilter = chatListFilter
         self.chatListFilterValue.set(.single(chatListFilter))
-        self.controlsHistoryPreload = controlsHistoryPreload
+        self.fillPreloadItems = fillPreloadItems
         self.mode = mode
         
         var isSelecting = false
@@ -1284,6 +1286,31 @@ public final class ChatListNode: ListView {
             let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
                 if let strongSelf = self {
                     strongSelf.chatListView = transition.chatListView
+                    
+                    if strongSelf.fillPreloadItems {
+                        let filteredEntries = transition.chatListView.filteredEntries
+                        var preloadItems: [ChatHistoryPreloadItem] = []
+                        if transition.chatListView.originalView.laterIndex == nil {
+                            for entry in filteredEntries.reversed() {
+                                switch entry {
+                                case let .PeerEntry(index, _, _, combinedReadState, isMuted, _, _, _, _, _, _, _, _, isAd, _, _):
+                                    if !isAd {
+                                        var hasUnread = false
+                                        if let combinedReadState = combinedReadState {
+                                            hasUnread = combinedReadState.count > 0
+                                        }
+                                        preloadItems.append(ChatHistoryPreloadItem(index: index, isMuted: isMuted, hasUnread: hasUnread))
+                                    }
+                                default:
+                                    break
+                                }
+                                if preloadItems.count >= 30 {
+                                    break
+                                }
+                            }
+                        }
+                        strongSelf.preloadItems.set(.single(preloadItems))
+                    }
                     
                     var pinnedOverscroll = false
                     if case .chatList = strongSelf.mode {
