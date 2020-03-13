@@ -1637,6 +1637,8 @@ extension PresentationThemeContextMenu: Codable {
         case destructive
         case badgeFill
         case badgeForeground
+        case badgeInactiveFill
+        case badgeInactiveForeground
         case extractedTint
     }
     
@@ -1656,6 +1658,8 @@ extension PresentationThemeContextMenu: Codable {
             destructiveColor: destructiveColor,
             badgeFillColor: (try? decodeColor(values, .badgeFill)) ?? destructiveColor,
             badgeForegroundColor: (try? decodeColor(values, .badgeForeground)) ?? backgroundColor,
+            badgeInactiveFillColor: (try? decodeColor(values, .badgeInactiveFill)) ?? destructiveColor,
+            badgeInactiveForegroundColor: (try? decodeColor(values, .badgeInactiveForeground)) ?? backgroundColor,
             extractedContentTintColor: (try? decodeColor(values, .extractedTint)) ?? backgroundColor
         )
     }

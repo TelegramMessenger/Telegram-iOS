@@ -2361,10 +2361,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 
                 for preset in presetList {
                     let filterType = chatListFilterType(preset)
-                    var badge = ""
+                    var badge: ContextMenuActionBadge?
                     for item in filterItems {
                         if item.0.id == preset.id && item.1 != 0 {
-                            badge = "\(item.1)"
+                            badge = ContextMenuActionBadge(value: "\(item.1)", color: item.2 ? .accent : .inactive)
                         }
                     }
                     items.append(.action(ContextMenuActionItem(text: preset.title, badge: badge, icon: { theme in

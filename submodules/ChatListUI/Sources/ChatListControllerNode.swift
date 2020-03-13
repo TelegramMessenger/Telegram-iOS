@@ -274,7 +274,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     
     private var floatingHeaderOffset: CGFloat?
     
-    private var emptyNode: ChatListEmptyNode?
+    private(set) var emptyNode: ChatListEmptyNode?
     var emptyShimmerEffectNode: ChatListShimmerNode?
     let listNode: ChatListNode
     
@@ -583,6 +583,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         case .began:
             self.transitionFractionOffset = 0.0
             if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
+                for (id, itemNode) in self.itemNodes {
+                    if id != selectedId {
+                        itemNode.emptyNode?.restartAnimation()
+                    }
+                }
                 if let presentationLayer = itemNode.layer.presentation() {
                     self.transitionFraction = presentationLayer.frame.minX / layout.size.width
                     self.transitionFractionOffset = self.transitionFraction

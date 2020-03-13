@@ -523,8 +523,10 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         primaryColor: UIColor(rgb: 0xffffff, alpha: 1.0),
         secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.8),
         destructiveColor: UIColor(rgb: 0xeb5545),
-        badgeFillColor: UIColor(rgb: 0xeb5545),
-        badgeForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        badgeFillColor: UIColor(rgb: 0xffffff),
+        badgeForegroundColor: UIColor(rgb: 0x000000),
+        badgeInactiveFillColor: UIColor(rgb: 0xffffff).withAlphaComponent(0.5),
+        badgeInactiveForegroundColor: UIColor(rgb: 0x000000),
         extractedContentTintColor: UIColor(rgb: 0xffffff, alpha: 1.0)
     )
 
