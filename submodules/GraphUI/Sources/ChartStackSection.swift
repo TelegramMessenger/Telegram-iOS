@@ -32,7 +32,8 @@ class ChartStackSection: UIView, ChartThemeContainer {
     var titleLabel: UILabel!
     var backButton: UIButton!
     
-    var controller: BaseChartController!
+    var controller: BaseChartController?
+    var theme: ChartTheme?
     
     init() {
         sectionContainerView = UIView()
@@ -82,6 +83,8 @@ class ChartStackSection: UIView, ChartThemeContainer {
     }
     
     func apply(theme: ChartTheme, animated: Bool) {
+        self.theme = theme
+        
         UIView.perform(animated: animated && self.isVisibleInWindow) {
             self.backgroundColor = theme.tableBackgroundColor
             
@@ -100,12 +103,13 @@ class ChartStackSection: UIView, ChartThemeContainer {
         if rangeView.isVisibleInWindow || chartView.isVisibleInWindow {
             chartView.loadDetailsViewIfNeeded()
             chartView.apply(theme: theme, animated: animated && chartView.isVisibleInWindow)
-            controller.apply(theme: theme, animated: animated)
+            controller?.apply(theme: theme, animated: animated)
             rangeView.apply(theme: theme, animated: animated && rangeView.isVisibleInWindow)
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval.random(in: 0...0.1)) {
                 self.chartView.loadDetailsViewIfNeeded()
-                self.controller.apply(theme: theme, animated: false)
+                
+                self.controller?.apply(theme: theme, animated: false)
                 self.chartView.apply(theme: theme, animated: false)
                 self.rangeView.apply(theme: theme, animated: false)
             }
@@ -115,7 +119,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
     }
     
     @objc private func didTapBackButton() {
-        controller.didTapZoomOut()
+        self.controller?.didTapZoomOut()
     }
     
     func setBackButtonVisible(_ visible: Bool, animated: Bool) {
@@ -124,6 +128,10 @@ class ChartStackSection: UIView, ChartThemeContainer {
     }
     
     func updateToolViews(animated: Bool) {
+        guard let controller = self.controller else {
+            return
+        }
+        
         rangeView.setRange(controller.currentChartHorizontalRangeFraction, animated: animated)
         rangeView.setRangePaging(enabled: controller.isChartRangePagingEnabled,
                                  minimumSize: controller.minimumSelectedChartRange)
@@ -156,14 +164,16 @@ class ChartStackSection: UIView, ChartThemeContainer {
     
     func setup(controller: BaseChartController, title: String) {
         self.controller = controller
-        
-        // Chart
-        chartView.renderers = controller.mainChartRenderers
-        chartView.userDidSelectCoordinateClosure = { [unowned self] point in
-            self.controller.chartInteractionDidBegin(point: point)
+        if let theme = self.theme {
+            controller.apply(theme: theme, animated: false)
         }
-        chartView.userDidDeselectCoordinateClosure = { [unowned self] in
-            self.controller.chartInteractionDidEnd()
+        
+        self.chartView.renderers = controller.mainChartRenderers
+        self.chartView.userDidSelectCoordinateClosure = { [unowned self] point in
+            self.controller?.chartInteractionDidBegin(point: point)
+        }
+        self.chartView.userDidDeselectCoordinateClosure = { [unowned self] in
+            self.controller?.chartInteractionDidEnd()
         }
         controller.cartViewBounds = { [unowned self] in
             return self.chartView.bounds
@@ -191,12 +201,11 @@ class ChartStackSection: UIView, ChartThemeContainer {
             self.updateToolViews(animated: animated)
         }
         
-        // Range view
-        rangeView.chartView.renderers = controller.navigationRenderers
-        rangeView.rangeDidChangeClosure = { range in
+        self.rangeView.chartView.renderers = controller.navigationRenderers
+        self.rangeView.rangeDidChangeClosure = { range in
             controller.updateChartRange(range)
         }
-        rangeView.touchedOutsideClosure = {
+        self.rangeView.touchedOutsideClosure = {
             controller.cancelChartInteraction()
         }
         controller.chartRangeUpdatedClosure = { [unowned self] (range, animated) in
@@ -205,18 +214,15 @@ class ChartStackSection: UIView, ChartThemeContainer {
         controller.chartRangePagingClosure = { [unowned self] (isEnabled, pageSize) in
             self.rangeView.setRangePaging(enabled: isEnabled, minimumSize: pageSize)
         }
-        
-        // Visibility view
-        visibilityView.selectionCallbackClosure = { [unowned self] visibility in
-            self.controller.updateChartsVisibility(visibility: visibility, animated: true)
+
+        self.visibilityView.selectionCallbackClosure = { [unowned self] visibility in
+            self.controller?.updateChartsVisibility(visibility: visibility, animated: true)
         }
         
         controller.initializeChart()
         updateToolViews(animated: false)
         
         rangeView.setRange(0.8...1.0, animated: false)
-//        TimeInterval.animationDurationMultipler = 0.00001
         controller.updateChartRange(0.8...1.0, animated: false)
-//        TimeInterval.animationDurationMultipler = 1.0
     }
 }
