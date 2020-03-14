@@ -138,6 +138,12 @@ private final class ChatListViewSpaceState {
             }
             
             if case .includePinnedAsUnpinned = pinned {
+                let unpinnedLowerBound: MutableChatListEntryIndex
+                let unpinnedUpperBound: MutableChatListEntryIndex
+                unpinnedUpperBound = .absoluteUpperBound
+                unpinnedLowerBound = MutableChatListEntryIndex(index: ChatListIndex.absoluteLowerBound, isMessage: true)
+                let resolvedUnpinnedAnchorIndex = min(unpinnedUpperBound, max(self.anchorIndex, unpinnedLowerBound))
+                
                 if lowerOrAtAnchorMessages.count < self.halfLimit || higherThanAnchorMessages.count < self.halfLimit {
                     let loadedMessages = postbox.chatListTable.entries(groupId: groupId, from: (ChatListIndex.pinnedLowerBound, true), to: (ChatListIndex.absoluteUpperBound, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit * 2, predicate: self.filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, groupId: groupId, predicate: $0) }).map(mapEntry).sorted(by: { $0.entryIndex < $1.entryIndex })
                     
@@ -146,7 +152,7 @@ private final class ChatListViewSpaceState {
                         if let lastMessage = lowerOrAtAnchorMessages.min(by: { $0.entryIndex < $1.entryIndex }) {
                             nextLowerIndex = lastMessage.entryIndex.predecessor
                         } else {
-                            nextLowerIndex = min(resolvedAnchorIndex, self.anchorIndex)
+                            nextLowerIndex = min(resolvedUnpinnedAnchorIndex, self.anchorIndex)
                         }
                         var loadedLowerMessages = Array(loadedMessages.filter({ $0.entryIndex <= nextLowerIndex }).reversed())
                         let lowerLimit = self.halfLimit - lowerOrAtAnchorMessages.count
@@ -160,7 +166,7 @@ private final class ChatListViewSpaceState {
                         if let lastMessage = higherThanAnchorMessages.max(by: { $0.entryIndex < $1.entryIndex }) {
                             nextHigherIndex = lastMessage.entryIndex.successor
                         } else {
-                            nextHigherIndex = max(resolvedAnchorIndex, self.anchorIndex.successor)
+                            nextHigherIndex = max(resolvedUnpinnedAnchorIndex, self.anchorIndex.successor)
                         }
                         var loadedHigherMessages = loadedMessages.filter({ $0.entryIndex > nextHigherIndex })
                         let higherLimit = self.halfLimit - higherThanAnchorMessages.count
