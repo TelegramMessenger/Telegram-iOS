@@ -245,11 +245,14 @@ enum ManagedDiceAnimationState: Equatable {
 
 final class ManagedDiceAnimationNode: ManagedAnimationNode {
     private let context: AccountContext
+    private let emojis: [TelegramMediaFile]
+    
     private var diceState: ManagedDiceAnimationState = .rolling
     private let disposable = MetaDisposable()
     
-    init(context: AccountContext) {
+    init(context: AccountContext, emojis: [TelegramMediaFile]) {
         self.context = context
+        self.emojis = emojis
         
         super.init(size: CGSize(width: 136.0, height: 136.0))
         
@@ -268,6 +271,16 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode {
             case .rolling:
                 switch diceState {
                     case let .value(value):
+//                        self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
+//                        
+//                        return chatMessageAnimationData(postbox: self.account.postbox, resource: self.resource, fitzModifier: self.fitzModifier, width: width, height: height, synchronousLoad: false)
+//                        |> filter { data in
+//                            return data.size != 0
+//                        }
+//                        |> map { data -> (String, Bool) in
+//                            return (data.path, data.complete)
+//                        }
+                        
                         self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
                     case .rolling:
                         break

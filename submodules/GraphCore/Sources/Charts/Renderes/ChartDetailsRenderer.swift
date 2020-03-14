@@ -13,21 +13,14 @@ import Cocoa
 import UIKit
 #endif
 
-class ChartDetailsRenderer: BaseChartRenderer, GColorModeContainer {
+class ChartDetailsRenderer: BaseChartRenderer, ChartThemeContainer {
     private lazy var colorAnimator = AnimationController<CGFloat>(current: 1, refreshClosure: refreshClosure)
-    private var fromColorMode: GColorMode = .day
-    private var currentColorMode: GColorMode = .day
-    func apply(colorMode: GColorMode, animated: Bool) {
-        if currentColorMode != colorMode {
-            fromColorMode = currentColorMode
-            currentColorMode = colorMode
-            if animated {
-                colorAnimator.set(current: 0)
-                colorAnimator.animate(to: 1, duration: .defaultDuration)
-            } else {
-                colorAnimator.set(current: 1)
-            }
-        }
+    private var fromColorMode: ChartTheme = ChartTheme.defaultDayTheme
+    private var currentColorMode: ChartTheme = ChartTheme.defaultDayTheme
+    func apply(theme: ChartTheme, animated: Bool) {
+        fromColorMode = currentColorMode
+        currentColorMode = theme
+        colorAnimator.set(current: 1)
     }
     
     private var valuesAnimators: [AnimationController<CGFloat>] = []

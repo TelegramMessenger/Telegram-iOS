@@ -22,7 +22,7 @@ private class LeftAlignedIconButton: UIButton {
     }
 }
 
-class ChartStackSection: UIView, GColorModeContainer {
+class ChartStackSection: UIView, ChartThemeContainer {
     var chartView: ChartView
     var rangeView: RangeChartView
     var visibilityView: ChartVisibilityView
@@ -32,7 +32,8 @@ class ChartStackSection: UIView, GColorModeContainer {
     var titleLabel: UILabel!
     var backButton: UIButton!
     
-    var controller: BaseChartController!
+    var controller: BaseChartController?
+    var theme: ChartTheme?
     
     init() {
         sectionContainerView = UIView()
@@ -81,41 +82,44 @@ class ChartStackSection: UIView, GColorModeContainer {
         backButton.setVisible(false, animated: false)
     }
     
-    func apply(colorMode: GColorMode, animated: Bool) {
+    func apply(theme: ChartTheme, animated: Bool) {
+        self.theme = theme
+        
         UIView.perform(animated: animated && self.isVisibleInWindow) {
-            self.backgroundColor = colorMode.tableBackgroundColor
+            self.backgroundColor = theme.tableBackgroundColor
             
-            self.sectionContainerView.backgroundColor = colorMode.chartBackgroundColor
-            self.rangeView.backgroundColor = colorMode.chartBackgroundColor
-            self.visibilityView.backgroundColor = colorMode.chartBackgroundColor
+            self.sectionContainerView.backgroundColor = theme.chartBackgroundColor
+            self.rangeView.backgroundColor = theme.chartBackgroundColor
+            self.visibilityView.backgroundColor = theme.chartBackgroundColor
             
-            self.backButton.tintColor = colorMode.actionButtonColor
-            self.backButton.setTitleColor(colorMode.actionButtonColor, for: .normal)
+            self.backButton.tintColor = theme.actionButtonColor
+            self.backButton.setTitleColor(theme.actionButtonColor, for: .normal)
             
             for separator in self.separators {
-                separator.backgroundColor = colorMode.tableSeparatorColor
+                separator.backgroundColor = theme.tableSeparatorColor
             }
         }
         
         if rangeView.isVisibleInWindow || chartView.isVisibleInWindow {
             chartView.loadDetailsViewIfNeeded()
-            chartView.apply(colorMode: colorMode, animated: animated && chartView.isVisibleInWindow)
-            controller.apply(colorMode: colorMode, animated: animated)
-            rangeView.apply(colorMode: colorMode, animated: animated && rangeView.isVisibleInWindow)
+            chartView.apply(theme: theme, animated: animated && chartView.isVisibleInWindow)
+            controller?.apply(theme: theme, animated: animated)
+            rangeView.apply(theme: theme, animated: animated && rangeView.isVisibleInWindow)
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval.random(in: 0...0.1)) {
                 self.chartView.loadDetailsViewIfNeeded()
-                self.controller.apply(colorMode: colorMode, animated: false)
-                self.chartView.apply(colorMode: colorMode, animated: false)
-                self.rangeView.apply(colorMode: colorMode, animated: false)
+                
+                self.controller?.apply(theme: theme, animated: false)
+                self.chartView.apply(theme: theme, animated: false)
+                self.rangeView.apply(theme: theme, animated: false)
             }
         }
         
-        self.titleLabel.setTextColor(colorMode.chartTitleColor, animated: animated && titleLabel.isVisibleInWindow)
+        self.titleLabel.setTextColor(theme.chartTitleColor, animated: animated && titleLabel.isVisibleInWindow)
     }
     
     @objc private func didTapBackButton() {
-        controller.didTapZoomOut()
+        self.controller?.didTapZoomOut()
     }
     
     func setBackButtonVisible(_ visible: Bool, animated: Bool) {
@@ -124,6 +128,10 @@ class ChartStackSection: UIView, GColorModeContainer {
     }
     
     func updateToolViews(animated: Bool) {
+        guard let controller = self.controller else {
+            return
+        }
+        
         rangeView.setRange(controller.currentChartHorizontalRangeFraction, animated: animated)
         rangeView.setRangePaging(enabled: controller.isChartRangePagingEnabled,
                                  minimumSize: controller.minimumSelectedChartRange)
@@ -147,23 +155,25 @@ class ChartStackSection: UIView, GColorModeContainer {
         
         let bounds = self.bounds
         self.titleLabel.frame = CGRect(origin: CGPoint(x: backButton.alpha > 0.0 ? 36.0 : 0.0, y: 5.0), size: CGSize(width: bounds.width, height: 28.0))
-        self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 400.0))
+        self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 750.0))
         self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 250.0))
         self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 42.0))
-        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: 308.0), size: CGSize(width: bounds.width, height: 222.0))
+        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: 308.0), size: CGSize(width: bounds.width, height: 350.0))
         self.backButton.frame = CGRect(x: 0.0, y: 0.0, width: 96.0, height: 38.0)
     }
     
     func setup(controller: BaseChartController, title: String) {
         self.controller = controller
-        
-        // Chart
-        chartView.renderers = controller.mainChartRenderers
-        chartView.userDidSelectCoordinateClosure = { [unowned self] point in
-            self.controller.chartInteractionDidBegin(point: point)
+        if let theme = self.theme {
+            controller.apply(theme: theme, animated: false)
         }
-        chartView.userDidDeselectCoordinateClosure = { [unowned self] in
-            self.controller.chartInteractionDidEnd()
+        
+        self.chartView.renderers = controller.mainChartRenderers
+        self.chartView.userDidSelectCoordinateClosure = { [unowned self] point in
+            self.controller?.chartInteractionDidBegin(point: point)
+        }
+        self.chartView.userDidDeselectCoordinateClosure = { [unowned self] in
+            self.controller?.chartInteractionDidEnd()
         }
         controller.cartViewBounds = { [unowned self] in
             return self.chartView.bounds
@@ -191,12 +201,11 @@ class ChartStackSection: UIView, GColorModeContainer {
             self.updateToolViews(animated: animated)
         }
         
-        // Range view
-        rangeView.chartView.renderers = controller.navigationRenderers
-        rangeView.rangeDidChangeClosure = { range in
+        self.rangeView.chartView.renderers = controller.navigationRenderers
+        self.rangeView.rangeDidChangeClosure = { range in
             controller.updateChartRange(range)
         }
-        rangeView.touchedOutsideClosure = {
+        self.rangeView.touchedOutsideClosure = {
             controller.cancelChartInteraction()
         }
         controller.chartRangeUpdatedClosure = { [unowned self] (range, animated) in
@@ -205,18 +214,15 @@ class ChartStackSection: UIView, GColorModeContainer {
         controller.chartRangePagingClosure = { [unowned self] (isEnabled, pageSize) in
             self.rangeView.setRangePaging(enabled: isEnabled, minimumSize: pageSize)
         }
-        
-        // Visibility view
-        visibilityView.selectionCallbackClosure = { [unowned self] visibility in
-            self.controller.updateChartsVisibility(visibility: visibility, animated: true)
+
+        self.visibilityView.selectionCallbackClosure = { [unowned self] visibility in
+            self.controller?.updateChartsVisibility(visibility: visibility, animated: true)
         }
         
         controller.initializeChart()
         updateToolViews(animated: false)
         
-//        rangeView.setRange(0.8...1.0, animated: false)
-//        TimeInterval.animationDurationMultipler = 0.00001
-//        controller.updateChartRange(0.8...1.0)
-//        TimeInterval.animationDurationMultipler = 1.0
+        rangeView.setRange(0.8...1.0, animated: false)
+        controller.updateChartRange(0.8...1.0, animated: false)
     }
 }

@@ -8,6 +8,7 @@
 
 import UIKit
 import GraphCore
+import Display
 
 private enum Constants {
     static let itemHeight: CGFloat = 30
@@ -38,10 +39,18 @@ class ChartVisibilityView: UIView {
             for (index, item) in items.enumerated() {
                 let view = selectionViews[index]
                 view.item = item
-                view.tapClosure = { [weak self] in
+                view.tapClosure = { [weak self, weak view] in
                     guard let self = self else { return }
-                    self.setItemSelected(!self.selectedItems[index], at: index, animated: true)
-                    self.notifyItemSelection()
+                    
+                    let selected = !self.selectedItems[index]
+                    
+                    let selectedItemsCount = self.selectedItems.filter { $0 }.count
+                    if selectedItemsCount == 1 && !selected {
+                        view?.layer.addShakeAnimation()
+                    } else {
+                        self.setItemSelected(selected, at: index, animated: true)
+                        self.notifyItemSelection()
+                    }
                 }
                 
                 view.longTapClosure = { [weak self] in
@@ -138,11 +147,11 @@ class ChartVisibilityView: UIView {
     }
 }
 
-extension ChartVisibilityView: GColorModeContainer {
-    func apply(colorMode: GColorMode, animated: Bool) {
+extension ChartVisibilityView: ChartThemeContainer {
+    func apply(theme: ChartTheme, animated: Bool) {
         UIView.perform(animated: animated) {
-            self.backgroundColor = colorMode.chartBackgroundColor
-            self.tintColor = colorMode.descriptionActionColor
+            self.backgroundColor = theme.chartBackgroundColor
+            self.tintColor = theme.descriptionActionColor
         }
     }
 }

@@ -151,13 +151,16 @@ class PercentChartComponentController: GeneralChartComponentController {
             dateString = BaseConstants.headerMediumRangeFormatter.string(from: closestDate)
         }
         let viewModel = ChartDetailsViewModel(title: dateString,
-                                              showArrow: !self.isZoomed,
+                                              showArrow: self.isZoomable && !self.isZoomed,
                                               showPrefixes: true,
                                               values: values,
                                               totalValue: nil,
                                               tapAction: { [weak self] in
                                                 self?.hideDetailsView(animated: true)
-                                                self?.zoomInOnDateClosure?(closestDate) })
+                                                self?.zoomInOnDateClosure?(closestDate) },
+                                                                                      hideAction: { [weak self] in
+                                                                     self?.hideDetailsView(animated: true)
+                                                })
         return viewModel
     }
     
@@ -188,13 +191,13 @@ class PercentChartComponentController: GeneralChartComponentController {
         verticalLineRenderer.isEnabled = false
     }
     
-    override func apply(colorMode: GColorMode, animated: Bool) {
-        super.apply(colorMode: colorMode, animated: animated)
+    override func apply(theme: ChartTheme, animated: Bool) {
+        super.apply(theme: theme, animated: animated)
         
-        horizontalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.axisXColor = colorMode.barChartStrongLinesColor
-        verticalScalesRenderer.horizontalLinesColor = colorMode.barChartStrongLinesColor
-        verticalLineRenderer.linesColor = colorMode.chartStrongLinesColor
+        horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.axisXColor = theme.barChartStrongLinesColor
+        verticalScalesRenderer.horizontalLinesColor = theme.barChartStrongLinesColor
+        verticalLineRenderer.linesColor = theme.chartStrongLinesColor
     }
 }

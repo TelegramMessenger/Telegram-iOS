@@ -23,6 +23,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/MergeLists:MergeLists",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/GraphCore:GraphCore",
         "//submodules/GraphUI:GraphUI",
     ],
     visibility = [

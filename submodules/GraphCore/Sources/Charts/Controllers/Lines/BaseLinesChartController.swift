@@ -78,7 +78,7 @@ public class BaseLinesChartController: BaseChartController {
         isChartInteractionBegun = false
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         
     }
     
@@ -114,11 +114,14 @@ public class BaseLinesChartController: BaseChartController {
             dateString = BaseConstants.headerMediumRangeFormatter.string(from: closestDate)
         }
         let viewModel = ChartDetailsViewModel(title: dateString,
-                                              showArrow: !self.isZoomed,
+                                              showArrow: self.isZoomable && !self.isZoomed,
                                               showPrefixes: false,
                                               values: values,
                                               totalValue: nil,
-                                              tapAction: { [weak self] in self?.didTapZoomIn(date: closestDate) })
+                                              tapAction: { [weak self] in self?.didTapZoomIn(date: closestDate) },
+                                              hideAction: { [weak self] in
+                                                self?.setDetailsChartVisibleClosure?(false, true)
+                                              })
         return viewModel
     }
     

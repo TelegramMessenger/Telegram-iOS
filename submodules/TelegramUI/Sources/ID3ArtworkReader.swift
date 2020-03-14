@@ -8,18 +8,18 @@ private enum ID3Tag: CaseIterable {
     var header: Data {
         switch self {
             case .v2:
-                return Data(bytes: [ 0x49, 0x44, 0x33, 0x02, 0x00 ])
+                return Data([ 0x49, 0x44, 0x33, 0x02, 0x00 ])
             case .v3:
-                return Data(bytes: [ 0x49, 0x44, 0x33, 0x03, 0x00 ])
+                return Data([ 0x49, 0x44, 0x33, 0x03, 0x00 ])
         }
     }
     
     var artworkHeader: Data {
         switch self {
             case .v2:
-                return Data(bytes: [ 0x50, 0x49, 0x43 ])
+                return Data([ 0x50, 0x49, 0x43 ])
             case .v3:
-                return Data(bytes: [ 0x41, 0x50, 0x49, 0x43 ])
+                return Data([ 0x41, 0x50, 0x49, 0x43 ])
         }
     }
     
@@ -58,7 +58,7 @@ private let artOffset = 10
 private let v2FrameOffset: UInt32 = 6
 private let v3FrameOffset: UInt32 = 10
 
-private let tagEnding = Data(bytes: [ 0x00, 0x00, 0x00 ])
+private let tagEnding = Data([ 0x00, 0x00, 0x00 ])
 
 private enum ID3ArtworkFormat: CaseIterable {
     case jpg
@@ -67,9 +67,9 @@ private enum ID3ArtworkFormat: CaseIterable {
     var magic: Data {
         switch self {
             case .jpg:
-                return Data(bytes: [ 0xff, 0xd8, 0xff ])
+                return Data([ 0xff, 0xd8, 0xff ])
             case .png:
-                return Data(bytes: [ 0x89, 0x50, 0x4e, 0x47 ])
+                return Data([ 0x89, 0x50, 0x4e, 0x47 ])
         }
     }
 }
@@ -118,7 +118,7 @@ private class DataStream {
     }
     
     func upTo(_ marker: UInt8) -> Data? {
-        if let end = (self.position ..< self.data.count).index( where: { self.data[$0] == marker } ) {
+        if let end = (self.position ..< self.data.count).firstIndex( where: { self.data[$0] == marker } ) {
             let upTo = self.next(end - self.position)
             self.skip()
             return upTo
@@ -132,7 +132,7 @@ private class DataStream {
     }
     
     func skipThrough(_ marker: UInt8) {
-        if let end = (self.position ..< self.data.count).index( where: { self.data[$0] == marker } ) {
+        if let end = (self.position ..< self.data.count).firstIndex( where: { self.data[$0] == marker } ) {
             self.position = end + 1
         } else {
             self.position = self.data.count

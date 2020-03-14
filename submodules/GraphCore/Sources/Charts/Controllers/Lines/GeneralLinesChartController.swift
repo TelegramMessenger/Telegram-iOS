@@ -176,7 +176,7 @@ public class GeneralLinesChartController: BaseLinesChartController {
         return visibleCharts
     }
     
-    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>) {
+    public override func updateChartRange(_ rangeFraction: ClosedRange<CGFloat>, animated: Bool = true) {
         cancelChartInteraction()
         
         let horizontalRange = ClosedRange(uncheckedBounds:
@@ -184,11 +184,11 @@ public class GeneralLinesChartController: BaseLinesChartController {
              upper: totalHorizontalRange.lowerBound + rangeFraction.upperBound * totalHorizontalRange.distance))
         
         zoomedChartRange = horizontalRange
-        updateChartRangeTitle(animated: true)
+        updateChartRangeTitle(animated: animated)
 
         updateMainChartHorizontalRange(range: horizontalRange, animated: false)
-        updateHorizontalLimits(horizontalRange: horizontalRange, animated: true)
-        updateVerticalLimitsAndRange(horizontalRange: horizontalRange, animated: true)
+        updateHorizontalLimits(horizontalRange: horizontalRange, animated: animated)
+        updateVerticalLimitsAndRange(horizontalRange: horizontalRange, animated: animated)
     }
     
     func updateMainChartHorizontalRange(range: ClosedRange<CGFloat>, animated: Bool) {
@@ -239,12 +239,12 @@ public class GeneralLinesChartController: BaseLinesChartController {
         }
     }
     
-    override public func apply(colorMode: GColorMode, animated: Bool) {
-        horizontalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.labelsColor = colorMode.chartLabelsColor
-        verticalScalesRenderer.axisXColor = colorMode.chartStrongLinesColor
-        verticalScalesRenderer.horizontalLinesColor = colorMode.chartHelperLinesColor
-        lineBulletsRenderer.setInnerColor(colorMode.chartBackgroundColor, animated: animated)
-        verticalLineRenderer.linesColor = colorMode.chartStrongLinesColor
+    override public func apply(theme: ChartTheme, animated: Bool) {
+        horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.labelsColor = theme.chartLabelsColor
+        verticalScalesRenderer.axisXColor = theme.chartStrongLinesColor
+        verticalScalesRenderer.horizontalLinesColor = theme.chartHelperLinesColor
+        lineBulletsRenderer.setInnerColor(theme.chartBackgroundColor, animated: animated)
+        verticalLineRenderer.linesColor = theme.chartStrongLinesColor
     }
 }

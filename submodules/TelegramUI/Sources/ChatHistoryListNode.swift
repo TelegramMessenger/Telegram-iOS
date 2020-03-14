@@ -53,7 +53,7 @@ private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
         let translation = location.offsetBy(dx: -self.initialLocation.x, dy: -self.initialLocation.y)
         
         if self.recognized == nil {
-            if (fabs(translation.y) >= selectionGestureActivationThreshold) {
+            if (abs(translation.y) >= selectionGestureActivationThreshold) {
                 self.recognized = true
             }
         }
@@ -1709,7 +1709,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         var resultMessages: [Message]?
         self.forEachVisibleItemNode { itemNode in
             if resultMessages == nil, let itemNode = itemNode as? ListViewItemNode, itemNode.frame.contains(point) {
-                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item as? ChatMessageItem {
+                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                     switch item.content {
                         case let .message(message, _, _ , _):
                             resultMessages = [message]
@@ -1750,6 +1750,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 self.selectionScrollSkipUpdate = false
             case .possible:
                 break
+            @unknown default:
+                fatalError()
         }
     }
     
@@ -1825,7 +1827,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if let strongSelf = self, let delta = strongSelf.selectionScrollDelta {
                 let distance: CGFloat = 15.0 * min(1.0, 0.15 + abs(delta * delta))
                 let direction: ListViewScrollDirection = delta > 0.0 ? .up : .down
-                strongSelf.scrollWithDirection(direction, distance: distance)
+                let _ = strongSelf.scrollWithDirection(direction, distance: distance)
                 
                 if let location = strongSelf.selectionLastLocation {
                     if !strongSelf.selectionScrollSkipUpdate {

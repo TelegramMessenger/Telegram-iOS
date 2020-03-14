@@ -18,15 +18,16 @@ enum GeneralChartComponentConstants {
     static let defaultZoomedRangeLength = CGFloat(TimeInterval.day)
 }
 
-class GeneralChartComponentController: GColorModeContainer {
+class GeneralChartComponentController: ChartThemeContainer {
     var chartsCollection: ChartsCollection = ChartsCollection.blank
     var chartVisibility: [Bool] = []
     var lastChartInteractionPoint: CGPoint = .zero
     var isChartInteractionBegun: Bool = false
     var isChartInteracting: Bool = false
     let isZoomed: Bool
+    var isZoomable = true
     
-    var colorMode: GColorMode = .day
+    var theme: ChartTheme = ChartTheme.defaultDayTheme
     var totalHorizontalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     var totalVerticalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     var initialHorizontalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
@@ -214,8 +215,8 @@ class GeneralChartComponentController: GColorModeContainer {
     var setDetailsViewModel: ((ChartDetailsViewModel, Bool) -> Void)?
     var chartRangePagingClosure: ((Bool, CGFloat) -> Void)? // isEnabled, PageSize
     
-    func apply(colorMode: GColorMode, animated: Bool) {
-        self.colorMode = colorMode
+    func apply(theme: ChartTheme, animated: Bool) {
+        self.theme = theme
     }
 
 // MARK: - Helpers
@@ -310,12 +311,15 @@ class GeneralChartComponentController: GColorModeContainer {
             dateString = BaseConstants.headerMediumRangeFormatter.string(from: closestDate)
         }
         let viewModel = ChartDetailsViewModel(title: dateString,
-                                              showArrow: !self.isZoomed,
+                                              showArrow: self.isZoomable && !self.isZoomed,
                                               showPrefixes: false,
                                               values: values,
                                               totalValue: nil, 
                                               tapAction: { [weak self] in
-                                                self?.zoomInOnDateClosure?(closestDate) })
+                                                self?.zoomInOnDateClosure?(closestDate) },
+                                              hideAction: { [weak self] in
+                                                
+        })
         return viewModel
     }
 
