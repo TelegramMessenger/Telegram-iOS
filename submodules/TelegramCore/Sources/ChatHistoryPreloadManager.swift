@@ -234,7 +234,7 @@ private final class AdditionalPreloadPeerIdsContext {
     }
 }
 
-public struct ChatHistoryPreloadItem {
+public struct ChatHistoryPreloadItem : Equatable {
     public let index: ChatListIndex
     public let isMuted: Bool
     public let hasUnread: Bool
