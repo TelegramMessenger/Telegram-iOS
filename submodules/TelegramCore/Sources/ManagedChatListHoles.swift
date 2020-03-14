@@ -4,64 +4,35 @@ import SwiftSignalKit
 import SyncCore
 
 private final class ManagedChatListHolesState {
-    private var holeDisposables: [ChatListHolesEntry: Disposable] = [:]
-    private var additionalLatestHoleDisposable: (ChatListHole, Disposable)?
-    private var additionalLatestArchiveHoleDisposable: (ChatListHole, Disposable)?
+    private var currentHole: (ChatListHolesEntry, Disposable)?
     
     func clearDisposables() -> [Disposable] {
-        let disposables = Array(self.holeDisposables.values)
-        self.holeDisposables.removeAll()
-        return disposables
+        if let (_, disposable) = self.currentHole {
+            self.currentHole = nil
+            return [disposable]
+        } else {
+            return []
+        }
     }
     
-    func update(entries: Set<ChatListHolesEntry>, additionalLatestHole: ChatListHole?, additionalLatestArchiveHole: ChatListHole?) -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable], addedAdditionalLatestHole: (ChatListHole, MetaDisposable)?, addedAdditionalLatestArchiveHole: (ChatListHole, MetaDisposable)?) {
+    func update(entries: [ChatListHolesEntry]) -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable]) {
         var removed: [Disposable] = []
         var added: [ChatListHolesEntry: MetaDisposable] = [:]
         
-        for (entry, disposable) in self.holeDisposables {
+        if let (entry, disposable) = self.currentHole {
             if !entries.contains(entry) {
                 removed.append(disposable)
-                self.holeDisposables.removeValue(forKey: entry)
+                self.currentHole = nil
             }
         }
         
-        for entry in entries {
-            if self.holeDisposables[entry] == nil {
-                let disposable = MetaDisposable()
-                self.holeDisposables[entry] = disposable
-                added[entry] = disposable
-            }
+        if self.currentHole == nil, let entry = entries.first {
+            let disposable = MetaDisposable()
+            self.currentHole = (entry, disposable)
+            added[entry] = disposable
         }
         
-        var addedAdditionalLatestHole: (ChatListHole, MetaDisposable)?
-        var addedAdditionalLatestArchiveHole: (ChatListHole, MetaDisposable)?
-        if self.holeDisposables.isEmpty {
-            if self.additionalLatestHoleDisposable?.0 != additionalLatestHole {
-                if let (_, disposable) = self.additionalLatestHoleDisposable {
-                    removed.append(disposable)
-                }
-                if let additionalLatestHole = additionalLatestHole {
-                    let disposable = MetaDisposable()
-                    self.additionalLatestHoleDisposable = (additionalLatestHole, disposable)
-                    addedAdditionalLatestHole = (additionalLatestHole, disposable)
-                }
-            }
-            
-            if additionalLatestHole == nil {
-                if self.additionalLatestArchiveHoleDisposable?.0 != additionalLatestArchiveHole {
-                    if let (_, disposable) = self.additionalLatestArchiveHoleDisposable {
-                        removed.append(disposable)
-                    }
-                    if let additionalLatestArchiveHole = additionalLatestArchiveHole {
-                        let disposable = MetaDisposable()
-                        self.additionalLatestArchiveHoleDisposable = (additionalLatestArchiveHole, disposable)
-                        addedAdditionalLatestArchiveHole = (additionalLatestArchiveHole, disposable)
-                    }
-                }
-            }
-        }
-        
-        return (removed, added, addedAdditionalLatestHole, addedAdditionalLatestArchiveHole)
+        return (removed, added)
     }
 }
 
@@ -75,24 +46,29 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
         let combinedView = postbox.combinedView(keys: [topRootHoleKey, topArchiveHoleKey, filtersKey])
         
         let disposable = combineLatest(postbox.chatListHolesView(), combinedView).start(next: { view, combinedView in
-            var additionalLatestHole: ChatListHole?
-            var additionalLatestArchiveHole: ChatListHole?
+            var entries = Array(view.entries).sorted(by: { lhs, rhs in
+                return lhs.hole.index > rhs.hole.index
+            })
             
             if let preferencesView = combinedView.views[filtersKey] as? PreferencesView, let filtersState = preferencesView.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState, !filtersState.filters.isEmpty {
                 if let topRootHole = combinedView.views[topRootHoleKey] as? AllChatListHolesView, let hole = topRootHole.latestHole {
-                    if !view.entries.contains(ChatListHolesEntry(groupId: .root, hole: hole)) {
-                        additionalLatestHole = hole
+                    let entry = ChatListHolesEntry(groupId: .root, hole: hole)
+                    if !entries.contains(entry) {
+                        entries.append(entry)
                     }
                 }
                 if let topArchiveHole = combinedView.views[topArchiveHoleKey] as? AllChatListHolesView, let hole = topArchiveHole.latestHole {
                     if !view.entries.contains(ChatListHolesEntry(groupId: Namespaces.PeerGroup.archive, hole: hole)) {
-                        additionalLatestArchiveHole = hole
+                        let entry = ChatListHolesEntry(groupId: Namespaces.PeerGroup.archive, hole: hole)
+                        if !entries.contains(entry) {
+                            entries.append(entry)
+                        }
                     }
                 }
             }
             
-            let (removed, added, addedAdditionalLatestHole, addedAdditionalLatestArchiveHole) = state.with { state in
-                return state.update(entries: view.entries, additionalLatestHole: additionalLatestHole, additionalLatestArchiveHole: additionalLatestArchiveHole)
+            let (removed, added) = state.with { state in
+                return state.update(entries: entries)
             }
             
             for disposable in removed {
@@ -101,14 +77,6 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
             
             for (entry, disposable) in added {
                 disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: entry.groupId, hole: entry.hole).start())
-            }
-            
-            if let (hole, disposable) = addedAdditionalLatestHole {
-                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: .root, hole: hole).start())
-            }
-            
-            if let (hole, disposable) = addedAdditionalLatestArchiveHole {
-                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: Namespaces.PeerGroup.archive, hole: hole).start())
             }
         })
         
