@@ -13,14 +13,16 @@ import Cocoa
 import UIKit
 #endif
 
-struct ChartVisibilityItem {
-    var title: String
-    var color: GColor
-    
-    static func generateItemsFrames(for chartWidth: CGFloat, items: [ChartVisibilityItem]) -> [CGRect] {
+public struct ChartVisibilityItem {
+    public var title: String
+    public var color: GColor
+    public init(title: String, color: GColor) {
+        self.title = title
+        self.color = color
+    }
+    public static func generateItemsFrames(for chartWidth: CGFloat, items: [ChartVisibilityItem]) -> [CGRect] {
         var previousPoint = CGPoint(x: ChatVisibilityItemConstants.insets.left, y: ChatVisibilityItemConstants.insets.top)
         var frames: [CGRect] = []
-        
         for item in items {
             let labelSize = textSize(with: item.title, font: ChatVisibilityItemConstants.textFont)
             let width = (labelSize.width + ChatVisibilityItemConstants.labelTextApproxInsets).rounded(.up)
@@ -35,7 +37,7 @@ struct ChartVisibilityItem {
             }
             previousPoint.x += width + ChatVisibilityItemConstants.itemSpacing
         }
-        
+
         return frames
     }
     
