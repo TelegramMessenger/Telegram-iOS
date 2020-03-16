@@ -128,6 +128,7 @@ public class BaseChartController: ChartThemeContainer {
             return ChartVisibilityItem(title: value.name, color: value.color)
         }
         let frames = ChartVisibilityItem.generateItemsFrames(for: width, items: items)
+        
         guard let lastFrame = frames.last else { return height }
         
         height += lastFrame.maxY
