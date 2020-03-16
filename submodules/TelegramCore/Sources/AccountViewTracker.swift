@@ -286,7 +286,7 @@ public final class AccountViewTracker {
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
         
-        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get())
+        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged)
         
         self.externallyUpdatedPeerIdDisposable.set((account.stateManager.externallyUpdatedPeerIds
         |> deliverOn(self.queue)).start(next: { [weak self] peerIds in

@@ -15,11 +15,11 @@ import UIKit
 
 class ChartDetailsRenderer: BaseChartRenderer, ChartThemeContainer {
     private lazy var colorAnimator = AnimationController<CGFloat>(current: 1, refreshClosure: refreshClosure)
-    private var fromColorMode: ChartTheme = ChartTheme.defaultDayTheme
-    private var currentColorMode: ChartTheme = ChartTheme.defaultDayTheme
+    private var fromTheme: ChartTheme = ChartTheme.defaultDayTheme
+    private var currentTheme: ChartTheme = ChartTheme.defaultDayTheme
     func apply(theme: ChartTheme, animated: Bool) {
-        fromColorMode = currentColorMode
-        currentColorMode = theme
+        fromTheme = currentTheme
+        currentTheme = theme
         colorAnimator.set(current: 1)
     }
     
@@ -91,11 +91,11 @@ class ChartDetailsRenderer: BaseChartRenderer, ChartThemeContainer {
         
         let totalWidth: CGFloat = max(prefixesWidth + labelsWidth + valuesWidth, titleWidth + iconWidth) + margins * 2
         let totalHeight: CGFloat = CGFloat(detailsViewModel.values.count + 1) * rowHeight + margins * 2
-        let backgroundColor = GColor.valueBetween(start: fromColorMode.chartDetailsViewColor,
-                                                   end: currentColorMode.chartDetailsViewColor,
+        let backgroundColor = GColor.valueBetween(start: fromTheme.chartDetailsViewColor,
+                                                   end: currentTheme.chartDetailsViewColor,
                                                    offset: Double(colorAnimator.current))
-        let titleAndTextColor = GColor.valueBetween(start: fromColorMode.chartDetailsTextColor,
-                                                     end: currentColorMode.chartDetailsTextColor,
+        let titleAndTextColor = GColor.valueBetween(start: fromTheme.chartDetailsTextColor,
+                                                     end: currentTheme.chartDetailsTextColor,
                                                      offset: Double(colorAnimator.current))
         let detailsViewFrame: CGRect
         if totalWidth + detailViewTopOffset > detailsViewPosition {
