@@ -96,23 +96,78 @@ extension ChatListFilterPeerCategories {
     }
 }
 
+public struct ChatListFilterIncludePeers: Equatable, Hashable {
+    public private(set) var peers: [PeerId]
+    public private(set) var pinnedPeers: [PeerId]
+    
+    public init() {
+        self.peers = []
+        self.pinnedPeers = []
+    }
+    
+    init(peers: [PeerId], pinnedPeers: [PeerId]) {
+        self.peers = peers
+        self.pinnedPeers = pinnedPeers
+    }
+    
+    public mutating func reorderPinnedPeers(_ pinnedPeers: [PeerId]) {
+        if Set(self.pinnedPeers) == Set(pinnedPeers) {
+            self.pinnedPeers = pinnedPeers
+        }
+    }
+    
+    public mutating func addPinnedPeer(_ peerId: PeerId) -> Bool {
+        if self.pinnedPeers.contains(peerId) {
+            return false
+        }
+        if self.peers.contains(peerId) {
+            self.pinnedPeers.insert(peerId, at: 0)
+            return true
+        } else {
+            if self.peers.count < 100 {
+                self.peers.insert(peerId, at: 0)
+                self.pinnedPeers.insert(peerId, at: 0)
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public mutating func removePinnedPeer(_ peerId: PeerId) {
+        if self.pinnedPeers.contains(peerId) {
+            self.pinnedPeers.removeAll(where: { $0 == peerId })
+        }
+    }
+    
+    public mutating func setPeers(_ peers: [PeerId]) {
+        self.peers = peers
+        self.pinnedPeers = self.pinnedPeers.filter { peers.contains($0) }
+    }
+}
+
+extension ChatListFilterIncludePeers {
+    init(rawPeers: [PeerId], rawPinnedPeers: [PeerId]) {
+        self.peers = rawPinnedPeers + rawPeers.filter { !rawPinnedPeers.contains($0) }
+        self.pinnedPeers = rawPinnedPeers
+    }
+}
+
 public struct ChatListFilterData: Equatable, Hashable {
     public var categories: ChatListFilterPeerCategories
     public var excludeMuted: Bool
     public var excludeRead: Bool
     public var excludeArchived: Bool
-    public var includePeers: [PeerId]
+    public var includePeers: ChatListFilterIncludePeers
     public var excludePeers: [PeerId]
-    public var pinnedPeers: [PeerId]
     
     public init(
         categories: ChatListFilterPeerCategories,
         excludeMuted: Bool,
         excludeRead: Bool,
         excludeArchived: Bool,
-        includePeers: [PeerId],
-        excludePeers: [PeerId],
-        pinnedPeers: [PeerId]
+        includePeers: ChatListFilterIncludePeers,
+        excludePeers: [PeerId]
     ) {
         self.categories = categories
         self.excludeMuted = excludeMuted
@@ -120,7 +175,6 @@ public struct ChatListFilterData: Equatable, Hashable {
         self.excludeArchived = excludeArchived
         self.includePeers = includePeers
         self.excludePeers = excludePeers
-        self.pinnedPeers = pinnedPeers
     }
 }
 
@@ -147,9 +201,8 @@ public struct ChatListFilter: PostboxCoding, Equatable {
             excludeMuted: decoder.decodeInt32ForKey("excludeMuted", orElse: 0) != 0,
             excludeRead: decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0,
             excludeArchived: decoder.decodeInt32ForKey("excludeArchived", orElse: 0) != 0,
-            includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init),
-            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init),
-            pinnedPeers: decoder.decodeInt64ArrayForKey("pinnedPeers").map(PeerId.init)
+            includePeers: ChatListFilterIncludePeers(peers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init), pinnedPeers: decoder.decodeInt64ArrayForKey("pinnedPeers").map(PeerId.init)),
+            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init)
         )
     }
     
@@ -160,9 +213,9 @@ public struct ChatListFilter: PostboxCoding, Equatable {
         encoder.encodeInt32(self.data.excludeMuted ? 1 : 0, forKey: "excludeMuted")
         encoder.encodeInt32(self.data.excludeRead ? 1 : 0, forKey: "excludeRead")
         encoder.encodeInt32(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
-        encoder.encodeInt64Array(self.data.includePeers.map { $0.toInt64() }, forKey: "includePeers")
+        encoder.encodeInt64Array(self.data.includePeers.peers.map { $0.toInt64() }, forKey: "includePeers")
+        encoder.encodeInt64Array(self.data.includePeers.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
         encoder.encodeInt64Array(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
-        encoder.encodeInt64Array(self.data.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
     }
 }
 
@@ -178,7 +231,7 @@ extension ChatListFilter {
                     excludeMuted: (flags & (1 << 11)) != 0,
                     excludeRead: (flags & (1 << 12)) != 0,
                     excludeArchived: (flags & (1 << 13)) != 0,
-                    includePeers: includePeers.compactMap { peer -> PeerId? in
+                    includePeers: ChatListFilterIncludePeers(rawPeers: includePeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
                             return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
@@ -189,20 +242,19 @@ extension ChatListFilter {
                         default:
                             return nil
                         }
-                    },
+                    }, rawPinnedPeers: pinnedPeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        default:
+                            return nil
+                        }
+                    }),
                     excludePeers: excludePeers.compactMap { peer -> PeerId? in
-                        switch peer {
-                        case let .inputPeerUser(userId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                        case let .inputPeerChat(chatId):
-                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        case let .inputPeerChannel(channelId, _):
-                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        default:
-                            return nil
-                        }
-                    },
-                    pinnedPeers: pinnedPeers.compactMap { peer -> PeerId? in
                         switch peer {
                         case let .inputPeerUser(userId, _):
                             return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
@@ -231,9 +283,12 @@ extension ChatListFilter {
             flags |= 1 << 13
         }
         flags |= self.data.categories.apiFlags
-        return .dialogFilter(flags: flags, id: self.id, title: self.title, pinnedPeers: self.data.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+        return .dialogFilter(flags: flags, id: self.id, title: self.title, pinnedPeers: self.data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
-        }, includePeers: self.data.includePeers.compactMap { peerId -> Api.InputPeer? in
+        }, includePeers: self.data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
+            if self.data.includePeers.pinnedPeers.contains(peerId) {
+                return nil
+            }
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }, excludePeers: self.data.excludePeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
@@ -436,7 +491,9 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
             )
             |> castError(RequestChatListFiltersError.self)
             |> mapToSignal { _ -> Signal<[ChatListFilter], RequestChatListFiltersError> in
+                #if swift(<5)
                 return .complete()
+                #endif
             }
             |> then(
                 .single(filters)
@@ -593,9 +650,8 @@ public struct ChatListFeaturedFilter: PostboxCoding, Equatable {
             excludeMuted: decoder.decodeInt32ForKey("excludeMuted", orElse: 0) != 0,
             excludeRead: decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0,
             excludeArchived: decoder.decodeInt32ForKey("excludeArchived", orElse: 0) != 0,
-            includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init),
-            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init),
-            pinnedPeers: decoder.decodeInt64ArrayForKey("pinnedPeers").map(PeerId.init)
+            includePeers: ChatListFilterIncludePeers(peers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init), pinnedPeers: decoder.decodeInt64ArrayForKey("pinnedPeers").map(PeerId.init)),
+            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init)
         )
     }
     
@@ -606,9 +662,9 @@ public struct ChatListFeaturedFilter: PostboxCoding, Equatable {
         encoder.encodeInt32(self.data.excludeMuted ? 1 : 0, forKey: "excludeMuted")
         encoder.encodeInt32(self.data.excludeRead ? 1 : 0, forKey: "excludeRead")
         encoder.encodeInt32(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
-        encoder.encodeInt64Array(self.data.includePeers.map { $0.toInt64() }, forKey: "includePeers")
+        encoder.encodeInt64Array(self.data.includePeers.peers.map { $0.toInt64() }, forKey: "includePeers")
+        encoder.encodeInt64Array(self.data.includePeers.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
         encoder.encodeInt64Array(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
-        encoder.encodeInt64Array(self.data.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
     }
 }
 

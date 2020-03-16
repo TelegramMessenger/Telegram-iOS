@@ -189,11 +189,10 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 }
             } else if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
                 var updateEmpty = true
-                if !fromView.filteredEntries.isEmpty, let fromFilter = fromView.filter, let toFilter = toView.filter, fromFilter.data.pinnedPeers != toFilter.data.pinnedPeers {
+                if !fromView.filteredEntries.isEmpty, let fromFilter = fromView.filter, let toFilter = toView.filter, fromFilter.data.includePeers.pinnedPeers != toFilter.data.includePeers.pinnedPeers {
                     var fromData = fromFilter.data
-                    var toData = toFilter.data
-                    fromData.pinnedPeers = []
-                    toData.pinnedPeers = []
+                    let toData = toFilter.data
+                    fromData.includePeers = toData.includePeers
                     if fromData == toData {
                         options.insert(.AnimateInsertion)
                         updateEmpty = false

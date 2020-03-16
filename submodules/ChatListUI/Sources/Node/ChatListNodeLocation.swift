@@ -30,12 +30,12 @@ struct ChatListNodeViewUpdate {
 }
 
 func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
-    var includePeers = Set(filter.includePeers)
+    var includePeers = Set(filter.includePeers.peers)
     var excludePeers = Set(filter.excludePeers)
     
-    if !filter.pinnedPeers.isEmpty {
-        includePeers.subtract(filter.pinnedPeers)
-        excludePeers.subtract(filter.pinnedPeers)
+    if !filter.includePeers.pinnedPeers.isEmpty {
+        includePeers.subtract(filter.includePeers.pinnedPeers)
+        excludePeers.subtract(filter.includePeers.pinnedPeers)
     }
     
     var includeAdditionalPeerGroupIds: [PeerGroupId] = []
@@ -47,7 +47,7 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
     if filter.excludeRead {
         messageTagSummary = ChatListMessageTagSummaryResultCalculation(addCount: ChatListMessageTagSummaryResultComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), subtractCount: ChatListMessageTagActionsSummaryResultComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))
     }
-    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, pinnedPeerIds: filter.pinnedPeers, messageTagSummary: messageTagSummary, includeAdditionalPeerGroupIds: includeAdditionalPeerGroupIds, include: { peer, isMuted, isUnread, isContact, messageTagSummaryResult in
+    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, pinnedPeerIds: filter.includePeers.pinnedPeers, messageTagSummary: messageTagSummary, includeAdditionalPeerGroupIds: includeAdditionalPeerGroupIds, include: { peer, isMuted, isUnread, isContact, messageTagSummaryResult in
         if filter.excludeRead {
             var effectiveUnread = isUnread
             if let messageTagSummaryResult = messageTagSummaryResult, messageTagSummaryResult {

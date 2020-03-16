@@ -544,7 +544,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         })
                     })
                 })))
-                if let filter = filters.first(where: { $0.id == id }), filter.data.includePeers.count < 100 {
+                if let filter = filters.first(where: { $0.id == id }), filter.data.includePeers.peers.count < 100 {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_AddChatsToFolder, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                     }, action: { c, f in

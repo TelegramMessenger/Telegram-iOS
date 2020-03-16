@@ -65,12 +65,10 @@ public func toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinnedLoc
                 if let index = filters.firstIndex(where: { $0.id == filterId }) {
                     switch itemId {
                     case let .peer(peerId):
-                        if filters[index].data.pinnedPeers.contains(peerId) {
-                            filters[index].data.pinnedPeers.removeAll(where: { $0 == peerId })
+                        if filters[index].data.includePeers.pinnedPeers.contains(peerId) {
+                            filters[index].data.includePeers.removePinnedPeer(peerId)
                         } else {
-                            if filters[index].data.pinnedPeers.count < 100 {
-                                filters[index].data.pinnedPeers.insert(peerId, at: 0)
-                            } else {
+                            if !filters[index].data.includePeers.addPinnedPeer(peerId) {
                                 result = .limitExceeded(100)
                             }
                         }
@@ -91,7 +89,7 @@ public func getPinnedItemIds(transaction: Transaction, location: TogglePeerChatP
         var itemIds: [PinnedItemId] = []
         let _ = updateChatListFiltersInteractively(transaction: transaction, { filters in
             if let index = filters.firstIndex(where: { $0.id == filterId }) {
-                itemIds = filters[index].data.pinnedPeers.map { peerId in
+                itemIds = filters[index].data.includePeers.pinnedPeers.map { peerId in
                     return .peer(peerId)
                 }
             }
@@ -123,8 +121,8 @@ public func reorderPinnedItemIds(transaction: Transaction, location: TogglePeerC
                     }
                 }
                 
-                if filters[index].data.pinnedPeers != peerIds {
-                    filters[index].data.pinnedPeers = peerIds
+                if filters[index].data.includePeers.pinnedPeers != peerIds {
+                    filters[index].data.includePeers.reorderPinnedPeers(peerIds)
                     result = true
                 }
             }

@@ -19,7 +19,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
         var additionalPeerIds = Set<PeerId>()
         var additionalGroupIds = Set<PeerGroupId>()
         for filter in filters {
-            additionalPeerIds.formUnion(filter.data.includePeers)
+            additionalPeerIds.formUnion(filter.data.includePeers.peers)
             additionalPeerIds.formUnion(filter.data.excludePeers)
             if !filter.data.excludeArchived {
                 additionalGroupIds.insert(Namespaces.PeerGroup.archive)
@@ -146,7 +146,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                         }
                     }
                 }
-                for peerId in filter.data.includePeers {
+                for peerId in filter.data.includePeers.peers {
                     if let (tag, peerCount, hasUnmuted) = peerTagAndCount[peerId] {
                         if !tags.contains(tag) {
                             if peerCount != 0 {
