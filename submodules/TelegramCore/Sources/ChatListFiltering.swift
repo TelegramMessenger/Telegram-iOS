@@ -103,6 +103,7 @@ public struct ChatListFilterData: Equatable, Hashable {
     public var excludeArchived: Bool
     public var includePeers: [PeerId]
     public var excludePeers: [PeerId]
+    public var pinnedPeers: [PeerId]
     
     public init(
         categories: ChatListFilterPeerCategories,
@@ -110,7 +111,8 @@ public struct ChatListFilterData: Equatable, Hashable {
         excludeRead: Bool,
         excludeArchived: Bool,
         includePeers: [PeerId],
-        excludePeers: [PeerId]
+        excludePeers: [PeerId],
+        pinnedPeers: [PeerId]
     ) {
         self.categories = categories
         self.excludeMuted = excludeMuted
@@ -118,6 +120,7 @@ public struct ChatListFilterData: Equatable, Hashable {
         self.excludeArchived = excludeArchived
         self.includePeers = includePeers
         self.excludePeers = excludePeers
+        self.pinnedPeers = pinnedPeers
     }
 }
 
@@ -145,7 +148,8 @@ public struct ChatListFilter: PostboxCoding, Equatable {
             excludeRead: decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0,
             excludeArchived: decoder.decodeInt32ForKey("excludeArchived", orElse: 0) != 0,
             includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init),
-            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init)
+            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init),
+            pinnedPeers: decoder.decodeInt64ArrayForKey("pinnedPeers").map(PeerId.init)
         )
     }
     
@@ -158,13 +162,14 @@ public struct ChatListFilter: PostboxCoding, Equatable {
         encoder.encodeInt32(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
         encoder.encodeInt64Array(self.data.includePeers.map { $0.toInt64() }, forKey: "includePeers")
         encoder.encodeInt64Array(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
+        encoder.encodeInt64Array(self.data.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
     }
 }
 
 extension ChatListFilter {
     init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
-        case let .dialogFilter(flags, id, title, includePeers, excludePeers):
+        case let .dialogFilter(flags, id, title, pinnedPeers, includePeers, excludePeers):
             self.init(
                 id: id,
                 title: title,
@@ -196,6 +201,18 @@ extension ChatListFilter {
                         default:
                             return nil
                         }
+                    },
+                    pinnedPeers: pinnedPeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        default:
+                            return nil
+                        }
                     }
                 )
             )
@@ -214,7 +231,9 @@ extension ChatListFilter {
             flags |= 1 << 13
         }
         flags |= self.data.categories.apiFlags
-        return .dialogFilter(flags: flags, id: self.id, title: self.title, includePeers: self.data.includePeers.compactMap { peerId -> Api.InputPeer? in
+        return .dialogFilter(flags: flags, id: self.id, title: self.title, pinnedPeers: self.data.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        }, includePeers: self.data.includePeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }, excludePeers: self.data.excludePeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
@@ -278,27 +297,8 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
                 let filter = ChatListFilter(apiFilter: apiFilter)
                 filters.append(filter)
                 switch apiFilter {
-                case let .dialogFilter(_, _, _, includePeers, excludePeers):
-                    for peer in includePeers {
-                        var peerId: PeerId?
-                        switch peer {
-                        case let .inputPeerUser(userId, _):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                        case let .inputPeerChat(chatId):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        case let .inputPeerChannel(channelId, _):
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        default:
-                            break
-                        }
-                        if let peerId = peerId {
-                            if transaction.getPeer(peerId) == nil && !missingPeerIds.contains(peerId) {
-                                missingPeerIds.insert(peerId)
-                                missingPeers.append(peer)
-                            }
-                        }
-                    }
-                    for peer in excludePeers {
+                case let .dialogFilter(_, _, _, pinnedPeers, includePeers, excludePeers):
+                    for peer in pinnedPeers + includePeers + excludePeers {
                         var peerId: PeerId?
                         switch peer {
                         case let .inputPeerUser(userId, _):
@@ -509,6 +509,23 @@ public func updateChatListFiltersInteractively(postbox: Postbox, _ f: @escaping 
     }
 }
 
+public func updateChatListFiltersInteractively(transaction: Transaction, _ f: ([ChatListFilter]) -> [ChatListFilter]) {
+    var hasUpdates = false
+    transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
+        var state = entry as? ChatListFiltersState ?? ChatListFiltersState.default
+        let updatedFilters = f(state.filters)
+        if updatedFilters != state.filters {
+            state.filters = updatedFilters
+            hasUpdates = true
+        }
+        return state
+    })
+    if hasUpdates {
+        requestChatListFiltersSync(transaction: transaction)
+    }
+}
+
+
 public func updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
     |> map { preferences -> [ChatListFilter] in
@@ -577,7 +594,8 @@ public struct ChatListFeaturedFilter: PostboxCoding, Equatable {
             excludeRead: decoder.decodeInt32ForKey("excludeRead", orElse: 0) != 0,
             excludeArchived: decoder.decodeInt32ForKey("excludeArchived", orElse: 0) != 0,
             includePeers: decoder.decodeInt64ArrayForKey("includePeers").map(PeerId.init),
-            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init)
+            excludePeers: decoder.decodeInt64ArrayForKey("excludePeers").map(PeerId.init),
+            pinnedPeers: decoder.decodeInt64ArrayForKey("pinnedPeers").map(PeerId.init)
         )
     }
     
@@ -590,6 +608,7 @@ public struct ChatListFeaturedFilter: PostboxCoding, Equatable {
         encoder.encodeInt32(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
         encoder.encodeInt64Array(self.data.includePeers.map { $0.toInt64() }, forKey: "includePeers")
         encoder.encodeInt64Array(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
+        encoder.encodeInt64Array(self.data.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
     }
 }
 
@@ -668,8 +687,6 @@ public func updateChatListFeaturedFilters(postbox: Postbox, network: Network) ->
 }
 
 private enum SynchronizeChatListFiltersOperationContentType: Int32 {
-    case add
-    case remove
     case sync
 }
 
@@ -681,7 +698,7 @@ private enum SynchronizeChatListFiltersOperationContent: PostboxCoding {
         case SynchronizeChatListFiltersOperationContentType.sync.rawValue:
             self = .sync
         default:
-            assertionFailure()
+            //assertionFailure()
             self = .sync
         }
     }

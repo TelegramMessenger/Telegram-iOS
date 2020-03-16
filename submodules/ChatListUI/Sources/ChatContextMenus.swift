@@ -40,7 +40,7 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
 }
 
 enum ChatContextMenuSource {
-    case chatList(isFilter: Bool)
+    case chatList(filter: ChatListFilter?)
     case search(ChatListSearchContextActionSource)
 }
 
@@ -146,10 +146,16 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                 })))
             }
             
-            if case .chatList(false) = source {
+            if case let .chatList(filter) = source {
                 let isPinned = index.pinningIndex != nil
                 items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    let _ = (toggleItemPinned(postbox: context.account.postbox, groupId: group, itemId: .peer(peerId))
+                    let location: TogglePeerChatPinnedLocation
+                    if let filter = filter {
+                        location = .filter(filter.id)
+                    } else {
+                        location = .group(group)
+                    }
+                    let _ = (toggleItemPinned(postbox: context.account.postbox, location: location, itemId: .peer(peerId))
                     |> deliverOnMainQueue).start(next: { result in
                         switch result {
                         case .done:
