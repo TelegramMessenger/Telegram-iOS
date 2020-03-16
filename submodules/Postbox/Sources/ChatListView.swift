@@ -253,19 +253,24 @@ private enum ChatListEntryType {
 public struct ChatListFilterPredicate {
     public var includePeerIds: Set<PeerId>
     public var excludePeerIds: Set<PeerId>
+    public var pinnedPeerIds: [PeerId]
     public var messageTagSummary: ChatListMessageTagSummaryResultCalculation?
     public var includeAdditionalPeerGroupIds: [PeerGroupId]
     public var include: (Peer, Bool, Bool, Bool, Bool?) -> Bool
     
-    public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, messageTagSummary: ChatListMessageTagSummaryResultCalculation?, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, Bool, Bool, Bool, Bool?) -> Bool) {
+    public init(includePeerIds: Set<PeerId>, excludePeerIds: Set<PeerId>, pinnedPeerIds: [PeerId], messageTagSummary: ChatListMessageTagSummaryResultCalculation?, includeAdditionalPeerGroupIds: [PeerGroupId], include: @escaping (Peer, Bool, Bool, Bool, Bool?) -> Bool) {
         self.includePeerIds = includePeerIds
         self.excludePeerIds = excludePeerIds
+        self.pinnedPeerIds = pinnedPeerIds
         self.messageTagSummary = messageTagSummary
         self.includeAdditionalPeerGroupIds = includeAdditionalPeerGroupIds
         self.include = include
     }
     
     func includes(peer: Peer, groupId: PeerGroupId, isRemovedFromTotalUnreadCount: Bool, isUnread: Bool, isContact: Bool, messageTagSummaryResult: Bool?) -> Bool {
+        if self.pinnedPeerIds.contains(peer.id) {
+            return false
+        }
         let includePeerId = peer.associatedPeerId ?? peer.id
         if self.excludePeerIds.contains(includePeerId) {
             return false
@@ -299,19 +304,22 @@ final class MutableChatListView {
         self.summaryComponents = summaryComponents
         
         var spaces: [ChatListViewSpace] = [
-            .group(groupId: self.groupId, pinned: .notPinned)
+            .group(groupId: self.groupId, pinned: .notPinned, predicate: filterPredicate)
         ]
         if let filterPredicate = self.filterPredicate {
-            spaces.append(.group(groupId: self.groupId, pinned: .includePinnedAsUnpinned))
+            spaces.append(.group(groupId: self.groupId, pinned: .includePinnedAsUnpinned, predicate: filterPredicate))
             for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
-                spaces.append(.group(groupId: additionalGroupId, pinned: .notPinned))
-                spaces.append(.group(groupId: additionalGroupId, pinned: .includePinnedAsUnpinned))
+                spaces.append(.group(groupId: additionalGroupId, pinned: .notPinned, predicate: filterPredicate))
+                spaces.append(.group(groupId: additionalGroupId, pinned: .includePinnedAsUnpinned, predicate: filterPredicate))
+            }
+            if !filterPredicate.pinnedPeerIds.isEmpty {
+                spaces.append(.peers(peerIds: filterPredicate.pinnedPeerIds, asPinned: true))
             }
         } else {
-            spaces.append(.group(groupId: self.groupId, pinned: .includePinned))
+            spaces.append(.group(groupId: self.groupId, pinned: .includePinned, predicate: filterPredicate))
         }
         self.spaces = spaces
-        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: aroundIndex, filterPredicate: self.filterPredicate, summaryComponents: self.summaryComponents, halfLimit: count)
+        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, halfLimit: count)
         self.sampledState = self.state.sample(postbox: postbox)
         
         self.count = count
@@ -404,7 +412,7 @@ final class MutableChatListView {
     func refreshDueToExternalTransaction(postbox: Postbox) -> Bool {
         var updated = false
         
-        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, filterPredicate: self.filterPredicate, summaryComponents: self.summaryComponents, halfLimit: self.count)
+        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
         self.sampledState = self.state.sample(postbox: postbox)
         updated = true
         
@@ -423,7 +431,7 @@ final class MutableChatListView {
         var hasChanges = false
         
         if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
-            self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, filterPredicate: self.filterPredicate, summaryComponents: self.summaryComponents, halfLimit: self.count)
+            self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox)
             hasChanges = true
         } else {

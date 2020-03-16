@@ -17276,17 +17276,22 @@ public extension Api {
     
     }
     public enum DialogFilter: TypeConstructorDescription {
-        case dialogFilter(flags: Int32, id: Int32, title: String, includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
+        case dialogFilter(flags: Int32, id: Int32, title: String, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers, let excludePeers):
+                case .dialogFilter(let flags, let id, let title, let pinnedPeers, let includePeers, let excludePeers):
                     if boxed {
-                        buffer.appendInt32(1687327098)
+                        buffer.appendInt32(-878553771)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(pinnedPeers.count))
+                    for item in pinnedPeers {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(includePeers.count))
                     for item in includePeers {
@@ -17303,8 +17308,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers, let excludePeers):
-                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("includePeers", includePeers), ("excludePeers", excludePeers)])
+                case .dialogFilter(let flags, let id, let title, let pinnedPeers, let includePeers, let excludePeers):
+                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("pinnedPeers", pinnedPeers), ("includePeers", includePeers), ("excludePeers", excludePeers)])
     }
     }
     
@@ -17323,13 +17328,18 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
             }
+            var _6: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, includePeers: _4!, excludePeers: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, pinnedPeers: _4!, includePeers: _5!, excludePeers: _6!)
             }
             else {
                 return nil

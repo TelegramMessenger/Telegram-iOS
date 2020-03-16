@@ -188,9 +188,23 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     }
                 }
             } else if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
-                options.remove(.AnimateInsertion)
-                options.remove(.AnimateAlpha)
-                fromEmptyView = true
+                var updateEmpty = true
+                if !fromView.filteredEntries.isEmpty, let fromFilter = fromView.filter, let toFilter = toView.filter, fromFilter.data.pinnedPeers != toFilter.data.pinnedPeers {
+                    var fromData = fromFilter.data
+                    var toData = toFilter.data
+                    fromData.pinnedPeers = []
+                    toData.pinnedPeers = []
+                    if fromData == toData {
+                        options.insert(.AnimateInsertion)
+                        updateEmpty = false
+                    }
+                }
+                
+                if updateEmpty {
+                    options.remove(.AnimateInsertion)
+                    options.remove(.AnimateAlpha)
+                    fromEmptyView = true
+                }
             }
         } else {
             fromEmptyView = true

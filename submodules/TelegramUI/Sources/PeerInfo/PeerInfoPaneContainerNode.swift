@@ -510,7 +510,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         super.didLoad()
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let strongSelf = self, let currentPaneKey = strongSelf.currentPaneKey, let availablePanes = strongSelf.currentParams?.data?.availablePanes, let index = availablePanes.index(of: currentPaneKey) else {
+            guard let strongSelf = self, let currentPaneKey = strongSelf.currentPaneKey, let availablePanes = strongSelf.currentParams?.data?.availablePanes, let index = availablePanes.firstIndex(of: currentPaneKey) else {
                 return []
             }
             if index == 0 {
