@@ -3693,13 +3693,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var offsetRanges = OffsetRanges()
         
         if let reorderOffset = self.reorderNode?.currentOffset(), !self.itemNodes.isEmpty {
-            if reorderOffset < self.insets.top + 10.0 {
-                if self.itemNodes[0].apparentFrame.minY < self.insets.top {
+            let effectiveInsets = self.visualInsets ?? self.insets
+            if reorderOffset < effectiveInsets.top + 10.0 {
+                if self.itemNodes[0].apparentFrame.minY < effectiveInsets.top {
                     continueAnimations = true
                     offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: 6.0)
                 }
-            } else if reorderOffset > self.visibleSize.height - self.insets.bottom - 10.0 {
-                if self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
+            } else if reorderOffset > self.visibleSize.height - effectiveInsets.bottom - 10.0 {
+                if self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY > self.visibleSize.height - effectiveInsets.bottom {
                     continueAnimations = true
                     offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: -6.0)
                 }

@@ -674,7 +674,7 @@ private struct ContactsListNodeTransition {
 public enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(options: [ContactListAdditionalOption], includeChatList: Bool)
-    case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool, searchChannels: Bool)
+    case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool, searchChannels: Bool, globalSearch: Bool)
     
     public var sortOrder: ContactsSortOrder? {
         switch self {
@@ -917,7 +917,7 @@ public final class ContactListNode: ASDisplayNode {
                 includeChatList = natural.includeChatList
             }
             
-            if case let .search(query, searchChatList, searchDeviceContacts, searchGroups, searchChannels) = presentation {
+            if case let .search(query, searchChatList, searchDeviceContacts, searchGroups, searchChannels, globalSearch) = presentation {
                 return query
                 |> mapToSignal { query in
                     let foundLocalContacts: Signal<([FoundPeer], [PeerId: PeerPresence]), NoError>
@@ -975,12 +975,15 @@ public final class ContactListNode: ASDisplayNode {
                             return (peers.map({ FoundPeer(peer: $0, subscribers: nil) }), presences)
                         }
                     }
-                    let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
-                    |> then(
-                        searchPeers(account: context.account, query: query)
-                        |> map { ($0.0, $0.1) }
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
-                    )
+                    var foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                    if globalSearch {
+                        foundRemoteContacts = foundRemoteContacts
+                        |> then(
+                            searchPeers(account: context.account, query: query)
+                            |> map { ($0.0, $0.1) }
+                            |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                        )
+                    }
                     let foundDeviceContacts: Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)], NoError>
                     if searchDeviceContacts {
                         foundDeviceContacts = context.sharedContext.contactDataManager?.search(query: query) ?? .single([:])

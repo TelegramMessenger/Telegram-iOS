@@ -556,6 +556,9 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             case .none, .unknown:
                 break
             }
+            if !strongSelf.currentItemNode.isNavigationInAFinalState {
+                return []
+            }
             let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
             return directions
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
@@ -782,6 +785,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: transition)
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
+                itemNode.emptyNode?.restartAnimation()
                 completion?()
             } else if self.pendingItemNode == nil {
                 let itemNode = ChatListContainerItemNode(context: self.context, groupId: self.groupId, filter: self.availableFilters[index].filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, becameEmpty: { [weak self] filter in
@@ -954,6 +958,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     
     let containerNode: ChatListContainerNode
+    let inlineTabContainerNode: ChatListFilterTabInlineContainerNode
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     weak var controller: ChatListControllerImpl?
@@ -995,6 +1000,8 @@ final class ChatListControllerNode: ASDisplayNode {
             filterEmptyAction?(filter)
         })
         
+        self.inlineTabContainerNode = ChatListFilterTabInlineContainerNode()
+        
         self.controller = controller
         
         super.init()
@@ -1006,6 +1013,7 @@ final class ChatListControllerNode: ASDisplayNode {
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.containerNode)
+        self.addSubnode(self.inlineTabContainerNode)
         
         self.addSubnode(self.debugListView)
         
@@ -1109,6 +1117,8 @@ final class ChatListControllerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.containerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, transition: transition)
+        
+        transition.updateFrame(node: self.inlineTabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - layout.intrinsicInsets.bottom - 8.0 - 40.0), size: CGSize(width: layout.size.width, height: 40.0)))
         
         self.tapRecognizer?.isEnabled = self.isReorderingFilters
         

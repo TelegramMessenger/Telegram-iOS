@@ -57,6 +57,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.calendarButton = HighlightableButtonNode()
         self.membersButton = HighlightableButtonNode()
         self.measureResultsLabel = TextNode()
+        self.measureResultsLabel.displaysAsynchronously = false
         self.resultsButton = HighlightableButtonNode()
         self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme.rootController.navigationBar.buttonColor))
         self.activityIndicator.isHidden = true
@@ -68,6 +69,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.calendarButton)
         self.addSubnode(self.membersButton)
         self.addSubnode(self.resultsButton)
+        self.resultsButton.addSubnode(self.measureResultsLabel)
         self.addSubnode(self.activityIndicator)
         
         self.upButton.addTarget(self, action: #selector(self.upPressed), forControlEvents: [.touchUpInside])
@@ -190,11 +192,11 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.membersButton.isHidden = (!(interfaceState.search?.query.isEmpty ?? true)) || self.displayActivity || !canSearchMembers
         
         let resultsEnabled = (resultCount ?? 0) > 0
-        self.resultsButton.setTitle(resultsText ?? "", with: labelFont, with: resultsEnabled ? interfaceState.theme.chat.inputPanel.panelControlAccentColor : interfaceState.theme.chat.inputPanel.primaryTextColor, for: .normal)
+        //self.resultsButton.setTitle(resultsText ?? "", with: labelFont, with: resultsEnabled ? interfaceState.theme.chat.inputPanel.panelControlAccentColor : interfaceState.theme.chat.inputPanel.primaryTextColor, for: .normal)
         self.resultsButton.isUserInteractionEnabled = resultsEnabled
         
         let makeLabelLayout = TextNode.asyncLayout(self.measureResultsLabel)
-        let (labelSize, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: resultsText ?? "", font: labelFont, textColor: .black, paragraphAlignment: .left), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - 50.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
+        let (labelSize, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: resultsText ?? "", font: labelFont, textColor: resultsEnabled ? interfaceState.theme.chat.inputPanel.panelControlAccentColor : interfaceState.theme.chat.inputPanel.primaryTextColor, paragraphAlignment: .left), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - 50.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
         let _ = labelApply()
         
         var resultsOffset: CGFloat = 16.0
@@ -202,6 +204,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             resultsOffset += 48.0
         }
         self.resultsButton.frame = CGRect(origin: CGPoint(x: leftInset + resultsOffset, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
+        self.measureResultsLabel.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: labelSize.size)
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 22.0, height: 22.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - 41.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
