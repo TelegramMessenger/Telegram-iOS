@@ -5349,7 +5349,8 @@ Any member of this group will be able to see messages in the channel.";
 "External.OpenIn" = "Open in %@";
 
 "ChatList.EmptyChatList" = "You have no\nconversations yet.";
-"ChatList.EmptyChatFilterList" = "No chats currently\nmatch this filter.";
+"ChatList.EmptyChatListFilterTitle" = "Folder is empty.";
+"ChatList.EmptyChatListFilterText" = "No chats currently match this folder.";
 
 "ChatList.EmptyChatListNewMessage" = "New Message";
 "ChatList.EmptyChatListEditFilter" = "Edit Folder";

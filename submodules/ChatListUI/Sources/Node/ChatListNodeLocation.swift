@@ -59,7 +59,10 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
         }
         if filter.excludeMuted {
             if isMuted {
-                return false
+                if let messageTagSummaryResult = messageTagSummaryResult, messageTagSummaryResult {
+                } else {
+                    return false
+                }
             }
         }
         if !filter.categories.contains(.contacts) && isContact {

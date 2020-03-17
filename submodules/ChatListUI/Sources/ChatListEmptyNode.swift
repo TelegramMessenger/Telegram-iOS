@@ -9,11 +9,15 @@ import SolidRoundedButtonNode
 import ActivityIndicator
 
 final class ChatListEmptyNode: ASDisplayNode {
+    private let action: () -> Void
+    
     let isFilter: Bool
     private(set) var isLoading: Bool
     private let textNode: ImmediateTextNode
+    private let descriptionNode: ImmediateTextNode
     private let animationNode: AnimatedStickerNode
-    private let buttonNode: SolidRoundedButtonNode
+    private let buttonTextNode: ImmediateTextNode
+    private let buttonNode: HighlightTrackingButtonNode
     private let activityIndicator: ActivityIndicator
     
     private var animationSize: CGSize = CGSize()
@@ -21,6 +25,7 @@ final class ChatListEmptyNode: ASDisplayNode {
     private var validLayout: CGSize?
     
     init(isFilter: Bool, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
+        self.action = action
         self.isFilter = isFilter
         self.isLoading = isLoading
         
@@ -33,7 +38,17 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.textNode.textAlignment = .center
         self.textNode.lineSpacing = 0.1
         
-        self.buttonNode = SolidRoundedButtonNode(title: isFilter ? strings.ChatList_EmptyChatListEditFilter : strings.ChatList_EmptyChatListNewMessage, theme: SolidRoundedButtonTheme(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.descriptionNode = ImmediateTextNode()
+        self.descriptionNode.displaysAsynchronously = false
+        self.descriptionNode.maximumNumberOfLines = 0
+        self.descriptionNode.isUserInteractionEnabled = false
+        self.descriptionNode.textAlignment = .center
+        self.descriptionNode.lineSpacing = 0.1
+        
+        self.buttonNode = HighlightTrackingButtonNode()
+        
+        self.buttonTextNode = ImmediateTextNode()
+        self.buttonTextNode.displaysAsynchronously = false
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 22.0, 1.0, false))
         
@@ -41,6 +56,8 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         self.addSubnode(self.animationNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.buttonTextNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.activityIndicator)
         
@@ -56,16 +73,32 @@ final class ChatListEmptyNode: ASDisplayNode {
             self.animationNode.visibility = true
         }
         
-        self.buttonNode.pressed = {
-            action()
-        }
-        
         self.animationNode.isHidden = self.isLoading
         self.textNode.isHidden = self.isLoading
+        self.descriptionNode.isHidden = self.isLoading
         self.buttonNode.isHidden = self.isLoading
+        self.buttonTextNode.isHidden = self.isLoading
         self.activityIndicator.isHidden = !self.isLoading
         
+        self.buttonNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: -10.0, bottom: -10.0, right: -10.0)
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.buttonTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.buttonTextNode.alpha = 0.4
+                } else {
+                    strongSelf.buttonTextNode.alpha = 1.0
+                    strongSelf.buttonTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
         self.updateThemeAndStrings(theme: theme, strings: strings)
+    }
+    
+    @objc private func buttonPressed() {
+        self.action()
     }
     
     func restartAnimation() {
@@ -73,10 +106,17 @@ final class ChatListEmptyNode: ASDisplayNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        let string = NSMutableAttributedString(string: self.isFilter ? strings.ChatList_EmptyChatFilterList : strings.ChatList_EmptyChatList, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor)
+        let string = NSMutableAttributedString(string: self.isFilter ? strings.ChatList_EmptyChatListFilterTitle : strings.ChatList_EmptyChatList, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor)
+        let descriptionString: NSAttributedString
+        if self.isFilter {
+            descriptionString = NSAttributedString(string: strings.ChatList_EmptyChatListFilterText, font: Font.medium(14.0), textColor: theme.list.itemSecondaryTextColor)
+        } else {
+            descriptionString = NSAttributedString()
+        }
         self.textNode.attributedText = string
+        self.descriptionNode.attributedText = descriptionString
         
-        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor))
+        self.buttonTextNode.attributedText = NSAttributedString(string: isFilter ? strings.ChatList_EmptyChatListEditFilter : strings.ChatList_EmptyChatListNewMessage, font: Font.regular(17.0), textColor: theme.list.itemAccentColor)
         
         self.activityIndicator.type = .custom(theme.list.itemAccentColor, 22.0, 1.0, false)
         
@@ -92,7 +132,9 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.isLoading = isLoading
         self.animationNode.isHidden = self.isLoading
         self.textNode.isHidden = self.isLoading
+        self.descriptionNode.isHidden = self.isLoading
         self.buttonNode.isHidden = self.isLoading
+        self.buttonTextNode.isHidden = self.isLoading
         self.activityIndicator.isHidden = !self.isLoading
     }
     
@@ -102,11 +144,13 @@ final class ChatListEmptyNode: ASDisplayNode {
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
         
-        let animationSpacing: CGFloat = 10.0
+        let animationSpacing: CGFloat = 24.0
+        let descriptionSpacing: CGFloat = 8.0
         let buttonSpacing: CGFloat = 24.0
         let buttonSideInset: CGFloat = 16.0
         
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
+        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
         
         let buttonWidth = min(size.width - buttonSideInset * 2.0, 280.0)
         let buttonSize = CGSize(width: buttonWidth, height: 50.0)
@@ -123,7 +167,8 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - self.animationSize.width) / 2.0), y: floor((size.height - contentHeight) / 2.0) + contentOffset), size: self.animationSize)
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: animationFrame.maxY + animationSpacing), size: textSize)
-        let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: textFrame.maxY + buttonSpacing), size: buttonSize)
+        let descpriptionFrame = CGRect(origin: CGPoint(x: floor((size.width - descriptionSize.width) / 2.0), y: textFrame.maxY + descriptionSpacing), size: descriptionSize)
+        let bottomTextEdge: CGFloat = descpriptionFrame.width.isZero ? textFrame.maxY : descpriptionFrame.maxY
         
         if !self.animationSize.width.isZero {
             self.animationNode.updateLayout(size: self.animationSize)
@@ -131,9 +176,13 @@ final class ChatListEmptyNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.textNode, frame: textFrame)
+        transition.updateFrame(node: self.descriptionNode, frame: descpriptionFrame)
         
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
+        let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonTextSize.width) / 2.0), y: bottomTextEdge + buttonSpacing), size: buttonTextSize)
+        
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
+        transition.updateFrame(node: self.buttonTextNode, frame: buttonFrame)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

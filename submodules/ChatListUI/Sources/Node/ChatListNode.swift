@@ -1478,6 +1478,25 @@ public final class ChatListNode: ListView {
         }
     }
     
+    var isNavigationInAFinalState: Bool {
+        switch self.visibleContentOffset() {
+        case let .known(value):
+            if value < navigationBarSearchContentHeight + 1.0 {
+                if abs(value - 0.0) < 1.0 {
+                    return true
+                }
+                if abs(value - navigationBarSearchContentHeight) < 1.0 {
+                    return true
+                }
+                return false
+            } else {
+                return true
+            }
+        default:
+            return true
+        }
+    }
+    
     func adjustScrollOffsetForNavigation(isNavigationHidden: Bool) {
         if self.isNavigationHidden == isNavigationHidden {
             return

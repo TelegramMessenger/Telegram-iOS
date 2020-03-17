@@ -29,30 +29,41 @@ private func generateBackground(foregroundColor: UIColor, diameter: CGFloat) -> 
 private class SearchBarTextField: UITextField {
     public var didDeleteBackwardWhileEmpty: (() -> Void)?
     
-    let placeholderLabel: ASTextNode
+    let placeholderLabel: ImmediateTextNode
     var placeholderString: NSAttributedString? {
         didSet {
             self.placeholderLabel.attributedText = self.placeholderString
+            self.setNeedsLayout()
         }
     }
     
-    let prefixLabel: ASTextNode
+    private let measurePrefixLabel: ImmediateTextNode
+    let prefixLabel: ImmediateTextNode
     var prefixString: NSAttributedString? {
         didSet {
+            self.measurePrefixLabel.attributedText = self.prefixString
             self.prefixLabel.attributedText = self.prefixString
+            self.setNeedsLayout()
         }
     }
     
     override init(frame: CGRect) {
-        self.placeholderLabel = ASTextNode()
+        self.placeholderLabel = ImmediateTextNode()
         self.placeholderLabel.isUserInteractionEnabled = false
         self.placeholderLabel.displaysAsynchronously = false
         self.placeholderLabel.maximumNumberOfLines = 1
         self.placeholderLabel.truncationMode = .byTruncatingTail
         
-        self.prefixLabel = ASTextNode()
+        self.measurePrefixLabel = ImmediateTextNode()
+        self.measurePrefixLabel.isUserInteractionEnabled = false
+        self.measurePrefixLabel.displaysAsynchronously = false
+        self.measurePrefixLabel.maximumNumberOfLines = 1
+        self.measurePrefixLabel.truncationMode = .byTruncatingTail
+        
+        self.prefixLabel = ImmediateTextNode()
         self.prefixLabel.isUserInteractionEnabled = false
         self.prefixLabel.displaysAsynchronously = false
+        self.prefixLabel.maximumNumberOfLines = 1
         self.prefixLabel.truncationMode = .byTruncatingTail
         
         super.init(frame: frame)
@@ -87,9 +98,9 @@ private class SearchBarTextField: UITextField {
         }
         var rect = bounds.insetBy(dx: 4.0, dy: 4.0)
         
-        let prefixSize = self.prefixLabel.measure(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
+        let prefixSize = self.measurePrefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         if !prefixSize.width.isZero {
-            let prefixOffset = prefixSize.width
+            let prefixOffset = prefixSize.width + 3.0
             rect.origin.x += prefixOffset
             rect.size.width -= prefixOffset
         }
@@ -115,10 +126,10 @@ private class SearchBarTextField: UITextField {
         }
         
         let textRect = self.textRect(forBounds: bounds)
-        let labelSize = self.placeholderLabel.measure(textRect.size)
+        let labelSize = self.placeholderLabel.updateLayout(textRect.size)
         self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: textRect.minY + textOffset), size: labelSize)
         
-        let prefixSize = self.prefixLabel.measure(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
+        let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
         self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + textOffset), size: prefixSize)
     }
