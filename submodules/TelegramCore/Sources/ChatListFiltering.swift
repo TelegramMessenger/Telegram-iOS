@@ -504,7 +504,7 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
             )
             |> castError(RequestChatListFiltersError.self)
             |> mapToSignal { _ -> Signal<[ChatListFilter], RequestChatListFiltersError> in
-                #if swift(<5)
+                #if swift(<5.1)
                 return .complete()
                 #endif
             }
