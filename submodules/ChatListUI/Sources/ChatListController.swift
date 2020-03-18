@@ -1462,7 +1462,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     updatedFilter = nil
                 }
             }
-            strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: updatedFilter.flatMap { .filter($0.id) } ?? .all)
+            if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == updatedFilter?.id {
+                strongSelf.scrollToTop?()
+            } else {
+                strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: updatedFilter.flatMap { .filter($0.id) } ?? .all)
+            }
         })
     }
     

@@ -5453,3 +5453,5 @@ Any member of this group will be able to see messages in the channel.";
 "ChatListFolder.DiscardCancel" = "No";
 "ChatListFolder.IncludeChatsTitle" = "Include Chats";
 "ChatListFolder.ExcludeChatsTitle" = "Exclude Chats";
+
+"ChatListFolderSettings.AddRecommended" = "ADD";

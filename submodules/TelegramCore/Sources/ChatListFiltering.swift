@@ -181,21 +181,25 @@ public struct ChatListFilterData: Equatable, Hashable {
 public struct ChatListFilter: PostboxCoding, Equatable {
     public var id: Int32
     public var title: String
+    public var emoticon: String?
     public var data: ChatListFilterData
     
     public init(
         id: Int32,
         title: String,
+        emoticon: String?,
         data: ChatListFilterData
     ) {
         self.id = id
         self.title = title
+        self.emoticon = emoticon
         self.data = data
     }
     
     public init(decoder: PostboxDecoder) {
         self.id = decoder.decodeInt32ForKey("id", orElse: 0)
         self.title = decoder.decodeStringForKey("title", orElse: "")
+        self.emoticon = decoder.decodeOptionalStringForKey("emoticon")
         self.data = ChatListFilterData(
             categories: ChatListFilterPeerCategories(rawValue: decoder.decodeInt32ForKey("categories", orElse: 0)),
             excludeMuted: decoder.decodeInt32ForKey("excludeMuted", orElse: 0) != 0,
@@ -209,6 +213,11 @@ public struct ChatListFilter: PostboxCoding, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.id, forKey: "id")
         encoder.encodeString(self.title, forKey: "title")
+        if let emoticon = self.emoticon {
+            encoder.encodeString(emoticon, forKey: "emoticon")
+        } else {
+            encoder.encodeNil(forKey: "emoticon")
+        }
         encoder.encodeInt32(self.data.categories.rawValue, forKey: "categories")
         encoder.encodeInt32(self.data.excludeMuted ? 1 : 0, forKey: "excludeMuted")
         encoder.encodeInt32(self.data.excludeRead ? 1 : 0, forKey: "excludeRead")
@@ -222,10 +231,11 @@ public struct ChatListFilter: PostboxCoding, Equatable {
 extension ChatListFilter {
     init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
-        case let .dialogFilter(flags, id, title, pinnedPeers, includePeers, excludePeers):
+        case let .dialogFilter(flags, id, title, emoticon, pinnedPeers, includePeers, excludePeers):
             self.init(
                 id: id,
                 title: title,
+                emoticon: emoticon,
                 data: ChatListFilterData(
                     categories: ChatListFilterPeerCategories(apiFlags: flags),
                     excludeMuted: (flags & (1 << 11)) != 0,
@@ -283,7 +293,10 @@ extension ChatListFilter {
             flags |= 1 << 13
         }
         flags |= self.data.categories.apiFlags
-        return .dialogFilter(flags: flags, id: self.id, title: self.title, pinnedPeers: self.data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+        if self.emoticon != nil {
+            flags |= 1 << 25
+        }
+        return .dialogFilter(flags: flags, id: self.id, title: self.title, emoticon: self.emoticon, pinnedPeers: self.data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }, includePeers: self.data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
             if self.data.includePeers.pinnedPeers.contains(peerId) {
@@ -352,7 +365,7 @@ private func requestChatListFilters(postbox: Postbox, network: Network) -> Signa
                 let filter = ChatListFilter(apiFilter: apiFilter)
                 filters.append(filter)
                 switch apiFilter {
-                case let .dialogFilter(_, _, _, pinnedPeers, includePeers, excludePeers):
+                case let .dialogFilter(_, _, _, _, pinnedPeers, includePeers, excludePeers):
                     for peer in pinnedPeers + includePeers + excludePeers {
                         var peerId: PeerId?
                         switch peer {

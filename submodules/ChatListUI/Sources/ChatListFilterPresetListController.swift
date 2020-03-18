@@ -250,7 +250,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
             var filters = filters
             let id = generateNewChatListFilterId(filters: filters)
-            filters.insert(ChatListFilter(id: id, title: title, data: data), at: 0)
+            filters.insert(ChatListFilter(id: id, title: title, emoticon: nil, data: data), at: 0)
             return filters
         })
         |> deliverOnMainQueue).start(next: { _ in
