@@ -11,9 +11,11 @@ public enum ToolbarActionOption {
 final class TabBarControllerNode: ASDisplayNode {
     private var theme: TabBarControllerTheme
     let tabBarNode: TabBarNode
+    private let disabledOverlayNode: ASDisplayNode
     private let navigationBar: NavigationBar?
     private var toolbarNode: ToolbarNode?
     private let toolbarActionSelected: (ToolbarActionOption) -> Void
+    private let disabledPressed: () -> Void
 
     var currentControllerNode: ASDisplayNode? {
         didSet {
@@ -25,11 +27,15 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void) {
+    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void) {
         self.theme = theme
         self.navigationBar = navigationBar
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected, contextAction: contextAction, swipeAction: swipeAction)
+        self.disabledOverlayNode = ASDisplayNode()
+        self.disabledOverlayNode.backgroundColor = theme.backgroundColor.withAlphaComponent(0.5)
+        self.disabledOverlayNode.alpha = 0.0
         self.toolbarActionSelected = toolbarActionSelected
+        self.disabledPressed = disabledPressed
         
         super.init()
         
@@ -40,6 +46,19 @@ final class TabBarControllerNode: ASDisplayNode {
         self.backgroundColor = theme.backgroundColor
         
         self.addSubnode(self.tabBarNode)
+        self.addSubnode(self.disabledOverlayNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.disabledOverlayNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.disabledTapGesture(_:))))
+    }
+    
+    @objc private func disabledTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.disabledPressed()
+        }
     }
     
     func updateTheme(_ theme: TabBarControllerTheme) {
@@ -47,7 +66,12 @@ final class TabBarControllerNode: ASDisplayNode {
         self.backgroundColor = theme.backgroundColor
         
         self.tabBarNode.updateTheme(theme)
+        self.disabledOverlayNode.backgroundColor = theme.backgroundColor.withAlphaComponent(0.5)
         self.toolbarNode?.updateTheme(theme)
+    }
+    
+    func updateIsTabBarEnabled(_ value: Bool, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.disabledOverlayNode, alpha: value ? 0.0 : 1.0)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
@@ -67,6 +91,8 @@ final class TabBarControllerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.tabBarNode, frame: tabBarFrame)
         self.tabBarNode.updateLayout(size: layout.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, transition: transition)
+        
+        transition.updateFrame(node: self.disabledOverlayNode, frame: tabBarFrame)
         
         if let toolbar = toolbar {
             if let toolbarNode = self.toolbarNode {

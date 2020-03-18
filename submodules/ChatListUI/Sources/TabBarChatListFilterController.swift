@@ -51,7 +51,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
             
             var result: [(ChatListFilter, Int, Bool)] = []
             
-            var peerTagAndCount: [PeerId: (PeerSummaryCounterTags, Int, Bool)] = [:]
+            var peerTagAndCount: [PeerId: (PeerSummaryCounterTags, Int, Bool, PeerGroupId?)] = [:]
             
             var totalStates: [PeerGroupId: ChatListTotalUnreadState] = [:]
             for entry in unreadCounts.entries {
@@ -71,9 +71,9 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                             }
                             
                             if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings, case .muted = notificationSettings.muteState {
-                                peerTagAndCount[peerId] = (tag, peerCount, false)
+                                peerTagAndCount[peerId] = (tag, peerCount, false, peerView.groupId)
                             } else {
-                                peerTagAndCount[peerId] = (tag, peerCount, true)
+                                peerTagAndCount[peerId] = (tag, peerCount, true, peerView.groupId)
                             }
                         }
                     }
@@ -147,9 +147,20 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                     }
                 }
                 for peerId in filter.data.includePeers.peers {
-                    if let (tag, peerCount, hasUnmuted) = peerTagAndCount[peerId] {
-                        if !tags.contains(tag) {
-                            if peerCount != 0 {
+                    if let (tag, peerCount, hasUnmuted, groupId) = peerTagAndCount[peerId] {
+                        if let groupId = groupId, !tags.contains(tag) {
+                            let matchesGroup: Bool
+                            switch groupId {
+                            case .root:
+                                matchesGroup = true
+                            case .group:
+                                if groupId == Namespaces.PeerGroup.archive {
+                                    matchesGroup = !filter.data.excludeArchived
+                                } else {
+                                    matchesGroup = false
+                                }
+                            }
+                            if matchesGroup && peerCount != 0 {
                                 count += 1
                                 if hasUnmuted {
                                     hasUnmutedUnread = true
@@ -159,9 +170,20 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                     }
                 }
                 for peerId in filter.data.excludePeers {
-                    if let (tag, peerCount, _) = peerTagAndCount[peerId] {
-                        if tags.contains(tag) {
-                            if peerCount != 0 {
+                    if let (tag, peerCount, _, groupId) = peerTagAndCount[peerId] {
+                        if let groupId = groupId, tags.contains(tag) {
+                            let matchesGroup: Bool
+                            switch groupId {
+                            case .root:
+                                matchesGroup = true
+                            case .group:
+                                if groupId == Namespaces.PeerGroup.archive {
+                                    matchesGroup = !filter.data.excludeArchived
+                                } else {
+                                    matchesGroup = false
+                                }
+                            }
+                            if matchesGroup && peerCount != 0 {
                                 count -= 1
                             }
                         }

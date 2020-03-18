@@ -91,12 +91,16 @@ private final class ItemNode: ASDisplayNode {
         self.extractedBackgroundNode = ASImageNode()
         self.extractedBackgroundNode.alpha = 0.0
         
+        let titleInset: CGFloat = 4.0
+        
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
+        self.titleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         
         self.shortTitleNode = ImmediateTextNode()
         self.shortTitleNode.displaysAsynchronously = false
         self.shortTitleNode.alpha = 0.0
+        self.shortTitleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         
         self.badgeContainerNode = ASDisplayNode()
         
@@ -166,7 +170,7 @@ private final class ItemNode: ASDisplayNode {
             self.badgeBackgroundInactiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor)
         }
         
-        self.containerNode.isGestureEnabled = !isNoFilter && !isEditing && !isReordering
+        self.containerNode.isGestureEnabled = !isEditing && !isReordering
         self.buttonNode.isUserInteractionEnabled = !isEditing && !isReordering
         
         self.isSelected = isSelected
@@ -217,10 +221,10 @@ private final class ItemNode: ASDisplayNode {
     
     func updateLayout(height: CGFloat, transition: ContainedViewLayoutTransition) -> (width: CGFloat, shortWidth: CGFloat) {
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: -self.titleNode.insets.left, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
         
         let shortTitleSize = self.shortTitleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        self.shortTitleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((height - shortTitleSize.height) / 2.0)), size: shortTitleSize)
+        self.shortTitleNode.frame = CGRect(origin: CGPoint(x: -self.shortTitleNode.insets.left, y: floor((height - shortTitleSize.height) / 2.0)), size: shortTitleSize)
         
         if let deleteButtonNode = self.deleteButtonNode {
             if let theme = self.theme {
@@ -231,7 +235,7 @@ private final class ItemNode: ASDisplayNode {
         
         let badgeSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let badgeInset: CGFloat = 4.0
-        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width + 5.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
+        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right + 5.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
         self.badgeContainerNode.frame = badgeBackgroundFrame
         self.badgeBackgroundActiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
         self.badgeBackgroundInactiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
@@ -242,7 +246,7 @@ private final class ItemNode: ASDisplayNode {
             if !self.isReordering {
                 self.badgeContainerNode.alpha = 0.0
             }
-            width = titleSize.width
+            width = titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right
         } else {
             if !self.isReordering {
                 self.badgeContainerNode.alpha = 1.0
@@ -254,7 +258,7 @@ private final class ItemNode: ASDisplayNode {
         let extractedBackgroundInset: CGFloat = 14.0
         self.extractedBackgroundNode.frame = CGRect(origin: CGPoint(x: -extractedBackgroundInset, y: floor((height - extractedBackgroundHeight) / 2.0)), size: CGSize(width: width + extractedBackgroundInset * 2.0, height: extractedBackgroundHeight))
         
-        return (width, shortTitleSize.width)
+        return (width, shortTitleSize.width - self.shortTitleNode.insets.left - self.shortTitleNode.insets.right)
     }
     
     func updateArea(size: CGSize, sideInset: CGFloat, useShortTitle: Bool, transition: ContainedViewLayoutTransition) {
@@ -371,7 +375,7 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
     var tabSelected: ((ChatListFilterTabEntryId) -> Void)?
     var tabRequestedDeletion: ((ChatListFilterTabEntryId) -> Void)?
     var addFilter: (() -> Void)?
-    var contextGesture: ((Int32, ContextExtractedContentContainingNode, ContextGesture) -> Void)?
+    var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture) -> Void)?
     
     private var reorderingGesture: ReorderingGestureRecognizer?
     private var reorderingItem: ChatListFilterTabEntryId?
@@ -645,14 +649,14 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                     guard let strongSelf = self else {
                         return
                     }
+                    strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = false
+                    strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
+                    strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                     switch filter {
                     case let .filter(filter):
-                        strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = false
-                        strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
-                        strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                         strongSelf.contextGesture?(filter.id, sourceNode, gesture)
                     default:
-                        break
+                        strongSelf.contextGesture?(nil, sourceNode, gesture)
                     }
                 }), highlighted: ItemNode(pressed: { [weak self] in
                     self?.tabSelected?(filter.id)
@@ -669,7 +673,7 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                         strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                         strongSelf.contextGesture?(filter.id, sourceNode, gesture)
                     default:
-                        break
+                        strongSelf.contextGesture?(nil, sourceNode, gesture)
                     }
                 }))
                 self.itemNodePairs[filter.id] = itemNodePair

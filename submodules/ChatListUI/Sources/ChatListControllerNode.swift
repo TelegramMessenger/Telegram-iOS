@@ -455,6 +455,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             previousItemNode.listNode.contentScrollingEnded = nil
             previousItemNode.listNode.activateChatPreview = nil
             previousItemNode.listNode.addedVisibleChatsWithPeerIds = nil
+            previousItemNode.listNode.didBeginSelectingChats = nil
             
             previousItemNode.accessibilityElementsHidden = true
         }
@@ -497,6 +498,9 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.addedVisibleChatsWithPeerIds = { [weak self] ids in
             self?.addedVisibleChatsWithPeerIds?(ids)
         }
+        itemNode.listNode.didBeginSelectingChats = { [weak self] in
+            self?.didBeginSelectingChats?()
+        }
         
         self.currentItemStateValue.set(itemNode.listNode.state)
         
@@ -517,6 +521,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var contentScrollingEnded: ((ListView) -> Bool)?
     var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([PeerId]) -> Void)?
+    var didBeginSelectingChats: (() -> Void)?
     
     init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
@@ -970,6 +975,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private(set) var searchDisplayController: SearchDisplayController?
     
     var isReorderingFilters: Bool = false
+    var didBeginSelectingChatsWhileEditing: Bool = false
     var isEditing: Bool = false
     
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat)?

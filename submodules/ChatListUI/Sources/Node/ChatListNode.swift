@@ -487,6 +487,8 @@ public final class ChatListNode: ListView {
     
     let preloadItems = Promise<[ChatHistoryPreloadItem]>([])
     
+    var didBeginSelectingChats: (() -> Void)?
+    
     public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
@@ -525,16 +527,23 @@ public final class ChatListNode: ListView {
                 disabledPeerSelected(peer)
             }
         }, togglePeerSelected: { [weak self] peerId in
+            var didBeginSelecting = false
             self?.updateState { state in
                 var state = state
                 if state.selectedPeerIds.contains(peerId) {
                     state.selectedPeerIds.remove(peerId)
                 } else {
                     if state.selectedPeerIds.count < 100 {
+                        if state.selectedPeerIds.isEmpty {
+                            didBeginSelecting = true
+                        }
                         state.selectedPeerIds.insert(peerId)
                     }
                 }
                 return state
+            }
+            if didBeginSelecting {
+                self?.didBeginSelectingChats?()
             }
         }, additionalCategorySelected: { [weak self] id in
             self?.additionalCategorySelected?(id)

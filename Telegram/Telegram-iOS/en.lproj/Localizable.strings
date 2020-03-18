@@ -5455,3 +5455,10 @@ Any member of this group will be able to see messages in the channel.";
 "ChatListFolder.ExcludeChatsTitle" = "Exclude Chats";
 
 "ChatListFolderSettings.AddRecommended" = "ADD";
+
+"ChatListFilter.ShowMoreChats_0" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_1" = "Show %@ More Chat";
+"ChatListFilter.ShowMoreChats_2" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_3_10" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_many" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_any" = "Show %@ More Chats";
