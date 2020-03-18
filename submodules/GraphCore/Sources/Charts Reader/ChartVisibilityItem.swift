@@ -21,6 +21,11 @@ public struct ChartVisibilityItem {
         self.color = color
     }
     public static func generateItemsFrames(for chartWidth: CGFloat, items: [ChartVisibilityItem]) -> [CGRect] {
+        
+        if items.count == 1 {
+            return []
+        }
+        
         var previousPoint = CGPoint(x: ChatVisibilityItemConstants.insets.left, y: ChatVisibilityItemConstants.insets.top)
         var frames: [CGRect] = []
         for item in items {
