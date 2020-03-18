@@ -1140,51 +1140,59 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         if !self.processedFeaturedFilters {
-            self.featuredFiltersDisposable.set((
-                self.context.account.postbox.transaction { transaction -> ChatListFiltersFeaturedState? in
-                    return transaction.getPreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState) as? ChatListFiltersFeaturedState
+            let initializedFeatured = self.context.account.postbox.preferencesView(keys: [
+                PreferencesKeys.chatListFiltersFeaturedState
+            ])
+            |> mapToSignal { view -> Signal<Bool, NoError> in
+                if let entry = view.values[PreferencesKeys.chatListFiltersFeaturedState] as? ChatListFiltersFeaturedState {
+                    return .single(!entry.filters.isEmpty && !entry.isSeen)
+                } else {
+                    return .complete()
                 }
+            }
+            |> take(1)
+            
+            let initializedFilters = updatedChatListFiltersInfo(postbox: self.context.account.postbox)
+            |> mapToSignal { (filters, isInitialized) -> Signal<Bool, NoError> in
+                if isInitialized {
+                    return .single(!filters.isEmpty)
+                } else {
+                    return .complete()
+                }
+            }
+            |> take(1)
+            
+            self.featuredFiltersDisposable.set((
+                combineLatest(initializedFeatured, initializedFilters)
+                |> take(1)
                 |> delay(1.0, queue: .mainQueue())
                 |> deliverOnMainQueue
-            ).start(next: { [weak self] featuredState in
-                guard let strongSelf = self, let featuredState = featuredState else {
+            ).start(next: { [weak self] hasFeatured, hasFilters in
+                guard let strongSelf = self else {
                     return
                 }
                 
-                let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
-                |> deliverOnMainQueue).start(next: { filters in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.processedFeaturedFilters = true
-                    if !featuredState.isSeen && !featuredState.filters.isEmpty {
-                        let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
-                        |> deliverOnMainQueue).start(next: { filters in
-                            guard let strongSelf = self else {
-                                return
+                strongSelf.processedFeaturedFilters = true
+                if hasFeatured {
+                    if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
+                        let absoluteFrame = sourceFrame
+                        let text: String
+                        if hasFilters {
+                            text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
+                        } else {
+                            text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
+                        }
+                        parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
+                            guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                                return true
                             }
-                            let hasFilters = !filters.isEmpty
-                            if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
-                                let absoluteFrame = sourceFrame
-                                let text: String
-                                if hasFilters {
-                                    text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
-                                } else {
-                                    text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
-                                }
-                                parentController.present(TooltipScreen(text: text, location: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), shouldDismissOnTouch: { point in
-                                    guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
-                                        return true
-                                    }
-                                    if parentController.isPointInsideContentArea(point: point) {
-                                        return false
-                                    }
-                                    return true
-                                }), in: .current)
+                            if parentController.isPointInsideContentArea(point: point) {
+                                return false
                             }
-                        })
+                            return true
+                        }), in: .current)
                     }
-                })
+                }
             }))
         }
     }
