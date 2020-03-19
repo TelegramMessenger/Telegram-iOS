@@ -161,8 +161,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                                 selectionState = state
                                 return state
                             }
-                        case .chats:
-                            break
+                        case let .chats(chatsNode):
+                            selectionState = ContactListNodeGroupSelectionState()
+                            for peerId in chatsNode.currentState.selectedPeerIds {
+                                selectionState = selectionState?.withToggledPeerId(.peer(peerId))
+                            }
                         }
                         var searchChatList = false
                         var searchGroups = false

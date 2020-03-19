@@ -244,6 +244,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     var dismissImpl: (() -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
     
     let arguments = ChatListFilterPresetListControllerArguments(context: context,
     addSuggestedPresed: { title, data in
@@ -268,15 +269,32 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             return state
         }
     }, removePreset: { id in
-        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
-            var filters = filters
-            if let index = filters.firstIndex(where: { $0.id == id }) {
-                filters.remove(at: index)
-            }
-            return filters
-        })
-        |> deliverOnMainQueue).start(next: { _ in
-        })
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.ChatList_RemoveFolderConfirmation),
+                ActionSheetButtonItem(title: presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                        var filters = filters
+                        if let index = filters.firstIndex(where: { $0.id == id }) {
+                            filters.remove(at: index)
+                        }
+                        return filters
+                    })
+                    |> deliverOnMainQueue).start()
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        presentControllerImpl?(actionSheet)
     })
     
     let chatCountCache = Atomic<[ChatListFilterData: Int]>(value: [:])
@@ -419,6 +437,9 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     }
     pushControllerImpl = { [weak controller] c in
         controller?.push(c)
+    }
+    presentControllerImpl = { [weak controller] c in
+        controller?.present(c, in: .window(.root))
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()

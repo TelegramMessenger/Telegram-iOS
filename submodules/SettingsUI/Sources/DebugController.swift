@@ -451,7 +451,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
-                        ])])
+                    ])])
                 arguments.presentController(actionSheet, nil)
             })
         case let .resetHoles(theme):

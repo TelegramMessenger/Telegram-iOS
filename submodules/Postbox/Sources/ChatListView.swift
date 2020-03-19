@@ -298,6 +298,9 @@ final class MutableChatListView {
     fileprivate var state: ChatListViewState
     fileprivate var sampledState: ChatListViewSample
     
+    private var additionalItemIds = Set<PeerId>()
+    fileprivate var additionalItemEntries: [MutableChatListEntry] = []
+    
     init(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
@@ -325,17 +328,16 @@ final class MutableChatListView {
         self.count = count
         
         if case .root = groupId, self.filterPredicate == nil {
-            /*let itemIds = postbox.additionalChatListItemsTable.get()
+            let itemIds = postbox.additionalChatListItemsTable.get()
             self.additionalItemIds = Set(itemIds)
             for peerId in itemIds {
                 if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
                     self.additionalItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
                 }
-            }*/
+            }
             self.groupEntries = []
             self.reloadGroups(postbox: postbox)
         } else {
-            //self.additionalItemIds = Set()
             self.groupEntries = []
         }
     }
@@ -477,9 +479,6 @@ final class MutableChatListView {
             }
         }
         
-        /*
-        
-        
         var updateAdditionalItems = false
         if let itemIds = transaction.replacedAdditionalChatListItems {
             self.additionalItemIds = Set(itemIds)
@@ -505,34 +504,6 @@ final class MutableChatListView {
             }
             hasChanges = true
         }
-        var updateAdditionalMixedItems = false
-        for peerId in self.additionalMixedItemIds.union(self.additionalMixedPinnedItemIds) {
-            if transaction.currentOperationsByPeerId[peerId] != nil {
-                updateAdditionalMixedItems = true
-            }
-            if transaction.currentUpdatedPeers[peerId] != nil {
-                updateAdditionalMixedItems = true
-            }
-            if transaction.currentUpdatedChatListInclusions[peerId] != nil {
-                updateAdditionalMixedItems = true
-            }
-        }
-        if updateAdditionalMixedItems {
-            self.additionalMixedItemEntries.removeAll()
-            for peerId in self.additionalMixedItemIds {
-                if let entry = postbox.chatListTable.getEntry(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable) {
-                    self.additionalMixedItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
-                }
-            }
-            self.additionalMixedPinnedEntries.removeAll()
-            for peerId in self.additionalMixedPinnedItemIds {
-                if let entry = postbox.chatListTable.getEntry(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable) {
-                    self.additionalMixedPinnedEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
-                }
-            }
-            
-            hasChanges = true
-        }*/
         return hasChanges
     }
     
@@ -544,7 +515,7 @@ final class MutableChatListView {
         return self.sampledState.hole
     }
     
-    /*private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) -> MutableChatListEntry? {
+    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) -> MutableChatListEntry? {
         switch entry {
         case let .IntermediateMessageEntry(index, messageIndex):
             let renderedMessage: Message?
@@ -573,48 +544,21 @@ final class MutableChatListView {
                 }
             }
             
-            var tagSummaryCount: Int32?
-            var actionsSummaryCount: Int32?
+            let tagSummaryCount: Int32? = nil
+            let actionsSummaryCount: Int32? = nil
             
-            if let tagSummary = self.summaryComponents.tagSummary {
-                let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
-                if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
-                    tagSummaryCount = summary.count
-                }
-            }
-            
-            if let actionsSummary = self.summaryComponents.actionsSummary {
-                let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
-                actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
-            }
-            
-            return .MessageEntry(index: index, message: renderedMessage, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState, renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), presence: presence, tagSummaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount), hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
+            return .MessageEntry(index: index, message: renderedMessage, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId)?.chatListEmbeddedState, renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), presence: presence, tagSummaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount), hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
         default:
             return nil
         }
-    }*/
+    }
     
     func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) {
-        /*for i in 0 ..< self.entries.count {
-            if let updatedEntry = self.renderEntry(self.entries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
-                self.entries[i] = updatedEntry
-            }
-        }
         for i in 0 ..< self.additionalItemEntries.count {
             if let updatedEntry = self.renderEntry(self.additionalItemEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
                 self.additionalItemEntries[i] = updatedEntry
             }
         }
-        for i in 0 ..< self.additionalMixedItemEntries.count {
-            if let updatedEntry = self.renderEntry(self.additionalMixedItemEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
-                self.additionalMixedItemEntries[i] = updatedEntry
-            }
-        }
-        for i in 0 ..< self.additionalMixedPinnedEntries.count {
-            if let updatedEntry = self.renderEntry(self.additionalMixedPinnedEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
-                self.additionalMixedPinnedEntries[i] = updatedEntry
-            }
-        }*/
     }
 }
 
@@ -648,16 +592,16 @@ public final class ChatListView {
         self.groupEntries = mutableView.groupEntries
         
         var additionalItemEntries: [ChatListEntry] = []
-        /*for entry in mutableView.additionalItemEntries {
+        for entry in mutableView.additionalItemEntries {
             switch entry {
-                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                    additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact))
-                case .HoleEntry:
-                    assertionFailure()
-                case .IntermediateMessageEntry:
-                    assertionFailure()
+            case let .MessageEntry(index, message, combinedReadState, _, isExcludedFromUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
+                additionalItemEntries.append(.MessageEntry(index: index, message: message, readState: combinedReadState, isRemovedFromTotalUnreadCount: isExcludedFromUnreadCount, embeddedInterfaceState: embeddedState, renderedPeer: peer, presence: peerPresence, summaryInfo: summaryInfo, hasFailed: hasFailed, isContact: isContact))
+            case .HoleEntry:
+                assertionFailure()
+            case .IntermediateMessageEntry:
+                assertionFailure()
             }
-        }*/
+        }
         
         self.additionalItemEntries = additionalItemEntries
     }
