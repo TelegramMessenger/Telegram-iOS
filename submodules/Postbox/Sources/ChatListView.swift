@@ -480,7 +480,7 @@ final class MutableChatListView {
         }
         
         var updateAdditionalItems = false
-        if let itemIds = transaction.replacedAdditionalChatListItems {
+        if case .root = self.groupId, self.filterPredicate == nil, let itemIds = transaction.replacedAdditionalChatListItems {
             self.additionalItemIds = Set(itemIds)
             updateAdditionalItems = true
         }

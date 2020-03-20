@@ -792,7 +792,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
     if let data = data, let notificationSettings = data.notificationSettings {
         let notificationsLabel: String
         let soundLabel: String
-        let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings ?? TelegramPeerNotificationSettings.defaultSettings
         if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
             if until < Int32.max - 1 {
                 notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
@@ -2148,13 +2147,40 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .call:
             self.requestCall()
         case .mute:
-            let muteInterval: Int32?
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
-                muteInterval = nil
+                let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: nil).start()
             } else {
-                muteInterval = Int32.max
+                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                let dismissAction: () -> Void = { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                }
+                var items: [ActionSheetItem] = []
+                let muteValues: [Int32] = [
+                    1 * 60 * 60,
+                    24 * 60 * 60,
+                    Int32.max
+                ]
+                for delay in muteValues {
+                    let title: String
+                    if delay == Int32.max {
+                        title = self.presentationData.strings.MuteFor_Forever
+                    } else {
+                        title = muteForIntervalString(strings: self.presentationData.strings, value: delay)
+                    }
+                    items.append(ActionSheetButtonItem(title: title, action: {
+                        dismissAction()
+                        
+                        let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: delay).start()
+                    }))
+                }
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                self.view.endEditing(true)
+                controller.present(actionSheet, in: .window(.root))
             }
-            let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: muteInterval).start()
         case .more:
             guard let data = self.data, let peer = data.peer else {
                 return

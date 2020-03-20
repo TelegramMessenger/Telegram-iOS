@@ -616,7 +616,10 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         self.scrollNode.layer.removeAllAnimations()
     }
     
-    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, transitionFraction: CGFloat, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
+        let isFirstTime = self.currentParams == nil
+        let transition: ContainedViewLayoutTransition = isFirstTime ? .immediate : proposedTransition
+        
         var focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
         let previousScrollBounds = self.scrollNode.bounds
         let previousContentWidth = self.scrollNode.view.contentSize.width

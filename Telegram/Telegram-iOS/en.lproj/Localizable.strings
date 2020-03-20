@@ -5468,3 +5468,5 @@ Any member of this group will be able to see messages in the channel.";
 "SetupUsername.ChangeNameWarningGroup" = "Warning, if you change the name of your group, it will loose its verified status. You will need to send a new application to @verification_bot";
 "SetupUsername.ChangeLinkWarningChannel" = "Warning, if you change the short link to your channel, it will loose its verified status. You will need to send a new application to @verification_bot";
 "SetupUsername.ChangeLinkWarningGroup" = "Warning, if you change the short link to your group, it will loose its verified status. You will need to send a new application to @verification_bot";
+
+"MuteFor.Forever" = "Mute Forever";
