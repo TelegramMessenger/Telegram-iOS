@@ -1051,13 +1051,23 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         
                     }
                     
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                        if showAlert {
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
+                    if peer.isVerified {
+                        let alertText: String
+                        if case .broadcast = peer.info {
+                            alertText = presentationData.strings.SetupUsername_ChangeLinkWarningChannel
                         } else {
-                            invokeAction()
+                            alertText = presentationData.strings.SetupUsername_ChangeLinkWarningGroup
                         }
-                    })
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
+                    } else {
+                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                            if showAlert {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
+                            } else {
+                                invokeAction()
+                            }
+                        })
+                    }
                 } else {
                     switch mode {
                         case .initialSetup:

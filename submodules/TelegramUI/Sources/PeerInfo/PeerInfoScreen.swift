@@ -1840,52 +1840,70 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         let title = strongSelf.headerNode.editingContentNode.editingTextForKey(.title) ?? ""
                         let description = strongSelf.headerNode.editingContentNode.editingTextForKey(.description) ?? ""
                         
-                        if title.isEmpty {
-                            strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
+                        let proceed: () -> Void = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if title.isEmpty {
+                                strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
+                            } else {
+                                var updateDataSignals: [Signal<Never, Void>] = []
+                                
+                                if title != channel.title {
+                                    updateDataSignals.append(
+                                        updatePeerTitle(account: strongSelf.context.account, peerId: channel.id, title: title)
+                                        |> ignoreValues
+                                        |> mapError { _ in return Void() }
+                                    )
+                                }
+                                if description != (data.cachedData as? CachedChannelData)?.about {
+                                    updateDataSignals.append(
+                                        updatePeerDescription(account: strongSelf.context.account, peerId: channel.id, description: description.isEmpty ? nil : description)
+                                        |> ignoreValues
+                                        |> mapError { _ in return Void() }
+                                    )
+                                }
+                                
+                                var dismissStatus: (() -> Void)?
+                                let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                                    dismissStatus?()
+                                }))
+                                dismissStatus = { [weak statusController] in
+                                    self?.activeActionDisposable.set(nil)
+                                    statusController?.dismiss()
+                                }
+                                strongSelf.controller?.present(statusController, in: .window(.root))
+                                
+                                strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    dismissStatus?()
+                                    
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                                }, completed: {
+                                    dismissStatus?()
+                                    
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                                }))
+                            }
+                        }
+                        
+                        if channel.isVerified && title != channel.title {
+                            let alertText: String
+                            if case .broadcast = channel.info {
+                                alertText = strongSelf.presentationData.strings.SetupUsername_ChangeNameWarningChannel
+                            } else {
+                                alertText = strongSelf.presentationData.strings.SetupUsername_ChangeNameWarningGroup
+                            }
+                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: proceed)]), in: .window(.root))
                         } else {
-                            var updateDataSignals: [Signal<Never, Void>] = []
-                            
-                            if title != channel.title {
-                                updateDataSignals.append(
-                                    updatePeerTitle(account: strongSelf.context.account, peerId: channel.id, title: title)
-                                    |> ignoreValues
-                                    |> mapError { _ in return Void() }
-                                )
-                            }
-                            if description != (data.cachedData as? CachedChannelData)?.about {
-                                updateDataSignals.append(
-                                    updatePeerDescription(account: strongSelf.context.account, peerId: channel.id, description: description.isEmpty ? nil : description)
-                                    |> ignoreValues
-                                    |> mapError { _ in return Void() }
-                                )
-                            }
-                            
-                            var dismissStatus: (() -> Void)?
-                            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
-                                dismissStatus?()
-                            }))
-                            dismissStatus = { [weak statusController] in
-                                self?.activeActionDisposable.set(nil)
-                                statusController?.dismiss()
-                            }
-                            strongSelf.controller?.present(statusController, in: .window(.root))
-                            
-                            strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
-                            |> deliverOnMainQueue).start(error: { _ in
-                                dismissStatus?()
-                                
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                            }, completed: {
-                                dismissStatus?()
-                                
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                            }))
+                            proceed()
                         }
                     } else {
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)

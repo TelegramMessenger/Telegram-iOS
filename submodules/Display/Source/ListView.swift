@@ -1424,7 +1424,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         } else if topItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
-            self.scroller.contentOffset = self.lastContentOffset
+            if self.scroller.contentOffset != self.lastContentOffset {
+                self.scroller.contentOffset = self.lastContentOffset
+            }
         } else if bottomItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize * 2.0 - bottomItemEdge)

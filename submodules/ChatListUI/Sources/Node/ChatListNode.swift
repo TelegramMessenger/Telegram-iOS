@@ -579,10 +579,16 @@ public final class ChatListNode: ListView {
             |> deliverOnMainQueue).start(next: { result in
                 if let strongSelf = self {
                     switch result {
-                        case .done:
-                            break
-                        case let .limitExceeded(maxCount):
-                            strongSelf.presentAlert?(strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0)
+                    case .done:
+                        break
+                    case let .limitExceeded(maxCount):
+                        let text: String
+                        if chatListFilter != nil {
+                            text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
+                        } else {
+                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0
+                        }
+                        strongSelf.presentAlert?(text)
                     }
                 }
             })
@@ -1490,7 +1496,7 @@ public final class ChatListNode: ListView {
     var isNavigationInAFinalState: Bool {
         switch self.visibleContentOffset() {
         case let .known(value):
-            if value < navigationBarSearchContentHeight + 1.0 {
+            if value < navigationBarSearchContentHeight - 1.0 {
                 if abs(value - 0.0) < 1.0 {
                     return true
                 }

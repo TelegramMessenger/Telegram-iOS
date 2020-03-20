@@ -1689,7 +1689,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let titleFrame = self.titleNode.frame
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
+            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
             
             let authorFrame = self.authorNode.frame
             transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: authorFrame.origin.y), size: authorFrame.size))
@@ -1697,10 +1697,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
             var textFrame = self.textNode.frame
-            let textDeltaX = textFrame.origin.x - contentRect.origin.x
-            transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textDeltaX, y: 0.0))
             textFrame.origin.x = contentRect.origin.x
-            transition.updateFrame(node: textNode, frame: textFrame)
+            transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             
             var contentImageFrame = self.contentImageNode.frame
             contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 0.0)

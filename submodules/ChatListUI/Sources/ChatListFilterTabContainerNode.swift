@@ -64,8 +64,12 @@ private final class ItemNode: ASDisplayNode {
     private let containerNode: ContextControllerSourceNode
     
     private let extractedBackgroundNode: ASImageNode
+    private let titleContainer: ASDisplayNode
     private let titleNode: ImmediateTextNode
+    private let titleActiveNode: ImmediateTextNode
+    private let shortTitleContainer: ASDisplayNode
     private let shortTitleNode: ImmediateTextNode
+    private let shortTitleActiveNode: ImmediateTextNode
     private let badgeContainerNode: ASDisplayNode
     private let badgeTextNode: ImmediateTextNode
     private let badgeBackgroundActiveNode: ASImageNode
@@ -74,7 +78,7 @@ private final class ItemNode: ASDisplayNode {
     private var deleteButtonNode: ItemNodeDeleteButtonNode?
     private let buttonNode: HighlightTrackingButtonNode
     
-    private var isSelected: Bool = false
+    private var selectionFraction: CGFloat = 0.0
     private(set) var unreadCount: Int = 0
     
     private var isReordering: Bool = false
@@ -93,14 +97,29 @@ private final class ItemNode: ASDisplayNode {
         
         let titleInset: CGFloat = 4.0
         
+        self.titleContainer = ASDisplayNode()
+        
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        
+        self.titleActiveNode = ImmediateTextNode()
+        self.titleActiveNode.displaysAsynchronously = false
+        self.titleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.titleActiveNode.alpha = 0.0
+        
+        self.shortTitleContainer = ASDisplayNode()
         
         self.shortTitleNode = ImmediateTextNode()
         self.shortTitleNode.displaysAsynchronously = false
         self.shortTitleNode.alpha = 0.0
         self.shortTitleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        
+        self.shortTitleActiveNode = ImmediateTextNode()
+        self.shortTitleActiveNode.displaysAsynchronously = false
+        self.shortTitleActiveNode.alpha = 0.0
+        self.shortTitleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.shortTitleActiveNode.alpha = 0.0
         
         self.badgeContainerNode = ASDisplayNode()
         
@@ -114,17 +133,20 @@ private final class ItemNode: ASDisplayNode {
         self.badgeBackgroundInactiveNode = ASImageNode()
         self.badgeBackgroundInactiveNode.displaysAsynchronously = false
         self.badgeBackgroundInactiveNode.displayWithoutProcessing = true
-        self.badgeBackgroundInactiveNode.isHidden = true
         
         self.buttonNode = HighlightTrackingButtonNode()
         
         super.init()
         
         self.extractedContainerNode.contentNode.addSubnode(self.extractedBackgroundNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.titleNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.shortTitleNode)
-        self.badgeContainerNode.addSubnode(self.badgeBackgroundActiveNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.titleContainer)
+        self.titleContainer.addSubnode(self.titleNode)
+        self.titleContainer.addSubnode(self.titleActiveNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.shortTitleContainer)
+        self.shortTitleContainer.addSubnode(self.shortTitleNode)
+        self.shortTitleContainer.addSubnode(self.shortTitleActiveNode)
         self.badgeContainerNode.addSubnode(self.badgeBackgroundInactiveNode)
+        self.badgeContainerNode.addSubnode(self.badgeBackgroundActiveNode)
         self.badgeContainerNode.addSubnode(self.badgeTextNode)
         self.extractedContainerNode.contentNode.addSubnode(self.badgeContainerNode)
         self.extractedContainerNode.contentNode.addSubnode(self.buttonNode)
@@ -162,7 +184,7 @@ private final class ItemNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateText(title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, isSelected: Bool, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func updateText(title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
@@ -173,7 +195,7 @@ private final class ItemNode: ASDisplayNode {
         self.containerNode.isGestureEnabled = !isEditing && !isReordering
         self.buttonNode.isUserInteractionEnabled = !isEditing && !isReordering
         
-        self.isSelected = isSelected
+        self.selectionFraction = selectionFraction
         self.unreadCount = unreadCount
         
         transition.updateAlpha(node: self.containerNode, alpha: isReordering && isAllChats ? 0.5 : 1.0)
@@ -200,12 +222,28 @@ private final class ItemNode: ASDisplayNode {
         
         transition.updateAlpha(node: self.badgeContainerNode, alpha: (isReordering || unreadCount == 0) ? 0.0 : 1.0)
         
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
-        self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
+        let selectionAlpha: CGFloat = selectionFraction * selectionFraction
+        let deselectionAlpha: CGFloat = 1.0// - selectionFraction
+        
+        transition.updateAlpha(node: self.titleNode, alpha: deselectionAlpha)
+        transition.updateAlpha(node: self.titleActiveNode, alpha: selectionAlpha)
+        transition.updateAlpha(node: self.shortTitleNode, alpha: deselectionAlpha)
+        transition.updateAlpha(node: self.shortTitleActiveNode, alpha: selectionAlpha)
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+        self.titleActiveNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+        self.shortTitleActiveNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
         if unreadCount != 0 {
             self.badgeTextNode.attributedText = NSAttributedString(string: "\(unreadCount)", font: Font.regular(14.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
-            self.badgeBackgroundActiveNode.isHidden = !isSelected && !unreadHasUnmuted
-            self.badgeBackgroundInactiveNode.isHidden = isSelected || unreadHasUnmuted
+            let badgeSelectionFraction: CGFloat = unreadHasUnmuted ? 1.0 : selectionFraction
+            
+            let badgeSelectionAlpha: CGFloat = badgeSelectionFraction
+            //let badgeDeselectionAlpha: CGFloat = 1.0 - badgeSelectionFraction
+            
+            transition.updateAlpha(node: self.badgeBackgroundActiveNode, alpha: badgeSelectionAlpha * badgeSelectionAlpha)
+            //transition.updateAlpha(node: self.badgeBackgroundInactiveNode, alpha: badgeDeselectionAlpha)
+            self.badgeBackgroundInactiveNode.alpha = 1.0
         }
         
         if self.isReordering != isReordering {
@@ -221,10 +259,18 @@ private final class ItemNode: ASDisplayNode {
     
     func updateLayout(height: CGFloat, transition: ContainedViewLayoutTransition) -> (width: CGFloat, shortWidth: CGFloat) {
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: -self.titleNode.insets.left, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+        let _ = self.titleActiveNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
+        let titleFrame = CGRect(origin: CGPoint(x: -self.titleNode.insets.left, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+        self.titleContainer.frame = titleFrame
+        self.titleNode.frame = CGRect(origin: CGPoint(), size: titleFrame.size)
+        self.titleActiveNode.frame = CGRect(origin: CGPoint(), size: titleFrame.size)
         
         let shortTitleSize = self.shortTitleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        self.shortTitleNode.frame = CGRect(origin: CGPoint(x: -self.shortTitleNode.insets.left, y: floor((height - shortTitleSize.height) / 2.0)), size: shortTitleSize)
+        let _ = self.shortTitleActiveNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
+        let shortTitleFrame = CGRect(origin: CGPoint(x: -self.shortTitleNode.insets.left, y: floor((height - shortTitleSize.height) / 2.0)), size: shortTitleSize)
+        self.shortTitleContainer.frame = shortTitleFrame
+        self.shortTitleNode.frame = CGRect(origin: CGPoint(), size: shortTitleFrame.size)
+        self.shortTitleActiveNode.frame = CGRect(origin: CGPoint(), size: shortTitleFrame.size)
         
         if let deleteButtonNode = self.deleteButtonNode {
             if let theme = self.theme {
@@ -235,7 +281,7 @@ private final class ItemNode: ASDisplayNode {
         
         let badgeSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let badgeInset: CGFloat = 4.0
-        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right + 5.0 + 5.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
+        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right + 4.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
         self.badgeContainerNode.frame = badgeBackgroundFrame
         self.badgeBackgroundActiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
         self.badgeBackgroundInactiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
@@ -258,8 +304,8 @@ private final class ItemNode: ASDisplayNode {
     }
     
     func updateArea(size: CGSize, sideInset: CGFloat, useShortTitle: Bool, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.titleNode, alpha: useShortTitle ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.shortTitleNode, alpha: useShortTitle ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.titleContainer, alpha: useShortTitle ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.shortTitleContainer, alpha: useShortTitle ? 1.0 : 0.0)
         
         self.buttonNode.frame = CGRect(origin: CGPoint(x: -sideInset, y: 0.0), size: CGSize(width: size.width + sideInset * 2.0, height: size.height))
         
@@ -628,7 +674,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             }
         }
         
-        for filter in reorderedFilters {
+        for i in 0 ..< reorderedFilters.count {
+            let filter = reorderedFilters[i]
+            
             let itemNode: ItemNode
             var itemNodeTransition = transition
             var wasAdded = false
@@ -672,7 +720,19 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             if !wasAdded && (itemNode.unreadCount != 0) != (unreadCount != 0) {
                 badgeAnimations[filter.id] = (unreadCount != 0) ? .in : .out
             }
-            itemNode.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, isSelected: selectedFilter == filter.id, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            
+            let selectionFraction: CGFloat
+            if selectedFilter == filter.id {
+                selectionFraction = 1.0 - abs(transitionFraction)
+            } else if i != 0 && selectedFilter == reorderedFilters[i - 1].id {
+                selectionFraction = max(0.0, -transitionFraction)
+            } else if i != reorderedFilters.count - 1 && selectedFilter == reorderedFilters[i + 1].id {
+                selectionFraction = max(0.0, transitionFraction)
+            } else {
+                selectionFraction = 0.0
+            }
+            
+            itemNode.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {
