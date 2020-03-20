@@ -203,6 +203,7 @@ framework(
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/Svg:Svg",
         "//submodules/StatisticsUI:StatisticsUI",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

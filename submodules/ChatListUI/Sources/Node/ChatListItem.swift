@@ -1881,8 +1881,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
 }
 
 private func foldLineBreaks(_ text: String) -> String {
-    var lines = text.split { $0.isNewline }
-    var startedBothLines = false
+    let lines = text.split { $0.isNewline }
     var result = ""
     for line in lines {
         if line.isEmpty {

@@ -170,15 +170,16 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            var leftInset = 16.0 + params.leftInset
-            var rightInset = 16.0 + params.rightInset
+            let leftInset = 16.0 + params.leftInset
+            let rightInset = 16.0 + params.rightInset
             var totalLeftInset = leftInset
-            var additionalRightInset: CGFloat = 93.0
+            let additionalRightInset: CGFloat = 93.0
         
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             let contentKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.message, strings: item.presentationData.strings, nameDisplayOrder: .firstLast, accountPeerId: item.context.account.peerId)
-            let text = stringForMediaKind(contentKind, strings: item.presentationData.strings).0
+            var text = stringForMediaKind(contentKind, strings: item.presentationData.strings).0
+            text = foldLineBreaks(text)
             
             var contentImageMedia: Media?
             for media in item.message.media {

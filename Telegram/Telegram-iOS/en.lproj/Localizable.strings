@@ -5368,6 +5368,7 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.InteractionsTitle" = "INTERACTIONS";
 "Stats.InstantViewInteractionsTitle" = "INSTANT VIEW INTERACTIONS";
 "Stats.ViewsBySourceTitle" = "VIEWS BY SOURCE";
+"Stats.ViewsByHoursTitle" = "VIEWS BY HOURS";
 "Stats.FollowersBySourceTitle" = "FOLLOWERS BY SOURCE";
 "Stats.LanguagesTitle" = "LANGUAGES";
 "Stats.PostsTitle" = "RECENT POSTS";
@@ -5385,6 +5386,9 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.MessageForwards_3_10" = "%@ forwards";
 "Stats.MessageForwards_many" = "%@ forwards";
 "Stats.MessageForwards_any" = "%@ forwards";
+
+"Stats.LoadingTitle" = "Preparing stats";
+"Stats.LoadingText" = "Please wait a few moments while\nwe generate your stats";
 
 "InstantPage.Views_0" = "%@ views";
 "InstantPage.Views_1" = "%@ view";

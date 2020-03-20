@@ -138,7 +138,7 @@ class PercentChartComponentController: GeneralChartComponentController {
         
         let values: [ChartDetailsViewModel.Value] = chartsCollection.chartValues.enumerated().map { arg in
             let (index, component) = arg
-            return ChartDetailsViewModel.Value(prefix: PercentConstants.percentValueFormatter.string(from: component.values[pointIndex] / total * 100),
+            return ChartDetailsViewModel.Value(prefix: total > 0 ? PercentConstants.percentValueFormatter.string(from: component.values[pointIndex] / total * 100) : "0%",
                                                title: component.name,
                                                value: BaseConstants.detailsNumberFormatter.string(from: component.values[pointIndex]),
                                                color: component.color,
@@ -151,16 +151,16 @@ class PercentChartComponentController: GeneralChartComponentController {
             dateString = BaseConstants.headerMediumRangeFormatter.string(from: closestDate)
         }
         let viewModel = ChartDetailsViewModel(title: dateString,
-                                              showArrow: self.isZoomable && !self.isZoomed,
+                                              showArrow: total > 0 && self.isZoomable && !self.isZoomed,
                                               showPrefixes: true,
                                               values: values,
                                               totalValue: nil,
                                               tapAction: { [weak self] in
                                                 self?.hideDetailsView(animated: true)
                                                 self?.zoomInOnDateClosure?(closestDate) },
-                                                                                      hideAction: { [weak self] in
-                                                                     self?.hideDetailsView(animated: true)
-                                                })
+                                              hideAction: { [weak self] in
+                                                self?.hideDetailsView(animated: true)
+                                            })
         return viewModel
     }
     

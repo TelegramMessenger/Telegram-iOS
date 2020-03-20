@@ -13,23 +13,6 @@ import StickerResources
 import PhotoResources
 import TelegramStringFormatting
 
-private func foldLineBreaks(_ text: String) -> String {
-    var lines = text.split { $0.isNewline }
-    var startedBothLines = false
-    var result = ""
-    for line in lines {
-        if line.isEmpty {
-            continue
-        }
-        if result.isEmpty {
-            result += line
-        } else {
-            result += " " + line
-        }
-    }
-    return result
-}
-
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let context: AccountContext
     private let tapButton: HighlightTrackingButtonNode

@@ -40,6 +40,7 @@ static_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/rlottie:RLottieBinding",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

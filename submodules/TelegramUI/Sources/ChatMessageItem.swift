@@ -406,10 +406,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                             break
                     }
                 }
-            } else if let _ = media as? TelegramMediaAction {
+            } else if media is TelegramMediaAction {
                 viewClassName = ChatMessageBubbleItemNode.self
-            } else if let _ = media as? TelegramMediaExpiredContent {
+            } else if media is TelegramMediaExpiredContent {
                 viewClassName = ChatMessageBubbleItemNode.self
+            } else if media is TelegramMediaDice {
+                viewClassName = ChatMessageAnimatedStickerItemNode.self
             }
         }
         

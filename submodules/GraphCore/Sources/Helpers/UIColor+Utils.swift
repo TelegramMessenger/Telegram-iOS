@@ -54,6 +54,21 @@ extension GColor {
                 case "lightblue":
                     self.init(hexString: "#5ac8fa")
                     return
+                case "seablue":
+                    self.init(hexString: "#35afdc")
+                    return
+                case "orange":
+                    self.init(hexString: "#fd7a32")
+                    return
+                case "violet":
+                    self.init(hexString: "#9968f7")
+                    return
+                case "emerald":
+                    self.init(hexString: "#37cca3")
+                    return
+                case "pink":
+                    self.init(hexString: "#ff4f79")
+                    return
                 default:
                     break
             }

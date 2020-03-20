@@ -296,36 +296,36 @@ private enum StatsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! StatsControllerArguments
         switch self {
-            case let .overviewHeader(theme, text, dates):
+            case let .overviewHeader(_, text, dates):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
-            case let .growthTitle(theme, text),
-                 let .followersTitle(theme, text),
-                 let .notificationsTitle(theme, text),
-                 let .viewsByHourTitle(theme, text),
-                 let .viewsBySourceTitle(theme, text),
-                 let .followersBySourceTitle(theme, text),
-                 let .languagesTitle(theme, text),
-                 let .postInteractionsTitle(theme, text),
-                 let .postsTitle(theme, text),
-                 let .instantPageInteractionsTitle(theme, text):
+            case let .growthTitle(_, text),
+                 let .followersTitle(_, text),
+                 let .notificationsTitle(_, text),
+                 let .viewsByHourTitle(_, text),
+                 let .viewsBySourceTitle(_, text),
+                 let .followersBySourceTitle(_, text),
+                 let .languagesTitle(_, text),
+                 let .postInteractionsTitle(_, text),
+                 let .postsTitle(_, text),
+                 let .instantPageInteractionsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .overview(theme, stats):
+            case let .overview(_, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
-            case let .growthGraph(theme, strings, dateTimeFormat, graph, type):
+            case let .growthGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .followersGraph(theme, strings, dateTimeFormat, graph, type):
+            case let .followersGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .notificationsGraph(theme, strings, dateTimeFormat, graph, type):
+            case let .notificationsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .viewsByHourGraph(theme, strings, dateTimeFormat, graph, type):
+            case let .viewsByHourGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .viewsBySourceGraph(theme, strings, dateTimeFormat, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
-            case let .followersBySourceGraph(theme, strings, dateTimeFormat, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 160.0, sectionId: self.section, style: .blocks)
-            case let .languagesGraph(theme, strings, dateTimeFormat, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, height: 100.0, sectionId: self.section, style: .blocks)
-            case let .postInteractionsGraph(theme, strings, dateTimeFormat, graph, type):
+            case let .viewsBySourceGraph(_, _, _, graph, type):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .followersBySourceGraph(_, _, _, graph, type):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .languagesGraph(_, _, _, graph, type):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+            case let .postInteractionsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
@@ -333,18 +333,18 @@ private enum StatsEntry: ItemListNodeEntry {
                         }
                     })
                 }, sectionId: self.section, style: .blocks)
-            case let .post(index, theme, strings, dateTimeFormat, message, interactions):
+            case let .instantPageInteractionsGraph(_, _, _, graph, type):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
+                    let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
+                        if let graph = graph, case let .Loaded(_, data) = graph {
+                            completion(data)
+                        }
+                    })
+                }, sectionId: self.section, style: .blocks)
+            case let .post(_, _, _, _, message, interactions):
                 return StatsMessageItem(context: arguments.context, presentationData: presentationData, message: message, views: interactions.views, forwards: interactions.forwards, sectionId: self.section, style: .blocks, action: {
                     arguments.openMessage(message.id)
                 })
-            case let .instantPageInteractionsGraph(theme, strings, dateTimeFormat, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
-                    let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
-                        if let graph = graph, case let .Loaded(_, data) = graph {
-                            completion(data)
-                        }
-                    })
-                }, sectionId: self.section, style: .blocks)
         }
     }
 }
@@ -368,32 +368,37 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
             entries.append(.followersTitle(presentationData.theme, presentationData.strings.Stats_FollowersTitle))
             entries.append(.followersGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.followersGraph, .lines))
         }
-        
+
         if !data.muteGraph.isEmpty {
             entries.append(.notificationsTitle(presentationData.theme, presentationData.strings.Stats_NotificationsTitle))
             entries.append(.notificationsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.muteGraph, .lines))
         }
         
+        if !data.topHoursGraph.isEmpty {
+            entries.append(.viewsByHourTitle(presentationData.theme, presentationData.strings.Stats_ViewsByHoursTitle))
+            entries.append(.viewsByHourGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .hourlyStep))
+        }
+
         if !data.viewsBySourceGraph.isEmpty {
             entries.append(.viewsBySourceTitle(presentationData.theme, presentationData.strings.Stats_ViewsBySourceTitle))
             entries.append(.viewsBySourceGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.viewsBySourceGraph, .bars))
         }
-        
+
         if !data.newFollowersBySourceGraph.isEmpty {
             entries.append(.followersBySourceTitle(presentationData.theme, presentationData.strings.Stats_FollowersBySourceTitle))
             entries.append(.followersBySourceGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.newFollowersBySourceGraph, .bars))
         }
-        
+
         if !data.languagesGraph.isEmpty {
             entries.append(.languagesTitle(presentationData.theme, presentationData.strings.Stats_LanguagesTitle))
             entries.append(.languagesGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.languagesGraph, .pie))
         }
-        
+
         if !data.interactionsGraph.isEmpty {
             entries.append(.postInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InteractionsTitle))
-            entries.append(.postInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, .step))
+            entries.append(.postInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, .twoAxisStep))
         }
-        
+
         if let messages = messages, !messages.isEmpty, let interactions = interactions, !interactions.isEmpty {
             entries.append(.postsTitle(presentationData.theme, presentationData.strings.Stats_PostsTitle))
             var index: Int32 = 0
@@ -404,7 +409,7 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
                 }
             }
         }
-        
+
         if !data.instantPageInteractionsGraph.isEmpty {
             entries.append(.instantPageInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InstantViewInteractionsTitle))
             entries.append(.instantPageInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.instantPageInteractionsGraph, .step))
@@ -439,6 +444,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         if let statsContext = statsContext, let stats = stats {
             if case .OnDemand = stats.interactionsGraph {
                 statsContext.loadInteractionsGraph()
+                statsContext.loadTopHoursGraph()
                 statsContext.loadNewFollowersBySourceGraph()
                 statsContext.loadViewsBySourceGraph()
                 statsContext.loadLanguagesGraph()
@@ -460,12 +466,21 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     }
     messagesPromise.set(.single(nil) |> then(messageView))
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get())
+    let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(1.5, queue: Queue.mainQueue()))
+    
+    let previousData = Atomic<ChannelStats?>(value: nil)
+    
+    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
     |> deliverOnMainQueue
-    |> map { presentationData, data, messageView -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, messageView, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
-            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+            if longLoading {
+                emptyStateItem = StatsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+            } else {
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+            }
         }
         
         let messages = messageView?.entries.map { $0.message }.sorted(by: { (lhsMessage, rhsMessage) -> Bool in
@@ -478,7 +493,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelInfo_Stats), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: statsControllerEntries(data: data, messages: messages, interactions: interactions, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: false, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: statsControllerEntries(data: data, messages: messages, interactions: interactions, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

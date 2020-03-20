@@ -156,26 +156,26 @@ class StatsOverviewItemNode: ListViewItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             let deltaFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
-            let (followersValueLabelLayout, followersValueLabelApply) = makeFollowersValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(item.stats.followers.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (followersValueLabelLayout, followersValueLabelApply) = makeFollowersValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(item.stats.followers.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
              
-            let (viewsPerPostValueLabelLayout, viewsPerPostValueLabelApply) = makeViewsPerPostValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(item.stats.viewsPerPost.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (viewsPerPostValueLabelLayout, viewsPerPostValueLabelApply) = makeViewsPerPostValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.stats.viewsPerPost.current > 0 ? compactNumericCountString(Int(item.stats.viewsPerPost.current)) : "", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (sharesPerPostValueLabelLayout, sharesPerPostValueLabelApply) = makeSharesPerPostValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(item.stats.sharesPerPost.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (sharesPerPostValueLabelLayout, sharesPerPostValueLabelApply) = makeSharesPerPostValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.stats.sharesPerPost.current > 0 ? compactNumericCountString(Int(item.stats.sharesPerPost.current)) : "", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var enabledNotifications: Double = 0.0
             if item.stats.enabledNotifications.total > 0 {
                 enabledNotifications = item.stats.enabledNotifications.value / item.stats.enabledNotifications.total
             }
             
-            let (enabledNotificationsValueLabelLayout, enabledNotificationsValueLabelApply) = makeEnabledNotificationsValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%.02f%%", enabledNotifications * 100.0), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (enabledNotificationsValueLabelLayout, enabledNotificationsValueLabelApply) = makeEnabledNotificationsValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%.02f%%", enabledNotifications * 100.0), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (followersTitleLabelLayout, followersTitleLabelApply) = makeFollowersTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Followers, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (followersTitleLabelLayout, followersTitleLabelApply) = makeFollowersTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Followers, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (viewsPerPostTitleLabelLayout, viewsPerPostTitleLabelApply) = makeViewsPerPostTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_ViewsPerPost, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (viewsPerPostTitleLabelLayout, viewsPerPostTitleLabelApply) = makeViewsPerPostTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.stats.viewsPerPost.current > 0 ? item.presentationData.strings.Stats_ViewsPerPost : "", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (sharesPerPostTitleLabelLayout, sharesPerPostTitleLabelApply) = makeSharesPerPostTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_SharesPerPost, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (sharesPerPostTitleLabelLayout, sharesPerPostTitleLabelApply) = makeSharesPerPostTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.stats.sharesPerPost.current > 0 ? item.presentationData.strings.Stats_SharesPerPost : "", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (enabledNotificationsTitleLabelLayout, enabledNotificationsTitleLabelApply) = makeEnabledNotificationsTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_EnabledNotifications, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (enabledNotificationsTitleLabelLayout, enabledNotificationsTitleLabelApply) = makeEnabledNotificationsTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_EnabledNotifications, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let followersDeltaValue = item.stats.followers.current - item.stats.followers.previous
             let followersDeltaCompact = compactNumericCountString(abs(Int(followersDeltaValue)))
@@ -185,7 +185,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                 followersDeltaPercentage = abs(followersDeltaValue / item.stats.followers.previous)
             }
              
-            let (followersDeltaLabelLayout, followersDeltaLabelApply) = makeFollowersDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%@ (%.02f%%)", followersDelta, followersDeltaPercentage * 100.0), font: deltaFont, textColor: followersDeltaValue > 0.0 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let followersDeltaText = abs(followersDeltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", followersDelta, followersDeltaPercentage * 100.0) : ""
+            
+            let (followersDeltaLabelLayout, followersDeltaLabelApply) = makeFollowersDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: followersDeltaText, font: deltaFont, textColor: followersDeltaValue > 0.0 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let viewsPerPostDeltaValue = item.stats.viewsPerPost.current - item.stats.viewsPerPost.previous
             let viewsPerPostDeltaCompact = compactNumericCountString(abs(Int(viewsPerPostDeltaValue)))
@@ -195,7 +197,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                 viewsPerPostDeltaPercentage = abs(viewsPerPostDeltaValue / item.stats.viewsPerPost.previous)
             }
             
-            let (viewsPerPostDeltaLabelLayout, viewsPerPostDeltaLabelApply) = makeViewsPerPostDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%@ (%.02f%%)", viewsPerPostDelta, viewsPerPostDeltaPercentage * 100.0), font: deltaFont, textColor: viewsPerPostDeltaValue > 0.0 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let viewsPerPostDeltaText = abs(viewsPerPostDeltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", viewsPerPostDelta, viewsPerPostDeltaPercentage * 100.0) : ""
+            
+            let (viewsPerPostDeltaLabelLayout, viewsPerPostDeltaLabelApply) = makeViewsPerPostDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewsPerPostDeltaText, font: deltaFont, textColor: viewsPerPostDeltaValue > 0.0 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let sharesPerPostDeltaValue = item.stats.sharesPerPost.current - item.stats.sharesPerPost.previous
             let sharesPerPostDeltaCompact = compactNumericCountString(abs(Int(sharesPerPostDeltaValue)))
@@ -205,7 +209,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                 sharesPerPostDeltaPercentage = abs(sharesPerPostDeltaValue / item.stats.sharesPerPost.previous)
             }
             
-            let (sharesPerPostDeltaLabelLayout, sharesPerPostDeltaLabelApply) = makeSharesPerPostDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%@ (%.02f%%)", sharesPerPostDelta, sharesPerPostDeltaPercentage * 100.0), font: deltaFont, textColor: sharesPerPostDeltaValue > 0.0 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 140.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let sharesPerPostDeltaText = abs(sharesPerPostDeltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", sharesPerPostDelta, sharesPerPostDeltaPercentage * 100.0) : ""
+            
+            let (sharesPerPostDeltaLabelLayout, sharesPerPostDeltaLabelApply) = makeSharesPerPostDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: sharesPerPostDeltaText, font: deltaFont, textColor: sharesPerPostDeltaValue > 0.0 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -213,11 +219,35 @@ class StatsOverviewItemNode: ListViewItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            let height: CGFloat
-            if item.stats.viewsPerPost.current.isZero && item.stats.sharesPerPost.current.isZero {
-                height = 64.0
+            let horizontalSpacing: CGFloat = 4.0
+            let verticalSpacing: CGFloat = 18.0
+            let topInset: CGFloat = 14.0
+            let sideInset: CGFloat = 16.0
+            
+            var height: CGFloat = topInset * 2.0
+            height += enabledNotificationsValueLabelLayout.size.height + enabledNotificationsTitleLabelLayout.size.height
+            
+            var twoColumnLayout = true
+            if max(followersValueLabelLayout.size.width + followersDeltaLabelLayout.size.width + horizontalSpacing + enabledNotificationsValueLabelLayout.size.width, viewsPerPostValueLabelLayout.size.width + viewsPerPostDeltaLabelLayout.size.width + horizontalSpacing + sharesPerPostValueLabelLayout.size.width + sharesPerPostDeltaLabelLayout.size.width) > params.width - leftInset - rightInset {
+                twoColumnLayout = false
+            }
+            
+            if twoColumnLayout {
+                if !item.stats.viewsPerPost.current.isZero || !item.stats.sharesPerPost.current.isZero {
+                    height += verticalSpacing
+                    height += sharesPerPostValueLabelLayout.size.height + sharesPerPostTitleLabelLayout.size.height
+                }
             } else {
-                height = 120.0
+                height += verticalSpacing
+                height += enabledNotificationsValueLabelLayout.size.height + enabledNotificationsTitleLabelLayout.size.height
+                if !item.stats.viewsPerPost.current.isZero {
+                    height += verticalSpacing
+                    height += viewsPerPostValueLabelLayout.size.height + viewsPerPostTitleLabelLayout.size.height
+                }
+                if !item.stats.sharesPerPost.current.isZero {
+                    height += verticalSpacing
+                    height += sharesPerPostValueLabelLayout.size.height + sharesPerPostTitleLabelLayout.size.height
+                }
             }
             
             switch item.style {
@@ -316,28 +346,25 @@ class StatsOverviewItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    let horizontalSpacing: CGFloat = 4.0
-                    let verticalSpacing: CGFloat = 70.0
-                    let topInset: CGFloat = 14.0
-                    let sideInset: CGFloat = 16.0
-                    
                     strongSelf.followersValueLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: topInset), size: followersValueLabelLayout.size)
                     strongSelf.followersTitleLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: strongSelf.followersValueLabel.frame.maxY), size: followersTitleLabelLayout.size)
-                    strongSelf.followersDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.followersValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.followersValueLabel.frame.minY + 4.0), size: followersDeltaLabelLayout.size)
+                    strongSelf.followersDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.followersValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.followersValueLabel.frame.maxY - followersDeltaLabelLayout.size.height - 2.0), size: followersDeltaLabelLayout.size)
                     
-                    strongSelf.viewsPerPostValueLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: verticalSpacing), size: viewsPerPostValueLabelLayout.size)
+                    let secondColumnX = twoColumnLayout ? max(layout.size.width / 2.0, sideInset + leftInset + max(followersValueLabelLayout.size.width + followersDeltaLabelLayout.size.width, viewsPerPostValueLabelLayout.size.width + viewsPerPostDeltaLabelLayout.size.width) + horizontalSpacing) : sideInset + leftInset
+                    
+                    let enabledNotificationsY = twoColumnLayout ? topInset : strongSelf.followersTitleLabel.frame.maxY + verticalSpacing
+                    strongSelf.enabledNotificationsValueLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: enabledNotificationsY), size: enabledNotificationsValueLabelLayout.size)
+                    strongSelf.enabledNotificationsTitleLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: strongSelf.enabledNotificationsValueLabel.frame.maxY), size: enabledNotificationsTitleLabelLayout.size)
+                    
+                    let viewsPerPostY = twoColumnLayout ? strongSelf.followersTitleLabel.frame.maxY + verticalSpacing : strongSelf.enabledNotificationsTitleLabel.frame.maxY + verticalSpacing
+                    strongSelf.viewsPerPostValueLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: viewsPerPostY), size: viewsPerPostValueLabelLayout.size)
                     strongSelf.viewsPerPostTitleLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: strongSelf.viewsPerPostValueLabel.frame.maxY), size: viewsPerPostTitleLabelLayout.size)
-                    strongSelf.viewsPerPostDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.viewsPerPostValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.viewsPerPostValueLabel.frame.minY + 4.0), size: viewsPerPostDeltaLabelLayout.size)
-                    
-                    let rightColumnX = max(layout.size.width / 2.0, max(strongSelf.followersDeltaLabel.frame.maxX, strongSelf.viewsPerPostDeltaLabel.frame.maxX) + horizontalSpacing)
-                    
-                    strongSelf.sharesPerPostValueLabel.frame = CGRect(origin: CGPoint(x: rightColumnX, y: verticalSpacing), size: sharesPerPostValueLabelLayout.size)
-                    strongSelf.enabledNotificationsValueLabel.frame = CGRect(origin: CGPoint(x: rightColumnX, y: topInset), size: enabledNotificationsValueLabelLayout.size)
-                    
-                    strongSelf.sharesPerPostTitleLabel.frame = CGRect(origin: CGPoint(x: rightColumnX, y: strongSelf.sharesPerPostValueLabel.frame.maxY), size: sharesPerPostTitleLabelLayout.size)
-                    strongSelf.enabledNotificationsTitleLabel.frame = CGRect(origin: CGPoint(x: rightColumnX, y: strongSelf.enabledNotificationsValueLabel.frame.maxY), size: enabledNotificationsTitleLabelLayout.size)
-
-                    strongSelf.sharesPerPostDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.sharesPerPostValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.sharesPerPostValueLabel.frame.minY + 4.0), size: sharesPerPostDeltaLabelLayout.size)
+                    strongSelf.viewsPerPostDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.viewsPerPostValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.viewsPerPostValueLabel.frame.maxY - viewsPerPostDeltaLabelLayout.size.height - 2.0), size: viewsPerPostDeltaLabelLayout.size)
+            
+                    let sharesPerPostY = twoColumnLayout ? strongSelf.enabledNotificationsTitleLabel.frame.maxY + verticalSpacing : strongSelf.viewsPerPostTitleLabel.frame.maxY + verticalSpacing
+                    strongSelf.sharesPerPostValueLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: sharesPerPostY), size: sharesPerPostValueLabelLayout.size)
+                    strongSelf.sharesPerPostTitleLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: strongSelf.sharesPerPostValueLabel.frame.maxY), size: sharesPerPostTitleLabelLayout.size)
+                    strongSelf.sharesPerPostDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.sharesPerPostValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.sharesPerPostValueLabel.frame.maxY - sharesPerPostDeltaLabelLayout.size.height - 2.0), size: sharesPerPostDeltaLabelLayout.size)
                 }
             })
         }

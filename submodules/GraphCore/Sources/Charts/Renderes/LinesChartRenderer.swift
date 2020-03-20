@@ -48,7 +48,7 @@ class LinesChartRenderer: BaseChartRenderer {
             linesShapeAnimator.set(current: 1)
         }
     }
-
+    
     func setLineVisible(_ isVisible: Bool, at index: Int, animated: Bool) {
         linesAlphaAnimators[index].animate(to: isVisible ? 1 : 0, duration: animated ? .defaultDuration : 0)
     }
@@ -62,9 +62,10 @@ class LinesChartRenderer: BaseChartRenderer {
         for (index, toLine) in toLines.enumerated() {
             let alpha = linesAlphaAnimators[index].current * chartsAlpha
             if alpha == 0 { continue }
-            context.setStrokeColor(toLine.color.withAlphaComponent(alpha).cgColor)
+            context.setAlpha(alpha)
+            context.setStrokeColor(toLine.color.cgColor)
             context.setLineWidth(lineWidth)
-
+            
             if linesShapeAnimator.isAnimating {
                 let animationOffset = linesShapeAnimator.current
                 
@@ -93,7 +94,7 @@ class LinesChartRenderer: BaseChartRenderer {
                 var previousToPoint: CGPoint
                 let startFromPoint: CGPoint?
                 let startToPoint: CGPoint?
-
+                
                 if let validFrom = fromIndex {
                     previousFromPoint = convertFromPoint(fromPoints[max(0, validFrom - 1)])
                     startFromPoint = previousFromPoint
@@ -110,7 +111,7 @@ class LinesChartRenderer: BaseChartRenderer {
                 }
                 
                 var combinedPoints: [CGPoint] = []
-
+                
                 func add(pointToDraw: CGPoint) {
                     if let startFromPoint = startFromPoint,
                         pointToDraw.x < startFromPoint.x {
@@ -312,13 +313,7 @@ class LinesChartRenderer: BaseChartRenderer {
                 
                 context.setLineCap(.round)
                 context.strokeLineSegments(between: lines)
-                
-            } else {
-                let alpha = linesAlphaAnimators[index].current * chartsAlpha
-                if alpha == 0 { continue }
-                context.setStrokeColor(toLine.color.withAlphaComponent(alpha).cgColor)
-                context.setLineWidth(lineWidth)
-
+            } else {                
                 if var index = toLine.points.firstIndex(where: { $0.x >= range.lowerBound }) {
                     var lines: [CGPoint] = []
                     index = max(0, index - 1)
@@ -436,33 +431,8 @@ class LinesChartRenderer: BaseChartRenderer {
                     context.setLineCap(.round)
                     context.strokeLineSegments(between: lines)
                 }
-                
-//                if var start = toLine.points.firstIndex(where: { $0.x > range.lowerBound }) {
-//                    let alpha = linesAlphaAnimators[index].current * chartsAlpha
-//                    if alpha == 0 { continue }
-//                    context.setStrokeColor(toLine.color.withAlphaComponent(alpha).cgColor)
-//                    context.setLineWidth(lineWidth)
-//
-//                    context.setLineCap(.round)
-//                    start = max(0, start - 1)
-//                    let startPoint = toLine.points[start]
-//                    var lines: [CGPoint] = []
-//                    var pointToDraw = CGPoint(x: transform(toChartCoordinateHorizontal: startPoint.x, chartFrame: chartFrame),
-//                                              y: transform(toChartCoordinateVertical: startPoint.y, chartFrame: chartFrame))
-//                    for index in (start + 1)..<toLine.points.count {
-//                        lines.append(pointToDraw)
-//                        let point = toLine.points[index]
-//                        pointToDraw = CGPoint(x: transform(toChartCoordinateHorizontal: point.x, chartFrame: chartFrame),
-//                                              y: transform(toChartCoordinateVertical: point.y, chartFrame: chartFrame))
-//                        lines.append(pointToDraw)
-//                        if point.x > range.upperBound {
-//                            break
-//                        }
-//                    }
-//
-//                    context.strokeLineSegments(between: lines)
-//                }
             }
+            context.setAlpha(1.0)
         }
     }
 }

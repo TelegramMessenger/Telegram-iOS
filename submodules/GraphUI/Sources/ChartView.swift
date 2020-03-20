@@ -75,7 +75,9 @@ class ChartView: UIControl {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let point = touches.first?.location(in: self) {
+        if var point = touches.first?.location(in: self) {
+            point.x = max(0.0, min(self.frame.width, point.x))
+            point.y = max(0.0, min(self.frame.height, point.y))
             let fractionPoint = CGPoint(x: (point.x - chartFrame.origin.x) / chartFrame.width,
                                         y: (point.y - chartFrame.origin.y) / chartFrame.height)
             userDidSelectCoordinateClosure?(fractionPoint)

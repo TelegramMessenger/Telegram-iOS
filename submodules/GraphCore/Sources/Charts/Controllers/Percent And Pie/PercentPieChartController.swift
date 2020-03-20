@@ -95,9 +95,11 @@ public class PercentPieChartController: BaseChartController {
                                      totalVerticalRange: BaseConstants.defaultRange)
         switchToChart(chartsCollection: percentController.chartsCollection, isZoomed: false, animated: false)
     
-        TimeInterval.animationDurationMultipler = 0.00001
-        self.didTapZoomIn(date: Date(timeIntervalSinceReferenceDate: 603849600.0), animated: false)
-        TimeInterval.animationDurationMultipler = 1
+        if let lastDate = initialChartsCollection.axisValues.last {
+            TimeInterval.animationDurationMultipler = 0.00001
+            self.didTapZoomIn(date: lastDate, animated: false)
+            TimeInterval.animationDurationMultipler = 1.0
+        }
     }
     
     func switchToChart(chartsCollection: ChartsCollection, isZoomed: Bool, animated: Bool) {

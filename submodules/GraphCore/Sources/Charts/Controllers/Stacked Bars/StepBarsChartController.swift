@@ -1,5 +1,5 @@
 //
-//  DailyBarsChartController.swift
+//  StackedBarsChartController.swift
 //  GraphTest
 //
 //  Created by Andrei Salavei on 4/7/19.
@@ -17,6 +17,12 @@ public class StepBarsChartController: BaseChartController {
     let barsController: BarsComponentController
     let zoomedBarsController: BarsComponentController
     
+    override public var isZoomable: Bool {
+        didSet {
+            barsController.isZoomable = self.isZoomable
+        }
+    }
+    
     override public init(chartsCollection: ChartsCollection)  {
         let horizontalScalesRenderer = HorizontalScalesRenderer()
         let verticalScalesRenderer = VerticalScalesRenderer()
@@ -24,13 +30,13 @@ public class StepBarsChartController: BaseChartController {
                                                  mainBarsRenderer: BarChartRenderer(step: true),
                                                  horizontalScalesRenderer: horizontalScalesRenderer,
                                                  verticalScalesRenderer: verticalScalesRenderer,
-                                                 previewBarsChartRenderer: BarChartRenderer())
+                                                 previewBarsChartRenderer: BarChartRenderer(step: true), step: true)
         zoomedBarsController = BarsComponentController(isZoomed: true,
-                                                       mainBarsRenderer: BarChartRenderer(step: true),
+                                                       mainBarsRenderer: BarChartRenderer(),
                                                        horizontalScalesRenderer: horizontalScalesRenderer,
                                                        verticalScalesRenderer: verticalScalesRenderer,
-                                                       previewBarsChartRenderer: BarChartRenderer())
-        
+                                                       previewBarsChartRenderer: BarChartRenderer(), step: true)
+
         super.init(chartsCollection: chartsCollection)
         
         [barsController, zoomedBarsController].forEach { controller in
@@ -40,7 +46,7 @@ public class StepBarsChartController: BaseChartController {
                 self.didTapZoomIn(date: date)
             }
             controller.setChartTitleClosure = { [unowned self] (title, animated) in
-                self.setChartTitleClosure?(title, animated)
+                self.setChartTitleClosure?("", animated)
             }
             controller.setDetailsViewPositionClosure = { [unowned self] (position) in
                 self.setDetailsViewPositionClosure?(position)
@@ -60,12 +66,18 @@ public class StepBarsChartController: BaseChartController {
         }
     }
     
+    public var hourly: Bool = false
+    
+    public convenience init(chartsCollection: ChartsCollection, hourly: Bool)  {
+        self.init(chartsCollection: chartsCollection)
+        self.hourly = hourly
+    }
+    
     public override var mainChartRenderers: [ChartViewRenderer] {
         return [barsController.mainBarsRenderer,
                 zoomedBarsController.mainBarsRenderer,
                 barsController.horizontalScalesRenderer,
                 barsController.verticalScalesRenderer,
-                barsController.secondVerticalScalesRenderer!
 //                performanceRenderer
         ]
     }
@@ -90,57 +102,65 @@ public class StepBarsChartController: BaseChartController {
                 TimeInterval.setDefaultSuration(.osXDuration)
             }
         }
-        
+
         super.isZoomed = isZoomed
         if isZoomed {
             let toHorizontalRange = zoomedBarsController.initialHorizontalRange
             let destinationHorizontalRange = (toHorizontalRange.lowerBound - barsController.barsWidth)...(toHorizontalRange.upperBound - barsController.barsWidth)
-//            let initialChartVerticalRange = lineProportionAnimationRange()
-            
-//            let visibleVerticalRange = BarChartRenderer.BarsData.verticalRange(bars: zoomedBarsController.visibleBars,
-//                                                                               calculatingRange: zoomedBarsController.initialHorizontalRange) ?? BaseConstants.defaultRange
-            zoomedBarsController.mainBarsRenderer.setup(verticalRange: 0...117278, animated: false)
-            
-            zoomedBarsController.setupMainChart(horizontalRange: barsController.currentHorizontalMainChartRange, animated: false)
+            let verticalVisibleRange = barsController.currentVerticalMainChartRange
+            let initialVerticalRange = verticalVisibleRange.lowerBound...(verticalVisibleRange.upperBound + verticalVisibleRange.distance * 10)
+ 
+            zoomedBarsController.mainBarsRenderer.setup(horizontalRange: barsController.currentHorizontalMainChartRange, animated: false)
             zoomedBarsController.previewBarsChartRenderer.setup(horizontalRange: barsController.currentPreviewHorizontalRange, animated: false)
-//            zoomedBarsController.mainLinesRenderer.setup(verticalRange: initialChartVerticalRange, animated: false)
-//            zoomedBarsController.previewLinesChartRenderer.setup(verticalRange: initialChartVerticalRange, animated: false)
-            zoomedBarsController.mainBarsRenderer.setVisible(false, animated: false)
-            zoomedBarsController.previewBarsChartRenderer.setVisible(false, animated: false)
-            
+            zoomedBarsController.mainBarsRenderer.setup(verticalRange: initialVerticalRange, animated: false)
+            zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: initialVerticalRange, animated: false)
+            zoomedBarsController.mainBarsRenderer.setVisible(true, animated: false)
+            zoomedBarsController.previewBarsChartRenderer.setVisible(true, animated: false)
+
             barsController.setupMainChart(horizontalRange: destinationHorizontalRange, animated: animated)
             barsController.previewBarsChartRenderer.setup(horizontalRange: zoomedBarsController.totalHorizontalRange, animated: animated)
             barsController.mainBarsRenderer.setVisible(false, animated: animated)
             barsController.previewBarsChartRenderer.setVisible(false, animated: animated)
-            
+
             zoomedBarsController.willAppear(animated: animated)
             barsController.willDisappear(animated: animated)
             
-            zoomedBarsController.updateChartsVisibility(visibility: zoomedBarsController.chartBars.components.map { _ in true }, animated: false)
+            zoomedBarsController.updateChartsVisibility(visibility: barsController.chartVisibility, animated: false)
+            zoomedBarsController.mainBarsRenderer.setup(verticalRange: zoomedBarsController.currentVerticalMainChartRange, animated: animated, timeFunction: .easeOut)
+            zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: zoomedBarsController.currentPreviewVerticalRange, animated: animated, timeFunction: .easeOut)
         } else {
             if !zoomedBarsController.chartsCollection.isBlank {
                 barsController.hideDetailsView(animated: false)
+                barsController.chartVisibility = zoomedBarsController.chartVisibility
                 let visibleVerticalRange = BarChartRenderer.BarsData.verticalRange(bars: barsController.visibleBars,
+                                                                                   separate: true,
                                                                                    calculatingRange: barsController.initialHorizontalRange) ?? BaseConstants.defaultRange
                 barsController.mainBarsRenderer.setup(verticalRange: visibleVerticalRange, animated: false)
                 
                 let toHorizontalRange = barsController.initialHorizontalRange
-//                let destinationChartVerticalRange = lineProportionAnimationRange()
-                
+
+                let verticalVisibleRange = barsController.initialVerticalRange
+                let targetVerticalRange = verticalVisibleRange.lowerBound...(verticalVisibleRange.upperBound + verticalVisibleRange.distance * 10)
+
                 zoomedBarsController.setupMainChart(horizontalRange: toHorizontalRange, animated: animated)
-//                zoomedBarsController.mainLinesRenderer.setup(verticalRange: destinationChartVerticalRange, animated: animated)
-//                zoomedBarsController.previewLinesChartRenderer.setup(verticalRange: destinationChartVerticalRange, animated: animated)
+                zoomedBarsController.mainBarsRenderer.setup(verticalRange: targetVerticalRange, animated: animated, timeFunction: .easeIn)
+                zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: targetVerticalRange, animated: animated, timeFunction: .easeIn)
                 zoomedBarsController.previewBarsChartRenderer.setup(horizontalRange: barsController.totalHorizontalRange, animated: animated)
-                zoomedBarsController.mainBarsRenderer.setVisible(false, animated: animated)
-                zoomedBarsController.previewBarsChartRenderer.setVisible(false, animated: animated)
+                DispatchQueue.main.asyncAfter(deadline: .now() + .defaultDuration) { [weak self] in
+                    self?.zoomedBarsController.mainBarsRenderer.setVisible(false, animated: false)
+                    self?.zoomedBarsController.previewBarsChartRenderer.setVisible(false, animated: false)
+                }
             }
             
             barsController.willAppear(animated: animated)
             zoomedBarsController.willDisappear(animated: animated)
+            
+            if !zoomedBarsController.chartsCollection.isBlank {
+                barsController.updateChartsVisibility(visibility: zoomedBarsController.chartVisibility, animated: false)
+            }
         }
         
         self.setBackButtonVisibilityClosure?(isZoomed, animated)
-        self.refreshChartToolsClosure?(animated)
     }
     
     public override func updateChartsVisibility(visibility: [Bool], animated: Bool) {
@@ -166,13 +186,12 @@ public class StepBarsChartController: BaseChartController {
     
     public override var actualChartsCollection: ChartsCollection {
         let collection = isZoomed ? zoomedBarsController.chartsCollection : barsController.chartsCollection
-        
         if collection.isBlank {
             return self.initialChartsCollection
         }
         return collection
     }
-    
+
     public override func chartInteractionDidBegin(point: CGPoint) {
         if isZoomed {
             zoomedBarsController.chartInteractionDidBegin(point: point)
@@ -187,6 +206,10 @@ public class StepBarsChartController: BaseChartController {
         } else {
             barsController.chartInteractionDidEnd()
         }
+    }
+    
+    public override var drawChartVisibity: Bool {
+        return true
     }
     
     public override var currentChartHorizontalRangeFraction: ClosedRange<CGFloat> {
@@ -221,15 +244,6 @@ public class StepBarsChartController: BaseChartController {
         })
     }
     
-//    func lineProportionAnimationRange() -> ClosedRange<CGFloat> {
-//        let visibleLines = self.barsController.chartVisibility.enumerated().compactMap { $0.element ? self.zoomedBarsController.chartLines[$0.offset] : nil }
-//        let linesRange = LinesChartRenderer.LineData.verticalRange(lines: visibleLines) ?? BaseConstants.defaultRange
-//        let barsRange = BarChartRenderer.BarsData.verticalRange(bars: self.barsController.visibleBars,
-//                                                                calculatingRange: self.zoomedBarsController.totalHorizontalRange) ?? BaseConstants.defaultRange
-//        let range = 0...(linesRange.upperBound / barsRange.distance * self.barsController.currentVerticalMainChartRange.distance)
-//        return range
-//    }
-    
    public override func didTapZoomOut() {
         cancelChartInteraction()
         switchToChart(chartsCollection: barsController.chartsCollection, isZoomed: false, animated: true)
@@ -243,17 +257,10 @@ public class StepBarsChartController: BaseChartController {
         }
     }
     
-    override public func apply(theme: ChartTheme, animated: Bool) {
+    public override func apply(theme: ChartTheme, animated: Bool) {
         super.apply(theme: theme, animated: animated)
         
         zoomedBarsController.apply(theme: theme, animated: animated)
         barsController.apply(theme: theme, animated: animated)
     }
-
-    public override var drawChartVisibity: Bool {
-        return true
-    }
 }
-
-//TODO: Убрать Performance полоски сверзу чартов (Не забыть)
-//TODO: Добавить ховеры на кнопки

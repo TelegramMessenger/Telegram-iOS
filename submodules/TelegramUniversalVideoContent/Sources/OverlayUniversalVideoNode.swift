@@ -98,7 +98,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         self.updateLayout(self.bounds.size)
     }
     
-    override public func preferredSizeForOverlayDisplay() -> CGSize {
+    override public func preferredSizeForOverlayDisplay(boundingSize: CGSize) -> CGSize {
         return self.content.dimensions.aspectFitted(CGSize(width: 300.0, height: 300.0))
     }
     

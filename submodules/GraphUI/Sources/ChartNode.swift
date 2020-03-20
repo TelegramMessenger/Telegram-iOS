@@ -13,6 +13,8 @@ public enum ChartType {
     case pie
     case bars
     case step
+    case twoAxisStep
+    case hourlyStep
 }
 
 public extension ChartTheme {    
@@ -22,6 +24,54 @@ public extension ChartTheme {
             
         self.init(chartTitleColor: presentationTheme.list.itemPrimaryTextColor, actionButtonColor: presentationTheme.list.itemAccentColor, tableBackgroundColor: tableBackgroundColor, chartBackgroundColor: presentationTheme.list.itemBlocksBackgroundColor, tableSeparatorColor: presentationTheme.list.itemSecondaryTextColor, chartLabelsColor: presentationTheme.list.itemSecondaryTextColor, chartHelperLinesColor: presentationTheme.list.itemSecondaryTextColor, chartStrongLinesColor: presentationTheme.list.itemSecondaryTextColor, barChartStrongLinesColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsTextColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsArrowColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsViewColor: presentationTheme.list.itemSecondaryTextColor, descriptionActionColor: presentationTheme.list.itemSecondaryTextColor,  rangeViewFrameColor: presentationTheme.list.itemSecondaryTextColor, rangeViewTintColor: rangeViewTintColor, rangeViewMarkerColor: UIColor.white)
     }
+}
+
+public func createChartController(_ data: String, type: ChartType, getDetailsData: @escaping (Date, @escaping (String?) -> Void) -> Void) -> BaseChartController? {
+    var resultController: BaseChartController?
+    if let data = data.data(using: .utf8) {
+        ChartsDataManager.readChart(data: data, extraCopiesCount: 0, sync: true, success: { collection in
+            let controller: BaseChartController
+            switch type {
+                case .lines:
+                    controller = GeneralLinesChartController(chartsCollection: collection)
+                    controller.isZoomable = false
+                case .twoAxis:
+                    controller = TwoAxisLinesChartController(chartsCollection: collection)
+                    controller.isZoomable = false
+                case .pie:
+                    controller = PercentPieChartController(chartsCollection: collection)
+                case .bars:
+                    controller = StackedBarsChartController(chartsCollection: collection)
+                    controller.isZoomable = false
+                case .step:
+                    controller = StepBarsChartController(chartsCollection: collection)
+                case .twoAxisStep:
+                    controller = TwoAxisStepBarsChartController(chartsCollection: collection)
+                case .hourlyStep:
+                    controller = StepBarsChartController(chartsCollection: collection, hourly: true)
+                    controller.isZoomable = false
+            }
+            controller.getDetailsData = { date, completion in
+                getDetailsData(date, { detailsData in
+                    if let detailsData = detailsData, let data = detailsData.data(using: .utf8) {
+                        ChartsDataManager.readChart(data: data, extraCopiesCount: 0, sync: true, success: { collection in
+                            Queue.mainQueue().async {
+                                completion(collection)
+                            }
+                        }) { error in
+                            completion(nil)
+                        }
+                    } else {
+                        completion(nil)
+                    }
+                })
+            }
+            resultController = controller
+        }) { error in
+            
+        }
+    }
+    return resultController
 }
 
 public final class ChartNode: ASDisplayNode {
@@ -36,64 +86,21 @@ public final class ChartNode: ASDisplayNode {
             return ChartStackSection()
         })
     }
-    
-    public override func didLoad() {
-        super.didLoad()
-                
-        self.view.disablesInteractiveTransitionGestureRecognizer = true
-    }
-    
+        
     public func setupTheme(_ theme: ChartTheme) {
         self.chartView.apply(theme: ChartTheme.defaultDayTheme, animated: false)
     }
     
-    public override func layout() {
-        super.layout()
-        
-        self.chartView.setNeedsDisplay()
+    public func setup(controller: BaseChartController) {
+        var displayRange = true
+        if let controller = controller as? StepBarsChartController {
+            displayRange = !controller.hourly
+        }
+        self.chartView.setup(controller: controller, displayRange: displayRange)
     }
     
-    public func setup(_ data: String, type: ChartType, getDetailsData: @escaping (Date, @escaping (String?) -> Void) -> Void) {
-        if let data = data.data(using: .utf8) {
-            ChartsDataManager.readChart(data: data, extraCopiesCount: 0, sync: true, success: { [weak self] collection in
-                let controller: BaseChartController
-                switch type {
-                    case .lines:
-                        controller = GeneralLinesChartController(chartsCollection: collection)
-                        controller.isZoomable = false
-                    case .twoAxis:
-                        controller = TwoAxisLinesChartController(chartsCollection: collection)
-                        controller.isZoomable = false
-                    case .pie:
-                        controller = PercentPieChartController(chartsCollection: collection)
-                    case .bars:
-                        controller = StackedBarsChartController(chartsCollection: collection)
-                        controller.isZoomable = false
-                    case .step:
-                        controller = StepBarsChartController(chartsCollection: collection)
-                }
-                controller.getDetailsData = { date, completion in
-                    getDetailsData(date, { detailsData in
-                        if let detailsData = detailsData, let data = detailsData.data(using: .utf8) {
-                            ChartsDataManager.readChart(data: data, extraCopiesCount: 0, sync: true, success: { collection in
-                                Queue.mainQueue().async {
-                                    completion(collection)
-                                }
-                            }) { error in
-                                completion(nil)
-                            }
-                        } else {
-                            completion(nil)
-                        }
-                    })
-                }
-                if let strongSelf = self {
-                    strongSelf.chartView.setup(controller: controller, title: "")
-                }
-            }) { error in
-                
-            }
-        }
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        return super.hitTest(point, with: event)
     }
     
     required public init?(coder aDecoder: NSCoder) {

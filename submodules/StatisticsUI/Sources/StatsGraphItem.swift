@@ -16,16 +16,14 @@ class StatsGraphItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let graph: ChannelStatsGraph
     let type: ChartType
-    let height: CGFloat
     let getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, height: CGFloat = 0.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
-        self.height = height
         self.getDetailsData = getDetailsData
         self.sectionId = sectionId
         self.style = style
@@ -72,11 +70,13 @@ class StatsGraphItemNode: ListViewItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
+    private let chartContainerNode: ASDisplayNode
     
     let chartNode: ChartNode
     private let activityIndicator: ActivityIndicator
     
     private var item: StatsGraphItem?
+    private var visibilityHeight: CGFloat?
         
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -84,41 +84,46 @@ class StatsGraphItemNode: ListViewItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
-      
+        
+        self.chartContainerNode = ASDisplayNode()
+        self.chartContainerNode.clipsToBounds = true
+        self.chartContainerNode.isUserInteractionEnabled = true
+        
         self.chartNode = ChartNode()
         self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0, 2.0, false))
         self.activityIndicator.isHidden = true
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.clipsToBounds = true
-        
-        self.addSubnode(self.chartNode)
-        self.addSubnode(self.activityIndicator)
+        self.chartContainerNode.addSubnode(self.chartNode)
+        self.chartContainerNode.addSubnode(self.activityIndicator)
     }
     
     override func didLoad() {
         super.didLoad()
     
-        self.chartNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
-            return point.x > 30.0
+        self.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
+            return point.x > 30.0 || (point.y > 250.0 && point.y < 295.0)
         }
     }
     
     func asyncLayout() -> (_ item: StatsGraphItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
+        let currentVisibilityHeight = self.visibilityHeight
         
         return { item, params, neighbors in
             let leftInset = params.leftInset
             let rightInset: CGFloat = params.rightInset
             var updatedTheme: PresentationTheme?
             var updatedGraph: ChannelStatsGraph?
+            var updatedController: BaseChartController?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
@@ -126,9 +131,16 @@ class StatsGraphItemNode: ListViewItemNode {
             
             if currentItem?.graph != item.graph {
                 updatedGraph = item.graph
+                if case let .Loaded(_, data) = updatedGraph {
+                    updatedController = createChartController(data, type: item.type, getDetailsData: { [weak self] date, completion in
+                        if let strongSelf = self, let item = strongSelf.item {
+                            item.getDetailsData?(date, completion)
+                        }
+                    })
+                }
             }
             
-            let contentSize: CGSize
+            var contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             let itemBackgroundColor: UIColor
@@ -138,20 +150,39 @@ class StatsGraphItemNode: ListViewItemNode {
                 case .plain:
                     itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 350.0 + item.height)
+                    contentSize = CGSize(width: params.width, height: 301.0)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 350.0 + item.height)
+                    contentSize = CGSize(width: params.width, height: 301.0)
                     insets = itemListNeighborsGroupedInsets(neighbors)
+            }
+                
+            var visibilityHeight = currentVisibilityHeight
+            if let updatedController = updatedController {
+                var height: CGFloat = 0.0
+                var items: [ChartVisibilityItem] = []
+                for item in updatedController.actualChartsCollection.chartValues {
+                    items.append(ChartVisibilityItem(title: item.name, color: .black))
+                }
+                if items.count > 1 {
+                    height = calculateVisiblityHeight(width: params.width - params.leftInset - params.rightInset, items: items)
+                }
+                if item.type == .hourlyStep {
+                    height -= 42.0
+                }
+                visibilityHeight = height
+            }
+            if let visibilityHeight = visibilityHeight {
+                contentSize.height += visibilityHeight
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    strongSelf.visibilityHeight = visibilityHeight
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
@@ -178,14 +209,17 @@ class StatsGraphItemNode: ListViewItemNode {
                         if strongSelf.backgroundNode.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                         }
+                        if strongSelf.chartContainerNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.chartContainerNode, at: 1)
+                        }
                         if strongSelf.topStripeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                            strongSelf.insertSubnode(strongSelf.topStripeNode, at: 2)
                         }
                         if strongSelf.bottomStripeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 3)
                         }
                         if strongSelf.maskNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                            strongSelf.insertSubnode(strongSelf.maskNode, at: 4)
                         }
                         let hasCorners = itemListHasRoundedBlockLayout(params)
                         var hasTopCorners = false
@@ -207,7 +241,8 @@ class StatsGraphItemNode: ListViewItemNode {
                                 strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 750.0))
+                        strongSelf.chartContainerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: contentSize.height))
+                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 750.0))
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
@@ -220,23 +255,19 @@ class StatsGraphItemNode: ListViewItemNode {
                     
                     strongSelf.activityIndicator.type = .custom(item.presentationData.theme.list.itemSecondaryTextColor, 16.0, 2.0, false)
                     
+                    if let updatedTheme = updatedTheme {
+                        strongSelf.chartNode.setupTheme(ChartTheme(presentationTheme: updatedTheme))
+                    }
+                    
                     if let updatedGraph = updatedGraph {
-                        if case let .Loaded(_, data) = updatedGraph {
-                            strongSelf.chartNode.setup(data, type: item.type, getDetailsData: { [weak self] date, completion in
-                                if let strongSelf = self, let item = strongSelf.item {
-                                    item.getDetailsData?(date, completion)
-                                }
-                            })
+                        if case let .Loaded(_, data) = updatedGraph, let updatedController = updatedController {
+                            strongSelf.chartNode.setup(controller: updatedController)
                             strongSelf.activityIndicator.isHidden = true
                             strongSelf.chartNode.isHidden = false
                         } else if case .OnDemand = updatedGraph {
                             strongSelf.activityIndicator.isHidden = false
                             strongSelf.chartNode.isHidden = true
                         }
-                    }
-                    
-                    if let updatedTheme = updatedTheme {
-                        strongSelf.chartNode.setupTheme(ChartTheme(presentationTheme: updatedTheme))
                     }
                 }
             })

@@ -31,7 +31,7 @@ public enum ChannelStatsGraph: Equatable {
             case .Empty:
                 return true
             case let .Failed(error):
-                return true
+                return error.lowercased().contains("not enough data")
             default:
                 return false
         }
@@ -598,8 +598,11 @@ extension ChannelStatsMessageInteractions {
 extension ChannelStats {
     convenience init(apiBroadcastStats: Api.stats.BroadcastStats, peerId: PeerId) {
         switch apiBroadcastStats {
-            case let .broadcastStats(period, followers, viewsPerPost, sharesPerPost, enabledNotifications, growthGraph, followersGraph, muteGraph, topHoursGraph, interactionsGraph, instantViewInteractionsGraph, viewsBySourceGraph, newFollowersBySourceGraph, languagesGraph, recentMessageInteractions):
-                self.init(period: ChannelStatsDateRange(apiStatsDateRangeDays: period), followers: ChannelStatsValue(apiStatsAbsValueAndPrev: followers), viewsPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: viewsPerPost), sharesPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: sharesPerPost), enabledNotifications: ChannelStatsPercentValue(apiPercentValue: enabledNotifications), growthGraph: ChannelStatsGraph(apiStatsGraph: growthGraph), followersGraph: ChannelStatsGraph(apiStatsGraph: followersGraph), muteGraph: ChannelStatsGraph(apiStatsGraph: muteGraph), topHoursGraph: ChannelStatsGraph(apiStatsGraph: topHoursGraph), interactionsGraph: ChannelStatsGraph(apiStatsGraph: interactionsGraph), instantPageInteractionsGraph: ChannelStatsGraph(apiStatsGraph: instantViewInteractionsGraph), viewsBySourceGraph: ChannelStatsGraph(apiStatsGraph: viewsBySourceGraph), newFollowersBySourceGraph: ChannelStatsGraph(apiStatsGraph: newFollowersBySourceGraph), languagesGraph: ChannelStatsGraph(apiStatsGraph: languagesGraph), messageInteractions: recentMessageInteractions.map { ChannelStatsMessageInteractions(apiMessageInteractionCounters: $0, peerId: peerId) })
+            case let .broadcastStats(period, followers, viewsPerPost, sharesPerPost, enabledNotifications, apiGrowthGraph, apiFollowersGraph, apiMuteGraph, apiTopHoursGraph, apiInteractionsGraph, apiInstantViewInteractionsGraph, apiViewsBySourceGraph, apiNewFollowersBySourceGraph, apiLanguagesGraph, recentMessageInteractions):
+                let growthGraph = ChannelStatsGraph(apiStatsGraph: apiGrowthGraph)
+                let isEmpty = growthGraph.isEmpty
+                
+                self.init(period: ChannelStatsDateRange(apiStatsDateRangeDays: period), followers: ChannelStatsValue(apiStatsAbsValueAndPrev: followers), viewsPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: viewsPerPost), sharesPerPost: ChannelStatsValue(apiStatsAbsValueAndPrev: sharesPerPost), enabledNotifications: ChannelStatsPercentValue(apiPercentValue: enabledNotifications), growthGraph: growthGraph, followersGraph: ChannelStatsGraph(apiStatsGraph: apiFollowersGraph), muteGraph: ChannelStatsGraph(apiStatsGraph: apiMuteGraph), topHoursGraph: ChannelStatsGraph(apiStatsGraph: apiTopHoursGraph), interactionsGraph: isEmpty ? .Empty : ChannelStatsGraph(apiStatsGraph: apiInteractionsGraph), instantPageInteractionsGraph: isEmpty ? .Empty : ChannelStatsGraph(apiStatsGraph: apiInstantViewInteractionsGraph), viewsBySourceGraph: isEmpty ? .Empty : ChannelStatsGraph(apiStatsGraph: apiViewsBySourceGraph), newFollowersBySourceGraph: isEmpty ? .Empty : ChannelStatsGraph(apiStatsGraph: apiNewFollowersBySourceGraph), languagesGraph: isEmpty ? .Empty : ChannelStatsGraph(apiStatsGraph: apiLanguagesGraph), messageInteractions: recentMessageInteractions.map { ChannelStatsMessageInteractions(apiMessageInteractionCounters: $0, peerId: peerId) })
         }
     }
 }

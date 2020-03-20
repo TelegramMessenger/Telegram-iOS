@@ -14,7 +14,7 @@ private let cornerRadius: CGFloat = 5
 private let verticalMargins: CGFloat = 8
 private var labelHeight: CGFloat = 18
 private var margin: CGFloat = 10
-private var prefixLabelWidth: CGFloat = 27
+private var prefixLabelWidth: CGFloat = 29
 private var textLabelWidth: CGFloat = 96
 private var valueLabelWidth: CGFloat = 65
 
@@ -56,9 +56,10 @@ class ChartDetailsView: UIControl {
     func setup(viewModel: ChartDetailsViewModel, animated: Bool) {
         self.viewModel = viewModel
         
-        titleLabel.setText(viewModel.title, animated: animated)
+        titleLabel.setText(viewModel.title, animated: false)
         titleLabel.setVisible(!viewModel.title.isEmpty, animated: animated)
         arrowView.setVisible(viewModel.showArrow, animated: animated)
+        arrowButton.isUserInteractionEnabled = viewModel.showArrow
         
         let width: CGFloat = margin * 2 + (viewModel.showPrefixes ? (prefixLabelWidth + margin) : 0) + textLabelWidth + valueLabelWidth
         var y: CGFloat = verticalMargins

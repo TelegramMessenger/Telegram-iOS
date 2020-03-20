@@ -201,6 +201,7 @@ swift_library(
         "//submodules/SemanticStatusNode:SemanticStatusNode",
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/Svg:Svg",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [
         "//visibility:public",

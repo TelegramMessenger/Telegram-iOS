@@ -221,3 +221,19 @@ public func descriptionStringForMessage(contentSettings: ContentSettings, messag
     }
     return stringForMediaKind(messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId), strings: strings)
 }
+
+public func foldLineBreaks(_ text: String) -> String {
+    let lines = text.split { $0.isNewline }
+    var result = ""
+    for line in lines {
+        if line.isEmpty {
+            continue
+        }
+        if result.isEmpty {
+            result += line
+        } else {
+            result += " " + line
+        }
+    }
+    return result
+}

@@ -201,7 +201,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 deliveryFailedInset += 24.0
             }
             
-            let displaySize = CGSize(width: 212.0, height: 212.0)
+            let displaySize = layoutConstants.instantVideo.dimensions
             
             var automaticDownload = true
             for media in item.message.media {

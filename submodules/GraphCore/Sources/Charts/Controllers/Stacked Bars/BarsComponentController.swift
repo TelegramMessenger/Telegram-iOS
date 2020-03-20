@@ -17,25 +17,25 @@ class BarsComponentController: GeneralChartComponentController {
     let mainBarsRenderer: BarChartRenderer
     let horizontalScalesRenderer: HorizontalScalesRenderer
     let verticalScalesRenderer: VerticalScalesRenderer
-    let secondVerticalScalesRenderer: VerticalScalesRenderer?
     
     let previewBarsChartRenderer: BarChartRenderer
     private(set) var barsWidth: CGFloat = 1
     
     private (set) var chartBars: BarChartRenderer.BarsData = .blank
     
+    private var step: Bool
+    
     init(isZoomed: Bool,
          mainBarsRenderer: BarChartRenderer,
          horizontalScalesRenderer: HorizontalScalesRenderer,
          verticalScalesRenderer: VerticalScalesRenderer,
-         previewBarsChartRenderer: BarChartRenderer) {
+         previewBarsChartRenderer: BarChartRenderer,
+         step: Bool = false) {
         self.mainBarsRenderer = mainBarsRenderer
         self.horizontalScalesRenderer = horizontalScalesRenderer
         self.verticalScalesRenderer = verticalScalesRenderer
         self.previewBarsChartRenderer = previewBarsChartRenderer
-        
-        self.secondVerticalScalesRenderer = VerticalScalesRenderer()
-        self.secondVerticalScalesRenderer?.isRightAligned = true
+        self.step = step
         
         self.mainBarsRenderer.optimizationLevel = BaseConstants.barsChartOptimizationLevel
         self.previewBarsChartRenderer.optimizationLevel = BaseConstants.barsChartOptimizationLevel
@@ -44,7 +44,7 @@ class BarsComponentController: GeneralChartComponentController {
     }
     
     override func initialize(chartsCollection: ChartsCollection, initialDate: Date, totalHorizontalRange _: ClosedRange<CGFloat>, totalVerticalRange _: ClosedRange<CGFloat>) {
-        let (width, chartBars, totalHorizontalRange, totalVerticalRange) = BarChartRenderer.BarsData.initialComponents(chartsCollection: chartsCollection)
+        let (width, chartBars, totalHorizontalRange, totalVerticalRange) = BarChartRenderer.BarsData.initialComponents(chartsCollection: chartsCollection, separate: self.step)
         self.chartBars = chartBars
         self.barsWidth = width
         
@@ -76,10 +76,10 @@ class BarsComponentController: GeneralChartComponentController {
         mainBarsRenderer.bars = self.chartBars
         previewBarsChartRenderer.bars = self.chartBars
         
-        previewBarsChartRenderer.setup(verticalRange: 0...117278, animated: animated)
+        previewBarsChartRenderer.setup(verticalRange: totalVerticalRange, animated: animated)
         previewBarsChartRenderer.setup(horizontalRange: totalHorizontalRange, animated: animated)
         
-        setupMainChart(verticalRange: 0...117278, animated: animated)
+        setupMainChart(verticalRange: initialVerticalRange, animated: animated)
         setupMainChart(horizontalRange: initialHorizontalRange, animated: animated)
         
         updateChartVerticalRanges(horizontalRange: initialHorizontalRange, animated: animated)
@@ -119,16 +119,12 @@ class BarsComponentController: GeneralChartComponentController {
         horizontalScalesRenderer.setVisible(visible, animated: animated)
         verticalScalesRenderer.setVisible(visible, animated: animated)
         previewBarsChartRenderer.setVisible(visible, animated: animated)
-        
-        secondVerticalScalesRenderer?.setVisible(visible, animated: animated)
     }
     
     func setupMainChart(horizontalRange: ClosedRange<CGFloat>, animated: Bool) {
         mainBarsRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         horizontalScalesRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         verticalScalesRenderer.setup(horizontalRange: horizontalRange, animated: animated)
-        
-        secondVerticalScalesRenderer?.setup(horizontalRange: horizontalRange, animated: animated)
     }
     
     var visibleBars: BarChartRenderer.BarsData {
@@ -142,6 +138,7 @@ class BarsComponentController: GeneralChartComponentController {
     
     func updateChartVerticalRanges(horizontalRange: ClosedRange<CGFloat>, animated: Bool) {
         if let range = BarChartRenderer.BarsData.verticalRange(bars: visibleBars,
+                                                               separate: self.step,
                                                                calculatingRange: horizontalRange,
                                                                addBounds: true) {
             let (range, labels) = verticalLimitsLabels(verticalRange: range)
@@ -151,31 +148,19 @@ class BarsComponentController: GeneralChartComponentController {
             verticalScalesRenderer.setVisible(true, animated: animated)
             
             setupMainChart(verticalRange: range, animated: animated)
-            
-            let (secondRange, secondLabels) = verticalLimitsLabels(verticalRange: range)
-            if secondVerticalScalesRenderer?.verticalRange.end != secondRange {
-                secondVerticalScalesRenderer?.setup(verticalLimitsLabels: secondLabels, animated: animated)
-            }
-            secondVerticalScalesRenderer?.setVisible(true, animated: animated)
         } else {
             verticalScalesRenderer.setVisible(false, animated: animated)
-            secondVerticalScalesRenderer?.setVisible(false, animated: animated)
         }
         
-        if let range = BarChartRenderer.BarsData.verticalRange(bars: visibleBars) {
+        if let range = BarChartRenderer.BarsData.verticalRange(bars: visibleBars, separate: self.step) {
             previewBarsChartRenderer.setup(verticalRange: range, animated: animated)
         }
     }
     
     func setupMainChart(verticalRange: ClosedRange<CGFloat>, animated: Bool) {
-        var verticalRange = verticalRange
-        if verticalRange.upperBound > 2000 && verticalRange.upperBound < 10000 {
-            verticalRange = 0...117278
-        }
         mainBarsRenderer.setup(verticalRange: verticalRange, animated: animated)
         horizontalScalesRenderer.setup(verticalRange: verticalRange, animated: animated)
         verticalScalesRenderer.setup(verticalRange: verticalRange, animated: animated)
-        secondVerticalScalesRenderer?.setup(verticalRange: verticalRange, animated: animated)
     }
     
     public override func updateChartsVisibility(visibility: [Bool], animated: Bool) {
@@ -198,12 +183,15 @@ class BarsComponentController: GeneralChartComponentController {
         var viewModel = super.chartDetailsViewModel(closestDate: closestDate, pointIndex: pointIndex)
         let visibleChartValues = self.visibleChartValues
         let totalSumm: CGFloat = visibleChartValues.map { CGFloat($0.values[pointIndex]) }.reduce(0, +)
-        
-        viewModel.totalValue = ChartDetailsViewModel.Value(prefix: nil,
-                                                           title: "Total",
-                                                           value: BaseConstants.detailsNumberFormatter.string(from: totalSumm),
-                                                           color: .white,
-                                                           visible: visibleChartValues.count > 1)
+        if !self.step {
+            viewModel.totalValue = ChartDetailsViewModel.Value(prefix: nil,
+                                                               title: "Total",
+                                                               value: BaseConstants.detailsNumberFormatter.string(from: totalSumm),
+                                                               color: .white,
+                                                               visible: visibleChartValues.count > 1)
+        } else {
+            viewModel.title = ""
+        }
         return viewModel
     }
     
@@ -235,10 +223,6 @@ class BarsComponentController: GeneralChartComponentController {
         verticalScalesRenderer.horizontalLinesColor = theme.barChartStrongLinesColor
         mainBarsRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
         previewBarsChartRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
-        
-        secondVerticalScalesRenderer?.labelsColor = theme.chartLabelsColor
-        secondVerticalScalesRenderer?.axisXColor = theme.barChartStrongLinesColor
-        secondVerticalScalesRenderer?.horizontalLinesColor = theme.barChartStrongLinesColor
     }
     
     override func updateChartRangeTitle(animated: Bool) {

@@ -83,8 +83,12 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
         self.updateLayout(self.bounds.size)
     }
     
-    override func preferredSizeForOverlayDisplay() -> CGSize {
-        return CGSize(width: 120.0, height: 120.0)
+    override func preferredSizeForOverlayDisplay(boundingSize: CGSize) -> CGSize {
+        if min(boundingSize.width, boundingSize.height) > 320.0 {
+            return CGSize(width: 150.0, height: 150.0)
+        } else {
+            return CGSize(width: 120.0, height: 120.0)
+        }
     }
     
     override func dismiss() {
