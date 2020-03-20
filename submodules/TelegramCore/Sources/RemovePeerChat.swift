@@ -34,6 +34,18 @@ public func removePeerChat(account: Account, transaction: Transaction, mediaBox:
             }
         })
     }
+    updateChatListFiltersInteractively(transaction: transaction, { filters in
+        var filters = filters
+        for i in 0 ..< filters.count {
+            if filters[i].data.includePeers.peers.contains(peerId) {
+                filters[i].data.includePeers.setPeers(filters[i].data.includePeers.peers.filter { $0 != peerId })
+            }
+            if filters[i].data.excludePeers.contains(peerId) {
+                filters[i].data.excludePeers = filters[i].data.excludePeers.filter { $0 != peerId }
+            }
+        }
+        return filters
+    })
     if peerId.namespace == Namespaces.Peer.SecretChat {
         if let state = transaction.getPeerChatState(peerId) as? SecretChatState, state.embeddedState != .terminated {
             let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: reportChatSpam), state: state).withUpdatedEmbeddedState(.terminated)

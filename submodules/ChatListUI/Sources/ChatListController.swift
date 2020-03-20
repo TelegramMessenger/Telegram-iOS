@@ -279,7 +279,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 passcode,
                 self.chatListDisplayNode.containerNode.currentItemState,
                 self.isReorderingTabsValue.get()
-            ).start(next: { [weak self] networkState, proxy, passcode, state, isReorderingTabs in
+            ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs in
                 if let strongSelf = self {
                     let defaultTitle: String
                     if strongSelf.groupId == .root {
@@ -287,12 +287,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     } else {
                         defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
                     }
-                    if state.editing {
+                    if stateAndFilterId.state.editing {
                         if strongSelf.groupId == .root {
                             strongSelf.navigationItem.rightBarButtonItem = nil
                         }
                         
-                        let title = !state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(state.selectedPeerIds.count)) : defaultTitle
+                        let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
                         strongSelf.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
                     } else if isReorderingTabs {
                         if strongSelf.groupId == .root {
@@ -334,7 +334,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 strongSelf.navigationItem.leftBarButtonItem = leftBarButtonItem
                             } else {
                                 let editItem: UIBarButtonItem
-                                if state.editing {
+                                if stateAndFilterId.state.editing {
                                     editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(strongSelf.donePressed))
                                     editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Done
                                 } else {
@@ -798,16 +798,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         
         let context = self.context
         let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.containerNode.currentItemState
-        |> map { state -> Set<PeerId>? in
+        |> map { state, filterId -> (Set<PeerId>, Int32?)? in
             if !state.editing {
                 return nil
             }
-            return state.selectedPeerIds
+            return (state.selectedPeerIds, filterId)
         }
-        |> distinctUntilChanged
-        |> mapToSignal { selectedPeerIds -> Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> in
-            if let selectedPeerIds = selectedPeerIds {
-                return chatListSelectionOptions(postbox: context.account.postbox, peerIds: selectedPeerIds)
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs?.0 != rhs?.0 {
+                return false
+            }
+            if lhs?.1 != rhs?.1 {
+                return false
+            }
+            return true
+        })
+        |> mapToSignal { selectedPeerIdsAndFilterId -> Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> in
+            if let (selectedPeerIds, filterId) = selectedPeerIdsAndFilterId {
+                return chatListSelectionOptions(postbox: context.account.postbox, peerIds: selectedPeerIds, filterId: filterId)
                 |> map { options -> (ChatListSelectionOptions, Set<PeerId>)? in
                     return (options, selectedPeerIds)
                 }
@@ -1381,7 +1389,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         |> distinctUntilChanged
         
-        let filterItems = chatListFilterItems(context: self.context)
+        let filterItems = chatListFilterItems(postbox: self.context.account.postbox)
         var notifiedFirstUpdate = false
         self.filterDisposable.set((combineLatest(queue: .mainQueue(),
                 context.account.postbox.combinedView(keys: [
@@ -2428,7 +2436,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
         let _ = (combineLatest(queue: .mainQueue(),
             currentChatListFilters(postbox: self.context.account.postbox),
-            chatListFilterItems(context: self.context)
+            chatListFilterItems(postbox: self.context.account.postbox)
             |> take(1)
         )
         |> deliverOnMainQueue).start(next: { [weak self] presetList, filterItemsAndTotalCount in

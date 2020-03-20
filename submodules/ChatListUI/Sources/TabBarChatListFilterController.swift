@@ -10,8 +10,8 @@ import Postbox
 import TelegramUIPreferences
 import TelegramCore
 
-func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
-    return updatedChatListFilters(postbox: context.account.postbox)
+func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
+    return updatedChatListFilters(postbox: postbox)
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
         var unreadCountItems: [UnreadMessageCountsItem] = []
@@ -40,8 +40,8 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
             keys.append(.basicPeer(peerId))
         }
         
-        return combineLatest(queue: context.account.postbox.queue,
-            context.account.postbox.combinedView(keys: keys),
+        return combineLatest(queue: postbox.queue,
+            postbox.combinedView(keys: keys),
             Signal<Bool, NoError>.single(true)
         )
         |> map { view, _ -> (Int, [(ChatListFilter, Int, Bool)]) in
@@ -63,7 +63,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                 case let .peer(peerId, state):
                     if let state = state, state.isUnread {
                         if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer {
-                            let tag = context.account.postbox.seedConfiguration.peerSummaryCounterTags(peer, peerView.isContact)
+                            let tag = postbox.seedConfiguration.peerSummaryCounterTags(peer, peerView.isContact)
                             
                             var peerCount = Int(state.count)
                             if state.isUnread {

@@ -254,10 +254,6 @@ private final class ItemNode: ASDisplayNode {
             width = badgeBackgroundFrame.maxX
         }
         
-        let extractedBackgroundHeight: CGFloat = 36.0
-        let extractedBackgroundInset: CGFloat = 14.0
-        self.extractedBackgroundNode.frame = CGRect(origin: CGPoint(x: -extractedBackgroundInset, y: floor((height - extractedBackgroundHeight) / 2.0)), size: CGSize(width: width + extractedBackgroundInset * 2.0, height: extractedBackgroundHeight))
-        
         return (width, shortTitleSize.width - self.shortTitleNode.insets.left - self.shortTitleNode.insets.right + 5.0)
     }
     
@@ -276,6 +272,10 @@ private final class ItemNode: ASDisplayNode {
         self.extractedContainerNode.hitTestSlop = self.hitTestSlop
         self.extractedContainerNode.contentNode.hitTestSlop = self.hitTestSlop
         self.containerNode.hitTestSlop = self.hitTestSlop
+        
+        let extractedBackgroundHeight: CGFloat = 36.0
+        let extractedBackgroundInset: CGFloat = 14.0
+        self.extractedBackgroundNode.frame = CGRect(origin: CGPoint(x: -extractedBackgroundInset, y: floor((size.height - extractedBackgroundHeight) / 2.0)), size: CGSize(width: size.width + extractedBackgroundInset * 2.0, height: extractedBackgroundHeight))
     }
     
     func animateBadgeIn() {

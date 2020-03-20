@@ -17,6 +17,7 @@ static_library(
     compiler_flags = [
         "-Dpixman_region_selfcheck(x)=1",
         "-DLOTTIE_DISABLE_ARM_NEON=1",
+        "-DLOTTIE_IMAGE_MODULE_DISABLED=1",
     ],
     headers = glob([
         "rlottie/src/**/*.h",

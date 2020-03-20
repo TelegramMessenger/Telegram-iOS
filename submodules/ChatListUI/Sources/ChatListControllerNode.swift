@@ -431,8 +431,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         return self.currentItemNodeValue!.listNode
     }
     
-    private let currentItemStateValue = Promise<ChatListNodeState>()
-    var currentItemState: Signal<ChatListNodeState, NoError> {
+    private let currentItemStateValue = Promise<(state: ChatListNodeState, filterId: Int32?)>()
+    var currentItemState: Signal<(state: ChatListNodeState, filterId: Int32?), NoError> {
         return self.currentItemStateValue.get()
     }
     
@@ -502,7 +502,16 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self?.didBeginSelectingChats?()
         }
         
-        self.currentItemStateValue.set(itemNode.listNode.state)
+        self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
+            let filterId: Int32?
+            switch id {
+            case .all:
+                filterId = nil
+            case let .filter(filter):
+                filterId = filter
+            }
+            return (state, filterId)
+        })
         
         if self.controlsHistoryPreload {
             self.context.account.viewTracker.chatListPreloadItems.set(itemNode.listNode.preloadItems.get())

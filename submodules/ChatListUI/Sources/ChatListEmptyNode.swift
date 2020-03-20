@@ -95,10 +95,20 @@ final class ChatListEmptyNode: ASDisplayNode {
         }
         
         self.updateThemeAndStrings(theme: theme, strings: strings)
+        
+        self.animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
     }
     
     @objc private func buttonPressed() {
         self.action()
+    }
+    
+    @objc private func animationTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if !self.animationNode.isPlaying {
+                self.animationNode.play()
+            }
+        }
     }
     
     func restartAnimation() {
@@ -188,6 +198,9 @@ final class ChatListEmptyNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.buttonNode.frame.contains(point) {
             return self.buttonNode.view.hitTest(self.view.convert(point, to: self.buttonNode.view), with: event)
+        }
+        if self.animationNode.frame.contains(point) {
+            return self.animationNode.view.hitTest(self.view.convert(point, to: self.animationNode.view), with: event)
         }
         return nil
     }

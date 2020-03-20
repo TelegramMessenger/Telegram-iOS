@@ -330,7 +330,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         case let .nameHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .name(placeholder, value):
-            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), clearType: .always, maxLength: 20, sectionId: self.section, textUpdated: { value in
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), clearType: .always, maxLength: 12, sectionId: self.section, textUpdated: { value in
                 arguments.updateState { current in
                     var state = current
                     state.name = value
@@ -480,7 +480,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         for peer in includePeers {
             entries.append(.includePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
             count += 1
-            if includePeers.count >= 6 && count == 5 && !state.expandedSections.contains(.include) {
+            if includePeers.count >= 7 && count == 5 && !state.expandedSections.contains(.include) {
                 break
             }
         }
@@ -517,7 +517,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         for peer in excludePeers {
             entries.append(.excludePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
             count += 1
-            if excludePeers.count >= 6 && count == 5 && !state.expandedSections.contains(.exclude) {
+            if excludePeers.count >= 7 && count == 5 && !state.expandedSections.contains(.exclude) {
                 break
             }
         }
@@ -592,7 +592,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filter.data.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filter.data.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], filters: [], alwaysEnabled: true))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -679,7 +679,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         selectedCategories.insert(AdditionalExcludeCategoryId.archived.rawValue)
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filter.data.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filter.data.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], filters: [], alwaysEnabled: true))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
