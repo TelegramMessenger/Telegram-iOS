@@ -119,7 +119,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         let string = NSMutableAttributedString(string: self.isFilter ? strings.ChatList_EmptyChatListFilterTitle : strings.ChatList_EmptyChatList, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor)
         let descriptionString: NSAttributedString
         if self.isFilter {
-            descriptionString = NSAttributedString(string: strings.ChatList_EmptyChatListFilterText, font: Font.medium(14.0), textColor: theme.list.itemSecondaryTextColor)
+            descriptionString = NSAttributedString(string: strings.ChatList_EmptyChatListFilterText, font: Font.regular(14.0), textColor: theme.list.itemSecondaryTextColor)
         } else {
             descriptionString = NSAttributedString()
         }

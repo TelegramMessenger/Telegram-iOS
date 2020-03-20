@@ -283,6 +283,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
     if view.laterIndex == nil && savedMessagesPeer == nil {
         pinnedIndexOffset += UInt16(view.additionalItemEntries.count)
     }
+    var filterAfterHole = false
     loop: for entry in view.entries {
         switch entry {
             case let .MessageEntry(index, message, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
@@ -301,8 +302,9 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedState, peer: peer, presence: peerPresence, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false, hasFailedMessages: hasFailed, isContact: isContact))
             case let .HoleEntry(hole):
                 if hole.index.timestamp == Int32.max - 1 {
-                    return ([.HeaderEntry], true)
+                    //return ([.HeaderEntry], true)
                 }
+                filterAfterHole = true
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
         }
     }
@@ -351,11 +353,35 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             }
         }
     }
+    
+    var isLoading: Bool = false
+    
+    if filterAfterHole {
+        var seenHole = false
+        for i in (0 ..< result.count).reversed() {
+            if seenHole {
+                result.remove(at: i)
+            } else {
+                switch result[i] {
+                case .HeaderEntry:
+                    break
+                case .ArchiveIntro, .AdditionalCategory, .GroupReferenceEntry:
+                    break
+                case .PeerEntry:
+                    break
+                case .HoleEntry:
+                    isLoading = true
+                    seenHole = true
+                    result.remove(at: i)
+                }
+            }
+        }
+    }
 
     if result.count >= 1, case .HoleEntry = result[result.count - 1] {
         return ([.HeaderEntry], true)
     } else if result.count == 1, case .HoleEntry = result[0] {
         return ([.HeaderEntry], true)
     }
-    return (result, false)
+    return (result, isLoading)
 }

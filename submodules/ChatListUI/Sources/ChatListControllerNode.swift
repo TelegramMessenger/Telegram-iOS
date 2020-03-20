@@ -341,7 +341,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 if strongSelf.emptyShimmerEffectNode == nil {
                     let emptyShimmerEffectNode = ChatListShimmerNode()
                     strongSelf.emptyShimmerEffectNode = emptyShimmerEffectNode
-                    strongSelf.addSubnode(emptyShimmerEffectNode)
+                    strongSelf.insertSubnode(emptyShimmerEffectNode, belowSubnode: strongSelf.listNode)
                     if let (size, insets, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
                         strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: .immediate)
                     }

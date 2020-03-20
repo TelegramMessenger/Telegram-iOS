@@ -1796,8 +1796,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
             } else {
                 let groupId = self.groupId
+                let filterPredicate = (self.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.data).flatMap(chatListFilterPredicate)
                 signal = self.context.account.postbox.transaction { transaction -> Void in
-                    let filterPredicate = (self.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.data).flatMap(chatListFilterPredicate)
                     markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId, filterPredicate: filterPredicate)
                     if let filterPredicate = filterPredicate {
                         for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
