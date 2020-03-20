@@ -17,16 +17,6 @@ private enum Constants {
     static let insets = UIEdgeInsets(top: 0, left: 16, bottom: 16, right: 16)
 }
 
-public struct ChartVisibilityItem {
-    var title: String
-    var color: UIColor
-    
-    public init(title: String, color: UIColor) {
-        self.title = title
-        self.color = color
-    }
-}
-
 public func calculateVisiblityHeight(width: CGFloat, items: [ChartVisibilityItem]) -> CGFloat {
     let frames = generateItemsFrames(frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)), items: items)
     guard let lastFrame = frames.last else { return .zero }
