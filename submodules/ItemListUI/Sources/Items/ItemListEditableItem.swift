@@ -174,6 +174,13 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
         }
     }
     
+    open func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        /*if gestureRecognizer === self.recognizer && otherGestureRecognizer is InteractiveTransitionGestureRecognizer {
+            return true
+        }*/
+        return false
+    }
+    
     @objc private func revealTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))

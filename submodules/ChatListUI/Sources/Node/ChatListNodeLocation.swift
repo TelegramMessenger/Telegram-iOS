@@ -30,8 +30,14 @@ struct ChatListNodeViewUpdate {
 }
 
 func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
-    let includePeers = Set(filter.includePeers)
-    let excludePeers = Set(filter.excludePeers)
+    var includePeers = Set(filter.includePeers.peers)
+    var excludePeers = Set(filter.excludePeers)
+    
+    if !filter.includePeers.pinnedPeers.isEmpty {
+        includePeers.subtract(filter.includePeers.pinnedPeers)
+        excludePeers.subtract(filter.includePeers.pinnedPeers)
+    }
+    
     var includeAdditionalPeerGroupIds: [PeerGroupId] = []
     if !filter.excludeArchived {
         includeAdditionalPeerGroupIds.append(Namespaces.PeerGroup.archive)
@@ -41,7 +47,7 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
     if filter.excludeRead {
         messageTagSummary = ChatListMessageTagSummaryResultCalculation(addCount: ChatListMessageTagSummaryResultComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), subtractCount: ChatListMessageTagActionsSummaryResultComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))
     }
-    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, messageTagSummary: messageTagSummary, includeAdditionalPeerGroupIds: includeAdditionalPeerGroupIds, include: { peer, isMuted, isUnread, isContact, messageTagSummaryResult in
+    return ChatListFilterPredicate(includePeerIds: includePeers, excludePeerIds: excludePeers, pinnedPeerIds: filter.includePeers.pinnedPeers, messageTagSummary: messageTagSummary, includeAdditionalPeerGroupIds: includeAdditionalPeerGroupIds, include: { peer, isMuted, isUnread, isContact, messageTagSummaryResult in
         if filter.excludeRead {
             var effectiveUnread = isUnread
             if let messageTagSummaryResult = messageTagSummaryResult, messageTagSummaryResult {
@@ -53,7 +59,10 @@ func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredic
         }
         if filter.excludeMuted {
             if isMuted {
-                return false
+                if let messageTagSummaryResult = messageTagSummaryResult, messageTagSummaryResult {
+                } else {
+                    return false
+                }
             }
         }
         if !filter.categories.contains(.contacts) && isContact {

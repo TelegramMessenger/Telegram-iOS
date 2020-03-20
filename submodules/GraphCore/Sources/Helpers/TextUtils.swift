@@ -26,11 +26,13 @@ extension NSAttributedString {
 }
 
 func textSize(with string: String, font: NSFont) -> CGSize {
+    
     let attributedString:NSAttributedString = NSAttributedString(string: string, attributes: [.font : font])
     let layout = LabelNode.layoutText(attributedString, CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
     var size:CGSize = layout.0.size
     size.width = ceil(size.width)
     size.height = ceil(size.height)
+    
     return size
 }
 

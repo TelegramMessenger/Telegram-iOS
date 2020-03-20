@@ -636,6 +636,9 @@ public enum TabBarItemContextActionType {
     open func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
     }
     
+    open func tabBarDisabledAction() {
+    }
+    
     open func tabBarItemSwipeAction(direction: TabBarItemSwipeDirection) {
     }
 }

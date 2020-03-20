@@ -36,9 +36,9 @@ private final class ItemNodeDeleteButtonNode: HighlightableButtonNode {
             self.theme = theme
             self.contentImageNode.image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.rootController.navigationBar.clearButtonBackgroundColor.cgColor)
+                context.setFillColor(UIColor(rgb: 0xbbbbbb).cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                context.setStrokeColor(theme.rootController.navigationBar.clearButtonForegroundColor.cgColor)
+                context.setStrokeColor(UIColor(rgb: 0xffffff).cgColor)
                 context.setLineWidth(1.5)
                 context.setLineCap(.round)
                 context.move(to: CGPoint(x: 6.38, y: 6.38))
@@ -64,12 +64,8 @@ private final class ItemNode: ASDisplayNode {
     private let containerNode: ContextControllerSourceNode
     
     private let extractedBackgroundNode: ASImageNode
-    private let titleContainer: ASDisplayNode
     private let titleNode: ImmediateTextNode
-    private let titleActiveNode: ImmediateTextNode
-    private let shortTitleContainer: ASDisplayNode
     private let shortTitleNode: ImmediateTextNode
-    private let shortTitleActiveNode: ImmediateTextNode
     private let badgeContainerNode: ASDisplayNode
     private let badgeTextNode: ImmediateTextNode
     private let badgeBackgroundActiveNode: ASImageNode
@@ -78,7 +74,7 @@ private final class ItemNode: ASDisplayNode {
     private var deleteButtonNode: ItemNodeDeleteButtonNode?
     private let buttonNode: HighlightTrackingButtonNode
     
-    private var selectionFraction: CGFloat = 0.0
+    private var isSelected: Bool = false
     private(set) var unreadCount: Int = 0
     
     private var isReordering: Bool = false
@@ -97,29 +93,14 @@ private final class ItemNode: ASDisplayNode {
         
         let titleInset: CGFloat = 4.0
         
-        self.titleContainer = ASDisplayNode()
-        
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
-        
-        self.titleActiveNode = ImmediateTextNode()
-        self.titleActiveNode.displaysAsynchronously = false
-        self.titleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
-        self.titleActiveNode.alpha = 0.0
-        
-        self.shortTitleContainer = ASDisplayNode()
         
         self.shortTitleNode = ImmediateTextNode()
         self.shortTitleNode.displaysAsynchronously = false
         self.shortTitleNode.alpha = 0.0
         self.shortTitleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
-        
-        self.shortTitleActiveNode = ImmediateTextNode()
-        self.shortTitleActiveNode.displaysAsynchronously = false
-        self.shortTitleActiveNode.alpha = 0.0
-        self.shortTitleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
-        self.shortTitleActiveNode.alpha = 0.0
         
         self.badgeContainerNode = ASDisplayNode()
         
@@ -133,20 +114,17 @@ private final class ItemNode: ASDisplayNode {
         self.badgeBackgroundInactiveNode = ASImageNode()
         self.badgeBackgroundInactiveNode.displaysAsynchronously = false
         self.badgeBackgroundInactiveNode.displayWithoutProcessing = true
+        self.badgeBackgroundInactiveNode.isHidden = true
         
         self.buttonNode = HighlightTrackingButtonNode()
         
         super.init()
         
         self.extractedContainerNode.contentNode.addSubnode(self.extractedBackgroundNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.titleContainer)
-        self.titleContainer.addSubnode(self.titleNode)
-        self.titleContainer.addSubnode(self.titleActiveNode)
-        self.extractedContainerNode.contentNode.addSubnode(self.shortTitleContainer)
-        self.shortTitleContainer.addSubnode(self.shortTitleNode)
-        self.shortTitleContainer.addSubnode(self.shortTitleActiveNode)
-        self.badgeContainerNode.addSubnode(self.badgeBackgroundInactiveNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.titleNode)
+        self.extractedContainerNode.contentNode.addSubnode(self.shortTitleNode)
         self.badgeContainerNode.addSubnode(self.badgeBackgroundActiveNode)
+        self.badgeContainerNode.addSubnode(self.badgeBackgroundInactiveNode)
         self.badgeContainerNode.addSubnode(self.badgeTextNode)
         self.extractedContainerNode.contentNode.addSubnode(self.badgeContainerNode)
         self.extractedContainerNode.contentNode.addSubnode(self.buttonNode)
@@ -170,7 +148,7 @@ private final class ItemNode: ASDisplayNode {
             }
             
             if isExtracted, let theme = strongSelf.theme {
-                strongSelf.extractedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: theme.contextMenu.backgroundColor)
+                strongSelf.extractedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: strongSelf.isSelected ? UIColor(rgb: 0xbbbbbb) : UIColor(rgb: 0xf1f1f1))
             }
             transition.updateAlpha(node: strongSelf.extractedBackgroundNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
                 if !isExtracted {
@@ -184,7 +162,7 @@ private final class ItemNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateText(title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func updateText(title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, isSelected: Bool, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
@@ -195,7 +173,7 @@ private final class ItemNode: ASDisplayNode {
         self.containerNode.isGestureEnabled = !isEditing && !isReordering
         self.buttonNode.isUserInteractionEnabled = !isEditing && !isReordering
         
-        self.selectionFraction = selectionFraction
+        self.isSelected = isSelected
         self.unreadCount = unreadCount
         
         transition.updateAlpha(node: self.containerNode, alpha: isReordering && isAllChats ? 0.5 : 1.0)
@@ -222,28 +200,12 @@ private final class ItemNode: ASDisplayNode {
         
         transition.updateAlpha(node: self.badgeContainerNode, alpha: (isReordering || unreadCount == 0) ? 0.0 : 1.0)
         
-        let selectionAlpha: CGFloat = selectionFraction * selectionFraction
-        let deselectionAlpha: CGFloat = 1.0// - selectionFraction
-        
-        transition.updateAlpha(node: self.titleNode, alpha: deselectionAlpha)
-        transition.updateAlpha(node: self.titleActiveNode, alpha: selectionAlpha)
-        transition.updateAlpha(node: self.shortTitleNode, alpha: deselectionAlpha)
-        transition.updateAlpha(node: self.shortTitleActiveNode, alpha: selectionAlpha)
-        
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-        self.titleActiveNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
-        self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-        self.shortTitleActiveNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: isSelected ? presentationData.theme.contextMenu.badgeForegroundColor : presentationData.theme.list.itemSecondaryTextColor)
+        self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.bold(17.0), textColor: isSelected ? presentationData.theme.contextMenu.badgeForegroundColor : presentationData.theme.list.itemSecondaryTextColor)
         if unreadCount != 0 {
             self.badgeTextNode.attributedText = NSAttributedString(string: "\(unreadCount)", font: Font.regular(14.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
-            let badgeSelectionFraction: CGFloat = unreadHasUnmuted ? 1.0 : selectionFraction
-            
-            let badgeSelectionAlpha: CGFloat = badgeSelectionFraction
-            //let badgeDeselectionAlpha: CGFloat = 1.0 - badgeSelectionFraction
-            
-            transition.updateAlpha(node: self.badgeBackgroundActiveNode, alpha: badgeSelectionAlpha * badgeSelectionAlpha)
-            //transition.updateAlpha(node: self.badgeBackgroundInactiveNode, alpha: badgeDeselectionAlpha)
-            self.badgeBackgroundInactiveNode.alpha = 1.0
+            self.badgeBackgroundActiveNode.isHidden = !isSelected && !unreadHasUnmuted
+            self.badgeBackgroundInactiveNode.isHidden = isSelected || unreadHasUnmuted
         }
         
         if self.isReordering != isReordering {
@@ -259,29 +221,21 @@ private final class ItemNode: ASDisplayNode {
     
     func updateLayout(height: CGFloat, transition: ContainedViewLayoutTransition) -> (width: CGFloat, shortWidth: CGFloat) {
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        let _ = self.titleActiveNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        let titleFrame = CGRect(origin: CGPoint(x: -self.titleNode.insets.left, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
-        self.titleContainer.frame = titleFrame
-        self.titleNode.frame = CGRect(origin: CGPoint(), size: titleFrame.size)
-        self.titleActiveNode.frame = CGRect(origin: CGPoint(), size: titleFrame.size)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: -self.titleNode.insets.left, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
         
         let shortTitleSize = self.shortTitleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        let _ = self.shortTitleActiveNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
-        let shortTitleFrame = CGRect(origin: CGPoint(x: -self.shortTitleNode.insets.left, y: floor((height - shortTitleSize.height) / 2.0)), size: shortTitleSize)
-        self.shortTitleContainer.frame = shortTitleFrame
-        self.shortTitleNode.frame = CGRect(origin: CGPoint(), size: shortTitleFrame.size)
-        self.shortTitleActiveNode.frame = CGRect(origin: CGPoint(), size: shortTitleFrame.size)
+        self.shortTitleNode.frame = CGRect(origin: CGPoint(x: -self.shortTitleNode.insets.left, y: floor((height - shortTitleSize.height) / 2.0)), size: shortTitleSize)
         
         if let deleteButtonNode = self.deleteButtonNode {
             if let theme = self.theme {
                 let deleteButtonSize = deleteButtonNode.update(theme: theme)
-                deleteButtonNode.frame = CGRect(origin: CGPoint(x: -deleteButtonSize.width, y: 5.0), size: deleteButtonSize)
+                deleteButtonNode.frame = CGRect(origin: CGPoint(x: -deleteButtonSize.width + 7.0, y: 5.0), size: deleteButtonSize)
             }
         }
         
         let badgeSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let badgeInset: CGFloat = 4.0
-        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right + 4.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
+        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right + 5.0, y: floor((height - 18.0) / 2.0)), size: CGSize(width: max(18.0, badgeSize.width + badgeInset * 2.0), height: 18.0))
         self.badgeContainerNode.frame = badgeBackgroundFrame
         self.badgeBackgroundActiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
         self.badgeBackgroundInactiveNode.frame = CGRect(origin: CGPoint(), size: badgeBackgroundFrame.size)
@@ -300,18 +254,18 @@ private final class ItemNode: ASDisplayNode {
             width = badgeBackgroundFrame.maxX
         }
         
-        return (width, shortTitleSize.width - self.shortTitleNode.insets.left - self.shortTitleNode.insets.right + 5.0)
+        return (width, shortTitleSize.width - self.shortTitleNode.insets.left - self.shortTitleNode.insets.right)
     }
     
     func updateArea(size: CGSize, sideInset: CGFloat, useShortTitle: Bool, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.titleContainer, alpha: useShortTitle ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.shortTitleContainer, alpha: useShortTitle ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.titleNode, alpha: useShortTitle ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.shortTitleNode, alpha: useShortTitle ? 1.0 : 0.0)
         
         self.buttonNode.frame = CGRect(origin: CGPoint(x: -sideInset, y: 0.0), size: CGSize(width: size.width + sideInset * 2.0, height: size.height))
         
         self.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: size)
         self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundNode.frame.minX, y: 0.0), size: CGSize(width:self.extractedBackgroundNode.frame.width, height: size.height))
+        self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundNode.frame.minX, y: 0.0), size: CGSize(width: self.extractedBackgroundNode.frame.width, height: size.height))
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         
         self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -sideInset, bottom: 0.0, right: -sideInset)
@@ -319,7 +273,7 @@ private final class ItemNode: ASDisplayNode {
         self.extractedContainerNode.contentNode.hitTestSlop = self.hitTestSlop
         self.containerNode.hitTestSlop = self.hitTestSlop
         
-        let extractedBackgroundHeight: CGFloat = 36.0
+        let extractedBackgroundHeight: CGFloat = 32.0
         let extractedBackgroundInset: CGFloat = 14.0
         self.extractedBackgroundNode.frame = CGRect(origin: CGPoint(x: -extractedBackgroundInset, y: floor((size.height - extractedBackgroundHeight) / 2.0)), size: CGSize(width: size.width + extractedBackgroundInset * 2.0, height: extractedBackgroundHeight))
     }
@@ -397,52 +351,26 @@ private final class ItemNode: ASDisplayNode {
     }
 }
 
-enum ChatListFilterTabEntryId: Hashable {
-    case all
-    case filter(Int32)
-}
-
-struct ChatListFilterTabEntryUnreadCount: Equatable {
-    let value: Int
-    let hasUnmuted: Bool
-}
-
-enum ChatListFilterTabEntry: Equatable {
-    case all(unreadCount: Int)
-    case filter(id: Int32, text: String, unread: ChatListFilterTabEntryUnreadCount)
+private final class ItemNodePair {
+    let regular: ItemNode
+    let highlighted: ItemNode
     
-    var id: ChatListFilterTabEntryId {
-        switch self {
-        case .all:
-            return .all
-        case let .filter(filter):
-            return .filter(filter.id)
-        }
-    }
-    
-    func title(strings: PresentationStrings) -> String {
-        switch self {
-        case .all:
-            return strings.ChatList_Tabs_AllChats
-        case let .filter(filter):
-            return filter.text
-        }
-    }
-    
-    func shortTitle(strings: PresentationStrings) -> String {
-        switch self {
-        case .all:
-            return strings.ChatList_Tabs_All
-        case let .filter(filter):
-            return filter.text
-        }
+    init(regular: ItemNode, highlighted: ItemNode) {
+        self.regular = regular
+        self.highlighted = highlighted
     }
 }
 
-final class ChatListFilterTabContainerNode: ASDisplayNode {
+final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
     private let scrollNode: ASScrollNode
-    private let selectedLineNode: ASImageNode
-    private var itemNodes: [ChatListFilterTabEntryId: ItemNode] = [:]
+    private let itemsBackgroundView: UIVisualEffectView
+    private let itemsBackgroundTintNode: ASImageNode
+    
+    private let selectedBackgroundNode: ASImageNode
+    private var itemNodePairs: [ChatListFilterTabEntryId: ItemNodePair] = [:]
+    private var itemsContainer: ASDisplayNode
+    private var highlightedItemsClippingContainer: ASDisplayNode
+    private var highlightedItemsContainer: ASDisplayNode
     
     var tabSelected: ((ChatListFilterTabEntryId) -> Void)?
     var tabRequestedDeletion: ((ChatListFilterTabEntryId) -> Void)?
@@ -474,9 +402,25 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     override init() {
         self.scrollNode = ASScrollNode()
         
-        self.selectedLineNode = ASImageNode()
-        self.selectedLineNode.displaysAsynchronously = false
-        self.selectedLineNode.displayWithoutProcessing = true
+        self.itemsBackgroundView = UIVisualEffectView()
+        self.itemsBackgroundView.clipsToBounds = true
+        self.itemsBackgroundView.layer.cornerRadius = 20.0
+        
+        self.itemsBackgroundTintNode = ASImageNode()
+        self.itemsBackgroundTintNode.displaysAsynchronously = false
+        self.itemsBackgroundTintNode.displayWithoutProcessing = true
+        
+        self.selectedBackgroundNode = ASImageNode()
+        self.selectedBackgroundNode.displaysAsynchronously = false
+        self.selectedBackgroundNode.displayWithoutProcessing = true
+        
+        self.itemsContainer = ASDisplayNode()
+        
+        self.highlightedItemsClippingContainer = ASDisplayNode()
+        self.highlightedItemsClippingContainer.clipsToBounds = true
+        self.highlightedItemsClippingContainer.layer.cornerRadius = 16.0
+        
+        self.highlightedItemsContainer = ASDisplayNode()
         
         super.init()
         
@@ -489,14 +433,19 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         }
         
         self.addSubnode(self.scrollNode)
-        self.scrollNode.addSubnode(self.selectedLineNode)
+        self.scrollNode.view.addSubview(self.itemsBackgroundView)
+        self.scrollNode.addSubnode(self.itemsBackgroundTintNode)
+        self.scrollNode.addSubnode(self.itemsContainer)
+        self.scrollNode.addSubnode(self.selectedBackgroundNode)
+        self.scrollNode.addSubnode(self.highlightedItemsClippingContainer)
+        self.highlightedItemsClippingContainer.addSubnode(self.highlightedItemsContainer)
         
         let reorderingGesture = ReorderingGestureRecognizer(shouldBegin: { [weak self] point in
             guard let strongSelf = self else {
                 return false
             }
-            for (id, itemNode) in strongSelf.itemNodes {
-                if itemNode.view.convert(itemNode.bounds, to: strongSelf.view).contains(point) {
+            for (id, itemNodePair) in strongSelf.itemNodePairs {
+                if itemNodePair.regular.view.convert(itemNodePair.regular.bounds, to: strongSelf.view).contains(point) {
                     if case .all = id {
                         return false
                     }
@@ -508,13 +457,13 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             guard let strongSelf = self, let _ = strongSelf.currentParams else {
                 return
             }
-            for (id, itemNode) in strongSelf.itemNodes {
-                let itemFrame = itemNode.view.convert(itemNode.bounds, to: strongSelf.view)
+            for (id, itemNodePair) in strongSelf.itemNodePairs {
+                let itemFrame = itemNodePair.regular.view.convert(itemNodePair.regular.bounds, to: strongSelf.view)
                 if itemFrame.contains(point) {
                     strongSelf.hapticFeedback.impact()
                     
                     strongSelf.reorderingItem = id
-                    itemNode.frame = itemFrame
+                    itemNodePair.regular.frame = itemFrame
                     strongSelf.reorderingAutoScrollAnimator = ConstantDisplayLinkAnimator(update: {
                         guard let strongSelf = self, let currentLocation = strongSelf.reorderingGesture?.currentLocation else {
                             return
@@ -531,9 +480,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                         }
                     })
                     strongSelf.reorderingAutoScrollAnimator?.isPaused = false
-                    strongSelf.addSubnode(itemNode)
+                    strongSelf.addSubnode(itemNodePair.regular)
                     
-                    strongSelf.reorderingItemPosition = (itemNode.frame.minX, 0.0)
+                    strongSelf.reorderingItemPosition = (itemNodePair.regular.frame.minX, 0.0)
                     if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, transitionFraction, presentationData) = strongSelf.currentParams {
                         strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
@@ -544,10 +493,10 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             guard let strongSelf = self, let reorderingItem = strongSelf.reorderingItem else {
                 return
             }
-            if let itemNode = strongSelf.itemNodes[reorderingItem] {
-                let projectedItemFrame = itemNode.view.convert(itemNode.bounds, to: strongSelf.scrollNode.view)
-                itemNode.frame = projectedItemFrame
-                strongSelf.scrollNode.addSubnode(itemNode)
+            if let itemNodePair = strongSelf.itemNodePairs[reorderingItem] {
+                let projectedItemFrame = itemNodePair.regular.view.convert(itemNodePair.regular.bounds, to: strongSelf.scrollNode.view)
+                itemNodePair.regular.frame = projectedItemFrame
+                strongSelf.itemsContainer.addSubnode(itemNodePair.regular)
             }
             
             strongSelf.reorderingItem = nil
@@ -561,17 +510,17 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             guard let strongSelf = self, let reorderingItem = strongSelf.reorderingItem else {
                 return
             }
-            if let reorderingItemNode = strongSelf.itemNodes[reorderingItem], let (initial, _) = strongSelf.reorderingItemPosition, let reorderedItemIds = strongSelf.reorderedItemIds, let currentItemIndex = reorderedItemIds.firstIndex(of: reorderingItem) {
+            if let reorderingItemNodePair = strongSelf.itemNodePairs[reorderingItem], let (initial, _) = strongSelf.reorderingItemPosition, let reorderedItemIds = strongSelf.reorderedItemIds, let currentItemIndex = reorderedItemIds.firstIndex(of: reorderingItem) {
                 
-                for (id, itemNode) in strongSelf.itemNodes {
+                for (id, itemNodePair) in strongSelf.itemNodePairs {
                     guard let itemIndex = reorderedItemIds.firstIndex(of: id) else {
                         continue
                     }
                     if id != reorderingItem {
-                        let itemFrame = itemNode.view.convert(itemNode.bounds, to: strongSelf.view)
-                        if reorderingItemNode.frame.intersects(itemFrame) {
+                        let itemFrame = itemNodePair.regular.view.convert(itemNodePair.regular.bounds, to: strongSelf.view)
+                        if reorderingItemNodePair.regular.frame.intersects(itemFrame) {
                             let targetIndex: Int
-                            if reorderingItemNode.frame.midX < itemFrame.midX {
+                            if reorderingItemNodePair.regular.frame.midX < itemFrame.midX {
                                 targetIndex = max(1, itemIndex - 1)
                             } else {
                                 targetIndex = max(1, min(reorderedItemIds.count - 1, itemIndex))
@@ -612,8 +561,10 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     private var previousSelectedFrame: CGRect?
     
     func cancelAnimations() {
-        self.selectedLineNode.layer.removeAllAnimations()
+        self.selectedBackgroundNode.layer.removeAllAnimations()
         self.scrollNode.layer.removeAllAnimations()
+        self.highlightedItemsContainer.layer.removeAllAnimations()
+        self.highlightedItemsClippingContainer.layer.removeAllAnimations()
     }
     
     func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
@@ -625,11 +576,15 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         let previousContentWidth = self.scrollNode.view.contentSize.width
         
         if self.currentParams?.presentationData.theme !== presentationData.theme {
-            self.selectedLineNode.image = generateImage(CGSize(width: 7.0, height: 4.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width)))
-            })?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 1)
+            if presentationData.theme.rootController.keyboardColor == .dark {
+                self.itemsBackgroundView.effect = UIBlurEffect(style: .dark)
+            } else {
+                self.itemsBackgroundView.effect = UIBlurEffect(style: .light)
+            }
+            
+            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: UIColor(rgb: 0xf1f1f1))
+            
+            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: UIColor(rgb: 0xbbbbbb))
         }
         
         if isReordering {
@@ -677,18 +632,16 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             }
         }
         
-        for i in 0 ..< reorderedFilters.count {
-            let filter = reorderedFilters[i]
-            
-            let itemNode: ItemNode
+        for filter in reorderedFilters {
+            let itemNodePair: ItemNodePair
             var itemNodeTransition = transition
             var wasAdded = false
-            if let current = self.itemNodes[filter.id] {
-                itemNode = current
+            if let current = self.itemNodePairs[filter.id] {
+                itemNodePair = current
             } else {
                 itemNodeTransition = .immediate
                 wasAdded = true
-                itemNode = ItemNode(pressed: { [weak self] in
+                itemNodePair = ItemNodePair(regular: ItemNode(pressed: { [weak self] in
                     self?.tabSelected?(filter.id)
                 }, requestedDeletion: { [weak self] in
                     self?.tabRequestedDeletion?(filter.id)
@@ -705,8 +658,25 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                     default:
                         strongSelf.contextGesture?(nil, sourceNode, gesture)
                     }
-                })
-                self.itemNodes[filter.id] = itemNode
+                }), highlighted: ItemNode(pressed: { [weak self] in
+                    self?.tabSelected?(filter.id)
+                }, requestedDeletion: { [weak self] in
+                    self?.tabRequestedDeletion?(filter.id)
+                }, contextGesture: { [weak self] sourceNode, gesture in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    switch filter {
+                    case let .filter(filter):
+                        strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = false
+                        strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
+                        strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
+                        strongSelf.contextGesture?(filter.id, sourceNode, gesture)
+                    default:
+                        strongSelf.contextGesture?(nil, sourceNode, gesture)
+                    }
+                }))
+                self.itemNodePairs[filter.id] = itemNodePair
             }
             let unreadCount: Int
             let unreadHasUnmuted: Bool
@@ -720,86 +690,92 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 unreadCount = filter.unread.value
                 unreadHasUnmuted = filter.unread.hasUnmuted
             }
-            if !wasAdded && (itemNode.unreadCount != 0) != (unreadCount != 0) {
+            if !wasAdded && (itemNodePair.regular.unreadCount != 0) != (unreadCount != 0) {
                 badgeAnimations[filter.id] = (unreadCount != 0) ? .in : .out
             }
-            
-            let selectionFraction: CGFloat
-            if selectedFilter == filter.id {
-                selectionFraction = 1.0 - abs(transitionFraction)
-            } else if i != 0 && selectedFilter == reorderedFilters[i - 1].id {
-                selectionFraction = max(0.0, -transitionFraction)
-            } else if i != reorderedFilters.count - 1 && selectedFilter == reorderedFilters[i + 1].id {
-                selectionFraction = max(0.0, transitionFraction)
-            } else {
-                selectionFraction = 0.0
-            }
-            
-            itemNode.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            itemNodePair.regular.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, isSelected: false, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            itemNodePair.highlighted.updateText(title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, isSelected: true, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
-        for (id, _) in self.itemNodes {
+        for (id, _) in self.itemNodePairs {
             if !filters.contains(where: { $0.id == id }) {
                 removeKeys.append(id)
             }
         }
         for id in removeKeys {
-            if let itemNode = self.itemNodes.removeValue(forKey: id) {
-                transition.updateAlpha(node: itemNode, alpha: 0.0, completion: { [weak itemNode] _ in
-                    itemNode?.removeFromSupernode()
+            if let itemNodePair = self.itemNodePairs.removeValue(forKey: id) {
+                let regular = itemNodePair.regular
+                let highlighted = itemNodePair.highlighted
+                transition.updateAlpha(node: regular, alpha: 0.0, completion: { [weak regular] _ in
+                    regular?.removeFromSupernode()
                 })
-                transition.updateTransformScale(node: itemNode, scale: 0.1)
+                transition.updateTransformScale(node: regular, scale: 0.1)
+                transition.updateAlpha(node: highlighted, alpha: 0.0, completion: { [weak highlighted] _ in
+                    highlighted?.removeFromSupernode()
+                })
+                transition.updateTransformScale(node: highlighted, scale: 0.1)
             }
         }
         
-        var tabSizes: [(ChatListFilterTabEntryId, CGSize, CGSize, ItemNode, Bool)] = []
+        var tabSizes: [(ChatListFilterTabEntryId, CGSize, CGSize, ItemNodePair, Bool)] = []
         var totalRawTabSize: CGFloat = 0.0
         var selectionFrames: [CGRect] = []
         
         for filter in reorderedFilters {
-            guard let itemNode = self.itemNodes[filter.id] else {
+            guard let itemNodePair = self.itemNodePairs[filter.id] else {
                 continue
             }
-            let wasAdded = itemNode.supernode == nil
+            let wasAdded = itemNodePair.regular.supernode == nil
             var itemNodeTransition = transition
             if wasAdded {
                 itemNodeTransition = .immediate
-                self.scrollNode.addSubnode(itemNode)
+                self.itemsContainer.addSubnode(itemNodePair.regular)
+                self.highlightedItemsContainer.addSubnode(itemNodePair.highlighted)
             }
-            let (paneNodeWidth, paneNodeShortWidth) = itemNode.updateLayout(height: size.height, transition: itemNodeTransition)
+            let (paneNodeWidth, paneNodeShortWidth) = itemNodePair.regular.updateLayout(height: size.height, transition: itemNodeTransition)
+            let _ = itemNodePair.highlighted.updateLayout(height: size.height, transition: itemNodeTransition)
             let paneNodeSize = CGSize(width: paneNodeWidth, height: size.height)
             let paneNodeShortSize = CGSize(width: paneNodeShortWidth, height: size.height)
-            tabSizes.append((filter.id, paneNodeSize, paneNodeShortSize, itemNode, wasAdded))
+            tabSizes.append((filter.id, paneNodeSize, paneNodeShortSize, itemNodePair, wasAdded))
             totalRawTabSize += paneNodeSize.width
             
             if case .animated = transition, let badgeAnimation = badgeAnimations[filter.id] {
                 switch badgeAnimation {
                 case .in:
-                    itemNode.animateBadgeIn()
+                    itemNodePair.regular.animateBadgeIn()
+                    itemNodePair.highlighted.animateBadgeIn()
                 case .out:
-                    itemNode.animateBadgeOut()
+                    itemNodePair.regular.animateBadgeOut()
+                    itemNodePair.highlighted.animateBadgeOut()
                 }
             }
         }
         
-        let minSpacing: CGFloat = 26.0
+        let minSpacing: CGFloat = 30.0
         
-        let resolvedSideInset: CGFloat = 16.0 + sideInset
+        let resolvedInitialSideInset: CGFloat = 8.0 + 14.0 + 4.0 + sideInset
+        
+        var longTitlesWidth: CGFloat = 0.0
+        var shortTitlesWidth: CGFloat = 0.0
+        for i in 0 ..< tabSizes.count {
+            let (_, paneNodeSize, paneNodeShortSize, _, _) = tabSizes[i]
+            longTitlesWidth += paneNodeSize.width
+            shortTitlesWidth += paneNodeShortSize.width
+        }
+        let totalSpacing = CGFloat(tabSizes.count - 1) * minSpacing
+        let useShortTitles = (longTitlesWidth + totalSpacing + resolvedInitialSideInset * 2.0) > size.width
+        
+        var rawContentWidth = useShortTitles ? shortTitlesWidth : longTitlesWidth
+        rawContentWidth += totalSpacing
+        
+        let resolvedSideInset = max(resolvedInitialSideInset, floor((size.width - rawContentWidth) / 2.0))
+        
         var leftOffset: CGFloat = resolvedSideInset
         
-        var longTitlesWidth: CGFloat = resolvedSideInset
-        for i in 0 ..< tabSizes.count {
-            let (itemId, paneNodeSize, paneNodeShortSize, paneNode, wasAdded) = tabSizes[i]
-            longTitlesWidth += paneNodeSize.width
-            if i != tabSizes.count - 1 {
-                longTitlesWidth += minSpacing
-            }
-        }
-        longTitlesWidth += resolvedSideInset
-        let useShortTitles = longTitlesWidth > size.width
+        let itemsBackgroundLeftX = leftOffset - 14.0 - 4.0
         
         for i in 0 ..< tabSizes.count {
-            let (itemId, paneNodeLongSize, paneNodeShortSize, paneNode, wasAdded) = tabSizes[i]
+            let (itemId, paneNodeLongSize, paneNodeShortSize, itemNodePair, wasAdded) = tabSizes[i]
             var itemNodeTransition = transition
             if wasAdded {
                 itemNodeTransition = .immediate
@@ -811,31 +787,50 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
             
             if itemId == self.reorderingItem, let (initial, offset) = self.reorderingItemPosition {
-                itemNodeTransition.updateSublayerTransformScale(node: paneNode, scale: 1.2)
-                itemNodeTransition.updateAlpha(node: paneNode, alpha: 0.9)
-                itemNodeTransition.updateFrameAdditive(node: paneNode, frame: CGRect(origin: CGPoint(x: initial + offset, y: paneFrame.minY), size: paneFrame.size))
+                itemNodeTransition.updateSublayerTransformScale(node: itemNodePair.regular, scale: 1.2)
+                itemNodeTransition.updateAlpha(node: itemNodePair.regular, alpha: 0.9)
+                let offsetFrame = CGRect(origin: CGPoint(x: initial + offset, y: paneFrame.minY), size: paneFrame.size)
+                itemNodeTransition.updateFrameAdditive(node: itemNodePair.regular, frame: offsetFrame)
+                selectionFrames.append(offsetFrame)
             } else {
-                itemNodeTransition.updateSublayerTransformScale(node: paneNode, scale: 1.0)
-                itemNodeTransition.updateAlpha(node: paneNode, alpha: 1.0)
+                itemNodeTransition.updateSublayerTransformScale(node: itemNodePair.regular, scale: 1.0)
+                itemNodeTransition.updateAlpha(node: itemNodePair.regular, alpha: 1.0)
                 if wasAdded {
-                    paneNode.frame = paneFrame
-                    paneNode.alpha = 0.0
-                    itemNodeTransition.updateAlpha(node: paneNode, alpha: 1.0)
+                    itemNodePair.regular.frame = paneFrame
+                    itemNodePair.regular.alpha = 0.0
+                    itemNodeTransition.updateAlpha(node: itemNodePair.regular, alpha: 1.0)
                 } else {
-                    itemNodeTransition.updateFrameAdditive(node: paneNode, frame: paneFrame)
+                    itemNodeTransition.updateFrameAdditive(node: itemNodePair.regular, frame: paneFrame)
                 }
+                selectionFrames.append(paneFrame)
             }
-            paneNode.updateArea(size: paneFrame.size, sideInset: minSpacing / 2.0, useShortTitle: useShortTitle, transition: itemNodeTransition)
-            paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -minSpacing / 2.0, bottom: 0.0, right: -minSpacing / 2.0)
             
-            selectionFrames.append(paneFrame)
+            if wasAdded {
+                itemNodePair.highlighted.frame = paneFrame
+                itemNodePair.highlighted.alpha = 0.0
+                itemNodeTransition.updateAlpha(node: itemNodePair.highlighted, alpha: 1.0)
+            } else {
+                itemNodeTransition.updateFrameAdditive(node: itemNodePair.highlighted, frame: paneFrame)
+            }
+            
+            itemNodePair.regular.updateArea(size: paneFrame.size, sideInset: minSpacing / 2.0, useShortTitle: useShortTitle, transition: itemNodeTransition)
+            itemNodePair.regular.hitTestSlop = UIEdgeInsets(top: 0.0, left: -minSpacing / 2.0, bottom: 0.0, right: -minSpacing / 2.0)
+            
+            itemNodePair.highlighted.updateArea(size: paneFrame.size, sideInset: minSpacing / 2.0, useShortTitle: useShortTitle, transition: itemNodeTransition)
+            itemNodePair.highlighted.hitTestSlop = UIEdgeInsets(top: 0.0, left: -minSpacing / 2.0, bottom: 0.0, right: -minSpacing / 2.0)
             
             leftOffset += paneNodeSize.width + minSpacing
         }
         leftOffset -= minSpacing
+        let itemsBackgroundRightX = leftOffset + 14.0 + 4.0
+        
         leftOffset += resolvedSideInset
         
-        self.scrollNode.view.contentSize = CGSize(width: leftOffset, height: size.height)
+        let backgroundFrame = CGRect(origin: CGPoint(x: itemsBackgroundLeftX, y: 0.0), size: CGSize(width: itemsBackgroundRightX - itemsBackgroundLeftX, height: size.height))
+        transition.updateFrame(view: self.itemsBackgroundView, frame: backgroundFrame)
+        transition.updateFrame(node: self.itemsBackgroundTintNode, frame: backgroundFrame)
+        
+        self.scrollNode.view.contentSize = CGSize(width: itemsBackgroundRightX + 8.0, height: size.height)
         
         var previousFrame: CGRect?
         var nextFrame: CGRect?
@@ -858,17 +853,22 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             }
         }
         
+        transition.updateFrame(node: self.itemsContainer, frame: CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize))
+        
         if let selectedFrame = selectedFrame {
-            let wasAdded = self.selectedLineNode.isHidden
-            self.selectedLineNode.isHidden = false
-            let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0))
+            let wasAdded = self.selectedBackgroundNode.isHidden
+            self.selectedBackgroundNode.isHidden = false
+            let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX - 14.0, y: floor((size.height - 32.0) / 2.0)), size: CGSize(width: selectedFrame.width + 14.0 * 2.0, height: 32.0))
             if wasAdded {
-                self.selectedLineNode.frame = lineFrame
-                self.selectedLineNode.alpha = 0.0
+                self.selectedBackgroundNode.frame = lineFrame
+                self.selectedBackgroundNode.alpha = 0.0
             } else {
-                transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
+                transition.updateFrame(node: self.selectedBackgroundNode, frame: lineFrame)
             }
-            transition.updateAlpha(node: self.selectedLineNode, alpha: isReordering && selectedFilter == .all ? 0.5 : 1.0)
+            transition.updateFrame(node: self.highlightedItemsClippingContainer, frame: lineFrame)
+            transition.updateFrame(node: self.highlightedItemsContainer, frame: CGRect(origin: CGPoint(x: -lineFrame.minX, y: -lineFrame.minY), size: self.scrollNode.view.contentSize))
+            transition.updateAlpha(node: self.selectedBackgroundNode, alpha: isReordering ? 0.0 : 1.0)
+            transition.updateAlpha(node: self.highlightedItemsClippingContainer, alpha: isReordering ? 0.0 : 1.0)
             
             if let previousSelectedFrame = self.previousSelectedFrame {
                 let previousContentOffsetX = max(0.0, min(previousContentWidth - previousScrollBounds.width, floor(previousSelectedFrame.midX - previousScrollBounds.width / 2.0)))
@@ -894,7 +894,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             self.previousSelectedAbsFrame = selectedFrame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
             self.previousSelectedFrame = selectedFrame
         } else {
-            self.selectedLineNode.isHidden = true
+            self.selectedBackgroundNode.isHidden = true
             self.previousSelectedAbsFrame = nil
             self.previousSelectedFrame = nil
         }

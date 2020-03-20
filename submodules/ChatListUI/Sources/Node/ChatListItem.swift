@@ -37,7 +37,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let presentationData: ChatListPresentationData
     let context: AccountContext
     let peerGroupId: PeerGroupId
-    let isInFilter: Bool
+    let filterData: ChatListItemFilterData?
     let index: ChatListIndex
     public let content: ChatListItemContent
     let editing: Bool
@@ -59,10 +59,10 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         return self.index.pinningIndex != nil
     }
     
-    public init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, isInFilter: Bool, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    public init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, filterData: ChatListItemFilterData?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
-        self.isInFilter = isInFilter
+        self.filterData = filterData
         self.context = context
         self.index = index
         self.content = content
@@ -204,7 +204,15 @@ private func canArchivePeer(id: PeerId, accountPeerId: PeerId) -> Bool {
     return true
 }
 
-private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, groupId: PeerGroupId, peerId: PeerId, accountPeerId: PeerId, canDelete: Bool, isEditing: Bool, isInFilter: Bool) -> [ItemListRevealOption] {
+public struct ChatListItemFilterData: Equatable {
+    public var excludesArchived: Bool
+    
+    public init(excludesArchived: Bool) {
+        self.excludesArchived = excludesArchived
+    }
+}
+
+private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, groupId: PeerGroupId, peerId: PeerId, accountPeerId: PeerId, canDelete: Bool, isEditing: Bool, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
         if case .group = groupId {
@@ -226,7 +234,7 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
     if canDelete {
         options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
     }
-    if !isEditing && !isInFilter {
+    if !isEditing && filterData == nil {
         if case .root = groupId {
             if canArchivePeer(id: peerId, accountPeerId: accountPeerId) {
                 options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
@@ -250,7 +258,7 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, groupId: PeerGroupId, isInFilter: Bool) -> [ItemListRevealOption] {
+private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, groupId: PeerGroupId, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
     if case .group = groupId {
         return []
     }
@@ -260,7 +268,7 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
     } else {
         options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Unread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
     }
-    if !isEditing && !isInFilter {
+    if !isEditing {
         if isPinned {
             options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
         } else {
@@ -1169,9 +1177,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let isPinned = item.index.pinningIndex != nil
                     
                     if item.enableContextActions && !isAd {
-                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.context.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, isInFilter: item.isInFilter)
+                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.context.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, filterData: item.filterData)
                         if case let .chat(itemPeer) = contentPeer {
-                            peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.context.account.peerId, groupId: item.peerGroupId, isInFilter: item.isInFilter)
+                            peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.context.account.peerId, groupId: item.peerGroupId, filterData: item.filterData)
                         } else {
                             peerLeftRevealOptions = []
                         }
@@ -1681,7 +1689,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let titleFrame = self.titleNode.frame
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
+            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
             
             let authorFrame = self.authorNode.frame
             transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: authorFrame.origin.y), size: authorFrame.size))
@@ -1689,10 +1697,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
             var textFrame = self.textNode.frame
-            let textDeltaX = textFrame.origin.x - contentRect.origin.x
-            transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textDeltaX, y: 0.0))
             textFrame.origin.x = contentRect.origin.x
-            transition.updateFrame(node: textNode, frame: textFrame)
+            transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             
             var contentImageFrame = self.contentImageNode.frame
             contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 0.0)

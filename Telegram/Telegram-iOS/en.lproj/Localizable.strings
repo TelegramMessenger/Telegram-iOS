@@ -2212,6 +2212,7 @@ Unused sets are archived when you add more.";
 "DialogList.Pin" = "Pin";
 "DialogList.Unpin" = "Unpin";
 "DialogList.PinLimitError" = "Sorry, you can pin no more than %@ chats to the top.";
+"DialogList.UnknownPinLimitError" = "Sorry, you can't pin any more chats to the top.";
 
 "Conversation.DeleteMessagesForMe" = "Delete for me";
 "Conversation.DeleteMessagesFor" = "Delete for me and %@";
@@ -5349,7 +5350,8 @@ Any member of this group will be able to see messages in the channel.";
 "External.OpenIn" = "Open in %@";
 
 "ChatList.EmptyChatList" = "You have no\nconversations yet.";
-"ChatList.EmptyChatFilterList" = "No chats currently\nmatch this filter.";
+"ChatList.EmptyChatListFilterTitle" = "Folder is empty.";
+"ChatList.EmptyChatListFilterText" = "No chats currently match this folder.";
 
 "ChatList.EmptyChatListNewMessage" = "New Message";
 "ChatList.EmptyChatListEditFilter" = "Edit Folder";
@@ -5456,3 +5458,19 @@ Any member of this group will be able to see messages in the channel.";
 "ChatListFolder.DiscardCancel" = "No";
 "ChatListFolder.IncludeChatsTitle" = "Include Chats";
 "ChatListFolder.ExcludeChatsTitle" = "Exclude Chats";
+
+"ChatListFolderSettings.AddRecommended" = "ADD";
+
+"ChatListFilter.ShowMoreChats_0" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_1" = "Show %@ More Chat";
+"ChatListFilter.ShowMoreChats_2" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_3_10" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_many" = "Show %@ More Chats";
+"ChatListFilter.ShowMoreChats_any" = "Show %@ More Chats";
+
+"SetupUsername.ChangeNameWarningChannel" = "Warning, if you change the name of your channel, it will loose its verified status. You will need to send a new application to @verification_bot";
+"SetupUsername.ChangeNameWarningGroup" = "Warning, if you change the name of your group, it will loose its verified status. You will need to send a new application to @verification_bot";
+"SetupUsername.ChangeLinkWarningChannel" = "Warning, if you change the short link to your channel, it will loose its verified status. You will need to send a new application to @verification_bot";
+"SetupUsername.ChangeLinkWarningGroup" = "Warning, if you change the short link to your group, it will loose its verified status. You will need to send a new application to @verification_bot";
+
+"MuteFor.Forever" = "Mute Forever";

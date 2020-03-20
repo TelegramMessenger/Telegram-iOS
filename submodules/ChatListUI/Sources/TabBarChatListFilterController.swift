@@ -10,8 +10,8 @@ import Postbox
 import TelegramUIPreferences
 import TelegramCore
 
-func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
-    return updatedChatListFilters(postbox: context.account.postbox)
+func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
+    return updatedChatListFilters(postbox: postbox)
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
         var unreadCountItems: [UnreadMessageCountsItem] = []
@@ -19,7 +19,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
         var additionalPeerIds = Set<PeerId>()
         var additionalGroupIds = Set<PeerGroupId>()
         for filter in filters {
-            additionalPeerIds.formUnion(filter.data.includePeers)
+            additionalPeerIds.formUnion(filter.data.includePeers.peers)
             additionalPeerIds.formUnion(filter.data.excludePeers)
             if !filter.data.excludeArchived {
                 additionalGroupIds.insert(Namespaces.PeerGroup.archive)
@@ -40,8 +40,8 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
             keys.append(.basicPeer(peerId))
         }
         
-        return combineLatest(queue: context.account.postbox.queue,
-            context.account.postbox.combinedView(keys: keys),
+        return combineLatest(queue: postbox.queue,
+            postbox.combinedView(keys: keys),
             Signal<Bool, NoError>.single(true)
         )
         |> map { view, _ -> (Int, [(ChatListFilter, Int, Bool)]) in
@@ -51,7 +51,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
             
             var result: [(ChatListFilter, Int, Bool)] = []
             
-            var peerTagAndCount: [PeerId: (PeerSummaryCounterTags, Int, Bool)] = [:]
+            var peerTagAndCount: [PeerId: (PeerSummaryCounterTags, Int, Bool, PeerGroupId?)] = [:]
             
             var totalStates: [PeerGroupId: ChatListTotalUnreadState] = [:]
             for entry in unreadCounts.entries {
@@ -63,7 +63,7 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                 case let .peer(peerId, state):
                     if let state = state, state.isUnread {
                         if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer {
-                            let tag = context.account.postbox.seedConfiguration.peerSummaryCounterTags(peer, peerView.isContact)
+                            let tag = postbox.seedConfiguration.peerSummaryCounterTags(peer, peerView.isContact)
                             
                             var peerCount = Int(state.count)
                             if state.isUnread {
@@ -71,9 +71,9 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                             }
                             
                             if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings, case .muted = notificationSettings.muteState {
-                                peerTagAndCount[peerId] = (tag, peerCount, false)
+                                peerTagAndCount[peerId] = (tag, peerCount, false, peerView.groupId)
                             } else {
-                                peerTagAndCount[peerId] = (tag, peerCount, true)
+                                peerTagAndCount[peerId] = (tag, peerCount, true, peerView.groupId)
                             }
                         }
                     }
@@ -146,10 +146,21 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                         }
                     }
                 }
-                for peerId in filter.data.includePeers {
-                    if let (tag, peerCount, hasUnmuted) = peerTagAndCount[peerId] {
-                        if !tags.contains(tag) {
-                            if peerCount != 0 {
+                for peerId in filter.data.includePeers.peers {
+                    if let (tag, peerCount, hasUnmuted, groupId) = peerTagAndCount[peerId] {
+                        if let groupId = groupId, !tags.contains(tag) {
+                            let matchesGroup: Bool
+                            switch groupId {
+                            case .root:
+                                matchesGroup = true
+                            case .group:
+                                if groupId == Namespaces.PeerGroup.archive {
+                                    matchesGroup = !filter.data.excludeArchived
+                                } else {
+                                    matchesGroup = false
+                                }
+                            }
+                            if matchesGroup && peerCount != 0 {
                                 count += 1
                                 if hasUnmuted {
                                     hasUnmutedUnread = true
@@ -159,9 +170,20 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                     }
                 }
                 for peerId in filter.data.excludePeers {
-                    if let (tag, peerCount, _) = peerTagAndCount[peerId] {
-                        if tags.contains(tag) {
-                            if peerCount != 0 {
+                    if let (tag, peerCount, _, groupId) = peerTagAndCount[peerId] {
+                        if let groupId = groupId, tags.contains(tag) {
+                            let matchesGroup: Bool
+                            switch groupId {
+                            case .root:
+                                matchesGroup = true
+                            case .group:
+                                if groupId == Namespaces.PeerGroup.archive {
+                                    matchesGroup = !filter.data.excludeArchived
+                                } else {
+                                    matchesGroup = false
+                                }
+                            }
+                            if matchesGroup && peerCount != 0 {
                                 count -= 1
                             }
                         }

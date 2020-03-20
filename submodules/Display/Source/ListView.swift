@@ -1424,7 +1424,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         } else if topItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
-            self.scroller.contentOffset = self.lastContentOffset
+            if self.scroller.contentOffset != self.lastContentOffset {
+                self.scroller.contentOffset = self.lastContentOffset
+            }
         } else if bottomItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize * 2.0 - bottomItemEdge)
@@ -3693,13 +3695,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var offsetRanges = OffsetRanges()
         
         if let reorderOffset = self.reorderNode?.currentOffset(), !self.itemNodes.isEmpty {
-            if reorderOffset < self.insets.top + 10.0 {
-                if self.itemNodes[0].apparentFrame.minY < self.insets.top {
+            let effectiveInsets = self.visualInsets ?? self.insets
+            if reorderOffset < effectiveInsets.top + 10.0 {
+                if self.itemNodes[0].apparentFrame.minY < effectiveInsets.top {
                     continueAnimations = true
                     offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: 6.0)
                 }
-            } else if reorderOffset > self.visibleSize.height - self.insets.bottom - 10.0 {
-                if self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
+            } else if reorderOffset > self.visibleSize.height - effectiveInsets.bottom - 10.0 {
+                if self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY > self.visibleSize.height - effectiveInsets.bottom {
                     continueAnimations = true
                     offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: -6.0)
                 }

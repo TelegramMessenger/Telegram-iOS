@@ -17276,17 +17276,23 @@ public extension Api {
     
     }
     public enum DialogFilter: TypeConstructorDescription {
-        case dialogFilter(flags: Int32, id: Int32, title: String, includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
+        case dialogFilter(flags: Int32, id: Int32, title: String, emoticon: String?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers, let excludePeers):
+                case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
                     if boxed {
-                        buffer.appendInt32(1687327098)
+                        buffer.appendInt32(1949890536)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 25) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(pinnedPeers.count))
+                    for item in pinnedPeers {
+                        item.serialize(buffer, true)
+                    }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(includePeers.count))
                     for item in includePeers {
@@ -17303,8 +17309,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers, let excludePeers):
-                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("includePeers", includePeers), ("excludePeers", excludePeers)])
+                case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
+                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("emoticon", emoticon), ("pinnedPeers", pinnedPeers), ("includePeers", includePeers), ("excludePeers", excludePeers)])
     }
     }
     
@@ -17315,21 +17321,29 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: String?
             _3 = parseString(reader)
-            var _4: [Api.InputPeer]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
-            }
+            var _4: String?
+            if Int(_1!) & Int(1 << 25) != 0 {_4 = parseString(reader) }
             var _5: [Api.InputPeer]?
             if let _ = reader.readInt32() {
                 _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
             }
+            var _6: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
+            var _7: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 25) == 0) || _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, includePeers: _4!, excludePeers: _5!)
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, emoticon: _4, pinnedPeers: _5!, includePeers: _6!, excludePeers: _7!)
             }
             else {
                 return nil

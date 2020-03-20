@@ -94,7 +94,9 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
     
     @objc private func animationTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.animationNode.play()
+            if !self.animationNode.isPlaying {
+                self.animationNode.play()
+            }
         }
     }
     

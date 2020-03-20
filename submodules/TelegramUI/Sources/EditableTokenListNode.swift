@@ -278,7 +278,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             }
         }
         
-        if width - currentOffset.x < 200.0 {
+        if width - currentOffset.x < 90.0 {
             currentOffset.y += 28.0
             currentOffset.x = sideInset
         }

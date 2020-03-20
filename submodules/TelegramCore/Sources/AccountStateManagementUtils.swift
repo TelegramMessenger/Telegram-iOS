@@ -1488,7 +1488,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
             
             var updatedState = state
             switch result {
-                case let .peerDialogs(dialogs, messages, chats, users, state):
+                case let .peerDialogs(dialogs, messages, chats, users, _):
                     updatedState.mergeChats(chats)
                     updatedState.mergeUsers(users)
                     
@@ -1496,7 +1496,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                     
                     for dialog in dialogs {
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, draft, folderId):
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, _, folderId):
                                 let peerId = peer.peerId
                                 
                                 updatedState.setNeedsHoleFromPreviousState(peerId: peerId, namespace: Namespaces.Message.Cloud)

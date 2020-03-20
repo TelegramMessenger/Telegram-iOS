@@ -181,6 +181,10 @@ open class TabBarController: ViewController {
         return false
     }
     
+    public func updateIsTabBarEnabled(_ value: Bool, transition: ContainedViewLayoutTransition) {
+        self.tabBarControllerNode.updateIsTabBarEnabled(value, transition: transition)
+    }
+    
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
@@ -264,6 +268,8 @@ open class TabBarController: ViewController {
             }
         }, toolbarActionSelected: { [weak self] action in
             self?.currentController?.toolbarActionSelected(action: action)
+        }, disabledPressed: { [weak self] in
+            self?.currentController?.tabBarDisabledAction()
         })
         
         self.updateSelectedIndex()

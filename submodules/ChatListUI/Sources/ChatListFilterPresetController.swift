@@ -14,6 +14,11 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 import AvatarNode
 
+private enum FilterSection: Int32, Hashable {
+    case include
+    case exclude
+}
+
 private final class ChatListFilterPresetControllerArguments {
     let context: AccountContext
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void
@@ -25,6 +30,7 @@ private final class ChatListFilterPresetControllerArguments {
     let deleteIncludeCategory: (ChatListFilterIncludeCategory) -> Void
     let deleteExcludeCategory: (ChatListFilterExcludeCategory) -> Void
     let focusOnName: () -> Void
+    let expandSection: (FilterSection) -> Void
     
     init(
         context: AccountContext,
@@ -36,7 +42,8 @@ private final class ChatListFilterPresetControllerArguments {
         setItemIdWithRevealedOptions: @escaping (ChatListFilterRevealedItemId?, ChatListFilterRevealedItemId?) -> Void,
         deleteIncludeCategory: @escaping (ChatListFilterIncludeCategory) -> Void,
         deleteExcludeCategory: @escaping (ChatListFilterExcludeCategory) -> Void,
-        focusOnName: @escaping () -> Void
+        focusOnName: @escaping () -> Void,
+        expandSection: @escaping (FilterSection) -> Void
     ) {
         self.context = context
         self.updateState = updateState
@@ -48,6 +55,7 @@ private final class ChatListFilterPresetControllerArguments {
         self.deleteIncludeCategory = deleteIncludeCategory
         self.deleteExcludeCategory = deleteExcludeCategory
         self.focusOnName = focusOnName
+        self.expandSection = expandSection
     }
 }
 
@@ -65,6 +73,8 @@ private enum ChatListFilterPresetEntryStableId: Hashable {
     case excludePeerInfo
     case includeCategory(ChatListFilterIncludeCategory)
     case excludeCategory(ChatListFilterExcludeCategory)
+    case includeExpand
+    case excludeExpand
 }
 
 private enum ChatListFilterPresetEntrySortId: Comparable {
@@ -222,6 +232,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case excludeCategory(index: Int, category: ChatListFilterExcludeCategory, title: String, isRevealed: Bool)
     case excludePeer(index: Int, peer: RenderedPeer, isRevealed: Bool)
     case excludePeerInfo(String)
+    case includeExpand(String)
+    case excludeExpand(String)
     
     var section: ItemListSectionId {
         switch self {
@@ -229,9 +241,9 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ChatListFilterPresetControllerSection.screenHeader.rawValue
         case .nameHeader, .name:
             return ChatListFilterPresetControllerSection.name.rawValue
-        case .includePeersHeader, .addIncludePeer, .includeCategory, .includePeer, .includePeerInfo:
+        case .includePeersHeader, .addIncludePeer, .includeCategory, .includePeer, .includePeerInfo, .includeExpand:
             return ChatListFilterPresetControllerSection.includePeers.rawValue
-        case .excludePeersHeader, .addExcludePeer, .excludeCategory, .excludePeer, .excludePeerInfo:
+        case .excludePeersHeader, .addExcludePeer, .excludeCategory, .excludePeer, .excludePeerInfo, .excludeExpand:
             return ChatListFilterPresetControllerSection.excludePeers.rawValue
         }
     }
@@ -250,16 +262,20 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .index(4)
         case let .includeCategory(includeCategory):
             return .includeCategory(includeCategory.category)
-        case .includePeerInfo:
+        case .includeExpand:
             return .index(5)
-        case .excludePeersHeader:
+        case .includePeerInfo:
             return .index(6)
-        case .addExcludePeer:
+        case .excludePeersHeader:
             return .index(7)
+        case .addExcludePeer:
+            return .index(8)
         case let .excludeCategory(excludeCategory):
             return .excludeCategory(excludeCategory.category)
+        case .excludeExpand:
+            return .index(9)
         case .excludePeerInfo:
-            return .index(8)
+            return .index(10)
         case let .includePeer(peer):
             return .peer(peer.peer.peerId)
         case let .excludePeer(peer):
@@ -283,6 +299,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .includeIndex(2 + includeCategory.index)
         case let .includePeer(includePeer):
             return .includeIndex(200 + includePeer.index)
+        case .includeExpand:
+            return .includeIndex(999)
         case .includePeerInfo:
             return .includeIndex(1000)
         case .excludePeersHeader:
@@ -293,6 +311,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .excludeIndex(2 + excludeCategory.index)
         case let .excludePeer(excludePeer):
             return .excludeIndex(200 + excludePeer.index)
+        case .excludeExpand:
+            return .excludeIndex(999)
         case .excludePeerInfo:
             return .excludeIndex(1000)
         }
@@ -310,7 +330,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         case let .nameHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .name(placeholder, value):
-            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), clearType: .always, maxLength: 20, sectionId: self.section, textUpdated: { value in
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), clearType: .always, maxLength: 12, sectionId: self.section, textUpdated: { value in
                 arguments.updateState { current in
                     var state = current
                     state.name = value
@@ -384,6 +404,14 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             }, removePeer: { id in
                 arguments.deleteExcludePeer(id)
             })
+        case let .includeExpand(text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: {
+                arguments.expandSection(.include)
+            })
+        case let .excludeExpand(text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: {
+                arguments.expandSection(.exclude)
+            })
         }
     }
 }
@@ -399,6 +427,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     var additionallyExcludePeers: [PeerId]
     
     var revealedItemId: ChatListFilterRevealedItemId?
+    var expandedSections: Set<FilterSection>
     
     var isComplete: Bool {
         if self.name.isEmpty {
@@ -446,8 +475,18 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         includeCategoryIndex += 1
     }
     
-    for peer in includePeers {
-        entries.append(.includePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
+    if !includePeers.isEmpty {
+        var count = 0
+        for peer in includePeers {
+            entries.append(.includePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
+            count += 1
+            if includePeers.count >= 7 && count == 5 && !state.expandedSections.contains(.include) {
+                break
+            }
+        }
+        if count < includePeers.count {
+            entries.append(.includeExpand(presentationData.strings.ChatListFilter_ShowMoreChats(Int32(includePeers.count - count))))
+        }
     }
     
     entries.append(.includePeerInfo(presentationData.strings.ChatListFolder_IncludeSectionInfo))
@@ -473,8 +512,18 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         excludeCategoryIndex += 1
     }
     
-    for peer in excludePeers {
-        entries.append(.excludePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
+    if !excludePeers.isEmpty {
+        var count = 0
+        for peer in excludePeers {
+            entries.append(.excludePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
+            count += 1
+            if excludePeers.count >= 7 && count == 5 && !state.expandedSections.contains(.exclude) {
+                break
+            }
+        }
+        if count < excludePeers.count {
+            entries.append(.excludeExpand(presentationData.strings.ChatListFilter_ShowMoreChats(Int32(excludePeers.count - count))))
+        }
     }
     
     entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
@@ -543,7 +592,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filter.data.includePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filter.data.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], filters: [], alwaysEnabled: true))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -579,8 +628,8 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
                 for i in 0 ..< filters.count {
                     if filters[i].id == filter.id {
                         filters[i].data.categories = categories
-                        filters[i].data.includePeers = includePeers
-                        filters[i].data.excludePeers = filters[i].data.excludePeers.filter { !filters[i].data.includePeers.contains($0) }
+                        filters[i].data.includePeers.setPeers(includePeers)
+                        filters[i].data.excludePeers = filters[i].data.excludePeers.filter { !filters[i].data.includePeers.peers.contains($0) }
                     }
                 }
                 return filters
@@ -591,8 +640,8 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         } else {
             var filter = filter
             filter.data.categories = categories
-            filter.data.includePeers = includePeers
-            filter.data.excludePeers = filter.data.excludePeers.filter { !filter.data.includePeers.contains($0) }
+            filter.data.includePeers.setPeers(includePeers)
+            filter.data.excludePeers = filter.data.excludePeers.filter { !filter.data.includePeers.peers.contains($0) }
             updated(filter)
             controller?.dismiss()
         }
@@ -630,7 +679,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         selectedCategories.insert(AdditionalExcludeCategoryId.archived.rawValue)
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filter.data.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], alwaysEnabled: true))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filter.data.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories)), options: [], filters: [], alwaysEnabled: true))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -660,7 +709,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
                         filters[i].data.excludeRead = additionalCategoryIds.contains(AdditionalExcludeCategoryId.read.rawValue)
                         filters[i].data.excludeArchived = additionalCategoryIds.contains(AdditionalExcludeCategoryId.archived.rawValue)
                         filters[i].data.excludePeers = excludePeers
-                        filters[i].data.includePeers = filters[i].data.includePeers.filter { !filters[i].data.excludePeers.contains($0) }
+                        filters[i].data.includePeers.setPeers(filters[i].data.includePeers.peers.filter { !filters[i].data.excludePeers.contains($0) })
                     }
                 }
                 return filters
@@ -674,7 +723,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
             filter.data.excludeRead = additionalCategoryIds.contains(AdditionalExcludeCategoryId.read.rawValue)
             filter.data.excludeArchived = additionalCategoryIds.contains(AdditionalExcludeCategoryId.archived.rawValue)
             filter.data.excludePeers = excludePeers
-            filter.data.includePeers = filter.data.includePeers.filter { !filter.data.excludePeers.contains($0) }
+            filter.data.includePeers.setPeers(filter.data.includePeers.peers.filter { !filter.data.excludePeers.contains($0) })
             updated(filter)
             controller?.dismiss()
         }
@@ -695,7 +744,7 @@ enum ChatListFilterType {
 
 func chatListFilterType(_ filter: ChatListFilter) -> ChatListFilterType {
     let filterType: ChatListFilterType
-    if filter.data.includePeers.isEmpty {
+    if filter.data.includePeers.peers.isEmpty {
         if filter.data.categories == .all {
             if filter.data.excludeRead {
                 filterType = .unread
@@ -732,7 +781,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     } else {
         initialName = ""
     }
-    let initialState = ChatListFilterPresetControllerState(name: initialName, changedName: currentPreset != nil, includeCategories: currentPreset?.data.categories ?? [], excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, excludeArchived: currentPreset?.data.excludeArchived ?? false, additionallyIncludePeers: currentPreset?.data.includePeers ?? [], additionallyExcludePeers: currentPreset?.data.excludePeers ?? [])
+    let initialState = ChatListFilterPresetControllerState(name: initialName, changedName: currentPreset != nil, includeCategories: currentPreset?.data.categories ?? [], excludeMuted: currentPreset?.data.excludeMuted ?? false, excludeRead: currentPreset?.data.excludeRead ?? false, excludeArchived: currentPreset?.data.excludeArchived ?? false, additionallyIncludePeers: currentPreset?.data.includePeers.peers ?? [], additionallyExcludePeers: currentPreset?.data.excludePeers ?? [], expandedSections: [])
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void = { f in
@@ -740,7 +789,9 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             var state = f(current)
             if !state.changedName {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
+                var includePeers = ChatListFilterIncludePeers()
+                includePeers.setPeers(state.additionallyIncludePeers)
+                let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
                 switch chatListFilterType(filter) {
                 case .generic:
                     state.name = initialName
@@ -781,13 +832,15 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         },
         openAddIncludePeer: {
             let state = stateValue.with { $0 }
-            let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
+            var includePeers = ChatListFilterIncludePeers()
+            includePeers.setPeers(state.additionallyIncludePeers)
+            let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
             let controller = internalChatListFilterAddChatsController(context: context, filter: filter, applyAutomatically: false, updated: { filter in
                 skipStateAnimation = true
                 updateState { state in
                     var state = state
-                    state.additionallyIncludePeers = filter.data.includePeers
+                    state.additionallyIncludePeers = filter.data.includePeers.peers
                     state.additionallyExcludePeers = filter.data.excludePeers
                     state.includeCategories = filter.data.categories
                     return state
@@ -797,13 +850,15 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         },
         openAddExcludePeer: {
             let state = stateValue.with { $0 }
-            let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
+            var includePeers = ChatListFilterIncludePeers()
+            includePeers.setPeers(state.additionallyIncludePeers)
+            let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
             let controller = internalChatListFilterExcludeChatsController(context: context, filter: filter, applyAutomatically: false, updated: { filter in
                 skipStateAnimation = true
                 updateState { state in
                     var state = state
-                    state.additionallyIncludePeers = filter.data.includePeers
+                    state.additionallyIncludePeers = filter.data.includePeers.peers
                     state.additionallyExcludePeers = filter.data.excludePeers
                     state.includeCategories = filter.data.categories
                     state.excludeRead = filter.data.excludeRead
@@ -864,6 +919,13 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         },
         focusOnName: {
             focusOnNameImpl?()
+        },
+        expandSection: { section in
+            updateState { state in
+                var state = state
+                state.expandedSections.insert(section)
+                return state
+            }
         }
     )
     
@@ -916,34 +978,38 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     }
     
     var attemptNavigationImpl: (() -> Bool)?
-    var applyImpl: (() -> Void)? = {
+    let applyImpl: (() -> Void)? = {
         let state = stateValue.with { $0 }
-        let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
         let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
-            var preset = preset
+            var includePeers = ChatListFilterIncludePeers()
+            includePeers.setPeers(state.additionallyIncludePeers)
+            var updatedFilter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             if currentPreset == nil {
-                preset.id = max(2, filters.map({ $0.id + 1 }).max() ?? 2)
+                updatedFilter.id = max(2, filters.map({ $0.id + 1 }).max() ?? 2)
             }
             var filters = filters
             if let _ = currentPreset {
                 var found = false
                 for i in 0 ..< filters.count {
-                    if filters[i].id == preset.id {
-                        filters[i] = preset
+                    if filters[i].id == updatedFilter.id {
+                        var includePeers = filters[i].data.includePeers
+                        includePeers.setPeers(state.additionallyIncludePeers)
+                        updatedFilter.data.includePeers = includePeers
+                        filters[i] = updatedFilter
                         found = true
                     }
                 }
                 if !found {
                     filters = filters.filter { listFilter in
-                        if listFilter.title == preset.title && listFilter.data == preset.data {
+                        if listFilter.title == updatedFilter.title && listFilter.data == updatedFilter.data {
                             return false
                         }
                         return true
                     }
-                    filters.append(preset)
+                    filters.append(updatedFilter)
                 }
             } else {
-                filters.append(preset)
+                filters.append(updatedFilter)
             }
             return filters
         })
@@ -952,6 +1018,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             dismissImpl?()
         })
     }
+    
+    var previousState = stateValue.with { $0 }
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
@@ -969,6 +1037,12 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         let rightNavigationButton = ItemListNavigationButton(content: .text(currentPreset == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             applyImpl?()
         })
+        
+        let previousStateValue = previousState
+        previousState = state
+        if previousStateValue.expandedSections != state.expandedSections {
+            skipStateAnimation = true
+        }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
@@ -1013,8 +1087,15 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     attemptNavigationImpl = {
         let state = stateValue.with { $0 }
         if let currentPreset = currentPreset {
-            let filter = ChatListFilter(id: currentPreset.id, title: state.name, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: state.additionallyIncludePeers, excludePeers: state.additionallyExcludePeers))
-            if currentPreset != filter {
+            var currentPresetWithoutPinnerPeers = currentPreset
+            var currentIncludePeers = ChatListFilterIncludePeers()
+            currentIncludePeers.setPeers(currentPresetWithoutPinnerPeers.data.includePeers.peers)
+            currentPresetWithoutPinnerPeers.data.includePeers = currentIncludePeers
+            
+            var includePeers = ChatListFilterIncludePeers()
+            includePeers.setPeers(state.additionallyIncludePeers)
+            let filter = ChatListFilter(id: currentPreset.id, title: state.name, emoticon: currentPreset.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            if currentPresetWithoutPinnerPeers != filter {
                 displaySaveAlert()
                 return false
             }

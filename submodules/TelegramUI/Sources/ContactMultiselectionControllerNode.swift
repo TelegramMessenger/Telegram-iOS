@@ -86,7 +86,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         if case let .chatSelection(_, selectedChats, additionalCategories) = mode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
-            let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSavedMessages], isSelecting: true, additionalCategories: additionalCategories?.categories ?? []), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+            let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [], isSelecting: true, additionalCategories: additionalCategories?.categories ?? []), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
             chatListNode.updateState { state in
                 var state = state
                 for peerId in selectedChats {
@@ -161,22 +161,28 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                                 selectionState = state
                                 return state
                             }
-                        case .chats:
-                            break
+                        case let .chats(chatsNode):
+                            selectionState = ContactListNodeGroupSelectionState()
+                            for peerId in chatsNode.currentState.selectedPeerIds {
+                                selectionState = selectionState?.withToggledPeerId(.peer(peerId))
+                            }
                         }
                         var searchChatList = false
                         var searchGroups = false
                         var searchChannels = false
+                        var globalSearch = false
                         if case let .peerSelection(peerSelection) = mode {
                             searchChatList = peerSelection.searchChatList
                             searchGroups = peerSelection.searchGroups
                             searchChannels = peerSelection.searchChannels
+                            globalSearch = true
                         } else if case .chatSelection = mode {
                             searchChatList = true
                             searchGroups = true
                             searchChannels = true
+                            globalSearch = false
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels)), filters: filters, selectionState: selectionState)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

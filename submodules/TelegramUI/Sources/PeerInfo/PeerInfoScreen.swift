@@ -792,7 +792,6 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
     if let data = data, let notificationSettings = data.notificationSettings {
         let notificationsLabel: String
         let soundLabel: String
-        let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings ?? TelegramPeerNotificationSettings.defaultSettings
         if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
             if until < Int32.max - 1 {
                 notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
@@ -1840,52 +1839,70 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         let title = strongSelf.headerNode.editingContentNode.editingTextForKey(.title) ?? ""
                         let description = strongSelf.headerNode.editingContentNode.editingTextForKey(.description) ?? ""
                         
-                        if title.isEmpty {
-                            strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
+                        let proceed: () -> Void = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if title.isEmpty {
+                                strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
+                            } else {
+                                var updateDataSignals: [Signal<Never, Void>] = []
+                                
+                                if title != channel.title {
+                                    updateDataSignals.append(
+                                        updatePeerTitle(account: strongSelf.context.account, peerId: channel.id, title: title)
+                                        |> ignoreValues
+                                        |> mapError { _ in return Void() }
+                                    )
+                                }
+                                if description != (data.cachedData as? CachedChannelData)?.about {
+                                    updateDataSignals.append(
+                                        updatePeerDescription(account: strongSelf.context.account, peerId: channel.id, description: description.isEmpty ? nil : description)
+                                        |> ignoreValues
+                                        |> mapError { _ in return Void() }
+                                    )
+                                }
+                                
+                                var dismissStatus: (() -> Void)?
+                                let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                                    dismissStatus?()
+                                }))
+                                dismissStatus = { [weak statusController] in
+                                    self?.activeActionDisposable.set(nil)
+                                    statusController?.dismiss()
+                                }
+                                strongSelf.controller?.present(statusController, in: .window(.root))
+                                
+                                strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    dismissStatus?()
+                                    
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                                }, completed: {
+                                    dismissStatus?()
+                                    
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                                }))
+                            }
+                        }
+                        
+                        if channel.isVerified && title != channel.title {
+                            let alertText: String
+                            if case .broadcast = channel.info {
+                                alertText = strongSelf.presentationData.strings.SetupUsername_ChangeNameWarningChannel
+                            } else {
+                                alertText = strongSelf.presentationData.strings.SetupUsername_ChangeNameWarningGroup
+                            }
+                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: proceed)]), in: .window(.root))
                         } else {
-                            var updateDataSignals: [Signal<Never, Void>] = []
-                            
-                            if title != channel.title {
-                                updateDataSignals.append(
-                                    updatePeerTitle(account: strongSelf.context.account, peerId: channel.id, title: title)
-                                    |> ignoreValues
-                                    |> mapError { _ in return Void() }
-                                )
-                            }
-                            if description != (data.cachedData as? CachedChannelData)?.about {
-                                updateDataSignals.append(
-                                    updatePeerDescription(account: strongSelf.context.account, peerId: channel.id, description: description.isEmpty ? nil : description)
-                                    |> ignoreValues
-                                    |> mapError { _ in return Void() }
-                                )
-                            }
-                            
-                            var dismissStatus: (() -> Void)?
-                            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
-                                dismissStatus?()
-                            }))
-                            dismissStatus = { [weak statusController] in
-                                self?.activeActionDisposable.set(nil)
-                                statusController?.dismiss()
-                            }
-                            strongSelf.controller?.present(statusController, in: .window(.root))
-                            
-                            strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
-                            |> deliverOnMainQueue).start(error: { _ in
-                                dismissStatus?()
-                                
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                            }, completed: {
-                                dismissStatus?()
-                                
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                            }))
+                            proceed()
                         }
                     } else {
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
@@ -2130,13 +2147,40 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .call:
             self.requestCall()
         case .mute:
-            let muteInterval: Int32?
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
-                muteInterval = nil
+                let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: nil).start()
             } else {
-                muteInterval = Int32.max
+                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                let dismissAction: () -> Void = { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                }
+                var items: [ActionSheetItem] = []
+                let muteValues: [Int32] = [
+                    1 * 60 * 60,
+                    24 * 60 * 60,
+                    Int32.max
+                ]
+                for delay in muteValues {
+                    let title: String
+                    if delay == Int32.max {
+                        title = self.presentationData.strings.MuteFor_Forever
+                    } else {
+                        title = muteForIntervalString(strings: self.presentationData.strings, value: delay)
+                    }
+                    items.append(ActionSheetButtonItem(title: title, action: {
+                        dismissAction()
+                        
+                        let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: delay).start()
+                    }))
+                }
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                self.view.endEditing(true)
+                controller.present(actionSheet, in: .window(.root))
             }
-            let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: muteInterval).start()
         case .more:
             guard let data = self.data, let peer = data.peer else {
                 return
