@@ -624,6 +624,62 @@ ios_extension(
     ],
 )
 
+swift_library(
+    name = "NotificationServiceExtensionLib",
+    module_name = "NotificationServiceExtensionLib",
+    srcs = glob([
+        "NotificationServiceNext/**/*.swift",
+    ]),
+    deps = [
+    ],
+)
+
+plist_fragment(
+    name = "NotificationServiceInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.NotificationService</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.usernotifications.service</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>NotificationService</string>
+    </dict>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
+ios_extension(
+    name = "NotificationServiceExtension",
+    bundle_id = "{telegram_bundle_id}.NotificationService".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":NotificationServiceInfoPlist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
+    ],
+    minimum_os_version = "10.0",
+    provisioning_profile = "//build-input/data/provisioning-profiles:NotificationService.mobileprovision",
+    deps = [":NotificationServiceExtensionLib"],
+    frameworks = [
+    ],
+)
+
 plist_fragment(
     name = "TelegramInfoPlist",
     extension = "plist",
@@ -813,6 +869,7 @@ ios_application(
     ],
     extensions = [
         ":ShareExtension",
+        ":NotificationServiceExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [
