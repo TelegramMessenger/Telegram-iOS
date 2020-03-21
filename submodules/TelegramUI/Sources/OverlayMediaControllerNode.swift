@@ -239,7 +239,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                 location = groupLocation
             }
         }
-        let nodeData = OverlayMediaVideoNodeData(node: node, location: location, isMinimized: false, currentSize: node.preferredSizeForOverlayDisplay())
+        let nodeData = OverlayMediaVideoNodeData(node: node, location: location, isMinimized: false, currentSize: node.preferredSizeForOverlayDisplay(boundingSize: self.frame.size))
         self.videoNodes.append(nodeData)
         self.addSubnode(node)
         if let validLayout = self.validLayout {

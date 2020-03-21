@@ -17,9 +17,32 @@ private enum Constants {
     static let insets = UIEdgeInsets(top: 0, left: 16, bottom: 16, right: 16)
 }
 
-struct ChartVisibilityItem {
-    var title: String
-    var color: UIColor
+public func calculateVisiblityHeight(width: CGFloat, items: [ChartVisibilityItem]) -> CGFloat {
+    let frames = generateItemsFrames(frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)), items: items)
+    guard let lastFrame = frames.last else { return .zero }
+    return lastFrame.maxY + Constants.insets.bottom
+}
+
+private func generateItemsFrames(frame: CGRect, items: [ChartVisibilityItem]) -> [CGRect] {
+    var previousPoint = CGPoint(x: Constants.insets.left, y: Constants.insets.top)
+    var frames: [CGRect] = []
+    
+    for item in items {
+        let labelSize = (item.title as NSString).size(withAttributes: [.font: ChartVisibilityItemView.textFont])
+        let width = (labelSize.width + Constants.labelTextApproxInsets).rounded(.up)
+        if previousPoint.x + width < (frame.width - Constants.insets.left - Constants.insets.right) {
+            frames.append(CGRect(origin: previousPoint, size: CGSize(width: width, height: Constants.itemHeight)))
+        } else if previousPoint.x <= Constants.insets.left {
+            frames.append(CGRect(origin: previousPoint, size: CGSize(width: width, height: Constants.itemHeight)))
+        } else {
+            previousPoint.y += Constants.itemHeight + Constants.itemSpacing
+            previousPoint.x = Constants.insets.left
+            frames.append(CGRect(origin: previousPoint, size: CGSize(width: width, height: Constants.itemHeight)))
+        }
+        previousPoint.x += width + Constants.itemSpacing
+    }
+    
+    return frames
 }
 
 class ChartVisibilityView: UIView {
@@ -80,29 +103,7 @@ class ChartVisibilityView: UIView {
     }
 
     private var selectionViews: [ChartVisibilityItemView] = []
-    
-    private func generateItemsFrames(frame: CGRect) -> [CGRect] {
-        var previousPoint = CGPoint(x: Constants.insets.left, y: Constants.insets.top)
-        var frames: [CGRect] = []
         
-        for item in items {
-            let labelSize = (item.title as NSString).size(withAttributes: [.font: ChartVisibilityItemView.textFont])
-            let width = (labelSize.width + Constants.labelTextApproxInsets).rounded(.up)
-            if previousPoint.x + width < (frame.width - Constants.insets.left - Constants.insets.right) {
-                frames.append(CGRect(origin: previousPoint, size: CGSize(width: width, height: Constants.itemHeight)))
-            } else if previousPoint.x <= Constants.insets.left {
-                frames.append(CGRect(origin: previousPoint, size: CGSize(width: width, height: Constants.itemHeight)))
-            } else {
-                previousPoint.y += Constants.itemHeight + Constants.itemSpacing
-                previousPoint.x = Constants.insets.left
-                frames.append(CGRect(origin: previousPoint, size: CGSize(width: width, height: Constants.itemHeight)))
-            }
-            previousPoint.x += width + Constants.itemSpacing
-        }
-        
-        return frames
-    }
-    
     var selectionCallbackClosure: (([Bool]) -> Void)?
 
     func setItemSelected(_ selected: Bool, at index: Int, animated: Bool) {
@@ -129,7 +130,7 @@ class ChartVisibilityView: UIView {
     }
     
     private func updateFrames() {
-        for (index, frame) in generateItemsFrames(frame: bounds).enumerated() {
+        for (index, frame) in generateItemsFrames(frame: bounds, items: self.items).enumerated() {
             selectionViews[index].frame = frame
         }
     }
@@ -140,7 +141,7 @@ class ChartVisibilityView: UIView {
             size.height = 0
             return size
         }
-        let frames = generateItemsFrames(frame: UIScreen.main.bounds)
+        let frames = generateItemsFrames(frame: UIScreen.main.bounds, items: self.items)
         guard let lastFrame = frames.last else { return .zero }
         let size = CGSize(width: frame.width, height: lastFrame.maxY + Constants.insets.bottom)
         return size

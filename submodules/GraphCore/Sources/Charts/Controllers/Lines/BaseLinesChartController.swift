@@ -157,8 +157,14 @@ public class BaseLinesChartController: BaseChartController {
             var labels: [LinesChartLabel] = []
             for index in stride(from: initialChartsCollection.axisValues.count - 1, to: -1, by: -strideInterval).reversed() {
                 let date = initialChartsCollection.axisValues[index]
-                labels.append(LinesChartLabel(value: CGFloat(date.timeIntervalSince1970),
-                                              text: scaleType.dateFormatter.string(from: date)))
+                let timestamp = date.timeIntervalSince1970
+                if timestamp <= 24 {
+                    labels.append(LinesChartLabel(value: CGFloat(timestamp),
+                                                  text: "\(Int(timestamp)):00"))
+                } else {
+                    labels.append(LinesChartLabel(value: CGFloat(timestamp),
+                                                  text: scaleType.dateFormatter.string(from: date)))
+                }
             }
             return (strideInterval, labels)
         }
@@ -179,14 +185,14 @@ public class BaseLinesChartController: BaseChartController {
     }
     
     func verticalLimitsLabels(verticalRange: ClosedRange<CGFloat>) -> (ClosedRange<CGFloat>, [LinesChartLabel]) {
-        let ditance = verticalRange.distance
+        let distance = verticalRange.distance
         let chartHeight = chartFrame().height
         
-        guard ditance > 0, chartHeight > 0 else { return (BaseConstants.defaultRange, []) }
+        guard distance > 0, chartHeight > 0 else { return (BaseConstants.defaultRange, []) }
         
         let approximateNumberOfChartValues = (chartHeight / BaseConstants.minimumAxisYLabelsDistance)
         
-        var numberOfOffsetsPerItem = ditance / approximateNumberOfChartValues
+        var numberOfOffsetsPerItem = distance / approximateNumberOfChartValues
         var multiplier: CGFloat = 1.0
         while numberOfOffsetsPerItem > 10 {
             numberOfOffsetsPerItem /= 10

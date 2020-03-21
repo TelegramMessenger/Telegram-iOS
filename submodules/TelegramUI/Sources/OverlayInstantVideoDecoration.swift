@@ -34,7 +34,6 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.backgroundColor = .white
-        self.contentContainerNode.cornerRadius = 60.0
         self.contentContainerNode.clipsToBounds = true
         
         self.foregroundContainerNode = ASDisplayNode()
@@ -74,7 +73,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
             
             if let snapshot = snapshot {
                 self.contentContainerNode.view.addSubview(snapshot)
-                if let validLayoutSize = self.validLayoutSize {
+                if let _ = self.validLayoutSize {
                     snapshot.frame = CGRect(origin: CGPoint(), size: snapshot.frame.size)
                 }
             }
@@ -83,6 +82,8 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
+        
+        self.contentContainerNode.cornerRadius = size.width / 2.0
         
         let shadowInsets = UIEdgeInsets(top: 2.0, left: 3.0, bottom: 4.0, right: 3.0)
         transition.updateFrame(node: self.shadowNode, frame: CGRect(origin: CGPoint(x: -shadowInsets.left, y: -shadowInsets.top), size: CGSize(width: size.width + shadowInsets.left + shadowInsets.right, height: size.height + shadowInsets.top + shadowInsets.bottom)))

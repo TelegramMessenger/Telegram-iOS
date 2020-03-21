@@ -1,11 +1,3 @@
-//
-//  TwoAxisLinesChartController.swift
-//  GraphTest
-//
-//  Created by Andrei Salavei on 4/7/19.
-//  Copyright © 2019 Andrei Salavei. All rights reserved.
-//
-
 import Foundation
 #if os(macOS)
 import Cocoa
@@ -15,31 +7,29 @@ import UIKit
 
 private enum Constants {
     static let verticalBaseAnchors: [CGFloat] = [8, 5, 4, 2.5, 2, 1]
-    static let defaultRange: ClosedRange<CGFloat> = 0...1
 }
 
-public class TwoAxisLinesChartController: BaseLinesChartController {
+public class TwoAxisStepBarsChartController: BaseLinesChartController {
     class GraphController {
-        let mainLinesRenderer = LinesChartRenderer()
+        let mainBarsRenderer = BarChartRenderer(step: true)
         let verticalScalesRenderer = VerticalScalesRenderer()
         let lineBulletsRenderer = LineBulletsRenderer()
-        let previewLinesRenderer = LinesChartRenderer()
+        let previewBarsRenderer = BarChartRenderer(step: true, lineWidth: 1.0)
         
-        var chartLines: [LinesChartRenderer.LineData] = []
-
-        var totalVerticalRange: ClosedRange<CGFloat> = Constants.defaultRange
+        var chartBars: BarChartRenderer.BarsData = .blank
+        var barsWidth: CGFloat = 1
+        
+        var totalVerticalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
 
         init() {
-            self.mainLinesRenderer.lineWidth = 2
-            self.previewLinesRenderer.lineWidth = 1
             self.lineBulletsRenderer.isEnabled = false
             
-            self.mainLinesRenderer.optimizationLevel = BaseConstants.linesChartOptimizationLevel
-            self.previewLinesRenderer.optimizationLevel = BaseConstants.previewLinesChartOptimizationLevel
+            self.mainBarsRenderer.optimizationLevel = BaseConstants.barsChartOptimizationLevel
+            self.previewBarsRenderer.optimizationLevel = BaseConstants.barsChartOptimizationLevel
         }
         
         func updateMainChartVerticalRange(range: ClosedRange<CGFloat>, animated: Bool) {
-            mainLinesRenderer.setup(verticalRange: range, animated: animated)
+            mainBarsRenderer.setup(verticalRange: range, animated: animated)
             verticalScalesRenderer.setup(verticalRange: range, animated: animated)
             lineBulletsRenderer.setup(verticalRange: range, animated: animated)
         }
@@ -49,7 +39,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     private let verticalLineRenderer = VerticalLinesRenderer()
     private let horizontalScalesRenderer = HorizontalScalesRenderer()
 
-    var totalHorizontalRange: ClosedRange<CGFloat> = Constants.defaultRange
+    var totalHorizontalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
 
     private let initialChartCollection: ChartsCollection
     
@@ -68,21 +58,29 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         
         for (index, controller) in self.graphControllers.enumerated() {
             let chart = chartsCollection.chartValues[index]
-            let points = chart.values.enumerated().map({ (arg) -> CGPoint in
-                return CGPoint(x: chartsCollection.axisValues[arg.offset].timeIntervalSince1970,
-                               y: arg.element)
-            })
-            let chartLines = [LinesChartRenderer.LineData(color: chart.color, points: points)]
-            controller.chartLines = [LinesChartRenderer.LineData(color: chart.color, points: points)]
+            let initialComponents = [BarChartRenderer.BarsData.Component(color: chart.color,
+                                                                        values: chart.values.map { CGFloat($0) })]
+            let (width, chartBars, totalHorizontalRange, totalVerticalRange) = BarChartRenderer.BarsData.initialComponents(chartsCollection: chartsCollection, separate: true, initialComponents: initialComponents)
+            controller.chartBars = chartBars
             controller.verticalScalesRenderer.labelsColor = chart.color
-            controller.totalVerticalRange = LinesChartRenderer.LineData.verticalRange(lines: chartLines) ?? Constants.defaultRange
-            self.totalHorizontalRange = LinesChartRenderer.LineData.horizontalRange(lines: chartLines) ?? Constants.defaultRange
-            controller.lineBulletsRenderer.bullets = chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero,
-                                                                                               color: $0.color) }
-            controller.previewLinesRenderer.setup(horizontalRange: self.totalHorizontalRange, animated: animated)
-            controller.previewLinesRenderer.setup(verticalRange: controller.totalVerticalRange, animated: animated)
-            controller.mainLinesRenderer.setLines(lines: chartLines, animated: animated)
-            controller.previewLinesRenderer.setLines(lines: chartLines, animated: animated)
+            controller.barsWidth = width
+            controller.totalVerticalRange = totalVerticalRange
+            self.totalHorizontalRange = totalHorizontalRange
+            
+            var bullets: [LineBulletsRenderer.Bullet] = []
+            if let component = chartBars.components.first {
+                for i in 0 ..< chartBars.locations.count {
+                    let location = chartBars.locations[i]
+                    let value = component.values[i]
+                    bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), color: component.color))
+                }
+            }
+            
+            controller.lineBulletsRenderer.bullets = bullets
+            controller.previewBarsRenderer.setup(horizontalRange: self.totalHorizontalRange, animated: animated)
+            controller.previewBarsRenderer.setup(verticalRange: controller.totalVerticalRange, animated: animated)
+            controller.mainBarsRenderer.bars = chartBars
+            controller.previewBarsRenderer.bars = chartBars
             
             controller.verticalScalesRenderer.setHorizontalLinesVisible((index == 0), animated: animated)
             controller.verticalScalesRenderer.isRightAligned = (index != 0)
@@ -113,7 +111,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     }
     
     public override var mainChartRenderers: [ChartViewRenderer] {
-        return graphControllers.map { $0.mainLinesRenderer } +
+        return graphControllers.map { $0.mainBarsRenderer } +
                graphControllers.flatMap { [$0.verticalScalesRenderer, $0.lineBulletsRenderer] } +
             [horizontalScalesRenderer, verticalLineRenderer,
 //             performanceRenderer
@@ -121,7 +119,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     }
     
     public override var navigationRenderers: [ChartViewRenderer] {
-        return graphControllers.map { $0.previewLinesRenderer }
+        return graphControllers.map { $0.previewBarsRenderer }
     }
     
     public override func updateChartsVisibility(visibility: [Bool], animated: Bool) {
@@ -130,11 +128,9 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         let firstIndex = visibility.firstIndex(where: { $0 })
         for (index, isVisible) in visibility.enumerated() {
             let graph = graphControllers[index]
-            for graphIndex in graph.chartLines.indices {
-                graph.mainLinesRenderer.setLineVisible(isVisible, at: graphIndex, animated: animated)
-                graph.previewLinesRenderer.setLineVisible(isVisible, at: graphIndex, animated: animated)
-                graph.lineBulletsRenderer.setLineVisible(isVisible, at: graphIndex, animated: animated)
-            }
+            graph.mainBarsRenderer.setVisible(isVisible, animated: animated)
+            graph.previewBarsRenderer.setVisible(isVisible, animated: animated)
+            graph.lineBulletsRenderer.setLineVisible(isVisible, at: 0, animated: animated)
             graph.verticalScalesRenderer.setVisible(isVisible, animated: animated)
             if let firstIndex = firstIndex {
                 graph.verticalScalesRenderer.setHorizontalLinesVisible(index == firstIndex, animated: animated)
@@ -160,9 +156,14 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         super.chartInteractionDidBegin(point: point)
         
         for graphController in graphControllers {
-            graphController.lineBulletsRenderer.bullets = graphController.chartLines.map { chart in
-                LineBulletsRenderer.Bullet(coordinate: chart.points[minIndex], color: chart.color)
+            
+            var bullets: [LineBulletsRenderer.Bullet] = []
+            if let component = graphController.chartBars.components.first {
+                let location = graphController.chartBars.locations[minIndex]
+                let value = component.values[minIndex]
+                bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), color: component.color))
             }
+            graphController.lineBulletsRenderer.bullets = bullets
             graphController.lineBulletsRenderer.isEnabled = true
         }
         
@@ -181,7 +182,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     }
     
     public override var currentHorizontalRange: ClosedRange<CGFloat> {
-        return graphControllers.first?.mainLinesRenderer.horizontalRange.end ?? Constants.defaultRange
+        return graphControllers.first?.mainBarsRenderer.horizontalRange.end ?? BaseConstants.defaultRange
     }
 
     public override func cancelChartInteraction() {
@@ -216,7 +217,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     
     func updateMainChartHorizontalRange(range: ClosedRange<CGFloat>, animated: Bool) {
         for controller in graphControllers {
-            controller.mainLinesRenderer.setup(horizontalRange: range, animated: animated)
+            controller.mainBarsRenderer.setup(horizontalRange: range, animated: animated)
             controller.verticalScalesRenderer.setup(horizontalRange: range, animated: animated)
             controller.lineBulletsRenderer.setup(horizontalRange: range, animated: animated)
         }
@@ -226,7 +227,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     
     func updateHorizontalLimits(horizontalRange: ClosedRange<CGFloat>, animated: Bool) {
         if let (stride, labels) = horizontalLimitsLabels(horizontalRange: horizontalRange,
-                                                         scaleType: isZoomed ? .hour : .day,
+                                                         scaleType: isZoomed ? .minutes5 : .day,
                                                          prevoiusHorizontalStrideInterval: prevoiusHorizontalStrideInterval) {
             self.horizontalScalesRenderer.setup(labels: labels, animated: animated)
             self.prevoiusHorizontalStrideInterval = stride
@@ -239,9 +240,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
 
         let dividorsAndMultiplers: [(startValue: CGFloat, base: CGFloat, count: Int, maximumNumberOfDecimals: Int)] = graphControllers.enumerated().map { arg in
             let (index, controller) = arg
-            let verticalRange = LinesChartRenderer.LineData.verticalRange(lines: controller.chartLines,
-                                                                          calculatingRange: horizontalRange,
-                                                                          addBounds: true) ?? controller.totalVerticalRange
+            let verticalRange = BarChartRenderer.BarsData.verticalRange(bars: controller.chartBars, separate: true, calculatingRange: horizontalRange, addBounds: true) ?? controller.totalVerticalRange
 
             var numberOfOffsetsPerItem = verticalRange.distance / approximateNumberOfChartValues
             

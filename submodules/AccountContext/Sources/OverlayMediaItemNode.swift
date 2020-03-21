@@ -38,7 +38,7 @@ open class OverlayMediaItemNode: ASDisplayNode {
     open func setShouldAcquireContext(_ value: Bool) {
     }
     
-    open func preferredSizeForOverlayDisplay() -> CGSize {
+    open func preferredSizeForOverlayDisplay(boundingSize: CGSize) -> CGSize {
         return CGSize(width: 50.0, height: 50.0)
     }
     

@@ -35,6 +35,8 @@ class ChartStackSection: UIView, ChartThemeContainer {
     var controller: BaseChartController?
     var theme: ChartTheme?
     
+    var displayRange: Bool = true
+    
     init() {
         sectionContainerView = UIView()
         chartView = ChartView()
@@ -157,13 +159,20 @@ class ChartStackSection: UIView, ChartThemeContainer {
         self.titleLabel.frame = CGRect(origin: CGPoint(x: backButton.alpha > 0.0 ? 36.0 : 0.0, y: 5.0), size: CGSize(width: bounds.width, height: 28.0))
         self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 750.0))
         self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 250.0))
+        
+        self.rangeView.isHidden = !self.displayRange
+        
         self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 42.0))
-        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: 308.0), size: CGSize(width: bounds.width, height: 350.0))
+        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.displayRange ? 308.0 : 266.0), size: CGSize(width: bounds.width, height: 350.0))
         self.backButton.frame = CGRect(x: 0.0, y: 0.0, width: 96.0, height: 38.0)
+        
+        self.chartView.setNeedsDisplay()
     }
     
-    func setup(controller: BaseChartController, title: String) {
+    func setup(controller: BaseChartController, displayRange: Bool = true) {
         self.controller = controller
+        self.displayRange = displayRange
+        
         if let theme = self.theme {
             controller.apply(theme: theme, animated: false)
         }
@@ -222,7 +231,10 @@ class ChartStackSection: UIView, ChartThemeContainer {
         controller.initializeChart()
         updateToolViews(animated: false)
         
-        rangeView.setRange(0.8...1.0, animated: false)
-        controller.updateChartRange(0.8...1.0, animated: false)
+        let range: ClosedRange<CGFloat> = displayRange ? 0.8 ... 1.0 : 0.0 ... 1.0
+        rangeView.setRange(range, animated: false)
+        controller.updateChartRange(range, animated: false)
+        
+        self.setNeedsLayout()
     }
 }

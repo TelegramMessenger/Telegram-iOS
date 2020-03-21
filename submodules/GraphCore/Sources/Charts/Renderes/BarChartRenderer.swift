@@ -27,9 +27,11 @@ class BarChartRenderer: BaseChartRenderer {
     }
     
     private var step = false
+    private var lineWidth: CGFloat = 2.0
     
-    init(step: Bool = false) {
+    init(step: Bool = false, lineWidth: CGFloat = 2.0) {
         self.step = step
+        self.lineWidth = lineWidth
         
         super.init()
     }
@@ -158,14 +160,10 @@ class BarChartRenderer: BaseChartRenderer {
                     var leftX = transform(toChartCoordinateHorizontal: currentLocation - bars.barWidth, chartFrame: chartFrame)
                     var rightX: CGFloat = 0
                     
-                    let startPoint = CGPoint(x: leftX,
-                                             y: transform(toChartCoordinateVertical: verticalRange.current.lowerBound, chartFrame: chartFrame))
-                    
-                    var backgourndPaths: [[CGPoint]] = bars.components.map { _ in Array() }
+                    var backgroundPaths: [[CGPoint]] = bars.components.map { _ in Array() }
                     let itemsCount = ((bars.locations.count - barIndex) * 2) + 4
-                    for path in backgourndPaths.indices {
-                        backgourndPaths[path].reserveCapacity(itemsCount)
-                        backgourndPaths[path].append(startPoint)
+                    for path in backgroundPaths.indices {
+                        backgroundPaths[path].reserveCapacity(itemsCount)
                     }
                     
                     var maxValues: [CGFloat] = bars.components.map { _ in 0 }
@@ -173,18 +171,13 @@ class BarChartRenderer: BaseChartRenderer {
                         currentLocation = bars.locations[barIndex]
                         rightX = transform(toChartCoordinateHorizontal: currentLocation, chartFrame: chartFrame)
                         
-                        var stackedValue: CGFloat = 0
-                        var bottomY: CGFloat = transform(toChartCoordinateVertical: stackedValue, chartFrame: chartFrame)
+                        let bottomY: CGFloat = transform(toChartCoordinateVertical: 0.0, chartFrame: chartFrame)
                         for (index, component) in bars.components.enumerated() {
                             let visibilityPercent = componentsAnimators[index].current
                             if visibilityPercent == 0 { continue }
                             
-                            var value = component.values[barIndex]
-                            if value < 5000 {
-                                value *= 40
-                            }
+                            let value = component.values[barIndex]
                             let height = value * visibilityPercent
-//                            stackedValue += height
                             let topY = transform(toChartCoordinateVertical: height, chartFrame: chartFrame)
                             let componentHeight = (bottomY - topY)
                             maxValues[index] = max(maxValues[index], componentHeight)
@@ -195,9 +188,8 @@ class BarChartRenderer: BaseChartRenderer {
                                                   height: componentHeight)
                                 selectedPaths[index].append(rect)
                             }
-                            backgourndPaths[index].append(CGPoint(x: leftX, y: topY))
-                            backgourndPaths[index].append(CGPoint(x: rightX, y: topY))
-//                            bottomY = topY
+                            backgroundPaths[index].append(CGPoint(x: leftX, y: topY))
+                            backgroundPaths[index].append(CGPoint(x: rightX, y: topY))
                         }
                         if currentLocation > range.upperBound {
                             break
@@ -206,8 +198,6 @@ class BarChartRenderer: BaseChartRenderer {
                         barIndex += 1
                     }
                     
-                    let endPoint = CGPoint(x: transform(toChartCoordinateHorizontal: currentLocation, chartFrame: chartFrame).roundedUpToPixelGrid(),
-                                           y: transform(toChartCoordinateVertical: verticalRange.current.lowerBound, chartFrame: chartFrame))
                     let colorOffset = Double((1.0 - (1.0 - generalUnselectedAlpha) * selectedIndexAnimator.current) * chartsAlpha)
                     
                     for (index, component) in bars.components.enumerated().reversed() {
@@ -216,12 +206,12 @@ class BarChartRenderer: BaseChartRenderer {
                         }
                         context.saveGState()
                         
-                        context.setLineWidth(2.0)
+                        context.setLineWidth(self.lineWidth)
                         context.setStrokeColor(GColor.valueBetween(start: backgroundColorAnimator.current.color,
                                                                  end: component.color,
                                                                  offset: colorOffset).cgColor)
                         context.beginPath()
-                        context.addLines(between: backgourndPaths[index])
+                        context.addLines(between: backgroundPaths[index])
                         context.strokePath()
                         context.restoreGState()
                     }
@@ -236,11 +226,11 @@ class BarChartRenderer: BaseChartRenderer {
                     let startPoint = CGPoint(x: leftX,
                                              y: transform(toChartCoordinateVertical: verticalRange.current.lowerBound, chartFrame: chartFrame))
                     
-                    var backgourndPaths: [[CGPoint]] = bars.components.map { _ in Array() }
+                    var backgroundPaths: [[CGPoint]] = bars.components.map { _ in Array() }
                     let itemsCount = ((bars.locations.count - barIndex) * 2) + 4
-                    for path in backgourndPaths.indices {
-                        backgourndPaths[path].reserveCapacity(itemsCount)
-                        backgourndPaths[path].append(startPoint)
+                    for path in backgroundPaths.indices {
+                        backgroundPaths[path].reserveCapacity(itemsCount)
+                        backgroundPaths[path].append(startPoint)
                     }
                     var maxValues: [CGFloat] = bars.components.map { _ in 0 }
                     while barIndex < bars.locations.count {
@@ -265,8 +255,8 @@ class BarChartRenderer: BaseChartRenderer {
                                                   height: componentHeight)
                                 selectedPaths[index].append(rect)
                             }
-                            backgourndPaths[index].append(CGPoint(x: leftX, y: topY))
-                            backgourndPaths[index].append(CGPoint(x: rightX, y: topY))
+                            backgroundPaths[index].append(CGPoint(x: leftX, y: topY))
+                            backgroundPaths[index].append(CGPoint(x: rightX, y: topY))
                             bottomY = topY
                         }
                         if currentLocation > range.upperBound {
@@ -285,13 +275,13 @@ class BarChartRenderer: BaseChartRenderer {
                             continue
                         }
                         context.saveGState()
-                        backgourndPaths[index].append(endPoint)
+                        backgroundPaths[index].append(endPoint)
                         
                         context.setFillColor(GColor.valueBetween(start: backgroundColorAnimator.current.color,
                                                                   end: component.color,
                                                                   offset: colorOffset).cgColor)
                         context.beginPath()
-                        context.addLines(between: backgourndPaths[index])
+                        context.addLines(between: backgroundPaths[index])
                         context.closePath()
                         context.fillPath()
                         context.restoreGState()
@@ -308,7 +298,7 @@ class BarChartRenderer: BaseChartRenderer {
 }
 
 extension BarChartRenderer.BarsData {
-    static func initialComponents(chartsCollection: ChartsCollection) ->
+    static func initialComponents(chartsCollection: ChartsCollection, separate: Bool = false, initialComponents: [BarChartRenderer.BarsData.Component]? = nil) ->
         (width: CGFloat,
         chartBars: BarChartRenderer.BarsData,
         totalHorizontalRange: ClosedRange<CGFloat>,
@@ -319,15 +309,13 @@ extension BarChartRenderer.BarsData {
             } else {
                 width = 1
             }
-            let components = chartsCollection.chartValues.map { BarChartRenderer.BarsData.Component(color: $0.color,
+            let components = initialComponents ?? chartsCollection.chartValues.map { BarChartRenderer.BarsData.Component(color: $0.color,
                                                                                                     values: $0.values.map { CGFloat($0) }) }
             let chartBars = BarChartRenderer.BarsData(barWidth: width,
                                                       locations: chartsCollection.axisValues.map { CGFloat($0.timeIntervalSince1970) },
                                                       components: components)
             
-            
-            
-            let totalVerticalRange = BarChartRenderer.BarsData.verticalRange(bars: chartBars) ?? 0...1
+            let totalVerticalRange = BarChartRenderer.BarsData.verticalRange(bars: chartBars, separate: separate) ?? 0...1
             let totalHorizontalRange = BarChartRenderer.BarsData.visibleHorizontalRange(bars: chartBars, width: width) ?? 0...1
             return (width: width, chartBars: chartBars, totalHorizontalRange: totalHorizontalRange, totalVerticalRange: totalVerticalRange)
     }
@@ -342,7 +330,7 @@ extension BarChartRenderer.BarsData {
         return (firstPoint - width)...lastPoint
     }
     
-    static func verticalRange(bars: BarChartRenderer.BarsData, calculatingRange: ClosedRange<CGFloat>? = nil, addBounds: Bool = false) -> ClosedRange<CGFloat>? {
+    static func verticalRange(bars: BarChartRenderer.BarsData, separate: Bool = false, calculatingRange: ClosedRange<CGFloat>? = nil, addBounds: Bool = false) -> ClosedRange<CGFloat>? {
         guard bars.components.count > 0 else {
             return nil
         }
@@ -353,11 +341,17 @@ extension BarChartRenderer.BarsData {
             
             var vMax: CGFloat = bars.components[0].values[index]
             while index < bars.locations.count {
-                var summ: CGFloat = 0
-                for component in bars.components {
-                    summ += component.values[index]
+                if separate {
+                    for component in bars.components {
+                        vMax = max(vMax, component.values[index])
+                    }
+                } else {
+                    var summ: CGFloat = 0
+                    for component in bars.components {
+                        summ += component.values[index]
+                    }
+                    vMax = max(vMax, summ)
                 }
-                vMax = max(vMax, summ)
                 
                 if bars.locations[index] > calculatingRange.upperBound {
                     break
@@ -370,11 +364,18 @@ extension BarChartRenderer.BarsData {
             
             var vMax: CGFloat = bars.components[0].values[index]
             while index < bars.locations.count {
-                var summ: CGFloat = 0
-                for component in bars.components {
-                    summ += component.values[index]
+                if separate {
+                    for component in bars.components {
+                        vMax = max(vMax, component.values[index])
+                    }
+                } else {
+                    var summ: CGFloat = 0
+                    for component in bars.components {
+                        summ += component.values[index]
+                    }
+                    vMax = max(vMax, summ)
                 }
-                vMax = max(vMax, summ)
+                
                 index += 1
             }
             return 0...vMax

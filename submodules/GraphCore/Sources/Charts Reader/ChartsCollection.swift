@@ -67,7 +67,15 @@ public extension ChartsCollection {
             }
             switch type {
             case .axix:
-                axixValuesToSetup = try column.dropFirst().map { Date(timeIntervalSince1970: try Convert.doubleFrom($0) / 1000) }
+                axixValuesToSetup = try column.dropFirst().map { value in
+                    let numberValue = try Convert.doubleFrom(value)
+                    if numberValue < 24.0 {
+                        return Date(timeIntervalSince1970: numberValue)
+                    } else {
+                        return Date(timeIntervalSince1970: numberValue / 1000)
+                    }
+                    
+                }
             case .chart, .bar, .area, .step:
                 guard let colorString = colors[columnId],
                     let color = GColor(hexString: colorString) else {

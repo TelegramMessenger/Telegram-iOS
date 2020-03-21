@@ -245,8 +245,14 @@ class GeneralChartComponentController: ChartThemeContainer {
             var labels: [LinesChartLabel] = []
             for index in stride(from: chartsCollection.axisValues.count - 1, to: -1, by: -strideInterval).reversed() {
                 let date = chartsCollection.axisValues[index]
-                labels.append(LinesChartLabel(value: CGFloat(date.timeIntervalSince1970),
-                                              text: scaleType.dateFormatter.string(from: date)))
+                let timestamp = date.timeIntervalSince1970
+                if timestamp <= 24 {
+                    labels.append(LinesChartLabel(value: CGFloat(timestamp),
+                                                  text: "\(Int(timestamp)):00"))
+                } else {
+                    labels.append(LinesChartLabel(value: CGFloat(timestamp),
+                                                  text: scaleType.dateFormatter.string(from: date)))
+                }
             }
             prevoiusHorizontalStrideInterval = strideInterval
             horizontalScalesRenderer.setup(labels: labels, animated: animated)
@@ -318,8 +324,9 @@ class GeneralChartComponentController: ChartThemeContainer {
                                               tapAction: { [weak self] in
                                                 self?.zoomInOnDateClosure?(closestDate) },
                                               hideAction: { [weak self] in
+                                                self?.setDetailsChartVisibleClosure?(false, true)
                                                 
-        })
+                                              })
         return viewModel
     }
 

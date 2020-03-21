@@ -2240,35 +2240,40 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var messages: [EnqueueMessage] = []
                 
-                let inputText = convertMarkdownToAttributes(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
-                
-                for text in breakChatInputText(trimChatInputText(inputText)) {
-                    if text.length != 0 {
-                        var attributes: [MessageAttribute] = []
-                        let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
-                        if !entities.isEmpty {
-                            attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
+                if effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines) == "🎲" {
+                    messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice()), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
+                } else {
+                    let inputText = convertMarkdownToAttributes(effectiveInputText)
+                    
+                    for text in breakChatInputText(trimChatInputText(inputText)) {
+                        if text.length != 0 {
+                            var attributes: [MessageAttribute] = []
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                            }
+                            var webpage: TelegramMediaWebpage?
+                            if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != nil {
+                                attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
+                            } else {
+                                webpage = self.chatPresentationInterfaceState.urlPreview?.1
+                            }
+                            messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                         }
-                        var webpage: TelegramMediaWebpage?
-                        if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != nil {
-                            attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
-                        } else {
-                            webpage = self.chatPresentationInterfaceState.urlPreview?.1
-                        }
-                        messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                     }
-                }
 
-                var forwardingToSameChat = false
-                if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
-                    for messageId in forwardMessageIds {
-                        if messageId.peerId == id {
-                            forwardingToSameChat = true
+                    var forwardingToSameChat = false
+                    if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                        for messageId in forwardMessageIds {
+                            if messageId.peerId == id {
+                                forwardingToSameChat = true
+                            }
                         }
                     }
-                }
-                if !messages.isEmpty && forwardingToSameChat {
-                    self.controllerInteraction.displaySwipeToReplyHint()
+                    if !messages.isEmpty && forwardingToSameChat {
+                        self.controllerInteraction.displaySwipeToReplyHint()
+                    }
                 }
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {

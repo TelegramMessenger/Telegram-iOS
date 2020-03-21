@@ -28,7 +28,12 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
 
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
+        var contentTypeHint: ChatMessageEntryContentType = .generic
+        
         for media in entry.message.media {
+            if media is TelegramMediaDice {
+                contentTypeHint = .animatedEmoji
+            }
             if let action = media as? TelegramMediaAction {
                 switch action.action {
                     case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
@@ -44,7 +49,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             adminRank = adminRanks[author.id]
         }
         
-        var contentTypeHint: ChatMessageEntryContentType = .generic
+        
         if presentationData.largeEmoji, entry.message.media.isEmpty {
             if stickersEnabled && entry.message.text.count == 1, let _ = associatedData.animatedEmojiStickers[entry.message.text.basicEmoji.0] {
                 contentTypeHint = .animatedEmoji

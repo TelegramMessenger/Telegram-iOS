@@ -293,7 +293,11 @@ typedef enum
         [_wrapperView addSubview:_fadeView];
     }
     
-    CGFloat circleWrapperViewLength = 216.0f + 38.0f;
+    CGFloat minSide = MIN(_wrapperView.frame.size.width, _wrapperView.frame.size.height);
+    CGFloat diameter = minSide > 320.0f ? 240.0f : 216.0f;
+    CGFloat shadowSize = minSide > 320.0f ? 21.0f : 19.0f;
+    
+    CGFloat circleWrapperViewLength = diameter + shadowSize * 2.0;
     _circleWrapperView = [[UIView alloc] initWithFrame:(CGRect){
         .origin.x = (_wrapperView.bounds.size.width - circleWrapperViewLength) / 2.0f,
         .origin.y = _wrapperView.bounds.size.height + circleWrapperViewLength * 0.3f,
@@ -309,7 +313,7 @@ typedef enum
     _shadowView.frame = _circleWrapperView.bounds;
     [_circleWrapperView addSubview:_shadowView];
     
-    _circleView = [[UIView alloc] initWithFrame:CGRectInset(_circleWrapperView.bounds, 19.0f, 19.0f)];
+    _circleView = [[UIView alloc] initWithFrame:CGRectInset(_circleWrapperView.bounds, shadowSize, shadowSize)];
     _circleView.clipsToBounds = true;
     _circleView.layer.cornerRadius = _circleView.frame.size.width / 2.0f;
     [_circleWrapperView addSubview:_circleView];
@@ -325,7 +329,7 @@ typedef enum
         _placeholderView.accessibilityIgnoresInvertColors = true;
     }
     
-    CGFloat ringViewLength = 234.0f;
+    CGFloat ringViewLength = minSide > 320.0f ? 260.0f : 234.0f;
     _ringView = [[TGVideoMessageRingView alloc] initWithFrame:(CGRect){
         .origin.x = (_circleWrapperView.bounds.size.width - ringViewLength) / 2.0f,
         .origin.y = (_circleWrapperView.bounds.size.height - ringViewLength) / 2.0f,

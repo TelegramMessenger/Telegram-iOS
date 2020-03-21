@@ -39,6 +39,7 @@ swift_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/rlottie:RLottieBinding",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [
         "//visibility:public",
