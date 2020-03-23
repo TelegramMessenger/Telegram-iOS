@@ -545,14 +545,14 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         )
     )
     let chart = PresentationThemeChart(
-        labelsColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
-        helperLinesColor: UIColor(rgb: 0x8596ab, alpha: 0.2),
-        strongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
-        barStrongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.45),
+        labelsColor: UIColor(rgb: 0x8e8e93),
+        helperLinesColor: UIColor(rgb: 0xd8d8d8, alpha: 0.2),
+        strongLinesColor: UIColor(rgb: 0xd8d8d8, alpha: 0.6),
+        barStrongLinesColor: UIColor(rgb: 0xd8d8d8, alpha: 0.45),
         detailsTextColor: UIColor(rgb: 0xffffff),
-        detailsArrowColor: UIColor(rgb: 0x4c5460),
-        detailsViewColor: UIColor(rgb: 0x19232f),
-        rangeViewFrameColor: UIColor(rgb: 0x354659),
+        detailsArrowColor: UIColor(rgb: 0xd8d8d8),
+        detailsViewColor: UIColor(rgb: 0x000000),
+        rangeViewFrameColor: UIColor(rgb: 0x6d6d72),
         rangeViewMarkerColor: UIColor(rgb: 0xffffff)
     )
 
