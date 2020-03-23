@@ -89,7 +89,6 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
             } else {
                 controller.mainBarsRenderer.bars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
                 controller.previewBarsRenderer.bars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
-                controller.verticalScalesRenderer.setHorizontalLinesVisible(false, animated: animated)
             }
         }
         
