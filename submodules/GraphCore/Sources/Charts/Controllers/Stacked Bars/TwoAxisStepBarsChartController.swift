@@ -57,33 +57,40 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         super.setupChartCollection(chartsCollection: chartsCollection, animated: animated, isZoomed: isZoomed)
         
         for (index, controller) in self.graphControllers.enumerated() {
-            let chart = chartsCollection.chartValues[index]
-            let initialComponents = [BarChartRenderer.BarsData.Component(color: chart.color,
-                                                                        values: chart.values.map { CGFloat($0) })]
-            let (width, chartBars, totalHorizontalRange, totalVerticalRange) = BarChartRenderer.BarsData.initialComponents(chartsCollection: chartsCollection, separate: true, initialComponents: initialComponents)
-            controller.chartBars = chartBars
-            controller.verticalScalesRenderer.labelsColor = chart.color
-            controller.barsWidth = width
-            controller.totalVerticalRange = totalVerticalRange
-            self.totalHorizontalRange = totalHorizontalRange
-            
-            var bullets: [LineBulletsRenderer.Bullet] = []
-            if let component = chartBars.components.first {
-                for i in 0 ..< chartBars.locations.count {
-                    let location = chartBars.locations[i]
-                    let value = component.values[i]
-                    bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), offset: .zero, color: component.color))
+            if index < chartsCollection.chartValues.count {
+                let chart = chartsCollection.chartValues[index]
+                let initialComponents = [BarChartRenderer.BarsData.Component(color: chart.color,
+                                                                            values: chart.values.map { CGFloat($0) })]
+                let (width, chartBars, totalHorizontalRange, totalVerticalRange) = BarChartRenderer.BarsData.initialComponents(chartsCollection: chartsCollection, separate: true, initialComponents: initialComponents)
+                controller.chartBars = chartBars
+                controller.verticalScalesRenderer.labelsColor = chart.color
+                controller.barsWidth = width
+                controller.totalVerticalRange = totalVerticalRange
+                self.totalHorizontalRange = totalHorizontalRange
+                
+                var bullets: [LineBulletsRenderer.Bullet] = []
+                if let component = chartBars.components.first {
+                    for i in 0 ..< chartBars.locations.count {
+                        let location = chartBars.locations[i]
+                        let value = component.values[i]
+                        bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), offset: .zero, color: component.color))
+                    }
                 }
+                
+                controller.lineBulletsRenderer.bullets = bullets
+                controller.previewBarsRenderer.setup(horizontalRange: self.totalHorizontalRange, animated: animated)
+                controller.previewBarsRenderer.setup(verticalRange: controller.totalVerticalRange, animated: animated)
+                controller.mainBarsRenderer.bars = chartBars
+                controller.previewBarsRenderer.bars = chartBars
+                
+                controller.verticalScalesRenderer.setHorizontalLinesVisible((index == 0), animated: animated)
+                controller.verticalScalesRenderer.isRightAligned = (index != 0)
+                controller.verticalScalesRenderer.isEnabled = true
+            } else {
+                controller.mainBarsRenderer.bars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
+                controller.previewBarsRenderer.bars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
+                controller.verticalScalesRenderer.setHorizontalLinesVisible(false, animated: animated)
             }
-            
-            controller.lineBulletsRenderer.bullets = bullets
-            controller.previewBarsRenderer.setup(horizontalRange: self.totalHorizontalRange, animated: animated)
-            controller.previewBarsRenderer.setup(verticalRange: controller.totalVerticalRange, animated: animated)
-            controller.mainBarsRenderer.bars = chartBars
-            controller.previewBarsRenderer.bars = chartBars
-            
-            controller.verticalScalesRenderer.setHorizontalLinesVisible((index == 0), animated: animated)
-            controller.verticalScalesRenderer.isRightAligned = (index != 0)
         }
         
         self.prevoiusHorizontalStrideInterval = -1
@@ -149,7 +156,9 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         let chartFrame = self.chartFrame()
         guard chartFrame.width > 0 else { return }
         
-        let dateToFind = Date(timeIntervalSince1970: TimeInterval(horizontalRange.distance * point.x + horizontalRange.lowerBound))
+        let barsWidth = graphControllers.first?.barsWidth ?? 0.0
+        
+        let dateToFind = Date(timeIntervalSince1970: TimeInterval(horizontalRange.distance * point.x + horizontalRange.lowerBound + barsWidth / 2.0))
         guard let (closestDate, minIndex) = findClosestDateTo(dateToFind: dateToFind) else { return }
         
         let chartInteractionWasBegin = isChartInteractionBegun

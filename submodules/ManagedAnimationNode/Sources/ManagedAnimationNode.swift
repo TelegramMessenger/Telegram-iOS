@@ -220,8 +220,13 @@ open class ManagedAnimationNode: ASDisplayNode {
         state.relativeTime += animationAdvancement
         
         if state.relativeTime >= duration && !self.didTryAdvancingState {
-            self.didTryAdvancingState = true
-            self.advanceState()
+            if state.item.loop && self.trackStack.isEmpty {
+                state.frameIndex = nil
+                state.relativeTime = 0.0
+            } else {
+                self.didTryAdvancingState = true
+                self.advanceState()
+            }
         }
     }
     
