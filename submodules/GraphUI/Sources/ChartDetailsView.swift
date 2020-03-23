@@ -57,8 +57,8 @@ class ChartDetailsView: UIControl {
         self.viewModel = viewModel
         
         titleLabel.setText(viewModel.title, animated: false)
-        titleLabel.setVisible(!viewModel.title.isEmpty, animated: animated)
-        arrowView.setVisible(viewModel.showArrow, animated: animated)
+        titleLabel.setVisible(!viewModel.title.isEmpty, animated: false)
+        arrowView.setVisible(viewModel.showArrow, animated: false)
         arrowButton.isUserInteractionEnabled = viewModel.showArrow
         
         let width: CGFloat = margin * 2 + (viewModel.showPrefixes ? (prefixLabelWidth + margin) : 0) + textLabelWidth + valueLabelWidth

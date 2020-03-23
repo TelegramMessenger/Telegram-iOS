@@ -18,7 +18,7 @@ public extension TimeInterval {
     static let hour: TimeInterval = 60 * 60
     static let day: TimeInterval = 60 * 60 * 24
     static let osXDuration: TimeInterval = 0.25
-    static let expandAnimationDuration: TimeInterval = 0.4
+    static let expandAnimationDuration: TimeInterval = 0.25
     static var animationDurationMultipler: Double = 1.0
 
     static var defaultDuration: TimeInterval {

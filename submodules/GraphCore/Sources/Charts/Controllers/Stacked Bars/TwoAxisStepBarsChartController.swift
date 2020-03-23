@@ -72,7 +72,7 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
                 for i in 0 ..< chartBars.locations.count {
                     let location = chartBars.locations[i]
                     let value = component.values[i]
-                    bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), color: component.color))
+                    bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), offset: .zero, color: component.color))
                 }
             }
             
@@ -155,12 +155,17 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         let chartInteractionWasBegin = isChartInteractionBegun
         super.chartInteractionDidBegin(point: point)
         
+        var barOffset: CGFloat = 0.0
         for graphController in graphControllers {
             var bullets: [LineBulletsRenderer.Bullet] = []
             if let component = graphController.chartBars.components.first {
                 let location = graphController.chartBars.locations[minIndex]
                 let value = component.values[minIndex]
-                bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), color: component.color))
+                
+                let offset = -(graphController.mainBarsRenderer.transform(toChartCoordinateHorizontal: horizontalRange.lowerBound + graphController.barsWidth, chartFrame: chartFrame) - chartFrame.minX) / 2.0
+                barOffset = offset
+                
+                bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), offset: CGPoint(x: offset, y: 0.0), color: component.color))
             }
             graphController.lineBulletsRenderer.bullets = bullets
             graphController.lineBulletsRenderer.isEnabled = true
@@ -172,6 +177,7 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         self.setDetailsChartVisibleClosure?(true, true)
         self.setDetailsViewPositionClosure?(detailsViewPosition)
         self.verticalLineRenderer.values = [chartValue]
+        self.verticalLineRenderer.offset = barOffset
     }
     
     public override var currentChartHorizontalRangeFraction: ClosedRange<CGFloat> {
@@ -244,18 +250,22 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
             var numberOfOffsetsPerItem = verticalRange.distance / approximateNumberOfChartValues
             
             var multiplier: CGFloat = 1.0
-            while numberOfOffsetsPerItem > 10 {
-                numberOfOffsetsPerItem /= 10
-                multiplier *= 10
+            if numberOfOffsetsPerItem > 0 {
+                while numberOfOffsetsPerItem > 10 {
+                    numberOfOffsetsPerItem /= 10
+                    multiplier *= 10
+                }
             }
             var dividor: CGFloat = 1.0
             var maximumNumberOfDecimals = 2
-            while numberOfOffsetsPerItem < 1 {
-                numberOfOffsetsPerItem *= 10
-                dividor *= 10
-                maximumNumberOfDecimals += 1
+            if numberOfOffsetsPerItem > 0 {
+                while numberOfOffsetsPerItem < 1 {
+                    numberOfOffsetsPerItem *= 10
+                    dividor *= 10
+                    maximumNumberOfDecimals += 1
+                }
             }
-
+            
             let generalBase = Constants.verticalBaseAnchors.first { numberOfOffsetsPerItem > $0 } ?? BaseConstants.defaultVerticalBaseAnchor
             let base = generalBase * multiplier / dividor
             

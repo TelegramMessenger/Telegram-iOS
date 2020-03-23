@@ -62,7 +62,7 @@ class LinesComponentController: GeneralChartComponentController {
         let (chartLines, totalHorizontalRange, totalVerticalRange) = LinesChartRenderer.LineData.initialComponents(chartsCollection: chartsCollection)
         self.chartLines = chartLines
         
-        self.lineBulletsRenderer.bullets = self.chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero,
+        self.lineBulletsRenderer.bullets = self.chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero, offset: .zero,
                                                                                           color: $0.color)}
         
         super.initialize(chartsCollection: chartsCollection,
@@ -190,7 +190,7 @@ class LinesComponentController: GeneralChartComponentController {
         lineBulletsRenderer.isEnabled = true
         lineBulletsRenderer.setVisible(true, animated: animted)
         lineBulletsRenderer.bullets = chartLines.compactMap { chart in
-            return LineBulletsRenderer.Bullet(coordinate: chart.points[dataIndex], color: chart.color)
+            return LineBulletsRenderer.Bullet(coordinate: chart.points[dataIndex], offset: .zero, color: chart.color)
         }
     }
     

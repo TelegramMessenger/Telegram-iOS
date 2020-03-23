@@ -100,11 +100,10 @@ class VerticalScalesRenderer: BaseChartRenderer {
         if generalAlpha == 0 { return }
         let labelColorAlpha = labelsColor.alphaValue
         
+        let spacing: CGFloat = 1.0
+        context.clip(to: CGRect(origin: CGPoint(x: 0.0, y: chartFrame.minY - spacing), size: CGSize(width: chartFrame.width + chartFrame.origin.x * 2.0, height: chartFrame.height + spacing * 2.0)))
+        
         func drawLines(_ labels: [LinesChartLabel], alpha: CGFloat) {
-            var labels = labels
-            if labels.count > 1 {
-                labels.removeFirst()
-            }
             var lineSegments: [CGPoint] = []
             let x0 = chartFrame.minX
             let x1 = chartFrame.maxX
@@ -113,8 +112,10 @@ class VerticalScalesRenderer: BaseChartRenderer {
             
             for lineInfo in labels {
                 let y = transform(toChartCoordinateVertical: lineInfo.value, chartFrame: chartFrame).roundedUpToPixelGrid()
-                lineSegments.append(CGPoint(x: x0, y: y))
-                lineSegments.append(CGPoint(x: x1, y: y))
+                if y < chartFrame.maxY - 2.0 {
+                    lineSegments.append(CGPoint(x: x0, y: y))
+                    lineSegments.append(CGPoint(x: x1, y: y))
+                }
             }
             context.strokeLineSegments(between: lineSegments)
         }
@@ -164,5 +165,7 @@ class VerticalScalesRenderer: BaseChartRenderer {
                                attributes: [.foregroundColor: labelsColor.withAlphaComponent(animatedLabesAndLines.alphaAnimator.current * labelColorAlpha * generalAlpha),
                                             .font: labelsFont])
         }
+        
+        context.resetClip()
     }
 }

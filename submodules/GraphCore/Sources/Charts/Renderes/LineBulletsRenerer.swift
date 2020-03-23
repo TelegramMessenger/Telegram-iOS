@@ -16,6 +16,7 @@ import UIKit
 class LineBulletsRenderer: BaseChartRenderer {
     struct Bullet {
         var coordinate: CGPoint
+        var offset: CGPoint
         var color: GColor
     }
     
@@ -56,8 +57,8 @@ class LineBulletsRenderer: BaseChartRenderer {
             let alpha = alphaAnimators[index].current
             if alpha == 0 { continue }
 
-            let centerX = transform(toChartCoordinateHorizontal: bullet.coordinate.x, chartFrame: chartFrame)
-            let centerY = transform(toChartCoordinateVertical: bullet.coordinate.y, chartFrame: chartFrame)
+            let centerX = transform(toChartCoordinateHorizontal: bullet.coordinate.x, chartFrame: chartFrame) + bullet.offset.x
+            let centerY = transform(toChartCoordinateVertical: bullet.coordinate.y, chartFrame: chartFrame) + bullet.offset.y
             context.setFillColor(innerColorAnimator.current.color.withAlphaComponent(alpha).cgColor)
             context.setStrokeColor(bullet.color.withAlphaComponent(alpha).cgColor)
             context.setLineWidth(linesWidth)

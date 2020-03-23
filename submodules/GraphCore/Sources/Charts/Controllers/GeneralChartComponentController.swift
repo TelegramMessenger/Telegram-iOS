@@ -269,16 +269,20 @@ class GeneralChartComponentController: ChartThemeContainer {
         
         var numberOfOffsetsPerItem = ditance / approximateNumberOfChartValues
         var multiplier: CGFloat = 1.0
-        while numberOfOffsetsPerItem > 10 {
-            numberOfOffsetsPerItem /= 10
-            multiplier *= 10
+        if numberOfOffsetsPerItem > 0 {
+            while numberOfOffsetsPerItem > 10 {
+                numberOfOffsetsPerItem /= 10
+                multiplier *= 10
+            }
         }
         var dividor: CGFloat = 1.0
         var maximumNumberOfDecimals = 2
-        while numberOfOffsetsPerItem < 1 {
-            numberOfOffsetsPerItem *= 10
-            dividor *= 10
-            maximumNumberOfDecimals += 1
+        if numberOfOffsetsPerItem > 0 {
+            while numberOfOffsetsPerItem < 1 {
+                numberOfOffsetsPerItem *= 10
+                dividor *= 10
+                maximumNumberOfDecimals += 1
+            }
         }
         
         var base: CGFloat = BaseConstants.verticalBaseAnchors.first { numberOfOffsetsPerItem > $0 } ?? BaseConstants.defaultVerticalBaseAnchor
