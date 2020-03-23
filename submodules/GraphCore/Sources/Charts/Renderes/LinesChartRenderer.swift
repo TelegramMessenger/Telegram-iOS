@@ -68,7 +68,8 @@ class LinesChartRenderer: BaseChartRenderer {
             context.setAlpha(alpha)
             context.setStrokeColor(toLine.color.cgColor)
             context.setLineWidth(lineWidth)
-            context.setLineCap(.round)
+            
+            context.beginTransparencyLayer(auxiliaryInfo: nil)
             
             if linesShapeAnimator.isAnimating {
                 let animationOffset = linesShapeAnimator.current
@@ -315,9 +316,8 @@ class LinesChartRenderer: BaseChartRenderer {
                     lines.removeLast()
                 }
                 
-                context.beginTransparencyLayer(auxiliaryInfo: nil)
+                context.setLineCap(.round)
                 context.strokeLineSegments(between: lines)
-                context.endTransparencyLayer()
             } else {                
                 if var index = toLine.points.firstIndex(where: { $0.x >= range.lowerBound }) {
                     var lines: [CGPoint] = []
@@ -433,9 +433,11 @@ class LinesChartRenderer: BaseChartRenderer {
                         lines.removeLast()
                     }
                     
+                    context.setLineCap(.round)
                     context.strokeLineSegments(between: lines)
                 }
             }
+            context.endTransparencyLayer()
             context.setAlpha(1.0)
         }
         
