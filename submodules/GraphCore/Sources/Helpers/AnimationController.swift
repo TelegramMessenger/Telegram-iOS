@@ -28,7 +28,6 @@ enum TimeFunction {
             return time / duration
         case .easeIn:
             return (pow(2, 10 * (time / duration - 1)) - 0.0009765625) * 1.0009775171065499
-            
         case .easeOut:
             return (-pow(2, -10 * time / duration)) + 1 * 1.0009775171065499
         }

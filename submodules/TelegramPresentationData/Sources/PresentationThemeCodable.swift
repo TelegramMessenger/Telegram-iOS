@@ -1700,6 +1700,39 @@ extension PresentationThemeInAppNotification: Codable {
     }
 }
 
+extension PresentationThemeChart: Codable {
+    enum CodingKeys: String, CodingKey {
+        case labels
+        case helperLines
+        case strongLines
+        case barStrongLines
+        case detailsText
+        case detailsArrow
+        case detailsView
+        case rangeViewFrame
+        case rangeViewMarker
+    }
+    
+    public convenience init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(labelsColor: try decodeColor(values, .labels), helperLinesColor: try decodeColor(values, .helperLines), strongLinesColor: try decodeColor(values, .strongLines), barStrongLinesColor: try decodeColor(values, .barStrongLines), detailsTextColor: try decodeColor(values, .detailsText), detailsArrowColor: try decodeColor(values, .detailsArrow), detailsViewColor: try decodeColor(values, .detailsView), rangeViewFrameColor: try decodeColor(values, .rangeViewFrame), rangeViewMarkerColor: try decodeColor(values, .rangeViewMarker))
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        
+        try encodeColor(&values, self.labelsColor, .labels)
+        try encodeColor(&values, self.helperLinesColor, .helperLines)
+        try encodeColor(&values, self.strongLinesColor, .strongLines)
+        try encodeColor(&values, self.barStrongLinesColor, .barStrongLines)
+        try encodeColor(&values, self.detailsTextColor, .detailsText)
+        try encodeColor(&values, self.detailsArrowColor, .detailsArrow)
+        try encodeColor(&values, self.detailsViewColor, .detailsView)
+        try encodeColor(&values, self.rangeViewFrameColor, .rangeViewFrame)
+        try encodeColor(&values, self.rangeViewMarkerColor, .rangeViewMarker)
+    }
+}
+
 extension PresentationThemeName: Codable {
     public init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer()
@@ -1776,6 +1809,7 @@ extension PresentationTheme: Codable {
         case actionSheet
         case contextMenu
         case notification
+        case chart
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -1808,7 +1842,8 @@ extension PresentationTheme: Codable {
                   chat: try values.decode(PresentationThemeChat.self, forKey: .chat),
                   actionSheet: try values.decode(PresentationThemeActionSheet.self, forKey: .actionSheet),
                   contextMenu: try values.decode(PresentationThemeContextMenu.self, forKey: .contextMenu),
-                  inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification)
+                  inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification),
+                  chart: try values.decode(PresentationThemeChart.self, forKey: .chart)
         )
     }
     
@@ -1826,5 +1861,6 @@ extension PresentationTheme: Codable {
         try container.encode(self.actionSheet, forKey: .actionSheet)
         try container.encode(self.contextMenu, forKey: .contextMenu)
         try container.encode(self.inAppNotification, forKey: .notification)
+        try container.encode(self.chart, forKey: .chart)
     }
 }

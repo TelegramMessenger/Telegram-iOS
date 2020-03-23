@@ -311,19 +311,17 @@ private extension RangeChartView {
 
 extension RangeChartView: ChartThemeContainer {
     func apply(theme: ChartTheme, animated: Bool) {
-        let colusre = {
+        let closure = {
             self.lowerBoundTintView.backgroundColor = theme.rangeViewTintColor
             self.upperBoundTintView.backgroundColor = theme.rangeViewTintColor
         }
         
-        
-        let image = UIImage(bundleImageName: "Chart/selection_frame_light")
-        self.cropFrameView.setImage(image, animated: animated)
+        self.cropFrameView.setImage(theme.rangeCropImage, animated: animated)
         
         if animated {
-            UIView.animate(withDuration: .defaultDuration, animations: colusre)
+            UIView.animate(withDuration: .defaultDuration, animations: closure)
         } else {
-            colusre()
+            closure()
         }
     }
 }

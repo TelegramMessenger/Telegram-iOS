@@ -64,7 +64,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
 
                             self.disposable.set(sticker.start(next: { [weak self] data in
                                 if let strongSelf = self {
-                                    strongSelf.trackTo(item: ManagedAnimationItem(source: .resource(strongSelf.context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                                    strongSelf.trackTo(item: ManagedAnimationItem(source: .resource(strongSelf.context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 180), duration: 3.0))
                                 }
                             }))
                         case .rolling:
@@ -73,7 +73,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case let .value(currentValue):
                     switch diceState {
                         case .rolling:
-                            self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                            self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 180), duration: 3.0, loop: true))
                         case let .value(value):
                             break
                     }
@@ -103,11 +103,11 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                     
                     self.disposable.set(sticker.start(next: { [weak self] data in
                         if let strongSelf = self {
-                            strongSelf.trackTo(item: ManagedAnimationItem(source: .resource(strongSelf.context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                            strongSelf.trackTo(item: ManagedAnimationItem(source: .resource(strongSelf.context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 180), duration: 3.0))
                         }
                     }))
                 case .rolling:
-                    self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                    self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3, loop: true))
             }
         }
     }

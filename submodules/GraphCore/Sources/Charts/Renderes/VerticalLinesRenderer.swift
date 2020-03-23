@@ -20,6 +20,7 @@ class VerticalLinesRenderer: BaseChartRenderer {
             setNeedsDisplay()
         }
     }
+    var offset: CGFloat = 0.0
     private var alphaAnimators: [AnimationController<CGFloat>] = []
     
     var linesColor: GColor = .black
@@ -39,7 +40,7 @@ class VerticalLinesRenderer: BaseChartRenderer {
             if alpha == 0 { continue }
 
             context.setStrokeColor(linesColor.withAlphaComponent(linesColor.alphaValue * alpha).cgColor)
-            let pointX = transform(toChartCoordinateHorizontal: value, chartFrame: chartFrame)
+            let pointX = transform(toChartCoordinateHorizontal: value, chartFrame: chartFrame) + offset
             context.strokeLineSegments(between: [CGPoint(x: pointX, y: chartFrame.minY),
                                                  CGPoint(x: pointX, y: chartFrame.maxY)])
         }

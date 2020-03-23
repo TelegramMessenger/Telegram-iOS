@@ -77,7 +77,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
             controller.verticalScalesRenderer.labelsColor = chart.color
             controller.totalVerticalRange = LinesChartRenderer.LineData.verticalRange(lines: chartLines) ?? Constants.defaultRange
             self.totalHorizontalRange = LinesChartRenderer.LineData.horizontalRange(lines: chartLines) ?? Constants.defaultRange
-            controller.lineBulletsRenderer.bullets = chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero,
+            controller.lineBulletsRenderer.bullets = chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero, offset: .zero,
                                                                                                color: $0.color) }
             controller.previewLinesRenderer.setup(horizontalRange: self.totalHorizontalRange, animated: animated)
             controller.previewLinesRenderer.setup(verticalRange: controller.totalVerticalRange, animated: animated)
@@ -161,7 +161,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         
         for graphController in graphControllers {
             graphController.lineBulletsRenderer.bullets = graphController.chartLines.map { chart in
-                LineBulletsRenderer.Bullet(coordinate: chart.points[minIndex], color: chart.color)
+                LineBulletsRenderer.Bullet(coordinate: chart.points[minIndex], offset: .zero, color: chart.color)
             }
             graphController.lineBulletsRenderer.isEnabled = true
         }
@@ -246,16 +246,20 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
             var numberOfOffsetsPerItem = verticalRange.distance / approximateNumberOfChartValues
             
             var multiplier: CGFloat = 1.0
-            while numberOfOffsetsPerItem > 10 {
-                numberOfOffsetsPerItem /= 10
-                multiplier *= 10
+            if numberOfOffsetsPerItem > 0 {
+                while numberOfOffsetsPerItem > 10 {
+                    numberOfOffsetsPerItem /= 10
+                    multiplier *= 10
+                }
             }
             var dividor: CGFloat = 1.0
             var maximumNumberOfDecimals = 2
-            while numberOfOffsetsPerItem < 1 {
-                numberOfOffsetsPerItem *= 10
-                dividor *= 10
-                maximumNumberOfDecimals += 1
+            if numberOfOffsetsPerItem > 0 {
+                while numberOfOffsetsPerItem < 1 {
+                    numberOfOffsetsPerItem *= 10
+                    dividor *= 10
+                    maximumNumberOfDecimals += 1
+                }
             }
 
             let generalBase = Constants.verticalBaseAnchors.first { numberOfOffsetsPerItem > $0 } ?? BaseConstants.defaultVerticalBaseAnchor

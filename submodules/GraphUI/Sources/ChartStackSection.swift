@@ -18,7 +18,7 @@ private class LeftAlignedIconButton: UIButton {
         let titleRect = super.titleRect(forContentRect: contentRect)
         let imageSize = currentImage?.size ?? .zero
         let availableWidth = contentRect.width - imageEdgeInsets.right - imageSize.width - titleRect.width
-        return titleRect.offsetBy(dx: round(availableWidth / 2), dy: 0)
+        return titleRect.offsetBy(dx: round(availableWidth / 2) - imageEdgeInsets.left, dy: 0)
     }
 }
 
@@ -27,7 +27,6 @@ class ChartStackSection: UIView, ChartThemeContainer {
     var rangeView: RangeChartView
     var visibilityView: ChartVisibilityView
     var sectionContainerView: UIView
-    var separators: [UIView] = []
     
     var titleLabel: UILabel!
     var backButton: UIButton!
@@ -64,7 +63,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
         backButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         backButton.setTitleColor(UIColor(rgb: 0x007ee5), for: .normal)
         backButton.setImage(UIImage(bundleImageName: "Chart/arrow_left"), for: .normal)
-        backButton.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 3.0)
+        backButton.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 3.0)
         backButton.imageView?.tintColor = UIColor(rgb: 0x007ee5)
         
         backButton.setVisible(false, animated: false)
@@ -87,19 +86,14 @@ class ChartStackSection: UIView, ChartThemeContainer {
     func apply(theme: ChartTheme, animated: Bool) {
         self.theme = theme
         
-        UIView.perform(animated: animated && self.isVisibleInWindow) {
-            self.backgroundColor = theme.tableBackgroundColor
-            
+        UIView.perform(animated: animated && self.isVisibleInWindow) {            
             self.sectionContainerView.backgroundColor = theme.chartBackgroundColor
             self.rangeView.backgroundColor = theme.chartBackgroundColor
             self.visibilityView.backgroundColor = theme.chartBackgroundColor
             
             self.backButton.tintColor = theme.actionButtonColor
             self.backButton.setTitleColor(theme.actionButtonColor, for: .normal)
-            
-            for separator in self.separators {
-                separator.backgroundColor = theme.tableSeparatorColor
-            }
+            self.backButton.imageView?.tintColor = theme.actionButtonColor
         }
         
         if rangeView.isVisibleInWindow || chartView.isVisibleInWindow {
@@ -158,12 +152,12 @@ class ChartStackSection: UIView, ChartThemeContainer {
         let bounds = self.bounds
         self.titleLabel.frame = CGRect(origin: CGPoint(x: backButton.alpha > 0.0 ? 36.0 : 0.0, y: 5.0), size: CGSize(width: bounds.width, height: 28.0))
         self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 750.0))
-        self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 250.0))
+        self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 310.0))
         
         self.rangeView.isHidden = !self.displayRange
         
-        self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 42.0))
-        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.displayRange ? 308.0 : 266.0), size: CGSize(width: bounds.width, height: 350.0))
+        self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 310.0), size: CGSize(width: bounds.width, height: 42.0))
+        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.displayRange ? 368.0 : 326.0), size: CGSize(width: bounds.width, height: 350.0))
         self.backButton.frame = CGRect(x: 0.0, y: 0.0, width: 96.0, height: 38.0)
         
         self.chartView.setNeedsDisplay()

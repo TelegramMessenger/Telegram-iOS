@@ -1083,6 +1083,34 @@ public final class PresentationThemeInAppNotification {
     }
 }
 
+public final class PresentationThemeChart {
+    public let labelsColor: UIColor
+    public let helperLinesColor: UIColor
+    public let strongLinesColor: UIColor
+    public let barStrongLinesColor: UIColor
+    public let detailsTextColor: UIColor
+    public let detailsArrowColor: UIColor
+    public let detailsViewColor: UIColor
+    public let rangeViewFrameColor: UIColor
+    public let rangeViewMarkerColor: UIColor
+    
+    public init(labelsColor: UIColor, helperLinesColor: UIColor, strongLinesColor: UIColor, barStrongLinesColor: UIColor, detailsTextColor: UIColor, detailsArrowColor: UIColor, detailsViewColor: UIColor, rangeViewFrameColor: UIColor, rangeViewMarkerColor: UIColor) {
+        self.labelsColor = labelsColor
+        self.helperLinesColor = helperLinesColor
+        self.strongLinesColor = strongLinesColor
+        self.barStrongLinesColor = barStrongLinesColor
+        self.detailsTextColor = detailsTextColor
+        self.detailsArrowColor = detailsArrowColor
+        self.detailsViewColor = detailsViewColor
+        self.rangeViewFrameColor = rangeViewFrameColor
+        self.rangeViewMarkerColor = rangeViewMarkerColor
+    }
+    
+    public func withUpdated(labelsColor: UIColor? = nil, helperLinesColor: UIColor? = nil, strongLinesColor: UIColor? = nil, barStrongLinesColor: UIColor? = nil, detailsTextColor: UIColor? = nil, detailsArrowColor: UIColor? = nil, detailsViewColor: UIColor? = nil, rangeViewFrameColor: UIColor? = nil, rangeViewMarkerColor: UIColor? = nil) -> PresentationThemeChart {
+        return PresentationThemeChart(labelsColor: labelsColor ?? self.labelsColor, helperLinesColor: helperLinesColor ?? self.helperLinesColor, strongLinesColor: strongLinesColor ?? self.strongLinesColor, barStrongLinesColor: barStrongLinesColor ?? self.barStrongLinesColor, detailsTextColor: detailsTextColor ?? self.detailsTextColor, detailsArrowColor: detailsArrowColor ?? self.detailsArrowColor, detailsViewColor: detailsViewColor ?? self.detailsViewColor, rangeViewFrameColor: rangeViewFrameColor ?? self.rangeViewFrameColor, rangeViewMarkerColor: rangeViewMarkerColor ?? self.rangeViewMarkerColor)
+    }
+}
+
 public enum PresentationThemeBuiltinName {
     case dayClassic
     case day
@@ -1144,7 +1172,7 @@ public enum PresentationThemeName: Equatable {
 }
 
 public extension PresentationThemeReference {
-    public var name: PresentationThemeName {
+    var name: PresentationThemeName {
         switch self {
             case let .builtin(theme):
                 switch theme {
@@ -1179,11 +1207,12 @@ public final class PresentationTheme: Equatable {
     public let actionSheet: PresentationThemeActionSheet
     public let contextMenu: PresentationThemeContextMenu
     public let inAppNotification: PresentationThemeInAppNotification
+    public let chart: PresentationThemeChart
     public let preview: Bool
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, chart: PresentationThemeChart, preview: Bool = false) {
         self.name = name
         self.index = index
         self.referenceTheme = referenceTheme
@@ -1197,6 +1226,7 @@ public final class PresentationTheme: Equatable {
         self.actionSheet = actionSheet
         self.contextMenu = contextMenu
         self.inAppNotification = inAppNotification
+        self.chart = chart
         self.preview = preview
     }
     
@@ -1230,10 +1260,10 @@ public final class PresentationTheme: Equatable {
                     break
             }
         }
-        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
     }
     
     public func withUpdated(preview: Bool) -> PresentationTheme {
-        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, preview: preview)
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: preview)
     }
 }

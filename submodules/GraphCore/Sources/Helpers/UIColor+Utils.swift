@@ -29,12 +29,11 @@ extension GColor {
     
     convenience init?(hexString: String) {
         let r, g, b, a: CGFloat
-    
         let components = hexString.components(separatedBy: "#")
         if let name = components.first, !name.isEmpty {
             switch name.lowercased() {
                 case "red":
-                    self.init(hexString: "#ff2d55")
+                    self.init(hexString: "#ff3b30")
                     return
                 case "green":
                     self.init(hexString: "#34c759")
@@ -43,13 +42,13 @@ extension GColor {
                     self.init(hexString: "#007aff")
                     return
                 case "golden":
-                    self.init(hexString: "#ff9500")
+                    self.init(hexString: "#ffcc00")
                     return
                 case "yellow":
                     self.init(hexString: "#ffcc00")
                     return
                 case "lightgreen":
-                    self.init(hexString: "#8fcf39")
+                    self.init(hexString: "#7ED321")
                     return
                 case "lightblue":
                     self.init(hexString: "#5ac8fa")
@@ -58,16 +57,19 @@ extension GColor {
                     self.init(hexString: "#35afdc")
                     return
                 case "orange":
-                    self.init(hexString: "#fd7a32")
+                    self.init(hexString: "#ff9500")
                     return
                 case "violet":
-                    self.init(hexString: "#9968f7")
+                    self.init(hexString: "#af52de")
                     return
                 case "emerald":
-                    self.init(hexString: "#37cca3")
+                    self.init(hexString: "#50e3c2")
                     return
                 case "pink":
-                    self.init(hexString: "#ff4f79")
+                    self.init(hexString: "#ff2d55")
+                    return
+                case "indigo":
+                    self.init(hexString: "#5e5ce6")
                     return
                 default:
                     break

@@ -61,7 +61,7 @@ public class GeneralLinesChartController: BaseLinesChartController {
         self.prevoiusHorizontalStrideInterval = -1
         self.totalVerticalRange = LinesChartRenderer.LineData.verticalRange(lines: chartLines) ?? Constants.defaultRange
         self.totalHorizontalRange = LinesChartRenderer.LineData.horizontalRange(lines: chartLines) ?? Constants.defaultRange
-        self.lineBulletsRenderer.bullets = self.chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero,
+        self.lineBulletsRenderer.bullets = self.chartLines.map { LineBulletsRenderer.Bullet(coordinate: $0.points.first ?? .zero, offset: .zero,
                                                                                           color: $0.color)}
 
         let chartRange: ClosedRange<CGFloat>
@@ -133,7 +133,7 @@ public class GeneralLinesChartController: BaseLinesChartController {
         super.chartInteractionDidBegin(point: point)
 
         self.lineBulletsRenderer.bullets = chartLines.compactMap { chart in
-            return LineBulletsRenderer.Bullet(coordinate: chart.points[minIndex], color: chart.color)
+            return LineBulletsRenderer.Bullet(coordinate: chart.points[minIndex], offset: .zero, color: chart.color)
         }
         self.lineBulletsRenderer.isEnabled = true
         

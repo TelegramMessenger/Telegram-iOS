@@ -59,6 +59,9 @@ class LinesChartRenderer: BaseChartRenderer {
         if chartsAlpha == 0 { return }
         let range = renderRange(bounds: bounds, chartFrame: chartFrame)
         
+        let spacing: CGFloat = 1.0
+        context.clip(to: CGRect(origin: CGPoint(x: 0.0, y: chartFrame.minY - spacing), size: CGSize(width: chartFrame.width + chartFrame.origin.x * 2.0, height: chartFrame.height + spacing * 2.0)))
+        
         for (index, toLine) in toLines.enumerated() {
             let alpha = linesAlphaAnimators[index].current * chartsAlpha
             if alpha == 0 { continue }
@@ -434,6 +437,8 @@ class LinesChartRenderer: BaseChartRenderer {
             }
             context.setAlpha(1.0)
         }
+        
+        context.resetClip()
     }
 }
 
@@ -496,6 +501,11 @@ extension LinesChartRenderer.LineData {
                     }
                 }
             }
+            
+            if vMin == vMax {
+                return 0...vMax * 2.0
+            }
+            
             return vMin...vMax
         } else {
             guard let firstPoint = lines.first?.points.first else { return nil }
@@ -507,6 +517,11 @@ extension LinesChartRenderer.LineData {
                     vMax = max(vMax, point.y)
                 }
             }
+            
+            if vMin == vMax {
+                return 0...vMax * 2.0
+            }
+            
             return vMin...vMax
         }
     }

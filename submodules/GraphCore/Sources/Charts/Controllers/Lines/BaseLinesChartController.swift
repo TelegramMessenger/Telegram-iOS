@@ -107,6 +107,8 @@ public class BaseLinesChartController: BaseChartController {
                                                color: component.color,
                                                visible: actualChartVisibility[index])
         }
+        let total = actualChartsCollection.chartValues.enumerated().map { $0.element.values[pointIndex] }.reduce(0, +)
+        
         let dateString: String
         if isZoomed {
             dateString = BaseConstants.timeDateFormatter.string(from: closestDate)
@@ -114,7 +116,7 @@ public class BaseLinesChartController: BaseChartController {
             dateString = BaseConstants.headerMediumRangeFormatter.string(from: closestDate)
         }
         let viewModel = ChartDetailsViewModel(title: dateString,
-                                              showArrow: self.isZoomable && !self.isZoomed,
+                                              showArrow: total > 0 && self.isZoomable && !self.isZoomed,
                                               showPrefixes: false,
                                               values: values,
                                               totalValue: nil,
@@ -194,16 +196,20 @@ public class BaseLinesChartController: BaseChartController {
         
         var numberOfOffsetsPerItem = distance / approximateNumberOfChartValues
         var multiplier: CGFloat = 1.0
-        while numberOfOffsetsPerItem > 10 {
-            numberOfOffsetsPerItem /= 10
-            multiplier *= 10
+        if numberOfOffsetsPerItem > 0 {
+            while numberOfOffsetsPerItem > 10 {
+                numberOfOffsetsPerItem /= 10
+                multiplier *= 10
+            }
         }
         var dividor: CGFloat = 1.0
         var maximumNumberOfDecimals = 2
-        while numberOfOffsetsPerItem < 1 {
-            numberOfOffsetsPerItem *= 10
-            dividor *= 10
-            maximumNumberOfDecimals += 1
+        if numberOfOffsetsPerItem > 0 {
+            while numberOfOffsetsPerItem < 1 {
+                numberOfOffsetsPerItem *= 10
+                dividor *= 10
+                maximumNumberOfDecimals += 1
+            }
         }
         
         var base: CGFloat = BaseConstants.verticalBaseAnchors.first { numberOfOffsetsPerItem > $0 } ?? BaseConstants.defaultVerticalBaseAnchor

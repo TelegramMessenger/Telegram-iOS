@@ -256,6 +256,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     var loadStickerSaveStatus: MediaId?
     var loadCopyMediaResource: MediaResource?
     var isAction = false
+    var isDice = false
     if messages.count == 1 {
         for media in messages[0].media {
             if let file = media as? TelegramMediaFile {
@@ -270,6 +271,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if !messages[0].containsSecretMedia {
                     loadCopyMediaResource = largestImageRepresentation(image.representations)?.resource
                 }
+            } else if let _ = media as? TelegramMediaDice {
+                isDice = true
             }
         }
     }
@@ -283,8 +286,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
         canReply = false
         canPin = false
-    }
-    else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
+    } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
             case .peer:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
@@ -411,7 +413,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             resourceAvailable = false
         }
         
-        if !messages[0].text.isEmpty || resourceAvailable {
+        if !messages[0].text.isEmpty || resourceAvailable || isDice {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -423,40 +425,44 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    let copyTextWithEntities = {
-                        var messageEntities: [MessageTextEntity]?
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                messageEntities = attribute.entities
-                                break
+                    if isDice {
+                        UIPasteboard.general.string = "🎲"
+                    } else {
+                        let copyTextWithEntities = {
+                            var messageEntities: [MessageTextEntity]?
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                    messageEntities = attribute.entities
+                                    break
+                                }
                             }
+                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
                         }
-                        storeMessageTextInPasteboard(message.text, entities: messageEntities)
-                    }
-                    if resourceAvailable {
-                        for media in message.media {
-                            if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
-                                let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                    |> take(1)
-                                    |> deliverOnMainQueue).start(next: { data in
-                                        if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                            if let image = UIImage(data: imageData) {
-                                                if !message.text.isEmpty {
-                                                    copyTextWithEntities()
+                        if resourceAvailable {
+                            for media in message.media {
+                                if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+                                    let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
+                                        |> take(1)
+                                        |> deliverOnMainQueue).start(next: { data in
+                                            if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                                if let image = UIImage(data: imageData) {
+                                                    if !message.text.isEmpty {
+                                                        copyTextWithEntities()
+                                                    } else {
+                                                        UIPasteboard.general.image = image
+                                                    }
                                                 } else {
-                                                    UIPasteboard.general.image = image
+                                                    copyTextWithEntities()
                                                 }
                                             } else {
                                                 copyTextWithEntities()
                                             }
-                                        } else {
-                                            copyTextWithEntities()
-                                        }
-                                    })
+                                        })
+                                }
                             }
+                        } else {
+                            copyTextWithEntities()
                         }
-                    } else {
-                        copyTextWithEntities()
                     }
                     f(.default)
                 })))

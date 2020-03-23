@@ -32,7 +32,7 @@ class VerticalScalesRenderer: BaseChartRenderer {
         }
     }
     var horizontalLinesWidth: CGFloat = GView.oneDevicePixel
-    var lavelsAsisOffset: CGFloat = 6
+    var labelsAxisOffset: CGFloat = 6
     var labelsColor: GColor = .black {
         didSet {
             setNeedsDisplay()
@@ -100,6 +100,9 @@ class VerticalScalesRenderer: BaseChartRenderer {
         if generalAlpha == 0 { return }
         let labelColorAlpha = labelsColor.alphaValue
         
+        let spacing: CGFloat = 1.0
+        context.clip(to: CGRect(origin: CGPoint(x: 0.0, y: chartFrame.minY - spacing), size: CGSize(width: chartFrame.width + chartFrame.origin.x * 2.0, height: chartFrame.height + spacing * 2.0)))
+        
         func drawLines(_ labels: [LinesChartLabel], alpha: CGFloat) {
             var lineSegments: [CGPoint] = []
             let x0 = chartFrame.minX
@@ -109,8 +112,10 @@ class VerticalScalesRenderer: BaseChartRenderer {
             
             for lineInfo in labels {
                 let y = transform(toChartCoordinateVertical: lineInfo.value, chartFrame: chartFrame).roundedUpToPixelGrid()
-                lineSegments.append(CGPoint(x: x0, y: y))
-                lineSegments.append(CGPoint(x: x1, y: y))
+                if y < chartFrame.maxY - 2.0 {
+                    lineSegments.append(CGPoint(x: x0, y: y))
+                    lineSegments.append(CGPoint(x: x1, y: y))
+                }
             }
             context.strokeLineSegments(between: lineSegments)
         }
@@ -118,18 +123,14 @@ class VerticalScalesRenderer: BaseChartRenderer {
         func drawVerticalLabels(_ labels: [LinesChartLabel], attributes: [NSAttributedString.Key: Any]) {
             if isRightAligned {
                 for label in labels {
-                    let y = transform(toChartCoordinateVertical: label.value, chartFrame: chartFrame) - labelsFont.pointSize - lavelsAsisOffset
-                    
-                    
-                    
-                    
+                    let y = transform(toChartCoordinateVertical: label.value, chartFrame: chartFrame) - labelsFont.pointSize - labelsAxisOffset
                     let attributedString = NSAttributedString(string: label.text, attributes: attributes)
                     let textNode = LabelNode.layoutText(attributedString, bounds.size)
                     textNode.1.draw(CGRect(origin: CGPoint(x:chartFrame.maxX - textNode.0.size.width, y: y), size: textNode.0.size), in: context, backingScaleFactor: deviceScale)
                 }
             } else {
                 for label in labels {
-                    let y = transform(toChartCoordinateVertical: label.value, chartFrame: chartFrame) - labelsFont.pointSize - lavelsAsisOffset
+                    let y = transform(toChartCoordinateVertical: label.value, chartFrame: chartFrame) - labelsFont.pointSize - labelsAxisOffset
                     let attributedString = NSAttributedString(string: label.text, attributes: attributes)
                     let textNode = LabelNode.layoutText(attributedString, bounds.size)
                     textNode.1.draw(CGRect(origin: CGPoint(x:chartFrame.minX, y: y), size: textNode.0.size), in: context, backingScaleFactor: deviceScale)
@@ -164,5 +165,7 @@ class VerticalScalesRenderer: BaseChartRenderer {
                                attributes: [.foregroundColor: labelsColor.withAlphaComponent(animatedLabesAndLines.alphaAnimator.current * labelColorAlpha * generalAlpha),
                                             .font: labelsFont])
         }
+        
+        context.resetClip()
     }
 }

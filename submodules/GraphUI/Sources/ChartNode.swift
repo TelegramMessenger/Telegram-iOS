@@ -19,10 +19,47 @@ public enum ChartType {
 
 public extension ChartTheme {    
     convenience init(presentationTheme: PresentationTheme) {
-        let tableBackgroundColor = UIColor(rgb: 0xefeff4)
-        let rangeViewTintColor = UIColor(rgb: 0xefeff4)
+        let rangeViewFrameColor = presentationTheme.chart.rangeViewFrameColor
+        let rangeViewMarkerColor = presentationTheme.chart.rangeViewMarkerColor
+        
+        let rangeImage = generateImage(CGSize(width: 114.0, height: 42.0), rotatedContext: { size, context in
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            context.clear(bounds)
             
-        self.init(chartTitleColor: presentationTheme.list.itemPrimaryTextColor, actionButtonColor: presentationTheme.list.itemAccentColor, tableBackgroundColor: tableBackgroundColor, chartBackgroundColor: presentationTheme.list.itemBlocksBackgroundColor, tableSeparatorColor: presentationTheme.list.itemSecondaryTextColor, chartLabelsColor: presentationTheme.list.itemSecondaryTextColor, chartHelperLinesColor: presentationTheme.list.itemSecondaryTextColor, chartStrongLinesColor: presentationTheme.list.itemSecondaryTextColor, barChartStrongLinesColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsTextColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsArrowColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsViewColor: presentationTheme.list.itemSecondaryTextColor, descriptionActionColor: presentationTheme.list.itemSecondaryTextColor,  rangeViewFrameColor: presentationTheme.list.itemSecondaryTextColor, rangeViewTintColor: rangeViewTintColor, rangeViewMarkerColor: UIColor.white)
+            context.setFillColor(rangeViewFrameColor.cgColor)
+            var path = UIBezierPath.init(roundedRect: CGRect(x: 0.0, y: 0.0, width: 11.0, height: 42.0), byRoundingCorners: [.topLeft, .bottomLeft], cornerRadii: CGSize(width: 6.0, height: 6.0))
+            context.addPath(path.cgPath)
+            context.fillPath()
+            
+            path = UIBezierPath.init(roundedRect: CGRect(x: 103.0, y: 0.0, width: 11.0, height: 42.0), byRoundingCorners: [.topRight, .bottomRight], cornerRadii: CGSize(width: 6.0, height: 6.0))
+            context.addPath(path.cgPath)
+            context.fillPath()
+            
+            context.setFillColor(rangeViewFrameColor.cgColor)
+            context.fill(CGRect(x: 7.0, y: 0.0, width: 4.0, height: 1.0))
+            context.fill(CGRect(x: 7.0, y: 41.0, width: 4.0, height: 1.0))
+            
+            context.fill(CGRect(x: 100.0, y: 0.0, width: 4.0, height: 1.0))
+            context.fill(CGRect(x: 100.0, y: 41.0, width: 4.0, height: 1.0))
+            
+            context.fill(CGRect(x: 11.0, y: 0.0, width: 92.0, height: 1.0))
+            context.fill(CGRect(x: 11.0, y: 41.0, width: 92.0, height: 1.0))
+            
+            context.setLineCap(.round)
+            context.setLineWidth(1.5)
+            context.setStrokeColor(rangeViewMarkerColor.cgColor)
+            context.move(to: CGPoint(x: 7.0, y: 17.0))
+            context.addLine(to: CGPoint(x: 4.0, y: 21.0))
+            context.addLine(to: CGPoint(x: 7.0, y: 25.0))
+            context.strokePath()
+            
+            context.move(to: CGPoint(x: 107.0, y: 17.0))
+            context.addLine(to: CGPoint(x: 110.0, y: 21.0))
+            context.addLine(to: CGPoint(x: 107.0, y: 25.0))
+            context.strokePath()
+        })?.resizableImage(withCapInsets: UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0), resizingMode: .stretch)
+        
+        self.init(chartTitleColor: presentationTheme.list.itemPrimaryTextColor, actionButtonColor: presentationTheme.list.itemAccentColor, chartBackgroundColor: presentationTheme.list.itemBlocksBackgroundColor, chartLabelsColor: presentationTheme.chart.labelsColor, chartHelperLinesColor: presentationTheme.chart.helperLinesColor, chartStrongLinesColor: presentationTheme.chart.strongLinesColor, barChartStrongLinesColor: presentationTheme.chart.barStrongLinesColor, chartDetailsTextColor: presentationTheme.chart.detailsTextColor, chartDetailsArrowColor: presentationTheme.chart.detailsArrowColor, chartDetailsViewColor: presentationTheme.chart.detailsViewColor, rangeViewFrameColor: rangeViewFrameColor, rangeViewTintColor: presentationTheme.list.blocksBackgroundColor.withAlphaComponent(0.5), rangeViewMarkerColor: rangeViewMarkerColor, rangeCropImage: rangeImage)
     }
 }
 
@@ -88,7 +125,7 @@ public final class ChartNode: ASDisplayNode {
     }
         
     public func setupTheme(_ theme: ChartTheme) {
-        self.chartView.apply(theme: ChartTheme.defaultDayTheme, animated: false)
+        self.chartView.apply(theme: theme, animated: false)
     }
     
     public func setup(controller: BaseChartController) {

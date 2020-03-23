@@ -51,7 +51,7 @@ class BaseChartRenderer: ChartViewRenderer {
     lazy var horizontalRange = AnimationController<ClosedRange<CGFloat>>(current: 0...1, refreshClosure: refreshClosure)
     lazy var verticalRange = AnimationController<ClosedRange<CGFloat>>(current: 0...1, refreshClosure: refreshClosure)
 
-    func setup(verticalRange: ClosedRange<CGFloat>, animated: Bool, timeFunction: TimeFunction? = nil) {   
+    func setup(verticalRange: ClosedRange<CGFloat>, animated: Bool, timeFunction: TimeFunction? = nil) {        
         guard self.verticalRange.end != verticalRange else {
             self.verticalRange.timeFunction = timeFunction ?? .linear
             return

@@ -312,6 +312,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
         actionSheet: actionSheet,
         contextMenu: theme.contextMenu,
         inAppNotification: theme.inAppNotification,
+        chart: theme.chart,
         preview: theme.preview
     )
 }
@@ -731,13 +732,13 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         sectionSeparatorColor: UIColor(rgb: 0x8a8a8a, alpha: 0.2),
         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
         itemHighlightedBackgroundColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
-        primaryColor: UIColor(rgb: 0x000000, alpha: 1.0),
+        primaryColor: UIColor(rgb: 0x000000),
         secondaryColor: UIColor(rgb: 0x000000, alpha: 0.8),
         destructiveColor: UIColor(rgb: 0xff3b30),
         badgeFillColor: UIColor(rgb: 0x007ee5),
-        badgeForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        badgeForegroundColor: UIColor(rgb: 0xffffff),
         badgeInactiveFillColor: UIColor(rgb: 0xb6b6bb),
-        badgeInactiveForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        badgeInactiveForegroundColor: UIColor(rgb: 0xffffff),
         extractedContentTintColor: .white
     )
     
@@ -755,6 +756,18 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         )
     )
     
+    let chart = PresentationThemeChart(
+        labelsColor: UIColor(rgb: 0x252529, alpha: 0.5),
+        helperLinesColor: UIColor(rgb: 0x182d3b, alpha: 0.3),
+        strongLinesColor: UIColor(rgb: 0x182d3b, alpha: 0.3),
+        barStrongLinesColor: UIColor(rgb: 0x252529, alpha: 0.2),
+        detailsTextColor: UIColor(rgb: 0x6d6d72),
+        detailsArrowColor: UIColor(rgb: 0xc5c7cd),
+        detailsViewColor: UIColor(rgb: 0xf5f5fb),
+        rangeViewFrameColor: UIColor(rgb: 0xcad4de),
+        rangeViewMarkerColor: UIColor(rgb: 0xffffff)
+    )
+    
     return PresentationTheme(
         name: extendingThemeReference?.name ?? .builtin(day ? .day : .dayClassic),
         index: extendingThemeReference?.index ?? PresentationThemeReference.builtin(day ? .day : .dayClassic).index,
@@ -769,6 +782,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         actionSheet: actionSheet,
         contextMenu: contextMenu,
         inAppNotification: inAppNotification,
+        chart: chart,
         preview: preview
     )
 }

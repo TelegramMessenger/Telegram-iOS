@@ -197,9 +197,7 @@ class BarChartRenderer: BaseChartRenderer {
                         leftX = rightX
                         barIndex += 1
                     }
-                    
-                    let colorOffset = Double((1.0 - (1.0 - generalUnselectedAlpha) * selectedIndexAnimator.current) * chartsAlpha)
-                    
+                                        
                     for (index, component) in bars.components.enumerated().reversed() {
                         if maxValues[index] < optimizationLevel {
                             continue
@@ -209,7 +207,7 @@ class BarChartRenderer: BaseChartRenderer {
                         context.setLineWidth(self.lineWidth)
                         context.setStrokeColor(GColor.valueBetween(start: backgroundColorAnimator.current.color,
                                                                  end: component.color,
-                                                                 offset: colorOffset).cgColor)
+                                                                 offset: 1.0).cgColor)
                         context.beginPath()
                         context.addLines(between: backgroundPaths[index])
                         context.strokePath()

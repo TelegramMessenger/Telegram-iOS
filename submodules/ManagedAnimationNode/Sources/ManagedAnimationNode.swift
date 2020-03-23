@@ -113,11 +113,13 @@ public struct ManagedAnimationItem: Equatable {
     public let source: ManagedAnimationSource
     var frames: ManagedAnimationFrameRange
     var duration: Double
+    var loop: Bool
     
-    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange, duration: Double) {
+    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange, duration: Double, loop: Bool = false) {
         self.source = source
         self.frames = frames
         self.duration = duration
+        self.loop = loop
     }
 }
 
