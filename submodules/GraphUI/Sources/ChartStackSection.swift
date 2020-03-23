@@ -152,12 +152,12 @@ class ChartStackSection: UIView, ChartThemeContainer {
         let bounds = self.bounds
         self.titleLabel.frame = CGRect(origin: CGPoint(x: backButton.alpha > 0.0 ? 36.0 : 0.0, y: 5.0), size: CGSize(width: bounds.width, height: 28.0))
         self.sectionContainerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 750.0))
-        self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 250.0))
+        self.chartView.frame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: 310.0))
         
         self.rangeView.isHidden = !self.displayRange
         
-        self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 250.0), size: CGSize(width: bounds.width, height: 42.0))
-        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.displayRange ? 308.0 : 266.0), size: CGSize(width: bounds.width, height: 350.0))
+        self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 310.0), size: CGSize(width: bounds.width, height: 42.0))
+        self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.displayRange ? 368.0 : 326.0), size: CGSize(width: bounds.width, height: 350.0))
         self.backButton.frame = CGRect(x: 0.0, y: 0.0, width: 96.0, height: 38.0)
         
         self.chartView.setNeedsDisplay()

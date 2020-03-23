@@ -16,7 +16,7 @@ import UIKit
 
 enum BaseConstants {
     static let defaultRange: ClosedRange<CGFloat> = 0...1
-    static let minimumAxisYLabelsDistance: CGFloat = 90
+    static let minimumAxisYLabelsDistance: CGFloat = 85
     static let monthDayDateFormatter = DateFormatter.utc(format: "MMM d")
     static let timeDateFormatter = DateFormatter.utc(format: "HH:mm")
     static let headerFullRangeFormatter: DateFormatter = {

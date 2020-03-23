@@ -156,7 +156,6 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         super.chartInteractionDidBegin(point: point)
         
         for graphController in graphControllers {
-            
             var bullets: [LineBulletsRenderer.Bullet] = []
             if let component = graphController.chartBars.components.first {
                 let location = graphController.chartBars.locations[minIndex]
