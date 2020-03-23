@@ -18,7 +18,7 @@ private class LeftAlignedIconButton: UIButton {
         let titleRect = super.titleRect(forContentRect: contentRect)
         let imageSize = currentImage?.size ?? .zero
         let availableWidth = contentRect.width - imageEdgeInsets.right - imageSize.width - titleRect.width
-        return titleRect.offsetBy(dx: round(availableWidth / 2), dy: 0)
+        return titleRect.offsetBy(dx: round(availableWidth / 2) - imageEdgeInsets.left, dy: 0)
     }
 }
 
@@ -63,7 +63,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
         backButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         backButton.setTitleColor(UIColor(rgb: 0x007ee5), for: .normal)
         backButton.setImage(UIImage(bundleImageName: "Chart/arrow_left"), for: .normal)
-        backButton.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 3.0)
+        backButton.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 3.0)
         backButton.imageView?.tintColor = UIColor(rgb: 0x007ee5)
         
         backButton.setVisible(false, animated: false)
@@ -93,6 +93,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
             
             self.backButton.tintColor = theme.actionButtonColor
             self.backButton.setTitleColor(theme.actionButtonColor, for: .normal)
+            self.backButton.imageView?.tintColor = theme.actionButtonColor
         }
         
         if rangeView.isVisibleInWindow || chartView.isVisibleInWindow {

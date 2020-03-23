@@ -39,11 +39,11 @@ public extension ChartTheme {
             context.fill(CGRect(x: 7.0, y: 0.0, width: 4.0, height: 1.0))
             context.fill(CGRect(x: 7.0, y: 41.0, width: 4.0, height: 1.0))
             
-            context.fill(CGRect(x: 107.0, y: 0.0, width: 4.0, height: 1.0))
-            context.fill(CGRect(x: 107.0, y: 41.0, width: 4.0, height: 1.0))
+            context.fill(CGRect(x: 100.0, y: 0.0, width: 4.0, height: 1.0))
+            context.fill(CGRect(x: 100.0, y: 41.0, width: 4.0, height: 1.0))
             
-            context.fill(CGRect(x: 11.0, y: 0.0, width: 81.0, height: 1.0))
-            context.fill(CGRect(x: 11.0, y: 41.0, width: 81.0, height: 1.0))
+            context.fill(CGRect(x: 11.0, y: 0.0, width: 92.0, height: 1.0))
+            context.fill(CGRect(x: 11.0, y: 41.0, width: 92.0, height: 1.0))
             
             context.setLineCap(.round)
             context.setLineWidth(1.5)
