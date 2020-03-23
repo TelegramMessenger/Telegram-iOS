@@ -138,7 +138,7 @@ class PieChartRenderer: BaseChartRenderer {
         let maximumFontSize: CGFloat = radius / 7
         let minimumFontSize: CGFloat = 4
         let centerOffsetStartAngle = CGFloat.pi / 4
-        let minimumValueToDraw: CGFloat = 1.01
+        let minimumValueToDraw: CGFloat = 0.015
         let diagramRadius = radius - animationSelectionOffset
 
         let numberOfVisibleItems = currentlyVisibleData.filter { $0.value > 0 }.count

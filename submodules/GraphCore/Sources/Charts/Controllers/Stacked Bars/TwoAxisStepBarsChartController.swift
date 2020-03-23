@@ -164,7 +164,7 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         super.chartInteractionDidBegin(point: point)
         
         var barOffset: CGFloat = 0.0
-        for graphController in graphControllers {
+        for (index, graphController) in graphControllers.enumerated() {
             var bullets: [LineBulletsRenderer.Bullet] = []
             if let component = graphController.chartBars.components.first {
                 let location = graphController.chartBars.locations[minIndex]
@@ -175,8 +175,10 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
                 
                 bullets.append(LineBulletsRenderer.Bullet(coordinate: CGPoint(x: location, y: value), offset: CGPoint(x: offset, y: 0.0), color: component.color))
             }
+            let isVisible = chartVisibility[index]
             graphController.lineBulletsRenderer.bullets = bullets
             graphController.lineBulletsRenderer.isEnabled = true
+            graphController.lineBulletsRenderer.setLineVisible(isVisible, at: 0, animated: false)
         }
         
         let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
