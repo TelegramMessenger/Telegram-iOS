@@ -101,6 +101,10 @@ class VerticalScalesRenderer: BaseChartRenderer {
         let labelColorAlpha = labelsColor.alphaValue
         
         func drawLines(_ labels: [LinesChartLabel], alpha: CGFloat) {
+            var labels = labels
+            if labels.count > 1 {
+                labels.removeFirst()
+            }
             var lineSegments: [CGPoint] = []
             let x0 = chartFrame.minX
             let x1 = chartFrame.maxX

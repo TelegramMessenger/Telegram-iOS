@@ -424,8 +424,8 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     
     chart = chart.withUpdated(
         labelsColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.6),
-        helperLinesColor: accentColor?.withMultiplied(hue: 1.037, saturation: 0.271, brightness: 0.671).withAlphaComponent(0.2),
-        strongLinesColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.6),
+        helperLinesColor: accentColor?.withMultiplied(hue: 1.037, saturation: 0.271, brightness: 0.671).withAlphaComponent(0.35),
+        strongLinesColor: accentColor?.withMultiplied(hue: 1.037, saturation: 0.271, brightness: 0.671).withAlphaComponent(0.35),
         barStrongLinesColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.45),
         detailsArrowColor: accentColor?.withMultiplied(hue: 1.051, saturation: 0.254, brightness: 0.376),
         detailsViewColor: accentColor?.withMultiplied(hue: 1.035, saturation: 0.571, brightness: 0.184),
@@ -804,8 +804,8 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         
     let chart = PresentationThemeChart(
         labelsColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
-        helperLinesColor: UIColor(rgb: 0x8596ab, alpha: 0.2),
-        strongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
+        helperLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.35),
+        strongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.35),
         barStrongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.45),
         detailsTextColor: UIColor(rgb: 0xffffff),
         detailsArrowColor: UIColor(rgb: 0x4c5460),

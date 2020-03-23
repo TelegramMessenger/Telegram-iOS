@@ -59,7 +59,8 @@ class LinesChartRenderer: BaseChartRenderer {
         if chartsAlpha == 0 { return }
         let range = renderRange(bounds: bounds, chartFrame: chartFrame)
         
-        context.clip(to: CGRect(origin: CGPoint(x: 0.0, y: chartFrame.minY), size: CGSize(width: chartFrame.width + chartFrame.origin.x * 2.0, height: chartFrame.height)))
+        let spacing: CGFloat = 1.0
+        context.clip(to: CGRect(origin: CGPoint(x: 0.0, y: chartFrame.minY - spacing), size: CGSize(width: chartFrame.width + chartFrame.origin.x * 2.0, height: chartFrame.height + spacing * 2.0)))
         
         for (index, toLine) in toLines.enumerated() {
             let alpha = linesAlphaAnimators[index].current * chartsAlpha

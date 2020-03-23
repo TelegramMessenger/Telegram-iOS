@@ -758,8 +758,8 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     
     let chart = PresentationThemeChart(
         labelsColor: UIColor(rgb: 0x252529, alpha: 0.5),
-        helperLinesColor: UIColor(rgb: 0x182d3b, alpha: 0.1),
-        strongLinesColor: UIColor(rgb: 0x182d3b, alpha: 0.35),
+        helperLinesColor: UIColor(rgb: 0x182d3b, alpha: 0.3),
+        strongLinesColor: UIColor(rgb: 0x182d3b, alpha: 0.3),
         barStrongLinesColor: UIColor(rgb: 0x252529, alpha: 0.2),
         detailsTextColor: UIColor(rgb: 0x6d6d72),
         detailsArrowColor: UIColor(rgb: 0xc5c7cd),
