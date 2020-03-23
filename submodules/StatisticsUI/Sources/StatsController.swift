@@ -269,7 +269,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     return false
                 }
             case let .post(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsMessage, lhsInteractions):
-                if case let .post(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessage, rhsInteractions) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsInteractions == rhsInteractions {
+                if case let .post(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessage, rhsInteractions) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsMessage.id == rhsMessage.id, lhsInteractions == rhsInteractions {
                     return true
                 } else {
                     return false
@@ -420,8 +420,6 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
 }
 
 public func channelStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
-    var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var navigateToMessageImpl: ((MessageId) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -505,16 +503,6 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     let controller = ItemListController(context: context, state: signal)
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
-    }
-    pushControllerImpl = { [weak controller] c in
-        if let controller = controller {
-            (controller.navigationController as? NavigationController)?.pushViewController(c, animated: true)
-        }
-    }
-    presentControllerImpl = { [weak controller] c, a in
-        if let controller = controller {
-            controller.present(c, in: .window(.root), with: a)
-        }
     }
     navigateToMessageImpl = { [weak controller] messageId in
         if let navigationController = controller?.navigationController as? NavigationController {

@@ -87,7 +87,7 @@ class BarsComponentController: GeneralChartComponentController {
         super.willAppear(animated: animated)
         
         updatePreviewRangeClosure?(currentChartHorizontalRangeFraction, animated)
-        setConponentsVisible(visible: true, animated: animated)
+        setComponentsVisible(visible: true, animated: animated)
         updateHorizontalLimitLabels(animated: animated, forceUpdate: true)
     }
     
@@ -111,10 +111,10 @@ class BarsComponentController: GeneralChartComponentController {
     
     func prepareAppearanceAnimation(horizontalRnage: ClosedRange<CGFloat>) {
         setupMainChart(horizontalRange: horizontalRnage, animated: false)
-        setConponentsVisible(visible: false, animated: false)
+        setComponentsVisible(visible: false, animated: false)
     }
     
-    func setConponentsVisible(visible: Bool, animated: Bool) {
+    func setComponentsVisible(visible: Bool, animated: Bool) {
         mainBarsRenderer.setVisible(visible, animated: animated)
         horizontalScalesRenderer.setVisible(visible, animated: animated)
         verticalScalesRenderer.setVisible(visible, animated: animated)
@@ -183,6 +183,9 @@ class BarsComponentController: GeneralChartComponentController {
         var viewModel = super.chartDetailsViewModel(closestDate: closestDate, pointIndex: pointIndex)
         let visibleChartValues = self.visibleChartValues
         let totalSumm: CGFloat = visibleChartValues.map { CGFloat($0.values[pointIndex]) }.reduce(0, +)
+        viewModel.hideAction = { [weak self] in
+            self?.hideDetailsView(animated: true)
+        }
         if !self.step {
             viewModel.totalValue = ChartDetailsViewModel.Value(prefix: nil,
                                                                title: "Total",

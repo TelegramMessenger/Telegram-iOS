@@ -110,7 +110,7 @@ class StatsGraphItemNode: ListViewItemNode {
         super.didLoad()
     
         self.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
-            return point.x > 30.0 || (point.y > 250.0 && point.y < 295.0)
+            return point.x > 30.0 || (point.y > 310.0 && point.y < 355.0)
         }
     }
     
@@ -150,12 +150,12 @@ class StatsGraphItemNode: ListViewItemNode {
                 case .plain:
                     itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 301.0)
+                    contentSize = CGSize(width: params.width, height: 361.0)
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: 301.0)
+                    contentSize = CGSize(width: params.width, height: 361.0)
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
                 

@@ -500,6 +500,11 @@ extension LinesChartRenderer.LineData {
                     }
                 }
             }
+            
+            if vMin == vMax {
+                return 0...vMax * 2.0
+            }
+            
             return vMin...vMax
         } else {
             guard let firstPoint = lines.first?.points.first else { return nil }
@@ -511,6 +516,11 @@ extension LinesChartRenderer.LineData {
                     vMax = max(vMax, point.y)
                 }
             }
+            
+            if vMin == vMax {
+                return 0...vMax * 2.0
+            }
+            
             return vMin...vMax
         }
     }
