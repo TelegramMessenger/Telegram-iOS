@@ -26,7 +26,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     var actionSheet = theme.actionSheet
     var contextMenu = theme.contextMenu
     var inAppNotification = theme.inAppNotification
-    
+    var chart = theme.chart
     
     var mainBackgroundColor: UIColor?
     var mainSelectionColor: UIColor?
@@ -234,7 +234,6 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     
     var outgoingBubbleFillColor: UIColor?
     var outgoingBubbleFillGradientColor: UIColor?
-    var outgoingBubbleHighlightedFillColor: UIColor?
     var outgoingPrimaryTextColor: UIColor?
     var outgoingSecondaryTextColor: UIColor?
     var outgoingLinkTextColor: UIColor?
@@ -423,6 +422,16 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         )
     )
     
+    chart = chart.withUpdated(
+        labelsColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.6),
+        helperLinesColor: accentColor?.withMultiplied(hue: 1.037, saturation: 0.271, brightness: 0.671).withAlphaComponent(0.2),
+        strongLinesColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.6),
+        barStrongLinesColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.45),
+        detailsArrowColor: accentColor?.withMultiplied(hue: 1.051, saturation: 0.254, brightness: 0.376),
+        detailsViewColor: accentColor?.withMultiplied(hue: 1.035, saturation: 0.571, brightness: 0.184),
+        rangeViewFrameColor: accentColor?.withMultiplied(hue: 1.030, saturation: 0.494, brightness: 0.349)
+    )
+    
     return PresentationTheme(
         name: title.flatMap { .custom($0) } ?? theme.name,
         index: theme.index,
@@ -437,6 +446,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         actionSheet: actionSheet,
         contextMenu: contextMenu,
         inAppNotification: inAppNotification,
+        chart: chart,
         preview: theme.preview
     )
 }
@@ -463,7 +473,6 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     
     let outgoingBubbleFillGradientColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
     let outgoingBubbleFillColor = outgoingBubbleFillGradientColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98)
-    let outgoingBubbleHighlightedFillColor: UIColor
     let outgoingScamColor = UIColor(rgb: 0xffffff)
     let outgoingPrimaryTextColor = UIColor(rgb: 0xffffff)
     let outgoingSecondaryTextColor = UIColor(rgb: 0xffffff, alpha: 0.5)
@@ -792,6 +801,18 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
             )
         )
     )
+        
+    let chart = PresentationThemeChart(
+        labelsColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
+        helperLinesColor: UIColor(rgb: 0x8596ab, alpha: 0.2),
+        strongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
+        barStrongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.45),
+        detailsTextColor: UIColor(rgb: 0xffffff),
+        detailsArrowColor: UIColor(rgb: 0x4c5460),
+        detailsViewColor: UIColor(rgb: 0x19232f),
+        rangeViewFrameColor: UIColor(rgb: 0x354659),
+        rangeViewMarkerColor: UIColor(rgb: 0xffffff)
+    )
 
     return PresentationTheme(
         name: extendingThemeReference?.name ?? .builtin(.nightAccent),
@@ -807,6 +828,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         actionSheet: actionSheet,
         contextMenu: contextMenu,
         inAppNotification: inAppNotification,
+        chart: chart,
         preview: preview
     )
 }

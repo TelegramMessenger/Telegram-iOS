@@ -19,10 +19,7 @@ public enum ChartType {
 
 public extension ChartTheme {    
     convenience init(presentationTheme: PresentationTheme) {
-        let tableBackgroundColor = UIColor(rgb: 0xefeff4)
-        let rangeViewTintColor = UIColor(rgb: 0xefeff4)
-            
-        self.init(chartTitleColor: presentationTheme.list.itemPrimaryTextColor, actionButtonColor: presentationTheme.list.itemAccentColor, tableBackgroundColor: tableBackgroundColor, chartBackgroundColor: presentationTheme.list.itemBlocksBackgroundColor, tableSeparatorColor: presentationTheme.list.itemSecondaryTextColor, chartLabelsColor: presentationTheme.list.itemSecondaryTextColor, chartHelperLinesColor: presentationTheme.list.itemSecondaryTextColor, chartStrongLinesColor: presentationTheme.list.itemSecondaryTextColor, barChartStrongLinesColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsTextColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsArrowColor: presentationTheme.list.itemSecondaryTextColor, chartDetailsViewColor: presentationTheme.list.itemSecondaryTextColor, descriptionActionColor: presentationTheme.list.itemSecondaryTextColor,  rangeViewFrameColor: presentationTheme.list.itemSecondaryTextColor, rangeViewTintColor: rangeViewTintColor, rangeViewMarkerColor: UIColor.white)
+        self.init(chartTitleColor: presentationTheme.list.itemPrimaryTextColor, actionButtonColor: presentationTheme.list.itemAccentColor, chartBackgroundColor: presentationTheme.list.itemBlocksBackgroundColor, chartLabelsColor: presentationTheme.chart.labelsColor, chartHelperLinesColor: presentationTheme.chart.helperLinesColor, chartStrongLinesColor: presentationTheme.chart.strongLinesColor, barChartStrongLinesColor: presentationTheme.chart.barStrongLinesColor, chartDetailsTextColor: presentationTheme.chart.detailsTextColor, chartDetailsArrowColor: presentationTheme.chart.detailsArrowColor, chartDetailsViewColor: presentationTheme.chart.detailsViewColor, rangeViewFrameColor: presentationTheme.chart.rangeViewFrameColor, rangeViewTintColor: presentationTheme.list.blocksBackgroundColor.withAlphaComponent(0.5), rangeViewMarkerColor: presentationTheme.chart.rangeViewMarkerColor)
     }
 }
 
@@ -88,7 +85,7 @@ public final class ChartNode: ASDisplayNode {
     }
         
     public func setupTheme(_ theme: ChartTheme) {
-        self.chartView.apply(theme: ChartTheme.defaultDayTheme, animated: false)
+        self.chartView.apply(theme: theme, animated: false)
     }
     
     public func setup(controller: BaseChartController) {

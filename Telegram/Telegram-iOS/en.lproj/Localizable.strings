@@ -5474,3 +5474,5 @@ Any member of this group will be able to see messages in the channel.";
 "SetupUsername.ChangeLinkWarningGroup" = "Warning, if you change the short link to your group, it will loose its verified status. You will need to send a new application to @verification_bot";
 
 "MuteFor.Forever" = "Mute Forever";
+
+"Conversation.Dice" = "Send a 🎲 emoji to any chat to get a random number from Telegram.";

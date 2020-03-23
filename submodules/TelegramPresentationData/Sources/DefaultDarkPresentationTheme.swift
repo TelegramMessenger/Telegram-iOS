@@ -224,6 +224,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         actionSheet: actionSheet,
         contextMenu: theme.contextMenu,
         inAppNotification: theme.inAppNotification,
+        chart: theme.chart,
         preview: theme.preview
     )
 }
@@ -543,6 +544,17 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
             )
         )
     )
+    let chart = PresentationThemeChart(
+        labelsColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
+        helperLinesColor: UIColor(rgb: 0x8596ab, alpha: 0.2),
+        strongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.6),
+        barStrongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.45),
+        detailsTextColor: UIColor(rgb: 0xffffff),
+        detailsArrowColor: UIColor(rgb: 0x4c5460),
+        detailsViewColor: UIColor(rgb: 0x19232f),
+        rangeViewFrameColor: UIColor(rgb: 0x354659),
+        rangeViewMarkerColor: UIColor(rgb: 0xffffff)
+    )
 
     return PresentationTheme(
         name: extendingThemeReference?.name ?? .builtin(.night),
@@ -558,6 +570,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         actionSheet: actionSheet,
         contextMenu: contextMenu,
         inAppNotification: inAppNotification,
+        chart: chart,
         preview: preview
     )
 }

@@ -73,7 +73,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case let .value(currentValue):
                     switch diceState {
                         case .rolling:
-                            self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                            self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3, loop: true))
                         case let .value(value):
                             break
                     }
@@ -107,7 +107,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                         }
                     }))
                 case .rolling:
-                    self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                    self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3, loop: true))
             }
         }
     }

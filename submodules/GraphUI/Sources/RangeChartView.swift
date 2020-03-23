@@ -311,7 +311,7 @@ private extension RangeChartView {
 
 extension RangeChartView: ChartThemeContainer {
     func apply(theme: ChartTheme, animated: Bool) {
-        let colusre = {
+        let closure = {
             self.lowerBoundTintView.backgroundColor = theme.rangeViewTintColor
             self.upperBoundTintView.backgroundColor = theme.rangeViewTintColor
         }
@@ -321,9 +321,9 @@ extension RangeChartView: ChartThemeContainer {
         self.cropFrameView.setImage(image, animated: animated)
         
         if animated {
-            UIView.animate(withDuration: .defaultDuration, animations: colusre)
+            UIView.animate(withDuration: .defaultDuration, animations: closure)
         } else {
-            colusre()
+            closure()
         }
     }
 }

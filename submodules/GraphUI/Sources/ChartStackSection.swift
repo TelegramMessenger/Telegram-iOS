@@ -27,7 +27,6 @@ class ChartStackSection: UIView, ChartThemeContainer {
     var rangeView: RangeChartView
     var visibilityView: ChartVisibilityView
     var sectionContainerView: UIView
-    var separators: [UIView] = []
     
     var titleLabel: UILabel!
     var backButton: UIButton!
@@ -87,19 +86,13 @@ class ChartStackSection: UIView, ChartThemeContainer {
     func apply(theme: ChartTheme, animated: Bool) {
         self.theme = theme
         
-        UIView.perform(animated: animated && self.isVisibleInWindow) {
-            self.backgroundColor = theme.tableBackgroundColor
-            
+        UIView.perform(animated: animated && self.isVisibleInWindow) {            
             self.sectionContainerView.backgroundColor = theme.chartBackgroundColor
             self.rangeView.backgroundColor = theme.chartBackgroundColor
             self.visibilityView.backgroundColor = theme.chartBackgroundColor
             
             self.backButton.tintColor = theme.actionButtonColor
             self.backButton.setTitleColor(theme.actionButtonColor, for: .normal)
-            
-            for separator in self.separators {
-                separator.backgroundColor = theme.tableSeparatorColor
-            }
         }
         
         if rangeView.isVisibleInWindow || chartView.isVisibleInWindow {

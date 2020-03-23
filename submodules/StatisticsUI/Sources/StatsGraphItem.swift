@@ -260,7 +260,7 @@ class StatsGraphItemNode: ListViewItemNode {
                     }
                     
                     if let updatedGraph = updatedGraph {
-                        if case let .Loaded(_, data) = updatedGraph, let updatedController = updatedController {
+                        if case .Loaded = updatedGraph, let updatedController = updatedController {
                             strongSelf.chartNode.setup(controller: updatedController)
                             strongSelf.activityIndicator.isHidden = true
                             strongSelf.chartNode.isHidden = false

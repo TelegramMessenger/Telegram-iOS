@@ -148,8 +148,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func setupNode(item: ChatMessageItem) {
-        var isDice = false
-        
         if let telegramDice = self.telegramDice, let diceEmojis = item.associatedData.animatedEmojiStickers["🎲"] {
             let animationNode = ManagedDiceAnimationNode(context: item.context, emojis: diceEmojis.map { $0.file })
             self.animationNode = animationNode
@@ -836,13 +834,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             if let item = self.item, self.imageNode.frame.contains(location) {
-                if self.telegramFile != nil {
+                if let _ = self.telegramFile {
                     let _ = item.controllerInteraction.openMessage(item.message, .default)
+                } else if let _ = self.telegramDice {
+                    item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_Dice, self, self.imageNode.frame)
                 } else if let _ = self.emojiFile {
-                    let (emoji, fitz) = item.message.text.basicEmoji
-                    if emoji == "🎲" {
-                        
-                    } else if let animationNode = self.animationNode as? AnimatedStickerNode {
+                    if let animationNode = self.animationNode as? AnimatedStickerNode {
                         var startTime: Signal<Double, NoError>
                         if animationNode.playIfNeeded() {
                             startTime = .single(0.0)
