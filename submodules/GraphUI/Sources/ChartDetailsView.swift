@@ -13,9 +13,10 @@ import AppBundle
 private let cornerRadius: CGFloat = 5
 private let verticalMargins: CGFloat = 8
 private var labelHeight: CGFloat = 18
+private var labelSpacing: CGFloat = 2
 private var margin: CGFloat = 10
 private var prefixLabelWidth: CGFloat = 29
-private var textLabelWidth: CGFloat = 96
+private var textLabelWidth: CGFloat = 110
 private var valueLabelWidth: CGFloat = 65
 
 class ChartDetailsView: UIControl {
@@ -29,6 +30,7 @@ class ChartDetailsView: UIControl {
     var valuesViews: [UILabel] = []
 
     private var viewModel: ChartDetailsViewModel?
+    private var textHeight: CGFloat?
     private var theme: ChartTheme = ChartTheme.defaultDayTheme
         
     override init(frame: CGRect) {
@@ -84,6 +86,7 @@ class ChartDetailsView: UIControl {
                        count: labelsCount,
                        font: UIFont.systemFont(ofSize: 12, weight: .bold))
         
+        var textHeight: CGFloat = 0.0
         UIView.perform(animated: animated, animations: {
             for (index, value) in viewModel.values.enumerated() {
                 var x: CGFloat = margin
@@ -98,7 +101,9 @@ class ChartDetailsView: UIControl {
                 let titleLabel = self.labelsViews[index]
                 titleLabel.setTextColor(self.theme.chartDetailsTextColor, animated: false)
                 titleLabel.setText(value.title, animated: false)
-                titleLabel.frame = CGRect(x: x, y: y, width: textLabelWidth, height: labelHeight)
+                var titleSize = titleLabel.sizeThatFits(CGSize(width: textLabelWidth, height: CGFloat.greatestFiniteMagnitude))
+                titleSize.height = ceil(titleSize.height)
+                titleLabel.frame = CGRect(x: x, y: y + labelSpacing, width: titleSize.width, height: titleSize.height)
                 titleLabel.alpha = value.visible ? 1 : 0
                 x += textLabelWidth
                 
@@ -109,7 +114,8 @@ class ChartDetailsView: UIControl {
                 valueLabel.alpha = value.visible ? 1 : 0
                 
                 if value.visible {
-                    y += labelHeight
+                    y += titleSize.height + labelSpacing * 2.0
+                    textHeight += titleSize.height + labelSpacing * 2.0
                 }
             }
             if let value = viewModel.totalValue {
@@ -136,14 +142,20 @@ class ChartDetailsView: UIControl {
                 valueLabel.alpha = value.visible ? 1 : 0
             }
         })
+        self.textHeight = textHeight
     }
     
     override var intrinsicContentSize: CGSize {
         if let viewModel = viewModel {
-            let height = ((!viewModel.title.isEmpty || viewModel.showArrow) ? labelHeight : 0) +
-                (CGFloat(viewModel.values.filter({ $0.visible }).count) * labelHeight) +
+            var height = ((!viewModel.title.isEmpty || viewModel.showArrow) ? labelHeight : 0) +
+//                (CGFloat(viewModel.values.filter({ $0.visible }).count) * labelHeight) +
                 (viewModel.totalValue?.visible == true ? labelHeight : 0) +
                 verticalMargins * 2
+            
+            if let textHeight = textHeight {
+                height += textHeight
+            }
+            
             let width: CGFloat = margin * 2 +
                 (viewModel.showPrefixes ? (prefixLabelWidth + margin) : 0) +
                 textLabelWidth +
@@ -175,6 +187,8 @@ class ChartDetailsView: UIControl {
         }
         while array.count < count {
             let label = UILabel()
+            label.numberOfLines = 2
+            label.lineBreakMode = .byWordWrapping
             label.font = font
             label.textAlignment = textAlignment
             addSubview(label)
@@ -194,54 +208,5 @@ extension ChartDetailsView: ChartThemeContainer {
             self.arrowView.tintColor = theme.chartDetailsArrowColor
             self.backgroundColor = theme.chartDetailsViewColor
         }
-    }
-}
-
-// MARK: UIStackView+removeAllArrangedSubviews
-public extension UIStackView {
-    func setLabelsCount(_ count: Int,
-                        font: UIFont,
-                        huggingPriority: UILayoutPriority,
-                        textAlignment: NSTextAlignment = .right) {
-        while arrangedSubviews.count > count {
-            let subview = arrangedSubviews.last!
-            removeArrangedSubview(subview)
-            subview.removeFromSuperview()
-        }
-        while arrangedSubviews.count < count {
-            let label = UILabel()
-            label.font = font
-            label.textAlignment = textAlignment
-            label.setContentHuggingPriority(huggingPriority, for: .horizontal)
-            label.setContentHuggingPriority(huggingPriority, for: .vertical)
-            label.setContentCompressionResistancePriority(UILayoutPriority(rawValue: 999), for: .horizontal)
-            label.setContentCompressionResistancePriority(UILayoutPriority(rawValue: 999), for: .vertical)
-            addArrangedSubview(label)
-        }
-    }
-    
-    func label(at index: Int) -> UILabel {
-        return arrangedSubviews[index] as! UILabel
-    }
-    
-    func removeAllArrangedSubviews() {
-        for subview in arrangedSubviews {
-            removeArrangedSubview(subview)
-            subview.removeFromSuperview()
-        }
-    }
-}
-
-// MARK: UIStackView+addArrangedSubviews
-public extension UIStackView {
-    func addArrangedSubviews(_ views: [UIView]) {
-        views.forEach({ addArrangedSubview($0) })
-    }
-}
-
-// MARK: UIStackView+insertArrangedSubviews
-public extension UIStackView {
-    func insertArrangedSubviews(_ views: [UIView], at index: Int) {
-        views.reversed().forEach({ insertArrangedSubview($0, at: index) })
     }
 }
