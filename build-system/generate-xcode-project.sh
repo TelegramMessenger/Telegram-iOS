@@ -2,6 +2,12 @@
 
 set -e
 
+APP_TARGET="$1"
+if [ "$APP_TARGET" == "" ]; then
+	echo "Usage: sh generate-xcode-project.sh app_target"
+	exit 1
+fi
+
 BAZEL="$(which bazel)"
 if [ "$BAZEL" = "" ]; then
 	echo "bazel not found in PATH"
@@ -73,23 +79,23 @@ fi
 
 "$TULSI" -- \
 	--verbose \
-	--create-tulsiproj Telegram \
+	--create-tulsiproj "$APP_TARGET" \
 	--workspaceroot ./ \
 	--bazel "$BAZEL" \
 	--outputfolder "$GEN_DIRECTORY" \
-	--target Telegram:Telegram \
-	--target Telegram:Main \
-	--target Telegram:Lib \
+	--target "$APP_TARGET":"$APP_TARGET" \
+	--target "$APP_TARGET":Main \
+	--target "$APP_TARGET":Lib \
 
 PATCH_OPTIONS="BazelBuildOptionsDebug BazelBuildOptionsRelease"
 for NAME in $PATCH_OPTIONS; do
-	sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("'"$NAME"'" : {\n[ ]*"p" : "$(inherited)\)/\1'" ${BAZEL_OPTIONS[*]}"'/' "$GEN_DIRECTORY/Telegram.tulsiproj/Configs/Telegram.tulsigen"
+	sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("'"$NAME"'" : {\n[ ]*"p" : "$(inherited)\)/\1'" ${BAZEL_OPTIONS[*]}"'/' "$GEN_DIRECTORY/$APP_TARGET.tulsiproj/Configs/$APP_TARGET.tulsigen"
 done
 
-sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"Telegram\/...", "submodules\/..."/' "$GEN_DIRECTORY/Telegram.tulsiproj/Configs/Telegram.tulsigen"
+sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"$APP_TARGET\/...", "submodules\/..."/' "$GEN_DIRECTORY/$APP_TARGET.tulsiproj/Configs/$APP_TARGET.tulsigen"
 
 "$TULSI" -- \
 	--verbose \
-	--genconfig "$GEN_DIRECTORY/Telegram.tulsiproj:Telegram" \
+	--genconfig "$GEN_DIRECTORY/$APP_TARGET.tulsiproj:$APP_TARGET" \
 	--bazel "$BAZEL" \
 	--outputfolder "$GEN_DIRECTORY" \
