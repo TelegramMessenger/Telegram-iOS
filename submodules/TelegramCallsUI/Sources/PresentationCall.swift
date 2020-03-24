@@ -418,9 +418,9 @@ public final class PresentationCallImpl: PresentationCall {
                                 if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
                                     Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
                                     Queue.mainQueue().async {
-                                        if let strongSelf = self {
+                                        /*if let strongSelf = self {
                                             strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .busy, debugLog: .single(nil))
-                                        }
+                                        }*/
                                     }
                                 } else {
                                     Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
