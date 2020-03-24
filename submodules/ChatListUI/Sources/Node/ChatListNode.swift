@@ -250,7 +250,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var status: ContactsPeerItemStatus = .none
                         if isSelecting, let itemPeer = itemPeer {
-                            status = .custom(statusStringForPeerType(strings: presentationData.strings, peer: itemPeer, isContact: isContact))
+                            if let string = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isContact: isContact) {
+                                status = .custom(string)
+                            } else {
+                                status = .none
+                            }
                         }
 
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
@@ -313,7 +317,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var status: ContactsPeerItemStatus = .none
                         if isSelecting, let itemPeer = itemPeer {
-                            status = .custom(statusStringForPeerType(strings: presentationData.strings, peer: itemPeer, isContact: isContact))
+                            if let string = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isContact: isContact) {
+                                status = .custom(string)
+                            } else {
+                                status = .none
+                            }
                         }
                         
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
@@ -1789,7 +1797,10 @@ public final class ChatListNode: ListView {
     }
 }
 
-private func statusStringForPeerType(strings: PresentationStrings, peer: Peer, isContact: Bool) -> String {
+private func statusStringForPeerType(accountPeerId: PeerId, strings: PresentationStrings, peer: Peer, isContact: Bool) -> String? {
+    if accountPeerId == peer.id {
+        return nil
+    }
     if let user = peer as? TelegramUser {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
             return strings.ChatList_PeerTypeBot
