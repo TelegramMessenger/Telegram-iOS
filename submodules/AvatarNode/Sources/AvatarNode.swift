@@ -449,7 +449,7 @@ public final class AvatarNode: ASDisplayNode {
             } else if case .savedMessagesIcon = parameters.icon {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
-                colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
+                colorsArray = [theme.list.itemAccentColor.withAlphaComponent(0.1).cgColor, theme.list.itemAccentColor.withAlphaComponent(0.1).cgColor]
             } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
                 let backgroundColors: (UIColor, UIColor)
                 if hiddenByDefault {
