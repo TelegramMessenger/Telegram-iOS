@@ -69,6 +69,8 @@ class LinesChartRenderer: BaseChartRenderer {
             context.setStrokeColor(toLine.color.cgColor)
             context.setLineWidth(lineWidth)
             
+            context.beginTransparencyLayer(auxiliaryInfo: nil)
+            
             if linesShapeAnimator.isAnimating {
                 let animationOffset = linesShapeAnimator.current
                 
@@ -435,6 +437,7 @@ class LinesChartRenderer: BaseChartRenderer {
                     context.strokeLineSegments(between: lines)
                 }
             }
+            context.endTransparencyLayer()
             context.setAlpha(1.0)
         }
         

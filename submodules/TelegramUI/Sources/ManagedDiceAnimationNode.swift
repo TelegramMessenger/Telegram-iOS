@@ -26,7 +26,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         
         super.init(size: CGSize(width: 136.0, height: 136.0))
         
-        self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+        self.trackTo(item: ManagedAnimationItem(source: .local("Dice_Rolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 60), duration: 1.0, loop: true))
     }
     
     deinit {
@@ -42,6 +42,9 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case .rolling:
                     switch diceState {
                         case let .value(value):
+                            guard self.emojis.count == 6 else {
+                                return
+                            }
                             let file = self.emojis[Int(value) - 1]
                             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                             let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
@@ -73,7 +76,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case let .value(currentValue):
                     switch diceState {
                         case .rolling:
-                            self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 180), duration: 3.0, loop: true))
+                            self.trackTo(item: ManagedAnimationItem(source: .local("Dice_Rolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 60), duration: 1.0, loop: true))
                         case let .value(value):
                             break
                     }
@@ -81,6 +84,9 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         } else {
             switch diceState {
                 case let .value(value):
+                    guard self.emojis.count == 6 else {
+                        return
+                    }
                     let file = self.emojis[Int(value) - 1]
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
@@ -107,7 +113,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                         }
                     }))
                 case .rolling:
-                    self.trackTo(item: ManagedAnimationItem(source: .local("DiceRolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3, loop: true))
+                    self.trackTo(item: ManagedAnimationItem(source: .local("Dice_Rolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 60), duration: 1.0, loop: true))
             }
         }
     }
