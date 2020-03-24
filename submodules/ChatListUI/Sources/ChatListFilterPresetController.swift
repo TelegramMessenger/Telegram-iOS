@@ -742,35 +742,33 @@ enum ChatListFilterType {
     case nonContacts
 }
 
-func chatListFilterType(_ filter: ChatListFilter) -> ChatListFilterType {
+func chatListFilterType(postbox: Postbox, filter: ChatListFilter) -> ChatListFilterType {
     let filterType: ChatListFilterType
-    if filter.data.includePeers.peers.isEmpty {
-        if filter.data.categories == .all {
-            if filter.data.excludeRead {
-                filterType = .unread
-            } else if filter.data.excludeMuted {
-                filterType = .unmuted
-            } else {
-                filterType = .generic
-            }
+    
+    if filter.data.categories == .all {
+        if filter.data.excludeRead {
+            filterType = .unread
+        } else if filter.data.excludeMuted {
+            filterType = .unmuted
         } else {
-            if filter.data.categories == .channels {
-                filterType = .channels
-            } else if filter.data.categories == .groups {
-                filterType = .groups
-            } else if filter.data.categories == .bots {
-                filterType = .bots
-            } else if filter.data.categories == .contacts {
-                filterType = .contacts
-            } else if filter.data.categories == .nonContacts {
-                filterType = .nonContacts
-            } else {
-                filterType = .generic
-            }
+            filterType = .generic
         }
     } else {
-        filterType = .generic
+        if filter.data.categories == .channels {
+            filterType = .channels
+        } else if filter.data.categories == .groups {
+            filterType = .groups
+        } else if filter.data.categories == .bots {
+            filterType = .bots
+        } else if filter.data.categories == .contacts {
+            filterType = .contacts
+        } else if filter.data.categories == .nonContacts {
+            filterType = .nonContacts
+        } else {
+            filterType = .generic
+        }
     }
+    
     return filterType
 }
 
