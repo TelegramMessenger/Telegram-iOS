@@ -742,7 +742,7 @@ enum ChatListFilterType {
     case nonContacts
 }
 
-func chatListFilterType(postbox: Postbox, filter: ChatListFilter) -> ChatListFilterType {
+func chatListFilterType(_ filter: ChatListFilter) -> ChatListFilterType {
     let filterType: ChatListFilterType
     
     if filter.data.categories == .all {
