@@ -1187,6 +1187,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         let text: String
                         if hasFilters {
                             text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
+                            let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
                         } else {
                             text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
                         }
