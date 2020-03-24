@@ -104,9 +104,9 @@ public class PercentPieChartController: BaseChartController {
     
     func switchToChart(chartsCollection: ChartsCollection, isZoomed: Bool, animated: Bool) {
         if animated {
-            TimeInterval.setDefaultSuration(.expandAnimationDuration)
+            TimeInterval.setDefaultDuration(.expandAnimationDuration)
             DispatchQueue.main.asyncAfter(deadline: .now() + .expandAnimationDuration) {
-                TimeInterval.setDefaultSuration(.osXDuration)
+                TimeInterval.setDefaultDuration(.osXDuration)
             }
         }
 

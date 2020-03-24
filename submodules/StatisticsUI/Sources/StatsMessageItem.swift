@@ -178,7 +178,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             let contentKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.message, strings: item.presentationData.strings, nameDisplayOrder: .firstLast, accountPeerId: item.context.account.peerId)
-            var text = stringForMediaKind(contentKind, strings: item.presentationData.strings).0
+            var text = !item.message.text.isEmpty ? item.message.text : stringForMediaKind(contentKind, strings: item.presentationData.strings).0
             text = foldLineBreaks(text)
             
             var contentImageMedia: Media?

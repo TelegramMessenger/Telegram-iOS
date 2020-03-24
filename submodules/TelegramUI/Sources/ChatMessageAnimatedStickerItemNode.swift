@@ -51,6 +51,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     var telegramDice: TelegramMediaDice?
     private let disposable = MetaDisposable()
     
+    private var forwardInfoNode: ChatMessageForwardInfoNode?
+    private var forwardBackgroundNode: ASImageNode?
+    
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
@@ -63,6 +66,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var heartbeatHaptic: HeartbeatHaptic?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
+    
+    private var appliedForwardInfo: (Peer?, String?)?
     
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -153,9 +158,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let _ = self.telegramDice {
-            let diceEmojis = item.associatedData.animatedEmojiStickers["🎲"] ?? []
-            let animationNode = ManagedDiceAnimationNode(context: item.context, emojis: diceEmojis.map { $0.file })
-            self.animationNode = animationNode
+            if let diceEmojis = item.associatedData.animatedEmojiStickers["🎲"] {
+                let animationNode = ManagedDiceAnimationNode(context: item.context, emojis: diceEmojis.map { $0.file })
+                self.animationNode = animationNode
+            }
         } else {
             let animationNode = AnimatedStickerNode()
             animationNode.started = { [weak self] in
@@ -203,7 +209,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             } else {
                 diceNode.setState(.rolling)
             }
-        } else if self.telegramFile == nil {
+        } else if self.telegramFile == nil && self.telegramDice == nil {
             let (emoji, fitz) = item.message.text.basicEmoji
             var emojiFile: TelegramMediaFile?
             
@@ -295,7 +301,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
         } else if let animationNode = self.animationNode as? ManagedDiceAnimationNode {
-            
+
         }
     }
     
@@ -307,23 +313,30 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
         let emojiFile = self.emojiFile
+        let telegramDice = self.telegramDice
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        
+        let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
+        let currentForwardBackgroundNode = self.forwardBackgroundNode
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
         let currentShareButtonNode = self.shareButtonNode
         let currentItem = self.item
+        let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
             var isEmoji = false
-            if let telegramFile = telegramFile {
+            if let _ = telegramDice {
+                imageSize = displaySize
+            } else if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
                     imageSize = dimensions.cgSize.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
@@ -482,7 +495,25 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            var ignoreForward = self.telegramDice == nil
+            var ignoreSource = false
+            
+            let availableContentWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            
+            if let forwardInfo = item.message.forwardInfo {
+                if item.message.id.peerId != item.context.account.peerId {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            if attribute.messageId.peerId == forwardInfo.author?.id {
+                                ignoreForward = true
+                            } else {
+                                ignoreSource = true
+                            }
+                            break
+                        }
+                    }
+                }
+            }
             
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
@@ -500,11 +531,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
                         let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                         
-                        viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                        viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableContentWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude))
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
@@ -517,7 +548,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                             
                             let nameString = NSAttributedString(string: sourcePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: inlineBotPrefixFont, textColor: inlineBotNameColor)
-                            viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: nameString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                            viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: nameString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableContentWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                         }
                     }
                 }
@@ -563,6 +594,47 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
+            
+            
+            var forwardSource: Peer?
+            var forwardAuthorSignature: String?
+            
+            var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode)?
+            var updatedForwardBackgroundNode: ASImageNode?
+            var forwardBackgroundImage: UIImage?
+            
+            if !ignoreForward, let forwardInfo = item.message.forwardInfo {
+                if let source = forwardInfo.source {
+                    forwardSource = source
+                    if let authorSignature = forwardInfo.authorSignature {
+                        forwardAuthorSignature = authorSignature
+                    } else if let forwardInfoAuthor = forwardInfo.author, forwardInfoAuthor.id != source.id {
+                        forwardAuthorSignature = forwardInfoAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    } else {
+                        forwardAuthorSignature = nil
+                    }
+                } else {
+                    if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
+                        forwardSource = nil
+                        forwardAuthorSignature = currentForwardInfo.0?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    } else {
+                        forwardSource = forwardInfo.author
+                        forwardAuthorSignature = forwardInfo.authorSignature
+                    }
+                }
+                let availableWidth = max(60.0, availableContentWidth + 6.0)
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                
+                if let currentForwardBackgroundNode = currentForwardBackgroundNode {
+                    updatedForwardBackgroundNode = currentForwardBackgroundNode
+                } else {
+                    updatedForwardBackgroundNode = ASImageNode()
+                }
+                
+                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
+                forwardBackgroundImage = graphics.chatServiceBubbleFillImage
+            }
+            
             var maxContentWidth = imageSize.width
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
@@ -583,6 +655,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
@@ -716,6 +790,31 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         })
                     }
                     
+                    if let updatedForwardBackgroundNode = updatedForwardBackgroundNode {
+                        if strongSelf.forwardBackgroundNode == nil {
+                            strongSelf.forwardBackgroundNode = updatedForwardBackgroundNode
+                            strongSelf.addSubnode(updatedForwardBackgroundNode)
+                            updatedForwardBackgroundNode.image = forwardBackgroundImage
+                        }
+                    } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                        forwardBackgroundNode.removeFromSupernode()
+                        strongSelf.forwardBackgroundNode = nil
+                    }
+                    
+                    if let (forwardInfoSize, forwardInfoApply) = forwardInfoSizeApply {
+                        let forwardInfoNode = forwardInfoApply()
+                        if strongSelf.forwardInfoNode == nil {
+                            strongSelf.forwardInfoNode = forwardInfoNode
+                            strongSelf.addSubnode(forwardInfoNode)
+                        }
+                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
+                        forwardInfoNode.frame = forwardInfoFrame
+                        strongSelf.forwardBackgroundNode?.frame = CGRect(origin: CGPoint(x: forwardInfoFrame.minX - 6.0, y: forwardInfoFrame.minY - 2.0), size: CGSize(width: forwardInfoFrame.size.width + 10.0, height: forwardInfoFrame.size.height + 4.0))
+                    } else if let forwardInfoNode = strongSelf.forwardInfoNode {
+                        forwardInfoNode.removeFromSupernode()
+                        strongSelf.forwardInfoNode = nil
+                    }
+                    
                     if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                         var animated = false
                         if let _ = strongSelf.actionButtonsNode {
@@ -842,7 +941,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let _ = self.telegramFile {
                     let _ = item.controllerInteraction.openMessage(item.message, .default)
                 } else if let _ = self.telegramDice {
-                    item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_Dice, self, self.imageNode.frame)
+                    item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_Dice, self, self.imageNode.frame.offsetBy(dx: 0.0, dy: self.imageNode.frame.height / 3.0))
                 } else if let _ = self.emojiFile {
                     if let animationNode = self.animationNode as? AnimatedStickerNode {
                         var startTime: Signal<Double, NoError>

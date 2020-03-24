@@ -30,9 +30,9 @@ public class BaseLinesChartController: BaseChartController {
     
     func setupChartCollection(chartsCollection: ChartsCollection, animated: Bool, isZoomed: Bool) {
         if animated {
-            TimeInterval.setDefaultSuration(.expandAnimationDuration)
+            TimeInterval.setDefaultDuration(.expandAnimationDuration)
             DispatchQueue.main.asyncAfter(deadline: .now() + .expandAnimationDuration) {
-                TimeInterval.setDefaultSuration(.osXDuration)
+                TimeInterval.setDefaultDuration(.osXDuration)
             }
         }
         

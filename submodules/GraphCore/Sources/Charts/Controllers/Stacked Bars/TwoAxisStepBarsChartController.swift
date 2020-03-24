@@ -87,8 +87,11 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
                 controller.verticalScalesRenderer.isRightAligned = (index != 0)
                 controller.verticalScalesRenderer.isEnabled = true
             } else {
-                controller.mainBarsRenderer.bars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
-                controller.previewBarsRenderer.bars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
+                let emptyBars = BarChartRenderer.BarsData(barWidth: 0.0, locations: [], components: [])
+                controller.chartBars = emptyBars
+                controller.barsWidth = emptyBars.barWidth
+                controller.mainBarsRenderer.bars = emptyBars
+                controller.previewBarsRenderer.bars = emptyBars
             }
         }
         
@@ -119,9 +122,7 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
     public override var mainChartRenderers: [ChartViewRenderer] {
         return graphControllers.map { $0.mainBarsRenderer } +
                graphControllers.flatMap { [$0.verticalScalesRenderer, $0.lineBulletsRenderer] } +
-            [horizontalScalesRenderer, verticalLineRenderer,
-//             performanceRenderer
-        ]
+            [horizontalScalesRenderer, verticalLineRenderer]
     }
     
     public override var navigationRenderers: [ChartViewRenderer] {

@@ -168,19 +168,10 @@ class PieChartComponentController: GeneralChartComponentController {
     override var currentPreviewRangeRenderer: BaseChartRenderer {
         return previewBarChartRenderer
     }
-    
-    var lastInteractionPoint: CGPoint = .zero
+
     public override func chartInteractionDidBegin(point: CGPoint) {
-        lastInteractionPoint = point
-    }
-    
-    public override func chartInteractionDidEnd() {
-        if let segment = pieChartRenderer.selectedItemIndex(at: lastInteractionPoint) {
-            if pieChartRenderer.selectedSegment == segment {
-                pieChartRenderer.selectSegmentAt(at: nil, animated: true)
-            } else {
-                pieChartRenderer.selectSegmentAt(at: segment, animated: true)
-            }
+        if let segment = pieChartRenderer.selectedItemIndex(at: point) {
+            pieChartRenderer.selectSegmentAt(at: segment, animated: true)
             updateSelectedDataLabelIfNeeded()
         }
     }

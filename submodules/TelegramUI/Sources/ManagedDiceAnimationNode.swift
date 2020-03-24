@@ -24,7 +24,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         self.context = context
         self.emojis = emojis
         
-        super.init(size: CGSize(width: 136.0, height: 136.0))
+        super.init(size: CGSize(width: 184.0, height: 184.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("Dice_Rolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 60), duration: 1.0, loop: true))
     }

@@ -26,7 +26,7 @@ public extension TimeInterval {
     }
     private static var innerDefaultDuration: TimeInterval = osXDuration
     
-    static func setDefaultSuration(_ duration: TimeInterval) {
+    static func setDefaultDuration(_ duration: TimeInterval) {
         innerDefaultDuration = duration
     }
 }

@@ -97,9 +97,9 @@ public class StepBarsChartController: BaseChartController {
     
     func switchToChart(chartsCollection: ChartsCollection, isZoomed: Bool, animated: Bool) {
         if animated {
-            TimeInterval.setDefaultSuration(.expandAnimationDuration)
+            TimeInterval.setDefaultDuration(.expandAnimationDuration)
             DispatchQueue.main.asyncAfter(deadline: .now() + .expandAnimationDuration) {
-                TimeInterval.setDefaultSuration(.osXDuration)
+                TimeInterval.setDefaultDuration(.osXDuration)
             }
         }
 
@@ -126,8 +126,8 @@ public class StepBarsChartController: BaseChartController {
             barsController.willDisappear(animated: animated)
             
             zoomedBarsController.updateChartsVisibility(visibility: barsController.chartVisibility, animated: false)
-            zoomedBarsController.mainBarsRenderer.setup(verticalRange: zoomedBarsController.currentVerticalMainChartRange, animated: animated, timeFunction: .easeOut)
-            zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: zoomedBarsController.currentPreviewVerticalRange, animated: animated, timeFunction: .easeOut)
+            zoomedBarsController.mainBarsRenderer.setup(verticalRange: zoomedBarsController.currentVerticalMainChartRange, animated: animated, timeFunction: .easeInOut)
+            zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: zoomedBarsController.currentPreviewVerticalRange, animated: animated, timeFunction: .easeInOut)
         } else {
             if !zoomedBarsController.chartsCollection.isBlank {
                 barsController.hideDetailsView(animated: false)
@@ -143,8 +143,8 @@ public class StepBarsChartController: BaseChartController {
                 let targetVerticalRange = verticalVisibleRange.lowerBound...(verticalVisibleRange.upperBound + verticalVisibleRange.distance * 10)
 
                 zoomedBarsController.setupMainChart(horizontalRange: toHorizontalRange, animated: animated)
-                zoomedBarsController.mainBarsRenderer.setup(verticalRange: targetVerticalRange, animated: animated, timeFunction: .easeIn)
-                zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: targetVerticalRange, animated: animated, timeFunction: .easeIn)
+                zoomedBarsController.mainBarsRenderer.setup(verticalRange: targetVerticalRange, animated: animated, timeFunction: .easeInOut)
+                zoomedBarsController.previewBarsChartRenderer.setup(verticalRange: targetVerticalRange, animated: animated, timeFunction: .easeInOut)
                 zoomedBarsController.previewBarsChartRenderer.setup(horizontalRange: barsController.totalHorizontalRange, animated: animated)
                 DispatchQueue.main.asyncAfter(deadline: .now() + .defaultDuration) { [weak self] in
                     self?.zoomedBarsController.mainBarsRenderer.setVisible(false, animated: false)

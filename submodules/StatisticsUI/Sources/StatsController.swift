@@ -412,7 +412,7 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
 
         if !data.instantPageInteractionsGraph.isEmpty {
             entries.append(.instantPageInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InstantViewInteractionsTitle))
-            entries.append(.instantPageInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.instantPageInteractionsGraph, .step))
+            entries.append(.instantPageInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.instantPageInteractionsGraph, .twoAxisStep))
         }
     }
     

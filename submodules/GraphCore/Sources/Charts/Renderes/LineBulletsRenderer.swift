@@ -45,7 +45,9 @@ class LineBulletsRenderer: BaseChartRenderer {
     var bulletRadius: CGFloat = 6
 
     func setLineVisible(_ isVisible: Bool, at index: Int, animated: Bool) {
-        alphaAnimators[index].animate(to: isVisible ? 1 : 0, duration: animated ? .defaultDuration : 0)
+        if alphaAnimators.count > index {
+            alphaAnimators[index].animate(to: isVisible ? 1 : 0, duration: animated ? .defaultDuration : 0)
+        }
     }
     
     override func render(context: CGContext, bounds: CGRect, chartFrame: CGRect) {

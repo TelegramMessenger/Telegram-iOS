@@ -21,6 +21,7 @@ enum TimeFunction {
     case linear
     case easeOut
     case easeIn
+    case easeInOut
     
     func profress(time: TimeInterval, duration: TimeInterval) -> TimeInterval {
         switch self {
@@ -30,12 +31,19 @@ enum TimeFunction {
             return (pow(2, 10 * (time / duration - 1)) - 0.0009765625) * 1.0009775171065499
         case .easeOut:
             return (-pow(2, -10 * time / duration)) + 1 * 1.0009775171065499
+        case .easeInOut:
+            let x = time / duration
+            if x < 1 / 2 {
+                return 4 * x * x * x
+            } else {
+                let f = 2 * x - 2
+                return 1 / 2 * f * f * f + 1
+            }
         }
     }
 }
 
 class AnimationController<AnimatableObject: Animatable> {
-    
     private(set) var isAnimating: Bool = false
     private(set) var animationDuration: TimeInterval = 0.0
     private(set) var currentTime: TimeInterval = 0.0
@@ -44,7 +52,7 @@ class AnimationController<AnimatableObject: Animatable> {
     private(set) var end: AnimatableObject
     private(set) var current: AnimatableObject
     
-    var timeFunction: TimeFunction = .linear
+    var timeFunction: TimeFunction = .easeInOut
 
     var refreshClosure: (() -> Void)?
 //    var updateClosure: ((AnimatableObject) -> Void)?
@@ -57,7 +65,7 @@ class AnimationController<AnimatableObject: Animatable> {
         self.refreshClosure = refreshClosure
     }
     
-    func animate(to: AnimatableObject, duration: TimeInterval, timeFunction: TimeFunction = .linear) {
+    func animate(to: AnimatableObject, duration: TimeInterval, timeFunction: TimeFunction = .easeInOut) {
         self.timeFunction = timeFunction
         currentTime = 0
         animationDuration = duration

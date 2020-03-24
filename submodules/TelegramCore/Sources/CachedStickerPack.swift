@@ -16,8 +16,19 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(info.id)), entry: CachedStickerPack(info: info, items: items.map { $0 as! StickerPackItem }, hash: info.hash), collectionSpec: collectionSpec)
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(shortName: info.shortName)), entry: CachedStickerPack(info: info, items: items.map { $0 as! StickerPackItem }, hash: info.hash), collectionSpec: collectionSpec)
     
-    if let reference = reference, case .animatedEmoji = reference {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: Namespaces.ItemCollection.CloudAnimatedEmoji, id: 0))), entry: CachedStickerPack(info: info, items: items.map { $0 as! StickerPackItem }, hash: info.hash), collectionSpec: collectionSpec)
+    if let reference = reference {
+        var namespace: Int32?
+        switch reference {
+            case .animatedEmoji:
+                namespace = Namespaces.ItemCollection.CloudAnimatedEmoji
+            case .dice:
+                namespace = Namespaces.ItemCollection.CloudDice
+            default:
+                break
+        }
+        if let namespace = namespace {
+            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: 0))), entry: CachedStickerPack(info: info, items: items.map { $0 as! StickerPackItem }, hash: info.hash), collectionSpec: collectionSpec)
+        }
     }
 }
 

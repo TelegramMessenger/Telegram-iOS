@@ -50,7 +50,9 @@ class LinesChartRenderer: BaseChartRenderer {
     }
     
     func setLineVisible(_ isVisible: Bool, at index: Int, animated: Bool) {
-        linesAlphaAnimators[index].animate(to: isVisible ? 1 : 0, duration: animated ? .defaultDuration : 0)
+        if linesAlphaAnimators.count > index {
+            linesAlphaAnimators[index].animate(to: isVisible ? 1 : 0, duration: animated ? .defaultDuration : 0)
+        }
     }
     
     override func render(context: CGContext, bounds: CGRect, chartFrame: CGRect) {
