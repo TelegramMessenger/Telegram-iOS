@@ -1889,17 +1889,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             }
                         }
                         
-                        if channel.isVerified && title != channel.title {
-                            let alertText: String
-                            if case .broadcast = channel.info {
-                                alertText = strongSelf.presentationData.strings.SetupUsername_ChangeNameWarningChannel
-                            } else {
-                                alertText = strongSelf.presentationData.strings.SetupUsername_ChangeNameWarningGroup
-                            }
-                            strongSelf.controller?.present(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: proceed)]), in: .window(.root))
-                        } else {
-                            proceed()
-                        }
+                        proceed()
                     } else {
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
                     }
