@@ -205,7 +205,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
         if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? ManagedDiceAnimationNode {
             if let value = telegramDice.value {
-                diceNode.setState(value == 0 ? .rolling : .value(value))
+                diceNode.setState(value == 0 ? .rolling : .value(value, true))
             } else {
                 diceNode.setState(.rolling)
             }
@@ -1169,6 +1169,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? ManagedDiceAnimationNode, let item = self.item, item.message.effectivelyIncoming(item.context.account.peerId) {
+            if let value = telegramDice.value, value != 0 {
+                diceNode.setState(.rolling)
+                diceNode.setState(.value(value, false))
+            }
+        }
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
