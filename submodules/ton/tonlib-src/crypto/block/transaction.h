@@ -139,6 +139,7 @@ struct ComputePhaseConfig {
 
 struct ActionPhaseConfig {
   int max_actions{255};
+  int bounce_msg_body{0};  // usually 0 or 256 bits
   MsgPrices fwd_std;
   MsgPrices fwd_mc;  // from/to masterchain
   const WorkchainSet* workchains{nullptr};

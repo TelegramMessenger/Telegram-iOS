@@ -570,8 +570,7 @@ PROGRAM{
     check_owner INLINECALLDICT	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err
     DUP	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err err
     IFJMP:<{	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err
-      s0 s14 XCHG
-      14 BLKDROP	//  err
+      14 1 BLKDROP2	//  err
       send_error CALLDICT
     }>	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table err
     DROP	//  msg_value key lhk exp qt ctl domdata gc prices nhk in_msg domain n cat_table
@@ -730,8 +729,7 @@ PROGRAM{
       housekeeping CALLDICT
       send_ok CALLDICT
     }>	//  price key lhk exp qt ctl domdata gc prices nhk cat_table stdper n data
-    s0 s3 XCHG
-    3 BLKDROP	//  price key lhk exp qt ctl domdata gc prices nhk data
+    3 1 BLKDROP2	//  price key lhk exp qt ctl domdata gc prices nhk data
     s0 s6 XCHG	//  price key lhk exp data ctl domdata gc prices nhk qt
     4 EQINT	//  price key lhk exp data ctl domdata gc prices nhk _311
     IFJMP:<{	//  price key lhk exp data ctl domdata gc prices nhk
@@ -928,8 +926,7 @@ PROGRAM{
   getppb PROC:<{
     // 
     load_prices INLINECALLDICT	//  _5 _6 _7 _8
-    s0 s3 XCHG
-    3 BLKDROP	//  ppb
+    3 1 BLKDROP2	//  ppb
   }>
   calcprice PROC:<{
     //  domain val

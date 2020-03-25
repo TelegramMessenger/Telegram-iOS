@@ -789,7 +789,7 @@ void register_shift_logic_ops(OpcodeTable& cp0) {
 
 int exec_minmax(VmState* st, int mode) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute MINMAXOP " << mode;
+  VM_LOG(st) << "execute " << (mode & 1 ? "Q" : "") << (mode & 2 ? "MIN" : "") << (mode & 4 ? "MAX" : "");
   stack.check_underflow(2);
   auto x = stack.pop_int();
   auto y = stack.pop_int();
@@ -811,7 +811,7 @@ int exec_minmax(VmState* st, int mode) {
 
 int exec_abs(VmState* st, bool quiet) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute ABS";
+  VM_LOG(st) << "execute " << (quiet ? "QABS" : "ABS");
   stack.check_underflow(1);
   auto x = stack.pop_int();
   if (x->is_valid() && x->sgn() < 0) {

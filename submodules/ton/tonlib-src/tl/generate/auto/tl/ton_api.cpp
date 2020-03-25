@@ -92,6 +92,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return adnl_address_udp::fetch(p);
     case adnl_address_udp6::ID:
       return adnl_address_udp6::fetch(p);
+    case adnl_address_tunnel::ID:
+      return adnl_address_tunnel::fetch(p);
     case adnl_addressList::ID:
       return adnl_addressList::fetch(p);
     case adnl_message_createChannel::ID:
@@ -122,10 +124,20 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return adnl_proxy_none::fetch(p);
     case adnl_proxy_fast::ID:
       return adnl_proxy_fast::fetch(p);
+    case adnl_proxyControlPacketPing::ID:
+      return adnl_proxyControlPacketPing::fetch(p);
+    case adnl_proxyControlPacketPong::ID:
+      return adnl_proxyControlPacketPong::fetch(p);
+    case adnl_proxyControlPacketRegister::ID:
+      return adnl_proxyControlPacketRegister::fetch(p);
+    case adnl_proxyPacketHeader::ID:
+      return adnl_proxyPacketHeader::fetch(p);
     case adnl_proxyToFastHash::ID:
       return adnl_proxyToFastHash::fetch(p);
     case adnl_proxyToFast::ID:
       return adnl_proxyToFast::fetch(p);
+    case adnl_tunnelPacketContents::ID:
+      return adnl_tunnelPacketContents::fetch(p);
     case adnl_config_global::ID:
       return adnl_config_global::fetch(p);
     case adnl_db_node_key::ID:
@@ -2225,6 +2237,8 @@ object_ptr<adnl_Address> adnl_Address::fetch(td::TlParser &p) {
       return adnl_address_udp::fetch(p);
     case adnl_address_udp6::ID:
       return adnl_address_udp6::fetch(p);
+    case adnl_address_tunnel::ID:
+      return adnl_address_tunnel::fetch(p);
     default:
       FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
   }
@@ -2315,6 +2329,50 @@ void adnl_address_udp6::store(td::TlStorerToString &s, const char *field_name) c
     s.store_class_begin(field_name, "adnl_address_udp6");
     s.store_field("ip", ip_);
     s.store_field("port", port_);
+    s.store_class_end();
+  }
+}
+
+adnl_address_tunnel::adnl_address_tunnel()
+  : to_()
+  , pubkey_()
+{}
+
+adnl_address_tunnel::adnl_address_tunnel(td::Bits256 const &to_, object_ptr<PublicKey> &&pubkey_)
+  : to_(to_)
+  , pubkey_(std::move(pubkey_))
+{}
+
+const std::int32_t adnl_address_tunnel::ID;
+
+object_ptr<adnl_Address> adnl_address_tunnel::fetch(td::TlParser &p) {
+  return make_object<adnl_address_tunnel>(p);
+}
+
+adnl_address_tunnel::adnl_address_tunnel(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : to_(TlFetchInt256::parse(p))
+  , pubkey_(TlFetchObject<PublicKey>::parse(p))
+#undef FAIL
+{}
+
+void adnl_address_tunnel::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(to_, s);
+  TlStoreBoxedUnknown<TlStoreObject>::store(pubkey_, s);
+}
+
+void adnl_address_tunnel::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(to_, s);
+  TlStoreBoxedUnknown<TlStoreObject>::store(pubkey_, s);
+}
+
+void adnl_address_tunnel::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnl_address_tunnel");
+    s.store_field("to", to_);
+    if (pubkey_ == nullptr) { s.store_field("pubkey", "null"); } else { pubkey_->store(s, "pubkey"); }
     s.store_class_end();
   }
 }
@@ -3017,8 +3075,13 @@ object_ptr<adnl_Proxy> adnl_Proxy::fetch(td::TlParser &p) {
 #undef FAIL
 }
 
-adnl_proxy_none::adnl_proxy_none() {
-}
+adnl_proxy_none::adnl_proxy_none()
+  : id_()
+{}
+
+adnl_proxy_none::adnl_proxy_none(td::Bits256 const &id_)
+  : id_(id_)
+{}
 
 const std::int32_t adnl_proxy_none::ID;
 
@@ -3028,32 +3091,36 @@ object_ptr<adnl_Proxy> adnl_proxy_none::fetch(td::TlParser &p) {
 
 adnl_proxy_none::adnl_proxy_none(td::TlParser &p)
 #define FAIL(error) p.set_error(error)
+  : id_(TlFetchInt256::parse(p))
 #undef FAIL
-{
-  (void)p;
-}
+{}
 
 void adnl_proxy_none::store(td::TlStorerCalcLength &s) const {
   (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
 }
 
 void adnl_proxy_none::store(td::TlStorerUnsafe &s) const {
   (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
 }
 
 void adnl_proxy_none::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "adnl_proxy_none");
+    s.store_field("id", id_);
     s.store_class_end();
   }
 }
 
 adnl_proxy_fast::adnl_proxy_fast()
-  : shared_secret_()
+  : id_()
+  , shared_secret_()
 {}
 
-adnl_proxy_fast::adnl_proxy_fast(td::BufferSlice &&shared_secret_)
-  : shared_secret_(std::move(shared_secret_))
+adnl_proxy_fast::adnl_proxy_fast(td::Bits256 const &id_, td::BufferSlice &&shared_secret_)
+  : id_(id_)
+  , shared_secret_(std::move(shared_secret_))
 {}
 
 const std::int32_t adnl_proxy_fast::ID;
@@ -3064,24 +3131,247 @@ object_ptr<adnl_Proxy> adnl_proxy_fast::fetch(td::TlParser &p) {
 
 adnl_proxy_fast::adnl_proxy_fast(td::TlParser &p)
 #define FAIL(error) p.set_error(error)
-  : shared_secret_(TlFetchBytes<td::BufferSlice>::parse(p))
+  : id_(TlFetchInt256::parse(p))
+  , shared_secret_(TlFetchBytes<td::BufferSlice>::parse(p))
 #undef FAIL
 {}
 
 void adnl_proxy_fast::store(td::TlStorerCalcLength &s) const {
   (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
   TlStoreString::store(shared_secret_, s);
 }
 
 void adnl_proxy_fast::store(td::TlStorerUnsafe &s) const {
   (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
   TlStoreString::store(shared_secret_, s);
 }
 
 void adnl_proxy_fast::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "adnl_proxy_fast");
+    s.store_field("id", id_);
     s.store_bytes_field("shared_secret", shared_secret_);
+    s.store_class_end();
+  }
+}
+
+object_ptr<adnl_ProxyControlPacket> adnl_ProxyControlPacket::fetch(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return nullptr;
+  int constructor = p.fetch_int();
+  switch (constructor) {
+    case adnl_proxyControlPacketPing::ID:
+      return adnl_proxyControlPacketPing::fetch(p);
+    case adnl_proxyControlPacketPong::ID:
+      return adnl_proxyControlPacketPong::fetch(p);
+    case adnl_proxyControlPacketRegister::ID:
+      return adnl_proxyControlPacketRegister::fetch(p);
+    default:
+      FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
+  }
+#undef FAIL
+}
+
+adnl_proxyControlPacketPing::adnl_proxyControlPacketPing()
+  : id_()
+{}
+
+adnl_proxyControlPacketPing::adnl_proxyControlPacketPing(td::Bits256 const &id_)
+  : id_(id_)
+{}
+
+const std::int32_t adnl_proxyControlPacketPing::ID;
+
+object_ptr<adnl_ProxyControlPacket> adnl_proxyControlPacketPing::fetch(td::TlParser &p) {
+  return make_object<adnl_proxyControlPacketPing>(p);
+}
+
+adnl_proxyControlPacketPing::adnl_proxyControlPacketPing(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : id_(TlFetchInt256::parse(p))
+#undef FAIL
+{}
+
+void adnl_proxyControlPacketPing::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
+}
+
+void adnl_proxyControlPacketPing::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
+}
+
+void adnl_proxyControlPacketPing::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnl_proxyControlPacketPing");
+    s.store_field("id", id_);
+    s.store_class_end();
+  }
+}
+
+adnl_proxyControlPacketPong::adnl_proxyControlPacketPong()
+  : id_()
+{}
+
+adnl_proxyControlPacketPong::adnl_proxyControlPacketPong(td::Bits256 const &id_)
+  : id_(id_)
+{}
+
+const std::int32_t adnl_proxyControlPacketPong::ID;
+
+object_ptr<adnl_ProxyControlPacket> adnl_proxyControlPacketPong::fetch(td::TlParser &p) {
+  return make_object<adnl_proxyControlPacketPong>(p);
+}
+
+adnl_proxyControlPacketPong::adnl_proxyControlPacketPong(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : id_(TlFetchInt256::parse(p))
+#undef FAIL
+{}
+
+void adnl_proxyControlPacketPong::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
+}
+
+void adnl_proxyControlPacketPong::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(id_, s);
+}
+
+void adnl_proxyControlPacketPong::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnl_proxyControlPacketPong");
+    s.store_field("id", id_);
+    s.store_class_end();
+  }
+}
+
+adnl_proxyControlPacketRegister::adnl_proxyControlPacketRegister()
+  : ip_()
+  , port_()
+{}
+
+adnl_proxyControlPacketRegister::adnl_proxyControlPacketRegister(std::int32_t ip_, std::int32_t port_)
+  : ip_(ip_)
+  , port_(port_)
+{}
+
+const std::int32_t adnl_proxyControlPacketRegister::ID;
+
+object_ptr<adnl_ProxyControlPacket> adnl_proxyControlPacketRegister::fetch(td::TlParser &p) {
+  return make_object<adnl_proxyControlPacketRegister>(p);
+}
+
+adnl_proxyControlPacketRegister::adnl_proxyControlPacketRegister(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : ip_(TlFetchInt::parse(p))
+  , port_(TlFetchInt::parse(p))
+#undef FAIL
+{}
+
+void adnl_proxyControlPacketRegister::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(ip_, s);
+  TlStoreBinary::store(port_, s);
+}
+
+void adnl_proxyControlPacketRegister::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(ip_, s);
+  TlStoreBinary::store(port_, s);
+}
+
+void adnl_proxyControlPacketRegister::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnl_proxyControlPacketRegister");
+    s.store_field("ip", ip_);
+    s.store_field("port", port_);
+    s.store_class_end();
+  }
+}
+
+adnl_proxyPacketHeader::adnl_proxyPacketHeader()
+  : proxy_id_()
+  , flags_()
+  , ip_()
+  , port_()
+  , adnl_start_time_()
+  , seqno_()
+  , date_()
+  , signature_()
+{}
+
+adnl_proxyPacketHeader::adnl_proxyPacketHeader(td::Bits256 const &proxy_id_, std::int32_t flags_, std::int32_t ip_, std::int32_t port_, std::int32_t adnl_start_time_, std::int64_t seqno_, std::int32_t date_, td::Bits256 const &signature_)
+  : proxy_id_(proxy_id_)
+  , flags_(flags_)
+  , ip_(ip_)
+  , port_(port_)
+  , adnl_start_time_(adnl_start_time_)
+  , seqno_(seqno_)
+  , date_(date_)
+  , signature_(signature_)
+{}
+
+const std::int32_t adnl_proxyPacketHeader::ID;
+
+object_ptr<adnl_proxyPacketHeader> adnl_proxyPacketHeader::fetch(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return nullptr;
+  object_ptr<adnl_proxyPacketHeader> res = make_object<adnl_proxyPacketHeader>();
+  std::int32_t var0;
+  res->proxy_id_ = TlFetchInt256::parse(p);
+  if ((var0 = res->flags_ = TlFetchInt::parse(p)) < 0) { FAIL("Variable of type # can't be negative"); }
+  if (var0 & 1) { res->ip_ = TlFetchInt::parse(p); }
+  if (var0 & 1) { res->port_ = TlFetchInt::parse(p); }
+  if (var0 & 2) { res->adnl_start_time_ = TlFetchInt::parse(p); }
+  if (var0 & 4) { res->seqno_ = TlFetchLong::parse(p); }
+  if (var0 & 8) { res->date_ = TlFetchInt::parse(p); }
+  res->signature_ = TlFetchInt256::parse(p);
+  if (p.get_error()) { FAIL(""); }
+  return res;
+#undef FAIL
+}
+
+void adnl_proxyPacketHeader::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  std::int32_t var0;
+  TlStoreBinary::store(proxy_id_, s);
+  TlStoreBinary::store((var0 = flags_), s);
+  if (var0 & 1) { TlStoreBinary::store(ip_, s); }
+  if (var0 & 1) { TlStoreBinary::store(port_, s); }
+  if (var0 & 2) { TlStoreBinary::store(adnl_start_time_, s); }
+  if (var0 & 4) { TlStoreBinary::store(seqno_, s); }
+  if (var0 & 8) { TlStoreBinary::store(date_, s); }
+  TlStoreBinary::store(signature_, s);
+}
+
+void adnl_proxyPacketHeader::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  std::int32_t var0;
+  TlStoreBinary::store(proxy_id_, s);
+  TlStoreBinary::store((var0 = flags_), s);
+  if (var0 & 1) { TlStoreBinary::store(ip_, s); }
+  if (var0 & 1) { TlStoreBinary::store(port_, s); }
+  if (var0 & 2) { TlStoreBinary::store(adnl_start_time_, s); }
+  if (var0 & 4) { TlStoreBinary::store(seqno_, s); }
+  if (var0 & 8) { TlStoreBinary::store(date_, s); }
+  TlStoreBinary::store(signature_, s);
+}
+
+void adnl_proxyPacketHeader::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnl_proxyPacketHeader");
+  std::int32_t var0;
+    s.store_field("proxy_id", proxy_id_);
+    s.store_field("flags", (var0 = flags_));
+    if (var0 & 1) { s.store_field("ip", ip_); }
+    if (var0 & 1) { s.store_field("port", port_); }
+    if (var0 & 2) { s.store_field("adnl_start_time", adnl_start_time_); }
+    if (var0 & 4) { s.store_field("seqno", seqno_); }
+    if (var0 & 8) { s.store_field("date", date_); }
+    s.store_field("signature", signature_);
     s.store_class_end();
   }
 }
@@ -3200,6 +3490,89 @@ void adnl_proxyToFast::store(td::TlStorerToString &s, const char *field_name) co
     s.store_field("port", port_);
     s.store_field("date", date_);
     s.store_field("signature", signature_);
+    s.store_class_end();
+  }
+}
+
+adnl_tunnelPacketContents::adnl_tunnelPacketContents()
+  : rand1_()
+  , flags_()
+  , from_ip_()
+  , from_port_()
+  , message_()
+  , statistics_()
+  , payment_()
+  , rand2_()
+{}
+
+adnl_tunnelPacketContents::adnl_tunnelPacketContents(td::BufferSlice &&rand1_, std::int32_t flags_, std::int32_t from_ip_, std::int32_t from_port_, td::BufferSlice &&message_, td::BufferSlice &&statistics_, td::BufferSlice &&payment_, td::BufferSlice &&rand2_)
+  : rand1_(std::move(rand1_))
+  , flags_(flags_)
+  , from_ip_(from_ip_)
+  , from_port_(from_port_)
+  , message_(std::move(message_))
+  , statistics_(std::move(statistics_))
+  , payment_(std::move(payment_))
+  , rand2_(std::move(rand2_))
+{}
+
+const std::int32_t adnl_tunnelPacketContents::ID;
+
+object_ptr<adnl_tunnelPacketContents> adnl_tunnelPacketContents::fetch(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return nullptr;
+  object_ptr<adnl_tunnelPacketContents> res = make_object<adnl_tunnelPacketContents>();
+  std::int32_t var0;
+  res->rand1_ = TlFetchBytes<td::BufferSlice>::parse(p);
+  if ((var0 = res->flags_ = TlFetchInt::parse(p)) < 0) { FAIL("Variable of type # can't be negative"); }
+  if (var0 & 1) { res->from_ip_ = TlFetchInt::parse(p); }
+  if (var0 & 1) { res->from_port_ = TlFetchInt::parse(p); }
+  if (var0 & 2) { res->message_ = TlFetchBytes<td::BufferSlice>::parse(p); }
+  if (var0 & 4) { res->statistics_ = TlFetchBytes<td::BufferSlice>::parse(p); }
+  if (var0 & 8) { res->payment_ = TlFetchBytes<td::BufferSlice>::parse(p); }
+  res->rand2_ = TlFetchBytes<td::BufferSlice>::parse(p);
+  if (p.get_error()) { FAIL(""); }
+  return res;
+#undef FAIL
+}
+
+void adnl_tunnelPacketContents::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  std::int32_t var0;
+  TlStoreString::store(rand1_, s);
+  TlStoreBinary::store((var0 = flags_), s);
+  if (var0 & 1) { TlStoreBinary::store(from_ip_, s); }
+  if (var0 & 1) { TlStoreBinary::store(from_port_, s); }
+  if (var0 & 2) { TlStoreString::store(message_, s); }
+  if (var0 & 4) { TlStoreString::store(statistics_, s); }
+  if (var0 & 8) { TlStoreString::store(payment_, s); }
+  TlStoreString::store(rand2_, s);
+}
+
+void adnl_tunnelPacketContents::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  std::int32_t var0;
+  TlStoreString::store(rand1_, s);
+  TlStoreBinary::store((var0 = flags_), s);
+  if (var0 & 1) { TlStoreBinary::store(from_ip_, s); }
+  if (var0 & 1) { TlStoreBinary::store(from_port_, s); }
+  if (var0 & 2) { TlStoreString::store(message_, s); }
+  if (var0 & 4) { TlStoreString::store(statistics_, s); }
+  if (var0 & 8) { TlStoreString::store(payment_, s); }
+  TlStoreString::store(rand2_, s);
+}
+
+void adnl_tunnelPacketContents::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "adnl_tunnelPacketContents");
+  std::int32_t var0;
+    s.store_bytes_field("rand1", rand1_);
+    s.store_field("flags", (var0 = flags_));
+    if (var0 & 1) { s.store_field("from_ip", from_ip_); }
+    if (var0 & 1) { s.store_field("from_port", from_port_); }
+    if (var0 & 2) { s.store_bytes_field("message", message_); }
+    if (var0 & 4) { s.store_bytes_field("statistics", statistics_); }
+    if (var0 & 8) { s.store_bytes_field("payment", payment_); }
+    s.store_bytes_field("rand2", rand2_);
     s.store_class_end();
   }
 }

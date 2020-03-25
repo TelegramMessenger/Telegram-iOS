@@ -321,10 +321,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         contentHeight = textFrame.maxY + textSpacing
         
-        let rowWidth = layout.size.width - buttonSideInset * 2.0
         let rowCount = self.wordNodes.count / 2
-        
-        let indexWidth: CGFloat = 16.0
         
         var wordSizes: [(CGSize, CGSize)] = []
         var columnIndexWidth: [CGFloat] = [0.0, 0.0]
@@ -371,16 +368,14 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
             }
         }
         
-        let minimalFullscreenBottomInset: CGFloat = 74.0
         let minimalScrollBottomInset: CGFloat = 30.0
-        let fullscreenBottomInset = layout.intrinsicInsets.bottom + minimalFullscreenBottomInset
         let scrollBottomInset = layout.intrinsicInsets.bottom + minimalScrollBottomInset
         
         let buttonWidth = layout.size.width - buttonSideInset * 2.0
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: max(contentHeight + buttonSpacing, layout.size.height - scrollBottomInset - buttonHeight)), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: max(layout.size.height, buttonFrame.maxY + scrollBottomInset))
         
@@ -395,7 +390,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         if let path = getAppBundle().path(forResource: "WalletApologiesAccepted", ofType: "tgs") {
             let toastNode = ToastNode(theme: self.presentationData.theme, animationPath: path, text: self.presentationData.strings.Wallet_Words_NotDoneResponse)
             self.toastNode = toastNode
-            if let (layout, navigationHeight) = self.validLayout {
+            if let (layout, _) = self.validLayout {
                 toastNode.update(layout: layout, transition: .immediate)
             }
             self.addSubnode(toastNode)

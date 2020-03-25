@@ -42,8 +42,10 @@ int string_hash(slice s) asm "SHA256U";
 int check_signature(int hash, slice signature, int public_key) asm "CHKSIGNU";
 int check_data_signature(slice data, slice signature, int public_key) asm "CHKSIGNS";
 
-(int, int, int) compute_data_size(cell c, int max_cells) asm "CDATASIZE";
-(int, int, int) slice_compute_data_size(slice s, int max_cells) asm "SDATASIZE";
+(int, int, int) compute_data_size(cell c, int max_cells) impure asm "CDATASIZE";
+(int, int, int) slice_compute_data_size(slice s, int max_cells) impure asm "SDATASIZE";
+(int, int, int, int) compute_data_size?(cell c, int max_cells) asm "CDATASIZEQ NULLSWAPIFNOT2 NULLSWAPIFNOT";
+(int, int, int, int) slice_compute_data_size?(cell c, int max_cells) asm "SDATASIZEQ NULLSWAPIFNOT2 NULLSWAPIFNOT";
 
 ;; () throw_if(int excno, int cond) impure asm "THROWARGIF";
 
@@ -62,6 +64,8 @@ cont bless(slice s) impure asm "BLESS";
 
 int min(int x, int y) asm "MIN";
 int max(int x, int y) asm "MAX";
+(int, int) minmax(int x, int y) asm "MINMAX";
+int abs(int x) asm "ABS";
 
 slice begin_parse(cell c) asm "CTOS";
 () end_parse(slice s) impure asm "ENDS";

@@ -30,19 +30,19 @@ public func deliverOn<T, E>(_ threadPool: ThreadPool) -> (Signal<T, E>) -> Signa
             let queue = threadPool.nextQueue()
             return signal.start(next: { next in
                 queue.addTask(ThreadPoolTask { state in
-                    if !state.cancelled.with { $0 } {
+                    if !state.cancelled.with({ $0 }) {
                         subscriber.putNext(next)
                     }
                 })
             }, error: { error in
                 queue.addTask(ThreadPoolTask { state in
-                    if !state.cancelled.with { $0 } {
+                    if !state.cancelled.with({ $0 }) {
                         subscriber.putError(error)
                     }
                 })
             }, completed: {
                 queue.addTask(ThreadPoolTask { state in
-                    if !state.cancelled.with { $0 } {
+                    if !state.cancelled.with({ $0 }) {
                         subscriber.putCompletion()
                     }
                 })
@@ -97,7 +97,7 @@ public func runOn<T, E>(_ threadPool: ThreadPool) -> (Signal<T, E>) -> Signal<T,
             let disposable = MetaDisposable()
             
             let task = ThreadPoolTask { state in
-                if cancelled || state.cancelled.with { $0 } {
+                if cancelled || state.cancelled.with({ $0 }) {
                     return
                 }
                 

@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <vector>
 #include <string>
@@ -218,6 +218,8 @@ inline bool is_uc_ident(sym_idx_t idx) {
 }  // namespace sym
 
 namespace tlbc {
+
+td::LinearAllocator AR(1 << 22);
 
 /*
  * 
@@ -906,7 +908,7 @@ bool TypeExpr::no_tchk() const {
 }
 
 TypeExpr* TypeExpr::mk_intconst(const src::SrcLocation& loc, unsigned int_const) {
-  return new TypeExpr{loc, te_IntConst, (int)int_const};
+  return new (AR) TypeExpr{loc, te_IntConst, (int)int_const};
 }
 
 TypeExpr* TypeExpr::mk_intconst(const src::SrcLocation& loc, std::string int_const) {
@@ -951,16 +953,16 @@ TypeExpr* TypeExpr::mk_mulint(const src::SrcLocation& loc, TypeExpr* expr1, Type
     return expr2;
   }
   // delete expr2;
-  return new TypeExpr{loc, te_MulConst, val, {expr1}, expr1->negated};
+  return new (AR) TypeExpr{loc, te_MulConst, val, {expr1}, expr1->negated};
 }
 
 TypeExpr* TypeExpr::mk_apply(const src::SrcLocation& loc, int tp, TypeExpr* expr1, TypeExpr* expr2) {
-  TypeExpr* expr = new TypeExpr{loc, tp, 0, {expr1, expr2}};
+  TypeExpr* expr = new (AR) TypeExpr{loc, tp, 0, {expr1, expr2}};
   return expr;
 }
 
 TypeExpr* TypeExpr::mk_cellref(const src::SrcLocation& loc, TypeExpr* expr1) {
-  TypeExpr* expr = new TypeExpr{loc, te_Ref, 0, {expr1}};
+  TypeExpr* expr = new (AR) TypeExpr{loc, te_Ref, 0, {expr1}};
   return expr;
 }
 
@@ -1046,7 +1048,7 @@ bool TypeExpr::close(const src::SrcLocation& loc) {
 }
 
 TypeExpr* TypeExpr::mk_apply_empty(const src::SrcLocation& loc, sym_idx_t name, Type* type_applied) {
-  TypeExpr* expr = new TypeExpr{loc, te_Apply, name};
+  TypeExpr* expr = new (AR) TypeExpr{loc, te_Apply, name};
   expr->type_applied = type_applied;
   expr->is_nat_subtype = (type_applied->produces_nat && !type_applied->arity);
   return expr;
@@ -1984,7 +1986,7 @@ void parse_field_list(Lexer& lex, Constructor& cs);
 
 TypeExpr* parse_anonymous_constructor(Lexer& lex, Constructor& cs) {
   sym::open_scope(lex);
-  Constructor* cs2 = new Constructor(lex.cur().loc);  // anonymous constructor
+  Constructor* cs2 = new (AR) Constructor(lex.cur().loc);  // anonymous constructor
   parse_field_list(lex, *cs2);
   if (lex.tp() != ']') {
     lex.expect(']');
@@ -2089,7 +2091,7 @@ TypeExpr* parse_term(Lexer& lex, Constructor& cs, int mode) {
     }
     int i = sym_val->idx;
     assert(i >= 0 && i < cs.fields_num);
-    auto res = new TypeExpr{lex.cur().loc, TypeExpr::te_Param, i};
+    auto res = new (AR) TypeExpr{lex.cur().loc, TypeExpr::te_Param, i};
     auto field_type = cs.fields[i].type;
     assert(field_type);
     if ((mode & 4) && !cs.fields[i].known) {
@@ -2345,7 +2347,7 @@ void parse_constructor_def(Lexer& lex) {
   }
   //std::cerr << "parsing constructor `" << sym::symbols.get_name(constr_name) << "` with tag " << std::hex << tag
   //          << std::dec << std::endl;
-  auto cs_ref = new Constructor(where, constr_name, 0, tag);
+  auto cs_ref = new (AR) Constructor(where, constr_name, 0, tag);
   Constructor& cs = *cs_ref;
   cs.is_special = is_special;
   parse_field_list(lex, cs);
@@ -2417,7 +2419,9 @@ void parse_constructor_def(Lexer& lex) {
  * 
  */
 
-bool parse_source(std::istream* is, const src::FileDescr* fdescr) {
+std::vector<const src::FileDescr*> source_fdescr;
+
+bool parse_source(std::istream* is, src::FileDescr* fdescr) {
   src::SourceReader reader{is, fdescr};
   src::Lexer lex{reader, true, "(){}:;? #$. ^~ #", "//", "/*", "*/"};
   while (lex.tp() != src::_Eof) {
@@ -2432,6 +2436,7 @@ bool parse_source_file(const char* filename) {
     throw src::Fatal{"source file name is an empty string"};
   }
   src::FileDescr* cur_source = new src::FileDescr{filename};
+  source_fdescr.push_back(cur_source);
   std::ifstream ifs{filename};
   if (ifs.fail()) {
     throw src::Fatal{std::string{"cannot open source file `"} + filename + "`"};
@@ -2440,7 +2445,9 @@ bool parse_source_file(const char* filename) {
 }
 
 bool parse_source_stdin() {
-  return parse_source(&std::cin, new src::FileDescr{"stdin", true});
+  src::FileDescr* cur_source = new src::FileDescr{"stdin", true};
+  source_fdescr.push_back(cur_source);
+  return parse_source(&std::cin, cur_source);
 }
 
 /*
@@ -2466,7 +2473,7 @@ Type* define_builtin_type(std::string name_str, std::string args, bool produces_
   }
   auto sym_def = sym::define_global_symbol(name, true);
   assert(sym_def);
-  sym_def->value = new SymValType{type};
+  sym_def->value = new (AR) SymValType{type};
   if (size < 0) {
     type->size = MinMaxSize::Any;
   } else if (min_size >= 0 && min_size != size) {

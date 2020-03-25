@@ -34,7 +34,7 @@ public struct Font {
     
     public static func with(size: CGFloat, design: Design = .regular, traits: Traits = []) -> UIFont {
         if #available(iOS 13.0, *) {
-            var descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
+            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
             var symbolicTraits = descriptor.symbolicTraits
             if traits.contains(.bold) {
                 symbolicTraits.insert(.traitBold)

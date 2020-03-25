@@ -69,6 +69,33 @@ private func stringForAddress(strings: WalletStrings, address: WalletTransaction
     }
 }
 
+private extension WalletInfoTransaction {
+    var isEncrypted: Bool {
+        switch self {
+        case .pending:
+            return false
+        case let .completed(transaction):
+            if let inMessage = transaction.inMessage {
+                switch inMessage.contents {
+                case .encryptedText:
+                    return true
+                default:
+                    break
+                }
+            }
+            for message in transaction.outMessages {
+                switch message.contents {
+                    case .encryptedText:
+                        return true
+                    default:
+                        break
+                }
+            }
+            return false
+        }
+    }
+}
+
 private func extractAddress(_ walletTransaction: WalletInfoTransaction) -> WalletTransactionAddress {
     switch walletTransaction {
     case let .completed(walletTransaction):
@@ -90,17 +117,17 @@ private func extractAddress(_ walletTransaction: WalletInfoTransaction) -> Walle
                 return .unknown
             }
         }
-        return .none
     case let .pending(pending):
         return .list([pending.address])
     }
 }
 
-private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> String {
+private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> (string: String, isEncrypted: Bool) {
     switch walletTransaction {
     case let .completed(walletTransaction):
         let transferredValue = walletTransaction.transferredValueWithoutFees
         var text = ""
+        var isEncrypted = false
         if transferredValue <= 0 {
             for message in walletTransaction.outMessages {
                 if !text.isEmpty {
@@ -110,7 +137,8 @@ private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> S
                 case .raw:
                     break
                 case .encryptedText:
-                    text.append("<encrypted>")
+                    text.append("Encrypted Comment")
+                    isEncrypted = true
                 case let .plainText(plainText):
                     text.append(plainText)
                 }
@@ -121,15 +149,16 @@ private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> S
                 case .raw:
                     text = ""
                 case .encryptedText:
-                    text = "<encrypted>"
+                    text = "Encrypted Comment"
+                    isEncrypted = true
                 case let .plainText(plainText):
                     text = plainText
                 }
             }
         }
-        return text
+        return (text, isEncrypted)
     case let .pending(pending):
-        return String(data: pending.comment, encoding: .utf8) ?? ""
+        return (String(data: pending.comment, encoding: .utf8) ?? "", false)
     }
 }
 
@@ -160,7 +189,7 @@ private func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor:
 final class WalletTransactionInfoScreen: ViewController {
     private let context: WalletContext
     private let walletInfo: WalletInfo?
-    private let walletTransaction: WalletInfoTransaction
+    private var walletTransaction: WalletInfoTransaction
     private let walletState: Signal<(CombinedWalletState, Bool), NoError>
     private var presentationData: WalletPresentationData
 
@@ -234,6 +263,39 @@ final class WalletTransactionInfoScreen: ViewController {
                 }
             }
         }
+        (self.displayNode as! WalletTransactionInfoScreenNode).requestDecryption = { [weak self] in
+            guard let strongSelf = self, let walletInfo = strongSelf.walletInfo, case let .completed(walletTransaction) = strongSelf.walletTransaction else {
+                return
+            }
+            let keychain = strongSelf.context.keychain
+            let _ = (strongSelf.context.getServerSalt()
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Data?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { serverSalt -> Signal<WalletTransactionDecryptionKey?, NoError> in
+                guard let serverSalt = serverSalt else {
+                    return .single(nil)
+                }
+                return walletTransactionDecryptionKey(keychain: keychain, walletInfo: walletInfo, localPassword: serverSalt)
+            }
+            |> deliverOnMainQueue).start(next: { decryptionKey in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let decryptionKey = decryptionKey {
+                    let _ = (decryptWalletTransactions(decryptionKey: decryptionKey, transactions: [walletTransaction], tonInstance: strongSelf.context.tonInstance)
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard let strongSelf = self, let updatedTransaction = result.first else {
+                            return
+                        }
+                        strongSelf.walletTransaction = .completed(updatedTransaction)
+                        (strongSelf.displayNode as! WalletTransactionInfoScreenNode).updateTransaction(strongSelf.walletTransaction)
+                        (strongSelf.navigationController as? NavigationController)?.requestLayout(transition: .immediate)
+                    })
+                }
+            })
+        }
         (self.displayNode as! WalletTransactionInfoScreenNode).displayFeesTooltip = { [weak self] node, rect in
             guard let strongSelf = self else {
                 return
@@ -255,7 +317,7 @@ final class WalletTransactionInfoScreen: ViewController {
                 }
             }
             strongSelf.present(controller, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
-                if let strongSelf = self {
+                if let _ = self {
                     return (node.view, rect.insetBy(dx: 0.0, dy: -4.0))
                 }
                 return nil
@@ -286,7 +348,8 @@ final class WalletTransactionInfoScreen: ViewController {
         let minHeight: CGFloat = 424.0
         let maxHeight: CGFloat = min(596.0, layout.size.height)
         
-        let text = NSAttributedString(string: extractDescription(self.walletTransaction), font: Font.regular(17.0), textColor: .black)
+        let (plainText, textIsEncrypted) = extractDescription(self.walletTransaction)
+        let text = NSAttributedString(string: plainText, font: textIsEncrypted ? Font.monospace(17.0) : Font.regular(17.0), textColor: .black)
         let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
         let (textLayout, _) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - 36.0 * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
@@ -296,7 +359,13 @@ final class WalletTransactionInfoScreen: ViewController {
             let minOverscroll: CGFloat = 42.0
             let maxOverscroll: CGFloat = 148.0
             
-            let contentHeight = minHeight + textHeight
+            var contentHeight = minHeight + textHeight
+            
+            if textIsEncrypted {
+                let (decryptTextLayout, _) = TextNode.asyncLayout(nil)(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Decrypt", font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - 40.0, height: .greatestFiniteMagnitude), alignment: .center, insets: UIEdgeInsets()))
+                contentHeight += 10.0 + decryptTextLayout.size.height + 10.0
+            }
+            
             let difference = contentHeight - maxHeight
             if difference < 0.0 {
                 resultHeight = contentHeight
@@ -329,7 +398,7 @@ private let fractionalFont = Font.medium(24.0)
 private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: WalletContext
     private var presentationData: WalletPresentationData
-    private let walletTransaction: WalletInfoTransaction
+    private var walletTransaction: WalletInfoTransaction
     private let incoming: Bool
 
     private let titleNode: ImmediateTextNode
@@ -345,12 +414,15 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
     private let commentBackgroundNode: ASImageNode
     private let commentTextNode: ImmediateTextNode
     private let commentSeparatorNode: ASDisplayNode
+    private let commentDecryptButtonTitle: ImmediateTextNode
+    private let commentDecryptButton: HighlightableButtonNode
     private let addressTextNode: ImmediateTextNode
     private let buttonNode: SolidRoundedButtonNode
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var send: ((String) -> Void)?
+    var requestDecryption: (() -> Void)?
     var displayFeesTooltip: ((ASDisplayNode, CGRect) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
   
@@ -401,6 +473,15 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.commentSeparatorNode = ASDisplayNode()
         self.commentSeparatorNode.backgroundColor = self.presentationData.theme.list.itemPlainSeparatorColor
         
+        self.commentDecryptButtonTitle = ImmediateTextNode()
+        self.commentDecryptButtonTitle.attributedText = NSAttributedString(string: "Decrypt", font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.commentDecryptButtonTitle.textAlignment = .natural
+        self.commentDecryptButtonTitle.maximumNumberOfLines = 0
+        self.commentDecryptButtonTitle.isUserInteractionEnabled = false
+        
+        self.commentDecryptButton = HighlightableButtonNode()
+        self.commentDecryptButton.hitTestSlop = UIEdgeInsets(top: -10.0, left: -10.0, bottom: -10.0, right: -10.0)
+        
         self.addressTextNode = ImmediateTextNode()
         self.addressTextNode.maximumNumberOfLines = 4
         self.addressTextNode.textAlignment = .justified
@@ -438,8 +519,12 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.addSubnode(self.timeNode)
         self.addSubnode(self.amountNode)
         self.addSubnode(self.commentSeparatorNode)
+        self.commentDecryptButton.addSubnode(self.commentDecryptButtonTitle)
+        self.scrollNode.addSubnode(self.commentDecryptButton)
         self.addSubnode(self.addressTextNode)
         self.addSubnode(self.buttonNode)
+        
+        self.commentDecryptButton.isHidden = !walletTransaction.isEncrypted
     
         let titleFont = Font.semibold(17.0)
         let subtitleFont = Font.regular(13.0)
@@ -485,7 +570,8 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
             commentBackgroundColor = UIColor(rgb: 0xf1f1f4)
         }
         self.commentBackgroundNode.image = messageBubbleImage(incoming: transferredValue > 0, fillColor: commentBackgroundColor, strokeColor: presentationData.theme.transaction.descriptionBackgroundColor)
-        self.commentTextNode.attributedText = NSAttributedString(string: extractDescription(walletTransaction), font: Font.regular(17.0), textColor: presentationData.theme.transaction.descriptionTextColor)
+        let (plainText, textIsEncrypted) = extractDescription(walletTransaction)
+        self.commentTextNode.attributedText = NSAttributedString(string: plainText, font:  textIsEncrypted ? Font.monospace(17.0) : Font.regular(17.0), textColor: presentationData.theme.transaction.descriptionTextColor)
         
         let address = extractAddress(walletTransaction)
         var singleAddress: String?
@@ -501,6 +587,21 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
                 self?.send?(address)
             }
         }
+        
+        self.commentDecryptButton.addTarget(self, action: #selector(self.decryptCommentPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func decryptCommentPressed() {
+        self.requestDecryption?()
+    }
+    
+    func updateTransaction(_ walletTransaction: WalletInfoTransaction) {
+        self.walletTransaction = walletTransaction
+        
+        let (plainText, textIsEncrypted) = extractDescription(walletTransaction)
+        self.commentTextNode.attributedText = NSAttributedString(string: plainText, font:  textIsEncrypted ? Font.monospace(17.0) : Font.regular(17.0), textColor: presentationData.theme.transaction.descriptionTextColor)
+        
+        self.commentDecryptButton.isHidden = !walletTransaction.isEncrypted
     }
 
     override func didLoad() {
@@ -509,15 +610,17 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.scrollNode.view.delegate = self
         self.scrollNode.view.alwaysBounceVertical = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.view.canCancelContentTouches = true
         
         let commentGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapCommentGesture(_:)))
-        commentGestureRecognizer.tapActionAtPoint = { [weak self] point in
+        commentGestureRecognizer.tapActionAtPoint = { point in
             return .waitForSingleTap
         }
         self.commentBackgroundNode.view.addGestureRecognizer(commentGestureRecognizer)
         
         let addressGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapAddressGesture(_:)))
-        addressGestureRecognizer.tapActionAtPoint = { [weak self] point in
+        addressGestureRecognizer.tapActionAtPoint = { point in
             return .waitForSingleTap
         }
         self.addressTextNode.view.addGestureRecognizer(addressGestureRecognizer)
@@ -526,10 +629,10 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
     @objc func tapLongTapOrDoubleTapCommentGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .longTap:
-                    let description = extractDescription(self.walletTransaction)
+                    let (description, _) = extractDescription(self.walletTransaction)
                     if !description.isEmpty {
                         self.displayCopyContextMenu?(self, self.commentBackgroundNode.convert(self.commentBackgroundNode.bounds, to: self), description)
                     }
@@ -545,7 +648,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
     @objc func tapLongTapOrDoubleTapAddressGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .longTap:
                     let address = extractAddress(self.walletTransaction)
@@ -668,7 +771,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         let buttonHeight: CGFloat = 50.0
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         let addressSize = self.addressTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
         let addressFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - addressSize.width) / 2.0), y: buttonFrame.minY - addressSize.height - 34.0), size: addressSize)
@@ -695,7 +798,18 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         }
         transition.updateFrame(node: self.commentBackgroundNode, frame: commentBackgroundFrame)
         
-        let contentHeight = commentOrigin.y + commentBackgroundFrame.height
+        var commentMaxY = commentOrigin.y + commentBackgroundFrame.height
+        
+        let decryptSize = self.commentDecryptButtonTitle.updateLayout(CGSize(width: layout.size.width - 40.0, height: .greatestFiniteMagnitude))
+        let decryptButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - decryptSize.width) / 2.0), y: commentMaxY + 10.0), size: decryptSize)
+        transition.updateFrame(node: self.commentDecryptButton, frame: decryptButtonFrame)
+        transition.updateFrame(node: self.commentDecryptButtonTitle, frame: CGRect(origin: CGPoint(), size: decryptSize))
+        
+        if self.walletTransaction.isEncrypted {
+            commentMaxY = decryptButtonFrame.maxY + 10.0
+        }
+        
+        let contentHeight = commentMaxY
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         
         let isScrollEnabled = contentHeight - scrollFrame.height > 20.0

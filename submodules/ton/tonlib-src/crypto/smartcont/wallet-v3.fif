@@ -9,9 +9,11 @@ true =: allow-bounce
 false =: force-bounce
 3 =: send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
 60 =: timeout   // external message expires in 60 seconds
+variable extra-currencies
+{ extra-currencies @ cc+ extra-currencies ! } : extra-cc+!
 
 begin-options
-     " <filename-base> <dest-addr> <subwallet-id> <seqno> <amount> [-n|-b] [-t<timeout>] [-B <body-boc>] [-C <comment>] [<savefile>]" +cr +tab
+     " <filename-base> <dest-addr> <subwallet-id> <seqno> <amount> [-x <extra-amount>*<extra-currency-id>] [-n|-b] [-t<timeout>] [-B <body-boc>] [-C <comment>] [<savefile>]" +cr +tab
     +"Creates a request to advanced wallet created by new-wallet-v3.fif, with private key loaded from file <filename-base>.pk "
     +"and address from <filename-base>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)"
     disable-digit-options generic-help-setopt
@@ -19,6 +21,8 @@ begin-options
     "Clears bounce flag" option-help
   "b" "--force-bounce" { true =: force-bounce } short-long-option
     "Forces bounce flag" option-help
+  "x" "--extra" { $>xcc extra-cc+! } short-long-option-arg
+    "Indicates the amount of extra currencies to be transfered" option-help
   "t" "--timeout" { parse-int =: timeout } short-long-option-arg
     "Sets expiration timeout in seconds (" timeout (.) $+ +" by default)" option-help
   "B" "--body" { =: body-boc-file } short-long-option-arg
@@ -40,7 +44,7 @@ $1 =: file-base
 $2 bounce parse-load-address force-bounce or allow-bounce and =: bounce 2=: dest_addr
 $3 parse-int =: subwallet_id
 $4 parse-int =: seqno
-$5 $>GR =: amount
+$5 $>cc extra-cc+! extra-currencies @ 2=: amount
 $6 "wallet-query" replace-if-null =: savefile
 
 file-base +".addr" load-address
@@ -51,14 +55,14 @@ file-base +".pk" load-keypair nip constant wallet_pk
 def? body-boc-file { @' body-boc-file file>B B>boc } { comment simple-transfer-body } cond
 constant body-cell
 
-."Transferring " amount .GR ."to account "
+."Transferring " amount .GR+cc ."to account "
 dest_addr 2dup bounce 7 + .Addr ." = " .addr 
 ."subwallet_id=0x" subwallet_id x.
 ."seqno=0x" seqno x. ."bounce=" bounce . cr
 ."Body of transfer message is " body-cell <s csr. cr
   
 // create a message
-<b b{01} s, bounce 1 i, b{000} s, dest_addr Addr, amount Gram, 0 9 64 32 + + 1+ u,
+<b b{01} s, bounce 1 i, b{000} s, dest_addr Addr, amount Gram+cc, 0 9 64 32 + + u,
   body-cell <s 2dup 1 s-fits-with? not rot over 1 i, -rot { drop body-cell ref, } { s, } cond
 b>
 <b subwallet_id 32 u, now timeout + 32 u, seqno 32 u, send-mode 8 u, swap ref, b>

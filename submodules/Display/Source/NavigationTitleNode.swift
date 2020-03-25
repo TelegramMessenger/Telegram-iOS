@@ -48,7 +48,7 @@ public class NavigationTitleNode: ASDisplayNode {
     }
     
     public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        self.label.updateLayout(constrainedSize)
+        let _ = self.label.updateLayout(constrainedSize)
         return self.label.calculatedSize
     }
     

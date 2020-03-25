@@ -215,8 +215,17 @@ bool downcast_call(Object &obj, const T &func) {
     case msg_dataEncryptedText::ID:
       func(static_cast<msg_dataEncryptedText &>(obj));
       return true;
-    case msg_dataArray::ID:
-      func(static_cast<msg_dataArray &>(obj));
+    case msg_dataDecrypted::ID:
+      func(static_cast<msg_dataDecrypted &>(obj));
+      return true;
+    case msg_dataDecryptedArray::ID:
+      func(static_cast<msg_dataDecryptedArray &>(obj));
+      return true;
+    case msg_dataEncrypted::ID:
+      func(static_cast<msg_dataEncrypted &>(obj));
+      return true;
+    case msg_dataEncryptedArray::ID:
+      func(static_cast<msg_dataEncryptedArray &>(obj));
       return true;
     case msg_message::ID:
       func(static_cast<msg_message &>(obj));
@@ -396,6 +405,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case msg_decrypt::ID:
       func(static_cast<msg_decrypt &>(obj));
+      return true;
+    case msg_decryptWithProof::ID:
+      func(static_cast<msg_decryptWithProof &>(obj));
       return true;
     case onLiteServerQueryError::ID:
       func(static_cast<onLiteServerQueryError &>(obj));

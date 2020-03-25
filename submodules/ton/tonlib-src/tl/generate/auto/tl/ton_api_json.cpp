@@ -85,7 +85,8 @@ Result<int32> tl_constructor_from_string(ton_api::TestObject *object, const std:
 Result<int32> tl_constructor_from_string(ton_api::adnl_Address *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"adnl.address.udp", 1728947943},
-    {"adnl.address.udp6", -484613126}
+    {"adnl.address.udp6", -484613126},
+    {"adnl.address.tunnel", 153813739}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -112,8 +113,20 @@ Result<int32> tl_constructor_from_string(ton_api::adnl_Message *object, const st
 }
 Result<int32> tl_constructor_from_string(ton_api::adnl_Proxy *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
-    {"adnl.proxy.none", -90551726},
-    {"adnl.proxy.fast", 554536094}
+    {"adnl.proxy.none", 892487803},
+    {"adnl.proxy.fast", 982205877}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(ton_api::adnl_ProxyControlPacket *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"adnl.proxyControlPacketPing", 932635723},
+    {"adnl.proxyControlPacketPong", 1272044540},
+    {"adnl.proxyControlPacketRegister", -1022774721}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -557,6 +570,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"testVectorBytes", 1267407827},
     {"adnl.address.udp", 1728947943},
     {"adnl.address.udp6", -484613126},
+    {"adnl.address.tunnel", 153813739},
     {"adnl.addressList", 573040216},
     {"adnl.message.createChannel", -428620869},
     {"adnl.message.confirmChannel", 1625103721},
@@ -570,10 +584,15 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"adnl.nodes", -1576412330},
     {"adnl.packetContents", -784151159},
     {"adnl.pong", 544504846},
-    {"adnl.proxy.none", -90551726},
-    {"adnl.proxy.fast", 554536094},
+    {"adnl.proxy.none", 892487803},
+    {"adnl.proxy.fast", 982205877},
+    {"adnl.proxyControlPacketPing", 932635723},
+    {"adnl.proxyControlPacketPong", 1272044540},
+    {"adnl.proxyControlPacketRegister", -1022774721},
+    {"adnl.proxyPacketHeader", 141114488},
     {"adnl.proxyToFastHash", -574752674},
     {"adnl.proxyToFast", -1259462186},
+    {"adnl.tunnelPacketContents", -980338508},
     {"adnl.config.global", -1099988784},
     {"adnl.db.node.key", -979114962},
     {"adnl.db.node.value", 1415390983},
@@ -1361,6 +1380,21 @@ Status from_json(ton_api::adnl_address_udp6 &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::adnl_address_tunnel &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "to", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.to_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "pubkey", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.pubkey_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::adnl_addressList &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "addrs", JsonValue::Type::Null, true));
@@ -1641,13 +1675,109 @@ Status from_json(ton_api::adnl_pong &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(ton_api::adnl_proxy_none &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
   return Status::OK();
 }
 Status from_json(ton_api::adnl_proxy_fast &to, JsonObject &from) {
   {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  {
     TRY_RESULT(value, get_json_object_field(from, "shared_secret", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json_bytes(to.shared_secret_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::adnl_proxyControlPacketPing &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::adnl_proxyControlPacketPong &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::adnl_proxyControlPacketRegister &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "ip", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.ip_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "port", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.port_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::adnl_proxyPacketHeader &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "proxy_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.proxy_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "flags", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.flags_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "ip", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.ip_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "port", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.port_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "adnl_start_time", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.adnl_start_time_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "date", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.date_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "signature", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.signature_, value));
     }
   }
   return Status::OK();
@@ -1708,6 +1838,57 @@ Status from_json(ton_api::adnl_proxyToFast &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "signature", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.signature_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::adnl_tunnelPacketContents &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "rand1", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.rand1_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "flags", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.flags_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "from_ip", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.from_ip_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "from_port", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.from_port_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.message_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "statistics", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.statistics_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "payment", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.payment_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "rand2", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.rand2_, value));
     }
   }
   return Status::OK();
@@ -6499,6 +6680,14 @@ void to_json(JsonValueScope &jv, const ton_api::adnl_address_udp6 &object) {
   jo << ctie("ip", ToJson(object.ip_));
   jo << ctie("port", ToJson(object.port_));
 }
+void to_json(JsonValueScope &jv, const ton_api::adnl_address_tunnel &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "adnl.address.tunnel");
+  jo << ctie("to", ToJson(object.to_));
+  if (object.pubkey_) {
+    jo << ctie("pubkey", ToJson(object.pubkey_));
+  }
+}
 void to_json(JsonValueScope &jv, const ton_api::adnl_addressList &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "adnl.addressList");
@@ -6616,11 +6805,46 @@ void to_json(JsonValueScope &jv, const ton_api::adnl_Proxy &object) {
 void to_json(JsonValueScope &jv, const ton_api::adnl_proxy_none &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "adnl.proxy.none");
+  jo << ctie("id", ToJson(object.id_));
 }
 void to_json(JsonValueScope &jv, const ton_api::adnl_proxy_fast &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "adnl.proxy.fast");
+  jo << ctie("id", ToJson(object.id_));
   jo << ctie("shared_secret", ToJson(JsonBytes{object.shared_secret_}));
+}
+void to_json(JsonValueScope &jv, const ton_api::adnl_ProxyControlPacket &object) {
+  ton_api::downcast_call(const_cast<ton_api::adnl_ProxyControlPacket &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const ton_api::adnl_proxyControlPacketPing &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "adnl.proxyControlPacketPing");
+  jo << ctie("id", ToJson(object.id_));
+}
+void to_json(JsonValueScope &jv, const ton_api::adnl_proxyControlPacketPong &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "adnl.proxyControlPacketPong");
+  jo << ctie("id", ToJson(object.id_));
+}
+void to_json(JsonValueScope &jv, const ton_api::adnl_proxyControlPacketRegister &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "adnl.proxyControlPacketRegister");
+  jo << ctie("ip", ToJson(object.ip_));
+  jo << ctie("port", ToJson(object.port_));
+}
+void to_json(JsonValueScope &jv, const ton_api::adnl_proxyPacketHeader &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "adnl.proxyPacketHeader");
+  jo << ctie("proxy_id", ToJson(object.proxy_id_));
+  if (object.flags_) {
+    jo << ctie("flags", ToJson(object.flags_));
+  }
+  jo << ctie("ip", ToJson(object.ip_));
+  jo << ctie("port", ToJson(object.port_));
+  jo << ctie("adnl_start_time", ToJson(object.adnl_start_time_));
+  jo << ctie("seqno", ToJson(JsonInt64{object.seqno_}));
+  jo << ctie("date", ToJson(object.date_));
+  jo << ctie("signature", ToJson(object.signature_));
 }
 void to_json(JsonValueScope &jv, const ton_api::adnl_proxyToFastHash &object) {
   auto jo = jv.enter_object();
@@ -6638,6 +6862,20 @@ void to_json(JsonValueScope &jv, const ton_api::adnl_proxyToFast &object) {
   jo << ctie("port", ToJson(object.port_));
   jo << ctie("date", ToJson(object.date_));
   jo << ctie("signature", ToJson(object.signature_));
+}
+void to_json(JsonValueScope &jv, const ton_api::adnl_tunnelPacketContents &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "adnl.tunnelPacketContents");
+  jo << ctie("rand1", ToJson(JsonBytes{object.rand1_}));
+  if (object.flags_) {
+    jo << ctie("flags", ToJson(object.flags_));
+  }
+  jo << ctie("from_ip", ToJson(object.from_ip_));
+  jo << ctie("from_port", ToJson(object.from_port_));
+  jo << ctie("message", ToJson(JsonBytes{object.message_}));
+  jo << ctie("statistics", ToJson(JsonBytes{object.statistics_}));
+  jo << ctie("payment", ToJson(JsonBytes{object.payment_}));
+  jo << ctie("rand2", ToJson(JsonBytes{object.rand2_}));
 }
 void to_json(JsonValueScope &jv, const ton_api::adnl_config_global &object) {
   auto jo = jv.enter_object();

@@ -13,12 +13,12 @@ public enum QrCodeIcon {
 }
 
 private func floorToContextPixels(_ value: CGFloat, scale: CGFloat? = UIScreenScale) -> CGFloat {
-    var scale = scale ?? UIScreenScale
+    let scale = scale ?? UIScreenScale
     return floor(value * scale) / scale
 }
 
 private func roundToContextPixels(_ value: CGFloat, scale: CGFloat? = UIScreenScale) -> CGFloat {
-    var scale = scale ?? UIScreenScale
+    let scale = scale ?? UIScreenScale
     return round(value * scale) / scale
 }
 

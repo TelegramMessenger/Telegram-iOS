@@ -52,43 +52,56 @@
 // elected-for elections-begin-before elections-end-before stakes-frozen
 { 4 0 reverse <b { swap 32 u, } 4 times b> 15 config! } : config.election_params!
 
-dictnew 0 2constant validator-dict
-{ @' validator-dict } : validator-dict@
-{ validator-dict@ nip } : validator#
+variable validator-dict
+dictnew 0 validator-dict 2!
+{ validator-dict @ second } : validator#
 // val-pubkey weight --
 { dup 0<= abort"validator weight must be non-negative"
   dup 64 ufits not abort"validator weight must fit into 64 bits"
   over Blen 32 <> abort"validator public key must be 32 bytes long"
   <b x{538e81278a} s, rot B, swap 64 u, b> <s
-  validator-dict@ dup 1+ 3 -roll swap 
+  validator-dict 2@ dup 1+ 3 -roll swap 
   16 udict!+ 0= abort"cannot add validator"
-  swap 2 'nop does : validator-dict
+  swap validator-dict 2!
 } : add-validator
 // since-ut until-ut main-val-cnt-or-0 --
 { ?dup 0= { validator# } if 
   validator# 0= abort"no initial validators defined"
   rot <b x{11} s, swap 32 u, rot 32 u, validator# 16 u, swap 16 u,
-  validator-dict@ drop <s s, b>
+  validator-dict @ first <s s, b>
   34 config!
 } : config.validators!
 
-dictnew constant workchain-dict
+variable workchain-dict
 // root-hash file-hash enable-utime actual-min-split min-split max-split workchain-id --
 { <b x{a6} s, 5 roll 32 u, 4 roll 8 u, 3 roll 8 u, rot 8 u, x{e000} s,
   3 roll 256 u, rot 256 u, 0 32 u, x{1} s, -1 32 i, 0 64 u, b>
   dup isWorkchainDescr? not abort"invalid WorkchainDescr created"
-  <s swap @' workchain-dict 32 idict!+ 0= abort"cannot add workchain"
-  =: workchain-dict
+  <s swap workchain-dict @ 32 idict!+ 0= abort"cannot add workchain"
+  workchain-dict !
 } : add-std-workchain
 // --
-{ @' workchain-dict dict>s s>c 12 config! } : config.workchains!
+{ workchain-dict @ dict>s s>c 12 config! } : config.workchains!
 
-dictnew constant special-dict
+variable special-dict
 // special-smc-addr --
-{ x{} swap @' special-dict 256 udict! not abort"cannot add a new special smart contract"
-  =: special-dict
+{ x{} swap special-dict @ 256 udict! not abort"cannot add a new special smart contract"
+  special-dict !
 } : make_special
-{ @' special-dict dict>s s>c 31 config! } : config.special!
+{ special-dict @ dict>s s>c 31 config! } : config.special!
+
+// ( l -- D )  Converts a list of parameter indices into a dictionary
+{ dictnew { swap uncons -rot <b swap rot 32 b>idict! not abort"cannot add parameter index" over null?
+  } until nip
+} : param-list-to-dict
+{ param-list-to-dict 9 config! } : config.mandatory_params!
+{ param-list-to-dict 10 config! } : config.critical_params!
+
+// min_tot_rounds max_tot_rounds min_wins max_losses min_store_sec max_store_sec bit_price cell_price --
+{ 8 untuple 8 0 reverse <b x{36} s, { swap 8 u, } 4 times { swap 32 u, } 4 times b> } : cfg-prop-setup
+// normal-prop-params critical-prop-params --
+{ swap cfg-prop-setup swap cfg-prop-setup <b x{91} s, rot ref, swap ref, b> } : make-proposals-setup
+{ make-proposals-setup 11 config! } : config.param_proposals_setup!
 
 // bit-pps cell-pps mc-bit-pps mc-cell-pps --
 { <b x{cc} s, 0 32 u, 4 roll 64 u, 3 roll 64 u, rot 64 u, swap 64 u,

@@ -9,15 +9,11 @@ load("@build_bazel_rules_apple//apple:watchos.bzl",
     "watchos_extension",
 )
 
-load("@build_bazel_rules_apple//apple:versioning.bzl",
-    "apple_bundle_version",
-)
-
 load("@build_bazel_rules_swift//swift:swift.bzl",
     "swift_library",
 )
 
-load("//build-system:plist_fragment.bzl",
+load("//build-system/bazel-utils:plist_fragment.bzl",
     "plist_fragment",
 )
 
@@ -179,42 +175,42 @@ plist_fragment(
     template =
     """
     <key>CFBundleShortVersionString</key>
-        <string>{telegram_version}</string>
-        <key>CFBundleVersion</key>
-        <string>{telegram_build_number}</string>
-        <key>CFBundleURLTypes</key>
-        <array>
-            <dict>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>CFBundleURLName</key>
-                <string>{telegram_bundle_id}</string>
-                <key>CFBundleURLSchemes</key>
-                <array>
-                    <string>telegram</string>
-                </array>
-            </dict>
-            <dict>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>CFBundleURLName</key>
-                <string>{telegram_bundle_id}.ton</string>
-                <key>CFBundleURLSchemes</key>
-                <array>
-                    <string>ton</string>
-                </array>
-            </dict>
-            <dict>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>CFBundleURLName</key>
-                <string>{telegram_bundle_id}.compatibility</string>
-                <key>CFBundleURLSchemes</key>
-                <array>
-                    <string>tg</string>
-                </array>
-            </dict>
-        </array>
+    <string>{telegram_version}</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>CFBundleURLName</key>
+            <string>{telegram_bundle_id}</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>CFBundleURLName</key>
+            <string>{telegram_bundle_id}.ton</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>ton</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>CFBundleURLName</key>
+            <string>{telegram_bundle_id}.compatibility</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>tg</string>
+            </array>
+        </dict>
+    </array>
     """.format(
         telegram_version = telegram_version,
         telegram_build_number = telegram_build_number,

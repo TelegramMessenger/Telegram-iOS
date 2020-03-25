@@ -22,6 +22,7 @@
 #include "fift/utils.h"
 #include "common/bigint.hpp"
 
+#include "td/utils/base64.h"
 #include "td/utils/tests.h"
 #include "td/utils/ScopeGuard.h"
 #include "td/utils/StringBuilder.h"
@@ -53,7 +54,10 @@ std::string run_vm(td::Ref<vm::Cell> cell) {
 
   vm::Stack stack;
   try {
-    vm::run_vm_code(vm::load_cell_slice_ref(cell), stack, 0 /*flags*/, nullptr /*data*/, std::move(log) /*VmLog*/);
+    vm::GasLimits gas_limit(1000, 1000);
+
+    vm::run_vm_code(vm::load_cell_slice_ref(cell), stack, 0 /*flags*/, nullptr /*data*/, std::move(log) /*VmLog*/,
+                    nullptr, &gas_limit);
   } catch (...) {
     LOG(FATAL) << "catch unhandled exception";
   }
@@ -75,6 +79,14 @@ void test_run_vm(td::Slice code_hex) {
   int bits = (int)td::bitstring::parse_bitstring_hex_literal(buff, sizeof(buff), code_hex.begin(), code_hex.end());
   CHECK(bits >= 0);
   test_run_vm(to_cell(buff, bits));
+}
+
+void test_run_vm_raw(td::Slice code64) {
+  auto code = td::base64_decode(code64).move_as_ok();
+  if (code.size() > 127) {
+    code.resize(127);
+  }
+  test_run_vm(vm::CellBuilder().store_bytes(code).finalize());
 }
 
 TEST(VM, simple) {
@@ -126,12 +138,12 @@ TEST(VM, unhandled_exception_1) {
 
 TEST(VM, unhandled_exception_2) {
   // infinite loop now
-  // test_run_vm("EBEDB4");
+  test_run_vm("EBEDB4");
 }
 
 TEST(VM, unhandled_exception_3) {
   // infinite loop now
-  // test_run_vm("EBEDC0");
+  test_run_vm("EBEDC0");
 }
 
 TEST(VM, unhandled_exception_4) {
@@ -140,6 +152,17 @@ TEST(VM, unhandled_exception_4) {
 
 TEST(VM, unhandled_exception_5) {
   test_run_vm("738B04016D21F41476A721F49F");
+}
+
+TEST(VM, infinity_loop_1) {
+  test_run_vm_raw("f3r4AJGQ6rDraIQ=");
+}
+TEST(VM, infinity_loop_2) {
+  test_run_vm_raw("kpTt7ZLrig==");
+}
+
+TEST(VM, oom_1) {
+  test_run_vm_raw("bXflX/BvDw==");
 }
 
 TEST(VM, bigint) {

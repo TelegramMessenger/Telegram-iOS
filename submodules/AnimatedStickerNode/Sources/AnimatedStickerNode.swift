@@ -543,7 +543,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         let frameSourceHolder = self.frameSource
         self.queue.async { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource?
-            var notifyUpdated: (() -> Void)?
+            let notifyUpdated: (() -> Void)? = nil
             if let directData = directData {
                 maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
             } else if let (cachedData, cachedDataComplete) = cachedData {

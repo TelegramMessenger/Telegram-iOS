@@ -152,7 +152,7 @@ public final class DisposableSet : Disposable {
     
     public func remove(_ disposable: Disposable) {
         pthread_mutex_lock(&self.lock)
-        if let index = self.disposables.index(where: { $0 === disposable }) {
+        if let index = self.disposables.firstIndex(where: { $0 === disposable }) {
             self.disposables.remove(at: index)
         }
         pthread_mutex_unlock(&self.lock)

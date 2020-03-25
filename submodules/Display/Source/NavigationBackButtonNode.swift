@@ -69,7 +69,7 @@ public class NavigationBackButtonNode: ASControlNode {
     }
     
     public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        self.label.updateLayout(CGSize(width: max(0.0, constrainedSize.width - self.arrow.frame.size.width - self.arrowSpacing), height: constrainedSize.height))
+        let _ = self.label.updateLayout(CGSize(width: max(0.0, constrainedSize.width - self.arrow.frame.size.width - self.arrowSpacing), height: constrainedSize.height))
         
         return CGSize(width: self.arrow.frame.size.width + self.arrowSpacing + self.label.calculatedSize.width, height: max(self.arrow.frame.size.height, self.label.calculatedSize.height))
     }

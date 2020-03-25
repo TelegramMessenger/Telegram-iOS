@@ -1555,8 +1555,16 @@ int Transaction::try_action_send_msg(const vm::CellSlice& cs0, ActionPhase& ap, 
     Ref<vm::Cell> new_extra;
 
     if (!block::sub_extra_currency(ap.remaining_balance.extra, req.extra, new_extra)) {
-      LOG(DEBUG) << "not enough extra currency to send with the message";
+      LOG(DEBUG) << "not enough extra currency to send with the message: "
+                 << block::CurrencyCollection{0, req.extra}.to_str() << " required, only "
+                 << block::CurrencyCollection{0, ap.remaining_balance.extra}.to_str() << " available";
       return skip_invalid ? 0 : 38;  // not enough (extra) funds
+    }
+    if (ap.remaining_balance.extra.not_null() || req.extra.not_null()) {
+      LOG(DEBUG) << "subtracting extra currencies: "
+                 << block::CurrencyCollection{0, ap.remaining_balance.extra}.to_str() << " minus "
+                 << block::CurrencyCollection{0, req.extra}.to_str() << " equals "
+                 << block::CurrencyCollection{0, new_extra}.to_str();
     }
 
     auto fwd_fee_mine = msg_prices.get_first_part(fwd_fee);
@@ -1691,7 +1699,9 @@ int Transaction::try_action_reserve_currency(vm::CellSlice& cs, ActionPhase& ap,
     }
   }
   if (!block::sub_extra_currency(ap.remaining_balance.extra, reserve.extra, newc.extra)) {
-    LOG(DEBUG) << "not enough extra currency to reserve";
+    LOG(DEBUG) << "not enough extra currency to reserve: " << block::CurrencyCollection{0, reserve.extra}.to_str()
+               << " required, only " << block::CurrencyCollection{0, ap.remaining_balance.extra}.to_str()
+               << " available";
     if (mode & 2) {
       // TODO: process (mode & 2) correctly by setting res_extra := inf (reserve.extra, ap.remaining_balance.extra)
     }
@@ -1720,10 +1730,16 @@ bool Transaction::prepare_bounce_phase(const ActionPhaseConfig& cfg) {
   }
   bounce_phase = std::make_unique<BouncePhase>();
   BouncePhase& bp = *bounce_phase;
+  block::gen::Message::Record msg;
   block::gen::CommonMsgInfo::Record_int_msg_info info;
-  if (!tlb::unpack_cell_inexact(in_msg, info)) {
+  auto cs = vm::load_cell_slice(in_msg);
+  if (!(tlb::unpack(cs, info) && gen::t_Maybe_Either_StateInit_Ref_StateInit.skip(cs) && cs.have(1) &&
+        cs.have_refs((int)cs.prefetch_ulong(1)))) {
     bounce_phase.reset();
     return false;
+  }
+  if (cs.fetch_ulong(1)) {
+    cs = vm::load_cell_slice(cs.prefetch_ref());
   }
   info.ihr_disabled = true;
   info.bounce = false;
@@ -1776,10 +1792,26 @@ bool Transaction::prepare_bounce_phase(const ActionPhaseConfig& cfg) {
         && block::tlb::t_Grams.store_long(cb, bp.fwd_fees)  // fwd_fee:Grams
         && cb.store_long_bool(info.created_lt, 64)          // created_lt:uint64
         && cb.store_long_bool(info.created_at, 32)          // created_at:uint32
-        && cb.store_long_bool(0, 2)                         // init:(Maybe ...) state:(Either ..)
-        && cb.finalize_to(bp.out_msg));
+        && cb.store_bool_bool(false));                      // init:(Maybe ...)
+  if (cfg.bounce_msg_body) {
+    int body_bits = std::min((int)cs.size(), cfg.bounce_msg_body);
+    if (cb.remaining_bits() >= body_bits + 33u) {
+      CHECK(cb.store_bool_bool(false)                             // body:(Either X ^X) -> left X
+            && cb.store_long_bool(-1, 32)                         // int = -1 ("message type")
+            && cb.append_bitslice(cs.prefetch_bits(body_bits)));  // truncated message body
+    } else {
+      vm::CellBuilder cb2;
+      CHECK(cb.store_bool_bool(true)                             // body:(Either X ^X) -> right ^X
+            && cb2.store_long_bool(-1, 32)                       // int = -1 ("message type")
+            && cb2.append_bitslice(cs.prefetch_bits(body_bits))  // truncated message body
+            && cb.store_builder_ref_bool(std::move(cb2)));       // ^X
+    }
+  } else {
+    CHECK(cb.store_bool_bool(false));  // body:(Either ..)
+  }
+  CHECK(cb.finalize_to(bp.out_msg));
   if (verbosity > 2) {
-    std::cerr << "generated bounced message: ";
+    LOG(INFO) << "generated bounced message: ";
     block::gen::t_Message_Any.print_ref(std::cerr, bp.out_msg);
   }
   out_msgs.push_back(bp.out_msg);

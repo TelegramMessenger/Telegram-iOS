@@ -66,6 +66,13 @@ _ unpack_owner_info(slice cs) inline_ref {
   return (root_i, 0, 0, in_msg);
 }
 
+(cell, ()) dec_flood(cell owner_infos, int creator_i) {
+  (slice owner_info, var found?) = owner_infos.udict_get?(8, creator_i);
+  (int public_key, int flood) = unpack_owner_info(owner_info);
+  owner_infos~udict_set_builder(8, creator_i, pack_owner_info(public_key, flood - 1));
+  return (owner_infos, ());
+}
+
 () try_init() impure inline_ref {
   ;; first query without signatures is always accepted
   (int wallet_id, int n, int k, int last_cleaned, cell owner_infos, cell pending_queries) = unpack_state();
@@ -82,10 +89,7 @@ _ unpack_owner_info(slice cs) inline_ref {
       send_raw_message(msg~load_ref(), mode);
     }
     pending_queries~udict_set_builder(64, query_id, begin_cell().store_int(0, 1));
-
-    (slice owner_info, var found?) = owner_infos.udict_get?(8, creator_i);
-    (int public_key, int flood) = unpack_owner_info(owner_info);
-    owner_infos~udict_set_builder(8, creator_i, pack_owner_info(public_key, flood - 1));
+    owner_infos~dec_flood(creator_i);
   } else {
     pending_queries~udict_set_builder(64, query_id, begin_cell()
       .store_uint(1, 1)
@@ -123,8 +127,8 @@ _ unpack_owner_info(slice cs) inline_ref {
   last_cleaned -= last_cleaned == 0;
 
   (slice owner_info, var found?) = owner_infos.udict_get?(8, root_i);
-  (int public_key, int flood) = unpack_owner_info(owner_info);
   throw_unless(31, found?);
+  (int public_key, int flood) = unpack_owner_info(owner_info);
   throw_unless(32, check_signature(root_hash, root_signature, public_key));
 
   cell signatures = in_msg~load_dict();
@@ -154,11 +158,12 @@ _ unpack_owner_info(slice cs) inline_ref {
   cnt_bits |= mask;
   cnt += 1;
 
+  throw_if(41, ~ found? & (cnt < k) & (bound + ((60 * 60) << 32) > query_id));
+
   set_gas_limit(100000);
 
   ifnot (found?) {
     owner_infos~udict_set_builder(8, root_i, pack_owner_info(public_key, flood));
-    throw_if(41, (cnt < k) & (bound + ((60 * 60) << 32) > query_id));
   }
 
   (pending_queries, owner_infos) = update_pending_queries(pending_queries, owner_infos, msg, query_id, creator_i, cnt, cnt_bits, n, k);
@@ -178,12 +183,15 @@ _ unpack_owner_info(slice cs) inline_ref {
   bound -= (64 << 32);   ;; clean up records expired more than 64 seconds ago
   int old_last_cleaned = last_cleaned;
   do {
-    var (pending_queries', i, _, f) = pending_queries.udict_delete_get_min(64);
+    var (pending_queries', i, query, f) = pending_queries.udict_delete_get_min(64);
     f~touch();
     if (f) {
       f = (i < bound);
     }
     if (f) {
+      if (query~load_int(1)) {
+        owner_infos~dec_flood(query~load_uint(8));
+      }
       pending_queries = pending_queries';
       last_cleaned = i;
       need_save = -1;

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <iostream>
 #include <iomanip>
@@ -94,10 +94,8 @@ td::Result<Ref<DataCell>> CellSerializationInfo::create_data_cell(td::Slice cell
   for (int k = 0; k < refs_cnt; k++) {
     cb.store_ref(std::move(refs[k]));
   }
-  auto res = cb.finalize_novm(special);
-  if (res.is_null()) {
-    return td::Status::Error("CellBuilder::finalize failed");
-  }
+  TRY_RESULT(res, cb.finalize_novm_nothrow(special));
+  CHECK(!res.is_null());
   if (res->is_special() != special) {
     return td::Status::Error("is_special mismatch");
   }
@@ -654,10 +652,10 @@ long long BagOfCells::Info::parse_serialized_header(const td::Slice& slice) {
   ptr += 6;
   sz -= 6;
   if (sz < ref_byte_size) {
-    return -(int)roots_offset;
+    return -static_cast<int>(roots_offset);
   }
   cell_count = (int)read_ref(ptr);
-  if (cell_count < 0) {
+  if (cell_count <= 0) {
     cell_count = -1;
     return 0;
   }
@@ -671,7 +669,7 @@ long long BagOfCells::Info::parse_serialized_header(const td::Slice& slice) {
   }
   index_offset = roots_offset;
   if (magic == boc_generic) {
-    index_offset += root_count * ref_byte_size;
+    index_offset += (long long)root_count * ref_byte_size;
     has_roots = true;
   } else {
     if (root_count != 1) {
@@ -690,11 +688,17 @@ long long BagOfCells::Info::parse_serialized_header(const td::Slice& slice) {
     return 0;
   }
   if (sz < 3 * ref_byte_size + offset_byte_size) {
-    return -(int)roots_offset;
+    return -static_cast<int>(roots_offset);
   }
   data_size = read_offset(ptr + 3 * ref_byte_size);
   if (data_size > ((unsigned long long)cell_count << 10)) {
     return 0;
+  }
+  if (data_size > (1ull << 40)) {
+    return 0;  // bag of cells with more than 1TiB data is unlikely
+  }
+  if (data_size < cell_count * (2ull + ref_byte_size) - ref_byte_size) {
+    return 0;  // invalid header, too many cells for this amount of data bytes
   }
   valid = true;
   total_size = data_offset + data_size + (has_crc32c ? 4 : 0);
@@ -747,14 +751,13 @@ td::Result<td::Ref<vm::DataCell>> BagOfCells::deserialize_cell(int idx, td::Slic
   return cell_info.create_data_cell(cell_slice, refs);
 }
 
-td::Result<long long> BagOfCells::deserialize(const td::Slice& data) {
+td::Result<long long> BagOfCells::deserialize(const td::Slice& data, int max_roots) {
   clear();
   long long size_est = info.parse_serialized_header(data);
   //LOG(INFO) << "estimated size " << size_est << ", true size " << data.size();
   if (size_est == 0) {
     return td::Status::Error(PSLICE() << "cannot deserialize bag-of-cells: invalid header, error " << size_est);
   }
-
   if (size_est < 0) {
     //LOG(ERROR) << "cannot deserialize bag-of-cells: not enough bytes (" << data.size() << " present, " << -size_est
     //<< " required)";
@@ -767,6 +770,9 @@ td::Result<long long> BagOfCells::deserialize(const td::Slice& data) {
     return -size_est;
   }
   //LOG(INFO) << "estimated size " << size_est << ", true size " << data.size();
+  if (info.root_count > max_roots) {
+    return td::Status::Error("Bag-of-cells has more root cells than expected");
+  }
   if (info.has_crc32c) {
     unsigned crc_computed = td::crc32c(td::Slice{data.ubegin(), data.uend() - 4});
     unsigned crc_stored = td::as<unsigned>(data.uend() - 4);
@@ -906,7 +912,7 @@ td::Result<Ref<Cell>> std_boc_deserialize(td::Slice data, bool can_be_empty) {
     return Ref<Cell>();
   }
   BagOfCells boc;
-  auto res = boc.deserialize(data);
+  auto res = boc.deserialize(data, 1);
   if (res.is_error()) {
     return res.move_as_error();
   }
@@ -923,12 +929,12 @@ td::Result<Ref<Cell>> std_boc_deserialize(td::Slice data, bool can_be_empty) {
   return std::move(root);
 }
 
-td::Result<std::vector<Ref<Cell>>> std_boc_deserialize_multi(td::Slice data) {
+td::Result<std::vector<Ref<Cell>>> std_boc_deserialize_multi(td::Slice data, int max_roots) {
   if (data.empty()) {
     return std::vector<Ref<Cell>>{};
   }
   BagOfCells boc;
-  auto res = boc.deserialize(data);
+  auto res = boc.deserialize(data, max_roots);
   if (res.is_error()) {
     return res.move_as_error();
   }

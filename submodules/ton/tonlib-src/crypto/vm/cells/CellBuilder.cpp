@@ -67,9 +67,14 @@ Ref<DataCell> CellBuilder::finalize_copy(bool special) const {
   return cell;
 }
 
-Ref<DataCell> CellBuilder::finalize_novm(bool special) {
+td::Result<Ref<DataCell>> CellBuilder::finalize_novm_nothrow(bool special) {
   auto res = DataCell::create(data, size(), td::mutable_span(refs.data(), size_refs()), special);
   bits = refs_cnt = 0;
+  return res;
+}
+
+Ref<DataCell> CellBuilder::finalize_novm(bool special) {
+  auto res = finalize_novm_nothrow(special);
   if (res.is_error()) {
     LOG(DEBUG) << res.error();
     throw CellWriteError{};
@@ -570,11 +575,11 @@ CellBuilder* CellBuilder::make_copy() const {
   return c;
 }
 
-CellSlice CellBuilder::as_cellslice() const & {
+CellSlice CellBuilder::as_cellslice() const& {
   return CellSlice{finalize_copy()};
 }
 
-Ref<CellSlice> CellBuilder::as_cellslice_ref() const & {
+Ref<CellSlice> CellBuilder::as_cellslice_ref() const& {
   return Ref<CellSlice>{true, finalize_copy()};
 }
 

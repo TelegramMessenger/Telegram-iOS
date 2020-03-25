@@ -68,13 +68,17 @@ struct VarUInteger final : TLB_Complex {
   bool store_integer_value(vm::CellBuilder& cb, const td::BigInt256& value) const override;
   unsigned precompute_integer_size(const td::BigInt256& value) const;
   unsigned precompute_integer_size(td::RefInt256 value) const;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "(VarUInteger " << n << ")";
+  }
 };
 
 extern const VarUInteger t_VarUInteger_3, t_VarUInteger_7, t_VarUInteger_16, t_VarUInteger_32;
 
 struct VarUIntegerPos final : TLB_Complex {
   int n, ln;
-  VarUIntegerPos(int _n) : n(_n) {
+  bool store_pos_only;
+  VarUIntegerPos(int _n, bool relaxed = false) : n(_n), store_pos_only(!relaxed) {
     ln = 32 - td::count_leading_zeroes32(n - 1);
   }
   bool skip(vm::CellSlice& cs) const override;
@@ -82,9 +86,12 @@ struct VarUIntegerPos final : TLB_Complex {
   td::RefInt256 as_integer_skip(vm::CellSlice& cs) const override;
   unsigned long long as_uint(const vm::CellSlice& cs) const override;
   bool store_integer_value(vm::CellBuilder& cb, const td::BigInt256& value) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "(VarUIntegerPos " << n << ")";
+  }
 };
 
-extern const VarUIntegerPos t_VarUIntegerPos_16, t_VarUIntegerPos_32;
+extern const VarUIntegerPos t_VarUIntegerPos_16, t_VarUIntegerPos_32, t_VarUIntegerPosRelaxed_32;
 
 struct VarInteger final : TLB_Complex {
   int n, ln;
@@ -99,6 +106,9 @@ struct VarInteger final : TLB_Complex {
     return cb.store_zeroes_bool(ln);
   }
   bool store_integer_value(vm::CellBuilder& cb, const td::BigInt256& value) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "(VarInteger " << n << ")";
+  }
 };
 
 struct VarIntegerNz final : TLB_Complex {
@@ -111,6 +121,9 @@ struct VarIntegerNz final : TLB_Complex {
   td::RefInt256 as_integer_skip(vm::CellSlice& cs) const override;
   long long as_int(const vm::CellSlice& cs) const override;
   bool store_integer_value(vm::CellBuilder& cb, const td::BigInt256& value) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "(VarIntegerNz " << n << ")";
+  }
 };
 
 struct Unary final : TLB {
@@ -312,8 +325,8 @@ struct MsgAddress final : TLB_Complex {
 extern const MsgAddress t_MsgAddress;
 
 struct ExtraCurrencyCollection final : TLB {
-  HashmapE dict_type;
-  ExtraCurrencyCollection() : dict_type(32, t_VarUIntegerPos_32) {
+  HashmapE dict_type, dict_type2;
+  ExtraCurrencyCollection() : dict_type(32, t_VarUIntegerPos_32), dict_type2(32, t_VarUIntegerPosRelaxed_32) {
   }
   int get_size(const vm::CellSlice& cs) const override {
     return dict_type.get_size(cs);
@@ -328,13 +341,13 @@ struct ExtraCurrencyCollection final : TLB {
     return dict_type.add_values(cb, cs1, cs2);
   }
   int sub_values(vm::CellBuilder& cb, vm::CellSlice& cs1, vm::CellSlice& cs2) const override {
-    return dict_type.sub_values(cb, cs1, cs2);
+    return dict_type2.sub_values(cb, cs1, cs2);
   }
   bool add_values_ref(Ref<vm::Cell>& res, Ref<vm::Cell> arg1, Ref<vm::Cell> arg2) const {
     return dict_type.add_values_ref(res, std::move(arg1), std::move(arg2));
   }
   int sub_values_ref(Ref<vm::Cell>& res, Ref<vm::Cell> arg1, Ref<vm::Cell> arg2) const {
-    return dict_type.sub_values_ref(res, std::move(arg1), std::move(arg2));
+    return dict_type2.sub_values_ref(res, std::move(arg1), std::move(arg2));
   }
   bool store_ref(vm::CellBuilder& cb, Ref<vm::Cell> arg) const {
     return dict_type.store_ref(cb, std::move(arg));

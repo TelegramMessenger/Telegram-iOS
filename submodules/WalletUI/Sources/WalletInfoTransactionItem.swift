@@ -98,6 +98,7 @@ class WalletInfoTransactionItem: ListViewItem {
 private let titleFont = Font.medium(17.0)
 private let textFont = Font.monospace(15.0)
 private let descriptionFont = Font.regular(15.0)
+private let descriptionMonospaceFont = Font.monospace(15.0)
 private let dateFont = Font.regular(14.0)
 private let directionFont = Font.regular(15.0)
 
@@ -222,6 +223,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             }
             var text: String = ""
             var description: String = ""
+            var descriptionIsMonospace = false
             if transferredValue <= 0 {
                 sign = ""
                 title = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
@@ -246,7 +248,8 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                             case .raw:
                                 break
                             case .encryptedText:
-                                description.append("<encrypted>")
+                                description.append("Encrypted Comment")
+                                descriptionIsMonospace = true
                             case let .plainText(text):
                                 description.append(text)
                             }
@@ -279,7 +282,8 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                         case .raw:
                             description = ""
                         case .encryptedText:
-                            description = "<encrypted>"
+                            description = "Encrypted Comment"
+                            descriptionIsMonospace = true
                         case let .plainText(text):
                             description = text
                         }
@@ -326,7 +330,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionIsMonospace ? descriptionMonospaceFont : descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (feesLayout, feesApply) = makeFeesLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: feeText, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

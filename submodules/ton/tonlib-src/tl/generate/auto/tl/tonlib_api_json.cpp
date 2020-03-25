@@ -251,14 +251,17 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"msg.dataText", -341560688},
     {"msg.dataDecryptedText", -1289133895},
     {"msg.dataEncryptedText", -296612902},
-    {"msg.dataArray", 1248461374},
-    {"msg.message", 1349943761},
+    {"msg.dataDecrypted", 195649769},
+    {"msg.dataDecryptedArray", -480491767},
+    {"msg.dataEncrypted", 564215121},
+    {"msg.dataEncryptedArray", 608655794},
+    {"msg.message", -2110533580},
     {"options.configInfo", 451217371},
     {"options.info", -64676736},
     {"query.fees", 1614616510},
     {"query.info", 1588635915},
     {"raw.fullAccountState", -1465398385},
-    {"raw.message", -32842388},
+    {"raw.message", 1368093263},
     {"raw.transaction", 1887601793},
     {"raw.transactions", -2063931155},
     {"smc.info", 1134270012},
@@ -315,7 +318,8 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"init", -1000594762},
     {"kdf", -1667861635},
     {"liteServer.getInfo", 1435327470},
-    {"msg.decrypt", 1131086633},
+    {"msg.decrypt", 223596297},
+    {"msg.decryptWithProof", -2111649663},
     {"onLiteServerQueryError", -677427533},
     {"onLiteServerQueryResult", 2056444510},
     {"options.setConfig", 1870064579},
@@ -1132,7 +1136,46 @@ Status from_json(tonlib_api::msg_dataEncryptedText &to, JsonObject &from) {
   }
   return Status::OK();
 }
-Status from_json(tonlib_api::msg_dataArray &to, JsonObject &from) {
+Status from_json(tonlib_api::msg_dataDecrypted &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "proof", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.proof_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.data_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::msg_dataDecryptedArray &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "elements", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.elements_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::msg_dataEncrypted &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "source", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.source_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.data_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::msg_dataEncryptedArray &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "elements", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
@@ -1146,6 +1189,12 @@ Status from_json(tonlib_api::msg_message &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "destination", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.destination_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.public_key_, value));
     }
   }
   {
@@ -1936,6 +1985,21 @@ Status from_json(tonlib_api::msg_decrypt &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::msg_decryptWithProof &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "proof", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.proof_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.data_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::onLiteServerQueryError &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
@@ -2670,9 +2734,32 @@ void to_json(JsonValueScope &jv, const tonlib_api::msg_dataEncryptedText &object
   jo << ctie("@type", "msg.dataEncryptedText");
   jo << ctie("text", ToJson(JsonBytes{object.text_}));
 }
-void to_json(JsonValueScope &jv, const tonlib_api::msg_dataArray &object) {
+void to_json(JsonValueScope &jv, const tonlib_api::msg_dataDecrypted &object) {
   auto jo = jv.enter_object();
-  jo << ctie("@type", "msg.dataArray");
+  jo << ctie("@type", "msg.dataDecrypted");
+  jo << ctie("proof", ToJson(JsonBytes{object.proof_}));
+  if (object.data_) {
+    jo << ctie("data", ToJson(object.data_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::msg_dataDecryptedArray &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "msg.dataDecryptedArray");
+  jo << ctie("elements", ToJson(object.elements_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::msg_dataEncrypted &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "msg.dataEncrypted");
+  if (object.source_) {
+    jo << ctie("source", ToJson(object.source_));
+  }
+  if (object.data_) {
+    jo << ctie("data", ToJson(object.data_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::msg_dataEncryptedArray &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "msg.dataEncryptedArray");
   jo << ctie("elements", ToJson(object.elements_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::msg_message &object) {
@@ -2681,6 +2768,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::msg_message &object) {
   if (object.destination_) {
     jo << ctie("destination", ToJson(object.destination_));
   }
+  jo << ctie("public_key", ToJson(object.public_key_));
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
   if (object.data_) {
     jo << ctie("data", ToJson(object.data_));
@@ -2731,8 +2819,12 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_fullAccountState &object)
 void to_json(JsonValueScope &jv, const tonlib_api::raw_message &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "raw.message");
-  jo << ctie("source", ToJson(object.source_));
-  jo << ctie("destination", ToJson(object.destination_));
+  if (object.source_) {
+    jo << ctie("source", ToJson(object.source_));
+  }
+  if (object.destination_) {
+    jo << ctie("destination", ToJson(object.destination_));
+  }
   jo << ctie("value", ToJson(JsonInt64{object.value_}));
   jo << ctie("fwd_fee", ToJson(JsonInt64{object.fwd_fee_}));
   jo << ctie("ihr_fee", ToJson(JsonInt64{object.ihr_fee_}));
@@ -3072,6 +3164,14 @@ void to_json(JsonValueScope &jv, const tonlib_api::msg_decrypt &object) {
   if (object.input_key_) {
     jo << ctie("input_key", ToJson(object.input_key_));
   }
+  if (object.data_) {
+    jo << ctie("data", ToJson(object.data_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::msg_decryptWithProof &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "msg.decryptWithProof");
+  jo << ctie("proof", ToJson(JsonBytes{object.proof_}));
   if (object.data_) {
     jo << ctie("data", ToJson(object.data_));
   }

@@ -77,15 +77,17 @@ library TonUtil // TON Blockchain Fift Library
 1000000000 constant Gram
 { Gram swap */r } : Gram*/
 { Gram * } : Gram*
+{ (number) dup { 1- ' Gram*/ ' Gram* cond true } if
+} : $>GR?
 // ( S -- nanograms )
-{ (number) ?dup 0= abort"not a valid Gram amount"
-1- ' Gram*/ ' Gram* cond
+{ $>GR? not abort"not a valid Gram amount"
 } : $>GR
 { bl word $>GR 1 'nop } ::_ GR$
 // ( nanograms -- S )
 { dup abs <# ' # 9 times char . hold #s rot sign #>
 nip -trailing0 } : (.GR)
-{ (.GR) ."GR$" type space } : .GR
+{ (.GR) ."GR$" type } : .GR_
+{ .GR_ space } : .GR
 
 // b x -- b'  ( serializes a Gram amount )
 { -1 { 1+ 2dup 8 * ufits } until
@@ -105,18 +107,65 @@ nip -trailing0 } : (.GR)
 ' VarUInt32, : val,
 ' VarUInt32@ : val@
 // d k v -- d'
-{ <b swap val, b> <s swap rot cc-key-bits idict! not abort"cannot add key-value to CurrencyCollection" } : +ccpair
+{ <b swap val, b> <s swap rot cc-key-bits idict!+ not abort"cannot add key-value to CurrencyCollection"
+} : +newccpair
+{ dup { -rot tuck swap cc-key-bits idict@- { val@ 2swap -rot + } { swap rot } cond +newccpair
+  } { 2drop } cond
+} : +ccpair
 dictnew constant cc0   // zero currency collection
 // ( v k -- d )  Creates currency collection representing v units of currency k
 { cc0 swap rot +ccpair } : of-cc
 { dictnew { over null? not } { swap uncons -rot unpair +ccpair } while nip } : list>cc
-{ dup null? { ."(null) " drop } { val@ . } cond } dup : .maybeVarUInt32 : .val
-{ cc-key-bits { swap 32 1<< rmod . ."-> " .val ."; " true } dictforeach drop cr } : .cc
+{ dup null? { ."(null)" drop } { val@ ._ } cond } dup : .maybeVarUInt32 : .val
+{ swap cc-key-bits { rot { ."+" } if .val ."*$" ._ true true } idictforeach drop } : (.cc)
+{ false (.cc) { ."0" } ifnot } : .cc_
+{ .cc_ space } : .cc
+{ true (.cc) drop } : .+cc_
+{ .+cc_ space } : .+cc
 { cc-key-bits { rot . ."-> " swap .val .val ."; " true } dictdiff drop cr } : show-cc-diff
 { cc-key-bits { val@ swap val@ + val, true } dictmerge } : cc+
-{ null swap cc-key-bits { val@ pair swap cons true } dictforeach drop } : cc>list-rev
+{ null swap cc-key-bits { val@ pair swap cons true } idictforeach drop } : cc>list-rev
 { cc>list-rev list-reverse } : cc>list
 forget val,  forget val@  forget .val
+
+// ( S -- x -1 or 0 )
+{ (number) dup 2 = { -rot 2drop } if 1 = } : int?
+{ int? dup { drop dup 0< { drop false } { true } cond } if } : pos-int?
+// ( S -- k v -1 or 0 )  Parses expression <value>*<currency> or <value>*$<currency>
+{ dup "*" $pos dup 0< { 2drop false } {
+  $| dup $len 2 < { 2drop false } {
+  1 $| nip dup 1 $| swap "$" $= { swap } if drop
+  int? dup { over 32 fits { 2drop false } ifnot } if
+  not { drop false } {
+  swap pos-int? not { drop false } {
+  true
+  } cond } cond } cond } cond
+} : cc-key-value?
+// ( S -- D -1 or 0 )  Parses an extra currency collection
+// e.g. "10000*$3+7777*$-11" means "10000 units of currency #3 and 7777 units of currency #-11"
+{ dictnew {  // S D
+    swap dup "+" $pos dup 0< { drop null -rot } { $| 1 $| nip -rot } cond
+    cc-key-value? { +ccpair over null? dup { rot drop true } if } { 2drop false true } cond
+  } until
+} : $>xcc?
+{ $>xcc? not abort"invalid extra currency collection" } : $>xcc
+{ char } word dup $len { $>xcc } { drop dictnew } cond 1 'nop } ::_ CX{
+
+// complete currency collections
+{ $>xcc? { true } { drop false } cond } : end-parse-cc
+// ( S -- x D -1 or 0 )  Parses a currency collection
+// e.g. "1.2+300*$2" means "1200000000ng plus 300 units of currency #2"
+{ 0 swap dup "+" $pos dup 0< { drop dup
+      $>GR? { nip nip dictnew true } { end-parse-cc } cond
+    } { over swap $| swap $>GR? { 2swap 2drop swap 1 $| nip } { drop
+  } cond end-parse-cc } cond
+} : $>cc?
+{ $>cc? not abort"invalid currency collection" } : $>cc
+{ char } word dup $len { $>cc } { drop 0 dictnew } cond 2 'nop } ::_ CC{
+// ( x D -- )
+{ swap ?dup { .GR_ .+cc_ } { .cc_ } cond } : .GR+cc_
+{ .GR+cc_ space } : .GR+cc
+{ -rot Gram, swap dict, } : Gram+cc,
 
 // Libraries
 // ( -- D )  New empty library collection

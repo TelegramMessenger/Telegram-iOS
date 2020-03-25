@@ -1,0 +1,20 @@
+#!/usr/bin/fift -s
+"Asm.fif" include
+2500 =: N
+{ 5 * } : *K
+N 100 / =: N/100
+N 10 / =: N/10
+{ { EXECUTE } 100 times } : 100EXECUTE
+{ DUP { 2DUP } 7 times } : 15DUP
+{ { 2DUP } 50 times } : 100DUP
+{ { 15 -1 SETCONTARGS 15DUP } 10 times } : 10SET&DUP
+<{
+  CONT:<{ }>
+  15DUP
+  N/10 INT REPEAT:<{ 10SET&DUP }>
+  N/100 *K INT REPEAT:<{ 100DUP }>
+  N/100 *K INT REPEAT:<{ 100EXECUTE }>
+}>s =: Code
+
+Code csr.
+Code 1000000 gasrunvmcode

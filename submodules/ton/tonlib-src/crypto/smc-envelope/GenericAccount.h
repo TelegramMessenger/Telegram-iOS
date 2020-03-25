@@ -14,11 +14,14 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "vm/cells.h"
 #include "block/block.h"
+#include "Ed25519.h"
+#include "SmartContract.h"
+
 namespace ton {
 class GenericAccount {
  public:
@@ -27,5 +30,7 @@ class GenericAccount {
   static td::Ref<vm::Cell> create_ext_message(const block::StdAddress& address, td::Ref<vm::Cell> new_state,
                                               td::Ref<vm::Cell> body) noexcept;
   static void store_int_message(vm::CellBuilder& cb, const block::StdAddress& dest_address, td::int64 gramms);
+
+  static td::Result<td::Ed25519::PublicKey> get_public_key(const SmartContract& sc);
 };
 }  // namespace ton

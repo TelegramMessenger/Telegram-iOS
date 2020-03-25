@@ -1288,7 +1288,9 @@ void parse_func_def(Lexer& lex) {
   sym::close_scope(lex);
 }
 
-bool parse_source(std::istream* is, const src::FileDescr* fdescr) {
+std::vector<const src::FileDescr*> source_fdescr;
+
+bool parse_source(std::istream* is, src::FileDescr* fdescr) {
   src::SourceReader reader{is, fdescr};
   Lexer lex{reader, true, ";,()[] ~."};
   while (lex.tp() != _Eof) {
@@ -1306,6 +1308,7 @@ bool parse_source_file(const char* filename) {
     throw src::Fatal{"source file name is an empty string"};
   }
   src::FileDescr* cur_source = new src::FileDescr{filename};
+  source_fdescr.push_back(cur_source);
   std::ifstream ifs{filename};
   if (ifs.fail()) {
     throw src::Fatal{std::string{"cannot open source file `"} + filename + "`"};
@@ -1314,7 +1317,9 @@ bool parse_source_file(const char* filename) {
 }
 
 bool parse_source_stdin() {
-  return parse_source(&std::cin, new src::FileDescr{"stdin", true});
+  src::FileDescr* cur_source = new src::FileDescr{"stdin", true};
+  source_fdescr.push_back(cur_source);
+  return parse_source(&std::cin, cur_source);
 }
 
 }  // namespace funC

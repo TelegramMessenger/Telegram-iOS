@@ -58,12 +58,25 @@ std::string dump_push_ref(CellSlice& cs, unsigned args, int pfx_bits, std::strin
     return "";
   }
   cs.advance(pfx_bits);
-  cs.advance_refs(1);
-  return name;
+  auto cell = cs.fetch_ref();
+  return name + " (" + cell->get_hash().to_hex() + ")";
 }
 
 int compute_len_push_ref(const CellSlice& cs, unsigned args, int pfx_bits) {
   return cs.have_refs(1) ? (0x10000 + pfx_bits) : 0;
+}
+
+std::string dump_push_ref2(CellSlice& cs, unsigned args, int pfx_bits, std::string name) {
+  if (!cs.have_refs(2)) {
+    return "";
+  }
+  cs.advance(pfx_bits);
+  auto cell1 = cs.fetch_ref(), cell2 = cs.fetch_ref();
+  return name + " (" + cell1->get_hash().to_hex() + ") (" + cell2->get_hash().to_hex() + ")";
+}
+
+int compute_len_push_ref2(const CellSlice& cs, unsigned args, int pfx_bits) {
+  return cs.have_refs(2) ? (0x20000 + pfx_bits) : 0;
 }
 
 int exec_push_slice_common(VmState* st, CellSlice& cs, unsigned data_bits, unsigned refs, int pfx_bits) {

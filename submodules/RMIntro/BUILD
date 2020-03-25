@@ -1,4 +1,4 @@
-load("//build-system:unique_directories.bzl", "unique_directories")
+load("//build-system/bazel-utils:unique_directories.bzl", "unique_directories")
 
 private_headers = glob([
     "Sources/**/*.h",

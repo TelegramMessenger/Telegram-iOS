@@ -44,7 +44,7 @@ td::Ref<vm::Stack> prepare_vm_stack(td::Ref<vm::CellSlice> body) {
   return stack_ref;
 }
 
-td::Ref<vm::Tuple> prepare_vm_c7() {
+td::Ref<vm::Tuple> prepare_vm_c7(td::uint32 now) {
   // TODO: fix initialization of c7
   td::BitArray<256> rand_seed;
   rand_seed.as_slice().fill(0);
@@ -54,7 +54,7 @@ td::Ref<vm::Tuple> prepare_vm_c7() {
       td::make_refint(0x076ef1ea),                           // [ magic:0x076ef1ea
       td::make_refint(0),                                    //   actions:Integer
       td::make_refint(0),                                    //   msgs_sent:Integer
-      td::make_refint(0),                                    //   unixtime:Integer
+      td::make_refint(now),                                  //   unixtime:Integer
       td::make_refint(0),                                    //   block_lt:Integer
       td::make_refint(0),                                    //   trans_lt:Integer
       std::move(rand_seed_int),                              //   rand_seed:Integer
@@ -166,8 +166,12 @@ td::Ref<vm::Cell> SmartContract::get_init_state() const {
 }
 
 SmartContract::Answer SmartContract::run_method(Args args) {
+  td::uint32 now = 0;
+  if (args.now) {
+    now = args.now.unwrap();
+  }
   if (!args.c7) {
-    args.c7 = prepare_vm_c7();
+    args.c7 = prepare_vm_c7(now);
   }
   if (!args.limits) {
     args.limits = vm::GasLimits{(long long)0, (long long)1000000, (long long)10000};
@@ -182,8 +186,12 @@ SmartContract::Answer SmartContract::run_method(Args args) {
 }
 
 SmartContract::Answer SmartContract::run_get_method(Args args) const {
+  td::uint32 now = 0;
+  if (args.now) {
+    now = args.now.unwrap();
+  }
   if (!args.c7) {
-    args.c7 = prepare_vm_c7();
+    args.c7 = prepare_vm_c7(now);
   }
   if (!args.limits) {
     args.limits = vm::GasLimits{1000000};

@@ -54,7 +54,7 @@ public struct TransformImageArguments: Equatable {
     }
     
     public static func ==(lhs: TransformImageArguments, rhs: TransformImageArguments) -> Bool {
-        var result = lhs.imageSize == rhs.imageSize && lhs.boundingSize == rhs.boundingSize && lhs.corners == rhs.corners && lhs.emptyColor == rhs.emptyColor
+        let result = lhs.imageSize == rhs.imageSize && lhs.boundingSize == rhs.boundingSize && lhs.corners == rhs.corners && lhs.emptyColor == rhs.emptyColor
         if result {
             if let lhsCustom = lhs.custom, let rhsCustom = rhs.custom {
                 return lhsCustom.serialized().isEqual(rhsCustom.serialized())

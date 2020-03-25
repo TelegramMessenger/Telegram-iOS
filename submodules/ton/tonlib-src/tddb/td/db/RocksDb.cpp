@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/db/RocksDb.h"
 
@@ -162,30 +162,32 @@ Result<size_t> RocksDb::count(Slice prefix) {
 }
 
 Status RocksDb::begin_transaction() {
-  write_batch_ = std::make_unique<rocksdb::WriteBatch>();
-  //transaction_.reset(db_->BeginTransaction({}, {}));
+  //write_batch_ = std::make_unique<rocksdb::WriteBatch>();
+  rocksdb::WriteOptions options;
+  options.sync = true;
+  transaction_.reset(db_->BeginTransaction(options, {}));
   return Status::OK();
 }
 
 Status RocksDb::commit_transaction() {
-  CHECK(write_batch_);
-  auto write_batch = std::move(write_batch_);
-  rocksdb::WriteOptions options;
-  options.sync = true;
-  TRY_STATUS(from_rocksdb(db_->Write(options, write_batch.get())));
-  return Status::OK();
+  //CHECK(write_batch_);
+  //auto write_batch = std::move(write_batch_);
+  //rocksdb::WriteOptions options;
+  //options.sync = true;
+  //TRY_STATUS(from_rocksdb(db_->Write(options, write_batch.get())));
+  //return Status::OK();
 
-  //CHECK(transaction_);
-  //auto res = from_rocksdb(transaction_->Commit());
-  //transaction_.reset();
-  //return res;
+  CHECK(transaction_);
+  auto res = from_rocksdb(transaction_->Commit());
+  transaction_.reset();
+  return res;
 }
 
 Status RocksDb::abort_transaction() {
-  CHECK(write_batch_);
-  write_batch_.reset();
-  //CHECK(transaction_);
-  //transaction_.reset();
+  //CHECK(write_batch_);
+  //write_batch_.reset();
+  CHECK(transaction_);
+  transaction_.reset();
   return Status::OK();
 }
 

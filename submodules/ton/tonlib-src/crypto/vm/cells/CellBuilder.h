@@ -177,12 +177,13 @@ class CellBuilder : public td::CntObject {
   Ref<DataCell> finalize_copy(bool special = false) const;
   Ref<DataCell> finalize(bool special = false);
   Ref<DataCell> finalize_novm(bool special = false);
+  td::Result<Ref<DataCell>> finalize_novm_nothrow(bool special = false);
   bool finalize_to(Ref<Cell>& res, bool special = false) {
     return (res = finalize(special)).not_null();
   }
-  CellSlice as_cellslice() const &;
+  CellSlice as_cellslice() const&;
   CellSlice as_cellslice() &&;
-  Ref<CellSlice> as_cellslice_ref() const &;
+  Ref<CellSlice> as_cellslice_ref() const&;
   Ref<CellSlice> as_cellslice_ref() &&;
   static td::int64 get_total_cell_builders() {
     return get_thread_safe_counter().sum();

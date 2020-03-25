@@ -108,7 +108,7 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
             })
         case let .modeInfo(theme, text):
             return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-        case let .configUrl(theme, strings, placeholder, text):
+        case let .configUrl(theme, _, placeholder, text):
             return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, capitalization: false, autocorrection: false, returnKeyType: .done, minimalHeight: nil, textUpdated: { value in
                 arguments.updateState { state in
                     var state = state
@@ -211,12 +211,9 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Loc
     }
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
-    var pushImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
-    var ensureItemVisibleImpl: ((WalletConfigurationScreenEntryTag, Bool) -> Void)?
     
-    weak var currentStatusController: ViewController?
     let arguments = WalletConfigurationScreenArguments(updateState: { f in
         updateState(f)
     }, dismissInput: {
@@ -237,9 +234,6 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Loc
     
     let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Navigation_Cancel), style: .regular, enabled: true, action: {
-            dismissImpl?()
-        })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Configuration_Apply), style: .bold, enabled: !state.isEmpty, action: {
             let state = stateValue.with { $0 }
             let source: LocalWalletConfigurationSource
@@ -346,36 +340,12 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Loc
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
-    pushImpl = { [weak controller] c in
-        controller?.push(c)
-    }
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         let _ = controller?.dismiss()
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
-    }
-    ensureItemVisibleImpl = { [weak controller] targetTag, animated in
-        controller?.afterLayout({
-            guard let controller = controller else {
-                return
-            }
-            var resultItemNode: ListViewItemNode?
-            let state = stateValue.with({ $0 })
-            let _ = controller.frameForItemNode({ itemNode in
-                if let itemNode = itemNode as? ItemListItemNode {
-                    if let tag = itemNode.tag, tag.isEqual(to: targetTag) {
-                        resultItemNode = itemNode as? ListViewItemNode
-                        return true
-                    }
-                }
-                return false
-            })
-            if let resultItemNode = resultItemNode {
-                controller.ensureItemNodeVisible(resultItemNode, animated: animated)
-            }
-        })
     }
     return controller
 }

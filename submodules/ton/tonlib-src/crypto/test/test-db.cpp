@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/boc.h"
 #include "vm/cellslice.h"
@@ -694,6 +694,32 @@ TEST(TonDb, BenchCellBuilder3) {
   td::bench(BenchCellBuilder3());
 }
 
+TEST(TonDb, BocFuzz) {
+  vm::std_boc_deserialize(td::base64_decode("te6ccgEBAQEAAgAoAAA=").move_as_ok()).ensure_error();
+  vm::std_boc_deserialize(td::base64_decode("te6ccgQBQQdQAAAAAAEAte6ccgQBB1BBAAAAAAEAAAAAAP/"
+                                            "wAACJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJicmJiYmJiYmJiYmJiQ0NDQ0NDQ0NDQ0NDQ0ND"
+                                            "Q0NiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiQAA//AAAO4=")
+                              .move_as_ok());
+  vm::std_boc_deserialize(td::base64_decode("SEkh/w==").move_as_ok()).ensure_error();
+  vm::std_boc_deserialize(
+      td::base64_decode(
+          "te6ccqwBMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMAKCEAAAAgAQ==")
+          .move_as_ok())
+      .ensure_error();
+}
+void test_parse_prefix(td::Slice boc) {
+  for (size_t i = 0; i <= boc.size(); i++) {
+    auto prefix = boc.substr(0, i);
+    vm::BagOfCells::Info info;
+    auto res = info.parse_serialized_header(prefix);
+    if (res > 0) {
+      break;
+    }
+    CHECK(res != 0);
+    CHECK(-res > (int)i);
+  }
+}
+
 TEST(TonDb, Boc) {
   td::Random::Xorshift128plus rnd{123};
   for (int t = 0; t < 1000; t++) {
@@ -703,6 +729,8 @@ TEST(TonDb, Boc) {
 
     auto serialized = serialize_boc(std::move(cell), mode);
     CHECK(serialized.size() != 0);
+
+    test_parse_prefix(serialized);
 
     auto loaded_cell = deserialize_boc(serialized);
     ASSERT_EQ(cell_hash, loaded_cell->get_hash());

@@ -1209,53 +1209,54 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self else {
                 return
             }
+            let _ = storedMessageFromSearch(account: strongSelf.context.account, message: message).start()
+            
             let _ = (chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
             |> deliverOnMainQueue).start(next: { actions in
+                
                 var messageIds = Set<MessageId>()
                 messageIds.insert(message.id)
                 
                 if let strongSelf = self {
-                    if let message = strongSelf.paneContainerNode.findLoadedMessage(id: message.id) {
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                        var items: [ActionSheetButtonItem] = []
-                        
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
-                            }
-                        }))
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
+                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                    var items: [ActionSheetButtonItem] = []
+                    
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
+                        }
+                    }))
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        if let strongSelf = self {
+                            strongSelf.forwardMessages(messageIds: messageIds)
+                        }
+                    }))
+                    if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
+                        items.append( ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.forwardMessages(messageIds: messageIds)
+                                strongSelf.deleteMessages(messageIds: Set(messageIds))
                             }
                         }))
-                        if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
-                            items.append( ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, color: .destructive, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                                if let strongSelf = self {
-                                    strongSelf.deleteMessages(messageIds: Set(messageIds))
-                                }
-                            }))
-                        }
-                        if strongSelf.searchDisplayController == nil {
-                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuMore, color: .accent, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                                if let strongSelf = self {
-                                    strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
-                                    strongSelf.expandTabs()
-                                }
-                            }))
-                        }
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        strongSelf.view.endEditing(true)
-                        strongSelf.controller?.present(actionSheet, in: .window(.root))
                     }
+                    if strongSelf.searchDisplayController == nil {
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuMore, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
+                                strongSelf.expandTabs()
+                            }
+                        }))
+                    }
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    strongSelf.view.endEditing(true)
+                    strongSelf.controller?.present(actionSheet, in: .window(.root))
                 }
             })
         }, openMessageContextActions: { [weak self] message, node, rect, gesture in

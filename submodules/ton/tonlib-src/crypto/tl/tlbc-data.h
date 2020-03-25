@@ -14,17 +14,20 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include <string>
 #include <vector>
+#include "common/linalloc.hpp"
 
 namespace tlbc {
 
 using src::Lexem;
 using src::Lexer;
 using sym::sym_idx_t;
+
+extern td::LinearAllocator AR;
 
 struct Type;
 struct Constructor;

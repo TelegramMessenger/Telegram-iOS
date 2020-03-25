@@ -155,7 +155,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var _viewControllers: [ViewController] = []
     override open var viewControllers: [UIViewController] {
         get {
-            return self._viewControllers.map { $0 as! ViewController }
+            return self._viewControllers.map { $0 as UIViewController }
         } set(value) {
             self.setViewControllers(value, animated: false)
         }
@@ -287,7 +287,6 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func updateTheme(_ theme: NavigationControllerTheme) {
-        let statusBarStyleUpdated = self.theme.statusBar != theme.statusBar
         self.theme = theme
         if let rootContainer = self.rootContainer {
             switch rootContainer {
@@ -790,7 +789,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 
                 let rootModalFrame: NavigationModalFrame
-                var modalFrameTransition: ContainedViewLayoutTransition = transition
+                let modalFrameTransition: ContainedViewLayoutTransition = transition
                 var forceStatusBarAnimation = false
                 if let current = self.rootModalFrame {
                     rootModalFrame = current
@@ -1165,7 +1164,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.overlayContainers.append(container)
         }
         container.isReadyUpdated = { [weak self, weak container] in
-            guard let strongSelf = self, let container = container else {
+            guard let strongSelf = self, let _ = container else {
                 return
             }
             strongSelf.updateContainersNonReentrant(transition: .immediate)
@@ -1245,7 +1244,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.view.setNeedsLayout()
     }
     
-    private func requestLayout(transition: ContainedViewLayoutTransition) {
+    public func requestLayout(transition: ContainedViewLayoutTransition) {
         if self.isViewLoaded, let validLayout = self.validLayout {
             self.containerLayoutUpdated(validLayout, transition: transition)
         }

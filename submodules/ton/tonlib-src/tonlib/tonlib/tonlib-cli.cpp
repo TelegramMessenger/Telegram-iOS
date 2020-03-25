@@ -1384,10 +1384,10 @@ class TonlibCli : public td::actor::Actor {
                      sb << "-" << Grams{td::uint64(-balance)};
                    }
                    sb << " Fee: " << Grams{td::uint64(t->fee_)};
-                   if (t->in_msg_->source_.empty()) {
+                   if (!t->in_msg_->source_->account_address_.empty()) {
                      sb << " External ";
                    } else {
-                     sb << " From " << t->in_msg_->source_;
+                     sb << " From " << t->in_msg_->source_->account_address_;
                    }
                    auto print_msg_data = [](td::StringBuilder& sb,
                                             tonlib_api::object_ptr<tonlib_api::msg_Data>& msg_data) {
@@ -1406,10 +1406,10 @@ class TonlibCli : public td::actor::Actor {
                    print_msg_data(sb, t->in_msg_->msg_data_);
                    for (auto& ot : t->out_msgs_) {
                      sb << "\n\t";
-                     if (ot->destination_.empty()) {
+                     if (ot->destination_->account_address_.empty()) {
                        sb << " External ";
                      } else {
-                       sb << " To " << ot->destination_;
+                       sb << " To " << ot->destination_->account_address_;
                      }
                      sb << " " << Grams{td::uint64(ot->value_)};
                      print_msg_data(sb, ot->msg_data_);
@@ -1476,8 +1476,8 @@ class TonlibCli : public td::actor::Actor {
       } else {
         data = tonlib_api::make_object<tonlib_api::msg_dataText>(message.str());
       }
-      messages.push_back(
-          tonlib_api::make_object<tonlib_api::msg_message>(std::move(address.address), amount.nano, std::move(data)));
+      messages.push_back(tonlib_api::make_object<tonlib_api::msg_message>(std::move(address.address), "", amount.nano,
+                                                                          std::move(data)));
       return td::Status::OK();
     };
 

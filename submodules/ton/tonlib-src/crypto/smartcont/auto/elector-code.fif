@@ -506,8 +506,7 @@ PROGRAM{
       4 BLKDROP	// 
     }>	//  query_id ok ds elect
     unpack_elect CALLDICT	//  query_id ok ds _63 _64 _65 _66 _67 _68 _69
-    s0 s5 XCHG
-    5 BLKDROP	//  query_id ok ds elect_at finished
+    5 1 BLKDROP2	//  query_id ok ds elect_at finished
     s1 s4 PUXC	//  finished ok ds elect_at elect_at query_id
     NEQ	//  finished ok ds elect_at _33
     s0 s4 XCHG	//  _33 ok ds elect_at finished
@@ -1073,8 +1072,7 @@ PROGRAM{
         s1 s3 XCHG
         s1 s4 XCHG	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr
       }>ELSE<{
-        s0 s3 XCHG
-        3 BLKDROP	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr
+        3 1 BLKDROP2	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr
       }>
       OVER	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr stake
       IF:<{	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr
@@ -1377,8 +1375,7 @@ PROGRAM{
     //  ds elect credits
     SWAP	//  ds credits elect
     unpack_elect CALLDICT	//  ds credits _44 _45 _46 _47 _48 _49 _50
-    s0 s5 XCHG
-    5 BLKDROP	//  ds credits elect_at finished
+    5 1 BLKDROP2	//  ds credits elect_at finished
     IFNOTJMP:<{	//  ds credits elect_at
       3 BLKDROP	// 
       FALSE	//  _11
@@ -1462,8 +1459,7 @@ PROGRAM{
       SWAP	//  elect credits past_elect grams active_id active_hash id f
       NOT	//  elect credits past_elect grams active_id active_hash id _26
     }>	//  elect credits past_elect grams active_id active_hash id
-    s0 s6 XCHG
-    6 BLKDROP	//  id
+    6 1 BLKDROP2	//  id
     ISNULL	//  _27
     NOT	//  _28
   }>

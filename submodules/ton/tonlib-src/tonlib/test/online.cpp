@@ -239,7 +239,7 @@ td::Result<QueryId> create_send_grams_query(Client& client, const Wallet& source
     data = tonlib_api::make_object<tonlib_api::msg_dataText>(std::move(message));
   }
   msgs.push_back(tonlib_api::make_object<tonlib_api::msg_message>(
-      tonlib_api::make_object<tonlib_api::accountAddress>(destination), amount, std::move(data)));
+      tonlib_api::make_object<tonlib_api::accountAddress>(destination), "", amount, std::move(data)));
 
   auto r_id =
       sync_send(client, tonlib_api::make_object<tonlib_api::createQuery>(
@@ -392,9 +392,9 @@ td::Status transfer_grams(Client& client, const Wallet& wallet, std::string addr
     if (transfer_all) {
       ASSERT_EQ(amount - first_fee, txn->in_msg_->value_);
     } else {
-      ASSERT_EQ(new_src_state.address, txn->in_msg_->source_);
+      ASSERT_EQ(new_src_state.address, txn->in_msg_->source_->account_address_);
     }
-    ASSERT_EQ(new_src_state.address, txn->in_msg_->source_);
+    ASSERT_EQ(new_src_state.address, txn->in_msg_->source_->account_address_);
     if (!encrypt) {
       ASSERT_EQ(message, read_text(*txn->in_msg_->msg_data_));
     }

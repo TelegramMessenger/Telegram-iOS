@@ -105,12 +105,7 @@ private func walletSettingsControllerEntries(presentationData: WalletPresentatio
 
 public func walletSettingsController(context: WalletContext, walletInfo: WalletInfo) -> ViewController {
     let statePromise = ValuePromise(WalletSettingsControllerState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: WalletSettingsControllerState())
-    let updateState: ((WalletSettingsControllerState) -> WalletSettingsControllerState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
-    }
     
-    var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
@@ -181,10 +176,6 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
     let controller = ItemListController(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
     controller.enableInteractiveDismiss = true
-    dismissImpl = { [weak controller] in
-        controller?.view.endEditing(true)
-        controller?.dismiss()
-    }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

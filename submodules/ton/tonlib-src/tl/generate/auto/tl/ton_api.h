@@ -78,9 +78,15 @@ class adnl_pong;
 
 class adnl_Proxy;
 
+class adnl_ProxyControlPacket;
+
+class adnl_proxyPacketHeader;
+
 class adnl_proxyToFastHash;
 
 class adnl_proxyToFast;
+
+class adnl_tunnelPacketContents;
 
 class adnl_config_global;
 
@@ -1279,6 +1285,31 @@ class adnl_address_udp6 final : public adnl_Address {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class adnl_address_tunnel final : public adnl_Address {
+ public:
+  td::Bits256 to_;
+  object_ptr<PublicKey> pubkey_;
+
+  adnl_address_tunnel();
+
+  adnl_address_tunnel(td::Bits256 const &to_, object_ptr<PublicKey> &&pubkey_);
+
+  static const std::int32_t ID = 153813739;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<adnl_Address> fetch(td::TlParser &p);
+
+  explicit adnl_address_tunnel(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class adnl_addressList final : public Object {
  public:
   std::vector<object_ptr<adnl_Address>> addrs_;
@@ -1629,10 +1660,13 @@ class adnl_Proxy: public Object {
 
 class adnl_proxy_none final : public adnl_Proxy {
  public:
+  td::Bits256 id_;
 
   adnl_proxy_none();
 
-  static const std::int32_t ID = -90551726;
+  explicit adnl_proxy_none(td::Bits256 const &id_);
+
+  static const std::int32_t ID = 892487803;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1650,13 +1684,14 @@ class adnl_proxy_none final : public adnl_Proxy {
 
 class adnl_proxy_fast final : public adnl_Proxy {
  public:
+  td::Bits256 id_;
   td::BufferSlice shared_secret_;
 
   adnl_proxy_fast();
 
-  explicit adnl_proxy_fast(td::BufferSlice &&shared_secret_);
+  adnl_proxy_fast(td::Bits256 const &id_, td::BufferSlice &&shared_secret_);
 
-  static const std::int32_t ID = 554536094;
+  static const std::int32_t ID = 982205877;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1664,6 +1699,115 @@ class adnl_proxy_fast final : public adnl_Proxy {
   static object_ptr<adnl_Proxy> fetch(td::TlParser &p);
 
   explicit adnl_proxy_fast(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class adnl_ProxyControlPacket: public Object {
+ public:
+
+  static object_ptr<adnl_ProxyControlPacket> fetch(td::TlParser &p);
+};
+
+class adnl_proxyControlPacketPing final : public adnl_ProxyControlPacket {
+ public:
+  td::Bits256 id_;
+
+  adnl_proxyControlPacketPing();
+
+  explicit adnl_proxyControlPacketPing(td::Bits256 const &id_);
+
+  static const std::int32_t ID = 932635723;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<adnl_ProxyControlPacket> fetch(td::TlParser &p);
+
+  explicit adnl_proxyControlPacketPing(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class adnl_proxyControlPacketPong final : public adnl_ProxyControlPacket {
+ public:
+  td::Bits256 id_;
+
+  adnl_proxyControlPacketPong();
+
+  explicit adnl_proxyControlPacketPong(td::Bits256 const &id_);
+
+  static const std::int32_t ID = 1272044540;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<adnl_ProxyControlPacket> fetch(td::TlParser &p);
+
+  explicit adnl_proxyControlPacketPong(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class adnl_proxyControlPacketRegister final : public adnl_ProxyControlPacket {
+ public:
+  std::int32_t ip_;
+  std::int32_t port_;
+
+  adnl_proxyControlPacketRegister();
+
+  adnl_proxyControlPacketRegister(std::int32_t ip_, std::int32_t port_);
+
+  static const std::int32_t ID = -1022774721;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<adnl_ProxyControlPacket> fetch(td::TlParser &p);
+
+  explicit adnl_proxyControlPacketRegister(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class adnl_proxyPacketHeader final : public Object {
+ public:
+  td::Bits256 proxy_id_;
+  std::int32_t flags_;
+  std::int32_t ip_;
+  std::int32_t port_;
+  std::int32_t adnl_start_time_;
+  std::int64_t seqno_;
+  std::int32_t date_;
+  td::Bits256 signature_;
+  enum Flags : std::int32_t {IP_MASK = 1, PORT_MASK = 1, ADNL_START_TIME_MASK = 2, SEQNO_MASK = 4, DATE_MASK = 8};
+
+  adnl_proxyPacketHeader();
+
+  adnl_proxyPacketHeader(td::Bits256 const &proxy_id_, std::int32_t flags_, std::int32_t ip_, std::int32_t port_, std::int32_t adnl_start_time_, std::int64_t seqno_, std::int32_t date_, td::Bits256 const &signature_);
+
+  static const std::int32_t ID = 141114488;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<adnl_proxyPacketHeader> fetch(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -1719,6 +1863,36 @@ class adnl_proxyToFast final : public Object {
   static object_ptr<adnl_proxyToFast> fetch(td::TlParser &p);
 
   explicit adnl_proxyToFast(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class adnl_tunnelPacketContents final : public Object {
+ public:
+  td::BufferSlice rand1_;
+  std::int32_t flags_;
+  std::int32_t from_ip_;
+  std::int32_t from_port_;
+  td::BufferSlice message_;
+  td::BufferSlice statistics_;
+  td::BufferSlice payment_;
+  td::BufferSlice rand2_;
+  enum Flags : std::int32_t {FROM_IP_MASK = 1, FROM_PORT_MASK = 1, MESSAGE_MASK = 2, STATISTICS_MASK = 4, PAYMENT_MASK = 8};
+
+  adnl_tunnelPacketContents();
+
+  adnl_tunnelPacketContents(td::BufferSlice &&rand1_, std::int32_t flags_, std::int32_t from_ip_, std::int32_t from_port_, td::BufferSlice &&message_, td::BufferSlice &&statistics_, td::BufferSlice &&payment_, td::BufferSlice &&rand2_);
+
+  static const std::int32_t ID = -980338508;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<adnl_tunnelPacketContents> fetch(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 

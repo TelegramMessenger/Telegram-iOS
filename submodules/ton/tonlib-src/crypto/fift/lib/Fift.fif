@@ -111,6 +111,8 @@ variable base
 { cdr cdr } : cddr
 { cdr cdr car } : caddr
 { null ' cons rot times } : list
+{ -rot pair swap ! } : 2!
+{ @ unpair } : 2@
 { true (atom) drop } : atom
 { bl word atom 1 'nop } ::_ `
 { hole dup 1 { @ execute } does create } : recursive
@@ -121,13 +123,18 @@ variable base
 { 0 word -trailing scan-until-word 1 'nop } ::_ $<<
 { 0x40 runvmx } : runvmcode
 { 0x48 runvmx } : gasrunvmcode
+{ 0xc8 runvmx } : gas2runvmcode
 { 0x43 runvmx } : runvmdict
 { 0x4b runvmx } : gasrunvmdict
+{ 0xcb runvmx } : gas2runvmdict
 { 0x45 runvmx } : runvm
 { 0x4d runvmx } : gasrunvm
+{ 0xcd runvmx } : gas2runvm
 { 0x55 runvmx } : runvmctx
 { 0x5d runvmx } : gasrunvmctx
+{ 0xdd runvmx } : gas2runvmctx
 { 0x75 runvmx } : runvmctxact
 { 0x7d runvmx } : gasrunvmctxact
+{ 0xfd runvmx } : gas2runvmctxact
 { 0x35 runvmx } : runvmctxactq
 { 0x3d runvmx } : gasrunvmctxactq

@@ -338,10 +338,10 @@ public class Window1 {
             }
             strongSelf._rootController?.displayNode.accessibilityElementsHidden = strongSelf.presentationContext.hasOpaqueOverlay || strongSelf.topPresentationContext.hasOpaqueOverlay
         }
-        self.presentationContext.updateHasOpaqueOverlay = { [weak self] value in
+        self.presentationContext.updateHasOpaqueOverlay = { value in
             updateOpaqueOverlays()
         }
-        self.topPresentationContext.updateHasOpaqueOverlay = { [weak self] value in
+        self.topPresentationContext.updateHasOpaqueOverlay = { value in
             updateOpaqueOverlays()
         }
         
@@ -846,7 +846,7 @@ public class Window1 {
     }
     
     private func layoutSubviews(force: Bool) {
-        if self.tracingStatusBarsInvalidated, let keyboardManager = keyboardManager {
+        if self.tracingStatusBarsInvalidated, let _ = keyboardManager {
             self.tracingStatusBarsInvalidated = false
             
             var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
@@ -1226,11 +1226,11 @@ public class Window1 {
         if let navigationController = self._rootController as? NavigationController {
             if !excludeNavigationSubControllers {
                 for case let controller as ContainableController in navigationController.viewControllers {
-                    !f(controller)
+                    let _ = f(controller)
                 }
             }
             if let controller = navigationController.topOverlayController {
-                !f(controller)
+                let _ = f(controller)
             }
         }
         for (controller, _) in self.presentationContext.controllers {

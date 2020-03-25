@@ -26,10 +26,12 @@
 #include "vm/excno.hpp"
 #include "vm/vm.h"
 
+using namespace std::literals::string_literals;
+
 namespace vm {
 
 int exec_execute(VmState* st) {
-  VM_LOG(st) << "execute EXECUTE\n";
+  VM_LOG(st) << "execute EXECUTE";
   auto cont = st->get_stack().pop_cont();
   return st->call(std::move(cont));
 }
@@ -150,12 +152,58 @@ int exec_callcc_varargs(VmState* st) {
 int exec_do_with_ref(VmState* st, CellSlice& cs, int pfx_bits, const std::function<int(VmState*, Ref<OrdCont>)>& func,
                      const char* name) {
   if (!cs.have_refs(1)) {
-    throw VmError{Excno::inv_opcode, "no references left for a CALLREF instruction"};
+    throw VmError{Excno::inv_opcode, "no references left for a "s + name + " instruction"};
   }
   cs.advance(pfx_bits);
   auto cell = cs.fetch_ref();
   VM_LOG(st) << "execute " << name << " (" << cell->get_hash().to_hex() << ")";
-  return func(st, Ref<OrdCont>{true, load_cell_slice_ref(std::move(cell)), st->get_cp()});
+  return func(st, st->ref_to_cont(std::move(cell)));
+}
+
+int exec_do_with_cell(VmState* st, CellSlice& cs, int pfx_bits, const std::function<int(VmState*, Ref<Cell>)>& func,
+                      const char* name) {
+  if (!cs.have_refs(1)) {
+    throw VmError{Excno::inv_opcode, "no references left for a "s + name + " instruction"};
+  }
+  cs.advance(pfx_bits);
+  auto cell = cs.fetch_ref();
+  VM_LOG(st) << "execute " << name << " (" << cell->get_hash().to_hex() << ")";
+  return func(st, std::move(cell));
+}
+
+int exec_ifelse_ref(VmState* st, CellSlice& cs, int pfx_bits, bool mode) {
+  const char* name = mode ? "IFREFELSE" : "IFELSEREF";
+  if (!cs.have_refs(1)) {
+    throw VmError{Excno::inv_opcode, "no references left for a "s + name + " instruction"};
+  }
+  cs.advance(pfx_bits);
+  auto cell = cs.fetch_ref();
+  Stack& stack = st->get_stack();
+  VM_LOG(st) << "execute " << name << " (" << cell->get_hash().to_hex() << ")";
+  stack.check_underflow(2);
+  auto cont = stack.pop_cont();
+  if (stack.pop_bool() == mode) {
+    cont = st->ref_to_cont(std::move(cell));
+  } else {
+    cell.clear();
+  }
+  return st->call(std::move(cont));
+}
+
+int exec_ifref_elseref(VmState* st, CellSlice& cs, unsigned args, int pfx_bits) {
+  if (!cs.have_refs(2)) {
+    throw VmError{Excno::inv_opcode, "no references left for a IFREFELSEREF instruction"};
+  }
+  cs.advance(pfx_bits);
+  auto cell1 = cs.fetch_ref(), cell2 = cs.fetch_ref();
+  Stack& stack = st->get_stack();
+  VM_LOG(st) << "execute IFREFELSEREF (" << cell1->get_hash().to_hex() << ") (" << cell2->get_hash().to_hex() << ")";
+  if (!stack.pop_bool()) {
+    cell1 = std::move(cell2);
+  } else {
+    cell2.clear();
+  }
+  return st->call(st->ref_to_cont(std::move(cell1)));
 }
 
 int exec_ret_data(VmState* st) {
@@ -349,7 +397,7 @@ int exec_if_bit_jmpref(VmState* st, CellSlice& cs, unsigned args, int pfx_bits) 
   bool val = x->get_bit(bit);
   stack.push_int(std::move(x));
   if (val ^ negate) {
-    return st->jump(Ref<OrdCont>{true, load_cell_slice_ref(std::move(cell)), st->get_cp()});
+    return st->jump(st->ref_to_cont(std::move(cell)));
   }
   return 0;
 }
@@ -365,66 +413,72 @@ std::string dump_if_bit_jmpref(CellSlice& cs, unsigned args, int pfx_bits) {
   return os.str();
 }
 
-int exec_repeat(VmState* st) {
+int exec_repeat(VmState* st, bool brk) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute REPEAT\n";
+  VM_LOG(st) << "execute REPEAT" << (brk ? "BRK" : "");
   stack.check_underflow(2);
   auto cont = stack.pop_cont();
   int c = stack.pop_smallint_range(0x7fffffff, 0x80000000);
   if (c <= 0) {
     return 0;
   }
-  return st->repeat(std::move(cont), st->extract_cc(1), c);
+  return st->repeat(std::move(cont), st->c1_envelope_if(brk, st->extract_cc(1)), c);
 }
 
-int exec_repeat_end(VmState* st) {
+int exec_repeat_end(VmState* st, bool brk) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute REPEATEND\n";
+  VM_LOG(st) << "execute REPEATEND" << (brk ? "BRK" : "");
   stack.check_underflow(1);
   int c = stack.pop_smallint_range(0x7fffffff, 0x80000000);
   if (c <= 0) {
     return st->ret();
   }
   auto cont = st->extract_cc(0);
-  return st->repeat(std::move(cont), st->get_c0(), c);
+  return st->repeat(std::move(cont), st->c1_envelope_if(brk, st->get_c0()), c);
 }
 
-int exec_until(VmState* st) {
+int exec_until(VmState* st, bool brk) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute UNTIL\n";
+  VM_LOG(st) << "execute UNTIL" << (brk ? "BRK" : "");
   auto cont = stack.pop_cont();
-  return st->until(std::move(cont), st->extract_cc(1));
+  return st->until(std::move(cont), st->c1_envelope_if(brk, st->extract_cc(1)));
 }
 
-int exec_until_end(VmState* st) {
-  VM_LOG(st) << "execute UNTILEND\n";
+int exec_until_end(VmState* st, bool brk) {
+  VM_LOG(st) << "execute UNTILEND" << (brk ? "BRK" : "");
   auto cont = st->extract_cc(0);
-  return st->until(std::move(cont), st->get_c0());
+  return st->until(std::move(cont), st->c1_envelope_if(brk, st->get_c0()));
 }
 
-int exec_while(VmState* st) {
+int exec_while(VmState* st, bool brk) {
   Stack& stack = st->get_stack();
-  VM_LOG(st) << "execute WHILE\n";
+  VM_LOG(st) << "execute WHILE" << (brk ? "BRK" : "");
   stack.check_underflow(2);
   auto body = stack.pop_cont();
   auto cond = stack.pop_cont();
-  return st->loop_while(std::move(cond), std::move(body), st->extract_cc(1));
+  return st->loop_while(std::move(cond), std::move(body), st->c1_envelope_if(brk, st->extract_cc(1)));
 }
 
-int exec_while_end(VmState* st) {
-  VM_LOG(st) << "execute WHILEEND\n";
+int exec_while_end(VmState* st, bool brk) {
+  VM_LOG(st) << "execute WHILEEND" << (brk ? "BRK" : "");
   auto cond = st->get_stack().pop_cont();
   auto body = st->extract_cc(0);
-  return st->loop_while(std::move(cond), std::move(body), st->get_c0());
+  return st->loop_while(std::move(cond), std::move(body), st->c1_envelope_if(brk, st->get_c0()));
 }
 
-int exec_again(VmState* st) {
-  VM_LOG(st) << "execute AGAIN\n";
+int exec_again(VmState* st, bool brk) {
+  VM_LOG(st) << "execute AGAIN" << (brk ? "BRK" : "");
+  if (brk) {
+    st->set_c1(st->extract_cc(3));
+  }
   return st->again(st->get_stack().pop_cont());
 }
 
-int exec_again_end(VmState* st) {
-  VM_LOG(st) << "execute AGAINEND\n";
+int exec_again_end(VmState* st, bool brk) {
+  VM_LOG(st) << "execute AGAINEND" << (brk ? "BRK" : "");
+  if (brk) {
+    st->c1_save_set();
+  }
   return st->again(st->extract_cc(0));
 }
 
@@ -437,44 +491,70 @@ void register_continuation_cond_loop_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0xe0, 8, "IFJMP", exec_if_jmp))
       .insert(OpcodeInstr::mksimple(0xe1, 8, "IFNOTJMP", exec_ifnot_jmp))
       .insert(OpcodeInstr::mksimple(0xe2, 8, "IFELSE", exec_if_else))
-      .insert(OpcodeInstr::mkext(
-          0xe300, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFREF"),
-          std::bind(exec_do_with_ref, _1, _2, _4,
-                    [](auto st, auto cont) { return st->get_stack().pop_bool() ? st->call(std::move(cont)) : 0; },
-                    "IFREF"),
-          compute_len_push_ref))
-      .insert(OpcodeInstr::mkext(
-          0xe301, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFNOTREF"),
-          std::bind(exec_do_with_ref, _1, _2, _4,
-                    [](auto st, auto cont) { return st->get_stack().pop_bool() ? 0 : st->call(std::move(cont)); },
-                    "IFNOTREF"),
-          compute_len_push_ref))
-      .insert(OpcodeInstr::mkext(
-          0xe302, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFJMPREF"),
-          std::bind(exec_do_with_ref, _1, _2, _4,
-                    [](auto st, auto cont) { return st->get_stack().pop_bool() ? st->jump(std::move(cont)) : 0; },
-                    "IFJMPREF"),
-          compute_len_push_ref))
-      .insert(OpcodeInstr::mkext(
-          0xe303, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFNOTJMPREF"),
-          std::bind(exec_do_with_ref, _1, _2, _4,
-                    [](auto st, auto cont) { return st->get_stack().pop_bool() ? 0 : st->jump(std::move(cont)); },
-                    "IFNOTJMPREF"),
-          compute_len_push_ref))
+      .insert(OpcodeInstr::mkext(0xe300, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFREF"),
+                                 std::bind(exec_do_with_cell, _1, _2, _4,
+                                           [](auto st, auto cell) {
+                                             return st->get_stack().pop_bool()
+                                                        ? st->call(st->ref_to_cont(std::move(cell)))
+                                                        : 0;
+                                           },
+                                           "IFREF"),
+                                 compute_len_push_ref))
+      .insert(OpcodeInstr::mkext(0xe301, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFNOTREF"),
+                                 std::bind(exec_do_with_cell, _1, _2, _4,
+                                           [](auto st, auto cell) {
+                                             return st->get_stack().pop_bool()
+                                                        ? 0
+                                                        : st->call(st->ref_to_cont(std::move(cell)));
+                                           },
+                                           "IFNOTREF"),
+                                 compute_len_push_ref))
+      .insert(OpcodeInstr::mkext(0xe302, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFJMPREF"),
+                                 std::bind(exec_do_with_cell, _1, _2, _4,
+                                           [](auto st, auto cell) {
+                                             return st->get_stack().pop_bool()
+                                                        ? st->jump(st->ref_to_cont(std::move(cell)))
+                                                        : 0;
+                                           },
+                                           "IFJMPREF"),
+                                 compute_len_push_ref))
+      .insert(OpcodeInstr::mkext(0xe303, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFNOTJMPREF"),
+                                 std::bind(exec_do_with_cell, _1, _2, _4,
+                                           [](auto st, auto cell) {
+                                             return st->get_stack().pop_bool()
+                                                        ? 0
+                                                        : st->jump(st->ref_to_cont(std::move(cell)));
+                                           },
+                                           "IFNOTJMPREF"),
+                                 compute_len_push_ref))
       .insert(OpcodeInstr::mksimple(0xe304, 16, "CONDSEL", exec_condsel))
       .insert(OpcodeInstr::mksimple(0xe305, 16, "CONDSELCHK", exec_condsel_chk))
       .insert(OpcodeInstr::mksimple(0xe308, 16, "IFRETALT", exec_ifretalt))
       .insert(OpcodeInstr::mksimple(0xe309, 16, "IFNOTRETALT", exec_ifnotretalt))
+      .insert(OpcodeInstr::mkext(0xe30d, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFREFELSE"),
+                                 std::bind(exec_ifelse_ref, _1, _2, _4, true), compute_len_push_ref))
+      .insert(OpcodeInstr::mkext(0xe30e, 16, 0, std::bind(dump_push_ref, _1, _2, _3, "IFELSEREF"),
+                                 std::bind(exec_ifelse_ref, _1, _2, _4, false), compute_len_push_ref))
+      .insert(OpcodeInstr::mkext(0xe30f, 16, 0, std::bind(dump_push_ref2, _1, _2, _3, "IFREFELSEREF"),
+                                 exec_ifref_elseref, compute_len_push_ref2))
       .insert(OpcodeInstr::mkfixed(0xe380 >> 6, 10, 6, dump_if_bit_jmp, exec_if_bit_jmp))
       .insert(OpcodeInstr::mkext(0xe3c0 >> 6, 10, 6, dump_if_bit_jmpref, exec_if_bit_jmpref, compute_len_push_ref))
-      .insert(OpcodeInstr::mksimple(0xe4, 8, "REPEAT", exec_repeat))
-      .insert(OpcodeInstr::mksimple(0xe5, 8, "REPEATEND", exec_repeat_end))
-      .insert(OpcodeInstr::mksimple(0xe6, 8, "UNTIL", exec_until))
-      .insert(OpcodeInstr::mksimple(0xe7, 8, "UNTILEND", exec_until_end))
-      .insert(OpcodeInstr::mksimple(0xe8, 8, "WHILE", exec_while))
-      .insert(OpcodeInstr::mksimple(0xe9, 8, "WHILEEND", exec_while_end))
-      .insert(OpcodeInstr::mksimple(0xea, 8, "AGAIN", exec_again))
-      .insert(OpcodeInstr::mksimple(0xeb, 8, "AGAINEND", exec_again_end));
+      .insert(OpcodeInstr::mksimple(0xe4, 8, "REPEAT", std::bind(exec_repeat, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xe5, 8, "REPEATEND", std::bind(exec_repeat_end, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xe6, 8, "UNTIL", std::bind(exec_until, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xe7, 8, "UNTILEND", std::bind(exec_until_end, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xe8, 8, "WHILE", std::bind(exec_while, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xe9, 8, "WHILEEND", std::bind(exec_while_end, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xea, 8, "AGAIN", std::bind(exec_again, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xeb, 8, "AGAINEND", std::bind(exec_again_end, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xe314, 16, "REPEATBRK", std::bind(exec_repeat, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe315, 16, "REPEATENDBRK", std::bind(exec_repeat_end, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe316, 16, "UNTILBRK", std::bind(exec_until, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe317, 16, "UNTILENDBRK", std::bind(exec_until_end, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe318, 16, "WHILEBRK", std::bind(exec_while, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe319, 16, "WHILEENDBRK", std::bind(exec_while_end, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe31a, 16, "AGAINBRK", std::bind(exec_again, _1, true)))
+      .insert(OpcodeInstr::mksimple(0xe31b, 16, "AGAINENDBRK", std::bind(exec_again_end, _1, true)));
 }
 
 int exec_setcontargs_common(VmState* st, int copy, int more) {
@@ -492,6 +572,7 @@ int exec_setcontargs_common(VmState* st, int copy, int more) {
       } else {
         cdata->stack.write().move_from_stack(stack, copy);
       }
+      st->consume_stack_gas(cdata->stack);
       if (cdata->nargs >= 0) {
         cdata->nargs -= copy;
       }
@@ -557,6 +638,7 @@ int exec_return_args_common(VmState* st, int count) {
     cdata->stack.write().move_from_stack(alt_stk.write(), copy);
     alt_stk.clear();
   }
+  st->consume_stack_gas(cdata->stack);
   if (cdata->nargs >= 0) {
     cdata->nargs -= copy;
   }
@@ -587,6 +669,7 @@ int exec_bless_args_common(VmState* st, int copy, int more) {
   stack.check_underflow(copy + 1);
   auto cs = stack.pop_cellslice();
   auto new_stk = stack.split_top(copy);
+  st->consume_stack_gas(new_stk);
   stack.push_cont(Ref<OrdCont>{true, std::move(cs), st->get_cp(), std::move(new_stk), more});
   return 0;
 }
@@ -700,6 +783,17 @@ int exec_save_ctr(VmState* st, unsigned args) {
   auto c0 = st->get_c0();
   throw_typechk(force_cregs(c0)->define(idx, st->get(idx)));
   st->set_c0(std::move(c0));
+  return 0;
+}
+
+int exec_samealt(VmState* st, bool save) {
+  VM_LOG(st) << "execute SAMEALT" << (save ? "SAVE" : "");
+  auto c0 = st->get_c0();
+  if (save) {
+    force_cregs(c0)->define_c1(st->get_c1());
+    st->set_c0(c0);
+  }
+  st->set_c1(std::move(c0));
   return 0;
 }
 
@@ -880,6 +974,8 @@ void register_continuation_change_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0xedf7, 16, "THENRETALT", exec_thenret_alt))
       .insert(OpcodeInstr::mksimple(0xedf8, 16, "INVERT", exec_invert))
       .insert(OpcodeInstr::mksimple(0xedf9, 16, "BOOLEVAL", exec_booleval))
+      .insert(OpcodeInstr::mksimple(0xedfa, 16, "SAMEALT", std::bind(exec_samealt, _1, false)))
+      .insert(OpcodeInstr::mksimple(0xedfb, 16, "SAMEALTSAVE", std::bind(exec_samealt, _1, true)))
       .insert(OpcodeInstr::mkfixed(0xee, 8, 8, std::bind(dump_setcontargs, _1, _2, "BLESSARGS"), exec_bless_args));
 }
 

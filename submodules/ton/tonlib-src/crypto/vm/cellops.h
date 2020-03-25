@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "vm/cellslice.h"
@@ -27,5 +27,8 @@ void register_cell_ops(OpcodeTable &cp0);
 
 std::string dump_push_ref(CellSlice &cs, unsigned args, int pfx_bits, std::string name);
 int compute_len_push_ref(const CellSlice &cs, unsigned args, int pfx_bits);
+
+std::string dump_push_ref2(CellSlice &cs, unsigned args, int pfx_bits, std::string name);
+int compute_len_push_ref2(const CellSlice &cs, unsigned args, int pfx_bits);
 
 }  // namespace vm

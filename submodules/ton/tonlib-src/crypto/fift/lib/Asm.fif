@@ -1,7 +1,7 @@
 library TVM_Asm
 // simple TVM Assembler
 variable @atend
-'nop @atend !
+{ "not in asm context" abort } @atend !
 { `normal eq? not abort"must be terminated by }>" } : @normal?
 { @atend @ 1 { @atend ! @normal? } does @atend ! } : @pushatend
 { @pushatend <b } : <{
@@ -12,10 +12,11 @@ variable @atend
 { @atend @ 2 { @atend ! rot b> ref, swap @endblk } does @atend ! <b } : @|
 { @atend @ 3 { @atend ! 2swap rot execute } does @atend ! <b } : @doafter<{
 { over brembits <= } : @havebits
+{ rot + -rot + swap } : pair+
 { rot >= -rot <= and } : 2x<=
 { 2 pick brembitrefs 1- 2x<= } : @havebitrefs
-{ @havebits not ' @| if } : @ensurebits
-{ @havebitrefs not ' @| if } : @ensurebitrefs
+{ @havebits ' @| ifnot } : @ensurebits
+{ @havebitrefs ' @| ifnot } : @ensurebitrefs
 { rot over @ensurebits -rot u, } : @simpleuop
 { tuck sbitrefs @ensurebitrefs swap s, } : @addop
 { tuck bbitrefs @ensurebitrefs swap b+ } : @addopb
@@ -27,6 +28,7 @@ variable @atend
 { 1 { <b swap s, swap 4 u, @addopb } does create } : @Defop(4u)
 { 1 { <b swap s, rot 4 u, swap 4 u, @addopb } does create } : @Defop(4u,4u)
 { 1 { <b swap s, swap ref, @addopb } does create } : @Defop(ref)
+{ 1 { <b swap s, rot ref, swap ref, @addopb } does create } : @Defop(ref*2)
 { <b 0xef 8 u, swap 12 i, b> } : si()
 // x mi ma -- ?
 { rot tuck >= -rot <= and } : @range
@@ -272,10 +274,27 @@ x{8A} @Defop(ref) PUSHREFCONT
     } cond
   } cond
 } dup : PUSHSLICE : SLICE
-{ tuck bbitrefs swap 16 + dup 7 and 3 -roll swap @havebitrefs
-  not rot or
-  { swap b> PUSHREFCONT }
-  { over bbitrefs 2dup 120 0 2x<=
+// ( b' -- ? )
+{ bbitrefs or 0= } : @cont-empty?
+{ bbits 7 and 0= } : @cont-aligned?
+// ( b b' -- ? )
+{ bbitrefs over 7 and { 2drop drop false } {
+  swap 16 + swap @havebitrefs nip
+  } cond
+} : @cont-fits?
+// ( b b' -- ? )
+{ bbitrefs over 7 and { 2drop drop false } {
+  32 1 pair+ @havebitrefs nip
+  } cond
+} : @cont-ref-fit?
+// ( b b' b'' -- ? )
+{ over @cont-aligned? over @cont-aligned? and not { 2drop drop false } {
+  bbitrefs rot bbitrefs pair+ swap 32 + swap @havebitrefs nip
+  } cond
+} : @two-cont-fit?
+{ 2dup @cont-fits? not
+  { b> PUSHREFCONT }
+  { swap over bbitrefs 2dup 120 0 2x<=
     { drop swap x{9} s, swap 3 >> 4 u, swap b+ }
     { rot x{8F_} s, swap 2 u, swap 3 >> 7 u, swap b+ } cond
   } cond
@@ -320,12 +339,16 @@ x{A985} @Defop MULDIVR
 x{A98C} @Defop MULDIVMOD
 x{A9A4} @Defop MULRSHIFT
 x{A9A5} @Defop MULRSHIFTR
+x{A9A6} @Defop MULRSHIFTC
 x{A9B4} @Defop(8u+1) MULRSHIFT#
 x{A9B5} @Defop(8u+1) MULRSHIFTR#
+x{A9B6} @Defop(8u+1) MULRSHIFTC#
 x{A9C4} @Defop LSHIFTDIV
 x{A9C5} @Defop LSHIFTDIVR
+x{A9C6} @Defop LSHIFTDIVC
 x{A9D4} @Defop(8u+1) LSHIFT#DIV
 x{A9D5} @Defop(8u+1) LSHIFT#DIVR
+x{A9D6} @Defop(8u+1) LSHIFT#DIVC
 x{AA} @Defop(8u+1) LSHIFT#
 x{AB} @Defop(8u+1) RSHIFT#
 x{AC} @Defop LSHIFT
@@ -628,46 +651,80 @@ x{DB3F} @Defop RETDATA
 x{DC} @Defop IFRET
 x{DD} @Defop IFNOTRET
 x{DE} @Defop IF
-{ }> PUSHCONT IF } : }>IF
 x{DF} @Defop IFNOT
-{ }> PUSHCONT IFNOT } : }>IFNOT
 ' IFNOTRET : IF:
 ' IFRET : IFNOT:
 x{E0} @Defop IFJMP
-{ }> PUSHCONT IFJMP } : }>IFJMP
-{ { @normal? PUSHCONT IFJMP } @doafter<{ } : IFJMP:<{
 x{E1} @Defop IFNOTJMP
-{ }> PUSHCONT IFNOTJMP } : }>IFNOTJMP
-{ { @normal? PUSHCONT IFNOTJMP } @doafter<{ } : IFNOTJMP:<{
 x{E2} @Defop IFELSE
-{ `else @endblk } : }>ELSE<{
-{ `else: @endblk } : }>ELSE:
-{ PUSHCONT { @normal? PUSHCONT IFELSE } @doafter<{ } : @doifelse
-{ 1 { swap @normal? -rot PUSHCONT swap PUSHCONT IFELSE } does @doafter<{ } : @doifnotelse
-{ 
-  { dup `else eq? 
-    { drop @doifelse }
-    { dup `else: eq?
-      { drop PUSHCONT IFJMP }
-      { @normal? PUSHCONT IF
-      } cond 
-    } cond 
-  } @doafter<{ 
-} : IF:<{
-{ 
-  { dup `else eq? 
-    { drop @doifnotelse }
-    { dup `else: eq?
-      { drop PUSHCONT IFNOTJMP }
-      { @normal? PUSHCONT IFNOT
-      } cond 
-    } cond 
-  } @doafter<{ 
-} : IFNOT:<{
+
 x{E300} @Defop(ref) IFREF
 x{E301} @Defop(ref) IFNOTREF
 x{E302} @Defop(ref) IFJMPREF
 x{E303} @Defop(ref) IFNOTJMPREF
+x{E30D} @Defop(ref) IFREFELSE
+x{E30E} @Defop(ref) IFELSEREF
+x{E30F} @Defop(ref*2) IFREFELSEREF
+
+{ 16 1 @havebitrefs nip } : @refop-fits?
+// b b1 [e0 e1 e2] -- b'
+{ -rot dup @cont-empty? { drop swap 0 } {
+  2dup @cont-fits? { rot 1 } {
+  over @refop-fits? { b> rot 2 } {
+  swap @| swap 2dup @cont-fits? { rot 1 } {
+  b> rot 2
+  } cond } cond } cond } cond
+  [] execute
+} : @run-cont-op
+{ triple 1 ' @run-cont-op does create } : @def-cont-op
+{ } { PUSHCONT IF } { IFREF } @def-cont-op IF-cont
+{ IFRET } { PUSHCONT IFJMP } { IFJMPREF } @def-cont-op IFJMP-cont
+{ } { PUSHCONT IFNOT } { IFNOTREF } @def-cont-op IFNOT-cont
+{ IFNOTRET } { PUSHCONT IFNOTJMP } { IFNOTJMPREF } @def-cont-op IFNOTJMP-cont
+{ dup 2over rot } : 3dup
+
+recursive IFELSE-cont2 {
+  dup @cont-empty? { drop IF-cont } {
+  over @cont-empty? { nip IFNOT-cont } {
+  3dup @two-cont-fit? { -rot PUSHCONT swap PUSHCONT IFELSE } {
+  3dup nip @cont-ref-fit? { rot swap PUSHCONT swap b> IFREFELSE } {
+  3dup drop @cont-ref-fit? { -rot PUSHCONT swap b> IFELSEREF } {
+  rot 32 2 @havebitrefs { rot b> rot b> IFREFELSEREF } {
+  @| -rot IFELSE-cont2
+  } cond } cond } cond } cond } cond } cond
+} swap !
+
+{ }> IF-cont } : }>IF
+{ }> IFNOT-cont } : }>IFNOT
+{ }> IFJMP-cont } : }>IFJMP
+{ }> IFNOTJMP-cont } : }>IFNOTJMP
+{ { @normal? IFJMP-cont } @doafter<{ } : IFJMP:<{
+{ { @normal? IFNOTJMP-cont } @doafter<{ } : IFNOTJMP:<{
+{ `else @endblk } : }>ELSE<{
+{ `else: @endblk } : }>ELSE:
+{ 1 { swap @normal? swap IFELSE-cont2 } does @doafter<{ } : @doifelse
+{ 1 { swap @normal? IFELSE-cont2 } does @doafter<{ } : @doifnotelse
+{
+  { dup `else eq? 
+    { drop @doifelse }
+    { dup `else: eq?
+      { drop IFJMP-cont }
+      { @normal? IF-cont
+      } cond 
+    } cond 
+  } @doafter<{ 
+} : IF:<{
+{
+  { dup `else eq? 
+    { drop @doifnotelse }
+    { dup `else: eq?
+      { drop IFNOTJMP-cont }
+      { @normal? IFNOT-cont
+      } cond 
+    } cond 
+  } @doafter<{ 
+} : IFNOT:<{
+
 x{E304} @Defop CONDSEL
 x{E305} @Defop CONDSELCHK
 x{E308} @Defop IFRETALT
@@ -676,18 +733,22 @@ x{E309} @Defop IFNOTRETALT
 { <b x{E3B_} swap 5 u, @addopb } : IFNBITJMP
 { <b x{E3D_} swap 5 u, swap ref, @addopb } : IFBITJMPREF
 { <b x{E3F_} swap 5 u, swap ref, @addopb } : IFNBITJMPREF
+
 x{E4} @Defop REPEAT
-{ }> PUSHCONT REPEAT } : }>REPEAT
-{ { @normal? PUSHCONT REPEAT } @doafter<{ } : REPEAT:<{
 x{E5} dup @Defop REPEATEND @Defop REPEAT:
 x{E6} @Defop UNTIL
-{ }> PUSHCONT UNTIL } : }>UNTIL
-{ { @normal? PUSHCONT UNTIL } @doafter<{ } : UNTIL:<{
 x{E7} dup @Defop UNTILEND @Defop UNTIL:
 x{E8} @Defop WHILE
 x{E9} @Defop WHILEEND
+x{EA} @Defop AGAIN
+x{EB} dup @Defop AGAINEND @Defop AGAIN:
+
 { `do @endblk } : }>DO<{
 { `do: @endblk } : }>DO:
+{ }> PUSHCONT REPEAT } : }>REPEAT
+{ { @normal? PUSHCONT REPEAT } @doafter<{ } : REPEAT:<{
+{ }> PUSHCONT UNTIL } : }>UNTIL
+{ { @normal? PUSHCONT UNTIL } @doafter<{ } : UNTIL:<{
 { PUSHCONT { @normal? PUSHCONT WHILE } @doafter<{ } : @dowhile
 { 
   { dup `do eq? 
@@ -696,10 +757,34 @@ x{E9} @Defop WHILEEND
     } cond 
   } @doafter<{ 
 } : WHILE:<{
-x{EA} @Defop AGAIN
 { }> PUSHCONT AGAIN } : }>AGAIN
 { { @normal? PUSHCONT AGAIN } @doafter<{ } : AGAIN:<{
-x{EB} dup @Defop AGAINEND @Defop AGAIN:
+
+x{E314} @Defop REPEATBRK
+x{E315} @Defop REPEATENDBRK
+x{E316} @Defop UNTILBRK
+x{E317} dup @Defop UNTILENDBRK @Defop UNTILBRK:
+x{E318} @Defop WHILEBRK
+x{E319} @Defop WHILEENDBRK
+x{E31A} @Defop AGAINBRK
+x{E31B} dup @Defop AGAINENDBRK @Defop AGAINBRK:
+
+{ }> PUSHCONT REPEATBRK } : }>REPEATBRK
+{ { @normal? PUSHCONT REPEATBRK } @doafter<{ } : REPEATBRK:<{
+{ }> PUSHCONT UNTILBRK } : }>UNTILBRK
+{ { @normal? PUSHCONT UNTILBRK } @doafter<{ } : UNTILBRK:<{
+{ PUSHCONT { @normal? PUSHCONT WHILEBRK } @doafter<{ } : @dowhile
+{
+  { dup `do eq? 
+    { drop @dowhile } 
+    { `do: eq? not abort"`}>DO<{` expected" PUSHCONT WHILEENDBRK
+    } cond 
+  } @doafter<{ 
+} : WHILEBRK:<{
+{ }> PUSHCONT AGAINBRK } : }>AGAINBRK
+{ { @normal? PUSHCONT AGAINBRK } @doafter<{ } : AGAINBRK:<{
+
+
 //
 // continuation stack manipulation and continuation creation
 //
@@ -745,6 +830,8 @@ x{EDF6} @Defop THENRET
 x{EDF7} @Defop THENRETALT
 x{EDF8} @Defop INVERT
 x{EDF9} @Defop BOOLEVAL
+x{EDFA} @Defop SAMEALT
+x{EDFB} @Defop SAMEALTSAVE
 // x{EE} is BLESSARGS
 //
 // dictionary subroutine call/jump primitives

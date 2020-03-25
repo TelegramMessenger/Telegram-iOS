@@ -118,6 +118,24 @@ std::pair<RefInt256, RefInt256> divmod(RefInt256 x, RefInt256 y, int round_mode)
   return std::make_pair(std::move(quot), std::move(x));
 }
 
+RefInt256 muldiv(RefInt256 x, RefInt256 y, RefInt256 z, int round_mode) {
+  typename td::BigInt256::DoubleInt tmp{0};
+  tmp.add_mul(*x, *y);
+  RefInt256 quot{true};
+  tmp.mod_div(*z, quot.unique_write(), round_mode);
+  quot.write().normalize();
+  return quot;
+}
+
+std::pair<RefInt256, RefInt256> muldivmod(RefInt256 x, RefInt256 y, RefInt256 z, int round_mode) {
+  typename td::BigInt256::DoubleInt tmp{0};
+  tmp.add_mul(*x, *y);
+  RefInt256 quot{true};
+  tmp.mod_div(*z, quot.unique_write(), round_mode);
+  quot.write().normalize();
+  return std::make_pair(std::move(quot), td::make_refint(tmp));
+}
+
 RefInt256 operator&(RefInt256 x, RefInt256 y) {
   x.write() &= *y;
   return x;

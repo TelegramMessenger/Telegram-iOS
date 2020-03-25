@@ -1368,6 +1368,7 @@ bool TonlibClient::is_static_request(td::int32 id) {
     case tonlib_api::encrypt::ID:
     case tonlib_api::decrypt::ID:
     case tonlib_api::kdf::ID:
+    case tonlib_api::msg_decryptWithProof::ID:
       return true;
     default:
       return false;
@@ -1688,6 +1689,29 @@ const MasterConfig& get_default_master_config() {
 {"workchain":-1,"shard":-9223372036854775808,"seqno":870721,"root_hash":"jYKhSQ1xeSPprzgjqiUOnAWwc2yqs7nCVAU21k922s4=","file_hash":"kHidF02CZpaz2ia9jtXUJLp0AiWMWwfzprTUIsddHSo="}
   }
 })abc");
+    res.add_config("testnet2", R"abc({
+  "liteservers": [
+    {
+      "ip": 1137658550,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "peJTw/arlRfssgTuf9BMypJzqOi7SXEqSPSWiEw2U1M="
+      }
+    }
+  ],
+  "validator": {
+    "@type": "validator.config.global",
+    "zero_state": {
+      "workchain": -1,
+      "shard": -9223372036854775808,
+      "seqno": 0,
+      "root_hash": "F6OpKZKqvqeFp6CQmFomXNMfMj2EnaUSOXN+Mh+wVWk=",
+      "file_hash": "XplPz01CXAps5qeSWUtxcyBfdAo5zVb1N979KLSKD24="
+    },
+    "init_block": {"workchain":-1,"shard":-9223372036854775808,"seqno":2908451,"root_hash":"5+7X1QHVUBFLFMwa/yd/2fGzt2KeQtwr+o6UUFOQ7Qc=","file_hash":"gmiUgrtAbvEJZYDEkcbeNOhGPS3g+qCepSOEBFLZFzk="}
+  }
+})abc");
     return res;
   }();
   return config;
@@ -1841,39 +1865,41 @@ struct ToRawTransactions {
     auto body_cell = vm::CellBuilder().append_cellslice(*body).finalize();
     auto body_hash = body_cell->get_hash().as_slice().str();
 
-    tonlib_api::object_ptr<tonlib_api::msg_Data> data;
-    if (body->size() >= 32 && static_cast<td::uint32>(body->prefetch_long(32)) <= 1) {
-      auto type = body.write().fetch_long(32);
-      td::Status status;
+    auto get_data = [body = std::move(body), body_cell, this](td::Slice salt) mutable {
+      tonlib_api::object_ptr<tonlib_api::msg_Data> data;
+      if (body->size() >= 32 && static_cast<td::uint32>(body->prefetch_long(32)) <= 1) {
+        auto type = body.write().fetch_long(32);
+        td::Status status;
 
-      auto r_body_message = vm::CellString::load(body.write());
-      LOG_IF(WARNING, r_body_message.is_error()) << "Failed to parse a message: " << r_body_message.error();
+        auto r_body_message = vm::CellString::load(body.write());
+        LOG_IF(WARNING, r_body_message.is_error()) << "Failed to parse a message: " << r_body_message.error();
 
-      if (r_body_message.is_ok()) {
-        if (type == 0) {
-          LOG(ERROR) << "OK " << r_body_message.ok();
-          data = tonlib_api::make_object<tonlib_api::msg_dataText>(r_body_message.move_as_ok());
-        } else {
-          LOG(ERROR) << "TRY DECRYPT";
-          auto encrypted_message = r_body_message.move_as_ok();
-          auto r_decrypted_message = [&]() -> td::Result<std::string> {
-            if (!private_key_) {
-              return TonlibError::EmptyField("private_key");
-            }
-            TRY_RESULT(decrypted, SimpleEncryptionV2::decrypt_data(encrypted_message, private_key_.value()));
-            return decrypted.as_slice().str();
-          }();
-          if (r_decrypted_message.is_ok()) {
-            data = tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(r_decrypted_message.move_as_ok());
+        if (r_body_message.is_ok()) {
+          if (type == 0) {
+            data = tonlib_api::make_object<tonlib_api::msg_dataText>(r_body_message.move_as_ok());
           } else {
-            data = tonlib_api::make_object<tonlib_api::msg_dataEncryptedText>(encrypted_message);
+            LOG(ERROR) << "TRY DECRYPT";
+            auto encrypted_message = r_body_message.move_as_ok();
+            auto r_decrypted_message = [&]() -> td::Result<std::string> {
+              if (!private_key_) {
+                return TonlibError::EmptyField("private_key");
+              }
+              TRY_RESULT(decrypted, SimpleEncryptionV2::decrypt_data(encrypted_message, private_key_.value(), salt));
+              return decrypted.data.as_slice().str();
+            }();
+            if (r_decrypted_message.is_ok()) {
+              data = tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(r_decrypted_message.move_as_ok());
+            } else {
+              data = tonlib_api::make_object<tonlib_api::msg_dataEncryptedText>(encrypted_message);
+            }
           }
         }
       }
-    }
-    if (!data) {
-      data = tonlib_api::make_object<tonlib_api::msg_dataRaw>(to_bytes(std::move(body_cell)));
-    }
+      if (!data) {
+        data = tonlib_api::make_object<tonlib_api::msg_dataRaw>(to_bytes(std::move(body_cell)));
+      }
+      return data;
+    };
 
     auto tag = block::gen::CommonMsgInfo().get_tag(*message.info);
     if (tag < 0) {
@@ -1893,9 +1919,10 @@ struct ToRawTransactions {
         TRY_RESULT(ihr_fee, to_balance(msg_info.ihr_fee));
         auto created_lt = static_cast<td::int64>(msg_info.created_lt);
 
-        return tonlib_api::make_object<tonlib_api::raw_message>(std::move(src), std::move(dest), balance, fwd_fee,
-                                                                ihr_fee, created_lt, std::move(body_hash),
-                                                                std::move(data));
+        return tonlib_api::make_object<tonlib_api::raw_message>(
+            tonlib_api::make_object<tonlib_api::accountAddress>(src),
+            tonlib_api::make_object<tonlib_api::accountAddress>(std::move(dest)), balance, fwd_fee, ihr_fee, created_lt,
+            std::move(body_hash), get_data(src));
       }
       case block::gen::CommonMsgInfo::ext_in_msg_info: {
         block::gen::CommonMsgInfo::Record_ext_in_msg_info msg_info;
@@ -1903,8 +1930,10 @@ struct ToRawTransactions {
           return td::Status::Error("Failed to unpack CommonMsgInfo::ext_in_msg_info");
         }
         TRY_RESULT(dest, to_std_address(msg_info.dest));
-        return tonlib_api::make_object<tonlib_api::raw_message>("", std::move(dest), 0, 0, 0, 0, std::move(body_hash),
-                                                                std::move(data));
+        return tonlib_api::make_object<tonlib_api::raw_message>(
+            tonlib_api::make_object<tonlib_api::accountAddress>(),
+            tonlib_api::make_object<tonlib_api::accountAddress>(std::move(dest)), 0, 0, 0, 0, std::move(body_hash),
+            get_data(""));
       }
       case block::gen::CommonMsgInfo::ext_out_msg_info: {
         block::gen::CommonMsgInfo::Record_ext_out_msg_info msg_info;
@@ -1912,8 +1941,9 @@ struct ToRawTransactions {
           return td::Status::Error("Failed to unpack CommonMsgInfo::ext_out_msg_info");
         }
         TRY_RESULT(src, to_std_address(msg_info.src));
-        return tonlib_api::make_object<tonlib_api::raw_message>(std::move(src), "", 0, 0, 0, 0, std::move(body_hash),
-                                                                std::move(data));
+        return tonlib_api::make_object<tonlib_api::raw_message>(
+            tonlib_api::make_object<tonlib_api::accountAddress>(src),
+            tonlib_api::make_object<tonlib_api::accountAddress>(), 0, 0, 0, 0, std::move(body_hash), get_data(src));
       }
     }
 
@@ -2177,6 +2207,8 @@ class GenericCreateSendGrams : public TonlibQueryActor {
     std::string message;
 
     td::Ref<vm::Cell> body;
+
+    td::optional<td::Ed25519::PublicKey> o_public_key;
   };
   bool allow_send_to_uninited_{false};
   std::vector<Action> actions_;
@@ -2210,6 +2242,11 @@ class GenericCreateSendGrams : public TonlibQueryActor {
       return TonlibError::InvalidField("amount", "can't be negative");
     }
     res.amount = message.amount_;
+    if (!message.public_key_.empty()) {
+      TRY_RESULT(public_key, get_public_key(message.public_key_));
+      auto key = td::Ed25519::PublicKey(td::SecureString(public_key.key));
+      res.o_public_key = std::move(key);
+    }
     auto status =
         downcast_call2<td::Status>(*message.data_, td::overloaded(
                                                        [&](tonlib_api::msg_dataRaw& text) {
@@ -2243,7 +2280,7 @@ class GenericCreateSendGrams : public TonlibQueryActor {
       return TonlibError::MessageTooLong();
     }
     TRY_STATUS(std::move(status));
-    return res;
+    return std::move(res);
   }
 
   td::Result<ton::ManualDns::Action> to_dns_action(tonlib_api::dns_Action& action) {
@@ -2465,15 +2502,35 @@ class GenericCreateSendGrams : public TonlibQueryActor {
         if (!private_key_) {
           return TonlibError::EmptyField("private_key");
         }
-        if (!destination->is_wallet()) {
+
+        auto o_public_key = std::move(action.o_public_key);
+        if (!o_public_key && destination->is_wallet()) {
+          auto wallet = destination->get_wallet();
+          auto r_public_key = wallet->get_public_key();
+          if (r_public_key.is_ok()) {
+            o_public_key = r_public_key.move_as_ok();
+          }
+        }
+
+        if (!o_public_key) {
+          auto smc = ton::SmartContract::create(destination->get_smc_state());
+          auto r_public_key = ton::GenericAccount::get_public_key(destination->get_smc_state());
+          if (r_public_key.is_ok()) {
+            o_public_key = r_public_key.move_as_ok();
+          }
+        }
+
+        if (!o_public_key) {
           return TonlibError::MessageEncryption("Get public key (in destination)");
         }
-        auto wallet = destination->get_wallet();
-        TRY_RESULT_PREFIX(public_key, wallet->get_public_key(),
-                          TonlibError::AccountActionUnsupported(PSLICE() << "Get public key (in destination) : "
-                                                                         << destination->get_wallet_type()));
+
+        auto addr = source_->get_address();
+        addr.bounceable = true;
+        addr.testnet = false;
+
         TRY_RESULT_PREFIX(encrypted_message,
-                          SimpleEncryptionV2::encrypt_data(action.message, public_key, private_key_.value()),
+                          SimpleEncryptionV2::encrypt_data(action.message, o_public_key.unwrap(), private_key_.value(),
+                                                           addr.rserialize(true)),
                           TonlibError::Internal());
         gift.message = encrypted_message.as_slice().str();
         gift.is_encrypted = true;
@@ -2548,7 +2605,7 @@ td::Status TonlibClient::do_request(tonlib_api::createQuery& request,
 }
 
 td::Status TonlibClient::do_request(tonlib_api::msg_decrypt& request,
-                                    td::Promise<object_ptr<tonlib_api::msg_dataArray>>&& promise) {
+                                    td::Promise<object_ptr<tonlib_api::msg_dataDecryptedArray>>&& promise) {
   if (!request.input_key_) {
     return TonlibError::EmptyField("input_key");
   }
@@ -2556,27 +2613,44 @@ td::Status TonlibClient::do_request(tonlib_api::msg_decrypt& request,
     return TonlibError::EmptyField("data");
   }
   TRY_RESULT(input_key, from_tonlib(*request.input_key_));
+  using ReturnType = tonlib_api::object_ptr<tonlib_api::msg_dataDecrypted>;
   make_request(
       int_api::GetPrivateKey{std::move(input_key)},
       promise.wrap([elements = std::move(request.data_)](auto key) mutable {
         auto private_key = td::Ed25519::PrivateKey(std::move(key.private_key));
-        elements->elements_ = td::transform(std::move(elements->elements_), [&private_key](auto msg) {
+        auto new_elements = td::transform(std::move(elements->elements_), [&private_key](auto msg) -> ReturnType {
+          auto res = tonlib_api::make_object<tonlib_api::msg_dataDecrypted>();
           if (!msg) {
-            return std::move(msg);
+            return res;
           }
-          using ReturnType = tonlib_api::object_ptr<tonlib_api::msg_Data>;
+          if (!msg->data_) {
+            return res;
+          }
+          res->data_ = std::move(msg->data_);
+          if (!msg->source_) {
+            return res;
+          }
+          auto r_account_address = get_account_address(msg->source_->account_address_);
+          if (r_account_address.is_error()) {
+            return res;
+          }
           return downcast_call2<ReturnType>(
-              *msg, td::overloaded([&msg](auto&) { return std::move(msg); },
-                                   [&msg, &private_key](tonlib_api::msg_dataEncryptedText& encrypted) -> ReturnType {
-                                     auto r_decrypted = SimpleEncryptionV2::decrypt_data(encrypted.text_, private_key);
-                                     if (r_decrypted.is_error()) {
-                                       return std::move(msg);
-                                     }
-                                     return tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(
-                                         r_decrypted.move_as_ok().as_slice().str());
-                                   }));
+              *res->data_,
+              td::overloaded(
+                  [&res](auto&) { return std::move(res); },
+                  [&res, &private_key, &msg](tonlib_api::msg_dataEncryptedText& encrypted) -> ReturnType {
+                    auto r_decrypted =
+                        SimpleEncryptionV2::decrypt_data(encrypted.text_, private_key, msg->source_->account_address_);
+                    if (r_decrypted.is_error()) {
+                      return std::move(res);
+                    }
+                    auto decrypted = r_decrypted.move_as_ok();
+                    return tonlib_api::make_object<tonlib_api::msg_dataDecrypted>(
+                        decrypted.proof.as_slice().str(),
+                        tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(decrypted.data.as_slice().str()));
+                  }));
         });
-        return std::move(elements);
+        return tonlib_api::make_object<tonlib_api::msg_dataDecryptedArray>(std::move(new_elements));
       }));
   return td::Status::OK();
 }
@@ -3230,6 +3304,32 @@ tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(const
       SimpleEncryption::kdf(request.password_, request.salt_, request.iterations_));
 }
 
+tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(
+    const tonlib_api::msg_decryptWithProof& request) {
+  if (!request.data_) {
+    return status_to_tonlib_api(TonlibError::EmptyField("data"));
+  }
+  if (!request.data_->data_) {
+    TonlibError::EmptyField("data.data");
+  }
+  if (!request.data_->source_) {
+    TonlibError::EmptyField("data.source");
+  }
+  using ReturnType = tonlib_api::object_ptr<tonlib_api::msg_Data>;
+  return downcast_call2<ReturnType>(
+      *request.data_->data_,
+      td::overloaded([&request](auto&) { return std::move(request.data_->data_); },
+                     [&request](tonlib_api::msg_dataEncryptedText& encrypted) -> ReturnType {
+                       auto r_decrypted = SimpleEncryptionV2::decrypt_data_with_proof(
+                           encrypted.text_, request.proof_, request.data_->source_->account_address_);
+                       if (r_decrypted.is_error()) {
+                         return std::move(request.data_->data_);
+                       }
+                       auto decrypted = r_decrypted.move_as_ok();
+                       return tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(decrypted.as_slice().str());
+                     }));
+}
+
 td::Status TonlibClient::do_request(int_api::GetAccountState request,
                                     td::Promise<td::unique_ptr<AccountState>>&& promise) {
   auto actor_id = actor_id_++;
@@ -3375,6 +3475,11 @@ td::Status TonlibClient::do_request(const tonlib_api::decrypt& request, P&&) {
 }
 template <class P>
 td::Status TonlibClient::do_request(const tonlib_api::kdf& request, P&&) {
+  UNREACHABLE();
+  return TonlibError::Internal();
+}
+template <class P>
+td::Status TonlibClient::do_request(const tonlib_api::msg_decryptWithProof& request, P&&) {
   UNREACHABLE();
   return TonlibError::Internal();
 }

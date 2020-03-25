@@ -14,6 +14,7 @@
 // uses built-in type `uint`
 // uses built-in type `bits`
 // uses built-in type `int8`
+// uses built-in type `uint8`
 // uses built-in type `uint13`
 // uses built-in type `uint15`
 // uses built-in type `int16`
@@ -23,6 +24,7 @@
 // uses built-in type `uint63`
 // uses built-in type `int64`
 // uses built-in type `uint64`
+// uses built-in type `uint256`
 // uses built-in type `int257`
 // uses built-in type `bits256`
 
@@ -10686,38 +10688,42 @@ int BlockInfo::check_tag(const vm::CellSlice& cs) const {
 }
 
 bool BlockInfo::skip(vm::CellSlice& cs) const {
-  int not_master, after_merge, vert_seqno_incr, seq_no, vert_seq_no, prev_seq_no;
+  int not_master, after_merge, vert_seqno_incr, flags, seq_no, vert_seq_no, prev_seq_no;
   return cs.advance(64)
       && cs.fetch_bool_to(not_master)
       && cs.fetch_bool_to(after_merge)
       && cs.advance(5)
       && cs.fetch_bool_to(vert_seqno_incr)
-      && cs.advance(8)
+      && cs.fetch_uint_to(8, flags)
+      && flags <= 1
       && cs.fetch_uint_to(32, seq_no)
       && cs.fetch_uint_to(32, vert_seq_no)
       && vert_seqno_incr <= vert_seq_no
       && add_r1(prev_seq_no, 1, seq_no)
       && cs.advance(392)
+      && (!(flags & 1) || cs.advance(104))
       && (!not_master || cs.advance_refs(1))
       && cs.advance_refs(1)
       && (!vert_seqno_incr || cs.advance_refs(1));
 }
 
 bool BlockInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
-  int not_master, after_merge, vert_seqno_incr, seq_no, vert_seq_no, prev_seq_no;
+  int not_master, after_merge, vert_seqno_incr, flags, seq_no, vert_seq_no, prev_seq_no;
   return cs.fetch_ulong(32) == 0x9bc7a987U
       && cs.advance(32)
       && cs.fetch_bool_to(not_master)
       && cs.fetch_bool_to(after_merge)
       && cs.advance(5)
       && cs.fetch_bool_to(vert_seqno_incr)
-      && cs.advance(8)
+      && cs.fetch_uint_to(8, flags)
+      && flags <= 1
       && cs.fetch_uint_to(32, seq_no)
       && cs.fetch_uint_to(32, vert_seq_no)
       && vert_seqno_incr <= vert_seq_no
       && add_r1(prev_seq_no, 1, seq_no)
       && t_ShardIdent.validate_skip(ops, cs, weak)
       && cs.advance(288)
+      && (!(flags & 1) || t_GlobalVersion.validate_skip(ops, cs, weak))
       && (!not_master || t_BlkMasterInfo.validate_skip_ref(ops, cs, weak))
       && BlkPrevInfo{after_merge}.validate_skip_ref(ops, cs, weak)
       && (!vert_seqno_incr || t_BlkPrevInfo_0.validate_skip_ref(ops, cs, weak));
@@ -10736,6 +10742,7 @@ bool BlockInfo::unpack(vm::CellSlice& cs, BlockInfo::Record& data) const {
       && cs.fetch_bool_to(data.key_block)
       && cs.fetch_bool_to(data.vert_seqno_incr)
       && cs.fetch_uint_to(8, data.flags)
+      && data.flags <= 1
       && cs.fetch_uint_to(32, data.seq_no)
       && cs.fetch_uint_to(32, data.vert_seq_no)
       && data.vert_seqno_incr <= data.vert_seq_no
@@ -10748,6 +10755,7 @@ bool BlockInfo::unpack(vm::CellSlice& cs, BlockInfo::Record& data) const {
       && cs.fetch_uint_to(32, data.gen_catchain_seqno)
       && cs.fetch_uint_to(32, data.min_ref_mc_seqno)
       && cs.fetch_uint_to(32, data.prev_key_block_seqno)
+      && (!(data.flags & 1) || cs.fetch_subslice_to(104, data.gen_software))
       && (!data.not_master || cs.fetch_ref_to(data.master_ref))
       && cs.fetch_ref_to(data.prev_ref)
       && (!data.vert_seqno_incr || cs.fetch_ref_to(data.prev_vert_ref));
@@ -10772,6 +10780,7 @@ bool BlockInfo::pack(vm::CellBuilder& cb, const BlockInfo::Record& data) const {
       && cb.store_ulong_rchk_bool(data.key_block, 1)
       && cb.store_ulong_rchk_bool(data.vert_seqno_incr, 1)
       && cb.store_ulong_rchk_bool(data.flags, 8)
+      && data.flags <= 1
       && cb.store_ulong_rchk_bool(data.seq_no, 32)
       && cb.store_ulong_rchk_bool(data.vert_seq_no, 32)
       && data.vert_seqno_incr <= data.vert_seq_no
@@ -10784,6 +10793,7 @@ bool BlockInfo::pack(vm::CellBuilder& cb, const BlockInfo::Record& data) const {
       && cb.store_ulong_rchk_bool(data.gen_catchain_seqno, 32)
       && cb.store_ulong_rchk_bool(data.min_ref_mc_seqno, 32)
       && cb.store_ulong_rchk_bool(data.prev_key_block_seqno, 32)
+      && (!(data.flags & 1) || cb.append_cellslice_chk(data.gen_software, 104))
       && (!data.not_master || cb.store_ref_bool(data.master_ref))
       && cb.store_ref_bool(data.prev_ref)
       && (!data.vert_seqno_incr || cb.store_ref_bool(data.prev_vert_ref));
@@ -10814,6 +10824,7 @@ bool BlockInfo::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
       && pp.field_int(vert_seqno_incr, "vert_seqno_incr")
       && cs.fetch_uint_to(8, flags)
       && pp.field_int(flags, "flags")
+      && flags <= 1
       && cs.fetch_uint_to(32, seq_no)
       && pp.field_int(seq_no, "seq_no")
       && cs.fetch_uint_to(32, vert_seq_no)
@@ -10829,6 +10840,7 @@ bool BlockInfo::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
       && pp.fetch_uint_field(cs, 32, "gen_catchain_seqno")
       && pp.fetch_uint_field(cs, 32, "min_ref_mc_seqno")
       && pp.fetch_uint_field(cs, 32, "prev_key_block_seqno")
+      && (!(flags & 1) || (pp.field("gen_software") && t_GlobalVersion.print_skip(pp, cs)))
       && (!not_master || (pp.field("master_ref") && t_BlkMasterInfo.print_ref(pp, cs.fetch_ref())))
       && pp.field("prev_ref")
       && BlkPrevInfo{after_merge}.print_ref(pp, cs.fetch_ref())
@@ -14058,6 +14070,309 @@ bool GlobalVersion::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 const GlobalVersion t_GlobalVersion;
 
 //
+// code for type `ConfigProposalSetup`
+//
+constexpr unsigned char ConfigProposalSetup::cons_tag[1];
+
+int ConfigProposalSetup::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0x36 ? cfg_vote_cfg : -1;
+}
+
+bool ConfigProposalSetup::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0x36
+      && cs.advance(160);
+}
+
+bool ConfigProposalSetup::unpack(vm::CellSlice& cs, ConfigProposalSetup::Record& data) const {
+  return cs.fetch_ulong(8) == 0x36
+      && cs.fetch_uint_to(8, data.min_tot_rounds)
+      && cs.fetch_uint_to(8, data.max_tot_rounds)
+      && cs.fetch_uint_to(8, data.min_wins)
+      && cs.fetch_uint_to(8, data.max_losses)
+      && cs.fetch_uint_to(32, data.min_store_sec)
+      && cs.fetch_uint_to(32, data.max_store_sec)
+      && cs.fetch_uint_to(32, data.bit_price)
+      && cs.fetch_uint_to(32, data.cell_price);
+}
+
+bool ConfigProposalSetup::cell_unpack(Ref<vm::Cell> cell_ref, ConfigProposalSetup::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigProposalSetup::pack(vm::CellBuilder& cb, const ConfigProposalSetup::Record& data) const {
+  return cb.store_long_bool(0x36, 8)
+      && cb.store_ulong_rchk_bool(data.min_tot_rounds, 8)
+      && cb.store_ulong_rchk_bool(data.max_tot_rounds, 8)
+      && cb.store_ulong_rchk_bool(data.min_wins, 8)
+      && cb.store_ulong_rchk_bool(data.max_losses, 8)
+      && cb.store_ulong_rchk_bool(data.min_store_sec, 32)
+      && cb.store_ulong_rchk_bool(data.max_store_sec, 32)
+      && cb.store_ulong_rchk_bool(data.bit_price, 32)
+      && cb.store_ulong_rchk_bool(data.cell_price, 32);
+}
+
+bool ConfigProposalSetup::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigProposalSetup::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigProposalSetup::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0x36
+      && pp.open("cfg_vote_cfg")
+      && pp.fetch_uint_field(cs, 8, "min_tot_rounds")
+      && pp.fetch_uint_field(cs, 8, "max_tot_rounds")
+      && pp.fetch_uint_field(cs, 8, "min_wins")
+      && pp.fetch_uint_field(cs, 8, "max_losses")
+      && pp.fetch_uint_field(cs, 32, "min_store_sec")
+      && pp.fetch_uint_field(cs, 32, "max_store_sec")
+      && pp.fetch_uint_field(cs, 32, "bit_price")
+      && pp.fetch_uint_field(cs, 32, "cell_price")
+      && pp.close();
+}
+
+const ConfigProposalSetup t_ConfigProposalSetup;
+
+//
+// code for type `ConfigVotingSetup`
+//
+constexpr unsigned char ConfigVotingSetup::cons_tag[1];
+
+int ConfigVotingSetup::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0x91 ? cfg_vote_setup : -1;
+}
+
+bool ConfigVotingSetup::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0x91
+      && t_ConfigProposalSetup.validate_skip_ref(ops, cs, weak)
+      && t_ConfigProposalSetup.validate_skip_ref(ops, cs, weak);
+}
+
+bool ConfigVotingSetup::unpack(vm::CellSlice& cs, ConfigVotingSetup::Record& data) const {
+  return cs.fetch_ulong(8) == 0x91
+      && cs.fetch_ref_to(data.normal_params)
+      && cs.fetch_ref_to(data.critical_params);
+}
+
+bool ConfigVotingSetup::unpack_cfg_vote_setup(vm::CellSlice& cs, Ref<Cell>& normal_params, Ref<Cell>& critical_params) const {
+  return cs.fetch_ulong(8) == 0x91
+      && cs.fetch_ref_to(normal_params)
+      && cs.fetch_ref_to(critical_params);
+}
+
+bool ConfigVotingSetup::cell_unpack(Ref<vm::Cell> cell_ref, ConfigVotingSetup::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigVotingSetup::cell_unpack_cfg_vote_setup(Ref<vm::Cell> cell_ref, Ref<Cell>& normal_params, Ref<Cell>& critical_params) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cfg_vote_setup(cs, normal_params, critical_params) && cs.empty_ext();
+}
+
+bool ConfigVotingSetup::pack(vm::CellBuilder& cb, const ConfigVotingSetup::Record& data) const {
+  return cb.store_long_bool(0x91, 8)
+      && cb.store_ref_bool(data.normal_params)
+      && cb.store_ref_bool(data.critical_params);
+}
+
+bool ConfigVotingSetup::pack_cfg_vote_setup(vm::CellBuilder& cb, Ref<Cell> normal_params, Ref<Cell> critical_params) const {
+  return cb.store_long_bool(0x91, 8)
+      && cb.store_ref_bool(normal_params)
+      && cb.store_ref_bool(critical_params);
+}
+
+bool ConfigVotingSetup::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigVotingSetup::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigVotingSetup::cell_pack_cfg_vote_setup(Ref<vm::Cell>& cell_ref, Ref<Cell> normal_params, Ref<Cell> critical_params) const {
+  vm::CellBuilder cb;
+  return pack_cfg_vote_setup(cb, std::move(normal_params), std::move(critical_params)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigVotingSetup::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0x91
+      && pp.open("cfg_vote_setup")
+      && pp.field("normal_params")
+      && t_ConfigProposalSetup.print_ref(pp, cs.fetch_ref())
+      && pp.field("critical_params")
+      && t_ConfigProposalSetup.print_ref(pp, cs.fetch_ref())
+      && pp.close();
+}
+
+const ConfigVotingSetup t_ConfigVotingSetup;
+
+//
+// code for type `ConfigProposal`
+//
+constexpr unsigned char ConfigProposal::cons_tag[1];
+
+int ConfigProposal::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0xf3 ? cfg_proposal : -1;
+}
+
+bool ConfigProposal::skip(vm::CellSlice& cs) const {
+  return cs.advance(40)
+      && t_Maybe_Ref_Cell.skip(cs)
+      && t_Maybe_uint256.skip(cs);
+}
+
+bool ConfigProposal::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0xf3
+      && cs.advance(32)
+      && t_Maybe_Ref_Cell.validate_skip(ops, cs, weak)
+      && t_Maybe_uint256.validate_skip(ops, cs, weak);
+}
+
+bool ConfigProposal::unpack(vm::CellSlice& cs, ConfigProposal::Record& data) const {
+  return cs.fetch_ulong(8) == 0xf3
+      && cs.fetch_int_to(32, data.param_id)
+      && t_Maybe_Ref_Cell.fetch_to(cs, data.param_value)
+      && t_Maybe_uint256.fetch_to(cs, data.if_hash_equal);
+}
+
+bool ConfigProposal::unpack_cfg_proposal(vm::CellSlice& cs, int& param_id, Ref<CellSlice>& param_value, Ref<CellSlice>& if_hash_equal) const {
+  return cs.fetch_ulong(8) == 0xf3
+      && cs.fetch_int_to(32, param_id)
+      && t_Maybe_Ref_Cell.fetch_to(cs, param_value)
+      && t_Maybe_uint256.fetch_to(cs, if_hash_equal);
+}
+
+bool ConfigProposal::cell_unpack(Ref<vm::Cell> cell_ref, ConfigProposal::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigProposal::cell_unpack_cfg_proposal(Ref<vm::Cell> cell_ref, int& param_id, Ref<CellSlice>& param_value, Ref<CellSlice>& if_hash_equal) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cfg_proposal(cs, param_id, param_value, if_hash_equal) && cs.empty_ext();
+}
+
+bool ConfigProposal::pack(vm::CellBuilder& cb, const ConfigProposal::Record& data) const {
+  return cb.store_long_bool(0xf3, 8)
+      && cb.store_long_rchk_bool(data.param_id, 32)
+      && t_Maybe_Ref_Cell.store_from(cb, data.param_value)
+      && t_Maybe_uint256.store_from(cb, data.if_hash_equal);
+}
+
+bool ConfigProposal::pack_cfg_proposal(vm::CellBuilder& cb, int param_id, Ref<CellSlice> param_value, Ref<CellSlice> if_hash_equal) const {
+  return cb.store_long_bool(0xf3, 8)
+      && cb.store_long_rchk_bool(param_id, 32)
+      && t_Maybe_Ref_Cell.store_from(cb, param_value)
+      && t_Maybe_uint256.store_from(cb, if_hash_equal);
+}
+
+bool ConfigProposal::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigProposal::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigProposal::cell_pack_cfg_proposal(Ref<vm::Cell>& cell_ref, int param_id, Ref<CellSlice> param_value, Ref<CellSlice> if_hash_equal) const {
+  vm::CellBuilder cb;
+  return pack_cfg_proposal(cb, param_id, std::move(param_value), std::move(if_hash_equal)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigProposal::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0xf3
+      && pp.open("cfg_proposal")
+      && pp.fetch_int_field(cs, 32, "param_id")
+      && pp.field("param_value")
+      && t_Maybe_Ref_Cell.print_skip(pp, cs)
+      && pp.field("if_hash_equal")
+      && t_Maybe_uint256.print_skip(pp, cs)
+      && pp.close();
+}
+
+const ConfigProposal t_ConfigProposal;
+
+//
+// code for type `ConfigProposalStatus`
+//
+constexpr unsigned char ConfigProposalStatus::cons_tag[1];
+
+int ConfigProposalStatus::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0xce ? cfg_proposal_status : -1;
+}
+
+bool ConfigProposalStatus::skip(vm::CellSlice& cs) const {
+  return cs.advance_ext(0x10029)
+      && t_HashmapE_16_True.skip(cs)
+      && cs.advance(344);
+}
+
+bool ConfigProposalStatus::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0xce
+      && cs.advance(32)
+      && t_ConfigProposal.validate_skip_ref(ops, cs, weak)
+      && cs.advance(1)
+      && t_HashmapE_16_True.validate_skip(ops, cs, weak)
+      && cs.advance(344);
+}
+
+bool ConfigProposalStatus::unpack(vm::CellSlice& cs, ConfigProposalStatus::Record& data) const {
+  return cs.fetch_ulong(8) == 0xce
+      && cs.fetch_uint_to(32, data.expires)
+      && cs.fetch_ref_to(data.proposal)
+      && cs.fetch_bool_to(data.is_critical)
+      && t_HashmapE_16_True.fetch_to(cs, data.voters)
+      && cs.fetch_int_to(64, data.remaining_weight)
+      && cs.fetch_uint256_to(256, data.validator_set_id)
+      && cs.fetch_uint_to(8, data.rounds_remaining)
+      && cs.fetch_uint_to(8, data.wins)
+      && cs.fetch_uint_to(8, data.losses);
+}
+
+bool ConfigProposalStatus::cell_unpack(Ref<vm::Cell> cell_ref, ConfigProposalStatus::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigProposalStatus::pack(vm::CellBuilder& cb, const ConfigProposalStatus::Record& data) const {
+  return cb.store_long_bool(0xce, 8)
+      && cb.store_ulong_rchk_bool(data.expires, 32)
+      && cb.store_ref_bool(data.proposal)
+      && cb.store_ulong_rchk_bool(data.is_critical, 1)
+      && t_HashmapE_16_True.store_from(cb, data.voters)
+      && cb.store_long_rchk_bool(data.remaining_weight, 64)
+      && cb.store_int256_bool(data.validator_set_id, 256, false)
+      && cb.store_ulong_rchk_bool(data.rounds_remaining, 8)
+      && cb.store_ulong_rchk_bool(data.wins, 8)
+      && cb.store_ulong_rchk_bool(data.losses, 8);
+}
+
+bool ConfigProposalStatus::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigProposalStatus::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigProposalStatus::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0xce
+      && pp.open("cfg_proposal_status")
+      && pp.fetch_uint_field(cs, 32, "expires")
+      && pp.field("proposal")
+      && t_ConfigProposal.print_ref(pp, cs.fetch_ref())
+      && pp.fetch_uint_field(cs, 1, "is_critical")
+      && pp.field("voters")
+      && t_HashmapE_16_True.print_skip(pp, cs)
+      && pp.fetch_int_field(cs, 64, "remaining_weight")
+      && pp.fetch_uint256_field(cs, 256, "validator_set_id")
+      && pp.fetch_uint_field(cs, 8, "rounds_remaining")
+      && pp.fetch_uint_field(cs, 8, "wins")
+      && pp.fetch_uint_field(cs, 8, "losses")
+      && pp.close();
+}
+
+const ConfigProposalStatus t_ConfigProposalStatus;
+
+//
 // code for type `WorkchainFormat`
 //
 
@@ -15219,6 +15534,10 @@ int ConfigParam::get_tag(const vm::CellSlice& cs) const {
     return cons8;
   case 9:
     return cons9;
+  case 10:
+    return cons10;
+  case 11:
+    return cons11;
   case 12:
     return cons12;
   case 14:
@@ -15288,6 +15607,10 @@ int ConfigParam::check_tag(const vm::CellSlice& cs) const {
     return cons8;
   case cons9:
     return cons9;
+  case cons10:
+    return cons10;
+  case cons11:
+    return cons11;
   case cons12:
     return cons12;
   case cons14:
@@ -15366,6 +15689,12 @@ bool ConfigParam::skip(vm::CellSlice& cs) const {
   case cons9:
     return t_Hashmap_32_True.skip(cs)
         && m_ == 9;
+  case cons10:
+    return t_Hashmap_32_True.skip(cs)
+        && m_ == 10;
+  case cons11:
+    return cs.advance_ext(0x20008)
+        && m_ == 11;
   case cons12:
     return t_HashmapE_32_WorkchainDescr.skip(cs)
         && m_ == 12;
@@ -15476,6 +15805,12 @@ bool ConfigParam::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   case cons9:
     return t_Hashmap_32_True.validate_skip(ops, cs, weak)
         && m_ == 9;
+  case cons10:
+    return t_Hashmap_32_True.validate_skip(ops, cs, weak)
+        && m_ == 10;
+  case cons11:
+    return t_ConfigVotingSetup.validate_skip(ops, cs, weak)
+        && m_ == 11;
   case cons12:
     return t_HashmapE_32_WorkchainDescr.validate_skip(ops, cs, weak)
         && m_ == 12;
@@ -15754,6 +16089,50 @@ bool ConfigParam::cell_unpack_cons9(Ref<vm::Cell> cell_ref, Ref<CellSlice>& mand
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack_cons9(cs, mandatory_params) && cs.empty_ext();
+}
+
+bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons10& data) const {
+  return t_Hashmap_32_True.fetch_to(cs, data.critical_params)
+      && m_ == 10;
+}
+
+bool ConfigParam::unpack_cons10(vm::CellSlice& cs, Ref<CellSlice>& critical_params) const {
+  return t_Hashmap_32_True.fetch_to(cs, critical_params)
+      && m_ == 10;
+}
+
+bool ConfigParam::cell_unpack(Ref<vm::Cell> cell_ref, ConfigParam::Record_cons10& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigParam::cell_unpack_cons10(Ref<vm::Cell> cell_ref, Ref<CellSlice>& critical_params) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons10(cs, critical_params) && cs.empty_ext();
+}
+
+bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons11& data) const {
+  return cs.fetch_subslice_ext_to(0x20008, data.x)
+      && m_ == 11;
+}
+
+bool ConfigParam::unpack_cons11(vm::CellSlice& cs, Ref<CellSlice>& x) const {
+  return cs.fetch_subslice_ext_to(0x20008, x)
+      && m_ == 11;
+}
+
+bool ConfigParam::cell_unpack(Ref<vm::Cell> cell_ref, ConfigParam::Record_cons11& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigParam::cell_unpack_cons11(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons11(cs, x) && cs.empty_ext();
 }
 
 bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons12& data) const {
@@ -16416,6 +16795,46 @@ bool ConfigParam::cell_pack_cons9(Ref<vm::Cell>& cell_ref, Ref<CellSlice> mandat
   return pack_cons9(cb, std::move(mandatory_params)) && std::move(cb).finalize_to(cell_ref);
 }
 
+bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons10& data) const {
+  return t_Hashmap_32_True.store_from(cb, data.critical_params)
+      && m_ == 10;
+}
+
+bool ConfigParam::pack_cons10(vm::CellBuilder& cb, Ref<CellSlice> critical_params) const {
+  return t_Hashmap_32_True.store_from(cb, critical_params)
+      && m_ == 10;
+}
+
+bool ConfigParam::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigParam::Record_cons10& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigParam::cell_pack_cons10(Ref<vm::Cell>& cell_ref, Ref<CellSlice> critical_params) const {
+  vm::CellBuilder cb;
+  return pack_cons10(cb, std::move(critical_params)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons11& data) const {
+  return cb.append_cellslice_chk(data.x, 0x20008)
+      && m_ == 11;
+}
+
+bool ConfigParam::pack_cons11(vm::CellBuilder& cb, Ref<CellSlice> x) const {
+  return cb.append_cellslice_chk(x, 0x20008)
+      && m_ == 11;
+}
+
+bool ConfigParam::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigParam::Record_cons11& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigParam::cell_pack_cons11(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const {
+  vm::CellBuilder cb;
+  return pack_cons11(cb, std::move(x)) && std::move(cb).finalize_to(cell_ref);
+}
+
 bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons12& data) const {
   return t_HashmapE_32_WorkchainDescr.store_from(cb, data.workchains)
       && m_ == 12;
@@ -16904,6 +17323,18 @@ bool ConfigParam::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && pp.field("mandatory_params")
         && t_Hashmap_32_True.print_skip(pp, cs)
         && m_ == 9
+        && pp.close();
+  case cons10:
+    return pp.open()
+        && pp.field("critical_params")
+        && t_Hashmap_32_True.print_skip(pp, cs)
+        && m_ == 10
+        && pp.close();
+  case cons11:
+    return pp.open()
+        && pp.field()
+        && t_ConfigVotingSetup.print_skip(pp, cs)
+        && m_ == 11
         && pp.close();
   case cons12:
     return pp.open()
@@ -21128,8 +21559,8 @@ const RefT t_Ref_OutMsgDescr{t_OutMsgDescr};
 const RefT t_Ref_ShardAccountBlocks{t_ShardAccountBlocks};
 const RefT t_Ref_McBlockExtra{t_McBlockExtra};
 const Maybe t_Maybe_Ref_McBlockExtra{t_Ref_McBlockExtra};
-const RefT t_Ref_TYPE_1648{t_ValueFlow_aux};
-const RefT t_Ref_TYPE_1649{t_ValueFlow_aux1};
+const RefT t_Ref_TYPE_1649{t_ValueFlow_aux};
+const RefT t_Ref_TYPE_1650{t_ValueFlow_aux1};
 const NatWidth t_natwidth_3{3};
 const BinTree t_BinTree_ShardDescr{t_ShardDescr};
 const RefT t_Ref_BinTree_ShardDescr{t_BinTree_ShardDescr};
@@ -21142,14 +21573,21 @@ const HashmapE t_HashmapE_256_CreatorStats{256, t_CreatorStats};
 const HashmapAugE t_HashmapAugE_256_CreatorStats_uint32{256, t_CreatorStats, t_uint32};
 const NatWidth t_natwidth_16{16};
 const Maybe t_Maybe_ExtBlkRef{t_ExtBlkRef};
-const RefT t_Ref_TYPE_1666{t_McStateExtra_aux};
+const RefT t_Ref_TYPE_1667{t_McStateExtra_aux};
 const RefT t_Ref_SignedCertificate{t_SignedCertificate};
 const HashmapE t_HashmapE_16_CryptoSignaturePair{16, t_CryptoSignaturePair};
 const Maybe t_Maybe_Ref_InMsg{t_Ref_InMsg};
-const RefT t_Ref_TYPE_1674{t_McBlockExtra_aux};
+const RefT t_Ref_TYPE_1675{t_McBlockExtra_aux};
 const Hashmap t_Hashmap_16_ValidatorDescr{16, t_ValidatorDescr};
 const HashmapE t_HashmapE_16_ValidatorDescr{16, t_ValidatorDescr};
 const Hashmap t_Hashmap_32_True{32, t_True};
+const UInt t_uint8{8};
+const RefT t_Ref_ConfigProposalSetup{t_ConfigProposalSetup};
+const UInt t_uint256{256};
+const Maybe t_Maybe_uint256{t_uint256};
+const RefT t_Ref_ConfigProposal{t_ConfigProposal};
+const HashmapE t_HashmapE_16_True{16, t_True};
+const Int t_int64{64};
 const NatWidth t_natwidth_12{12};
 const NatWidth t_natwidth_32{32};
 const NatWidth t_natwidth_13{13};
@@ -21162,14 +21600,13 @@ const RefT t_Ref_BlockSignatures{t_BlockSignatures};
 const Maybe t_Maybe_Ref_BlockSignatures{t_Ref_BlockSignatures};
 const RefT t_Ref_TopBlockDescr{t_TopBlockDescr};
 const HashmapE t_HashmapE_96_Ref_TopBlockDescr{96, t_Ref_TopBlockDescr};
-const Int t_int64{64};
 const Int t_int257{257};
 const NatWidth t_natwidth_10{10};
 const NatLeq t_natleq_4{4};
 const RefT t_Ref_VmStackValue{t_VmStackValue};
 const NatWidth t_natwidth_24{24};
 const HashmapE t_HashmapE_4_VmStackValue{4, t_VmStackValue};
-const RefT t_Ref_TYPE_1705{t_VmGasLimits_aux};
+const RefT t_Ref_TYPE_1709{t_VmGasLimits_aux};
 const HashmapE t_HashmapE_256_Ref_Cell{256, t_RefCell};
 const UInt t_uint13{13};
 const Maybe t_Maybe_uint13{t_uint13};
@@ -21250,6 +21687,7 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("McStateExtra", &t_McStateExtra)
       && func("ShardStateUnsplit", &t_ShardStateUnsplit)
       && func("ShardState", &t_ShardState)
+      && func("GlobalVersion", &t_GlobalVersion)
       && func("BlockInfo", &t_BlockInfo)
       && func("ValueFlow", &t_ValueFlow)
       && func("BlockExtra", &t_BlockExtra)
@@ -21278,7 +21716,10 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("SignedCertificate", &t_SignedCertificate)
       && func("ValidatorDescr", &t_ValidatorDescr)
       && func("ValidatorSet", &t_ValidatorSet)
-      && func("GlobalVersion", &t_GlobalVersion)
+      && func("ConfigProposalSetup", &t_ConfigProposalSetup)
+      && func("ConfigVotingSetup", &t_ConfigVotingSetup)
+      && func("ConfigProposal", &t_ConfigProposal)
+      && func("ConfigProposalStatus", &t_ConfigProposalStatus)
       && func("WorkchainDescr", &t_WorkchainDescr)
       && func("BlockCreateFees", &t_BlockCreateFees)
       && func("StoragePrices", &t_StoragePrices)

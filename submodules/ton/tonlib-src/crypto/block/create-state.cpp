@@ -55,6 +55,8 @@
 #include "td/utils/port/path.h"
 #include "td/utils/port/signals.h"
 
+#include "tonlib/keys/Mnemonic.h"
+
 #include "block.h"
 #include "block-parse.h"
 #include "block-auto.h"
@@ -616,7 +618,43 @@ void interpret_is_workchain_descr(vm::Stack& stack) {
   stack.push_bool(block::gen::t_WorkchainDescr.validate_ref(std::move(cell)));
 }
 
+void interpret_add_extra_currencies(vm::Stack& stack) {
+  Ref<vm::Cell> y = stack.pop_maybe_cell(), x = stack.pop_maybe_cell(), res;
+  bool ok = block::add_extra_currency(std::move(x), std::move(y), res);
+  if (ok) {
+    stack.push_maybe_cell(std::move(res));
+  }
+  stack.push_bool(ok);
+}
+
+void interpret_sub_extra_currencies(vm::Stack& stack) {
+  Ref<vm::Cell> y = stack.pop_maybe_cell(), x = stack.pop_maybe_cell(), res;
+  bool ok = block::sub_extra_currency(std::move(x), std::move(y), res);
+  if (ok) {
+    stack.push_maybe_cell(std::move(res));
+  }
+  stack.push_bool(ok);
+}
+
+void interpret_mnemonic_to_privkey(vm::Stack& stack, int mode) {
+  td::SecureString str{td::Slice{stack.pop_string()}};
+  auto res = tonlib::Mnemonic::create(std::move(str), td::SecureString());
+  if (res.is_error()) {
+    throw fift::IntError{res.move_as_error().to_string()};
+  }
+  auto privkey = res.move_as_ok().to_private_key();
+  td::SecureString key;
+  if (mode & 1) {
+    auto pub = privkey.get_public_key();
+    key = pub.move_as_ok().as_octet_string();
+  } else {
+    key = privkey.as_octet_string();
+  }
+  stack.push_bytes(key.as_slice());
+}
+
 void init_words_custom(fift::Dictionary& d) {
+  using namespace std::placeholders;
   d.def_stack_word("verb@ ", interpret_get_verbosity);
   d.def_stack_word("verb! ", interpret_set_verbosity);
   d.def_stack_word("wcid@ ", interpret_get_workchain);
@@ -631,6 +669,10 @@ void init_words_custom(fift::Dictionary& d) {
   d.def_stack_word("create_state ", interpret_create_state);
   d.def_stack_word("isShardState? ", interpret_is_shard_state);
   d.def_stack_word("isWorkchainDescr? ", interpret_is_workchain_descr);
+  d.def_stack_word("CC+? ", interpret_add_extra_currencies);
+  d.def_stack_word("CC-? ", interpret_sub_extra_currencies);
+  d.def_stack_word("mnemo>priv ", std::bind(interpret_mnemonic_to_privkey, _1, 0));
+  d.def_stack_word("mnemo>pub ", std::bind(interpret_mnemonic_to_privkey, _1, 1));
 }
 
 tlb::TypenameLookup tlb_dict;
@@ -704,7 +746,12 @@ void interpret_tlb_validate_skip(vm::Stack& stack) {
   stack.push_bool(ok);
 }
 
+void interpret_tlb_type_const(vm::Stack& stack, const tlb::TLB* ptr) {
+  stack.push_make_object<tlb::TlbTypeHolder>(ptr);
+}
+
 void init_words_tlb(fift::Dictionary& d) {
+  using namespace std::placeholders;
   tlb_dict.register_types(block::gen::register_simple_types);
   d.def_stack_word("tlb-type-lookup ", interpret_tlb_type_lookup);
   d.def_stack_word("tlb-type-name ", interpret_tlb_type_name);
@@ -713,6 +760,8 @@ void init_words_tlb(fift::Dictionary& d) {
   d.def_stack_word("(tlb-dump-str?) ", interpret_tlb_dump_to_str);
   d.def_stack_word("tlb-skip ", interpret_tlb_skip);
   d.def_stack_word("tlb-validate-skip ", interpret_tlb_validate_skip);
+  d.def_stack_word("ExtraCurrencyCollection",
+                   std::bind(interpret_tlb_type_const, _1, &block::tlb::t_ExtraCurrencyCollection));
 }
 
 void usage(const char* progname) {

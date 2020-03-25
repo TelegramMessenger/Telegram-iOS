@@ -40,6 +40,7 @@
 #include <algorithm>
 
 namespace block {
+using namespace std::literals::string_literals;
 using td::Ref;
 
 Config::Config(Ref<vm::Cell> config_root, const td::Bits256& config_addr, int _mode)
@@ -333,6 +334,59 @@ std::unique_ptr<vm::Dictionary> ShardConfig::extract_shard_hashes_dict(Ref<vm::C
   } else {
     return {};
   }
+}
+
+td::Result<std::vector<int>> Config::unpack_param_dict(vm::Dictionary& dict) {
+  try {
+    std::vector<int> vect;
+    if (dict.check_for_each(
+            [&vect](Ref<vm::CellSlice> value, td::ConstBitPtr key, int key_len) {
+              bool ok = (key_len == 32 && value->empty_ext());
+              if (ok) {
+                vect.push_back((int)key.get_int(32));
+              }
+              return ok;
+            },
+            true)) {
+      return std::move(vect);
+    } else {
+      return td::Status::Error("invalid parameter list dictionary");
+    }
+  } catch (vm::VmError& vme) {
+    return td::Status::Error("error unpacking parameter list dictionary: "s + vme.get_msg());
+  }
+}
+
+td::Result<std::vector<int>> Config::unpack_param_dict(Ref<vm::Cell> dict_root) {
+  vm::Dictionary dict{std::move(dict_root), 32};
+  return unpack_param_dict(dict);
+}
+
+std::unique_ptr<vm::Dictionary> Config::get_param_dict(int idx) const {
+  return std::make_unique<vm::Dictionary>(get_config_param(idx), 32);
+}
+
+td::Result<std::vector<int>> Config::unpack_param_list(int idx) const {
+  return unpack_param_dict(*get_param_dict(idx));
+}
+
+bool Config::all_mandatory_params_defined(int* bad_idx_ptr) const {
+  auto res = get_mandatory_param_list();
+  if (res.is_error()) {
+    if (bad_idx_ptr) {
+      *bad_idx_ptr = -1;
+    }
+    return false;
+  }
+  for (int x : res.move_as_ok()) {
+    if (get_config_param(x).is_null()) {
+      if (bad_idx_ptr) {
+        *bad_idx_ptr = x;
+      }
+      return false;
+    }
+  }
+  return true;
 }
 
 std::unique_ptr<vm::AugmentedDictionary> ConfigInfo::create_accounts_dict() const {

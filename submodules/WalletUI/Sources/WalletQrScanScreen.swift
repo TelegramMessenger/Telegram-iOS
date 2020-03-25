@@ -18,7 +18,7 @@ private func generateFrameImage() -> UIImage? {
         context.setLineWidth(4.0)
         context.setLineCap(.round)
         
-        var path = CGMutablePath();
+        let path = CGMutablePath()
         path.move(to: CGPoint(x: 2.0, y: 2.0 + 26.0))
         path.addArc(tangent1End: CGPoint(x: 2.0, y: 2.0), tangent2End: CGPoint(x: 2.0 + 26.0, y: 2.0), radius: 6.0)
         path.addLine(to: CGPoint(x: 2.0 + 26.0, y: 2.0))

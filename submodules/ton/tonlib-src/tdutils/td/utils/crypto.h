@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -65,10 +65,17 @@ class AesCbcState {
 
   void encrypt(Slice from, MutableSlice to);
   void decrypt(Slice from, MutableSlice to);
+  struct Raw {
+    SecureString key;
+    SecureString iv;
+  };
+
+  const Raw &raw() const {
+    return raw_;
+  }
 
  private:
-  SecureString key_;
-  SecureString iv_;
+  Raw raw_;
 };
 
 void sha1(Slice data, unsigned char output[20]);
