@@ -1,6 +1,3 @@
-load("//build-system/bazel-utils:defines.bzl",
-    "string_value",
-)
 
 def _plist_fragment(ctx):
     output = ctx.outputs.out
