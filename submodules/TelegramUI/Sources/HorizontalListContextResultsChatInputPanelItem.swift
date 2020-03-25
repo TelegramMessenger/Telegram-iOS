@@ -12,6 +12,7 @@ import StickerResources
 import PhotoResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import AccountContext
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
@@ -91,6 +92,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     private(set) var item: HorizontalListContextResultsChatInputPanelItem?
     private var statusDisposable = MetaDisposable()
     private let statusNode: RadialStatusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+    
+    private let fetchDisposable = MetaDisposable()
 
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -175,6 +178,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             displayLink.invalidate()
         }
         self.statusDisposable.dispose()
+        self.fetchDisposable.dispose()
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -388,6 +392,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             }
                             let dimensions = animatedStickerFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                            strongSelf.fetchDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(animatedStickerFile), resource: animatedStickerFile.resource).start())
                             animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
