@@ -17,7 +17,7 @@ private var labelSpacing: CGFloat = 2
 private var margin: CGFloat = 10
 private var prefixLabelWidth: CGFloat = 29
 private var textLabelWidth: CGFloat = 110
-private var valueLabelWidth: CGFloat = 65
+private var valueLabelWidth: CGFloat = 70
 
 class ChartDetailsView: UIControl {
     let titleLabel = UILabel()

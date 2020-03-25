@@ -18,6 +18,7 @@ public class BaseLinesChartController: BaseChartController {
     var zoomChartVisibility: [Bool]
     var lastChartInteractionPoint: CGPoint = .zero
     var isChartInteractionBegun: Bool = false
+    var isChartInteracting: Bool = false
     var ignoreInteraction: Bool = false
     
     var initialChartRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
@@ -66,17 +67,18 @@ public class BaseLinesChartController: BaseChartController {
         }
     }
     
-    public override func chartInteractionDidBegin(point: CGPoint) {
+    public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         lastChartInteractionPoint = point
         isChartInteractionBegun = true
     }
     
     public override func chartInteractionDidEnd() {
-        isChartInteractionBegun = false
+        isChartInteracting = false
         ignoreInteraction = false
     }
     
     public override func cancelChartInteraction() {
+        isChartInteracting = false
         isChartInteractionBegun = false
     }
     

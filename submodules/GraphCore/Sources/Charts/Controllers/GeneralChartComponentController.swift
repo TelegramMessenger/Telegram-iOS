@@ -129,7 +129,7 @@ class GeneralChartComponentController: ChartThemeContainer {
     func updateChartsVisibility(visibility: [Bool], animated: Bool) {
         self.chartVisibility = visibility
         if isChartInteractionBegun {
-            chartInteractionDidBegin(point: lastChartInteractionPoint)
+            chartInteractionDidBegin(point: lastChartInteractionPoint, manual: false)
         }
     }
     
@@ -169,11 +169,11 @@ class GeneralChartComponentController: ChartThemeContainer {
         return (closestDate, minIndex)
     }
     
-    func chartInteractionDidBegin(point: CGPoint) {
+    func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         guard !ignoreInteraction else {
             return
         }
-        if !isChartInteractionBegun && detailsVisible {
+        if manual && !isChartInteracting && detailsVisible {
             self.hideDetailsView(animated: true)
             ignoreInteraction = true
             return
@@ -203,7 +203,6 @@ class GeneralChartComponentController: ChartThemeContainer {
     }
     
     func chartInteractionDidEnd() {
-        isChartInteractionBegun = false
         isChartInteracting = false
         ignoreInteraction = false
     }

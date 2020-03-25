@@ -170,7 +170,7 @@ class PieChartComponentController: GeneralChartComponentController {
         return previewBarChartRenderer
     }
 
-    public override func chartInteractionDidBegin(point: CGPoint) {
+    public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         if let segment = pieChartRenderer.selectedItemIndex(at: point) {
             pieChartRenderer.selectSegmentAt(at: segment, animated: true)
             updateSelectedDataLabelIfNeeded()
