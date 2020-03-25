@@ -152,8 +152,7 @@ public extension ContainedViewLayoutTransition {
                 if let completion = completion {
                     completion(true)
                 }
-            case let .animated(duration, curve):
-                let previousBounds = node.bounds
+            case .animated:
                 let previousCenter = node.frame.center
                 node.position = frame.center
                 node.bounds = CGRect(origin: node.bounds.origin, size: frame.size)

@@ -23,6 +23,8 @@ public enum WindowUserInterfaceStyle {
             self = .light
         case .dark:
             self = .dark
+        @unknown default:
+            self = .dark
         }
     }
 }
@@ -188,33 +190,6 @@ private final class WindowRootViewController: UIViewController, UIViewController
     private var previewingContext: AnyObject?
     
     private func updatePreviewingRegistration() {
-        var shouldRegister = false
-        
-        var isVoiceOverRunning = false
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
-        }
-        if !isVoiceOverRunning {
-            shouldRegister = true
-        }
-        
-        shouldRegister = false
-        
-        if shouldRegister != self.registeredForPreviewing {
-            self.registeredForPreviewing = shouldRegister
-            if shouldRegister {
-                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                    self.previewingContext = self.registerForPreviewing(with: self, sourceView: self.view)
-                }
-            } else if let previewingContext = self.previewingContext {
-                self.previewingContext = nil
-                if let previewingContext = previewingContext as? UIViewControllerPreviewing {
-                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                        self.unregisterForPreviewing(withContext: previewingContext)
-                    }
-                }
-            }
-        }
     }
     
     private weak var previousPreviewingHostView: (UIView & PreviewingHostView)?

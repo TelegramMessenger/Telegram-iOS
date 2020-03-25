@@ -232,15 +232,14 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         }
         
         let textFont = Font.regular(16.0)
-        let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         let secondaryTextColor = self.presentationData.theme.list.itemSecondaryTextColor
         let url = urlForMode(self.mode)
         switch self.mode {
-            case let .receive(address):
+            case .receive:
                 self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareAddress
                 self.secondaryButtonNode.setTitle(self.presentationData.strings.Wallet_Receive_CreateInvoice, with: Font.regular(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
-            case let .invoice(address, amount, comment):
+            case .invoice:
                 self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor, paragraphAlignment: .center)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareInvoiceUrl
         }
@@ -255,7 +254,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         super.didLoad()
         
         let addressGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapAddressGesture(_:)))
-        addressGestureRecognizer.tapActionAtPoint = { [weak self] point in
+        addressGestureRecognizer.tapActionAtPoint = { point in
             return .waitForSingleTap
         }
         self.urlTextNode.view.addGestureRecognizer(addressGestureRecognizer)
@@ -264,7 +263,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     @objc func tapLongTapOrDoubleTapAddressGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .longTap:
                     self.displayCopyContextMenu?(self, self.urlTextNode.frame, urlForMode(self.mode))
@@ -299,7 +298,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         let makeImageLayout = self.qrImageNode.asyncLayout()
         
         let imageSide: CGFloat = 215.0
-        var imageSize = CGSize(width: imageSide, height: imageSide)
+        let imageSize = CGSize(width: imageSide, height: imageSide)
         let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
         
         let _ = imageApply()
@@ -353,6 +352,6 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight + buttonOffset), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
     }
 }

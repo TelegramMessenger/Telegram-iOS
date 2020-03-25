@@ -111,6 +111,42 @@ recursive list-map {
   swap uncons -rot over execute -rot list-map cons
   } cond
 } swap !
+
+variable ctxdump  variable curctx
+// (a1 .. an) e -- executes e for a1, ..., an
+{ ctxdump @ curctx @ ctxdump 2! curctx 2!
+  { curctx 2@ over null? not } { swap uncons rot tuck curctx 2! execute }
+  while 2drop ctxdump 2@ curctx ! ctxdump !
+} : list-foreach
+forget ctxdump  forget curctx
+
+//
+// Experimental implementation of `for` loops with index
+//
+variable loopdump  variable curloop
+{ curloop @ loopdump @ loopdump 2! } : push-loop-ctx
+{ loopdump 2@ loopdump ! curloop ! } : pop-loop-ctx
+// ilast i0 e -- executes e for i=i0,i0+1,...,ilast-1
+{ -rot 2dup > {
+    push-loop-ctx {
+      triple dup curloop ! first execute curloop @ untriple 1+ 2dup <=
+    } until pop-loop-ctx
+  } if 2drop drop
+} : for
+// ilast i0 e -- same as 'for', but pushes current index i before executing e
+{ -rot 2dup > {
+    push-loop-ctx {
+      triple dup curloop ! untriple nip swap execute curloop @ untriple 1+ 2dup <=
+    } until pop-loop-ctx
+  } if 2drop drop
+} : for-i
+// ( -- i )  Returns innermost loop index
+{ curloop @ third } : i
+// ( -- j )  Returns outer loop index
+{ loopdump @ car third } : j
+{ loopdump @ cadr third } : k
+forget curloop  forget loopdump
+
 //
 // create Lisp-style lists using words "(" and ")"
 //

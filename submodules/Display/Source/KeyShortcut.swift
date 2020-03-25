@@ -13,8 +13,9 @@ public struct KeyShortcut: Hashable {
         self.action = action
     }
     
-    public var hashValue: Int {
-        return input.hashValue ^ modifiers.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.input)
+        hasher.combine(self.modifiers)
     }
     
     public static func ==(lhs: KeyShortcut, rhs: KeyShortcut) -> Bool {

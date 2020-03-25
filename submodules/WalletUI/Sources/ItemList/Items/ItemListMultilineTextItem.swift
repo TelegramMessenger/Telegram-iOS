@@ -182,16 +182,8 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
             }
             
             var baseFont = titleFont
-            var linkFont = titleFont
-            var boldFont = titleBoldFont
-            var italicFont = titleItalicFont
-            var boldItalicFont = titleBoldItalicFont
             if case .monospace = item.font {
                 baseFont = Font.monospace(17.0)
-                linkFont = Font.monospace(17.0)
-                boldFont = Font.semiboldMonospace(17.0)
-                italicFont = Font.italicMonospace(17.0)
-                boldItalicFont = Font.semiboldItalicMonospace(17.0)
             }
             
             let string = NSAttributedString(string: item.text, font: baseFont, textColor: textColor)
@@ -365,7 +357,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
     
     private func linkItemAtPoint(_ point: CGPoint) -> String? {
         let textNodeFrame = self.textNode.frame
-        if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+        if let (_, _) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             return nil
         }
         return nil

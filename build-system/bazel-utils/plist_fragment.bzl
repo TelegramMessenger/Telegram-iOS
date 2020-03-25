@@ -1,4 +1,4 @@
-load("//build-system:defines.bzl",
+load("//build-system/bazel-utils:defines.bzl",
     "string_value",
 )
 

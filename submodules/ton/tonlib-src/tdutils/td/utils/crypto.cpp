@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/utils/crypto.h"
 
@@ -299,16 +299,16 @@ void aes_cbc_decrypt(Slice aes_key, MutableSlice aes_iv, Slice from, MutableSlic
   aes_cbc_xcrypt(aes_key, aes_iv, from, to, false);
 }
 
-AesCbcState::AesCbcState(Slice key256, Slice iv128) : key_(key256), iv_(iv128) {
-  CHECK(key_.size() == 32);
-  CHECK(iv_.size() == 16);
+AesCbcState::AesCbcState(Slice key256, Slice iv128) : raw_{td::SecureString(key256), td::SecureString(iv128)} {
+  CHECK(raw_.key.size() == 32);
+  CHECK(raw_.iv.size() == 16);
 }
 
 void AesCbcState::encrypt(Slice from, MutableSlice to) {
-  ::td::aes_cbc_encrypt(key_.as_slice(), iv_.as_mutable_slice(), from, to);
+  ::td::aes_cbc_encrypt(raw_.key.as_slice(), raw_.iv.as_mutable_slice(), from, to);
 }
 void AesCbcState::decrypt(Slice from, MutableSlice to) {
-  ::td::aes_cbc_decrypt(key_.as_slice(), iv_.as_mutable_slice(), from, to);
+  ::td::aes_cbc_decrypt(raw_.key.as_slice(), raw_.iv.as_mutable_slice(), from, to);
 }
 
 class AesCtrState::Impl {

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Display
 
 public enum ContextGestureTransition {
     case begin
@@ -207,7 +206,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesCancelled(touches, with: event)
         
-        if let touch = touches.first, !self.currentProgress.isZero, self.isValidated {
+        if let _ = touches.first, !self.currentProgress.isZero, self.isValidated {
             let previousProgress = self.currentProgress
             self.currentProgress = 0.0
             self.activationProgress?(0.0, .ended(previousProgress))

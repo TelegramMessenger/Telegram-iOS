@@ -62,22 +62,15 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         } set(value) {
             _image = value
             
-            if let value = value {
+            if let _ = value {
                 if self.imageNode == nil {
                     let imageNode = ASImageNode()
                     imageNode.displayWithoutProcessing = true
                     imageNode.displaysAsynchronously = false
                     self.imageNode = imageNode
-                    if false, value.size == CGSize(width: 30.0, height: 30.0) {
-                        if self.imageRippleNode.supernode == nil {
-                            self.addSubnode(self.imageRippleNode)
-                            self.imageRippleNode.image = generateFilledCircleImage(diameter: 30.0, color: self.rippleColor)
-                        }
-                    } else {
-                        if self.imageRippleNode.supernode != nil {
-                            self.imageRippleNode.image = nil
-                            self.imageRippleNode.removeFromSupernode()
-                        }
+                    if self.imageRippleNode.supernode != nil {
+                        self.imageRippleNode.image = nil
+                        self.imageRippleNode.removeFromSupernode()
                     }
                     
                     self.addSubnode(imageNode)

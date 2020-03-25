@@ -23,6 +23,25 @@
   .end_cell());
 }
 
+;; [min_tot_rounds, max_tot_rounds, min_wins, max_losses, min_store_sec, max_store_sec, bit_price, cell_price]
+_ parse_vote_config(cell c) inline {
+  var cs = c.begin_parse();
+  throw_unless(44, cs~load_uint(8) == 0x36);
+  var res = [cs~load_uint(8), cs~load_uint(8), cs~load_uint(8), cs~load_uint(8), cs~load_uint(32), cs~load_uint(32), cs~load_uint(32), cs~load_uint(32)];
+  cs.end_parse();
+  return res;
+}
+
+;; cfg_vote_setup#91 normal_params:^ConfigProposalSetup critical_params:^ConfigProposalSetup = ConfigVotingSetup;
+_ get_vote_config(int critical?) inline_ref {
+  var cs = config_param(11).begin_parse();
+  throw_unless(44, cs~load_uint(8) == 0x91);
+  if (critical?) {
+    cs~load_ref();
+  }
+  return parse_vote_config(cs.preload_ref());
+}
+
 (int, int) check_validator_set(cell vset) {
   var cs = vset.begin_parse();
   throw_unless(9, cs~load_uint(8) == 0x12);  ;; validators_ext#12 only
@@ -37,54 +56,21 @@
 
 () send_answer(addr, query_id, ans_tag, mode) impure {
   ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
-  send_raw_message(begin_cell().store_uint(0x18, 6).store_slice(addr).store_uint(0, 5 + 4 + 4 + 64 + 32 + 1 + 1).store_uint(ans_tag, 32).store_uint(query_id, 64).end_cell(), mode);
+  send_raw_message(begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(addr)
+    .store_uint(0, 5 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(ans_tag, 32)
+    .store_uint(query_id, 64)
+  .end_cell(), mode);
 }
 
-() send_confirmation(addr, query_id, ans_tag) impure {
+() send_confirmation(addr, query_id, ans_tag) impure inline {
   return send_answer(addr, query_id, ans_tag, 64);
 }
 
-() send_error(addr, query_id, ans_tag) impure {
+() send_error(addr, query_id, ans_tag) impure inline {
   return send_answer(addr, query_id, ans_tag, 64);
-}
-
-() recv_internal(cell in_msg_cell, slice in_msg) impure {
-  var cs = in_msg_cell.begin_parse();
-  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
-  var s_addr = cs~load_msg_addr();
-  (int src_wc, int src_addr) = s_addr.parse_std_addr();
-  if ((src_wc + 1) | (flags & 1) | in_msg.slice_empty?()) {
-    ;; source not in masterchain, or a bounced message, or a simple transfer
-    return ();
-  }
-  int tag = in_msg~load_uint(32);
-  int query_id = in_msg~load_uint(64);
-  if (tag == 0x4e565354) {
-    ;; set next validator set
-    var vset = in_msg~load_ref();
-    in_msg.end_parse();
-    var elector_param = config_param(1);
-    var elector_addr = cell_null?(elector_param) ? -1 : elector_param.begin_parse().preload_uint(256);
-    var ok = false;
-    if (src_addr == elector_addr) {
-      ;; message from elector smart contract
-      ;; set next validator set
-      (var t_since, var t_until) = check_validator_set(vset);
-      var t = now();
-      ok = (t_since > t) & (t_until > t_since);
-    }
-    if (ok) {
-      set_conf_param(36, vset);
-      ;; send confirmation
-      return send_confirmation(s_addr, query_id, 0xee764f4b);
-    } else {
-      return send_error(s_addr, query_id, 0xee764f6f);
-    }
-  }
-  ;; if tag is non-zero and its higher bit is zero, throw an exception (the message is an unsupported query)
-  ;; to bounce message back to sender
-  throw_unless(37, (tag == 0) | (tag & (1 << 31)));
-  ;; do nothing for other internal messages
 }
 
 ;; forward a message to elector smart contract to make it upgrade its code
@@ -108,7 +94,7 @@
 _ perform_action(cfg_dict, public_key, action, cs) {
   if (action == 0x43665021) {
     ;; change one configuration parameter
-    var param_index = cs~load_uint(32);
+    var param_index = cs~load_int(32);
     var param_value = cs~load_ref();
     cs.end_parse();
     cfg_dict~idict_set_ref(32, param_index, param_value);
@@ -137,11 +123,8 @@ _ perform_action(cfg_dict, public_key, action, cs) {
   }
 }
 
-(slice, int) get_validator_descr(int idx) inline_ref {
+(cell, int, slice) get_current_vset() inline_ref {
   var vset = config_param(34);
-  if (vset.null?()) {
-    return (null(), 0);
-  }
   var cs = begin_parse(vset);
   ;; validators_ext#12 utime_since:uint32 utime_until:uint32 
   ;; total:(## 16) main:(## 16) { main <= total } { main >= 1 } 
@@ -149,6 +132,11 @@ _ perform_action(cfg_dict, public_key, action, cs) {
   throw_unless(40, cs~load_uint(8) == 0x12);
   cs~skip_bits(32 + 32 + 16 + 16);
   int total_weight = cs~load_uint(64);
+  return (vset, total_weight, cs);
+}
+
+(slice, int) get_validator_descr(int idx) inline_ref {
+  var (vset, total_weight, cs) = get_current_vset();
   var dict = begin_cell().store_slice(cs).end_cell();
   var (value, _) = dict.udict_get?(16, idx);
   return (value, total_weight);
@@ -161,6 +149,40 @@ _ perform_action(cfg_dict, public_key, action, cs) {
   throw_unless(41, (cs~load_uint(8) & ~ 0x20) == 0x53);
   throw_unless(41, cs~load_uint(32) == 0x8e81278a);
   return (cs~load_uint(256), cs~load_uint(64));
+}
+
+;; cfg_proposal#f3 param_id:int32 param_value:(Maybe ^Cell) if_hash_equal:(Maybe uint256)
+;; c -> (param-id param-cell maybe-hash)
+(int, cell, int) parse_config_proposal(cell c) inline_ref {
+  var cs = c.begin_parse();
+  throw_unless(44, cs~load_int(8) == 0xf3 - 0x100);
+  var (id, val, hash) = (cs~load_int(32), cs~load_maybe_ref(), cs~load_int(1));
+  if (hash) {
+    hash = cs~load_uint(256);
+  } else {
+    hash = -1;
+  }
+  cs.end_parse();
+  return (id, val, hash);
+}
+
+;; cfg_proposal_status#ce expires:uint32 proposal:^ConfigProposal is_critical:Bool
+;;  voters:(HashmapE 16 True) remaining_weight:int64 validator_set_id:uint256
+;;  rounds_remaining:uint8 wins:uint8 losses:uint8 = ConfigProposalStatus;
+(int, cell, int, cell, int, int, slice) unpack_proposal_status(slice cs) inline_ref {
+  throw_unless(44, cs~load_int(8) == 0xce - 0x100);
+  return (cs~load_uint(32), cs~load_ref(), cs~load_int(1), cs~load_dict(), cs~load_int(64), cs~load_uint(256), cs);
+}
+
+builder begin_pack_proposal_status(int expires, cell proposal, int critical?, cell voters, int weight_remaining, int vset_id) inline {
+  return begin_cell()
+    .store_int(0xce - 0x100, 8)
+    .store_uint(expires, 32)
+    .store_ref(proposal)
+    .store_int(critical?, 1)
+    .store_dict(voters)
+    .store_int(weight_remaining, 64)
+    .store_uint(vset_id, 256);
 }
 
 (cell, int, int, slice) new_proposal(cs) inline {
@@ -210,6 +232,141 @@ builder pack_proposal(cell voters, int sum_weight, int vset_id, slice body) inli
   }
 }
 
+int register_voting_proposal(slice cs, int msg_value) inline_ref {
+  var (expire_at, proposal, critical?) = (cs~load_uint(32), cs~load_ref(), cs~load_int(1));
+  if (expire_at >> 30) {
+    expire_at -= now();
+  }
+  var (param_id, param_val, hash) = parse_config_proposal(proposal);
+  if (hash >= 0) {
+    cell cur_val = config_param(param_id);
+    int cur_hash = null?(cur_val) ? 0 : cell_hash(cur_val);
+    if (cur_hash != hash) {
+      hash = -0xe2646356;  ;; bad current value
+    }
+  } else {
+    var m_params = config_param(9);
+    var (_, found?) = m_params.idict_get?(32, param_id);
+    if (found?) {
+      hash = -0xcd506e6c;  ;; cannot set mandatory parameter to null
+    }
+  }
+  if (param_val.cell_depth() >= 256) {
+    hash = -0xc2616456;  ;; bad value
+  }
+  if (hash < -1) {
+    return hash;  ;; return error if any
+  }
+  ifnot (critical?) {
+    var crit_params = config_param(10);
+    var (_, found?) = crit_params.idict_get?(32, param_id);
+    if (found?) {
+      hash = -0xc3726954;  ;; trying to set a critical parameter without critical flag
+    }
+  }
+  if (hash < -1) {
+    return hash;
+  }
+  ;; obtain vote proposal configuration
+  var vote_cfg = get_vote_config(critical?);
+  var [min_tot_rounds, max_tot_rounds, min_wins, max_losses, min_store_sec, max_store_sec, bit_price, cell_price] = vote_cfg;
+  if (expire_at < min_store_sec) {
+    return -0xc5787069;   ;; expired
+  }
+  expire_at = min(expire_at, max_store_sec);
+  ;; compute price
+  var (_, bits, refs) = compute_data_size(param_val, 1024);
+  var pps = bit_price * (bits + 1024) + cell_price * (refs + 2);
+  var price = pps * expire_at;
+  expire_at += now();
+  var (cfg_dict, stored_seqno, public_key, vote_dict) = load_data();
+  int phash = proposal.cell_hash();
+  var (pstatus, found?) = vote_dict.udict_get?(256, phash);
+  if (found?) {
+    ;; proposal already exists; we can only extend it
+    var (expires, r_proposal, r_critical?, voters, weight_remaining, vset_id, rest) = unpack_proposal_status(pstatus);
+    if (r_critical? != critical?) {
+      return -0xc3726955;  ;; cannot upgrade critical parameter to non-critical...
+    }
+    if (expires >= expire_at) {
+      return -0xc16c7245;  ;; proposal already exists
+    }
+    ;; recompute price
+    price = pps * (expire_at - expires + 16384);
+    if (msg_value - price < (1 << 30)) {
+      return -0xf0617924;   ;; need more money
+    }
+    ;; update expiration time
+    vote_dict~udict_set_builder(256, phash, begin_pack_proposal_status(expire_at, r_proposal, r_critical?, voters, weight_remaining, vset_id).store_slice(rest));
+    store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+    return price;
+  }
+  if (msg_value - price < (1 << 30)) {
+    return -0xf0617924;   ;; need more money
+  }
+  ;; obtain current validator set data
+  var (vset, total_weight, _) = get_current_vset();
+  int weight_remaining = muldiv(total_weight, 2, 3) + 1;
+  ;; create new proposal
+  vote_dict~udict_set_builder(256, phash,
+    begin_pack_proposal_status(expire_at, proposal, critical?, null(), weight_remaining, vset.cell_hash())
+    .store_uint(max_tot_rounds, 8).store_uint(0, 16));
+  store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+  return price;
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  var s_addr = cs~load_msg_addr();
+  (int src_wc, int src_addr) = s_addr.parse_std_addr();
+  if ((src_wc + 1) | (flags & 1) | in_msg.slice_empty?()) {
+    ;; source not in masterchain, or a bounced message, or a simple transfer
+    return ();
+  }
+  int tag = in_msg~load_uint(32);
+  int query_id = in_msg~load_uint(64);
+  if (tag == 0x4e565354) {
+    ;; set next validator set
+    var vset = in_msg~load_ref();
+    in_msg.end_parse();
+    var elector_param = config_param(1);
+    var elector_addr = cell_null?(elector_param) ? -1 : elector_param.begin_parse().preload_uint(256);
+    var ok = false;
+    if (src_addr == elector_addr) {
+      ;; message from elector smart contract
+      ;; set next validator set
+      (var t_since, var t_until) = check_validator_set(vset);
+      var t = now();
+      ok = (t_since > t) & (t_until > t_since);
+    }
+    if (ok) {
+      set_conf_param(36, vset);
+      ;; send confirmation
+      return send_confirmation(s_addr, query_id, 0xee764f4b);
+    } else {
+      return send_error(s_addr, query_id, 0xee764f6f);
+    }
+  }
+  if (tag == 0x6e565052) {
+    ;; new voting proposal
+    var price = register_voting_proposal(cs, msg_value);
+    int mode = 64;
+    int ans_tag = - price;
+    if (price >= 0) {
+      ;; ok, debit price
+      raw_reserve(price, 4);
+      ans_tag = 0xee565052;
+      mode = 128;
+    }
+    return send_answer(s_addr, query_id, ans_tag, mode);
+  }
+  ;; if tag is non-zero and its higher bit is zero, throw an exception (the message is an unsupported query)
+  ;; to bounce message back to sender
+  throw_unless(37, (tag == 0) | (tag & (1 << 31)));
+  ;; do nothing for other internal messages
+}
+
 () recv_external(slice in_msg) impure {
   var signature = in_msg~load_bits(512);
   var cs = in_msg;
@@ -217,6 +374,7 @@ builder pack_proposal(cell voters, int sum_weight, int vset_id, slice body) inli
   int msg_seqno = cs~load_uint(32);
   var valid_until = cs~load_uint(32);
   throw_if(35, valid_until < now());
+  throw_if(39, slice_depth(cs) > 64);
   var (cfg_dict, stored_seqno, public_key, vote_dict) = load_data();
   throw_unless(33, msg_seqno == stored_seqno);
   ifnot ((action - 0x566f7465) & -2) {
@@ -228,6 +386,7 @@ builder pack_proposal(cell voters, int sum_weight, int vset_id, slice body) inli
     stored_seqno += 1;
     store_data(cfg_dict, stored_seqno, public_key, vote_dict);
     commit();
+    var (_, bits, refs) = cs.slice_compute_data_size(1024);
     (vote_dict, var accepted) = register_vote(vote_dict, action, cs, idx, weight, total_weight, config_param(34).cell_hash());
     store_data(cfg_dict, stored_seqno, public_key, vote_dict);
     ifnot (accepted.null?()) {

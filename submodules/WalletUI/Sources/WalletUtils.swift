@@ -82,7 +82,6 @@ func isValidAmount(_ amount: String) -> Bool {
         return false
     }
     var hasDecimalSeparator = false
-    var hasLeadingZero = false
     var index = 0
     for c in amount {
         if c == "." || c == "," {

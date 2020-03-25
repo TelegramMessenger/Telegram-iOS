@@ -14,9 +14,10 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "srcread.h"
+#include <algorithm>
 
 namespace src {
 
@@ -34,9 +35,47 @@ std::ostream& operator<<(std::ostream& os, const Fatal& fatal) {
   return os << fatal.get_msg();
 }
 
+const char* FileDescr::convert_offset(long offset, long* line_no, long* line_pos, long* line_size) const {
+  long lno = 0, lpos = -1, lsize = 0;
+  const char* lstart = nullptr;
+  if (offset >= 0 && offset < (long)text.size()) {
+    auto it = std::upper_bound(line_offs.begin(), line_offs.end(), offset);
+    lno = it - line_offs.begin();
+    if (lno && it != line_offs.end()) {
+      lsize = it[0] - it[-1];
+      lpos = offset - it[-1];
+      lstart = text.data() + it[-1];
+    }
+  } else {
+    lno = (long)line_offs.size();
+  }
+  if (line_no) {
+    *line_no = lno;
+  }
+  if (line_pos) {
+    *line_pos = lpos;
+  }
+  if (line_size) {
+    *line_size = lsize;
+  }
+  return lstart;
+}
+
+const char* FileDescr::push_line(std::string new_line) {
+  if (line_offs.empty()) {
+    line_offs.push_back(0);
+  }
+  std::size_t cur_size = text.size();
+  text += new_line;
+  text += '\0';
+  line_offs.push_back((long)text.size());
+  return text.data() + cur_size;
+}
+
 void SrcLocation::show(std::ostream& os) const {
   os << fdescr;
-  if (line_no > 0) {
+  long line_no, line_pos;
+  if (fdescr && convert_pos(&line_no, &line_pos)) {
     os << ':' << line_no;
     if (line_pos >= 0) {
       os << ':' << (line_pos + 1);
@@ -45,13 +84,15 @@ void SrcLocation::show(std::ostream& os) const {
 }
 
 bool SrcLocation::show_context(std::ostream& os) const {
-  if (text.empty() || line_pos < 0 || (unsigned)line_pos > text.size()) {
+  long line_no, line_pos, line_size;
+  if (!fdescr || !convert_pos(&line_no, &line_pos, &line_size)) {
     return false;
   }
-  bool skip_left = (line_pos > 200), skip_right = (line_pos + 200u < text.size());
-  const char* start = skip_left ? text.c_str() + line_pos - 100 : text.c_str();
-  const char* end = skip_right ? text.c_str() + line_pos + 100 : text.c_str() + text.size();
-  const char* here = text.c_str() + line_pos;
+  bool skip_left = (line_pos > 200), skip_right = (line_pos + 200u < line_size);
+  const char* here = fdescr->text.data() + char_offs;
+  const char* base = here - line_pos;
+  const char* start = skip_left ? here - 100 : base;
+  const char* end = skip_right ? here + 100 : base + line_size;
   os << "  ";
   if (skip_left) {
     os << "... ";
@@ -99,8 +140,8 @@ void ParseError::show(std::ostream& os) const {
   where.show_context(os);
 }
 
-SourceReader::SourceReader(std::istream* _is, const FileDescr* _fdescr)
-    : ifs(_is), loc(_fdescr), eof(false), cur_line_len(0), start(0), cur(0), end(0) {
+SourceReader::SourceReader(std::istream* _is, FileDescr* _fdescr)
+    : ifs(_is), fdescr(_fdescr), loc(_fdescr), eof(false), cur_line_len(0), start(0), cur(0), end(0) {
   load_line();
 }
 
@@ -139,7 +180,7 @@ const char* SourceReader::set_ptr(const char* ptr) {
     if (ptr < cur || ptr > end) {
       error("parsing position went outside of line");
     }
-    loc.line_pos = (int)(ptr - start);
+    loc.char_offs += ptr - cur;
     cur = ptr;
   }
   return ptr;
@@ -149,12 +190,11 @@ bool SourceReader::load_line() {
   if (eof) {
     return false;
   }
+  loc.set_eof();
   if (ifs->eof()) {
     set_eof();
     return false;
   }
-  ++loc.line_no;
-  loc.line_pos = -1;
   std::getline(*ifs, cur_line);
   if (ifs->fail()) {
     set_eof();
@@ -174,11 +214,16 @@ bool SourceReader::load_line() {
     cur_line.pop_back();
     --len;
   }
-  loc.text = cur_line;
   cur_line_len = (int)len;
-  loc.line_pos = 0;
-  cur = start = cur_line.c_str();
-  end = start + cur_line_len;
+  if (fdescr) {
+    cur = start = fdescr->push_line(std::move(cur_line));
+    end = start + len;
+    loc.char_offs = (std::size_t)(cur - fdescr->text.data());
+    cur_line.clear();
+  } else {
+    cur = start = cur_line.c_str();
+    end = start + cur_line_len;
+  }
   return true;
 }
 

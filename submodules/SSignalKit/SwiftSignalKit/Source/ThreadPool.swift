@@ -13,7 +13,7 @@ public final class ThreadPoolTask {
     }
     
     func execute() {
-        if !state.cancelled.with { $0 }  {
+        if !state.cancelled.with({ $0 })  {
             self.action(self.state)
         }
     }
@@ -74,7 +74,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
             pthread_mutex_lock(&threadPool.mutex);
             
             if queue != nil {
-                if let index = threadPool.takenQueues.index(of: queue) {
+                if let index = threadPool.takenQueues.firstIndex(of: queue) {
                     threadPool.takenQueues.remove(at: index)
                 }
                 
@@ -97,7 +97,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
                     task = queue.popFirstTask()
                     threadPool.takenQueues.append(queue)
                     
-                    if let index = threadPool.queues.index(of: queue) {
+                    if let index = threadPool.queues.firstIndex(of: queue) {
                         threadPool.queues.remove(at: index)
                     }
                     

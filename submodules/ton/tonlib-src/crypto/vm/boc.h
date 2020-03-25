@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include <set>
@@ -25,12 +25,6 @@
 
 namespace vm {
 using td::Ref;
-
-td::Result<Ref<Cell>> std_boc_deserialize(td::Slice data, bool can_be_empty = false);
-td::Result<td::BufferSlice> std_boc_serialize(Ref<Cell> root, int mode = 0);
-
-td::Result<std::vector<Ref<Cell>>> std_boc_deserialize_multi(td::Slice data);
-td::Result<td::BufferSlice> std_boc_serialize_multi(std::vector<Ref<Cell>> root, int mode = 0);
 
 class NewCellStorageStat {
  public:
@@ -159,7 +153,7 @@ struct CellSerializationInfo {
 
 class BagOfCells {
  public:
-  enum { hash_bytes = vm::Cell::hash_bytes };
+  enum { hash_bytes = vm::Cell::hash_bytes, default_max_roots = 16384 };
   enum Mode { WithIndex = 1, WithCRC32C = 2, WithTopHash = 4, WithIntHashes = 8, WithCacheBits = 16, max = 31 };
   enum { max_cell_whs = 64 };
   using Hash = Cell::Hash;
@@ -259,9 +253,10 @@ class BagOfCells {
   std::size_t serialize_to(unsigned char* buffer, std::size_t buff_size, int mode = 0);
   std::string extract_string() const;
 
-  td::Result<long long> deserialize(const td::Slice& data);
-  td::Result<long long> deserialize(const unsigned char* buffer, std::size_t buff_size) {
-    return deserialize(td::Slice{buffer, buff_size});
+  td::Result<long long> deserialize(const td::Slice& data, int max_roots = default_max_roots);
+  td::Result<long long> deserialize(const unsigned char* buffer, std::size_t buff_size,
+                                    int max_roots = default_max_roots) {
+    return deserialize(td::Slice{buffer, buff_size}, max_roots);
   }
   int get_root_count() const {
     return root_count;
@@ -310,5 +305,12 @@ class BagOfCells {
   td::Result<td::Ref<vm::DataCell>> deserialize_cell(int index, td::Slice data, td::Span<td::Ref<DataCell>> cells,
                                                      std::vector<td::uint8>* cell_should_cache);
 };
+
+td::Result<Ref<Cell>> std_boc_deserialize(td::Slice data, bool can_be_empty = false);
+td::Result<td::BufferSlice> std_boc_serialize(Ref<Cell> root, int mode = 0);
+
+td::Result<std::vector<Ref<Cell>>> std_boc_deserialize_multi(td::Slice data,
+                                                             int max_roots = BagOfCells::default_max_roots);
+td::Result<td::BufferSlice> std_boc_serialize_multi(std::vector<Ref<Cell>> root, int mode = 0);
 
 }  // namespace vm

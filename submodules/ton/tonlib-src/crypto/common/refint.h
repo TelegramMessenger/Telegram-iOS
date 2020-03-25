@@ -45,6 +45,8 @@ extern RefInt256 operator%(RefInt256 x, RefInt256 y);
 extern RefInt256 div(RefInt256 x, RefInt256 y, int round_mode = -1);
 extern RefInt256 mod(RefInt256 x, RefInt256 y, int round_mode = -1);
 extern std::pair<RefInt256, RefInt256> divmod(RefInt256 x, RefInt256 y, int round_mode = -1);
+extern RefInt256 muldiv(RefInt256 x, RefInt256 y, RefInt256 z, int round_mode = -1);
+extern std::pair<RefInt256, RefInt256> muldivmod(RefInt256 x, RefInt256 y, RefInt256 z, int round_mode = -1);
 extern RefInt256 operator-(RefInt256 x);
 extern RefInt256 operator&(RefInt256 x, RefInt256 y);
 extern RefInt256 operator|(RefInt256 x, RefInt256 y);

@@ -606,7 +606,8 @@ bool unpack_CurrencyCollection(Ref<vm::CellSlice> csr, td::RefInt256& value, Ref
 bool valid_library_collection(Ref<vm::Cell> cell, bool catch_errors = true);
 
 bool valid_config_data(Ref<vm::Cell> cell, const td::BitArray<256>& addr, bool catch_errors = true,
-                       bool relax_par0 = false);
+                       bool relax_par0 = false, Ref<vm::Cell> old_mparams = {});
+bool config_params_present(vm::Dictionary& dict, Ref<vm::Cell> param_dict_root);
 
 bool add_extra_currency(Ref<vm::Cell> extra1, Ref<vm::Cell> extra2, Ref<vm::Cell>& res);
 bool sub_extra_currency(Ref<vm::Cell> extra1, Ref<vm::Cell> extra2, Ref<vm::Cell>& res);

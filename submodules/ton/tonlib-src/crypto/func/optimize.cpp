@@ -575,9 +575,9 @@ bool Optimizer::find_at_least(int pb) {
            (is_push_rotrev(&i) && rewrite(AsmOp::Push(i), AsmOp::Custom("-ROT"))) ||
            (is_push_xchg(&i, &j, &k) && rewrite(AsmOp::Push(i), AsmOp::Xchg(j, k))) ||
            (is_reverse(&i, &j) && rewrite(AsmOp::BlkReverse(i, j))) ||
+           (is_blkdrop2(&i, &j) && rewrite(AsmOp::BlkDrop2(i, j))) ||
            (is_nip_seq(&i, &j) && rewrite(AsmOp::Xchg(i, j), AsmOp::BlkDrop(i))) ||
            (is_pop_blkdrop(&i, &k) && rewrite(AsmOp::Pop(i), AsmOp::BlkDrop(k))) ||
-           (is_blkdrop2(&i, &j) && rewrite(AsmOp::BlkDrop2(i, j))) ||
            (is_2pop_blkdrop(&i, &j, &k) && (k >= 3 && k <= 13 && i != j + 1 && i <= 15 && j <= 14
                                                 ? rewrite(AsmOp::Xchg2(j + 1, i), AsmOp::BlkDrop(k + 2))
                                                 : rewrite(AsmOp::Pop(i), AsmOp::Pop(j), AsmOp::BlkDrop(k)))) ||

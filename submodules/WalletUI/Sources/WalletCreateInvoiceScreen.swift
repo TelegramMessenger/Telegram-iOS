@@ -142,7 +142,7 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
                 arguments.updateText(WalletCreateInvoiceScreenEntryTag.comment, text)
             }, shouldUpdateText: { text in
                 let textLength: Int = text.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
-                return text.count <= walletTextLimit
+                return textLength <= walletTextLimit
             }, updatedFocus: { focus in
                 arguments.updateState { state in
                     var state = state
@@ -171,7 +171,7 @@ private struct WalletCreateInvoiceScreenState: Equatable {
 
 private func walletCreateInvoiceScreenEntries(presentationData: WalletPresentationData, address: String, state: WalletCreateInvoiceScreenState) -> [WalletCreateInvoiceScreenEntry] {
     var entries: [WalletCreateInvoiceScreenEntry] = []
-    entries.append(.amount(presentationData.theme, state.amount ?? ""))
+    entries.append(.amount(presentationData.theme, state.amount))
     entries.append(.amountInfo(presentationData.theme, presentationData.strings.Wallet_Receive_CreateInvoiceInfo))
     entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
     entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment))
@@ -196,13 +196,10 @@ func walletCreateInvoiceScreen(context: WalletContext, address: String) -> ViewC
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
-    var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var ensureItemVisibleImpl: ((WalletCreateInvoiceScreenEntryTag, Bool) -> Void)?
     
-    weak var currentStatusController: ViewController?
     let arguments = WalletCreateInvoiceScreenArguments(context: context, updateState: { f in
         updateState(f)
     }, updateText: { tag, value in
@@ -250,15 +247,8 @@ func walletCreateInvoiceScreen(context: WalletContext, address: String) -> ViewC
             return state
         }
     }
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
-    }
     pushImpl = { [weak controller] c in
         controller?.push(c)
-    }
-    dismissImpl = { [weak controller] in
-        controller?.view.endEditing(true)
-        let _ = controller?.dismiss()
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
@@ -269,7 +259,6 @@ func walletCreateInvoiceScreen(context: WalletContext, address: String) -> ViewC
                 return
             }
             var resultItemNode: ListViewItemNode?
-            let state = stateValue.with({ $0 })
             let _ = controller.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListItemNode {
                     if let tag = itemNode.tag, tag.isEqual(to: targetTag) {

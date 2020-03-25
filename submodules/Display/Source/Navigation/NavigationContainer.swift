@@ -41,7 +41,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     update(strongSelf)
                 }
             }))
-            if let localIsReady = localIsReady {
+            if let _ = localIsReady {
                 self.isReady = true
             } else {
                 localIsReady = false
@@ -170,12 +170,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let topController = self.controllers[self.controllers.count - 1]
                 let bottomController = self.controllers[self.controllers.count - 2]
                 
-                if let topController = topController as? ViewController {
-                    if !topController.attemptNavigation({ [weak self] in
-                        //let _ = self?.popViewController(animated: true)
-                    }) {
-                        return
-                    }
+                if !topController.attemptNavigation({
+                }) {
+                    return
                 }
                 
                 topController.viewWillDisappear(true)
@@ -221,12 +218,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 
                 if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
                     navigationTransitionCoordinator.animateCompletion(velocity, completion: { [weak self] in
-                        guard let strongSelf = self, let layout = strongSelf.state.layout, let transition = strongSelf.state.transition, let top = strongSelf.state.top else {
+                        guard let strongSelf = self, let _ = strongSelf.state.layout, let _ = strongSelf.state.transition, let top = strongSelf.state.top else {
                             return
                         }
                         
                         let topController = top.value
-                        let bottomController = transition.previous.value
                         
                         if viewTreeContainsFirstResponder(view: top.value.view) {
                             strongSelf.ignoreInputHeight = true
@@ -349,7 +345,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         var updatedStatusBarStyle = self.statusBarStyle
         if let top = self.state.top {
             var updatedLayout = layout
-            if let topTransition = self.state.transition, top.value.view.disableAutomaticKeyboardHandling.isEmpty {
+            if let _ = self.state.transition, top.value.view.disableAutomaticKeyboardHandling.isEmpty {
                 if !viewTreeContainsFirstResponder(view: top.value.view) {
                     updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
                 }

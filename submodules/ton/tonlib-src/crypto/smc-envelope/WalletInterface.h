@@ -45,7 +45,7 @@ class WalletInterface {
   virtual td::Result<td::Ref<vm::Cell>> make_a_gift_message(const td::Ed25519::PrivateKey &private_key,
                                                             td::uint32 valid_until, td::Span<Gift> gifts) const = 0;
   virtual td::Result<td::Ed25519::PublicKey> get_public_key() const {
-    return td::Status::Error("TODO");
+    return td::Status::Error("Unsupported");
   }
 
   td::Result<td::Ref<vm::Cell>> get_init_message(const td::Ed25519::PrivateKey &private_key,

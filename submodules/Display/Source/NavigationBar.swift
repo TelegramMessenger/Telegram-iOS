@@ -1059,7 +1059,7 @@ open class NavigationBar: ASDisplayNode {
             node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
             if let (size, defaultHeight, _, _, _, _) = self.validLayout {
-                node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
+                let _ = node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
                 node.frame = self.backButtonNode.frame
             }
             return node
@@ -1082,7 +1082,7 @@ open class NavigationBar: ASDisplayNode {
             node.updateItems(items)
             node.color = accentColor
             if let (size, defaultHeight, _, _, _, _) = self.validLayout {
-                node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
+                let _ = node.updateLayout(constrainedSize: CGSize(width: size.width, height: defaultHeight))
                 node.frame = self.backButtonNode.frame
             }
             return node

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -65,6 +65,8 @@ class Ed25519 {
   static Result<PrivateKey> generate_private_key();
 
   static Result<SecureString> compute_shared_secret(const PublicKey &public_key, const PrivateKey &private_key);
+
+  static int version();
 };
 
 }  // namespace td

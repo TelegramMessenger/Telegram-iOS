@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -45,6 +45,7 @@ const char* get_exception_msg(Excno exc_no);
 
 class VmError {
   Excno exc_no;
+  bool msg_alloc = false;
   const char* msg;
   long long arg;
 
@@ -54,6 +55,18 @@ class VmError {
   VmError(Excno _excno) : exc_no(_excno), msg(0), arg(0) {
   }
   VmError(Excno _excno, const char* _msg, long long _arg) : exc_no(_excno), msg(_msg), arg(_arg) {
+  }
+  VmError(Excno _excno, std::string _msg, long long _arg = 0) : exc_no(_excno), msg_alloc(true), arg(_arg) {
+    msg_alloc = true;
+    char* p = (char*)malloc(_msg.size() + 1);
+    memcpy(p, _msg.data(), _msg.size());
+    p[_msg.size()] = 0;
+    msg = p;
+  }
+  ~VmError() {
+    if (msg_alloc) {
+      free(const_cast<char*>(msg));
+    }
   }
   int get_errno() const {
     return static_cast<int>(exc_no);

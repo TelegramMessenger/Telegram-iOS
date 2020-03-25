@@ -6,63 +6,17 @@ import SwiftSignalKit
 private enum Corner: Hashable {
     case TopLeft(Int), TopRight(Int), BottomLeft(Int), BottomRight(Int)
     
-    var hashValue: Int {
-        switch self {
-            case let .TopLeft(radius):
-                return radius | (1 << 24)
-            case let .TopRight(radius):
-                return radius | (2 << 24)
-            case let .BottomLeft(radius):
-                return radius | (3 << 24)
-            case let .BottomRight(radius):
-                return radius | (4 << 24)
-        }
-    }
-    
     var radius: Int {
         switch self {
-            case let .TopLeft(radius):
-                return radius
-            case let .TopRight(radius):
-                return radius
-            case let .BottomLeft(radius):
-                return radius
-            case let .BottomRight(radius):
-                return radius
+        case let .TopLeft(radius):
+            return radius
+        case let .TopRight(radius):
+            return radius
+        case let .BottomLeft(radius):
+            return radius
+        case let .BottomRight(radius):
+            return radius
         }
-    }
-}
-
-private func ==(lhs: Corner, rhs: Corner) -> Bool {
-    switch lhs {
-        case let .TopLeft(lhsRadius):
-            switch rhs {
-                case let .TopLeft(rhsRadius) where rhsRadius == lhsRadius:
-                    return true
-                default:
-                    return false
-            }
-        case let .TopRight(lhsRadius):
-            switch rhs {
-                case let .TopRight(rhsRadius) where rhsRadius == lhsRadius:
-                    return true
-                default:
-                    return false
-            }
-        case let .BottomLeft(lhsRadius):
-            switch rhs {
-                case let .BottomLeft(rhsRadius) where rhsRadius == lhsRadius:
-                    return true
-                default:
-                    return false
-            }
-        case let .BottomRight(lhsRadius):
-            switch rhs {
-                case let .BottomRight(rhsRadius) where rhsRadius == lhsRadius:
-                    return true
-                default:
-                    return false
-            }
     }
 }
 
@@ -70,15 +24,6 @@ private enum Tail: Hashable {
     case BottomLeft(Int)
     case BottomRight(Int)
     
-    var hashValue: Int {
-        switch self {
-            case let .BottomLeft(radius):
-                return radius | (1 << 24)
-            case let .BottomRight(radius):
-                return radius | (2 << 24)
-        }
-    }
-    
     var radius: Int {
         switch self {
             case let .BottomLeft(radius):
@@ -86,25 +31,6 @@ private enum Tail: Hashable {
             case let .BottomRight(radius):
                 return radius
         }
-    }
-}
-
-private func ==(lhs: Tail, rhs: Tail) -> Bool {
-    switch lhs {
-        case let .BottomLeft(lhsRadius):
-            switch rhs {
-                case let .BottomLeft(rhsRadius) where rhsRadius == lhsRadius:
-                    return true
-                default:
-                    return false
-            }
-        case let .BottomRight(lhsRadius):
-            switch rhs {
-                case let .BottomRight(rhsRadius) where rhsRadius == lhsRadius:
-                    return true
-                default:
-                    return false
-            }
     }
 }
 

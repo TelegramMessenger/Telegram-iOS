@@ -114,7 +114,13 @@ class liteServer_info;
 
 class msg_Data;
 
-class msg_dataArray;
+class msg_dataDecrypted;
+
+class msg_dataDecryptedArray;
+
+class msg_dataEncrypted;
+
+class msg_dataEncryptedArray;
 
 class msg_message;
 
@@ -1292,15 +1298,65 @@ class msg_dataEncryptedText final : public msg_Data {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
-class msg_dataArray final : public Object {
+class msg_dataDecrypted final : public Object {
  public:
-  std::vector<object_ptr<msg_Data>> elements_;
+  std::string proof_;
+  object_ptr<msg_Data> data_;
 
-  msg_dataArray();
+  msg_dataDecrypted();
 
-  explicit msg_dataArray(std::vector<object_ptr<msg_Data>> &&elements_);
+  msg_dataDecrypted(std::string const &proof_, object_ptr<msg_Data> &&data_);
 
-  static const std::int32_t ID = 1248461374;
+  static const std::int32_t ID = 195649769;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class msg_dataDecryptedArray final : public Object {
+ public:
+  std::vector<object_ptr<msg_dataDecrypted>> elements_;
+
+  msg_dataDecryptedArray();
+
+  explicit msg_dataDecryptedArray(std::vector<object_ptr<msg_dataDecrypted>> &&elements_);
+
+  static const std::int32_t ID = -480491767;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class msg_dataEncrypted final : public Object {
+ public:
+  object_ptr<accountAddress> source_;
+  object_ptr<msg_Data> data_;
+
+  msg_dataEncrypted();
+
+  msg_dataEncrypted(object_ptr<accountAddress> &&source_, object_ptr<msg_Data> &&data_);
+
+  static const std::int32_t ID = 564215121;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class msg_dataEncryptedArray final : public Object {
+ public:
+  std::vector<object_ptr<msg_dataEncrypted>> elements_;
+
+  msg_dataEncryptedArray();
+
+  explicit msg_dataEncryptedArray(std::vector<object_ptr<msg_dataEncrypted>> &&elements_);
+
+  static const std::int32_t ID = 608655794;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1311,14 +1367,15 @@ class msg_dataArray final : public Object {
 class msg_message final : public Object {
  public:
   object_ptr<accountAddress> destination_;
+  std::string public_key_;
   std::int64_t amount_;
   object_ptr<msg_Data> data_;
 
   msg_message();
 
-  msg_message(object_ptr<accountAddress> &&destination_, std::int64_t amount_, object_ptr<msg_Data> &&data_);
+  msg_message(object_ptr<accountAddress> &&destination_, std::string const &public_key_, std::int64_t amount_, object_ptr<msg_Data> &&data_);
 
-  static const std::int32_t ID = 1349943761;
+  static const std::int32_t ID = -2110533580;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1417,8 +1474,8 @@ class raw_fullAccountState final : public Object {
 
 class raw_message final : public Object {
  public:
-  std::string source_;
-  std::string destination_;
+  object_ptr<accountAddress> source_;
+  object_ptr<accountAddress> destination_;
   std::int64_t value_;
   std::int64_t fwd_fee_;
   std::int64_t ihr_fee_;
@@ -1428,9 +1485,9 @@ class raw_message final : public Object {
 
   raw_message();
 
-  raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, object_ptr<msg_Data> &&msg_data_);
+  raw_message(object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, object_ptr<msg_Data> &&msg_data_);
 
-  static const std::int32_t ID = -32842388;
+  static const std::int32_t ID = 1368093263;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -2276,18 +2333,37 @@ class liteServer_getInfo final : public Function {
 class msg_decrypt final : public Function {
  public:
   object_ptr<InputKey> input_key_;
-  object_ptr<msg_dataArray> data_;
+  object_ptr<msg_dataEncryptedArray> data_;
 
   msg_decrypt();
 
-  msg_decrypt(object_ptr<InputKey> &&input_key_, object_ptr<msg_dataArray> &&data_);
+  msg_decrypt(object_ptr<InputKey> &&input_key_, object_ptr<msg_dataEncryptedArray> &&data_);
 
-  static const std::int32_t ID = 1131086633;
+  static const std::int32_t ID = 223596297;
   std::int32_t get_id() const final {
     return ID;
   }
 
-  using ReturnType = object_ptr<msg_dataArray>;
+  using ReturnType = object_ptr<msg_dataDecryptedArray>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class msg_decryptWithProof final : public Function {
+ public:
+  std::string proof_;
+  object_ptr<msg_dataEncrypted> data_;
+
+  msg_decryptWithProof();
+
+  msg_decryptWithProof(std::string const &proof_, object_ptr<msg_dataEncrypted> &&data_);
+
+  static const std::int32_t ID = -2111649663;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<msg_Data>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };

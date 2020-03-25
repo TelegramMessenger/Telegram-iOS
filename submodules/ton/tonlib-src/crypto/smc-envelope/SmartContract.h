@@ -55,12 +55,17 @@ class SmartContract : public td::CntObject {
     td::optional<vm::GasLimits> limits;
     td::optional<td::Ref<vm::Tuple>> c7;
     td::optional<td::Ref<vm::Stack>> stack;
+    td::optional<td::int32> now;
     bool ignore_chksig{false};
 
     Args() {
     }
     Args(std::initializer_list<vm::StackEntry> stack)
         : stack(td::Ref<vm::Stack>(true, std::vector<vm::StackEntry>(std::move(stack)))) {
+    }
+    Args&& set_now(int now) {
+      this->now = now;
+      return std::move(*this);
     }
     Args&& set_method_id(td::Slice method_name) {
       unsigned crc = td::crc16(method_name);

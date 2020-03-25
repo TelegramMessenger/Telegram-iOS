@@ -14,11 +14,12 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
 #include <string>
+#include <vector>
 #include <iostream>
 
 namespace src {
@@ -31,9 +32,13 @@ namespace src {
 
 struct FileDescr {
   std::string filename;
+  std::string text;
+  std::vector<long> line_offs;
   bool is_stdin;
   FileDescr(std::string _fname, bool _stdin = false) : filename(std::move(_fname)), is_stdin(_stdin) {
   }
+  const char* push_line(std::string new_line);
+  const char* convert_offset(long offset, long* line_no, long* line_pos, long* line_size = nullptr) const;
 };
 
 struct Fatal {
@@ -49,15 +54,22 @@ std::ostream& operator<<(std::ostream& os, const Fatal& fatal);
 
 struct SrcLocation {
   const FileDescr* fdescr;
-  int line_no;
-  int line_pos;
-  std::string text;
-  SrcLocation() : fdescr(nullptr), line_no(0), line_pos(-1) {
+  long char_offs;
+  SrcLocation() : fdescr(nullptr), char_offs(-1) {
   }
-  SrcLocation(const FileDescr* _fdescr, int line = 0, int pos = -1) : fdescr(_fdescr), line_no(line), line_pos(pos) {
+  SrcLocation(const FileDescr* _fdescr, long offs = -1) : fdescr(_fdescr), char_offs(-1) {
   }
   bool defined() const {
     return fdescr;
+  }
+  bool eof() const {
+    return char_offs == -1;
+  }
+  void set_eof() {
+    char_offs = -1;
+  }
+  const char* convert_pos(long* line_no, long* line_pos, long* line_size = nullptr) const {
+    return defined() ? fdescr->convert_offset(char_offs, line_no, line_pos, line_size) : nullptr;
   }
   void show(std::ostream& os) const;
   bool show_context(std::ostream& os) const;
@@ -98,6 +110,7 @@ struct ParseError : Error {
 
 class SourceReader {
   std::istream* ifs;
+  FileDescr* fdescr;
   SrcLocation loc;
   bool eof;
   std::string cur_line;
@@ -106,7 +119,7 @@ class SourceReader {
   const char *start, *cur, *end;
 
  public:
-  SourceReader(std::istream* _is, const FileDescr* _fdescr);
+  SourceReader(std::istream* _is, FileDescr* _fdescr);
   bool load_line();
   bool is_eof() const {
     return eof;

@@ -89,7 +89,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { [weak self] point in
+        recognizer.tapActionAtPoint = { point in
             return .waitForSingleTap
         }
         self.addressNode.view.addGestureRecognizer(recognizer)
@@ -98,7 +98,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .longTap:
                     self.item?.displayAddressContextMenu(self, self.addressNode.frame)
@@ -129,7 +129,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
             let contentVerticalOrigin: CGFloat = 10.0
             
             let sideInset: CGFloat = 16.0
-            var iconOffset = CGPoint()
+            let iconOffset = CGPoint()
             
             let title = item.strings.Wallet_Info_WalletCreated
             let text = item.strings.Wallet_Info_Address

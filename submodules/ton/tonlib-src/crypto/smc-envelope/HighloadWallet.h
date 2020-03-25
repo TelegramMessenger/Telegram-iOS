@@ -26,7 +26,7 @@
 #include "vm/cells/CellString.h"
 
 namespace ton {
-class HighloadWallet : ton::SmartContract, public WalletInterface {
+class HighloadWallet : public ton::SmartContract, public WalletInterface {
  public:
   explicit HighloadWallet(State state) : ton::SmartContract(std::move(state)) {
   }

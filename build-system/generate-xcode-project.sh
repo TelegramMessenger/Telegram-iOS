@@ -4,7 +4,7 @@ set -e
 
 APP_TARGET="$1"
 if [ "$APP_TARGET" == "" ]; then
-	echo "Usage: sh generate-xcode-project.sh app_target"
+	echo "Usage: sh generate-xcode-project.sh app_target_folder"
 	exit 1
 fi
 
@@ -19,31 +19,6 @@ INSTALLED_XCODE_VERSION=$(echo `plutil -p \`xcode-select -p\`/../Info.plist | gr
 
 if [ "$INSTALLED_XCODE_VERSION" != "$XCODE_VERSION" ]; then
 	echo "Xcode $XCODE_VERSION required, $INSTALLED_XCODE_VERSION installed (at $(xcode-select -p))"
-	exit 1
-fi
-
-EXPECTED_VARIABLES=(\
-	BUILD_NUMBER \
-	APP_VERSION \
-	BUNDLE_ID \
-	DEVELOPMENT_TEAM \
-	API_ID \
-	API_HASH \
-	APP_CENTER_ID \
-	IS_INTERNAL_BUILD \
-	IS_APPSTORE_BUILD \
-	APPSTORE_ID \
-	APP_SPECIFIC_URL_SCHEME \
-)
-
-MISSING_VARIABLES="0"
-for VARIABLE_NAME in ${EXPECTED_VARIABLES[@]}; do
-	if [ "${!VARIABLE_NAME}" = "" ]; then
-		echo "$VARIABLE_NAME not defined"
-		MISSING_VARIABLES="1"
-	fi
-done
-if [ "$MISSING_VARIABLES" == "1" ]; then
 	exit 1
 fi
 
@@ -84,18 +59,16 @@ fi
 	--bazel "$BAZEL" \
 	--outputfolder "$GEN_DIRECTORY" \
 	--target "$APP_TARGET":"$APP_TARGET" \
-	--target "$APP_TARGET":Main \
-	--target "$APP_TARGET":Lib \
 
 PATCH_OPTIONS="BazelBuildOptionsDebug BazelBuildOptionsRelease"
 for NAME in $PATCH_OPTIONS; do
-	sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("'"$NAME"'" : {\n[ ]*"p" : "$(inherited)\)/\1'" ${BAZEL_OPTIONS[*]}"'/' "$GEN_DIRECTORY/$APP_TARGET.tulsiproj/Configs/$APP_TARGET.tulsigen"
+	sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("'"$NAME"'" : {\n[ ]*"p" : "$(inherited)\)/\1'" ${BAZEL_OPTIONS[*]}"'/' "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj/Configs/${APP_TARGET}.tulsigen"
 done
 
-sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"$APP_TARGET\/...", "submodules\/..."/' "$GEN_DIRECTORY/$APP_TARGET.tulsiproj/Configs/$APP_TARGET.tulsigen"
+sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"'"${APP_TARGET}"'\/...", "submodules\/..."/' "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj/Configs/${APP_TARGET}.tulsigen"
 
 "$TULSI" -- \
 	--verbose \
-	--genconfig "$GEN_DIRECTORY/$APP_TARGET.tulsiproj:$APP_TARGET" \
+	--genconfig "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj:${APP_TARGET}" \
 	--bazel "$BAZEL" \
 	--outputfolder "$GEN_DIRECTORY" \

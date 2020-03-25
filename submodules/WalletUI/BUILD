@@ -20,6 +20,10 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    data = [
+        ":WalletUIResources",
+        ":WalletUIAssets",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

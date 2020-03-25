@@ -414,7 +414,7 @@ block_info#9bc7a987 version:uint32
   after_split:(## 1) 
   want_split:Bool want_merge:Bool
   key_block:Bool vert_seqno_incr:(## 1)
-  flags:(## 8)
+  flags:(## 8) { flags <= 1 }
   seq_no:# vert_seq_no:# { vert_seq_no >= vert_seqno_incr } 
   { prev_seq_no:# } { ~prev_seq_no + 1 = seq_no } 
   shard:ShardIdent gen_utime:uint32
@@ -423,6 +423,7 @@ block_info#9bc7a987 version:uint32
   gen_catchain_seqno:uint32
   min_ref_mc_seqno:uint32
   prev_key_block_seqno:uint32
+  gen_software:flags . 0?GlobalVersion
   master_ref:not_master?^BlkMasterInfo 
   prev_ref:^(BlkPrevInfo after_merge)
   prev_vert_ref:vert_seqno_incr?^(BlkPrevInfo 0)
@@ -572,6 +573,17 @@ _ to_mint:ExtraCurrencyCollection = ConfigParam 7;
 capabilities#c4 version:uint32 capabilities:uint64 = GlobalVersion;
 _ GlobalVersion = ConfigParam 8;  // all zero if absent
 _ mandatory_params:(Hashmap 32 True) = ConfigParam 9;
+_ critical_params:(Hashmap 32 True) = ConfigParam 10;
+
+cfg_vote_cfg#36 min_tot_rounds:uint8 max_tot_rounds:uint8 min_wins:uint8 max_losses:uint8 min_store_sec:uint32 max_store_sec:uint32 bit_price:uint32 cell_price:uint32 = ConfigProposalSetup;
+cfg_vote_setup#91 normal_params:^ConfigProposalSetup critical_params:^ConfigProposalSetup = ConfigVotingSetup;
+_ ConfigVotingSetup = ConfigParam 11;
+
+cfg_proposal#f3 param_id:int32 param_value:(Maybe ^Cell) if_hash_equal:(Maybe uint256) 
+  = ConfigProposal;
+cfg_proposal_status#ce expires:uint32 proposal:^ConfigProposal is_critical:Bool
+  voters:(HashmapE 16 True) remaining_weight:int64 validator_set_id:uint256 
+  rounds_remaining:uint8 wins:uint8 losses:uint8 = ConfigProposalStatus;
 
 wfmt_basic#1 vm_version:int32 vm_mode:uint64 = WorkchainFormat 1;
 wfmt_ext#0 min_addr_len:(## 12) max_addr_len:(## 12) addr_len_step:(## 12)

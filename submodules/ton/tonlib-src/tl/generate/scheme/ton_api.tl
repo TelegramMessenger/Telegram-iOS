@@ -58,8 +58,8 @@ adnl.id.short id:int256 = adnl.id.Short;
 adnl.proxyToFastHash ip:int port:int date:int data_hash:int256 shared_secret:int256 = adnl.ProxyTo;
 adnl.proxyToFast ip:int port:int date:int signature:int256 = adnl.ProxyToSign;
 
-adnl.proxy.none = adnl.Proxy;
-adnl.proxy.fast shared_secret:bytes = adnl.Proxy;
+adnl.proxy.none id:int256 = adnl.Proxy;
+adnl.proxy.fast id:int256 shared_secret:bytes = adnl.Proxy;
 
 
 adnl.address.udp ip:int port:int = adnl.Address;
@@ -67,7 +67,7 @@ adnl.address.udp6 ip:int128 port:int = adnl.Address;
 //adnl.address.tcp ip:int port:int = adnl.Address;
 //adnl.address.tcp6 ip:int128 port:int = adnl.Address;
 
-//adnl.address.tunnel to:adnl.Address tunid: = adnl.Address; 
+adnl.address.tunnel to:int256 pubkey:PublicKey = adnl.Address; 
 
 adnl.addressList addrs:(vector adnl.Address) version:int reinit_date:int priority:int expire_at:int = adnl.AddressList;
 
@@ -96,6 +96,34 @@ adnl.packetContents
   signature:flags.11?bytes 
   rand2:bytes 
         = adnl.PacketContents;
+
+adnl.tunnelPacketContents 
+  rand1:bytes 
+  flags:# 
+  from_ip:flags.0?int
+  from_port:flags.0?int
+  message:flags.1?bytes 
+  statistics:flags.2?bytes
+  payment:flags.3?bytes
+  rand2:bytes 
+        = adnl.TunnelPacketContents;
+
+
+// flag 16 - packet is outbound
+// flag 17 - control packet
+adnl.proxyPacketHeader
+  proxy_id:int256
+  flags:# 
+  ip:flags.0?int
+  port:flags.0?int
+  adnl_start_time:flags.1?int
+  seqno:flags.2?long
+  date:flags.3?int
+  signature:int256 = adnl.ProxyPacketHeader;
+
+adnl.proxyControlPacketPing id:int256 = adnl.ProxyControlPacket;
+adnl.proxyControlPacketPong id:int256 = adnl.ProxyControlPacket;
+adnl.proxyControlPacketRegister ip:int port:int = adnl.ProxyControlPacket;
 
 
 adnl.message.createChannel key:int256 date:int = adnl.Message;

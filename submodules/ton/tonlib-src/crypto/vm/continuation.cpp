@@ -610,30 +610,4 @@ Ref<OrdCont> OrdCont::deserialize(CellSlice& cs, int mode) {
              : Ref<OrdCont>{};
 }
 
-void VmState::init_cregs(bool same_c3, bool push_0) {
-  cr.set_c0(quit0);
-  cr.set_c1(quit1);
-  cr.set_c2(Ref<ExcQuitCont>{true});
-  if (same_c3) {
-    cr.set_c3(Ref<OrdCont>{true, code, cp});
-    if (push_0) {
-      VM_LOG(this) << "implicit PUSH 0 at start\n";
-      get_stack().push_smallint(0);
-    }
-  } else {
-    cr.set_c3(Ref<QuitCont>{true, 11});
-  }
-  if (cr.d[0].is_null() || cr.d[1].is_null()) {
-    auto empty_cell = CellBuilder{}.finalize();
-    for (int i = 0; i < ControlRegs::dreg_num; i++) {
-      if (cr.d[i].is_null()) {
-        cr.d[i] = empty_cell;
-      }
-    }
-  }
-  if (cr.c7.is_null()) {
-    cr.set_c7(Ref<Tuple>{true});
-  }
-}
-
 }  // namespace vm

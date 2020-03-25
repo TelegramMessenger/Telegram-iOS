@@ -154,7 +154,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
         
         let spacingOffset: CGFloat = 9.0
-        var verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
+        let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
         
         let titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)

@@ -1288,32 +1288,94 @@ void msg_dataEncryptedText::store(td::TlStorerToString &s, const char *field_nam
   }
 }
 
-msg_dataArray::msg_dataArray()
+msg_dataDecrypted::msg_dataDecrypted()
+  : proof_()
+  , data_()
+{}
+
+msg_dataDecrypted::msg_dataDecrypted(std::string const &proof_, object_ptr<msg_Data> &&data_)
+  : proof_(std::move(proof_))
+  , data_(std::move(data_))
+{}
+
+const std::int32_t msg_dataDecrypted::ID;
+
+void msg_dataDecrypted::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataDecrypted");
+    s.store_bytes_field("proof", proof_);
+    if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
+    s.store_class_end();
+  }
+}
+
+msg_dataDecryptedArray::msg_dataDecryptedArray()
   : elements_()
 {}
 
-msg_dataArray::msg_dataArray(std::vector<object_ptr<msg_Data>> &&elements_)
+msg_dataDecryptedArray::msg_dataDecryptedArray(std::vector<object_ptr<msg_dataDecrypted>> &&elements_)
   : elements_(std::move(elements_))
 {}
 
-const std::int32_t msg_dataArray::ID;
+const std::int32_t msg_dataDecryptedArray::ID;
 
-void msg_dataArray::store(td::TlStorerToString &s, const char *field_name) const {
+void msg_dataDecryptedArray::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "msg_dataArray");
-    { const std::vector<object_ptr<msg_Data>> &v = elements_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("elements", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_begin(field_name, "msg_dataDecryptedArray");
+    { const std::vector<object_ptr<msg_dataDecrypted>> &v = elements_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("elements", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+msg_dataEncrypted::msg_dataEncrypted()
+  : source_()
+  , data_()
+{}
+
+msg_dataEncrypted::msg_dataEncrypted(object_ptr<accountAddress> &&source_, object_ptr<msg_Data> &&data_)
+  : source_(std::move(source_))
+  , data_(std::move(data_))
+{}
+
+const std::int32_t msg_dataEncrypted::ID;
+
+void msg_dataEncrypted::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataEncrypted");
+    if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
+    if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
+    s.store_class_end();
+  }
+}
+
+msg_dataEncryptedArray::msg_dataEncryptedArray()
+  : elements_()
+{}
+
+msg_dataEncryptedArray::msg_dataEncryptedArray(std::vector<object_ptr<msg_dataEncrypted>> &&elements_)
+  : elements_(std::move(elements_))
+{}
+
+const std::int32_t msg_dataEncryptedArray::ID;
+
+void msg_dataEncryptedArray::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_dataEncryptedArray");
+    { const std::vector<object_ptr<msg_dataEncrypted>> &v = elements_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("elements", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_class_end();
   }
 }
 
 msg_message::msg_message()
   : destination_()
+  , public_key_()
   , amount_()
   , data_()
 {}
 
-msg_message::msg_message(object_ptr<accountAddress> &&destination_, std::int64_t amount_, object_ptr<msg_Data> &&data_)
+msg_message::msg_message(object_ptr<accountAddress> &&destination_, std::string const &public_key_, std::int64_t amount_, object_ptr<msg_Data> &&data_)
   : destination_(std::move(destination_))
+  , public_key_(std::move(public_key_))
   , amount_(amount_)
   , data_(std::move(data_))
 {}
@@ -1324,6 +1386,7 @@ void msg_message::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "msg_message");
     if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
+    s.store_field("public_key", public_key_);
     s.store_field("amount", amount_);
     if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
     s.store_class_end();
@@ -1458,7 +1521,7 @@ raw_message::raw_message()
   , msg_data_()
 {}
 
-raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, object_ptr<msg_Data> &&msg_data_)
+raw_message::raw_message(object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, object_ptr<msg_Data> &&msg_data_)
   : source_(std::move(source_))
   , destination_(std::move(destination_))
   , value_(value_)
@@ -1474,8 +1537,8 @@ const std::int32_t raw_message::ID;
 void raw_message::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "raw_message");
-    s.store_field("source", source_);
-    s.store_field("destination", destination_);
+    if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
+    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
     s.store_field("value", value_);
     s.store_field("fwd_fee", fwd_fee_);
     s.store_field("ihr_fee", ihr_fee_);
@@ -2409,7 +2472,7 @@ msg_decrypt::msg_decrypt()
   , data_()
 {}
 
-msg_decrypt::msg_decrypt(object_ptr<InputKey> &&input_key_, object_ptr<msg_dataArray> &&data_)
+msg_decrypt::msg_decrypt(object_ptr<InputKey> &&input_key_, object_ptr<msg_dataEncryptedArray> &&data_)
   : input_key_(std::move(input_key_))
   , data_(std::move(data_))
 {}
@@ -2420,6 +2483,27 @@ void msg_decrypt::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "msg_decrypt");
     if (input_key_ == nullptr) { s.store_field("input_key", "null"); } else { input_key_->store(s, "input_key"); }
+    if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
+    s.store_class_end();
+  }
+}
+
+msg_decryptWithProof::msg_decryptWithProof()
+  : proof_()
+  , data_()
+{}
+
+msg_decryptWithProof::msg_decryptWithProof(std::string const &proof_, object_ptr<msg_dataEncrypted> &&data_)
+  : proof_(std::move(proof_))
+  , data_(std::move(data_))
+{}
+
+const std::int32_t msg_decryptWithProof::ID;
+
+void msg_decryptWithProof::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "msg_decryptWithProof");
+    s.store_bytes_field("proof", proof_);
     if (data_ == nullptr) { s.store_field("data", "null"); } else { data_->store(s, "data"); }
     s.store_class_end();
   }

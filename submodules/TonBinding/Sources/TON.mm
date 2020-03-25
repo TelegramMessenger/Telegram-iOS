@@ -46,8 +46,8 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
     if (message == nullptr) {
         return nil;
     }
-    NSString *source = readString(message->source_);
-    NSString *destination = readString(message->destination_);
+    NSString *source = readString(message->source_->account_address_);
+    NSString *destination = readString(message->destination_->account_address_);
     
     id<TONTransactionMessageContents> contents = nil;
     if (message->msg_data_->get_id() == tonlib_api::msg_dataRaw::ID) {
@@ -71,7 +71,8 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
         }
     } else if (message->msg_data_->get_id() == tonlib_api::msg_dataEncryptedText::ID) {
         auto msgData = tonlib_api::move_object_as<tonlib_api::msg_dataEncryptedText>(message->msg_data_);
-        contents = [[TONTransactionMessageContentsEncryptedText alloc] initWithData:makeData(msgData->text_)];
+        TONEncryptedData *encryptedData = [[TONEncryptedData alloc] initWithSourceAddress:source data:makeData(msgData->text_)];
+        contents = [[TONTransactionMessageContentsEncryptedText alloc] initWithEncryptedData:encryptedData];
     } else {
         contents = [[TONTransactionMessageContentsRawData alloc] initWithData:[NSData data]];
     }
@@ -150,10 +151,10 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONTransactionMessageContentsEncryptedText
 
-- (instancetype)initWithData:(NSData * _Nonnull)data {
+- (instancetype)initWithEncryptedData:(TONEncryptedData * _Nonnull)encryptedData {
     self = [super init];
     if (self != nil) {
-        _data = data;
+        _encryptedData = encryptedData;
     }
     return self;
 }
@@ -268,6 +269,19 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
     self = [super init];
     if (self != nil) {
         _defaultWalletId = defaultWalletId;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONEncryptedData
+
+- (instancetype)initWithSourceAddress:(NSString * _Nonnull)sourceAddress data:(NSData * _Nonnull)data {
+    self = [super init];
+    if (self != nil) {
+        _sourceAddress = sourceAddress;
+        _data = data;
     }
     return self;
 }
@@ -752,6 +766,7 @@ typedef enum {
         std::vector<tonlib_api::object_ptr<tonlib_api::msg_message> > inputMessages;
         inputMessages.push_back(make_object<tonlib_api::msg_message>(
             make_object<tonlib_api::accountAddress>(address.UTF8String),
+            makeString([NSData data]),
             amount,
             tonlib_api::move_object_as<tonlib_api::msg_Data>(inputMessageData)
         ));
@@ -812,6 +827,7 @@ typedef enum {
         std::vector<tonlib_api::object_ptr<tonlib_api::msg_message> > inputMessages;
         inputMessages.push_back(make_object<tonlib_api::msg_message>(
             make_object<tonlib_api::accountAddress>(address.UTF8String),
+            makeString([NSData data]),
             amount,
             tonlib_api::move_object_as<tonlib_api::msg_Data>(inputMessageData)
         ));
@@ -1093,7 +1109,7 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (SSignal *)decryptMessagesWithKey:(TONKey * _Nonnull)key localPassword:(NSData * _Nonnull)localPassword messages:(NSArray<NSData *> * _Nonnull)messages {
+- (SSignal *)decryptMessagesWithKey:(TONKey * _Nonnull)key localPassword:(NSData * _Nonnull)localPassword messages:(NSArray<TONEncryptedData *> * _Nonnull)messages {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
@@ -1108,24 +1124,24 @@ typedef enum {
             if (object->get_id() == tonlib_api::error::ID) {
                 auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
-            } else if (object->get_id() == tonlib_api::msg_dataArray::ID) {
-                auto result = tonlib_api::move_object_as<tonlib_api::msg_dataArray>(object);
+            } else if (object->get_id() == tonlib_api::msg_dataDecryptedArray::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::msg_dataDecryptedArray>(object);
                 if (result->elements_.size() != messages.count) {
                     [subscriber putError:[[TONError alloc] initWithText:@"API interaction error"]];
                 } else {
                     NSMutableArray<id<TONTransactionMessageContents> > *resultMessages = [[NSMutableArray alloc] init];
                     int index = 0;
                     for (auto &it : result->elements_) {
-                        if (it->get_id() == tonlib_api::msg_dataDecryptedText::ID) {
-                            auto dataDecryptedText = tonlib_api::move_object_as<tonlib_api::msg_dataDecryptedText>(it);
+                        if (it->data_->get_id() == tonlib_api::msg_dataDecryptedText::ID) {
+                            auto dataDecryptedText = tonlib_api::move_object_as<tonlib_api::msg_dataDecryptedText>(it->data_);
                             NSString *decryptedString = readString(dataDecryptedText->text_);
                             if (decryptedString != nil) {
                                 [resultMessages addObject:[[TONTransactionMessageContentsPlainText alloc] initWithText:decryptedString]];
                             } else {
-                                [resultMessages addObject:[[TONTransactionMessageContentsEncryptedText alloc] initWithData:messages[index]]];
+                                [resultMessages addObject:[[TONTransactionMessageContentsEncryptedText alloc] initWithEncryptedData:messages[index]]];
                             }
                         } else {
-                            [resultMessages addObject:[[TONTransactionMessageContentsEncryptedText alloc] initWithData:messages[index]]];
+                            [resultMessages addObject:[[TONTransactionMessageContentsEncryptedText alloc] initWithEncryptedData:messages[index]]];
                         }
                         index++;
                     }
@@ -1137,10 +1153,20 @@ typedef enum {
             }
         }];
         
-        std::vector<tonlib_api::object_ptr<tonlib_api::msg_Data>> inputData;
-        for (NSData *message in messages) {
-            inputData.push_back(make_object<tonlib_api::msg_dataEncryptedText>(
-                makeString(message)
+        std::vector<tonlib_api::object_ptr<tonlib_api::msg_dataEncrypted>> inputData;
+        for (TONEncryptedData *message in messages) {
+            NSData *sourceAddressData = [message.sourceAddress dataUsingEncoding:NSUTF8StringEncoding];
+            if (sourceAddressData == nil) {
+                continue;
+            }
+            
+            inputData.push_back(make_object<tonlib_api::msg_dataEncrypted>(
+                make_object<tonlib_api::accountAddress>(
+                    makeString(sourceAddressData)
+                ),
+                make_object<tonlib_api::msg_dataEncryptedText>(
+                    makeString(message.data)
+                )
             ));
         }
         
@@ -1152,7 +1178,7 @@ typedef enum {
                 ),
                 makeSecureString(localPassword)
             ),
-            make_object<tonlib_api::msg_dataArray>(
+            make_object<tonlib_api::msg_dataEncryptedArray>(
                 std::move(inputData)
             )
         );

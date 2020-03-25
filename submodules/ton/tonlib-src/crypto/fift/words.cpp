@@ -177,28 +177,15 @@ void interpret_divmod(vm::Stack& stack, int round_mode) {
 }
 
 void interpret_times_div(vm::Stack& stack, int round_mode) {
-  auto z = stack.pop_int();
-  auto y = stack.pop_int();
-  auto x = stack.pop_int();
-  typename td::BigInt256::DoubleInt tmp{0};
-  tmp.add_mul(*x, *y);
-  auto q = td::make_refint();
-  tmp.mod_div(*z, q.unique_write(), round_mode);
-  q.unique_write().normalize();
-  stack.push_int(std::move(q));
+  auto z = stack.pop_int(), y = stack.pop_int(), x = stack.pop_int();
+  stack.push_int(muldiv(std::move(x), std::move(y), std::move(z), round_mode));
 }
 
 void interpret_times_divmod(vm::Stack& stack, int round_mode) {
-  auto z = stack.pop_int();
-  auto y = stack.pop_int();
-  auto x = stack.pop_int();
-  typename td::BigInt256::DoubleInt tmp{0};
-  tmp.add_mul(*x, *y);
-  auto q = td::make_refint();
-  tmp.mod_div(*z, q.unique_write(), round_mode);
-  q.unique_write().normalize();
-  stack.push_int(std::move(q));
-  stack.push_int(td::make_refint(tmp));
+  auto z = stack.pop_int(), y = stack.pop_int(), x = stack.pop_int();
+  auto dm = muldivmod(std::move(x), std::move(y), std::move(z));
+  stack.push_int(std::move(dm.first));
+  stack.push_int(std::move(dm.second));
 }
 
 void interpret_times_mod(vm::Stack& stack, int round_mode) {
@@ -2242,6 +2229,7 @@ std::vector<Ref<vm::Cell>> get_vm_libraries() {
 // +16 = load c7 (smart-contract context)
 // +32 = return c5 (actions)
 // +64 = log vm ops to stderr
+// +128 = pop hard gas limit (enabled by ACCEPT) from stack as well
 void interpret_run_vm(IntCtx& ctx, int mode) {
   if (mode < 0) {
     mode = ctx.stack.pop_smallint_range(0xff);
@@ -2249,7 +2237,13 @@ void interpret_run_vm(IntCtx& ctx, int mode) {
   bool with_data = mode & 4;
   Ref<vm::Tuple> c7;
   Ref<vm::Cell> data, actions;
+  long long gas_max = (mode & 128) ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
   long long gas_limit = (mode & 8) ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
+  if (!(mode & 128)) {
+    gas_max = gas_limit;
+  } else {
+    gas_max = std::max(gas_max, gas_limit);
+  }
   if (mode & 16) {
     c7 = ctx.stack.pop_tuple();
   }
@@ -2259,7 +2253,7 @@ void interpret_run_vm(IntCtx& ctx, int mode) {
   auto cs = ctx.stack.pop_cellslice();
   OstreamLogger ostream_logger(ctx.error_stream);
   auto log = create_vm_log((mode & 64) && ctx.error_stream ? &ostream_logger : nullptr);
-  vm::GasLimits gas{gas_limit};
+  vm::GasLimits gas{gas_limit, gas_max};
   int res =
       vm::run_vm_code(cs, ctx.stack, mode & 3, &data, log, nullptr, &gas, get_vm_libraries(), std::move(c7), &actions);
   ctx.stack.push_smallint(res);

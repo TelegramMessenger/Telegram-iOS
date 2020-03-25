@@ -179,12 +179,12 @@ private struct WrappedGridSection: Equatable, Hashable {
         self.section = section
     }
     
-    var hashValue: Int {
-        return self.section.hashValue
-    }
-    
     static func ==(lhs: WrappedGridSection, rhs: WrappedGridSection) -> Bool {
         return lhs.section.isEqual(to: rhs.section)
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.section.hashValue)
     }
 }
 
@@ -199,10 +199,6 @@ public struct GridNodeVisibleItems {
 
 private struct WrappedGridItemNode: Hashable {
     let node: ASDisplayNode
-    
-    var hashValue: Int {
-        return node.hashValue
-    }
     
     static func ==(lhs: WrappedGridItemNode, rhs: WrappedGridItemNode) -> Bool {
         return lhs.node === rhs.node

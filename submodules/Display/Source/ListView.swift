@@ -882,8 +882,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var completeHeight: CGFloat = 0.0
         var topItemFound = false
         var bottomItemFound = false
-        var topItemEdge: CGFloat = 0.0
-        var bottomItemEdge: CGFloat = 0.0
         
         for i in 0 ..< self.itemNodes.count {
             if let index = itemNodes[i].index {
@@ -900,23 +898,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - additionalInverseTopInset)
         }
         
-        if topItemFound {
-            topItemEdge = itemNodes[0].apparentFrame.origin.y
-        }
-        
-        var bottomItemNode: ListViewItemNode?
         for i in (0 ..< self.itemNodes.count).reversed() {
             if let index = itemNodes[i].index {
                 if index == self.items.count - 1 {
-                    bottomItemNode = itemNodes[i]
                     bottomItemFound = true
                 }
                 break
             }
-        }
-        
-        if bottomItemFound {
-            bottomItemEdge = itemNodes[itemNodes.count - 1].apparentFrame.maxY
         }
         
         if topItemFound && bottomItemFound {
@@ -1119,7 +1107,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         if topItemIndexAndMinY.0 == 0 {
-            var offsetValue: CGFloat = -(topItemIndexAndMinY.1 - self.insets.top)
+            let offsetValue: CGFloat = -(topItemIndexAndMinY.1 - self.insets.top)
             offset = .known(offsetValue)
         } else if topItemIndexAndMinY.0 == -1 {
             offset = .none
@@ -1950,7 +1938,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private func fillMissingNodes(synchronous: Bool, synchronousLoads: Bool, animated: Bool, inputAnimatedInsertIndices: Set<Int>, insertDirectionHints: [Int: ListViewItemOperationDirectionHint], inputState: ListViewState, inputPreviousNodes: [Int: QueueLocalObject<ListViewItemNode>], inputOperations: [ListViewStateOperation], inputCompletion: @escaping (ListViewState, [ListViewStateOperation]) -> Void) {
         let animatedInsertIndices = inputAnimatedInsertIndices
         var state = inputState
-        var previousNodes = inputPreviousNodes
+        let previousNodes = inputPreviousNodes
         var operations = inputOperations
         let completion = inputCompletion
         let updateAnimation: ListViewItemUpdateAnimation = animated ? .System(duration: insertionAnimationDuration) : .None
@@ -2680,7 +2668,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.visibleSize = updateSizeAndInsets.size
                 
                 var offsetFix: CGFloat
-                var insetDeltaOffsetFix: CGFloat = 0.0
+                let insetDeltaOffsetFix: CGFloat = 0.0
                 if self.isTracking || isExperimentalSnapToScrollToItem {
                     offsetFix = 0.0
                 } else if self.snapToBottomInsetUntilFirstInteraction {
@@ -4009,7 +3997,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func cancelSelection() {
-        if let selectionTouchLocation = self.selectionTouchLocation {
+        if let _ = self.selectionTouchLocation {
             self.clearHighlightAnimated(true)
             self.selectionTouchLocation = nil
         }

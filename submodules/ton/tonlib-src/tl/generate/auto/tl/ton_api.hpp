@@ -116,6 +116,9 @@ bool downcast_call(Object &obj, const T &func) {
     case adnl_address_udp6::ID:
       func(static_cast<adnl_address_udp6 &>(obj));
       return true;
+    case adnl_address_tunnel::ID:
+      func(static_cast<adnl_address_tunnel &>(obj));
+      return true;
     case adnl_addressList::ID:
       func(static_cast<adnl_addressList &>(obj));
       return true;
@@ -161,11 +164,26 @@ bool downcast_call(Object &obj, const T &func) {
     case adnl_proxy_fast::ID:
       func(static_cast<adnl_proxy_fast &>(obj));
       return true;
+    case adnl_proxyControlPacketPing::ID:
+      func(static_cast<adnl_proxyControlPacketPing &>(obj));
+      return true;
+    case adnl_proxyControlPacketPong::ID:
+      func(static_cast<adnl_proxyControlPacketPong &>(obj));
+      return true;
+    case adnl_proxyControlPacketRegister::ID:
+      func(static_cast<adnl_proxyControlPacketRegister &>(obj));
+      return true;
+    case adnl_proxyPacketHeader::ID:
+      func(static_cast<adnl_proxyPacketHeader &>(obj));
+      return true;
     case adnl_proxyToFastHash::ID:
       func(static_cast<adnl_proxyToFastHash &>(obj));
       return true;
     case adnl_proxyToFast::ID:
       func(static_cast<adnl_proxyToFast &>(obj));
+      return true;
+    case adnl_tunnelPacketContents::ID:
+      func(static_cast<adnl_tunnelPacketContents &>(obj));
       return true;
     case adnl_config_global::ID:
       func(static_cast<adnl_config_global &>(obj));
@@ -1262,6 +1280,9 @@ bool downcast_call(adnl_Address &obj, const T &func) {
     case adnl_address_udp6::ID:
       func(static_cast<adnl_address_udp6 &>(obj));
       return true;
+    case adnl_address_tunnel::ID:
+      func(static_cast<adnl_address_tunnel &>(obj));
+      return true;
     default:
       return false;
   }
@@ -1319,6 +1340,29 @@ bool downcast_call(adnl_Proxy &obj, const T &func) {
       return true;
     case adnl_proxy_fast::ID:
       func(static_cast<adnl_proxy_fast &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(adnl_ProxyControlPacket &obj, const T &func) {
+  switch (obj.get_id()) {
+    case adnl_proxyControlPacketPing::ID:
+      func(static_cast<adnl_proxyControlPacketPing &>(obj));
+      return true;
+    case adnl_proxyControlPacketPong::ID:
+      func(static_cast<adnl_proxyControlPacketPong &>(obj));
+      return true;
+    case adnl_proxyControlPacketRegister::ID:
+      func(static_cast<adnl_proxyControlPacketRegister &>(obj));
       return true;
     default:
       return false;

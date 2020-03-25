@@ -160,6 +160,8 @@ class TonlibClient : public td::actor::Actor {
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::decrypt& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::kdf& request);
 
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::msg_decryptWithProof& request);
+
   template <class P>
   td::Status do_request(const tonlib_api::runTests& request, P&&);
   template <class P>
@@ -194,6 +196,8 @@ class TonlibClient : public td::actor::Actor {
   td::Status do_request(const tonlib_api::decrypt& request, P&&);
   template <class P>
   td::Status do_request(const tonlib_api::kdf& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::msg_decryptWithProof& request, P&&);
 
   void make_any_request(tonlib_api::Function& function, QueryContext query_context,
                         td::Promise<tonlib_api::object_ptr<tonlib_api::Object>>&& promise);
@@ -281,7 +285,8 @@ class TonlibClient : public td::actor::Actor {
 
   td::Status do_request(tonlib_api::createQuery& request, td::Promise<object_ptr<tonlib_api::query_info>>&& promise);
 
-  td::Status do_request(tonlib_api::msg_decrypt& request, td::Promise<object_ptr<tonlib_api::msg_dataArray>>&& promise);
+  td::Status do_request(tonlib_api::msg_decrypt& request,
+                        td::Promise<object_ptr<tonlib_api::msg_dataDecryptedArray>>&& promise);
 
   td::int64 next_smc_id_{0};
   std::map<td::int64, td::unique_ptr<AccountState>> smcs_;

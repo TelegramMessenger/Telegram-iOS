@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "GenericAccount.h"
 
@@ -95,5 +95,20 @@ td::Ref<vm::Cell> GenericAccount::create_ext_message(const block::StdAddress& ad
   CHECK(res.not_null());
 
   return res;
+}
+td::Result<td::Ed25519::PublicKey> GenericAccount::get_public_key(const SmartContract& sc) {
+  auto answer = sc.run_get_method("get_public_key");
+  if (!answer.success) {
+    return td::Status::Error("get_public_key failed");
+  }
+  auto do_get_public_key = [&]() -> td::Result<td::Ed25519::PublicKey> {
+    auto key = answer.stack.write().pop_int_finite();
+    td::SecureString bytes(32);
+    if (!key->export_bytes(bytes.as_mutable_slice().ubegin(), bytes.size(), false)) {
+      return td::Status::Error("get_public_key failed");
+    }
+    return td::Ed25519::PublicKey(std::move(bytes));
+  };
+  return TRY_VM(do_get_public_key());
 }
 }  // namespace ton

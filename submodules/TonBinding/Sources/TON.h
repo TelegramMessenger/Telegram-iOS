@@ -59,11 +59,20 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@interface TONTransactionMessageContentsEncryptedText : NSObject <TONTransactionMessageContents>
+@interface TONEncryptedData : NSObject
 
+@property (nonatomic, strong, readonly) NSString * _Nonnull sourceAddress;
 @property (nonatomic, strong, readonly) NSData * _Nonnull data;
 
-- (instancetype)initWithData:(NSData * _Nonnull)data;
+- (instancetype)initWithSourceAddress:(NSString * _Nonnull)sourceAddress data:(NSData * _Nonnull)data;
+
+@end
+
+@interface TONTransactionMessageContentsEncryptedText : NSObject <TONTransactionMessageContents>
+
+@property (nonatomic, strong, readonly) TONEncryptedData * _Nonnull encryptedData;
+
+- (instancetype)initWithEncryptedData:(TONEncryptedData * _Nonnull)encryptedData;
 
 @end
 
@@ -168,7 +177,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (SSignal *)deleteKey:(TONKey *)key;
 - (SSignal *)deleteAllKeys;
 - (SSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash;
-- (SSignal *)decryptMessagesWithKey:(TONKey * _Nonnull)key localPassword:(NSData * _Nonnull)localPassword messages:(NSArray<NSData *> * _Nonnull)messages;
+- (SSignal *)decryptMessagesWithKey:(TONKey * _Nonnull)key localPassword:(NSData * _Nonnull)localPassword messages:(NSArray<TONEncryptedData *> * _Nonnull)messages;
 
 - (NSData *)encrypt:(NSData *)decryptedData secret:(NSData *)data;
 - (NSData * __nullable)decrypt:(NSData *)encryptedData secret:(NSData *)data;

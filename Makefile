@@ -384,7 +384,7 @@ project: check_env kill_xcode
 
 bazel_app_debug_arm64:
 	APP_VERSION="${APP_VERSION}" \
-	build-system/prepare-build.sh distribution
+	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_DEBUG_FLAGS} \
 	-c dbg \
 	--ios_multi_cpus=arm64 \
@@ -394,7 +394,7 @@ bazel_app_debug_arm64:
 bazel_app_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
-	build-system/prepare-build.sh distribution
+	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
 	-c opt \
 	--ios_multi_cpus=arm64 \
@@ -408,7 +408,7 @@ bazel_app_arm64:
 bazel_prepare_development_build:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
-	build-system/prepare-build.sh development
+	build-system/prepare-build.sh Telegram development
 
 bazel_project: kill_xcode bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \

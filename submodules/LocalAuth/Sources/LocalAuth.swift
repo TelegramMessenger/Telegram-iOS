@@ -13,12 +13,14 @@ public struct LocalAuth {
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 switch context.biometryType {
-                    case .faceID:
-                        return .faceId
-                    case .touchID:
-                        return .touchId
-                    case .none:
-                        return nil
+                case .faceID:
+                    return .faceId
+                case .touchID:
+                    return .touchId
+                case .none:
+                    return nil
+                @unknown default:
+                    return nil
                 }
             } else {
                 return .touchId

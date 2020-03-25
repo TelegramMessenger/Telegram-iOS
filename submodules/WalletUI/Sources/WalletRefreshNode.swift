@@ -93,12 +93,7 @@ private func lastUpdateTimestampString(strings: WalletStrings, dateTimeFormat: W
         if dayDifference == 0 || dayDifference == -1 {
             let day: RelativeTimestampFormatDay
             if dayDifference == 0 {
-                if expanded {
-                    day = .today
-                } else {
-                    let minutes = difference / (60 * 60)
-                    return strings.Wallet_Updated_HoursAgo(minutes)
-                }
+                day = .today
             } else {
                 day = .yesterday
             }
@@ -226,13 +221,10 @@ final class WalletRefreshNode: ASDisplayNode {
         let previousState = self.state
         self.state = state
         
-        var pullProgress: CGFloat = 0.0
-        
         let title: String
         switch state {
-        case let .pullToRefresh(ts, progress):
+        case let .pullToRefresh(ts, _):
             title = lastUpdateTimestampString(strings: self.strings, dateTimeFormat: dateTimeFormat, statusTimestamp: ts, relativeTo: Int32(Date().timeIntervalSince1970))
-            pullProgress = progress
         case .refreshing:
             if ignoreProgressValue {
                 title = self.strings.Wallet_Info_Updating

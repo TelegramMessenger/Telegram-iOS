@@ -196,7 +196,7 @@ public final class TonInstance {
                             assertionFailure()
                             return
                         }
-                        let cancel = keychain.encrypt(key.secret).start(next: { encryptedSecretData in
+                        let _ = keychain.encrypt(key.secret).start(next: { encryptedSecretData in
                             let _ = self.exportKey(key: key, localPassword: localPassword).start(next: { wordList in
                                 subscriber.putNext((WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: encryptedSecretData), wordList))
                                 subscriber.putCompletion()
@@ -231,7 +231,7 @@ public final class TonInstance {
                             subscriber.putError(.generic)
                             return
                         }
-                        let cancel = keychain.encrypt(key.secret).start(next: { encryptedSecretData in
+                        let _ = keychain.encrypt(key.secret).start(next: { encryptedSecretData in
                             subscriber.putNext(WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: encryptedSecretData))
                             subscriber.putCompletion()
                         }, error: { _ in
@@ -427,20 +427,22 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func decryptWalletTransactions(decryptionKey: WalletTransactionDecryptionKey, encryptedMessages: [Data]) -> Signal<[WalletTransactionMessageContents], DecryptWalletTransactionsError> {
+    fileprivate func decryptWalletTransactions(decryptionKey: WalletTransactionDecryptionKey, encryptedMessages: [WalletTransactionEncryptedMessageData]) -> Signal<[WalletTransactionMessageContents], DecryptWalletTransactionsError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.decryptMessages(with: TONKey(publicKey: decryptionKey.walletInfo.publicKey.rawValue, secret: decryptionKey.decryptedSecret), localPassword: decryptionKey.localPassword, messages: encryptedMessages).start(next: { result in
+                    let cancel = ton.decryptMessages(with: TONKey(publicKey: decryptionKey.walletInfo.publicKey.rawValue, secret: decryptionKey.decryptedSecret), localPassword: decryptionKey.localPassword, messages: encryptedMessages.map { data in
+                        TONEncryptedData(sourceAddress: data.sourceAddress, data: data.data)
+                    }).start(next: { result in
                         guard let result = result as? [TONTransactionMessageContents] else {
                             subscriber.putError(.generic)
                             return
                         }
                         subscriber.putNext(result.map(WalletTransactionMessageContents.init(tonTransactionMessageContents:)))
                     }, error: { error in
-                        if let error = error as? TONError {
+                        if let _ = error as? TONError {
                             subscriber.putError(.generic)
                         } else {
                             subscriber.putError(.generic)
@@ -735,7 +737,7 @@ public struct CombinedWalletState: Codable, Equatable {
         return CombinedWalletState(
             walletState: self.walletState,
             timestamp: self.timestamp,
-            topTransactions: self.topTransactions,
+            topTransactions: topTransactions,
             pendingTransactions: self.pendingTransactions
         )
     }
@@ -1093,7 +1095,6 @@ public func sendGramsFromWallet(storage: WalletStorageInterface, tonInstance: To
                 }
             })
             |> mapToSignal { _ -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
-                return .complete()
             }
             |> then(.single(PendingWalletTransaction(timestamp: Int64(Date().timeIntervalSince1970), validUntilTimestamp: preparedQuery.validUntil, bodyHash: preparedQuery.bodyHash, address: toAddress, value: amount, comment: comment)))
             |> mapToSignal { result in
@@ -1134,16 +1135,26 @@ public enum WalletTransactionMessageContentsDecodingError: Error {
     case generic
 }
 
+public struct WalletTransactionEncryptedMessageData: Codable, Equatable {
+    public let sourceAddress: String
+    public let data: Data
+    
+    public init(sourceAddress: String, data: Data) {
+        self.sourceAddress = sourceAddress
+        self.data = data
+    }
+}
+
 public enum WalletTransactionMessageContents: Codable, Equatable {
     enum Key: CodingKey {
         case raw
         case plainText
-        case encryptedText
+        case encryptedData
     }
     
     case raw(Data)
     case plainText(String)
-    case encryptedText(Data)
+    case encryptedText(WalletTransactionEncryptedMessageData)
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Key.self)
@@ -1151,22 +1162,22 @@ public enum WalletTransactionMessageContents: Codable, Equatable {
             self = .raw(data)
         } else if let plainText = try? container.decode(String.self, forKey: .plainText) {
             self = .plainText(plainText)
-        } else if let encryptedText = try? container.decode(Data.self, forKey: .encryptedText) {
-            self = .encryptedText(encryptedText)
+        } else if let encryptedData = try? container.decode(WalletTransactionEncryptedMessageData.self, forKey: .encryptedData) {
+            self = .encryptedText(encryptedData)
         } else {
             throw WalletTransactionMessageContentsDecodingError.generic
         }
     }
     
     public func encode(to encoder: Encoder) throws {
-        var container = try encoder.container(keyedBy: Key.self)
+        var container = encoder.container(keyedBy: Key.self)
         switch self {
         case let .raw(data):
             try container.encode(data, forKey: .raw)
         case let .plainText(text):
             try container.encode(text, forKey: .plainText)
         case let .encryptedText(data):
-            try container.encode(data, forKey: .encryptedText)
+            try container.encode(data, forKey: .encryptedData)
         }
     }
 }
@@ -1178,7 +1189,7 @@ private extension WalletTransactionMessageContents {
         } else if let plainText = tonTransactionMessageContents as? TONTransactionMessageContentsPlainText {
             self = .plainText(plainText.text)
         } else if let encryptedText = tonTransactionMessageContents as? TONTransactionMessageContentsEncryptedText {
-            self = .encryptedText(encryptedText.data)
+            self = .encryptedText(WalletTransactionEncryptedMessageData(sourceAddress: encryptedText.encryptedData.sourceAddress, data: encryptedText.encryptedData.data))
         } else {
             self = .raw(Data())
         }
@@ -1383,7 +1394,7 @@ public func decryptWalletTransactions(decryptionKey: WalletTransactionDecryption
         case inMessage
         case outMessage(Int)
     }
-    var encryptedMessages: [(Int, EncryptedMessagePath, Data)] = []
+    var encryptedMessages: [(Int, EncryptedMessagePath, WalletTransactionEncryptedMessageData)] = []
     for i in 0 ..< transactions.count {
         if let inMessage = transactions[i].inMessage {
             switch inMessage.contents {
@@ -1506,7 +1517,7 @@ private func getWalletTransactionsOnce(address: String, previousId: WalletTransa
                         case inMessage
                         case outMessage(Int)
                     }
-                    var encryptedMessages: [(Int, EncryptedMessagePath, Data)] = []
+                    var encryptedMessages: [(Int, EncryptedMessagePath, WalletTransactionEncryptedMessageData)] = []
                     for i in 0 ..< transactions.count {
                         if let inMessage = transactions[i].inMessage {
                             switch inMessage.contents {
@@ -1591,7 +1602,7 @@ public enum LocalWalletConfigurationSource: Codable, Equatable {
     }
     
     public func encode(to encoder: Encoder) throws {
-        var container = try encoder.container(keyedBy: Key.self)
+        var container = encoder.container(keyedBy: Key.self)
         switch self {
         case let .url(url):
             try container.encode(url, forKey: .url)

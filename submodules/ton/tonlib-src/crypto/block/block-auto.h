@@ -15,6 +15,7 @@
 // uses built-in type `uint`
 // uses built-in type `bits`
 // uses built-in type `int8`
+// uses built-in type `uint8`
 // uses built-in type `uint13`
 // uses built-in type `uint15`
 // uses built-in type `int16`
@@ -24,6 +25,7 @@
 // uses built-in type `uint63`
 // uses built-in type `int64`
 // uses built-in type `uint64`
+// uses built-in type `uint256`
 // uses built-in type `int257`
 // uses built-in type `bits256`
 
@@ -4533,11 +4535,12 @@ struct BlockInfo::Record {
   unsigned gen_catchain_seqno;  	// gen_catchain_seqno : uint32
   unsigned min_ref_mc_seqno;  	// min_ref_mc_seqno : uint32
   unsigned prev_key_block_seqno;  	// prev_key_block_seqno : uint32
+  Ref<CellSlice> gen_software;  	// gen_software : flags.0?GlobalVersion
   Ref<Cell> master_ref;  	// master_ref : not_master?^BlkMasterInfo
   Ref<Cell> prev_ref;  	// prev_ref : ^(BlkPrevInfo after_merge)
   Ref<Cell> prev_vert_ref;  	// prev_vert_ref : vert_seqno_incr?^(BlkPrevInfo 0)
   Record() = default;
-  Record(unsigned _version, bool _not_master, bool _after_merge, bool _before_split, bool _after_split, bool _want_split, bool _want_merge, bool _key_block, bool _vert_seqno_incr, int _flags, int _seq_no, int _vert_seq_no, Ref<CellSlice> _shard, unsigned _gen_utime, unsigned long long _start_lt, unsigned long long _end_lt, unsigned _gen_validator_list_hash_short, unsigned _gen_catchain_seqno, unsigned _min_ref_mc_seqno, unsigned _prev_key_block_seqno, Ref<Cell> _master_ref, Ref<Cell> _prev_ref, Ref<Cell> _prev_vert_ref) : version(_version), not_master(_not_master), after_merge(_after_merge), before_split(_before_split), after_split(_after_split), want_split(_want_split), want_merge(_want_merge), key_block(_key_block), vert_seqno_incr(_vert_seqno_incr), flags(_flags), seq_no(_seq_no), vert_seq_no(_vert_seq_no), shard(std::move(_shard)), gen_utime(_gen_utime), start_lt(_start_lt), end_lt(_end_lt), gen_validator_list_hash_short(_gen_validator_list_hash_short), gen_catchain_seqno(_gen_catchain_seqno), min_ref_mc_seqno(_min_ref_mc_seqno), prev_key_block_seqno(_prev_key_block_seqno), master_ref(std::move(_master_ref)), prev_ref(std::move(_prev_ref)), prev_vert_ref(std::move(_prev_vert_ref)) {}
+  Record(unsigned _version, bool _not_master, bool _after_merge, bool _before_split, bool _after_split, bool _want_split, bool _want_merge, bool _key_block, bool _vert_seqno_incr, int _flags, int _seq_no, int _vert_seq_no, Ref<CellSlice> _shard, unsigned _gen_utime, unsigned long long _start_lt, unsigned long long _end_lt, unsigned _gen_validator_list_hash_short, unsigned _gen_catchain_seqno, unsigned _min_ref_mc_seqno, unsigned _prev_key_block_seqno, Ref<CellSlice> _gen_software, Ref<Cell> _master_ref, Ref<Cell> _prev_ref, Ref<Cell> _prev_vert_ref) : version(_version), not_master(_not_master), after_merge(_after_merge), before_split(_before_split), after_split(_after_split), want_split(_want_split), want_merge(_want_merge), key_block(_key_block), vert_seqno_incr(_vert_seqno_incr), flags(_flags), seq_no(_seq_no), vert_seq_no(_vert_seq_no), shard(std::move(_shard)), gen_utime(_gen_utime), start_lt(_start_lt), end_lt(_end_lt), gen_validator_list_hash_short(_gen_validator_list_hash_short), gen_catchain_seqno(_gen_catchain_seqno), min_ref_mc_seqno(_min_ref_mc_seqno), prev_key_block_seqno(_prev_key_block_seqno), gen_software(std::move(_gen_software)), master_ref(std::move(_master_ref)), prev_ref(std::move(_prev_ref)), prev_vert_ref(std::move(_prev_vert_ref)) {}
 };
 
 extern const BlockInfo t_BlockInfo;
@@ -6086,6 +6089,176 @@ struct GlobalVersion final : TLB_Complex {
 extern const GlobalVersion t_GlobalVersion;
 
 //
+// headers for type `ConfigProposalSetup`
+//
+
+struct ConfigProposalSetup final : TLB_Complex {
+  enum { cfg_vote_cfg };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0x36 };
+  struct Record;
+  int get_size(const vm::CellSlice& cs) const override {
+    return 168;
+  }
+  bool skip(vm::CellSlice& cs) const override {
+    return cs.advance(168);
+  }
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ConfigProposalSetup";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ConfigProposalSetup::Record {
+  typedef ConfigProposalSetup type_class;
+  int min_tot_rounds;  	// min_tot_rounds : uint8
+  int max_tot_rounds;  	// max_tot_rounds : uint8
+  int min_wins;  	// min_wins : uint8
+  int max_losses;  	// max_losses : uint8
+  unsigned min_store_sec;  	// min_store_sec : uint32
+  unsigned max_store_sec;  	// max_store_sec : uint32
+  unsigned bit_price;  	// bit_price : uint32
+  unsigned cell_price;  	// cell_price : uint32
+  Record() = default;
+  Record(int _min_tot_rounds, int _max_tot_rounds, int _min_wins, int _max_losses, unsigned _min_store_sec, unsigned _max_store_sec, unsigned _bit_price, unsigned _cell_price) : min_tot_rounds(_min_tot_rounds), max_tot_rounds(_max_tot_rounds), min_wins(_min_wins), max_losses(_max_losses), min_store_sec(_min_store_sec), max_store_sec(_max_store_sec), bit_price(_bit_price), cell_price(_cell_price) {}
+};
+
+extern const ConfigProposalSetup t_ConfigProposalSetup;
+
+//
+// headers for type `ConfigVotingSetup`
+//
+
+struct ConfigVotingSetup final : TLB_Complex {
+  enum { cfg_vote_setup };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0x91 };
+  struct Record {
+    typedef ConfigVotingSetup type_class;
+    Ref<Cell> normal_params;  	// normal_params : ^ConfigProposalSetup
+    Ref<Cell> critical_params;  	// critical_params : ^ConfigProposalSetup
+    Record() = default;
+    Record(Ref<Cell> _normal_params, Ref<Cell> _critical_params) : normal_params(std::move(_normal_params)), critical_params(std::move(_critical_params)) {}
+  };
+  int get_size(const vm::CellSlice& cs) const override {
+    return 0x20008;
+  }
+  bool skip(vm::CellSlice& cs) const override {
+    return cs.advance_ext(0x20008);
+  }
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_cfg_vote_setup(vm::CellSlice& cs, Ref<Cell>& normal_params, Ref<Cell>& critical_params) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_cfg_vote_setup(Ref<vm::Cell> cell_ref, Ref<Cell>& normal_params, Ref<Cell>& critical_params) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_cfg_vote_setup(vm::CellBuilder& cb, Ref<Cell> normal_params, Ref<Cell> critical_params) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_cfg_vote_setup(Ref<vm::Cell>& cell_ref, Ref<Cell> normal_params, Ref<Cell> critical_params) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ConfigVotingSetup";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+extern const ConfigVotingSetup t_ConfigVotingSetup;
+
+//
+// headers for type `ConfigProposal`
+//
+
+struct ConfigProposal final : TLB_Complex {
+  enum { cfg_proposal };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0xf3 };
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_cfg_proposal(vm::CellSlice& cs, int& param_id, Ref<CellSlice>& param_value, Ref<CellSlice>& if_hash_equal) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_cfg_proposal(Ref<vm::Cell> cell_ref, int& param_id, Ref<CellSlice>& param_value, Ref<CellSlice>& if_hash_equal) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_cfg_proposal(vm::CellBuilder& cb, int param_id, Ref<CellSlice> param_value, Ref<CellSlice> if_hash_equal) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_cfg_proposal(Ref<vm::Cell>& cell_ref, int param_id, Ref<CellSlice> param_value, Ref<CellSlice> if_hash_equal) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ConfigProposal";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ConfigProposal::Record {
+  typedef ConfigProposal type_class;
+  int param_id;  	// param_id : int32
+  Ref<CellSlice> param_value;  	// param_value : Maybe ^Cell
+  Ref<CellSlice> if_hash_equal;  	// if_hash_equal : Maybe uint256
+  Record() = default;
+  Record(int _param_id, Ref<CellSlice> _param_value, Ref<CellSlice> _if_hash_equal) : param_id(_param_id), param_value(std::move(_param_value)), if_hash_equal(std::move(_if_hash_equal)) {}
+};
+
+extern const ConfigProposal t_ConfigProposal;
+
+//
+// headers for type `ConfigProposalStatus`
+//
+
+struct ConfigProposalStatus final : TLB_Complex {
+  enum { cfg_proposal_status };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0xce };
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ConfigProposalStatus";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ConfigProposalStatus::Record {
+  typedef ConfigProposalStatus type_class;
+  unsigned expires;  	// expires : uint32
+  Ref<Cell> proposal;  	// proposal : ^ConfigProposal
+  bool is_critical;  	// is_critical : Bool
+  Ref<CellSlice> voters;  	// voters : HashmapE 16 True
+  long long remaining_weight;  	// remaining_weight : int64
+  RefInt256 validator_set_id;  	// validator_set_id : uint256
+  int rounds_remaining;  	// rounds_remaining : uint8
+  int wins;  	// wins : uint8
+  int losses;  	// losses : uint8
+  Record() = default;
+  Record(unsigned _expires, Ref<Cell> _proposal, bool _is_critical, Ref<CellSlice> _voters, long long _remaining_weight, RefInt256 _validator_set_id, int _rounds_remaining, int _wins, int _losses) : expires(_expires), proposal(std::move(_proposal)), is_critical(_is_critical), voters(std::move(_voters)), remaining_weight(_remaining_weight), validator_set_id(std::move(_validator_set_id)), rounds_remaining(_rounds_remaining), wins(_wins), losses(_losses) {}
+};
+
+extern const ConfigProposalStatus t_ConfigProposalStatus;
+
+//
 // headers for type `WorkchainFormat`
 //
 
@@ -6640,7 +6813,7 @@ extern const ValidatorSignedTempKey t_ValidatorSignedTempKey;
 //
 
 struct ConfigParam final : TLB_Complex {
-  enum { cons32, cons33, cons34, cons35, cons36, cons37, config_mc_block_limits, config_block_limits, cons14, cons0, cons1, cons2, cons3, cons4, cons6, cons7, cons9, cons12, cons15, cons16, cons17, cons18, cons31, cons39, cons28, cons8, config_mc_gas_prices, config_gas_prices, cons29, config_mc_fwd_prices, config_fwd_prices };
+  enum { cons32, cons33, cons34, cons35, cons36, cons37, config_mc_block_limits, config_block_limits, cons14, cons0, cons1, cons2, cons3, cons4, cons6, cons7, cons9, cons10, cons12, cons15, cons16, cons17, cons18, cons31, cons39, cons11, cons28, cons8, config_mc_gas_prices, config_gas_prices, cons29, config_mc_fwd_prices, config_fwd_prices };
   static constexpr int cons_len_exact = 0;
   int m_;
   ConfigParam(int m) : m_(m) {}
@@ -6698,6 +6871,18 @@ struct ConfigParam final : TLB_Complex {
     Ref<CellSlice> mandatory_params;  	// mandatory_params : Hashmap 32 True
     Record_cons9() = default;
     Record_cons9(Ref<CellSlice> _mandatory_params) : mandatory_params(std::move(_mandatory_params)) {}
+  };
+  struct Record_cons10 {
+    typedef ConfigParam type_class;
+    Ref<CellSlice> critical_params;  	// critical_params : Hashmap 32 True
+    Record_cons10() = default;
+    Record_cons10(Ref<CellSlice> _critical_params) : critical_params(std::move(_critical_params)) {}
+  };
+  struct Record_cons11 {
+    typedef ConfigParam type_class;
+    Ref<CellSlice> x;  	// ConfigVotingSetup
+    Record_cons11() = default;
+    Record_cons11(Ref<CellSlice> _x) : x(std::move(_x)) {}
   };
   struct Record_cons12 {
     typedef ConfigParam type_class;
@@ -6890,6 +7075,22 @@ struct ConfigParam final : TLB_Complex {
   bool pack_cons9(vm::CellBuilder& cb, Ref<CellSlice> mandatory_params) const;
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_cons9& data) const;
   bool cell_pack_cons9(Ref<vm::Cell>& cell_ref, Ref<CellSlice> mandatory_params) const;
+  bool unpack(vm::CellSlice& cs, Record_cons10& data) const;
+  bool unpack_cons10(vm::CellSlice& cs, Ref<CellSlice>& critical_params) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_cons10& data) const;
+  bool cell_unpack_cons10(Ref<vm::Cell> cell_ref, Ref<CellSlice>& critical_params) const;
+  bool pack(vm::CellBuilder& cb, const Record_cons10& data) const;
+  bool pack_cons10(vm::CellBuilder& cb, Ref<CellSlice> critical_params) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_cons10& data) const;
+  bool cell_pack_cons10(Ref<vm::Cell>& cell_ref, Ref<CellSlice> critical_params) const;
+  bool unpack(vm::CellSlice& cs, Record_cons11& data) const;
+  bool unpack_cons11(vm::CellSlice& cs, Ref<CellSlice>& x) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_cons11& data) const;
+  bool cell_unpack_cons11(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const;
+  bool pack(vm::CellBuilder& cb, const Record_cons11& data) const;
+  bool pack_cons11(vm::CellBuilder& cb, Ref<CellSlice> x) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_cons11& data) const;
+  bool cell_pack_cons11(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const;
   bool unpack(vm::CellSlice& cs, Record_cons12& data) const;
   bool unpack_cons12(vm::CellSlice& cs, Ref<CellSlice>& workchains) const;
   bool cell_unpack(Ref<vm::Cell> cell_ref, Record_cons12& data) const;
@@ -8689,9 +8890,9 @@ extern const RefT t_Ref_McBlockExtra;
 // Maybe ^McBlockExtra
 extern const Maybe t_Maybe_Ref_McBlockExtra;
 // ^[$_ from_prev_blk:CurrencyCollection to_next_blk:CurrencyCollection imported:CurrencyCollection exported:CurrencyCollection ]
-extern const RefT t_Ref_TYPE_1648;
-// ^[$_ fees_imported:CurrencyCollection recovered:CurrencyCollection created:CurrencyCollection minted:CurrencyCollection ]
 extern const RefT t_Ref_TYPE_1649;
+// ^[$_ fees_imported:CurrencyCollection recovered:CurrencyCollection created:CurrencyCollection minted:CurrencyCollection ]
+extern const RefT t_Ref_TYPE_1650;
 // ## 3
 extern const NatWidth t_natwidth_3;
 // BinTree ShardDescr
@@ -8717,7 +8918,7 @@ extern const NatWidth t_natwidth_16;
 // Maybe ExtBlkRef
 extern const Maybe t_Maybe_ExtBlkRef;
 // ^[$_ flags:(## 16) {<= flags 1} validator_info:ValidatorInfo prev_blocks:OldMcBlocksInfo after_key_block:Bool last_key_block:(Maybe ExtBlkRef) block_create_stats:flags.0?BlockCreateStats ]
-extern const RefT t_Ref_TYPE_1666;
+extern const RefT t_Ref_TYPE_1667;
 // ^SignedCertificate
 extern const RefT t_Ref_SignedCertificate;
 // HashmapE 16 CryptoSignaturePair
@@ -8725,13 +8926,27 @@ extern const HashmapE t_HashmapE_16_CryptoSignaturePair;
 // Maybe ^InMsg
 extern const Maybe t_Maybe_Ref_InMsg;
 // ^[$_ prev_blk_signatures:(HashmapE 16 CryptoSignaturePair) recover_create_msg:(Maybe ^InMsg) mint_msg:(Maybe ^InMsg) ]
-extern const RefT t_Ref_TYPE_1674;
+extern const RefT t_Ref_TYPE_1675;
 // Hashmap 16 ValidatorDescr
 extern const Hashmap t_Hashmap_16_ValidatorDescr;
 // HashmapE 16 ValidatorDescr
 extern const HashmapE t_HashmapE_16_ValidatorDescr;
 // Hashmap 32 True
 extern const Hashmap t_Hashmap_32_True;
+// uint8
+extern const UInt t_uint8;
+// ^ConfigProposalSetup
+extern const RefT t_Ref_ConfigProposalSetup;
+// uint256
+extern const UInt t_uint256;
+// Maybe uint256
+extern const Maybe t_Maybe_uint256;
+// ^ConfigProposal
+extern const RefT t_Ref_ConfigProposal;
+// HashmapE 16 True
+extern const HashmapE t_HashmapE_16_True;
+// int64
+extern const Int t_int64;
 // ## 12
 extern const NatWidth t_natwidth_12;
 // ## 32
@@ -8756,8 +8971,6 @@ extern const Maybe t_Maybe_Ref_BlockSignatures;
 extern const RefT t_Ref_TopBlockDescr;
 // HashmapE 96 ^TopBlockDescr
 extern const HashmapE t_HashmapE_96_Ref_TopBlockDescr;
-// int64
-extern const Int t_int64;
 // int257
 extern const Int t_int257;
 // ## 10
@@ -8771,7 +8984,7 @@ extern const NatWidth t_natwidth_24;
 // HashmapE 4 VmStackValue
 extern const HashmapE t_HashmapE_4_VmStackValue;
 // ^[$_ max_limit:int64 cur_limit:int64 credit:int64 ]
-extern const RefT t_Ref_TYPE_1705;
+extern const RefT t_Ref_TYPE_1709;
 // HashmapE 256 ^Cell
 extern const HashmapE t_HashmapE_256_Ref_Cell;
 // uint13

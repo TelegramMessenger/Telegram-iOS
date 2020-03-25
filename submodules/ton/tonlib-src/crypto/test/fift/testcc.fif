@@ -1,0 +1,32 @@
+#!/usr/bin/create-state -s
+{ dup tlb-type-lookup { nip } { "unknown TLB type " swap $+ abort } cond } : $>tlb
+{ bl word $>tlb 1 'nop } ::_ tlb:
+{ dup null? { drop true } {
+  <b true 1 i, swap ref, b> <s ExtraCurrencyCollection
+  tlb-validate-skip { empty? } { false } cond
+  } cond
+} : cc-valid?
+{ cc-valid? { ."(valid)" } { ."(invalid)" } cond } : .cc-valid
+{ { dup .cc space .cc-valid } { ."<error>" } cond cr } : cshow
+{ ."X = " over dup .cc space .cc-valid cr
+  ."Y = " dup dup .cc space .cc-valid cr
+  ."X + Y = " 2dup CC+? cshow
+  ."X - Y = " 2dup CC-? cshow
+  ."Y - X = " 2dup swap CC-? cshow
+  ."X + X = " over dup CC+? cshow
+  ."Y + Y = " dup dup CC+? cshow
+  ."X - X = " over dup CC-? cshow
+  ."Y - Y = " dup dup CC-? cshow
+  2drop ."********************" cr
+} : one-test
+CX{666666666666*$239+1000000000000*$-17} =: X
+X CX{666666666666*$239+4444*$-17} one-test
+X CX{666666666665*$239+4444*$-17} one-test
+X CX{666666666667*$239+4444*$-17} one-test
+X CX{666666666666*$239} one-test
+X CX{666666666665*$239} one-test
+X CX{666666666667*$239} one-test
+X CX{1111*$1} one-test
+X CX{0*$-17} one-test
+X cc0 1 0 +newccpair one-test
+X cc0 239 0 +newccpair one-test

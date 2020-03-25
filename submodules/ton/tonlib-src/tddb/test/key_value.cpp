@@ -32,7 +32,11 @@ TEST(KeyValue, simple) {
   td::RocksDb::destroy(db_name).ignore();
 
   std::unique_ptr<td::KeyValue> kv = std::make_unique<td::RocksDb>(td::RocksDb::open(db_name.str()).move_as_ok());
-  auto set_value = [&](td::Slice key, td::Slice value) { kv->set(key, value); };
+  auto set_value = [&](td::Slice key, td::Slice value) {
+    kv->begin_transaction();
+    kv->set(key, value);
+    kv->commit_transaction();
+  };
   auto ensure_value = [&](td::Slice key, td::Slice value) {
     std::string kv_value;
     auto status = kv->get(key, kv_value).move_as_ok();

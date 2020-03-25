@@ -344,11 +344,11 @@ unsigned long long VarUIntegerPos::as_uint(const vm::CellSlice& cs) const {
 
 bool VarUIntegerPos::store_integer_value(vm::CellBuilder& cb, const td::BigInt256& value) const {
   int k = value.bit_size(false);
-  return k <= (n - 1) * 8 && value.sgn() > 0 && cb.store_long_bool((k + 7) >> 3, ln) &&
+  return k <= (n - 1) * 8 && value.sgn() >= (int)store_pos_only && cb.store_long_bool((k + 7) >> 3, ln) &&
          cb.store_int256_bool(value, (k + 7) & -8, false);
 }
 
-const VarUIntegerPos t_VarUIntegerPos_16{16}, t_VarUIntegerPos_32{32};
+const VarUIntegerPos t_VarUIntegerPos_16{16}, t_VarUIntegerPos_32{32}, t_VarUIntegerPosRelaxed_32{32, true};
 
 static inline bool redundant_int(const vm::CellSlice& cs) {
   int t = (int)cs.prefetch_long(9);
@@ -500,8 +500,8 @@ bool HashmapE::add_values(vm::CellBuilder& cb, vm::CellSlice& cs1, vm::CellSlice
   int n = root_type.n;
   vm::Dictionary dict1{vm::DictAdvance(), cs1, n}, dict2{vm::DictAdvance(), cs2, n};
   const TLB& vt = root_type.value_type;
-  vm::Dictionary::simple_combine_func_t combine = [vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
-                                                       Ref<vm::CellSlice> cs2_ref) -> bool {
+  vm::Dictionary::simple_combine_func_t combine = [&vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
+                                                        Ref<vm::CellSlice> cs2_ref) -> bool {
     if (!vt.add_values(cb, cs1_ref.write(), cs2_ref.write())) {
       throw CombineError{};
     }
@@ -514,8 +514,8 @@ bool HashmapE::add_values_ref(Ref<vm::Cell>& res, Ref<vm::Cell> arg1, Ref<vm::Ce
   int n = root_type.n;
   vm::Dictionary dict1{std::move(arg1), n}, dict2{std::move(arg2), n};
   const TLB& vt = root_type.value_type;
-  vm::Dictionary::simple_combine_func_t combine = [vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
-                                                       Ref<vm::CellSlice> cs2_ref) -> bool {
+  vm::Dictionary::simple_combine_func_t combine = [&vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
+                                                        Ref<vm::CellSlice> cs2_ref) -> bool {
     if (!vt.add_values(cb, cs1_ref.write(), cs2_ref.write())) {
       throw CombineError{};
     }
@@ -535,8 +535,8 @@ int HashmapE::sub_values(vm::CellBuilder& cb, vm::CellSlice& cs1, vm::CellSlice&
   int n = root_type.n;
   vm::Dictionary dict1{vm::DictAdvance(), cs1, n}, dict2{vm::DictAdvance(), cs2, n};
   const TLB& vt = root_type.value_type;
-  vm::Dictionary::simple_combine_func_t combine = [vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
-                                                       Ref<vm::CellSlice> cs2_ref) -> bool {
+  vm::Dictionary::simple_combine_func_t combine = [&vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
+                                                        Ref<vm::CellSlice> cs2_ref) -> bool {
     int r = vt.sub_values(cb, cs1_ref.write(), cs2_ref.write());
     if (r < 0) {
       throw CombineError{};
@@ -555,8 +555,8 @@ int HashmapE::sub_values_ref(Ref<vm::Cell>& res, Ref<vm::Cell> arg1, Ref<vm::Cel
   int n = root_type.n;
   vm::Dictionary dict1{std::move(arg1), n}, dict2{std::move(arg2), n};
   const TLB& vt = root_type.value_type;
-  vm::Dictionary::simple_combine_func_t combine = [vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
-                                                       Ref<vm::CellSlice> cs2_ref) -> bool {
+  vm::Dictionary::simple_combine_func_t combine = [&vt](vm::CellBuilder& cb, Ref<vm::CellSlice> cs1_ref,
+                                                        Ref<vm::CellSlice> cs2_ref) -> bool {
     int r = vt.sub_values(cb, cs1_ref.write(), cs2_ref.write());
     if (r < 0) {
       throw CombineError{};

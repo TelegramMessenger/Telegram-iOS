@@ -72,6 +72,32 @@ VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, const GasLimits& gas, 
   init_cregs(flags & 1, flags & 2);
 }
 
+void VmState::init_cregs(bool same_c3, bool push_0) {
+  cr.set_c0(quit0);
+  cr.set_c1(quit1);
+  cr.set_c2(Ref<ExcQuitCont>{true});
+  if (same_c3) {
+    cr.set_c3(Ref<OrdCont>{true, code, cp});
+    if (push_0) {
+      VM_LOG(this) << "implicit PUSH 0 at start\n";
+      get_stack().push_smallint(0);
+    }
+  } else {
+    cr.set_c3(Ref<QuitCont>{true, 11});
+  }
+  if (cr.d[0].is_null() || cr.d[1].is_null()) {
+    auto empty_cell = CellBuilder{}.finalize();
+    for (int i = 0; i < ControlRegs::dreg_num; i++) {
+      if (cr.d[i].is_null()) {
+        cr.d[i] = empty_cell;
+      }
+    }
+  }
+  if (cr.c7.is_null()) {
+    cr.set_c7(Ref<Tuple>{true});
+  }
+}
+
 Ref<CellSlice> VmState::convert_code_cell(Ref<Cell> code_cell) {
   if (code_cell.is_null()) {
     return {};
@@ -176,8 +202,10 @@ int VmState::call(Ref<Continuation> cont, int pass_args, int ret_args) {
       if (skip > 0) {
         get_stack().pop_many(skip);
       }
+      consume_stack_gas(new_stk);
     } else if (copy >= 0) {
       new_stk = get_stack().split_top(copy, skip);
+      consume_stack_gas(new_stk);
     } else {
       new_stk = std::move(stack);
       stack.clear();
@@ -196,7 +224,13 @@ int VmState::call(Ref<Continuation> cont, int pass_args, int ret_args) {
       throw VmError{Excno::stk_und, "stack underflow while calling a continuation: not enough arguments on stack"};
     }
     // create new stack from the top `pass_args` elements of the current stack
-    Ref<Stack> new_stk = (pass_args >= 0 ? get_stack().split_top(pass_args) : std::move(stack));
+    Ref<Stack> new_stk;
+    if (pass_args >= 0) {
+      new_stk = get_stack().split_top(pass_args);
+      consume_stack_gas(new_stk);
+    } else {
+      new_stk = std::move(stack);
+    }
     // create return continuation using the remainder of the current stack
     Ref<OrdCont> ret = Ref<OrdCont>{true, std::move(code), cp, std::move(stack), ret_args};
     ret.unique_write().get_cdata()->save.set_c0(std::move(cr.c[0]));
@@ -251,10 +285,12 @@ int VmState::jump(Ref<Continuation> cont, int pass_args) {
         new_stk = cont_data->stack;
       }
       new_stk.write().move_from_stack(get_stack(), copy);
+      consume_stack_gas(new_stk);
       set_stack(std::move(new_stk));
     } else {
-      if (copy >= 0) {
+      if (copy >= 0 && copy < stack->depth()) {
         get_stack().drop_bottom(stack->depth() - copy);
+        consume_stack_gas(copy);
       }
     }
     return jump_to(std::move(cont));
@@ -264,8 +300,10 @@ int VmState::jump(Ref<Continuation> cont, int pass_args) {
       int depth = get_stack().depth();
       if (pass_args > depth) {
         throw VmError{Excno::stk_und, "stack underflow while jumping to a continuation: not enough arguments on stack"};
+      } else if (pass_args < depth) {
+        get_stack().drop_bottom(depth - pass_args);
+        consume_stack_gas(pass_args);
       }
-      get_stack().drop_bottom(depth - pass_args);
     }
     return jump_to(std::move(cont));
   }
@@ -295,6 +333,22 @@ int VmState::ret_alt(int ret_args) {
   return jump(std::move(cont), ret_args);
 }
 
+Ref<Continuation> VmState::c1_envelope(Ref<Continuation> cont, bool save) {
+  if (save) {
+    force_cregs(cont)->define_c1(cr.c[1]);
+    force_cregs(cont)->define_c0(cr.c[0]);
+  }
+  set_c1(cont);
+  return cont;
+}
+
+void VmState::c1_save_set(bool save) {
+  if (save) {
+    force_cregs(cr.c[0])->define_c1(cr.c[1]);
+  }
+  set_c1(cr.c[0]);
+}
+
 Ref<OrdCont> VmState::extract_cc(int save_cr, int stack_copy, int cc_args) {
   Ref<Stack> new_stk;
   if (stack_copy < 0 || stack_copy == stack->depth()) {
@@ -303,6 +357,7 @@ Ref<OrdCont> VmState::extract_cc(int save_cr, int stack_copy, int cc_args) {
   } else if (stack_copy > 0) {
     stack->check_underflow(stack_copy);
     new_stk = get_stack().split_top(stack_copy);
+    consume_stack_gas(new_stk);
   } else {
     new_stk = Ref<Stack>{true};
   }
@@ -332,7 +387,7 @@ int VmState::throw_exception(int excno) {
   stack_ref.push_smallint(0);
   stack_ref.push_smallint(excno);
   code.clear();
-  consume_gas(exception_gas_price);
+  gas.consume_chk(exception_gas_price);
   return jump(get_c2());
 }
 
@@ -342,7 +397,7 @@ int VmState::throw_exception(int excno, StackEntry&& arg) {
   stack_ref.push(std::move(arg));
   stack_ref.push_smallint(excno);
   code.clear();
-  consume_gas(exception_gas_price);
+  gas.consume_chk(exception_gas_price);
   return jump(get_c2());
 }
 
@@ -375,7 +430,7 @@ void VmState::change_gas_limit(long long new_limit) {
 }
 
 int VmState::step() {
-  assert(!code.is_null());
+  CHECK(code.not_null() && stack.not_null());
   //VM_LOG(st) << "stack:";  stack->dump(VM_LOG(st));
   //VM_LOG(st) << "; cr0.refcnt = " << get_c0()->get_refcnt() - 1 << std::endl;
   if (stack_trace) {
@@ -397,13 +452,13 @@ int VmState::step() {
 }
 
 int VmState::run() {
-  if (code.is_null()) {
-    throw VmError{Excno::fatal, "cannot run an uninitialized VM"};
+  if (code.is_null() || stack.is_null()) {
+    // throw VmError{Excno::fatal, "cannot run an uninitialized VM"};
+    return (int)Excno::fatal;  // no ~ for unhandled exceptions
   }
   int res;
   Guard guard(this);
   do {
-    // LOG(INFO) << "[BS] data cells: " << DataCell::get_total_data_cells();
     try {
       try {
         try {
@@ -419,12 +474,10 @@ int VmState::run() {
       } catch (const VmError& vme) {
         VM_LOG(this) << "handling exception code " << vme.get_errno() << ": " << vme.get_msg();
         try {
-          // LOG(INFO) << "[EX] data cells: " << DataCell::get_total_data_cells();
           ++steps;
           res = throw_exception(vme.get_errno());
         } catch (const VmError& vme2) {
           VM_LOG(this) << "exception " << vme2.get_errno() << " while handling exception: " << vme.get_msg();
-          // LOG(INFO) << "[EXX] data cells: " << DataCell::get_total_data_cells();
           return ~vme2.get_errno();
         }
       }
@@ -437,7 +490,6 @@ int VmState::run() {
       return vmoog.get_errno();  // no ~ for unhandled exceptions (to make their faking impossible)
     }
   } while (!res);
-  // LOG(INFO) << "[EN] data cells: " << DataCell::get_total_data_cells();
   if ((res | 1) == -1 && !try_commit()) {
     VM_LOG(this) << "automatic commit failed (new data or action cells too deep)";
     get_stack().clear();

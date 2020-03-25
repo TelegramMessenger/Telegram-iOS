@@ -83,10 +83,10 @@ public final class ScreenCaptureDetectionManager {
     
     public init(check: @escaping () -> Bool) {
         self.observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { [weak self] _ in
-            guard let strongSelf = self else {
+            guard let _ = self else {
                 return
             }
-            check()
+            let _ = check()
         })
         
         self.screenRecordingDisposable = screenRecordingActive().start(next: { [weak self] value in
@@ -116,7 +116,9 @@ public final class ScreenCaptureDetectionManager {
     }
     
     deinit {
-        NotificationCenter.default.removeObserver(self.observer)
+        if let observer = self.observer {
+            NotificationCenter.default.removeObserver(observer)
+        }
         self.screenRecordingDisposable?.dispose()
         self.screenRecordingCheckTimer?.invalidate()
         self.screenRecordingCheckTimer = nil

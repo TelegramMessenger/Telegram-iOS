@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "crypto/Ed25519.h"
 
@@ -310,6 +310,10 @@ Result<SecureString> Ed25519::compute_shared_secret(const PublicKey &public_key,
   return std::move(result);
 }
 
+int Ed25519::version() {
+  return OPENSSL_VERSION_NUMBER;
+}
+
 #else
 
 Result<Ed25519::PrivateKey> Ed25519::generate_private_key() {
@@ -385,6 +389,10 @@ Result<SecureString> Ed25519::compute_shared_secret(const PublicKey &public_key,
     return Status::Error("Failed to compute shared secret");
   }
   return std::move(shared_secret);
+}
+
+int Ed25519::version() {
+  return 0;
 }
 
 #endif

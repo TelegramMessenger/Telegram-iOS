@@ -562,18 +562,6 @@ public enum TabBarItemContextActionType {
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     open func registerForPreviewing(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme, onlyNative: Bool) {
-        if false, self.traitCollection.forceTouchCapability == .available {
-            let _ = super.registerForPreviewing(with: delegate, sourceView: sourceView)
-        } else if !onlyNative {
-            if self.previewingContext == nil {
-                let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
-                    self?.presentInGlobalOverlay(c, with: a)
-                }, customPresent: { [weak self] c, n in
-                    return self?.customPresentPreviewingController?(c, n)
-                })
-                self.previewingContext = previewingContext
-            }
-        }
     }
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)
