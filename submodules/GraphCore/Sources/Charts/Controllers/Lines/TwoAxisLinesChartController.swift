@@ -144,15 +144,15 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         updateVerticalLimitsAndRange(horizontalRange: currentHorizontalRange, animated: true)
         
         if isChartInteractionBegun {
-            chartInteractionDidBegin(point: lastChartInteractionPoint)
+            chartInteractionDidBegin(point: lastChartInteractionPoint, manual: false)
         }
     }
     
-    public override func chartInteractionDidBegin(point: CGPoint) {
+    public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         guard !ignoreInteraction else {
             return
         }
-        if !isChartInteractionBegun && !self.verticalLineRenderer.values.isEmpty {
+        if manual && !isChartInteracting && !self.verticalLineRenderer.values.isEmpty {
             self.cancelChartInteraction()
             ignoreInteraction = true
             return

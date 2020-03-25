@@ -208,11 +208,11 @@ public class PercentPieChartController: BaseChartController {
         return collection
     }
     
-    public override func chartInteractionDidBegin(point: CGPoint) {
+    public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         if isZoomed {
-            pieController.chartInteractionDidBegin(point: point)
+            pieController.chartInteractionDidBegin(point: point, manual: manual)
         } else {
-            percentController.chartInteractionDidBegin(point: point)
+            percentController.chartInteractionDidBegin(point: point, manual: manual)
         }
     }
     

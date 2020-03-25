@@ -173,11 +173,11 @@ public class DailyBarsChartController: BaseChartController {
         return collection
     }
     
-    public override func chartInteractionDidBegin(point: CGPoint) {
+    public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         if isZoomed {
-            linesController.chartInteractionDidBegin(point: point)
+            linesController.chartInteractionDidBegin(point: point, manual: manual)
         } else {
-            barsController.chartInteractionDidBegin(point: point)
+            barsController.chartInteractionDidBegin(point: point, manual: manual)
         }
     }
     

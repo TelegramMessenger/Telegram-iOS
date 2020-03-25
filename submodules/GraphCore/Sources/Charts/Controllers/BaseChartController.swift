@@ -97,7 +97,7 @@ public class BaseChartController: ChartThemeContainer {
         fatalError("Abstract")
     }
     
-    public func chartInteractionDidBegin(point: CGPoint) {
+    public func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         fatalError("Abstract")
     }
     

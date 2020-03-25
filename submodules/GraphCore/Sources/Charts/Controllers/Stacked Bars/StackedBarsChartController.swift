@@ -184,11 +184,11 @@ public class StackedBarsChartController: BaseChartController {
         return collection
     }
 
-    public override func chartInteractionDidBegin(point: CGPoint) {
+    public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         if isZoomed {
-            zoomedBarsController.chartInteractionDidBegin(point: point)
+            zoomedBarsController.chartInteractionDidBegin(point: point, manual: manual)
         } else {
-            barsController.chartInteractionDidBegin(point: point)
+            barsController.chartInteractionDidBegin(point: point, manual: manual)
         }
     }
     
