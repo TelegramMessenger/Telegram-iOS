@@ -49,6 +49,7 @@ class ChartDetailsView: UIControl {
         addSubview(titleLabel)
         addSubview(arrowView)
         addSubview(arrowButton)
+        addSubview(activityIndicator)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -60,21 +61,32 @@ class ChartDetailsView: UIControl {
         
         titleLabel.setText(viewModel.title, animated: false)
         titleLabel.setVisible(!viewModel.title.isEmpty, animated: false)
-        arrowView.setVisible(viewModel.showArrow, animated: false)
-        arrowButton.isUserInteractionEnabled = viewModel.showArrow
+        arrowView.setVisible(viewModel.showArrow && !viewModel.isLoading, animated: false)
+        arrowButton.isUserInteractionEnabled = viewModel.showArrow && !viewModel.isLoading
+        self.isEnabled = !viewModel.isLoading
+        
+        if viewModel.isLoading {
+            activityIndicator.isHidden = false
+            activityIndicator.startAnimating()
+        } else {
+            activityIndicator.isHidden = true
+            activityIndicator.stopAnimating()
+        }
         
         let width: CGFloat = margin * 2 + (viewModel.showPrefixes ? (prefixLabelWidth + margin) : 0) + textLabelWidth + valueLabelWidth
         var y: CGFloat = verticalMargins
 
         if (!viewModel.title.isEmpty || viewModel.showArrow) {
             titleLabel.frame = CGRect(x: margin, y: y, width: width, height: labelHeight)
-            arrowView.frame = CGRect(x: width - 6 - margin, y: margin, width: 6, height: 10)
+            arrowView.frame = CGRect(x: width - 6 - margin, y: margin + 2, width: 6, height: 10)
+            
+            activityIndicator.transform = CGAffineTransform(scaleX: 0.65, y: 0.65)
+            activityIndicator.center = CGPoint(x: width - 3 - margin, y: 16.0)
+            
             y += labelHeight
         }
         let labelsCount: Int = viewModel.values.count + ((viewModel.totalValue == nil) ? 0 : 1)
 
-        arrowButton.frame = CGRect(x: 0.0, y: 0.0, width: width, height: 30.0)
-        
         setLabelsCount(array: &prefixViews,
                        count: viewModel.showPrefixes ? labelsCount : 0,
                        font: UIFont.systemFont(ofSize: 12, weight: .bold))
@@ -143,12 +155,13 @@ class ChartDetailsView: UIControl {
             }
         })
         self.textHeight = textHeight
+        
+        arrowButton.frame = CGRect(x: 0.0, y: 0.0, width: width, height: y)
     }
     
     override var intrinsicContentSize: CGSize {
         if let viewModel = viewModel {
             var height = ((!viewModel.title.isEmpty || viewModel.showArrow) ? labelHeight : 0) +
-//                (CGFloat(viewModel.values.filter({ $0.visible }).count) * labelHeight) +
                 (viewModel.totalValue?.visible == true ? labelHeight : 0) +
                 verticalMargins * 2
             
@@ -206,6 +219,7 @@ extension ChartDetailsView: ChartThemeContainer {
         }
         UIView.perform(animated: animated) {
             self.arrowView.tintColor = theme.chartDetailsArrowColor
+            self.activityIndicator.color = theme.chartDetailsArrowColor
             self.backgroundColor = theme.chartDetailsViewColor
         }
     }

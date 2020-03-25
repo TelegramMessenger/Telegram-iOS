@@ -152,6 +152,15 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
     }
     
     public override func chartInteractionDidBegin(point: CGPoint) {
+        guard !ignoreInteraction else {
+            return
+        }
+        if !isChartInteractionBegun && !self.verticalLineRenderer.values.isEmpty {
+            self.cancelChartInteraction()
+            ignoreInteraction = true
+            return
+        }
+        
         let horizontalRange = currentHorizontalRange
         let chartFrame = self.chartFrame()
         guard chartFrame.width > 0 else { return }
@@ -183,8 +192,8 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
         }
         
         let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
-        let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
-        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex), chartInteractionWasBegin)
+        let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX + barOffset
+        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex, loading: false), chartInteractionWasBegin)
         self.setDetailsChartVisibleClosure?(true, true)
         self.setDetailsViewPositionClosure?(detailsViewPosition)
         self.verticalLineRenderer.values = [chartValue]

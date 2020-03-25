@@ -166,13 +166,13 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! CallFeedbackControllerArguments
         switch self {
-        case let .reasonsHeader(theme, text):
+        case let .reasonsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .reason(theme, reason, title, value):
+        case let .reason(_, reason, title, value):
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleReason(reason, value)
             })
-        case let .comment(theme, text, placeholder):
+        case let .comment(_, text, placeholder):
             return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                 arguments.updateComment(updatedText)
             }, updatedFocus: { focused in
@@ -180,11 +180,11 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
                     arguments.scrollToComment()
                 }
             }, tag: CallFeedbackControllerEntryTag.comment)
-        case let .includeLogs(theme, title, value):
+        case let .includeLogs(_, title, value):
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleIncludeLogs(value)
             })
-        case let .includeLogsInfo(theme, text):
+        case let .includeLogsInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -312,7 +312,6 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
             }
             
             var resultItemNode: ListViewItemNode?
-            let state = stateValue.with({ $0 })
             let _ = controller.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListItemNode {
                     if let tag = itemNode.tag, tag.isEqual(to: targetTag) {

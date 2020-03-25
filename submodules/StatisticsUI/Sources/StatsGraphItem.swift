@@ -114,6 +114,10 @@ class StatsGraphItemNode: ListViewItemNode {
         }
     }
     
+    func resetInteraction() {
+        self.chartNode.resetInteraction()
+    }
+    
     func asyncLayout() -> (_ item: StatsGraphItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         let currentVisibilityHeight = self.visibilityHeight

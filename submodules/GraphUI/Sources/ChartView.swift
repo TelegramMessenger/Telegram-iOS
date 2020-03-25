@@ -123,12 +123,12 @@ class ChartView: UIControl {
             let detailsViewSize = detailsView.intrinsicContentSize
             maxDetailsViewWidth = max(maxDetailsViewWidth, detailsViewSize.width)
             if maxDetailsViewWidth + detailsTableLeftOffset > detailsViewPosition {
-                detailsView.frame = CGRect(x: min(detailsViewPosition + detailsTableLeftOffset, bounds.width - maxDetailsViewWidth),
+                detailsView.frame = CGRect(x: min(detailsViewPosition + detailsTableLeftOffset, bounds.width - maxDetailsViewWidth - detailsTableLeftOffset),
                                            y: chartInsets.top + detailsTableTopOffset,
                                            width: maxDetailsViewWidth,
                                            height: detailsViewSize.height)
             } else {
-                detailsView.frame = CGRect(x: detailsViewPosition - maxDetailsViewWidth - detailsTableLeftOffset,
+                detailsView.frame = CGRect(x: min(detailsViewPosition - maxDetailsViewWidth - detailsTableLeftOffset, bounds.width - maxDetailsViewWidth - detailsTableLeftOffset),
                                            y: chartInsets.top + detailsTableTopOffset,
                                            width: maxDetailsViewWidth,
                                            height: detailsViewSize.height)

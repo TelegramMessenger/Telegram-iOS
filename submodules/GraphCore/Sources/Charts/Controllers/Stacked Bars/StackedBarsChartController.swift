@@ -43,7 +43,7 @@ public class StackedBarsChartController: BaseChartController {
             controller.chartFrame = { [unowned self] in self.chartFrame() }
             controller.cartViewBounds = { [unowned self] in self.cartViewBounds() }
             controller.zoomInOnDateClosure = { [unowned self] date in
-                self.didTapZoomIn(date: date)
+                self.didTapZoomIn(date: date, pointIndex: 0)
             }
             controller.setChartTitleClosure = { [unowned self] (title, animated) in
                 self.setChartTitleClosure?(title, animated)
@@ -220,7 +220,7 @@ public class StackedBarsChartController: BaseChartController {
         }
     }
     
-    public override func didTapZoomIn(date: Date) {
+    public override func didTapZoomIn(date: Date, pointIndex: Int) {
         guard isZoomed == false else { return }
         if isZoomed {
             return zoomedBarsController.hideDetailsView(animated: true)

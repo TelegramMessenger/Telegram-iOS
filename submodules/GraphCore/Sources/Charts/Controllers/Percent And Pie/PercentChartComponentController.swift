@@ -153,6 +153,7 @@ class PercentChartComponentController: GeneralChartComponentController {
         let viewModel = ChartDetailsViewModel(title: dateString,
                                               showArrow: total > 0 && self.isZoomable && !self.isZoomed,
                                               showPrefixes: true,
+                                              isLoading: false,
                                               values: values,
                                               totalValue: nil,
                                               tapAction: { [weak self] in

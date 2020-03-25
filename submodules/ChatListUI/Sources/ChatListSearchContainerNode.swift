@@ -1044,7 +1044,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             case .groupReference:
                 gesture?.cancel()
             }
-        }, present: { [weak self] c in
+        }, present: { c in
             present(c)
         })
         self.interaction = interaction

@@ -83,6 +83,10 @@ class ChartStackSection: UIView, ChartThemeContainer {
         backButton.setVisible(false, animated: false)
     }
     
+    public func resetDetailsView() {
+        controller?.cancelChartInteraction()
+    }
+    
     func apply(theme: ChartTheme, animated: Bool) {
         self.theme = theme
         

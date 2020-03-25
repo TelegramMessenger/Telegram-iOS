@@ -501,6 +501,13 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.contentOffsetChanged = { [weak controller] _, _ in
+        controller?.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? StatsGraphItemNode {
+                itemNode.resetInteraction()
+            }
+        })
+    }
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }

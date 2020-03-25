@@ -24,6 +24,7 @@ class GeneralChartComponentController: ChartThemeContainer {
     var lastChartInteractionPoint: CGPoint = .zero
     var isChartInteractionBegun: Bool = false
     var isChartInteracting: Bool = false
+    var ignoreInteraction: Bool = false
     let isZoomed: Bool
     var isZoomable = true
     
@@ -169,6 +170,14 @@ class GeneralChartComponentController: ChartThemeContainer {
     }
     
     func chartInteractionDidBegin(point: CGPoint) {
+        guard !ignoreInteraction else {
+            return
+        }
+        if !isChartInteractionBegun && detailsVisible {
+            self.hideDetailsView(animated: true)
+            ignoreInteraction = true
+            return
+        }
         let chartFrame = self.chartFrame()
         guard chartFrame.width > 0 else { return }
         let horizontalRange = currentHorizontalMainChartRange
@@ -185,19 +194,24 @@ class GeneralChartComponentController: ChartThemeContainer {
         showDetailsView(at: chartValue, detailsViewPosition: detailsViewPosition, dataIndex: minIndex, date: closestDate, animted: chartWasInteracting)
     }
     
+    var detailsVisible = false
     func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animted: Bool) {
         setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex), animted)
         setDetailsChartVisibleClosure?(true, true)
         setDetailsViewPositionClosure?(detailsViewPosition)
+        detailsVisible = true
     }
     
     func chartInteractionDidEnd() {
+        isChartInteractionBegun = false
         isChartInteracting = false
+        ignoreInteraction = false
     }
 
     func hideDetailsView(animated: Bool) {
         isChartInteractionBegun = false
         setDetailsChartVisibleClosure?(false, animated)
+        detailsVisible = false
     }
     
     var visibleDetailsChartValues: [ChartsCollection.Chart] {
@@ -323,13 +337,13 @@ class GeneralChartComponentController: ChartThemeContainer {
         let viewModel = ChartDetailsViewModel(title: dateString,
                                               showArrow: self.isZoomable && !self.isZoomed,
                                               showPrefixes: false,
+                                              isLoading: false,
                                               values: values,
                                               totalValue: nil, 
                                               tapAction: { [weak self] in
                                                 self?.zoomInOnDateClosure?(closestDate) },
                                               hideAction: { [weak self] in
                                                 self?.setDetailsChartVisibleClosure?(false, true)
-                                                
                                               })
         return viewModel
     }
@@ -338,11 +352,11 @@ class GeneralChartComponentController: ChartThemeContainer {
         let fromDate = Date(timeIntervalSince1970: TimeInterval(currentHorizontalMainChartRange.lowerBound) + 1)
         let toDate = Date(timeIntervalSince1970: TimeInterval(currentHorizontalMainChartRange.upperBound))
         if Calendar.utc.startOfDay(for: fromDate) == Calendar.utc.startOfDay(for: toDate) {
-            let stirng = BaseConstants.headerFullZoomedFormatter.string(from: fromDate)
-            self.setChartTitleClosure?(stirng, animated)
+            let string = BaseConstants.headerFullZoomedFormatter.string(from: fromDate)
+            self.setChartTitleClosure?(string, animated)
         } else {
-            let stirng = "\(BaseConstants.headerMediumRangeFormatter.string(from: fromDate)) - \(BaseConstants.headerMediumRangeFormatter.string(from: toDate))"
-            self.setChartTitleClosure?(stirng, animated)
+            let string = "\(BaseConstants.headerMediumRangeFormatter.string(from: fromDate)) - \(BaseConstants.headerMediumRangeFormatter.string(from: toDate))"
+            self.setChartTitleClosure?(string, animated)
         }
     }
 }

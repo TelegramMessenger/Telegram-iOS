@@ -10,9 +10,9 @@ import GraphCore
 import AppBundle
 
 private enum Constants {
-    static let cropIndocatorLineWidth: CGFloat = 1
+    static let cropIndicatorLineWidth: CGFloat = 1
     static let markerSelectionRange: CGFloat = 25
-    static let defaultMinimumRangeDistance: CGFloat = 0.05
+    static let defaultMinimumRangeDistance: CGFloat = 0.1
     static let titntAreaWidth: CGFloat = 10
     static let horizontalContentMargin: CGFloat = 16
     static let cornerRadius: CGFloat = 5
@@ -56,9 +56,9 @@ class RangeChartView: UIControl {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
-        layoutMargins = UIEdgeInsets(top: Constants.cropIndocatorLineWidth,
+        layoutMargins = UIEdgeInsets(top: Constants.cropIndicatorLineWidth,
                                      left: Constants.horizontalContentMargin,
-                                     bottom: Constants.cropIndocatorLineWidth,
+                                     bottom: Constants.cropIndicatorLineWidth,
                                      right: Constants.horizontalContentMargin)
         
         self.setup()
@@ -289,9 +289,9 @@ private extension RangeChartView {
     
     func layoutViews() {
         cropFrameView.frame = CGRect(x: locationInView(for: lowerBound),
-                                     y: contentFrame.minY - Constants.cropIndocatorLineWidth,
+                                     y: contentFrame.minY - Constants.cropIndicatorLineWidth,
                                      width: locationInView(for: upperBound) - locationInView(for: lowerBound),
-                                     height: contentFrame.height + Constants.cropIndocatorLineWidth * 2)
+                                     height: contentFrame.height + Constants.cropIndicatorLineWidth * 2)
         
         if chartView.frame != contentFrame {
             chartView.frame = contentFrame

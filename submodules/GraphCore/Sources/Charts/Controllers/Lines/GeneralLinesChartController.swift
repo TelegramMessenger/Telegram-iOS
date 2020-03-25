@@ -122,14 +122,22 @@ public class GeneralLinesChartController: BaseLinesChartController {
     }
 
     public override func chartInteractionDidBegin(point: CGPoint) {
+        guard !ignoreInteraction else {
+            return
+        }
+        if !isChartInteractionBegun && !self.verticalLineRenderer.values.isEmpty {
+            self.cancelChartInteraction()
+            ignoreInteraction = true
+            return
+        }
         let horizontalRange = mainLinesRenderer.horizontalRange.current
         let chartFrame = self.chartFrame()
         guard chartFrame.width > 0 else { return }
-        let chartInteractionWasBegin = isChartInteractionBegun
 
         let dateToFind = Date(timeIntervalSince1970: TimeInterval(horizontalRange.distance * point.x + horizontalRange.lowerBound))
         guard let (closestDate, minIndex) = findClosestDateTo(dateToFind: dateToFind) else { return }
         
+        let chartInteractionWasBegin = isChartInteractionBegun
         super.chartInteractionDidBegin(point: point)
 
         self.lineBulletsRenderer.bullets = chartLines.compactMap { chart in
@@ -139,7 +147,7 @@ public class GeneralLinesChartController: BaseLinesChartController {
         
         let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
         let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
-        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex), chartInteractionWasBegin)
+        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex, loading: false), chartInteractionWasBegin)
         self.setDetailsChartVisibleClosure?(true, true)
         self.setDetailsViewPositionClosure?(detailsViewPosition)
         self.verticalLineRenderer.values = [chartValue]

@@ -78,15 +78,17 @@ public struct ChartDetailsViewModel {
     public internal(set) var title: String
     public internal(set) var showArrow: Bool
     public internal(set) var showPrefixes: Bool
+    public internal(set) var isLoading: Bool
     public internal(set) var values: [Value]
     public internal(set) var totalValue: Value?
     public internal(set) var tapAction: (() -> Void)?
     public internal(set) var hideAction: (() -> Void)?
     
-    static let blank = ChartDetailsViewModel(title: "", showArrow: false, showPrefixes: false, values: [], totalValue: nil, tapAction: nil, hideAction: nil)
+    static let blank = ChartDetailsViewModel(title: "", showArrow: false, showPrefixes: false, isLoading: false, values: [], totalValue: nil, tapAction: nil, hideAction: nil)
     public init(title: String,
     showArrow: Bool,
     showPrefixes: Bool,
+    isLoading: Bool,
     values: [Value],
     totalValue: Value?,
     tapAction: (() -> Void)?,
@@ -94,6 +96,7 @@ public struct ChartDetailsViewModel {
         self.title = title
         self.showArrow = showArrow
         self.showPrefixes = showPrefixes
+        self.isLoading = isLoading
         self.values = values
         self.totalValue = totalValue
         self.tapAction = tapAction
