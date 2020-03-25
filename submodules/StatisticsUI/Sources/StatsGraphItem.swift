@@ -174,7 +174,7 @@ class StatsGraphItemNode: ListViewItemNode {
                     height = calculateVisiblityHeight(width: params.width - params.leftInset - params.rightInset, items: items)
                 }
                 if item.type == .hourlyStep {
-                    height -= 42.0
+                    height -= 82.0
                 }
                 visibilityHeight = height
             }
@@ -246,7 +246,7 @@ class StatsGraphItemNode: ListViewItemNode {
                         }
                         
                         strongSelf.chartContainerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: contentSize.height))
-                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 750.0))
+                        strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: 0.0, y: item.type == .hourlyStep ? -40.0 : 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 750.0))
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))

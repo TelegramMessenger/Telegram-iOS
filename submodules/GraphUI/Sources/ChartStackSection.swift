@@ -8,6 +8,7 @@
 
 import UIKit
 import GraphCore
+import Display
 
 private enum Constants {
     static let chartViewHeightFraction: CGFloat = 0.55
@@ -35,6 +36,8 @@ class ChartStackSection: UIView, ChartThemeContainer {
     var theme: ChartTheme?
     
     var displayRange: Bool = true
+    
+    let hapticFeedback = HapticFeedback()
     
     init() {
         sectionContainerView = UIView()
@@ -188,8 +191,11 @@ class ChartStackSection: UIView, ChartThemeContainer {
         controller.chartFrame = { [unowned self] in
             return self.chartView.chartFrame
         }
-        controller.setDetailsViewModel = { [unowned self] viewModel, animated in
+        controller.setDetailsViewModel = { [unowned self] viewModel, animated, feedback in
             self.chartView.setDetailsViewModel(viewModel: viewModel, animated: animated)
+            if feedback {
+                self.hapticFeedback.tap()
+            }
         }
         controller.setDetailsChartVisibleClosure = { [unowned self] visible, animated in
             self.chartView.setDetailsChartVisible(visible, animated: animated)

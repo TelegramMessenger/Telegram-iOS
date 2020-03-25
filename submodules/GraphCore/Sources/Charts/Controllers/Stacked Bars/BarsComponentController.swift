@@ -193,7 +193,7 @@ class BarsComponentController: GeneralChartComponentController {
                                                                color: .white,
                                                                visible: visibleChartValues.count > 1)
         } else {
-            viewModel.title = ""
+            viewModel.title = "\(Int(closestDate.timeIntervalSince1970)):00"
         }
         return viewModel
     }

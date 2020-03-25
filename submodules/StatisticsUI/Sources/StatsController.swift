@@ -141,14 +141,14 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 16
             case .postInteractionsGraph:
                 return 17
-            case .postsTitle:
-                return 18
-            case let .post(index, _, _, _, _, _):
-                return 19 + index
             case .instantPageInteractionsTitle:
-                return 1000
-            case .instantPageInteractionsGraph:
-                return 1001
+                 return 18
+             case .instantPageInteractionsGraph:
+                 return 19
+            case .postsTitle:
+                return 20
+            case let .post(index, _, _, _, _, _):
+                return 21 + index
         }
     }
     
@@ -398,6 +398,11 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
             entries.append(.postInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InteractionsTitle))
             entries.append(.postInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, .twoAxisStep))
         }
+        
+        if !data.instantPageInteractionsGraph.isEmpty {
+            entries.append(.instantPageInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InstantViewInteractionsTitle))
+            entries.append(.instantPageInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.instantPageInteractionsGraph, .twoAxisStep))
+        }
 
         if let messages = messages, !messages.isEmpty, let interactions = interactions, !interactions.isEmpty {
             entries.append(.postsTitle(presentationData.theme, presentationData.strings.Stats_PostsTitle))
@@ -408,11 +413,6 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
                     index += 1
                 }
             }
-        }
-
-        if !data.instantPageInteractionsGraph.isEmpty {
-            entries.append(.instantPageInteractionsTitle(presentationData.theme, presentationData.strings.Stats_InstantViewInteractionsTitle))
-            entries.append(.instantPageInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.instantPageInteractionsGraph, .twoAxisStep))
         }
     }
     

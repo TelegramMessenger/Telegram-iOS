@@ -172,7 +172,7 @@ public class BaseChartController: ChartThemeContainer {
     
     public var setDetailsViewPositionClosure: ((CGFloat) -> Void)?
     public var setDetailsChartVisibleClosure: ((Bool, Bool) -> Void)?
-    public var setDetailsViewModel: ((ChartDetailsViewModel, Bool) -> Void)?
+    public var setDetailsViewModel: ((ChartDetailsViewModel, Bool, Bool) -> Void)?
     public var getDetailsData: ((Date, @escaping (ChartsCollection?) -> Void) -> Void)?
     public var setChartTitleClosure: ((String, Bool) -> Void)?
     public var setBackButtonVisibilityClosure: ((Bool, Bool) -> Void)?

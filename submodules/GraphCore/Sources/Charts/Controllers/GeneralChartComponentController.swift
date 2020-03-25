@@ -196,7 +196,7 @@ class GeneralChartComponentController: ChartThemeContainer {
     
     var detailsVisible = false
     func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animted: Bool) {
-        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex), animted)
+        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex), animted, false)
         setDetailsChartVisibleClosure?(true, true)
         setDetailsViewPositionClosure?(detailsViewPosition)
         detailsVisible = true
@@ -226,7 +226,7 @@ class GeneralChartComponentController: ChartThemeContainer {
     var setChartTitleClosure: ((String, Bool) -> Void)?
     var setDetailsViewPositionClosure: ((CGFloat) -> Void)?
     var setDetailsChartVisibleClosure: ((Bool, Bool) -> Void)?
-    var setDetailsViewModel: ((ChartDetailsViewModel, Bool) -> Void)?
+    var setDetailsViewModel: ((ChartDetailsViewModel, Bool, Bool) -> Void)?
     var chartRangePagingClosure: ((Bool, CGFloat) -> Void)? // isEnabled, PageSize
     
     func apply(theme: ChartTheme, animated: Bool) {

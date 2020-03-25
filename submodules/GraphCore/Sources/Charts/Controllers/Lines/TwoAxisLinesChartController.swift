@@ -176,7 +176,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         
         let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
         let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
-        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex, loading: false), chartInteractionWasBegin)
+        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex, loading: false), chartInteractionWasBegin, !chartInteractionWasBegin)
         self.setDetailsChartVisibleClosure?(true, true)
         self.setDetailsViewPositionClosure?(detailsViewPosition)
         self.verticalLineRenderer.values = [chartValue]

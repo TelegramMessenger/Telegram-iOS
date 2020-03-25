@@ -134,7 +134,7 @@ public class BaseLinesChartController: BaseChartController {
     public override func didTapZoomIn(date: Date, pointIndex: Int) {
         guard isZoomed == false else { return }
                 
-        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: pointIndex, loading: true), false)
+        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: pointIndex, loading: true), false, false)
         
         self.getDetailsData?(date, { updatedCollection in
             if let updatedCollection = updatedCollection {

@@ -59,8 +59,8 @@ public class PercentPieChartController: BaseChartController {
             controller.setDetailsChartVisibleClosure = { [unowned self] (visible, animated) in
                 self.setDetailsChartVisibleClosure?(visible, animated)
             }
-            controller.setDetailsViewModel = { [unowned self] (viewModel, animated) in
-                self.setDetailsViewModel?(viewModel, animated)
+            controller.setDetailsViewModel = { [unowned self] (viewModel, animated, feedback) in
+                self.setDetailsViewModel?(viewModel, animated, feedback)
             }
             controller.updatePreviewRangeClosure = { [unowned self] (fraction, animated) in
                 self.chartRangeUpdatedClosure?(fraction, animated)

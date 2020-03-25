@@ -136,7 +136,7 @@ class PieChartComponentController: GeneralChartComponentController {
     func updateSelectedDataLabelIfNeeded() {
         if let segment = pieChartRenderer.selectedSegment {
             self.setDetailsChartVisibleClosure?(true, true)
-            self.setDetailsViewModel?(chartDetailsViewModel(segmentInde: segment), false)
+            self.setDetailsViewModel?(chartDetailsViewModel(segmentInde: segment), false, false)
             self.setDetailsViewPositionClosure?(chartFrame().width / 4)
         } else {
             self.setDetailsChartVisibleClosure?(false, true)
