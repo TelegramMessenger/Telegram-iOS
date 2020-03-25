@@ -98,6 +98,7 @@ additional_paths = [
     ".bazelrc",
     "Utils.makefile",
     "Wallet.makefile",
+    "wallet_env.sh",
 ]
 
 for file_path in additional_paths:
