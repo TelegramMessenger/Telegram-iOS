@@ -36,7 +36,7 @@ public struct ChartsCollection {
 }
 
 public extension ChartsCollection {
-    public init(from decodedData: [String: Any]) throws {
+    init(from decodedData: [String: Any]) throws {
         guard let columns = decodedData["columns"] as? [[Any]] else {
             throw ChartsError.generalConversion("Unable to get columns from: \(decodedData)")
         }

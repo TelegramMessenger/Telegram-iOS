@@ -150,6 +150,7 @@ class PieChartComponentController: GeneralChartComponentController {
         let viewModel = ChartDetailsViewModel(title: "",
                                               showArrow: false,
                                               showPrefixes: false,
+                                              isLoading: false,
                                               values: [ChartDetailsViewModel.Value(prefix: nil,
                                                                                    title: title,
                                                                                    value: valueString,

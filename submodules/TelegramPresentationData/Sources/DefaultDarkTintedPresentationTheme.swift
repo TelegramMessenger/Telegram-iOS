@@ -427,7 +427,6 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         helperLinesColor: accentColor?.withMultiplied(hue: 1.037, saturation: 0.271, brightness: 0.671).withAlphaComponent(0.35),
         strongLinesColor: accentColor?.withMultiplied(hue: 1.037, saturation: 0.271, brightness: 0.671).withAlphaComponent(0.35),
         barStrongLinesColor: accentColor?.withMultiplied(hue: 1.033, saturation: 0.211, brightness: 0.882).withAlphaComponent(0.45),
-        detailsArrowColor: accentColor?.withMultiplied(hue: 1.051, saturation: 0.254, brightness: 0.376),
         detailsViewColor: accentColor?.withMultiplied(hue: 1.035, saturation: 0.571, brightness: 0.184),
         rangeViewFrameColor: accentColor?.withMultiplied(hue: 1.030, saturation: 0.494, brightness: 0.349)
     )
@@ -808,7 +807,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         strongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.35),
         barStrongLinesColor: UIColor(rgb: 0xbacce1, alpha: 0.45),
         detailsTextColor: UIColor(rgb: 0xffffff),
-        detailsArrowColor: UIColor(rgb: 0x4c5460),
+        detailsArrowColor: UIColor(rgb: 0xffffff),
         detailsViewColor: UIColor(rgb: 0x19232f),
         rangeViewFrameColor: UIColor(rgb: 0x354659),
         rangeViewMarkerColor: UIColor(rgb: 0xffffff)

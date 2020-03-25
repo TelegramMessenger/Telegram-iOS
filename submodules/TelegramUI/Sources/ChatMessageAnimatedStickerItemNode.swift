@@ -300,8 +300,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
-        } else if let animationNode = self.animationNode as? ManagedDiceAnimationNode {
-
         }
     }
     

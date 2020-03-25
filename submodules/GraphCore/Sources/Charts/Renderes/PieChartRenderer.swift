@@ -39,6 +39,9 @@ class PieChartRenderer: BaseChartRenderer {
     }
     private(set) var selectedSegment: Int?
     func selectSegmentAt(at indexToSelect: Int?, animated: Bool) {
+        guard selectedSegment != indexToSelect else {
+            return
+        }
         selectedSegment = indexToSelect
         for (index, animator) in setlectedSegmentsAnimators.enumerated() {
             let fraction: CGFloat = (index == indexToSelect) ? 1.0 : 0.0

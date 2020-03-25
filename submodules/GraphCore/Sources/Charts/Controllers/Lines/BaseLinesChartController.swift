@@ -18,6 +18,7 @@ public class BaseLinesChartController: BaseChartController {
     var zoomChartVisibility: [Bool]
     var lastChartInteractionPoint: CGPoint = .zero
     var isChartInteractionBegun: Bool = false
+    var ignoreInteraction: Bool = false
     
     var initialChartRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     var zoomedChartRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
@@ -71,7 +72,8 @@ public class BaseLinesChartController: BaseChartController {
     }
     
     public override func chartInteractionDidEnd() {
-        
+        isChartInteractionBegun = false
+        ignoreInteraction = false
     }
     
     public override func cancelChartInteraction() {
@@ -98,7 +100,7 @@ public class BaseLinesChartController: BaseChartController {
     }
     
     
-    func chartDetailsViewModel(closestDate: Date, pointIndex: Int) -> ChartDetailsViewModel {
+    func chartDetailsViewModel(closestDate: Date, pointIndex: Int, loading: Bool) -> ChartDetailsViewModel {
         let values: [ChartDetailsViewModel.Value] = actualChartsCollection.chartValues.enumerated().map { arg in
             let (index, component) = arg
             return ChartDetailsViewModel.Value(prefix: nil,
@@ -118,20 +120,25 @@ public class BaseLinesChartController: BaseChartController {
         let viewModel = ChartDetailsViewModel(title: dateString,
                                               showArrow: total > 0 && self.isZoomable && !self.isZoomed,
                                               showPrefixes: false,
+                                              isLoading: loading,
                                               values: values,
                                               totalValue: nil,
-                                              tapAction: { [weak self] in self?.didTapZoomIn(date: closestDate) },
-                                              hideAction: { [weak self] in
-                                                self?.setDetailsChartVisibleClosure?(false, true)
+                                              tapAction: { [weak self] in
+                                                self?.didTapZoomIn(date: closestDate, pointIndex: pointIndex)
+                                              }, hideAction: { [weak self] in
+                                                self?.cancelChartInteraction()
                                               })
         return viewModel
     }
     
-    public override func didTapZoomIn(date: Date) {
+    public override func didTapZoomIn(date: Date, pointIndex: Int) {
         guard isZoomed == false else { return }
-        cancelChartInteraction()
+                
+        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: pointIndex, loading: true), false)
+        
         self.getDetailsData?(date, { updatedCollection in
             if let updatedCollection = updatedCollection {
+                self.cancelChartInteraction()
                 self.initialChartRange = self.currentHorizontalRange
                 if let startDate = updatedCollection.axisValues.first,
                     let endDate = updatedCollection.axisValues.last {

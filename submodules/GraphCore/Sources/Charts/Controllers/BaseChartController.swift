@@ -137,7 +137,7 @@ public class BaseChartController: ChartThemeContainer {
     }
     
     public var isChartRangePagingEnabled: Bool = false
-    public var minimumSelectedChartRange: CGFloat = 0.05
+    public var minimumSelectedChartRange: CGFloat = 0.085
     public var chartRangePagingClosure: ((Bool, CGFloat) -> Void)? // isEnabled, PageSize
     public func setChartRangePagingEnabled(isEnabled: Bool, minimumSelectionSize: CGFloat) {
         isChartRangePagingEnabled = isEnabled
@@ -178,7 +178,7 @@ public class BaseChartController: ChartThemeContainer {
     public var setBackButtonVisibilityClosure: ((Bool, Bool) -> Void)?
     public var refreshChartToolsClosure: ((Bool) -> Void)?
 
-    public func didTapZoomIn(date: Date) {
+    public func didTapZoomIn(date: Date, pointIndex: Int) {
         fatalError("Abstract")
     }
     

@@ -57,7 +57,7 @@ public extension ChartTheme {
             context.addLine(to: CGPoint(x: 110.0, y: 21.0))
             context.addLine(to: CGPoint(x: 107.0, y: 25.0))
             context.strokePath()
-        })?.resizableImage(withCapInsets: UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0), resizingMode: .stretch)
+        })?.resizableImage(withCapInsets: UIEdgeInsets(top: 15.0, left: 11.0, bottom: 15.0, right: 11.0), resizingMode: .stretch)
         
         self.init(chartTitleColor: presentationTheme.list.itemPrimaryTextColor, actionButtonColor: presentationTheme.list.itemAccentColor, chartBackgroundColor: presentationTheme.list.itemBlocksBackgroundColor, chartLabelsColor: presentationTheme.chart.labelsColor, chartHelperLinesColor: presentationTheme.chart.helperLinesColor, chartStrongLinesColor: presentationTheme.chart.strongLinesColor, barChartStrongLinesColor: presentationTheme.chart.barStrongLinesColor, chartDetailsTextColor: presentationTheme.chart.detailsTextColor, chartDetailsArrowColor: presentationTheme.chart.detailsArrowColor, chartDetailsViewColor: presentationTheme.chart.detailsViewColor, rangeViewFrameColor: rangeViewFrameColor, rangeViewTintColor: presentationTheme.list.blocksBackgroundColor.withAlphaComponent(0.5), rangeViewMarkerColor: rangeViewMarkerColor, rangeCropImage: rangeImage)
     }
@@ -124,6 +124,10 @@ public final class ChartNode: ASDisplayNode {
         })
     }
         
+    required public init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     public func setupTheme(_ theme: ChartTheme) {
         self.chartView.apply(theme: theme, animated: false)
     }
@@ -136,11 +140,7 @@ public final class ChartNode: ASDisplayNode {
         self.chartView.setup(controller: controller, displayRange: displayRange)
     }
     
-    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        return super.hitTest(point, with: event)
-    }
-    
-    required public init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+    public func resetInteraction() {
+        self.chartView.resetDetailsView()
     }
 }
