@@ -57,20 +57,20 @@ class BaseChartRenderer: ChartViewRenderer {
             return
         }
         if animated {
-            let function: TimeFunction
-            if let timeFunction = timeFunction {
-                function = timeFunction
-            } else if self.verticalRange.current.distance > 0 && verticalRange.distance > 0 {
-                if self.verticalRange.current.distance / verticalRange.distance > exponentialAnimationTrashold {
-                    function = .easeIn
-                } else if verticalRange.distance / self.verticalRange.current.distance > exponentialAnimationTrashold {
-                    function = .easeOut
-                } else {
-                    function = .linear
-                }
-            } else {
-                function = .linear
-            }
+            let function: TimeFunction = .easeInOut
+//            if let timeFunction = timeFunction {
+//                function = timeFunction
+//            } else if self.verticalRange.current.distance > 0 && verticalRange.distance > 0 {
+//                if self.verticalRange.current.distance / verticalRange.distance > exponentialAnimationTrashold {
+//                    function = .easeIn
+//                } else if verticalRange.distance / self.verticalRange.current.distance > exponentialAnimationTrashold {
+//                    function = .easeOut
+//                } else {
+//                    function = .linear
+//                }
+//            } else {
+//                function = .linear
+//            }
             
             self.verticalRange.animate(to: verticalRange, duration: .defaultDuration, timeFunction: function)
         } else {

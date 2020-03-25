@@ -170,9 +170,6 @@ class GeneralChartComponentController: ChartThemeContainer {
     }
     
     func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
-        guard !ignoreInteraction else {
-            return
-        }
         if manual && !isChartInteracting && detailsVisible {
             self.hideDetailsView(animated: true)
             ignoreInteraction = true

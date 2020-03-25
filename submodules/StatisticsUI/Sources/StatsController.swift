@@ -464,7 +464,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     }
     messagesPromise.set(.single(nil) |> then(messageView))
     
-    let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(1.5, queue: Queue.mainQueue()))
+    let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
     
     let previousData = Atomic<ChannelStats?>(value: nil)
     
