@@ -70,6 +70,7 @@ public class BaseLinesChartController: BaseChartController {
     public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
         lastChartInteractionPoint = point
         isChartInteractionBegun = true
+        isChartInteracting = true
     }
     
     public override func chartInteractionDidEnd() {
