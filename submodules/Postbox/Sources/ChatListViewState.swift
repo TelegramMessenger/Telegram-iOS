@@ -213,9 +213,9 @@ private final class ChatListViewSpaceState {
                 if lowerOrAtAnchorMessages.count < self.halfLimit {
                     var nextLowerIndex: MutableChatListEntryIndex
                     if let lastMessage = lowerOrAtAnchorMessages.min(by: { $0.entryIndex < $1.entryIndex }) {
-                        nextLowerIndex = lastMessage.entryIndex.predecessor
+                        nextLowerIndex = lastMessage.entryIndex
                     } else {
-                        nextLowerIndex = resolvedAnchorIndex.predecessor
+                        nextLowerIndex = resolvedAnchorIndex
                     }
                     let loadedLowerMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextLowerIndex.index, nextLowerIndex.isMessage), to: (lowerBound.index, lowerBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - lowerOrAtAnchorMessages.count, predicate: filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, groupId: groupId, predicate: $0) }).map(mapEntry)
                     lowerOrAtAnchorMessages.append(contentsOf: loadedLowerMessages)
