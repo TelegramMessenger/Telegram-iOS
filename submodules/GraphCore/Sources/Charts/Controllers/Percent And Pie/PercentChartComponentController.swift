@@ -179,8 +179,8 @@ class PercentChartComponentController: GeneralChartComponentController {
         return previewPercentChartRenderer
     }
     
-    override func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animted: Bool) {
-        super.showDetailsView(at: chartPosition, detailsViewPosition: detailsViewPosition, dataIndex: dataIndex, date: date, animted: animted)
+    override func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animated: Bool, feedback: Bool) {
+        super.showDetailsView(at: chartPosition, detailsViewPosition: detailsViewPosition, dataIndex: dataIndex, date: date, animated: animated, feedback: feedback)
         verticalLineRenderer.values = [chartPosition]
         verticalLineRenderer.isEnabled = true
     }

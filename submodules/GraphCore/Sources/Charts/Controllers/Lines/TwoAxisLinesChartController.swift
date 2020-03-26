@@ -149,9 +149,6 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
     }
     
     public override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
-        guard !ignoreInteraction else {
-            return
-        }
         if manual && !isChartInteracting && !self.verticalLineRenderer.values.isEmpty {
             self.cancelChartInteraction()
             ignoreInteraction = true
@@ -175,8 +172,12 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         }
         
         let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
+        var chartValueUpdated = true
+        if self.verticalLineRenderer.values == [chartValue] {
+            chartValueUpdated = false
+        }
         let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
-        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex, loading: false), chartInteractionWasBegin, !chartInteractionWasBegin)
+        self.setDetailsViewModel?(chartDetailsViewModel(closestDate: closestDate, pointIndex: minIndex, loading: false), chartInteractionWasBegin, chartInteractionWasBegin && chartValueUpdated)
         self.setDetailsChartVisibleClosure?(true, true)
         self.setDetailsViewPositionClosure?(detailsViewPosition)
         self.verticalLineRenderer.values = [chartValue]

@@ -302,7 +302,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }
         }
-        
+    
         let previousState = Atomic<ItemListNodeState?>(value: nil)
         self.transitionDisposable.set(((state
         |> map { presentationData, stateAndArguments -> ItemListNodeTransition in

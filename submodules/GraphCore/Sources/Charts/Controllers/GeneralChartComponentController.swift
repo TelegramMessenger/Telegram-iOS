@@ -169,10 +169,9 @@ class GeneralChartComponentController: ChartThemeContainer {
         return (closestDate, minIndex)
     }
     
+    var currentChartValue: CGFloat?
+    
     func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
-        guard !ignoreInteraction else {
-            return
-        }
         if manual && !isChartInteracting && detailsVisible {
             self.hideDetailsView(animated: true)
             ignoreInteraction = true
@@ -190,13 +189,18 @@ class GeneralChartComponentController: ChartThemeContainer {
         isChartInteracting = true
         
         let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
+        var chartValueUpdated = true
+        if chartValue == currentChartValue {
+            chartValueUpdated = false
+        }
+        currentChartValue = chartValue
         let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
-        showDetailsView(at: chartValue, detailsViewPosition: detailsViewPosition, dataIndex: minIndex, date: closestDate, animted: chartWasInteracting)
+        showDetailsView(at: chartValue, detailsViewPosition: detailsViewPosition, dataIndex: minIndex, date: closestDate, animated: chartWasInteracting, feedback: chartWasInteracting && chartValueUpdated)
     }
     
     var detailsVisible = false
-    func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animted: Bool) {
-        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex), animted, false)
+    func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animated: Bool, feedback: Bool) {
+        setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: dataIndex), animated, feedback)
         setDetailsChartVisibleClosure?(true, true)
         setDetailsViewPositionClosure?(detailsViewPosition)
         detailsVisible = true
@@ -205,12 +209,14 @@ class GeneralChartComponentController: ChartThemeContainer {
     func chartInteractionDidEnd() {
         isChartInteracting = false
         ignoreInteraction = false
+        currentChartValue = nil
     }
 
     func hideDetailsView(animated: Bool) {
         isChartInteractionBegun = false
         setDetailsChartVisibleClosure?(false, animated)
         detailsVisible = false
+        currentChartValue = nil
     }
     
     var visibleDetailsChartValues: [ChartsCollection.Chart] {

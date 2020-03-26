@@ -158,7 +158,9 @@ class PieChartComponentController: GeneralChartComponentController {
                                                                                    visible: true)],
                                               totalValue: nil,
                                               tapAction: nil,
-                                              hideAction: nil)
+                                              hideAction: { [weak self] in
+                                                self?.deselectSegment(completion: {})
+        })
         return viewModel
     }
     

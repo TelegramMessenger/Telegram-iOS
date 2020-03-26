@@ -182,13 +182,13 @@ class LinesComponentController: GeneralChartComponentController {
         return previewLinesChartRenderer
     }
     
-    override func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animted: Bool) {
-        super.showDetailsView(at: chartPosition, detailsViewPosition: detailsViewPosition, dataIndex: dataIndex, date: date, animted: animted)
+    override func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animated: Bool, feedback: Bool) {
+        super.showDetailsView(at: chartPosition, detailsViewPosition: detailsViewPosition, dataIndex: dataIndex, date: date, animated: animated, feedback: feedback)
         verticalLineRenderer.values = [chartPosition]
         verticalLineRenderer.isEnabled = true
         
         lineBulletsRenderer.isEnabled = true
-        lineBulletsRenderer.setVisible(true, animated: animted)
+        lineBulletsRenderer.setVisible(true, animated: animated)
         lineBulletsRenderer.bullets = chartLines.compactMap { chart in
             return LineBulletsRenderer.Bullet(coordinate: chart.points[dataIndex], offset: .zero, color: chart.color)
         }

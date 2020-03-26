@@ -253,9 +253,9 @@ public class PercentPieChartController: BaseChartController {
          var lowIndex = max(0, index - range / 2)
          var highIndex = min(currentCollection.axisValues.count - 1, index + range / 2)
          if lowIndex == 0 {
-             highIndex = lowIndex + (range - 1)
+             highIndex = min(currentCollection.axisValues.count - 1, lowIndex + (range - 1))
          } else if highIndex == currentCollection.axisValues.count - 1 {
-             lowIndex = highIndex - (range - 1)
+             lowIndex = max(0, highIndex - (range - 1))
          }
          
          let newValues = currentCollection.chartValues.map { chart in
