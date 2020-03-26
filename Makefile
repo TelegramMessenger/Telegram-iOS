@@ -2,7 +2,7 @@
 
 include Utils.makefile
 
-APP_VERSION="5.16"
+APP_VERSION="6.0"
 CORE_COUNT=$(shell sysctl -n hw.logicalcpu)
 CORE_COUNT_MINUS_ONE=$(shell expr ${CORE_COUNT} \- 1)
 
