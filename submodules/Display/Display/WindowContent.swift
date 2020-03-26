@@ -513,7 +513,7 @@ public class Window1 {
                         if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
                             keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
                         } else {
-                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
+                            keyboardHeight = max(0.0, keyboardHeight)
                         }
                     }
                 }
