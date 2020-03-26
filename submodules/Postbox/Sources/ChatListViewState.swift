@@ -215,7 +215,7 @@ private final class ChatListViewSpaceState {
                     if let lastMessage = lowerOrAtAnchorMessages.min(by: { $0.entryIndex < $1.entryIndex }) {
                         nextLowerIndex = lastMessage.entryIndex
                     } else {
-                        nextLowerIndex = resolvedAnchorIndex
+                        nextLowerIndex = resolvedAnchorIndex.predecessor
                     }
                     let loadedLowerMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextLowerIndex.index, nextLowerIndex.isMessage), to: (lowerBound.index, lowerBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - lowerOrAtAnchorMessages.count, predicate: filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, groupId: groupId, predicate: $0) }).map(mapEntry)
                     lowerOrAtAnchorMessages.append(contentsOf: loadedLowerMessages)
@@ -223,7 +223,7 @@ private final class ChatListViewSpaceState {
                 if higherThanAnchorMessages.count < self.halfLimit {
                     var nextHigherIndex: MutableChatListEntryIndex
                     if let lastMessage = higherThanAnchorMessages.max(by: { $0.entryIndex < $1.entryIndex }) {
-                        nextHigherIndex = lastMessage.entryIndex.successor
+                        nextHigherIndex = lastMessage.entryIndex
                     } else {
                         nextHigherIndex = resolvedAnchorIndex
                     }
@@ -238,7 +238,25 @@ private final class ChatListViewSpaceState {
             assert(higherThanAnchorMessages.count <= self.halfLimit)
             
             let allIndices = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entryIndex }
-            assert(Set(allIndices).count == allIndices.count)
+            if Set(allIndices).count != allIndices.count {
+                var existingIndices = Set<MutableChatListEntryIndex>()
+                for i in (0 ..< lowerOrAtAnchorMessages.count).reversed() {
+                    if !existingIndices.contains(lowerOrAtAnchorMessages[i].entryIndex) {
+                        existingIndices.insert(lowerOrAtAnchorMessages[i].entryIndex)
+                    } else {
+                        lowerOrAtAnchorMessages.remove(at: i)
+                    }
+                }
+                for i in (0 ..< higherThanAnchorMessages.count).reversed() {
+                    if !existingIndices.contains(higherThanAnchorMessages[i].entryIndex) {
+                        existingIndices.insert(higherThanAnchorMessages[i].entryIndex)
+                    } else {
+                        higherThanAnchorMessages.remove(at: i)
+                    }
+                }
+                assert(false)
+            }
+            
             assert(allIndices.sorted() == allIndices)
             
             let entries = OrderedChatListViewEntries(anchorIndex: self.anchorIndex.index, lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
