@@ -57,7 +57,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var activationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
-    public var activated: ((ContextGesture) -> Void)?
+    public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var externalUpdated: ((UIView?, CGPoint) -> Void)?
     public var externalEnded: (((UIView?, CGPoint)?) -> Void)?
     
@@ -95,9 +95,10 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         guard let touch = touches.first else {
             return
         }
+        let location = touch.location(in: self.view)
         
         if let shouldBegin = self.shouldBegin {
-            if !shouldBegin(touch.location(in: self.view)) {
+            if !shouldBegin(location) {
                 self.state = .failed
                 return
             }
@@ -132,7 +133,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                         case .possible:
                             strongSelf.delayTimer?.invalidate()
                             strongSelf.animator?.invalidate()
-                            strongSelf.activated?(strongSelf)
+                            strongSelf.activated?(strongSelf, location)
                             if let view = strongSelf.view?.superview {
                                 if let window = view.window {
                                     cancelOtherGestures(gesture: strongSelf, view: window)
@@ -167,7 +168,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                     case .possible:
                         self.delayTimer?.invalidate()
                         self.animator?.invalidate()
-                        self.activated?(self)
+                        self.activated?(self, touch.location(in: self.view))
                         if let view = self.view?.superview {
                             if let window = view.window {
                                 cancelOtherGestures(gesture: self, view: window)

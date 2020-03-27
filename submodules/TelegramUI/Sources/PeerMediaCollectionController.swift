@@ -142,7 +142,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
             guard let strongSelf = self else {
                 return
             }
-            let items = (chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+            (chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
             |> deliverOnMainQueue).start(next: { actions in
                 var messageIds = Set<MessageId>()
                 messageIds.insert(message.id)

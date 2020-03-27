@@ -9,10 +9,11 @@ public final class ContextControllerSourceNode: ASDisplayNode {
             self.contextGesture?.isEnabled = self.isGestureEnabled
         }
     }
-    public var activated: ((ContextGesture) -> Void)?
+    public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var customActivationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
     public var targetNodeForActivationProgress: ASDisplayNode?
+    public var targetNodeForActivationProgressContentRect: CGRect?
     
     public func cancelGesture() {
         self.contextGesture?.cancel()
@@ -41,25 +42,53 @@ public final class ContextControllerSourceNode: ASDisplayNode {
             if let customActivationProgress = strongSelf.customActivationProgress {
                 customActivationProgress(progress, update)
             } else {
-                let targetNode = strongSelf.targetNodeForActivationProgress ?? strongSelf
+                let targetNode: ASDisplayNode
+                let targetContentRect: CGRect
+                if let targetNodeForActivationProgress = strongSelf.targetNodeForActivationProgress {
+                    targetNode = targetNodeForActivationProgress
+                    if let targetNodeForActivationProgressContentRect = strongSelf.targetNodeForActivationProgressContentRect {
+                        targetContentRect = targetNodeForActivationProgressContentRect
+                    } else {
+                        targetContentRect = CGRect(origin: CGPoint(), size: targetNode.bounds.size)
+                    }
+                } else {
+                    targetNode = strongSelf
+                    targetContentRect = CGRect(origin: CGPoint(), size: targetNode.bounds.size)
+                }
                 
-                let minScale: CGFloat = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
+                let minScale: CGFloat = (targetContentRect.width - 10.0) / targetContentRect.width
                 let currentScale = 1.0 * (1.0 - progress) + minScale * progress
+                
+                let originalCenterOffsetX: CGFloat = targetNode.bounds.width / 2.0 - targetContentRect.midX
+                let scaledCaneterOffsetX: CGFloat = originalCenterOffsetX * currentScale
+                
+                let originalCenterOffsetY: CGFloat = targetNode.bounds.height / 2.0 - targetContentRect.midY
+                let scaledCaneterOffsetY: CGFloat = originalCenterOffsetY * currentScale
+                
+                let scaleMidX: CGFloat = scaledCaneterOffsetX - originalCenterOffsetX
+                let scaleMidY: CGFloat = scaledCaneterOffsetY - originalCenterOffsetY
+                
                 switch update {
                 case .update:
-                    targetNode.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    targetNode.layer.sublayerTransform = sublayerTransform
                 case .begin:
-                    targetNode.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
-                case let .ended(previousProgress):
-                    let previousScale = 1.0 * (1.0 - previousProgress) + minScale * previousProgress
-                    targetNode.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
-                    targetNode.layer.animateSpring(from: previousScale as NSNumber, to: currentScale as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 90.0)
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    targetNode.layer.sublayerTransform = sublayerTransform
+                case .ended:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    let previousTransform = targetNode.layer.sublayerTransform
+                    targetNode.layer.sublayerTransform = sublayerTransform
+                    
+                    targetNode.layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+                    
+                    //targetNode.layer.animateSpring(from: previousScale as NSNumber, to: currentScale as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 90.0)
                 }
             }
         }
-        contextGesture.activated = { [weak self] gesture in
+        contextGesture.activated = { [weak self] gesture, location in
             if let activated = self?.activated {
-                activated(gesture)
+                activated(gesture, location)
             } else {
                 gesture.cancel()
             }

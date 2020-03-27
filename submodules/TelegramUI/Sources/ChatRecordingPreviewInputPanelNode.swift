@@ -118,7 +118,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         let gestureRecognizer = ContextGesture(target: nil, action: nil)
         self.sendButton.view.addGestureRecognizer(gestureRecognizer)
         self.gestureRecognizer = gestureRecognizer
-        gestureRecognizer.activated = { [weak self] gesture in
+        gestureRecognizer.activated = { [weak self] gesture, _ in
             guard let strongSelf = self else {
                 return
             }

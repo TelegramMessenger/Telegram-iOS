@@ -157,7 +157,7 @@ private final class ItemNode: ASDisplayNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
-        self.containerNode.activated = { [weak self] gesture in
+        self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self else {
                 return
             }
