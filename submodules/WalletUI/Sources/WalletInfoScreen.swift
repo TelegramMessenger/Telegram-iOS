@@ -130,7 +130,12 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, walletState: (strongSelf.displayNode as! WalletInfoScreenNode).statePromise.get(), enableDebugActions: strongSelf.enableDebugActions))
+            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, walletState: (strongSelf.displayNode as! WalletInfoScreenNode).statePromise.get(), enableDebugActions: strongSelf.enableDebugActions, decryptionKeyUpdated: { key in
+                guard let strongSelf = self else {
+                    return
+                }
+                (strongSelf.displayNode as! WalletInfoScreenNode).updateTransactionDecryptionKey(key)
+            }))
         }, present: { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -653,10 +658,11 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             guard let strongSelf = self, let (_, _) = strongSelf.validLayout else {
                 return
             }
+            let topInset = strongSelf.listNode.insets.top - strongSelf.listNode.headerInsets.top
             switch strongSelf.listNode.visibleContentOffset() {
             case let .known(offset):
-                if offset < strongSelf.listNode.insets.top {
-                    if offset > strongSelf.listNode.insets.top / 2.0 {
+                if offset < topInset {
+                    if offset > topInset / 2.0 {
                         strongSelf.scrollToHideHeader()
                     } else {
                         strongSelf.scrollToTop()
@@ -842,6 +848,10 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.watchCombinedStateDisposable?.dispose()
         self.refreshProgressDisposable?.dispose()
         self.transactionDecryptionKeyDisposable?.dispose()
+    }
+    
+    func updateTransactionDecryptionKey(_ key: WalletTransactionDecryptionKey) {
+        self.transactionDecryptionKey.set(.single(key))
     }
     
     func scrollToHideHeader() {
