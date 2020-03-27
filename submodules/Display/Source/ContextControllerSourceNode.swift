@@ -56,7 +56,8 @@ public final class ContextControllerSourceNode: ASDisplayNode {
                     targetContentRect = CGRect(origin: CGPoint(), size: targetNode.bounds.size)
                 }
                 
-                let minScale: CGFloat = (targetContentRect.width - 10.0) / targetContentRect.width
+                let scaleSide = max(targetContentRect.width, targetContentRect.height)
+                let minScale: CGFloat = (scaleSide - 10.0) / scaleSide
                 let currentScale = 1.0 * (1.0 - progress) + minScale * progress
                 
                 let originalCenterOffsetX: CGFloat = targetNode.bounds.width / 2.0 - targetContentRect.midX

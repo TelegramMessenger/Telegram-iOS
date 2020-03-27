@@ -221,6 +221,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             guard let strongSelf = self else {
                 return false
             }
+            if !strongSelf.backgroundNode.frame.contains(location) {
+                return false
+            }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
                 if case .action = action {
                     return false
@@ -2515,9 +2518,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         })
                     case .openMessage:
                         if let item = self.item {
-                            return .action({
-                                let _ = item.controllerInteraction.openMessage(item.message, .default)
-                            })
+                            if let type = self.backgroundNode.type, case .none = type {
+                                return .optionalAction({
+                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                })
+                            } else {
+                                return .action({
+                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                })
+                            }
                         }
                     case let .timecode(timecode, _):
                         if let item = self.item, let mediaMessage = mediaMessage {
