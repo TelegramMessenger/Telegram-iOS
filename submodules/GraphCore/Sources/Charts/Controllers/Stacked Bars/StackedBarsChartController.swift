@@ -221,7 +221,7 @@ public class StackedBarsChartController: BaseChartController {
     }
     
     public override func didTapZoomIn(date: Date, pointIndex: Int) {
-        guard isZoomed == false else { return }
+        guard !isZoomed, isZoomable else { return }
         if isZoomed {
             return zoomedBarsController.hideDetailsView(animated: true)
         }

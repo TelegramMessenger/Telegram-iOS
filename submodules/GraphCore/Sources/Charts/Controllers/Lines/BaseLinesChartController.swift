@@ -135,7 +135,7 @@ public class BaseLinesChartController: BaseChartController {
     }
     
     public override func didTapZoomIn(date: Date, pointIndex: Int) {
-        guard isZoomed == false else { return }
+        guard !isZoomed, isZoomable else { return }
                 
         setDetailsViewModel?(chartDetailsViewModel(closestDate: date, pointIndex: pointIndex, loading: true), false, false)
         
