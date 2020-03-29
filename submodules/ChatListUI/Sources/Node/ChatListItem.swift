@@ -529,7 +529,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         })
         
-        self.contextContainer.activated = { [weak self] gesture in
+        self.contextContainer.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }

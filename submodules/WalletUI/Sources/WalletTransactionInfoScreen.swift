@@ -191,17 +191,19 @@ final class WalletTransactionInfoScreen: ViewController {
     private let walletInfo: WalletInfo?
     private var walletTransaction: WalletInfoTransaction
     private let walletState: Signal<(CombinedWalletState, Bool), NoError>
+    private let decryptionKeyUpdated: (WalletTransactionDecryptionKey) -> Void
     private var presentationData: WalletPresentationData
 
     private var walletStateDisposable: Disposable?
     private var combinedState: CombinedWalletState?
     private var reloadingState = false
         
-    public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, walletState: Signal<(CombinedWalletState, Bool), NoError>, enableDebugActions: Bool) {
+    public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, walletState: Signal<(CombinedWalletState, Bool), NoError>, enableDebugActions: Bool, decryptionKeyUpdated: @escaping (WalletTransactionDecryptionKey) -> Void) {
         self.context = context
         self.walletInfo = walletInfo
         self.walletTransaction = walletTransaction
         self.walletState = walletState
+        self.decryptionKeyUpdated = decryptionKeyUpdated
         
         self.presentationData = context.presentationData
         
@@ -238,7 +240,7 @@ final class WalletTransactionInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletTransactionInfoScreenNode(context: self.context, presentationData: self.presentationData, walletTransaction: self.walletTransaction)
+        self.displayNode = WalletTransactionInfoScreenNode(context: self.context, presentationData: self.presentationData, walletTransaction: self.walletTransaction, decryptionKeyUpdated: self.decryptionKeyUpdated)
         (self.displayNode as! WalletTransactionInfoScreenNode).send = { [weak self] address in
             guard let strongSelf = self else {
                 return
@@ -284,6 +286,7 @@ final class WalletTransactionInfoScreen: ViewController {
                     return
                 }
                 if let decryptionKey = decryptionKey {
+                    strongSelf.decryptionKeyUpdated(decryptionKey)
                     let _ = (decryptWalletTransactions(decryptionKey: decryptionKey, transactions: [walletTransaction], tonInstance: strongSelf.context.tonInstance)
                     |> deliverOnMainQueue).start(next: { result in
                         guard let strongSelf = self, let updatedTransaction = result.first else {
@@ -400,6 +403,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
     private var presentationData: WalletPresentationData
     private var walletTransaction: WalletInfoTransaction
     private let incoming: Bool
+    private let decryptionKeyUpdated: (WalletTransactionDecryptionKey) -> Void
 
     private let titleNode: ImmediateTextNode
     private let timeNode: ImmediateTextNode
@@ -426,18 +430,21 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
     var displayFeesTooltip: ((ASDisplayNode, CGRect) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
   
-    init(context: WalletContext, presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction) {
+    init(context: WalletContext, presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction, decryptionKeyUpdated: @escaping (WalletTransactionDecryptionKey) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.walletTransaction = walletTransaction
+        self.decryptionKeyUpdated = decryptionKeyUpdated
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.textAlignment = .center
         self.titleNode.maximumNumberOfLines = 1
+        self.titleNode.displaysAsynchronously = false
         
         self.timeNode = ImmediateTextNode()
         self.timeNode.textAlignment = .center
         self.timeNode.maximumNumberOfLines = 1
+        self.timeNode.displaysAsynchronously = false
         
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.navigationBar.backgroundColor
@@ -453,6 +460,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.feesNode.textAlignment = .center
         self.feesNode.maximumNumberOfLines = 2
         self.feesNode.lineSpacing = 0.35
+        self.feesNode.displaysAsynchronously = false
         
         self.feesInfoIconNode = ASImageNode()
         self.feesInfoIconNode.displaysAsynchronously = false
@@ -469,6 +477,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.commentTextNode.textAlignment = .natural
         self.commentTextNode.maximumNumberOfLines = 0
         self.commentTextNode.isUserInteractionEnabled = false
+        self.commentTextNode.displaysAsynchronously = false
         
         self.commentSeparatorNode = ASDisplayNode()
         self.commentSeparatorNode.backgroundColor = self.presentationData.theme.list.itemPlainSeparatorColor
@@ -478,6 +487,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.commentDecryptButtonTitle.textAlignment = .natural
         self.commentDecryptButtonTitle.maximumNumberOfLines = 0
         self.commentDecryptButtonTitle.isUserInteractionEnabled = false
+        self.commentDecryptButtonTitle.displaysAsynchronously = false
         
         self.commentDecryptButton = HighlightableButtonNode()
         self.commentDecryptButton.hitTestSlop = UIEdgeInsets(top: -10.0, left: -10.0, bottom: -10.0, right: -10.0)
@@ -486,6 +496,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.addressTextNode.maximumNumberOfLines = 4
         self.addressTextNode.textAlignment = .justified
         self.addressTextNode.lineSpacing = 0.35
+        self.addressTextNode.displaysAsynchronously = false
         
         self.buttonNode = SolidRoundedButtonNode(title: "", icon: nil, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.setup.buttonFillColor, foregroundColor: self.presentationData.theme.setup.buttonForegroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
                

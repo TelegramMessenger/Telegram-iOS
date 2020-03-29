@@ -183,7 +183,7 @@ final class GridMessageItemNode: GridItemNode {
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.mediaBadgeNode)
         
-        self.containerNode.activated = { [weak self] gesture in
+        self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction else {
                 gesture.cancel()
                 return
@@ -458,8 +458,7 @@ final class GridMessageItemNode: GridItemNode {
                                 let _ = controllerInteraction.openMessage(message, .default)
                             }
                         case .longTap:
-                        break
-                            //controllerInteraction.openMessageContextMenu(message, false, self, self.bounds, nil)
+                            break
                         default:
                             break
                     }

@@ -366,7 +366,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
         })
         
-        self.containerNode.activated = { [weak self] gesture in
+        self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
                 gesture.cancel()
                 return

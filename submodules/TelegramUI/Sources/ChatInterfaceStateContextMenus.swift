@@ -257,6 +257,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     var loadCopyMediaResource: MediaResource?
     var isAction = false
     var isDice = false
+    var canDiscuss = false
     if messages.count == 1 {
         for media in messages[0].media {
             if let file = media as? TelegramMediaFile {
@@ -292,6 +293,17 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                     if !isAction {
                         canPin = channel.hasPermission(.pinMessages)
+                        
+                        if messages[0].id.namespace == Namespaces.Message.Cloud {
+                            switch channel.info {
+                            case let .broadcast(info):
+                                if info.flags.contains(.hasDiscussionGroup) {
+                                    canDiscuss = true
+                                }
+                            case .group:
+                                break
+                            }
+                        }
                     }
                 } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
                     if !isAction {
@@ -690,6 +702,94 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }, action: { _, f in
                 interfaceInteraction.forwardMessages(selectAll ? messages : [message])
                 f(.dismissWithoutContent)
+            })))
+        }
+        
+        if canDiscuss {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDiscuss, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, _ in
+                let timestamp = messages[0].timestamp
+                let channelMessageId = messages[0].id
+                
+                enum DiscussMessageResult {
+                    case message(MessageId)
+                    case peer(PeerId)
+                }
+                
+                let signal = context.account.postbox.transaction { transaction -> PeerId? in
+                    if let cachedData = transaction.getPeerCachedData(peerId: messages[0].id.peerId) as? CachedChannelData {
+                        return cachedData.linkedDiscussionPeerId
+                    } else {
+                        return nil
+                    }
+                }
+                |> mapToSignal { peerId -> Signal<DiscussMessageResult?, NoError> in
+                    guard let peerId = peerId else {
+                        return .single(nil)
+                    }
+                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), count: 30), id: 0), account: context.account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                    return historyView
+                    |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
+                        switch historyView {
+                        case .Loading:
+                            return .single((nil, true))
+                        case let .HistoryView(view, _, _, _, _, _, _):
+                            for entry in view.entries {
+                                for attribute in entry.message.attributes {
+                                    if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                        if attribute.messageId == channelMessageId {
+                                            return .single((entry.message.index, false))
+                                        }
+                                    }
+                                }
+                            }
+                            return .single((nil, false))
+                        }
+                    }
+                    |> take(until: { index in
+                        return SignalTakeAction(passthrough: true, complete: !index.1)
+                    })
+                    |> last
+                    |> map { result -> DiscussMessageResult? in
+                        if let index = result?.0 {
+                            return .message(index.id)
+                        } else {
+                            return .peer(peerId)
+                        }
+                    }
+                }
+                
+                let foundIndex = Promise<DiscussMessageResult?>()
+                foundIndex.set(signal)
+                
+                c.dismiss(completion: { [weak interfaceInteraction] in
+                    var cancelImpl: (() -> Void)?
+                    let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    controllerInteraction.presentController(statusController, nil)
+                    
+                    let disposable = (foundIndex.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak statusController] result in
+                        statusController?.dismiss()
+                        
+                        if let result = result {
+                            switch result {
+                            case let .message(id):
+                                interfaceInteraction?.navigateToMessage(id)
+                            case let .peer(peerId):
+                                interfaceInteraction?.navigateToChat(peerId)
+                            }
+                        }
+                    })
+                    
+                    cancelImpl = { [weak statusController] in
+                        disposable.dispose()
+                        statusController?.dismiss()
+                    }
+                })
             })))
         }
         

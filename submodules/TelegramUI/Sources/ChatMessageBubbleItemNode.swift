@@ -23,6 +23,12 @@ import GridMessageSelectionNode
 import AppBundle
 import Markdown
 
+private enum InternalBubbleTapAction {
+    case action(() -> Void)
+    case optionalAction(() -> Void)
+    case openContextMenu(tapMessage: Message, selectAll: Bool, subFrame: CGRect)
+}
+
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass, ChatMessageEntryAttributes)] {
     var result: [(Message, AnyClass, ChatMessageEntryAttributes)] = []
     var skipText = false
@@ -145,6 +151,7 @@ private enum ContentNodeOperation {
 
 class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode {
     private let contextSourceNode: ContextExtractedContentContainingNode
+    private let containerNode: ContextControllerSourceNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     private let shadowNode: ChatMessageShadowNode
@@ -201,6 +208,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
+        self.containerNode = ContextControllerSourceNode()
         self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
         
         self.backgroundNode = ChatMessageBackground()
@@ -209,7 +217,48 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         super.init(layerBacked: false)
         
-        self.addSubnode(self.contextSourceNode)
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self else {
+                return false
+            }
+            if !strongSelf.backgroundNode.frame.contains(location) {
+                return false
+            }
+            if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
+                if case .action = action {
+                    return false
+                }
+            }
+            if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
+                switch action {
+                case .action, .optionalAction:
+                    return false
+                case .openContextMenu:
+                    return true
+                }
+            }
+            return true
+        }
+        
+        self.containerNode.activated = { [weak self] gesture, location in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            
+            if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
+                switch action {
+                case .action, .optionalAction:
+                    break
+                case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                }
+            }
+        }
+        
+        self.containerNode.addSubnode(self.contextSourceNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
+        self.addSubnode(self.containerNode)
+        
         self.contextSourceNode.contentNode.addSubnode(self.backgroundWallpaperNode)
         self.contextSourceNode.contentNode.addSubnode(self.backgroundNode)
         self.addSubnode(self.messageAccessibilityArea)
@@ -385,8 +434,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 return
             }
             strongSelf.reactionRecognizer?.cancel()
-            if strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
-                recognizer.cancel()
+            if let action = strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
+                switch action {
+                case let .action(f):
+                    f()
+                    recognizer.cancel()
+                case let .optionalAction(f):
+                    f()
+                    recognizer.cancel()
+                case .openContextMenu:
+                    //recognizer.cancel()
+                    break
+                }
             }
         }
         recognizer.highlight = { [weak self] point in
@@ -1688,7 +1747,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         guard let strongSelf = selfReference.value else {
             return
         }
-        let previousContextFrame = strongSelf.contextSourceNode.frame
+        let previousContextFrame = strongSelf.containerNode.frame
+        strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         
@@ -2052,6 +2112,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         let previousContextContentFrame = strongSelf.contextSourceNode.contentRect
         strongSelf.contextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+        strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
         
         if previousContextFrame.size != strongSelf.contextSourceNode.bounds.size || previousContextContentFrame != strongSelf.contextSourceNode.contentRect {
             strongSelf.contextSourceNode.layoutUpdated?(strongSelf.contextSourceNode.bounds.size)
@@ -2212,6 +2273,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     break
                 }
                 self.contextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+                self.containerNode.targetNodeForActivationProgressContentRect = self.contextSourceNode.contentRect
                 if !self.contextSourceNode.isExtractedToContextPreview {
                     if let (rect, size) = self.absoluteRect {
                         self.updateAbsoluteRect(rect, within: size)
@@ -2246,14 +2308,25 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                let _ = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil)
+                if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
+                    switch action {
+                    case let .action(f):
+                        f()
+                    case let .optionalAction(f):
+                        f()
+                    case let .openContextMenu(tapMessage, selectAll, subFrame):
+                        self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                    }
+                } else if case .tap = gesture {
+                    self.item?.controllerInteraction.clickThroughMessage()
+                }
             }
         default:
             break
         }
     }
     
-    private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> Bool {
+    private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         var mediaMessage: Message?
         var forceOpen = false
         if let item = self.item {
@@ -2290,38 +2363,39 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         switch gesture {
             case .tap:
                 if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                    if let item = self.item, let author = item.content.firstMessage.author {
-                        var openPeerId = item.effectiveAuthorId ?? author.id
-                        var navigate: ChatControllerInteractionNavigateToPeer
-                        
-                        if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                            navigate = .chat(textInputState: nil, subject: nil)
-                        } else {
-                            navigate = .info
-                        }
-                        
-                        for attribute in item.content.firstMessage.attributes {
-                            if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                openPeerId = attribute.messageId.peerId
-                                navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
+                    return .action({
+                        if let item = self.item, let author = item.content.firstMessage.author {
+                            var openPeerId = item.effectiveAuthorId ?? author.id
+                            var navigate: ChatControllerInteractionNavigateToPeer
+                            
+                            if item.content.firstMessage.id.peerId == item.context.account.peerId {
+                                navigate = .chat(textInputState: nil, subject: nil)
+                            } else {
+                                navigate = .info
                             }
-                        }
-                        
-                        if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                            item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                        } else {
-                            if item.message.id.peerId == item.context.account.peerId, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
-                                } else if case .member = channel.participationStatus {
-                                } else {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                    return true
+                            
+                            for attribute in item.content.firstMessage.attributes {
+                                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                    openPeerId = attribute.messageId.peerId
+                                    navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                 }
                             }
-                            item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                            
+                            if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                                item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                            } else {
+                                if item.message.id.peerId == item.context.account.peerId, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                    if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                    } else if case .member = channel.participationStatus {
+                                    } else {
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
+                                        return
+                                    }
+                                }
+                                item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                            }
                         }
-                    }
-                    return true
+                    })
                 }
                 
                 if let nameNode = self.nameNode, nameNode.frame.contains(location) {
@@ -2335,15 +2409,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                     botAddressName = attribute.title
                                 }
                                 
-                                if let botAddressName = botAddressName {
-                                    item.controllerInteraction.updateInputState { textInputState in
-                                        return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                return .optionalAction({
+                                    if let botAddressName = botAddressName {
+                                        item.controllerInteraction.updateInputState { textInputState in
+                                            return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                        }
+                                        item.controllerInteraction.updateInputMode { _ in
+                                            return .text
+                                        }
                                     }
-                                    item.controllerInteraction.updateInputMode { _ in
-                                        return .text
-                                    }
-                                }
-                                return true
+                                })
                             }
                         }
                     }
@@ -2351,119 +2426,133 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     if let item = self.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
-                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                                return true
+                                return .optionalAction({
+                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                                })
                             }
                         }
                     }
                 }
                 if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
                     if let item = self.item, let forwardInfo = item.message.forwardInfo {
-                        if let sourceMessageId = forwardInfo.sourceMessageId {
-                            if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
-                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
-                                } else if case .member = channel.participationStatus {
-                                } else {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
-                                    return true
+                        return .optionalAction({
+                            if let sourceMessageId = forwardInfo.sourceMessageId {
+                                if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                    if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                    } else if case .member = channel.participationStatus {
+                                    } else {
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                        return
+                                    }
                                 }
+                                item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                            } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
+                                item.controllerInteraction.openPeer(id, .info, nil)
+                            } else if let _ = forwardInfo.authorSignature {
+                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                             }
-                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                        } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                            item.controllerInteraction.openPeer(id, .info, nil)
-                        } else if let _ = forwardInfo.authorSignature {
-                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
-                        }
-                        return true
+                        })
                     }
                 }
-                var foundTapAction = false
                 loop: for contentNode in self.contentNodes {
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
                     switch tapAction {
-                        case .none, .ignore:
-                            if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
-                                foundTapAction = true
+                    case .none:
+                        if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
+                            return .action({
                                 tapMessage(item.message)
-                            }
-                            break
-                        case let .url(url, concealed):
-                            foundTapAction = true
+                            })
+                        }
+                    case .ignore:
+                        if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
+                            return .action({
+                                tapMessage(item.message)
+                            })
+                        } else {
+                            return .action({
+                            })
+                        }
+                    case let .url(url, concealed):
+                        return .action({
                             self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage)
-                            break loop
-                        case let .peerMention(peerId, _):
-                            foundTapAction = true
+                        })
+                    case let .peerMention(peerId, _):
+                        return .action({
                             self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil), nil)
-                            break loop
-                        case let .textMention(name):
-                            foundTapAction = true
+                        })
+                    case let .textMention(name):
+                        return .action({
                             self.item?.controllerInteraction.openPeerMention(name)
-                            break loop
-                        case let .botCommand(command):
-                            foundTapAction = true
-                            if let item = self.item {
+                        })
+                    case let .botCommand(command):
+                        if let item = self.item {
+                            return .action({
                                 item.controllerInteraction.sendBotCommand(item.message.id, command)
-                            }
-                            break loop
-                        case let .hashtag(peerName, hashtag):
-                            foundTapAction = true
+                            })
+                        }
+                    case let .hashtag(peerName, hashtag):
+                        return .action({
                             self.item?.controllerInteraction.openHashtag(peerName, hashtag)
-                            break loop
-                        case .instantPage:
-                            foundTapAction = true
-                            if let item = self.item {
+                        })
+                    case .instantPage:
+                        if let item = self.item {
+                            return .optionalAction({
                                 item.controllerInteraction.openInstantPage(item.message, item.associatedData)
-                            }
-                            break loop
-                        case .wallpaper:
-                            foundTapAction = true
-                            if let item = self.item {
+                            })
+                        }
+                    case .wallpaper:
+                        if let item = self.item {
+                            return .action({
                                 item.controllerInteraction.openWallpaper(item.message)
-                            }
-                            break loop
-                        case .theme:
-                            foundTapAction = true
-                            if let item = self.item {
+                            })
+                        }
+                    case .theme:
+                        if let item = self.item {
+                            return .action({
                                 item.controllerInteraction.openTheme(item.message)
-                            }
-                            break loop
-                        case let .call(peerId):
-                            foundTapAction = true
+                            })
+                        }
+                    case let .call(peerId):
+                        return .optionalAction({
                             self.item?.controllerInteraction.callPeer(peerId)
-                            break loop
-                        case .openMessage:
-                            foundTapAction = true
-                            if let item = self.item {
-                                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        })
+                    case .openMessage:
+                        if let item = self.item {
+                            if let type = self.backgroundNode.type, case .none = type {
+                                return .optionalAction({
+                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                })
+                            } else {
+                                return .action({
+                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                })
                             }
-                            break loop
-                        case let .timecode(timecode, _):
-                            foundTapAction = true
-                            if let item = self.item, let mediaMessage = mediaMessage {
+                        }
+                    case let .timecode(timecode, _):
+                        if let item = self.item, let mediaMessage = mediaMessage {
+                            return .action({
                                 item.controllerInteraction.seekToTimecode(mediaMessage, timecode, forceOpen)
-                            }
-                            break loop
-                        case let .bankCard(number):
-                            foundTapAction = true
-                            if let item = self.item {
+                            })
+                        }
+                    case let .bankCard(number):
+                        if let item = self.item {
+                            return .action({
                                 item.controllerInteraction.longTap(.bankCard(number), item.message)
-                            }
-                        case let .tooltip(text, node, rect):
-                            foundTapAction = true
-                            if let item = self.item {
+                            })
+                        }
+                    case let .tooltip(text, node, rect):
+                        if let item = self.item {
+                            return .action({
                                 let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, node, rect)
-                            }
-                            break loop
+                            })
+                        }
                     }
                 }
-                if !foundTapAction {
-                    self.item?.controllerInteraction.clickThroughMessage()
-                }
+                return nil
             case .longTap, .doubleTap:
                 if let item = self.item, self.backgroundNode.frame.contains(location) {
                     let message = item.message
                     
-                    var foundTapAction = false
                     var tapMessage: Message? = item.content.firstMessage
                     var selectAll = true
                     loop: for contentNode in self.contentNodes {
@@ -2475,53 +2564,53 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         tapMessage = contentNode.item?.message
                         let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
                         switch tapAction {
-                            case .none, .ignore:
-                                break
-                            case let .url(url, _):
-                                foundTapAction = true
+                        case .none, .ignore:
+                            break
+                        case let .url(url, _):
+                            return .action({
                                 item.controllerInteraction.longTap(.url(url), message)
-                                break loop
-                            case let .peerMention(peerId, mention):
-                                foundTapAction = true
+                            })
+                        case let .peerMention(peerId, mention):
+                            return .action({
                                 item.controllerInteraction.longTap(.peerMention(peerId, mention), message)
-                                break loop
-                            case let .textMention(name):
-                                foundTapAction = true
+                            })
+                        case let .textMention(name):
+                            return .action({
                                 item.controllerInteraction.longTap(.mention(name), message)
-                                break loop
-                            case let .botCommand(command):
-                                foundTapAction = true
+                            })
+                        case let .botCommand(command):
+                            return .action({
                                 item.controllerInteraction.longTap(.command(command), message)
-                                break loop
-                            case let .hashtag(_, hashtag):
-                                foundTapAction = true
+                            })
+                        case let .hashtag(_, hashtag):
+                            return .action({
                                 item.controllerInteraction.longTap(.hashtag(hashtag), message)
-                                break loop
-                            case .instantPage:
-                                break
-                            case .wallpaper:
-                                break
-                            case .theme:
-                                break
-                            case .call:
-                                break
-                            case .openMessage:
-                                foundTapAction = false
-                                break
-                            case let .timecode(timecode, text):
-                                foundTapAction = true
-                                if let mediaMessage = mediaMessage {
+                            })
+                        case .instantPage:
+                            break
+                        case .wallpaper:
+                            break
+                        case .theme:
+                            break
+                        case .call:
+                            break
+                        case .openMessage:
+                            break
+                        case let .timecode(timecode, text):
+                            if let mediaMessage = mediaMessage {
+                                return .action({
                                     item.controllerInteraction.longTap(.timecode(timecode, text), mediaMessage)
-                                }
-                                break loop
-                            case let .bankCard(number):
-                                foundTapAction = true
+                                })
+                            }
+                        case let .bankCard(number):
+                            return .action({
                                 item.controllerInteraction.longTap(.bankCard(number), message)
-                            case .tooltip:
-                                break
+                            })
+                        case .tooltip:
+                            break
                         }
                     }
-                    if !foundTapAction, let tapMessage = tapMessage {
+                    if let tapMessage = tapMessage {
                         var subFrame = self.backgroundNode.frame
                         if case .group = item.content {
                             for contentNode in self.contentNodes {
@@ -2531,14 +2620,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 }
                             }
                         }
-                        item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, recognizer)
-                        return false
+                        return .openContextMenu(tapMessage: tapMessage, selectAll: selectAll, subFrame: subFrame)
                     }
                 }
             default:
                 break
         }
-        return true
+        return nil
     }
     
     private func traceSelectionNodes(parent: ASDisplayNode, point: CGPoint) -> ASDisplayNode? {
