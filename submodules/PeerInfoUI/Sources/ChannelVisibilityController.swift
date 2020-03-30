@@ -868,10 +868,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 return state.withUpdatedEditingPublicLinkText(text).withUpdatedAddressNameValidationStatus(nil)
             }
         } else if currentText == text {
-            checkAddressNameDisposable.set(nil)
-            updateState { state in
-                return state.withUpdatedEditingPublicLinkText(text).withUpdatedAddressNameValidationStatus(nil).withUpdatedAddressNameValidationStatus(nil)
-            }
+            return
         } else {
             updateState { state in
                 return state.withUpdatedEditingPublicLinkText(text)
