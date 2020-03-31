@@ -310,7 +310,7 @@ private extension RangeChartView {
 }
 
 extension RangeChartView: ChartThemeContainer {
-    func apply(theme: ChartTheme, animated: Bool) {
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         let closure = {
             self.lowerBoundTintView.backgroundColor = theme.rangeViewTintColor
             self.upperBoundTintView.backgroundColor = theme.rangeViewTintColor

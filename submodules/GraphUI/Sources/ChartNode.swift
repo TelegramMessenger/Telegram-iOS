@@ -128,8 +128,8 @@ public final class ChartNode: ASDisplayNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func setupTheme(_ theme: ChartTheme) {
-        self.chartView.apply(theme: theme, animated: false)
+    public func setup(theme: ChartTheme, strings: ChartStrings) {
+        self.chartView.apply(theme: theme, strings: strings, animated: false)
     }
     
     public func setup(controller: BaseChartController) {

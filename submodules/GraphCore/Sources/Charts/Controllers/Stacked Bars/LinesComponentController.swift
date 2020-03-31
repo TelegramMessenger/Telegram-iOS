@@ -202,8 +202,8 @@ class LinesComponentController: GeneralChartComponentController {
         lineBulletsRenderer.isEnabled = false
     }
     
-    override func apply(theme: ChartTheme, animated: Bool) {
-        super.apply(theme: theme, animated: animated)
+    override func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
+        super.apply(theme: theme, strings: strings, animated: animated)
         
         horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
         verticalScalesRenderer.labelsColor = theme.chartLabelsColor

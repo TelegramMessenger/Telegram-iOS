@@ -635,11 +635,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 case let .result(_, items, _):
                     var diceStickers: [StickerPackItem] = []
                     for case let item as StickerPackItem in items {
-                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                            diceStickers.append(item)
-                        }
+                        diceStickers.append(item)
                     }
-                    animatedEmojiStickers["🎲".strippedEmoji] = diceStickers
+                    animatedEmojiStickers["dice"] = diceStickers
                 default:
                     break
             }

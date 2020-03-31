@@ -17,7 +17,7 @@ class ChartDetailsRenderer: BaseChartRenderer, ChartThemeContainer {
     private lazy var colorAnimator = AnimationController<CGFloat>(current: 1, refreshClosure: refreshClosure)
     private var fromTheme: ChartTheme = ChartTheme.defaultDayTheme
     private var currentTheme: ChartTheme = ChartTheme.defaultDayTheme
-    func apply(theme: ChartTheme, animated: Bool) {
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         fromTheme = currentTheme
         currentTheme = theme
         colorAnimator.set(current: 1)

@@ -211,7 +211,7 @@ class ChartDetailsView: UIControl {
 }
 
 extension ChartDetailsView: ChartThemeContainer {
-    func apply(theme: ChartTheme, animated: Bool) {
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         self.theme = theme
         self.titleLabel.setTextColor(theme.chartDetailsTextColor, animated: animated)
         if let viewModel = self.viewModel {

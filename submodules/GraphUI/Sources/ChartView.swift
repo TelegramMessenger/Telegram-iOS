@@ -165,7 +165,7 @@ class ChartView: UIControl {
 
 
 extension ChartView: ChartThemeContainer {
-    func apply(theme: ChartTheme, animated: Bool) {
-        detailsView?.apply(theme: theme, animated: animated && (detailsView?.isVisibleInWindow ?? false))
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
+        detailsView?.apply(theme: theme, strings: strings, animated: animated && (detailsView?.isVisibleInWindow ?? false))
     }
 }

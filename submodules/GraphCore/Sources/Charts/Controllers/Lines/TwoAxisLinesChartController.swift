@@ -310,7 +310,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         }
     }
     
-    public override func apply(theme: ChartTheme, animated: Bool) {
+    public override func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
         verticalLineRenderer.linesColor = theme.chartStrongLinesColor
 

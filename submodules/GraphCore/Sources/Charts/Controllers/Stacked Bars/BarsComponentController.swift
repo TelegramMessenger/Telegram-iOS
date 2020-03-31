@@ -18,6 +18,9 @@ class BarsComponentController: GeneralChartComponentController {
     let horizontalScalesRenderer: HorizontalScalesRenderer
     let verticalScalesRenderer: VerticalScalesRenderer
     
+    let lineBulletsRenderer = LineBulletsRenderer()
+    let verticalLineRenderer = VerticalLinesRenderer()
+    
     let previewBarsChartRenderer: BarChartRenderer
     private(set) var barsWidth: CGFloat = 1
     
@@ -36,6 +39,8 @@ class BarsComponentController: GeneralChartComponentController {
         self.verticalScalesRenderer = verticalScalesRenderer
         self.previewBarsChartRenderer = previewBarsChartRenderer
         self.step = step
+        
+        self.lineBulletsRenderer.isEnabled = false
         
         self.mainBarsRenderer.optimizationLevel = BaseConstants.barsChartOptimizationLevel
         self.previewBarsChartRenderer.optimizationLevel = BaseConstants.barsChartOptimizationLevel
@@ -161,6 +166,7 @@ class BarsComponentController: GeneralChartComponentController {
         mainBarsRenderer.setup(verticalRange: verticalRange, animated: animated)
         horizontalScalesRenderer.setup(verticalRange: verticalRange, animated: animated)
         verticalScalesRenderer.setup(verticalRange: verticalRange, animated: animated)
+        lineBulletsRenderer.setup(verticalRange: verticalRange, animated: animated)
     }
     
     public override func updateChartsVisibility(visibility: [Bool], animated: Bool) {
@@ -188,7 +194,7 @@ class BarsComponentController: GeneralChartComponentController {
         }
         if !self.step {
             viewModel.totalValue = ChartDetailsViewModel.Value(prefix: nil,
-                                                               title: "Total",
+                                                               title: self.strings.total,
                                                                value: BaseConstants.detailsNumberFormatter.string(from: totalSumm),
                                                                color: .white,
                                                                visible: visibleChartValues.count > 1)
@@ -217,8 +223,8 @@ class BarsComponentController: GeneralChartComponentController {
         
         mainBarsRenderer.setSelectedIndex(nil, animated: animated)
     }
-    override func apply(theme: ChartTheme, animated: Bool) {
-        super.apply(theme: theme, animated: animated)
+    override func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
+        super.apply(theme: theme, strings: strings, animated: animated)
         
         horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
         verticalScalesRenderer.labelsColor = theme.chartLabelsColor
@@ -238,5 +244,37 @@ class BarsComponentController: GeneralChartComponentController {
             let stirng = "\(BaseConstants.headerMediumRangeFormatter.string(from: fromDate)) - \(BaseConstants.headerMediumRangeFormatter.string(from: toDate))"
             self.setChartTitleClosure?(stirng, animated)
         }
+    }
+    
+    override func chartInteractionDidBegin(point: CGPoint, manual: Bool = true) {
+        if manual && !isChartInteracting && detailsVisible {
+                  self.hideDetailsView(animated: true)
+                  ignoreInteraction = true
+                  return
+              }
+        let chartFrame = self.chartFrame()
+        guard chartFrame.width > 0 else { return }
+        let horizontalRange = currentHorizontalMainChartRange
+        let dateToFind = Date(timeIntervalSince1970: TimeInterval(horizontalRange.distance * point.x + horizontalRange.lowerBound))
+        guard let (closestDate, minIndex) = findClosestDateTo(dateToFind: dateToFind) else { return }
+        
+        let chartWasInteracting = isChartInteractionBegun
+        lastChartInteractionPoint = point
+        isChartInteractionBegun = true
+        isChartInteracting = true
+        
+        let chartValue: CGFloat = CGFloat(closestDate.timeIntervalSince1970)
+        var chartValueUpdated = true
+        if chartValue == currentChartValue {
+            chartValueUpdated = false
+        }
+        currentChartValue = chartValue
+        let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
+        showDetailsView(at: chartValue, detailsViewPosition: detailsViewPosition, dataIndex: minIndex, date: closestDate, animated: chartWasInteracting, feedback: chartWasInteracting && chartValueUpdated)
+        
+        super.chartInteractionDidBegin(point: point)
+        
+        self.verticalLineRenderer.values = [chartValue]
+//        self.verticalLineRenderer.offset = barOffset
     }
 }

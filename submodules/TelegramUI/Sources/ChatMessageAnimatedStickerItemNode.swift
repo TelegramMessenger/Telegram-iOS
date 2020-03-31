@@ -158,7 +158,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let _ = self.telegramDice {
-            if let diceEmojis = item.associatedData.animatedEmojiStickers["🎲"] {
+            if let diceEmojis = item.associatedData.animatedEmojiStickers["dice"] {
                 let animationNode = ManagedDiceAnimationNode(context: item.context, emojis: diceEmojis.map { $0.file })
                 self.animationNode = animationNode
             }
