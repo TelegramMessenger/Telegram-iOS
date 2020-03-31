@@ -630,8 +630,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         f()
                     case let .optionalAction(f):
                         f()
-                    case let .openContextMenu(tapMessage, selectAll, subFrame):
-                        self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                    case .openContextMenu:
+                        break
                     }
                 } else if case .tap = gesture {
                     self.item?.controllerInteraction.clickThroughMessage()
