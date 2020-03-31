@@ -21,6 +21,7 @@ private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
+    private let containerNode: ContextControllerSourceNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
@@ -57,11 +58,52 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
+        self.containerNode = ContextControllerSourceNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
         
         super.init(layerBacked: false)
         
-        self.addSubnode(self.contextSourceNode)
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self else {
+                return false
+            }
+            if !strongSelf.interactiveVideoNode.frame.contains(location) {
+                return false
+            }
+            if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
+                if case .action = action {
+                    return false
+                }
+            }
+            if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
+                switch action {
+                case .action, .optionalAction:
+                    return false
+                case .openContextMenu:
+                    return true
+                }
+            }
+            return true
+        }
+        
+        self.containerNode.activated = { [weak self] gesture, location in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            
+            if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
+                switch action {
+                case .action, .optionalAction:
+                    break
+                case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                }
+            }
+        }
+        
+        self.containerNode.addSubnode(self.contextSourceNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
+        self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.interactiveVideoNode)
     }
     
@@ -219,7 +261,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var updatedReplyBackgroundNode: ASImageNode?
             var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
-            var inlineBotNameString: String?
             
             let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
@@ -277,12 +318,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
-                } else if let attribute = attribute as? InlineBotMessageAttribute {
-                    if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
-                        inlineBotNameString = bot.username
-                    } else {
-                        inlineBotNameString = attribute.title
-                    }
+                } else if let _ = attribute as? InlineBotMessageAttribute {
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
@@ -389,6 +425,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
                     strongSelf.appliedItem = item
@@ -410,6 +447,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     videoApply(videoLayoutData, transition)
                     
                     strongSelf.contextSourceNode.contentRect = videoFrame
+                    strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -580,85 +618,111 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                switch gesture {
-                    case .tap:
-                        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                            if let item = self.item, let author = item.content.firstMessage.author {
-                                var openPeerId = item.effectiveAuthorId ?? author.id
-                                var navigate: ChatControllerInteractionNavigateToPeer
-                                
-                                if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                    navigate = .chat(textInputState: nil, subject: nil)
-                                } else {
-                                    navigate = .info
-                                }
-                                
-                                for attribute in item.content.firstMessage.attributes {
-                                    if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                        openPeerId = attribute.messageId.peerId
-                                        navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
-                                    }
-                                }
-                                
-                                if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                                    item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                                } else {
-                                    if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                        if case .member = channel.participationStatus {
-                                        } else {
-                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                            return
-                                        }
-                                    }
-                                    item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
-                                }
-                            }
-                            return
-                        }
-                        
-                        if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
-                            if let item = self.item {
-                                for attribute in item.message.attributes {
-                                    if let attribute = attribute as? ReplyMessageAttribute {
-                                        item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                                        return
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
-                            if let item = self.item, let forwardInfo = item.message.forwardInfo {
-                                if let sourceMessageId = forwardInfo.sourceMessageId {
-                                    if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
-                                        if case .member = channel.participationStatus {
-                                        } else {
-                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
-                                            return
-                                        }
-                                    }
-                                    item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                                } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, subject: nil), nil)
-                                } else if let _ = forwardInfo.authorSignature {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
-                                }
-                                return
-                            }
-                        }
-                        
-                        self.item?.controllerInteraction.clickThroughMessage()
-                    case .longTap, .doubleTap:
-                        if let item = self.item, let videoContentNode = self.interactiveVideoNode.videoContentNode(at: self.view.convert(location, to: self.interactiveVideoNode.view)) {
-                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds, nil)
-                        }
-                    case .hold:
-                        break
+                if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
+                    if case .doubleTap = gesture {
+                        self.containerNode.cancelGesture()
+                    }
+                    switch action {
+                    case let .action(f):
+                        f()
+                    case let .optionalAction(f):
+                        f()
+                    case let .openContextMenu(tapMessage, selectAll, subFrame):
+                        self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                    }
+                } else if case .tap = gesture {
+                    self.item?.controllerInteraction.clickThroughMessage()
                 }
             }
         default:
             break
         }
+    }
+    
+    private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
+        switch gesture {
+        case .tap:
+            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                if let item = self.item, let author = item.content.firstMessage.author {
+                    var openPeerId = item.effectiveAuthorId ?? author.id
+                    var navigate: ChatControllerInteractionNavigateToPeer
+                    
+                    if item.content.firstMessage.id.peerId == item.context.account.peerId {
+                        navigate = .chat(textInputState: nil, subject: nil)
+                    } else {
+                        navigate = .info
+                    }
+                    
+                    for attribute in item.content.firstMessage.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            openPeerId = attribute.messageId.peerId
+                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
+                        }
+                    }
+                    
+                    return .optionalAction({
+                        if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                            item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                        } else {
+                            if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                if case .member = channel.participationStatus {
+                                } else {
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
+                                    return
+                                }
+                            }
+                            item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                        }
+                    })
+                }
+            }
+            
+            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                if let item = self.item {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute {
+                            return .optionalAction({
+                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                            })
+                        }
+                    }
+                }
+            }
+            
+            if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
+                if let item = self.item, let forwardInfo = item.message.forwardInfo {
+                    if let sourceMessageId = forwardInfo.sourceMessageId {
+                        if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                            if case .member = channel.participationStatus {
+                            } else {
+                                return .optionalAction({
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                })
+                            }
+                        }
+                        return .optionalAction({
+                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                        })
+                    } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
+                        return .optionalAction({
+                            item.controllerInteraction.openPeer(id, .chat(textInputState: nil, subject: nil), nil)
+                        })
+                    } else if let _ = forwardInfo.authorSignature {
+                        return .optionalAction({
+                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                        })
+                    }
+                }
+            }
+            return nil
+        case .longTap, .doubleTap:
+            if let item = self.item, let videoContentNode = self.interactiveVideoNode.videoContentNode(at: self.view.convert(location, to: self.interactiveVideoNode.view)) {
+                return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: videoContentNode.view.convert(videoContentNode.bounds, to: self.view))
+            }
+        case .hold:
+            break
+        }
+        return nil
     }
     
     @objc func shareButtonPressed() {

@@ -20,7 +20,7 @@ private class TimerTargetWrapper: NSObject {
     }
 }
 
-private let beginDelay: Double = 0.1
+private let beginDelay: Double = 0.12
 
 private func cancelParentGestures(view: UIView) {
     if let gestureRecognizers = view.gestureRecognizers {
@@ -117,7 +117,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                 }
                 strongSelf.isValidated = true
                 if strongSelf.animator == nil {
-                    strongSelf.animator = DisplayLinkAnimator(duration: 0.3, from: 0.0, to: 1.0, update: { value in
+                    strongSelf.animator = DisplayLinkAnimator(duration: 0.2, from: 0.0, to: 1.0, update: { value in
                         guard let strongSelf = self else {
                             return
                         }

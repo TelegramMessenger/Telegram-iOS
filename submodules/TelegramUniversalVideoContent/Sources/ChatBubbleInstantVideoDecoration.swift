@@ -14,10 +14,12 @@ public final class ChatBubbleInstantVideoDecoration: UniversalVideoDecoration {
     private let tapped: () -> Void
     
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
+    private let inset: CGFloat
     
     private var validLayoutSize: CGSize?
     
-    public init(diameter: CGFloat, backgroundImage: UIImage?, tapped: @escaping () -> Void) {
+    public init(inset: CGFloat, backgroundImage: UIImage?, tapped: @escaping () -> Void) {
+        self.inset = inset
         self.tapped = tapped
         
         let backgroundNode = ASImageNode()
@@ -29,7 +31,6 @@ public final class ChatBubbleInstantVideoDecoration: UniversalVideoDecoration {
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.clipsToBounds = true
-        self.contentContainerNode.cornerRadius = (diameter - 3.0) / 2.0
         
         let foregroundNode = ASDisplayNode()
         self.foregroundNode = foregroundNode
@@ -64,6 +65,9 @@ public final class ChatBubbleInstantVideoDecoration: UniversalVideoDecoration {
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
+        
+        let diameter = size.width + inset
+        self.contentContainerNode.cornerRadius = (diameter - 3.0) / 2.0
         
         if let backgroundNode = self.backgroundNode {
             transition.updateFrame(node: backgroundNode, frame: CGRect(origin: CGPoint(), size: size))

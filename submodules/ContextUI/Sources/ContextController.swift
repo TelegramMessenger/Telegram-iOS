@@ -512,8 +512,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.hapticFeedback.impact()
         
         switch self.source {
-        case let .extracted(source):
-            if let contentAreaInScreenSpace = self.contentAreaInScreenSpace, let maybeContentNode = self.contentContainerNode.contentNode, case let .extracted(_, keepInPlace) = maybeContentNode {
+        case .extracted:
+            if let contentAreaInScreenSpace = self.contentAreaInScreenSpace, let maybeContentNode = self.contentContainerNode.contentNode, case .extracted = maybeContentNode {
                 var updatedContentAreaInScreenSpace = contentAreaInScreenSpace
                 updatedContentAreaInScreenSpace.origin.x = 0.0
                 updatedContentAreaInScreenSpace.size.width = self.bounds.width
@@ -553,7 +553,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             self.effectView.effect = makeCustomZoomBlurEffect()
             self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
-            self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: { [weak self] in
+            self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
             })
         }
         
@@ -601,7 +601,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
-                    let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y)
+                    let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
                     self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     contentParentNode.applyAbsoluteOffsetSpring?(-contentContainerOffset.y, springDuration, springDamping)
                 }
@@ -619,8 +619,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
                 
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                    let actionsSideInset: CGFloat = (validLayout?.safeInsets.left ?? 0.0) + 11.0
-                    
                     let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                     
                     self.contentContainerNode.layer.animateSpring(from: min(localSourceFrame.width / self.contentContainerNode.frame.width, localSourceFrame.height / self.contentContainerNode.frame.height) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
@@ -1121,13 +1119,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let originalActionsY: CGFloat
                     if keepInPlace {
                         originalActionsY = originalProjectedContentViewFrame.1.minY - contentActionsSpacing - actionsSize.height
-                        preferredActionsX = originalProjectedContentViewFrame.1.maxX - actionsSize.width
+                        preferredActionsX = max(actionsSideInset, originalProjectedContentViewFrame.1.maxX - actionsSize.width)
                     } else {
                         originalActionsY = min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)
                         preferredActionsX = originalProjectedContentViewFrame.1.minX
                     }
                     var originalActionsFrame = CGRect(origin: CGPoint(x: max(actionsSideInset, min(layout.size.width - actionsSize.width - actionsSideInset, preferredActionsX)), y: originalActionsY), size: actionsSize)
-                    var originalContentX: CGFloat = originalProjectedContentViewFrame.1.minX
+                    let originalContentX: CGFloat = originalProjectedContentViewFrame.1.minX
                     let originalContentY: CGFloat
                     if keepInPlace {
                         originalContentY = originalProjectedContentViewFrame.1.minY
@@ -1152,15 +1150,26 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     
                     var overflowOffset: CGFloat
-                    let contentContainerFrame: CGRect
+                    var contentContainerFrame: CGRect
                     if keepInPlace {
                         overflowOffset = min(0.0, originalActionsFrame.minY - contentTopInset)
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -contentParentNode.contentRect.minY)
                         if keepInPlace && !overflowOffset.isZero {
                             let offsetDelta = contentParentNode.contentRect.height + 4.0
                             overflowOffset += offsetDelta
+                            overflowOffset = min(0.0, overflowOffset)
+                            
                             originalActionsFrame.origin.x -= contentParentNode.contentRect.maxX - contentParentNode.contentRect.minX + 14.0
+                            originalActionsFrame.origin.x = max(actionsSideInset, originalActionsFrame.origin.x)
+                            //originalActionsFrame.origin.y += contentParentNode.contentRect.height
+                            if originalActionsFrame.minX < contentContainerFrame.minX {
+                                contentContainerFrame.origin.x = min(originalActionsFrame.maxX + 14.0, layout.size.width - actionsSideInset)
+                            }
                             originalActionsFrame.origin.y += offsetDelta
+                            if originalActionsFrame.maxY < originalContentFrame.maxY {
+                                originalActionsFrame.origin.y += contentParentNode.contentRect.height
+                                originalActionsFrame.origin.y = min(originalActionsFrame.origin.y, layout.size.height - originalActionsFrame.height - actionsBottomInset)
+                            }
                             contentHeight -= offsetDelta
                         }
                     } else {
