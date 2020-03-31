@@ -442,6 +442,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         if let statsContext = statsContext, let stats = stats {
             if case .OnDemand = stats.interactionsGraph {
                 statsContext.loadInteractionsGraph()
+                statsContext.loadMuteGraph()
                 statsContext.loadTopHoursGraph()
                 statsContext.loadNewFollowersBySourceGraph()
                 statsContext.loadViewsBySourceGraph()

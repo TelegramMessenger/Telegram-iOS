@@ -182,7 +182,7 @@ public class BaseChartController: ChartThemeContainer {
         fatalError("Abstract")
     }
     
-    public func apply(theme: ChartTheme, animated: Bool) {
+    public func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         
     }
 }

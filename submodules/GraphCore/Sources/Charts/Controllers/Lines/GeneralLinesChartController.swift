@@ -248,7 +248,7 @@ public class GeneralLinesChartController: BaseLinesChartController {
         }
     }
     
-    override public func apply(theme: ChartTheme, animated: Bool) {
+    override public func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         horizontalScalesRenderer.labelsColor = theme.chartLabelsColor
         verticalScalesRenderer.labelsColor = theme.chartLabelsColor
         verticalScalesRenderer.axisXColor = theme.chartStrongLinesColor

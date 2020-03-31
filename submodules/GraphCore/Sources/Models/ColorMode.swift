@@ -24,7 +24,19 @@ typealias NSEdgeInsets = UIEdgeInsets
 #endif
 
 public protocol ChartThemeContainer {
-    func apply(theme: ChartTheme, animated: Bool)
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool)
+}
+
+public class ChartStrings {
+    public let zoomOut: String
+    public let total: String
+    
+    public init(zoomOut: String, total: String) {
+        self.zoomOut = zoomOut
+        self.total = total
+    }
+    
+    public static var defaultStrings = ChartStrings(zoomOut: "Zoom Out", total: "Total")
 }
 
 public class ChartTheme {    

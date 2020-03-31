@@ -243,11 +243,11 @@ public class DailyBarsChartController: BaseChartController {
         }
     }
     
-    override public func apply(theme: ChartTheme, animated: Bool) {
-        super.apply(theme: theme, animated: animated)
+    override public func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
+        super.apply(theme: theme, strings: strings, animated: animated)
         
-        linesController.apply(theme: theme, animated: animated)
-        barsController.apply(theme: theme, animated: animated)
+        linesController.apply(theme: theme, strings: strings, animated: animated)
+        barsController.apply(theme: theme, strings: strings, animated: animated)
     }
 
     public override var drawChartVisibity: Bool {

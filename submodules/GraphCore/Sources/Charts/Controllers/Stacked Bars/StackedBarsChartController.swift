@@ -249,10 +249,10 @@ public class StackedBarsChartController: BaseChartController {
         }
     }
     
-    public override func apply(theme: ChartTheme, animated: Bool) {
-        super.apply(theme: theme, animated: animated)
+    public override func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
+        super.apply(theme: theme, strings: strings, animated: animated)
         
-        zoomedBarsController.apply(theme: theme, animated: animated)
-        barsController.apply(theme: theme, animated: animated)
+        zoomedBarsController.apply(theme: theme, strings: strings, animated: animated)
+        barsController.apply(theme: theme, strings: strings, animated: animated)
     }
 }

@@ -5392,6 +5392,9 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.LoadingTitle" = "Preparing stats";
 "Stats.LoadingText" = "Please wait a few moments while\nwe generate your stats";
 
+"Stats.ZoomOut" = "Zoom Out";
+"Stats.Total" = "Total";
+
 "InstantPage.Views_0" = "%@ views";
 "InstantPage.Views_1" = "%@ view";
 "InstantPage.Views_2" = "%@ views";
@@ -5472,4 +5475,12 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Dice" = "Send a 🎲 emoji to any chat to get a random number from Telegram.";
 
+"ForwardedDices_1" = "Forwarded dice";
+"ForwardedDices_2" = "2 forwarded dices";
+"ForwardedDices_3_10" = "%@ forwarded dices";
+"ForwardedDices_any" = "%@ forwarded dices";
+"ForwardedDices_many" = "%@ forwarded dices";
+"ForwardedDices_0" = "%@ forwarded dices";
+
 "Conversation.ContextMenuDiscuss" = "Discuss";
+

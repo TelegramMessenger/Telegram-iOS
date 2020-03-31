@@ -29,6 +29,7 @@ class GeneralChartComponentController: ChartThemeContainer {
     var isZoomable = true
     
     var theme: ChartTheme = ChartTheme.defaultDayTheme
+    var strings: ChartStrings = ChartStrings.defaultStrings
     var totalHorizontalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     var totalVerticalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
     var initialHorizontalRange: ClosedRange<CGFloat> = BaseConstants.defaultRange
@@ -234,8 +235,9 @@ class GeneralChartComponentController: ChartThemeContainer {
     var setDetailsViewModel: ((ChartDetailsViewModel, Bool, Bool) -> Void)?
     var chartRangePagingClosure: ((Bool, CGFloat) -> Void)? // isEnabled, PageSize
     
-    func apply(theme: ChartTheme, animated: Bool) {
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         self.theme = theme
+        self.strings = strings
     }
 
 // MARK: - Helpers

@@ -34,6 +34,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
     
     var controller: BaseChartController?
     var theme: ChartTheme?
+    var strings: ChartStrings?
     
     var displayRange: Bool = true
     
@@ -90,8 +91,11 @@ class ChartStackSection: UIView, ChartThemeContainer {
         controller?.cancelChartInteraction()
     }
     
-    func apply(theme: ChartTheme, animated: Bool) {
+    func apply(theme: ChartTheme, strings: ChartStrings, animated: Bool) {
         self.theme = theme
+        self.strings = strings
+        
+        self.backButton.setTitle(strings.zoomOut, for: .normal)
         
         UIView.perform(animated: animated && self.isVisibleInWindow) {            
             self.sectionContainerView.backgroundColor = theme.chartBackgroundColor
@@ -105,16 +109,16 @@ class ChartStackSection: UIView, ChartThemeContainer {
         
         if rangeView.isVisibleInWindow || chartView.isVisibleInWindow {
             chartView.loadDetailsViewIfNeeded()
-            chartView.apply(theme: theme, animated: animated && chartView.isVisibleInWindow)
-            controller?.apply(theme: theme, animated: animated)
-            rangeView.apply(theme: theme, animated: animated && rangeView.isVisibleInWindow)
+            chartView.apply(theme: theme, strings: strings, animated: animated && chartView.isVisibleInWindow)
+            controller?.apply(theme: theme, strings: strings, animated: animated)
+            rangeView.apply(theme: theme, strings: strings, animated: animated && rangeView.isVisibleInWindow)
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval.random(in: 0...0.1)) {
                 self.chartView.loadDetailsViewIfNeeded()
                 
-                self.controller?.apply(theme: theme, animated: false)
-                self.chartView.apply(theme: theme, animated: false)
-                self.rangeView.apply(theme: theme, animated: false)
+                self.controller?.apply(theme: theme, strings: strings, animated: false)
+                self.chartView.apply(theme: theme, strings: strings, animated: false)
+                self.rangeView.apply(theme: theme, strings: strings, animated: false)
             }
         }
         
@@ -174,8 +178,8 @@ class ChartStackSection: UIView, ChartThemeContainer {
         self.controller = controller
         self.displayRange = displayRange
         
-        if let theme = self.theme {
-            controller.apply(theme: theme, animated: false)
+        if let theme = self.theme, let strings = self.strings {
+            controller.apply(theme: theme, strings: strings, animated: false)
         }
         
         self.chartView.renderers = controller.mainChartRenderers
