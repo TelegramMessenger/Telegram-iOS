@@ -5481,3 +5481,6 @@ Any member of this group will be able to see messages in the channel.";
 "ForwardedDices_any" = "%@ forwarded dices";
 "ForwardedDices_many" = "%@ forwarded dices";
 "ForwardedDices_0" = "%@ forwarded dices";
+
+"Conversation.ContextMenuDiscuss" = "Discuss";
+

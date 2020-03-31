@@ -545,13 +545,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, recognizer in
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
             if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
                 return
             }
+            let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
+            let gesture: ContextGesture? = anyRecognizer as? ContextGesture
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
                 (strongSelf.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
                 strongSelf.chatDisplayNode.cancelInteractiveKeyboardGestures()
@@ -600,7 +602,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                     }
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer, displayTextSelectionTip: displayTextSelectionTip)
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer, gesture: gesture, displayTextSelectionTip: displayTextSelectionTip)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {

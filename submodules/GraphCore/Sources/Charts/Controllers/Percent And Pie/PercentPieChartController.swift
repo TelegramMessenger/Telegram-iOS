@@ -245,7 +245,7 @@ public class PercentPieChartController: BaseChartController {
     }
     
     func didTapZoomIn(date: Date, animated: Bool) {
-        guard isZoomed == false else { return }
+        guard !isZoomed, isZoomable else { return }
          cancelChartInteraction()
          let currentCollection = percentController.chartsCollection
          let range: Int = Constants.zoomedRange

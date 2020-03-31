@@ -206,7 +206,7 @@ public class DailyBarsChartController: BaseChartController {
     }
     
     public override func didTapZoomIn(date: Date, pointIndex: Int) {
-        guard isZoomed == false else { return }
+        guard !isZoomed, isZoomable else { return }
         if isZoomed {
             return linesController.hideDetailsView(animated: true)
         }

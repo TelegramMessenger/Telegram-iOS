@@ -162,7 +162,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             return strongSelf.fileAt(point: point) != nil
         }
         
-        self.contextContainerNode.activated = { [weak self] gesture in
+        self.contextContainerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let gestureLocation = gestureLocation else {
                 return
             }

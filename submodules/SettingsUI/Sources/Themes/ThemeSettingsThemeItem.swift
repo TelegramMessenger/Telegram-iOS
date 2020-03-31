@@ -224,7 +224,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         self.containerNode.addSubnode(self.overlayNode)
         self.containerNode.addSubnode(self.titleNode)
 
-        self.containerNode.activated = { [weak self] gesture in
+        self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.item else {
                 gesture.cancel()
                 return

@@ -70,7 +70,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         let gestureRecognizer = ContextGesture(target: nil, action: nil)
         self.gestureRecognizer = gestureRecognizer
         self.sendButton.view.addGestureRecognizer(gestureRecognizer)
-        gestureRecognizer.activated = { [weak self] recognizer in
+        gestureRecognizer.activated = { [weak self] recognizer, _ in
             guard let strongSelf = self else {
                 return
             }
