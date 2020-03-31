@@ -45,6 +45,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
+    private var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
@@ -90,12 +92,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            
             if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
                 switch action {
                 case .action, .optionalAction:
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    strongSelf.recognizer?.cancel()
                     item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
                 }
             }
@@ -115,6 +117,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        self.recognizer = recognizer
         recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
@@ -716,8 +719,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             }
             return nil
         case .longTap, .doubleTap:
-            if let item = self.item, let videoContentNode = self.interactiveVideoNode.videoContentNode(at: self.view.convert(location, to: self.interactiveVideoNode.view)) {
-                return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: videoContentNode.view.convert(videoContentNode.bounds, to: self.view))
+            if let item = self.item, self.interactiveVideoNode.frame.contains(location) {
+                return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.interactiveVideoNode.frame)
             }
         case .hold:
             break
