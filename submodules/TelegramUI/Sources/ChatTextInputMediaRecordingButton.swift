@@ -387,6 +387,10 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         return ChatTextInputMediaRecordingButtonPresenter(account: self.account!, presentController: self.presentController)
     }
     
+    func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
+        return CombinedWaveView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 640.0, height: 640.0)), color: self.theme.chat.inputPanel.actionControlFillColor)
+    }
+    
     private var previousSize = CGSize()
     func layoutItems() {
         let size = self.bounds.size
