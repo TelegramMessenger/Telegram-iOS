@@ -137,13 +137,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
         return { item, width, displaySize, statusDisplayType, automaticDownload in
-            var updatedTheme: ChatPresentationThemeData?
-            
             var secretVideoPlaceholderBackgroundImage: UIImage?
             var updatedInfoBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
             if item.presentationData.theme != currentItem?.presentationData.theme {
-                updatedTheme = item.presentationData.theme
                 updatedInfoBackgroundImage = PresentationResourcesChat.chatInstantMessageInfoBackgroundImage(item.presentationData.theme.theme)
                 updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.presentationData.theme.theme)
             }
@@ -382,13 +379,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 })
                             }
                             let mediaManager = item.context.sharedContext.mediaManager
-                            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(diameter: displaySize.width + 2.0, backgroundImage: instantVideoBackgroundImage, tapped: {
+                            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(inset: 2.0, backgroundImage: instantVideoBackgroundImage, tapped: {
                                 if let strongSelf = self {
                                     if let item = strongSelf.item {
                                         if strongSelf.infoBackgroundNode.alpha.isZero {
                                             item.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
-                                        } else {
-                                            //let _ = item.controllerInteraction.openMessage(item.message)
                                         }
                                     }
                                 }
@@ -670,9 +665,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             
                             self.item?.controllerInteraction.clickThroughMessage()
                         case .longTap, .doubleTap:
-                            if let item = self.item, let videoNode = self.videoNode, videoNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, videoNode.frame, nil)
-                            }
+                            break
                         case .hold:
                             break
                     }

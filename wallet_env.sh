@@ -1,5 +1,25 @@
 #!/bin/sh
 
+set -e
+
+REQUIRED_BAZEL_VERSION="$(cat build-system/bazel_version)"
+
+if which bazel >/dev/null 2>&1; then
+	export BAZEL="$(which bazel)"
+else
+	echo "bazel not found in PATH"
+	echo "Please download bazel version $REQUIRED_BAZEL_VERSION:"
+	echo "https://github.com/bazelbuild/bazel/releases"
+	exit 1
+fi
+
+BAZEL_VERSION="$($BAZEL --version | sed -e 's/^bazel '//)"
+
+if [ "$BAZEL_VERSION" != "$REQUIRED_BAZEL_VERSION" ]; then
+	echo "Required bazel version is \"$REQUIRED_BAZEL_VERSION\", you have \"$BAZEL_VERSION\" installed ($BAZEL)"
+	exit 1
+fi
+
 if [ "$DEVELOPMENT_CODE_SIGN_IDENTITY" == "" ]; then
 	echo "Set DEVELOPMENT_CODE_SIGN_IDENTITY to the name of a valid development certificate\nExample: export DEVELOPMENT_CODE_SIGN_IDENTITY=\"iPhone Developer: XXXXXXXXXX (XXXXXXXXXX)\""
 	exit 1

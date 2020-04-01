@@ -300,7 +300,7 @@ private final class ItemNode: ASDisplayNode {
             width = badgeBackgroundFrame.maxX
         }
         
-        return (width, shortTitleSize.width - self.shortTitleNode.insets.left - self.shortTitleNode.insets.right + 5.0)
+        return (width, shortTitleSize.width - self.shortTitleNode.insets.left - self.shortTitleNode.insets.right)
     }
     
     func updateArea(size: CGSize, sideInset: CGFloat, useShortTitle: Bool, transition: ContainedViewLayoutTransition) {

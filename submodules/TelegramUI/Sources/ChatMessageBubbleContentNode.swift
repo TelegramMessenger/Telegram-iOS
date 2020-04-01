@@ -84,6 +84,7 @@ enum ChatMessageBubbleContentTapAction {
     case tooltip(String, ASDisplayNode?, CGRect?)
     case bankCard(String)
     case ignore
+    case openPollResults(Data)
 }
 
 final class ChatMessageBubbleContentItem {

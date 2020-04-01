@@ -1489,8 +1489,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             if hasNonZeroVoters {
                                 if !isEstimating {
-                                    item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
-                                    return .ignore
+                                    return .openPollResults(option.opaqueIdentifier)
                                 }
                                 return .openMessage
                             }

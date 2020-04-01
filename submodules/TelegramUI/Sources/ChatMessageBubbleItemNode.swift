@@ -23,7 +23,7 @@ import GridMessageSelectionNode
 import AppBundle
 import Markdown
 
-private enum InternalBubbleTapAction {
+enum InternalBubbleTapAction {
     case action(() -> Void)
     case optionalAction(() -> Void)
     case openContextMenu(tapMessage: Message, selectAll: Bool, subFrame: CGRect)
@@ -418,7 +418,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults:
                             return .waitForSingleTap
                     }
                 }
@@ -443,7 +443,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     f()
                     recognizer.cancel()
                 case .openContextMenu:
-                    //recognizer.cancel()
                     break
                 }
             }
@@ -2309,6 +2308,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
+                    if case .doubleTap = gesture {
+                        self.containerNode.cancelGesture()
+                    }
                     switch action {
                     case let .action(f):
                         f()
@@ -2546,6 +2548,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, node, rect)
                             })
                         }
+                    case let .openPollResults(option):
+                        if let item = self.item {
+                            return .action({
+                                item.controllerInteraction.openMessagePollResults(item.message.id, option)
+                            })
+                        }
                     }
                 }
                 return nil
@@ -2607,6 +2615,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 item.controllerInteraction.longTap(.bankCard(number), message)
                             })
                         case .tooltip:
+                            break
+                        case .openPollResults:
                             break
                         }
                     }

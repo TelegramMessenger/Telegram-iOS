@@ -30,9 +30,16 @@ private class AnimatedStickerNodeDisplayEvents: ASDisplayNode {
     override func didExitHierarchy() {
         super.didExitHierarchy()
         
-        if self.value {
-            self.value = false
-            self.updated?(false)
+        DispatchQueue.main.async { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.isInHierarchy {
+                if strongSelf.value {
+                    strongSelf.value = false
+                    strongSelf.updated?(false)
+                }
+            }
         }
     }
 }

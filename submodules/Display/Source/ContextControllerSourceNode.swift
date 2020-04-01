@@ -56,8 +56,8 @@ public final class ContextControllerSourceNode: ASDisplayNode {
                     targetContentRect = CGRect(origin: CGPoint(), size: targetNode.bounds.size)
                 }
                 
-                let scaleSide = max(targetContentRect.width, targetContentRect.height)
-                let minScale: CGFloat = (scaleSide - 10.0) / scaleSide
+                let scaleSide = targetContentRect.width
+                let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
                 let currentScale = 1.0 * (1.0 - progress) + minScale * progress
                 
                 let originalCenterOffsetX: CGFloat = targetNode.bounds.width / 2.0 - targetContentRect.midX
@@ -82,8 +82,6 @@ public final class ContextControllerSourceNode: ASDisplayNode {
                     targetNode.layer.sublayerTransform = sublayerTransform
                     
                     targetNode.layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
-                    
-                    //targetNode.layer.animateSpring(from: previousScale as NSNumber, to: currentScale as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 90.0)
                 }
             }
         }

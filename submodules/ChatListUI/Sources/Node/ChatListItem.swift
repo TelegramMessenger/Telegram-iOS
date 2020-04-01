@@ -715,7 +715,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         isRemovedFromTotalUnreadCount = isRemovedFromTotalUnreadCountValue
                     }
-                    peerPresence = peerPresenceValue
+                    peerPresence = (peerPresenceValue as? TelegramUserPresence).flatMap { presence -> TelegramUserPresence in
+                        TelegramUserPresence(status: presence.status, lastActivity: 0)
+                    }
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
                     inputActivities = inputActivitiesValue
@@ -1180,7 +1182,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage, _):
                     if !displayAsMessage, let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId  {
-                        let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
+                        var updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
+                        let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
                         if case .online = relativeStatus {
                             online = true
                         }
@@ -1608,7 +1611,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
                     if let peerPresence = peerPresence as? TelegramUserPresence {
-                        strongSelf.peerPresenceManager?.reset(presence: peerPresence)
+                        strongSelf.peerPresenceManager?.reset(presence: TelegramUserPresence(status: peerPresence.status, lastActivity: 0))
                     }
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
@@ -1739,7 +1742,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.badgeNode, frame: updatedBadgeFrame)
             
             var mentionBadgeFrame = self.mentionBadgeNode.frame
-            if updatedBadgeFrame.width.isZero {
+            if updatedBadgeFrame.width.isZero || self.badgeNode.isHidden {
                 mentionBadgeFrame.origin.x = updatedBadgeFrame.minX - mentionBadgeFrame.width
             } else {
                 mentionBadgeFrame.origin.x = updatedBadgeFrame.minX - 6.0 - mentionBadgeFrame.width
