@@ -39,22 +39,6 @@ def clean_copy_files(dir, destination_dir):
                 continue
             mkdir_p(destination_dir + "/" + dir_path)
 
-def clean_files(base_dir, dirs, files):
-    for file in files:
-        if file == '.DS_Store':
-            os.remove(base_dir + '/' + file)
-    for dir in dirs:
-        if re.match('.*\\.xcodeproj', dir) or re.match('.*\\.xcworkspace', dir):
-            shutil.rmtree(base_dir + '/' + dir, ignore_errors=True)
-
-def clean_dep_files(base_dir, dirs, files):
-    for file in files:
-        if re.match('^\\.git$', file) or re.match('^.*/\\.git$', file):
-            os.remove(base_dir + '/' + file)
-    for dir in dirs:
-        if re.match('^\\.git$', dir) or re.match('^.*/\\.git$', dir):
-            shutil.rmtree(base_dir + '/' + dir, ignore_errors=True)
-
 if len(sys.argv) != 2:
     print('Usage: extract_wallet_source.py destination')
     sys.exit(1)
@@ -96,13 +80,15 @@ additional_paths = [
     "build-system/copy-provisioning-profiles-Wallet.sh",
     "build-system/prepare-build-variables-Wallet.sh",
     ".bazelrc",
-    "Utils.makefile",
-    "Wallet.makefile",
     "wallet_env.sh",
 ]
 
 for file_path in additional_paths:
     if os.path.isdir(file_path):
-        clean_copy_files(file_path, destination + '/' + file_path)
+        clean_copy_files(file_path, destination + "/" + file_path)
     else:
-        shutil.copy(file_path, destination + '/' + file_path)
+        shutil.copy(file_path, destination + "/" + file_path)
+
+shutil.copy("Wallet.makefile", destination + "/" + "Makefile")
+shutil.copy("Wallet/README.md", destination + "/" + "README.md")
+
