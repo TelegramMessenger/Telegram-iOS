@@ -135,6 +135,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     UIImage *_icon;
     
     id<TGModernConversationInputMicButtonPresentation> _presentation;
+    UIView<TGModernConversationInputMicButtonDecoration> *_decoration;
 }
 
 @end
@@ -240,6 +241,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     centerPoint.y += _centerOffset.y;
     _innerCircleView.center = centerPoint;
     _outerCircleView.center = centerPoint;
+    _decoration.center = centerPoint;
     _innerIconWrapperView.center = centerPoint;
     
     _lockPanelWrapperView.frame = CGRectMake(floor(centerPoint.x - _lockPanelWrapperView.frame.size.width / 2.0f), floor(centerPoint.y - 122.0f - _lockPanelWrapperView.frame.size.height / 2.0f), _lockPanelWrapperView.frame.size.width, _lockPanelWrapperView.frame.size.height);
@@ -355,7 +357,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
                     [delegate micButtonInteractionRequestedLockedAction];
             };
         }
-        
+                
         _lockPanelWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 77.0f)];
         _lockPanelWrapperView.userInteractionEnabled = false;
         [[_presentation view] addSubview:_lockPanelWrapperView];
@@ -376,6 +378,12 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView = [[UIImageView alloc] initWithImage:[self innerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()]];
         _innerCircleView.alpha = 0.0f;
         [[_presentation view] addSubview:_innerCircleView];
+        
+        if ([_delegate respondsToSelector:@selector(micButtonDecoration)]) {
+            UIView<TGModernConversationInputMicButtonDecoration> *decoration = [_delegate micButtonDecoration];
+            _decoration = decoration;
+            [[_presentation view] addSubview:_decoration];
+        }
         
         _outerCircleView = [[UIImageView alloc] initWithImage:[self outerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()]];
         _outerCircleView.alpha = 0.0f;
@@ -419,8 +427,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _innerIconWrapperView.transform = CGAffineTransformIdentity;
     _innerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
     _outerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+    _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
     _innerCircleView.alpha = 0.2f;
     _outerCircleView.alpha = 0.2f;
+    _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
     
     _lockPanelWrapperView.transform = CGAffineTransformMakeTranslation(0.0f, 100.0f);
     _lockPanelWrapperView.alpha = 0.0f;
@@ -429,6 +439,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         [UIView animateWithDuration:0.50 delay:0.0 usingSpringWithDamping:0.55f initialSpringVelocity:0.0f options:UIViewAnimationOptionBeginFromCurrentState animations:^{
             _innerCircleView.transform = CGAffineTransformIdentity;
             _outerCircleView.transform = CGAffineTransformMakeScale(outerCircleMinScale, outerCircleMinScale);
+            _decoration.transform = CGAffineTransformIdentity;
             
             _lockPanelWrapperView.transform = CGAffineTransformIdentity;
         } completion:nil];
@@ -438,6 +449,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             self.iconView.alpha = 0.0f;
             _innerIconWrapperView.alpha = 1.0f;
             _outerCircleView.alpha = 1.0f;
+            _decoration.alpha = 1.0;
             
             _lockPanelWrapperView.alpha = 1.0f;
         }];
@@ -473,8 +485,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     [UIView animateWithDuration:0.18 animations:^{
         _innerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _outerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+        _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _innerCircleView.alpha = 0.0f;
         _outerCircleView.alpha = 0.0f;
+        _decoration.alpha = 0.0f;
         self.iconView.alpha = 1.0f;
         _innerIconWrapperView.alpha = 0.0f;
         
@@ -764,6 +778,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 }
 
 - (void)displayLinkUpdate {
+    if (_decoration != NULL) {
+        _outerCircleView.image = nil;
+    }
     NSTimeInterval t = CACurrentMediaTime();
     if (t > _animationStartTime + 0.5) {
         _currentLevel = _currentLevel * 0.8f + _inputLevel * 0.2f;
@@ -783,11 +800,14 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         
         transform = CGAffineTransformScale(translation, _currentScale, _currentScale);
         _innerCircleView.transform = transform;
+        
+        [_decoration tick:_currentLevel];
     }
 }
 
 - (void)addMicLevel:(CGFloat)level {
     _inputLevel = level;
+    [_decoration updateLevel:level];
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)__unused gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer {

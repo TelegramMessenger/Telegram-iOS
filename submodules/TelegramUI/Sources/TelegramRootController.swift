@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -26,7 +27,7 @@ public final class TelegramRootController: NavigationController {
     private var permissionsDisposable: Disposable?
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
-    
+        
     public init(context: AccountContext) {
         self.context = context
         
@@ -120,21 +121,8 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-//        let _ = (archivedStickerPacks(account: self.context.account, namespace: .stickers)
-//        |> deliverOnMainQueue).start(next: { [weak self] stickerPacks in
-//            var packs: [(StickerPackCollectionInfo, StickerPackItem?)] = []
-//            for pack in stickerPacks {
-//                packs.append((pack.info, pack.topItems.first))
-//            }
-//
-//            if let strongSelf = self {
-//                let controller = archivedStickersNoticeController(context: strongSelf.context, archivedStickerPacks: packs)
-//                strongSelf.chatListController?.present(controller, in: .window(.root))
-//            }
-//        })
     }
-    
+        
     public func updateRootControllers(showCallsTab: Bool) {
         guard let rootTabController = self.rootTabController else {
             return
