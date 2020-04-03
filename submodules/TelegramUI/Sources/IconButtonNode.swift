@@ -20,13 +20,13 @@ final class IconButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    override init() {
+    init() {
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        super.init()
+        super.init(pointerStyle: .circle)
         
         self.addSubnode(self.iconNode)
         

@@ -156,6 +156,9 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.displayLink = CADisplayLink(target: DisplayLinkTarget {
             displayLinkUpdate?()
         }, selector: #selector(DisplayLinkTarget.event))
+        if #available(iOS 10.0, *) {
+            self.displayLink.preferredFramesPerSecond = 60
+        }
         
         super.init()
         

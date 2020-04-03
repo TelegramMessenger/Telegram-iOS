@@ -103,7 +103,7 @@ private func peerButtons(_ peer: Peer, interfaceState: ChatPresentationInterface
 private let buttonFont = Font.medium(10.0)
 
 private final class ChatInfoTitlePanelButtonNode: HighlightableButtonNode {
-    override init() {
+    init() {
         super.init()
         
         self.displaysAsynchronously = false

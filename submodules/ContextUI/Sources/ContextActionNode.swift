@@ -26,6 +26,8 @@ final class ContextActionNode: ASDisplayNode {
     
     private var iconDisposable: Disposable?
     
+    private var pointerInteraction: PointerInteraction?
+    
     init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.action = action
         self.getController = getController
@@ -147,6 +149,20 @@ final class ContextActionNode: ASDisplayNode {
     
     deinit {
         self.iconDisposable?.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.pointerInteraction = PointerInteraction(node: self.buttonNode, style: .hover, willEnter: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.highlightedBackgroundNode.alpha = 0.75
+            }
+        }, willExit: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.highlightedBackgroundNode.alpha = 0.0
+            }
+        })
     }
     
     func updateLayout(constrainedWidth: CGFloat, previous: ContextActionSibling, next: ContextActionSibling) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {

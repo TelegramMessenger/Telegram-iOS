@@ -29,6 +29,8 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
     
     private let backgroundNode: ASDisplayNode
     
+    private var pointerInteraction: PointerInteraction?
+    
     public init(theme: AlertControllerTheme, action: TextAlertAction) {
         self.theme = theme
         self.action = action
@@ -57,6 +59,22 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         }
         
         self.updateTheme(theme)
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+        
+        self.pointerInteraction = PointerInteraction(node: self, style: .hover, willEnter: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.backgroundNode.alpha = 0.25
+            }
+        }, willExit: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.backgroundNode.alpha = 1.0
+            }
+        })
     }
     
     public var actionEnabled: Bool = true {
@@ -88,12 +106,6 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
                 break
         }
         self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
-    }
-    
-    override public func didLoad() {
-        super.didLoad()
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
     }
     
     @objc func pressed() {

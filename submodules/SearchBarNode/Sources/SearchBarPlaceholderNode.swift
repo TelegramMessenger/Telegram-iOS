@@ -31,6 +31,8 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     public let iconNode: ASImageNode
     public let labelNode: TextNode
     
+    var pointerInteraction: PointerInteraction?
+    
     public private(set) var placeholderString: NSAttributedString?
     
     convenience public override init() {
@@ -89,6 +91,18 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
             return .waitForSingleTap
         }
         self.backgroundNode.view.addGestureRecognizer(gestureRecognizer)
+        
+        self.pointerInteraction = PointerInteraction(node: self, style: .caret, willEnter: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor.withMultipliedBrightnessBy(0.95)
+        }, willExit: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor
+        })
     }
     
     public func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {

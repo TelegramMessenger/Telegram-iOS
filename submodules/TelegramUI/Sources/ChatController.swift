@@ -5439,6 +5439,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if peer.smallProfileImage == nil {
                                 expandAvatar = false
                             }
+                            if let validLayout = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
+                                expandAvatar = false
+                            }
                             if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true) {
                                 strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }
@@ -7197,6 +7200,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         var mode: PeerInfoControllerMode = .generic
                                         if let _ = fromMessage {
                                             mode = .group(selfPeerId)
+                                        }
+                                        var expandAvatar = expandAvatar
+                                        if peer.smallProfileImage == nil {
+                                            expandAvatar = false
+                                        }
+                                        if let validLayout = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
+                                            expandAvatar = false
                                         }
                                         if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: false) {
                                             strongSelf.effectiveNavigationController?.pushViewController(infoController)

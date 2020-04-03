@@ -31,6 +31,22 @@ open class HighlightTrackingButtonNode: ASButtonNode {
     
     public var highligthedChanged: (Bool) -> Void = { _ in }
     
+    private let pointerStyle: PointerStyle?
+    private var pointerInteraction: PointerInteraction?
+    
+    public init(pointerStyle: PointerStyle? = nil) {
+        self.pointerStyle = pointerStyle
+        super.init()
+    }
+    
+    open override func didLoad() {
+        super.didLoad()
+        
+        if let pointerStyle = self.pointerStyle {
+            self.pointerInteraction = PointerInteraction(node: self, style: pointerStyle)
+        }
+    }
+    
     open override func beginTracking(with touch: UITouch, with event: UIEvent?) -> Bool {
         if !self.internalHighlighted {
             self.internalHighlighted = true
@@ -69,8 +85,8 @@ open class HighlightTrackingButtonNode: ASButtonNode {
 }
 
 open class HighlightableButtonNode: HighlightTrackingButtonNode {
-    override public init() {
-        super.init()
+    override public init(pointerStyle: PointerStyle? = nil) {
+        super.init(pointerStyle: pointerStyle)
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {

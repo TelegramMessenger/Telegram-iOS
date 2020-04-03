@@ -111,6 +111,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private var presenceManager: PeerPresenceStatusManager?
     
+    private var pointerInteraction: PointerInteraction?
+    
     var inputActivities: (PeerId, [(Peer, PeerInputActivity)])? {
         didSet {
             self.updateStatus()
@@ -603,14 +605,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
         
         let titleSideInset: CGFloat = 3.0
+        var titleFrame: CGRect
         if size.height > 40.0 {
             var titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
             titleSize.width += credibilityIconWidth
             let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
-            
-            var titleFrame: CGRect
-            
+                        
             if activitySize.height.isZero {
                 titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
                 if titleFrame.size.width < size.width {
@@ -650,7 +651,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             let titleInfoSpacing: CGFloat = 8.0
             let combinedWidth = titleSize.width + leftIconWidth + credibilityIconWidth + rightIconWidth + activitySize.width + titleInfoSpacing
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftIconWidth + floor((clearBounds.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+            titleFrame = CGRect(origin: CGPoint(x: leftIconWidth + floor((clearBounds.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
             self.titleNode.frame = titleFrame
             self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
             
@@ -664,7 +665,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
             }
         }
+        
+        self.pointerInteraction = PointerInteraction(view: self, style: .rectangle(CGSize(width: titleFrame.width + 16.0, height: 40.0)))
     }
+    
+    
     
     @objc private func buttonPressed() {
         self.pressed?()

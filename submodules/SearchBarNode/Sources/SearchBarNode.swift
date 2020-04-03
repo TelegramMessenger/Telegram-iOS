@@ -364,13 +364,13 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.returnKeyType = .search
         self.textField.font = self.fieldStyle.font
         
-        self.clearButton = HighlightableButtonNode()
+        self.clearButton = HighlightableButtonNode(pointerStyle: .lift)
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
         self.clearButton.isHidden = true
         
-        self.cancelButton = HighlightableButtonNode()
+        self.cancelButton = HighlightableButtonNode(pointerStyle: .default)
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.cancelButton.displaysAsynchronously = false
         

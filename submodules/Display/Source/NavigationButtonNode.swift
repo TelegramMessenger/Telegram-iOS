@@ -177,6 +177,8 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
     }
     
+    var pointerInteraction: PointerInteraction?
+    
     override public init() {
         self.imageRippleNode = ASImageNode()
         self.imageRippleNode.displaysAsynchronously = false
@@ -193,6 +195,21 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         self.displaysAsynchronously = false
         
         self.accessibilityTraits = .button
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        self.updatePointerInteraction()
+    }
+    
+    func updatePointerInteraction() {
+        let pointerStyle: PointerStyle
+        if self.node != nil {
+            pointerStyle = .lift
+        } else {
+            pointerStyle = .default
+        }
+        self.pointerInteraction = PointerInteraction(node: self, style: pointerStyle)
     }
     
     override func updateLayout(_ constrainedSize: CGSize) -> CGSize {

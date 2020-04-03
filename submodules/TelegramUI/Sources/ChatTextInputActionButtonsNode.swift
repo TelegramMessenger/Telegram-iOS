@@ -24,15 +24,17 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
     }
     
+    var micButtonPointerInteraction: PointerInteraction?
+    
     init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.strings = strings
         
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
-        self.sendButton = HighlightTrackingButtonNode()
+        self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
         //self.sendButton.adjustsImageWhenHighlighted = false
         //self.sendButton.adjustsImageWhenDisabled = false
         
-        self.expandMediaInputButton = HighlightableButtonNode()
+        self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .default)
         
         super.init()
         
@@ -78,6 +80,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 strongSelf.sendButtonLongPressed?(strongSelf.sendButton, recognizer)
             }
         }
+        
+        self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle)
     }
     
     @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
