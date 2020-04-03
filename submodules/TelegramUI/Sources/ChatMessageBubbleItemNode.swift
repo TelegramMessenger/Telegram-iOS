@@ -2544,13 +2544,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         }
                     case let .tooltip(text, node, rect):
                         if let item = self.item {
-                            return .action({
+                            return .optionalAction({
                                 let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, node, rect)
                             })
                         }
                     case let .openPollResults(option):
                         if let item = self.item {
-                            return .action({
+                            return .optionalAction({
                                 item.controllerInteraction.openMessagePollResults(item.message.id, option)
                             })
                         }

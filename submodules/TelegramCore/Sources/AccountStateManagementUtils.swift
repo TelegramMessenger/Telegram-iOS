@@ -2363,7 +2363,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     }
                     if let apiPoll = apiPoll {
                         switch apiPoll {
-                        case let .poll(id, flags, question, answers):
+                        case let .poll(id, flags, question, answers, closePeriod, _):
                             let publicity: TelegramMediaPollPublicity
                             if (flags & (1 << 1)) != 0 {
                                 publicity = .public
@@ -2376,7 +2376,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             } else {
                                 kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                             }
-                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0)
+                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
                         }
                     }
                     updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)

@@ -53,17 +53,20 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
     public let voters: [TelegramMediaPollOptionVoters]?
     public let totalVoters: Int32?
     public let recentVoters: [PeerId]
+    public let solution: String?
     
-    public init(voters: [TelegramMediaPollOptionVoters]?, totalVoters: Int32?, recentVoters: [PeerId]) {
+    public init(voters: [TelegramMediaPollOptionVoters]?, totalVoters: Int32?, recentVoters: [PeerId], solution: String?) {
         self.voters = voters
         self.totalVoters = totalVoters
         self.recentVoters = recentVoters
+        self.solution = solution
     }
     
     public init(decoder: PostboxDecoder) {
         self.voters = decoder.decodeOptionalObjectArrayWithDecoderForKey("v")
         self.totalVoters = decoder.decodeOptionalInt32ForKey("t")
         self.recentVoters = decoder.decodeInt64ArrayForKey("rv").map(PeerId.init)
+        self.solution = decoder.decodeOptionalStringForKey("sol")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -78,6 +81,11 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
             encoder.encodeNil(forKey: "t")
         }
         encoder.encodeInt64Array(self.recentVoters.map { $0.toInt64() }, forKey: "rv")
+        if let solution = self.solution {
+            encoder.encodeString(solution, forKey: "sol")
+        } else {
+            encoder.encodeNil(forKey: "sol")
+        }
     }
 }
 
@@ -130,8 +138,9 @@ public final class TelegramMediaPoll: Media, Equatable {
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
     public let isClosed: Bool
+    public let deadlineTimeout: Int32?
     
-    public init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, options: [TelegramMediaPollOption], correctAnswers: [Data]?, results: TelegramMediaPollResults, isClosed: Bool) {
+    public init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, options: [TelegramMediaPollOption], correctAnswers: [Data]?, results: TelegramMediaPollResults, isClosed: Bool, deadlineTimeout: Int32?) {
         self.pollId = pollId
         self.publicity = publicity
         self.kind = kind
@@ -140,6 +149,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         self.correctAnswers = correctAnswers
         self.results = results
         self.isClosed = isClosed
+        self.deadlineTimeout = deadlineTimeout
     }
     
     public init(decoder: PostboxDecoder) {
@@ -153,8 +163,9 @@ public final class TelegramMediaPoll: Media, Equatable {
         self.text = decoder.decodeStringForKey("t", orElse: "")
         self.options = decoder.decodeObjectArrayWithDecoderForKey("os")
         self.correctAnswers = decoder.decodeOptionalDataArrayForKey("ca")
-        self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults ?? TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [])
+        self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults ?? TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil)
         self.isClosed = decoder.decodeInt32ForKey("ic", orElse: 0) != 0
+        self.deadlineTimeout = decoder.decodeOptionalInt32ForKey("dt")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -172,6 +183,11 @@ public final class TelegramMediaPoll: Media, Equatable {
         }
         encoder.encodeObject(results, forKey: "rs")
         encoder.encodeInt32(self.isClosed ? 1 : 0, forKey: "ic")
+        if let deadlineTimeout = self.deadlineTimeout {
+            encoder.encodeInt32(deadlineTimeout, forKey: "dt")
+        } else {
+            encoder.encodeNil(forKey: "dt")
+        }
     }
     
     public func isEqual(to other: Media) -> Bool {
@@ -210,6 +226,9 @@ public final class TelegramMediaPoll: Media, Equatable {
         if lhs.isClosed != rhs.isClosed {
             return false
         }
+        if lhs.deadlineTimeout != rhs.deadlineTimeout {
+            return false
+        }
         return true
     }
     
@@ -229,15 +248,15 @@ public final class TelegramMediaPoll: Media, Equatable {
                 }
                 updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
                     return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count, isCorrect: correctOpaqueIdentifiers.contains(voters.opaqueIdentifier))
-                }), totalVoters: results.totalVoters, recentVoters: results.recentVoters)
+                }), totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution)
             } else if let updatedVoters = results.voters {
-                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters)
+                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution)
             } else {
-                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters)
+                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution)
             }
         } else {
             updatedResults = results
         }
-        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed)
+        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout)
     }
 }

@@ -518,7 +518,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         var activePoll: TelegramMediaPoll?
         for media in message.media {
             if let poll = media as? TelegramMediaPoll, !poll.isClosed, message.id.namespace == Namespaces.Message.Cloud, poll.pollId.namespace == Namespaces.Media.CloudPoll {
-                activePoll = poll
+                if !isPollEffectivelyClosed(message: message, poll: poll) {
+                    activePoll = poll
+                }
             }
         }
         
