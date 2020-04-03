@@ -175,9 +175,15 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
             pollMediaFlags |= 1 << 0
             correctAnswers = correctAnswersValue.map { Buffer(data: $0) }
         }
-        let inputPoll = Api.InputMedia.inputMediaPoll(flags: pollMediaFlags, poll: Api.Poll.poll(id: 0, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption })), correctAnswers: correctAnswers)
+        if poll.deadlineTimeout != nil {
+            pollFlags |= 1 << 4
+        }
+        if poll.results.solution != nil {
+            pollMediaFlags |= 1 << 1
+        }
+        let inputPoll = Api.InputMedia.inputMediaPoll(flags: pollMediaFlags, poll: Api.Poll.poll(id: 0, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: poll.results.solution, solutionEntities: poll.results.solution != nil ? [] : nil)
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil)))
-    } else if let dice = media as? TelegramMediaDice {
+    } else if let _ = media as? TelegramMediaDice {
         let input = Api.InputMedia.inputMediaDice
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else {

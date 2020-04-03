@@ -32,7 +32,7 @@ public func requestMessageSelectPollOption(account: Account, messageId: MessageI
                                 resultPoll = transaction.getMedia(pollId) as? TelegramMediaPoll
                                 if let poll = poll {
                                     switch poll {
-                                    case let .poll(id, flags, question, answers):
+                                    case let .poll(id, flags, question, answers, closePeriod, _):
                                         let publicity: TelegramMediaPollPublicity
                                         if (flags & (1 << 1)) != 0 {
                                             publicity = .public
@@ -45,7 +45,7 @@ public func requestMessageSelectPollOption(account: Account, messageId: MessageI
                                         } else {
                                             kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                                         }
-                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
                                     default:
                                         break
                                     }
@@ -126,7 +126,14 @@ public func requestClosePoll(postbox: Postbox, network: Network, stateManager: A
         
         pollFlags |= 1 << 0
         
-        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(flags: pollMediaFlags, poll: .poll(id: poll.pollId.id, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption })), correctAnswers: correctAnswers), replyMarkup: nil, entities: nil, scheduleDate: nil))
+        if poll.deadlineTimeout != nil {
+            pollFlags |= 1 << 4
+        }
+        if poll.results.solution != nil {
+            pollMediaFlags |= 1 << 1
+        }
+        
+        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(flags: pollMediaFlags, poll: .poll(id: poll.pollId.id, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: poll.results.solution, solutionEntities: poll.results.solution != nil ? [] : nil), replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

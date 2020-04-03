@@ -159,8 +159,9 @@ private final class CreatePollControllerArguments {
     let updateMultipleChoice: (Bool) -> Void
     let displayMultipleChoiceDisabled: () -> Void
     let updateQuiz: (Bool) -> Void
+    let updateSolutionText: (String) -> Void
     
-    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void) {
+    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void, updateSolutionText: @escaping (String) -> Void) {
         self.updatePollText = updatePollText
         self.updateOptionText = updateOptionText
         self.moveToNextOption = moveToNextOption
@@ -173,6 +174,7 @@ private final class CreatePollControllerArguments {
         self.updateMultipleChoice = updateMultipleChoice
         self.displayMultipleChoiceDisabled = displayMultipleChoiceDisabled
         self.updateQuiz = updateQuiz
+        self.updateSolutionText = updateSolutionText
     }
 }
 
@@ -180,6 +182,7 @@ private enum CreatePollSection: Int32 {
     case text
     case options
     case settings
+    case quizSolution
 }
 
 private enum CreatePollEntryId: Hashable {
@@ -192,6 +195,9 @@ private enum CreatePollEntryId: Hashable {
     case multipleChoice
     case quiz
     case quizInfo
+    case quizSolutionHeader
+    case quizSolutionText
+    case quizSolutionInfo
 }
 
 private enum CreatePollEntryTag: Equatable, ItemListItemTag {
@@ -218,6 +224,9 @@ private enum CreatePollEntry: ItemListNodeEntry {
     case multipleChoice(String, Bool, Bool)
     case quiz(String, Bool)
     case quizInfo(String)
+    case quizSolutionHeader(String)
+    case quizSolutionText(placeholder: String, text: String)
+    case quizSolutionInfo(String)
     
     var section: ItemListSectionId {
         switch self {
@@ -227,6 +236,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return CreatePollSection.options.rawValue
         case .anonymousVotes, .multipleChoice, .quiz, .quizInfo:
             return CreatePollSection.settings.rawValue
+        case .quizSolutionHeader, .quizSolutionText, .quizSolutionInfo:
+            return CreatePollSection.quizSolution.rawValue
         }
     }
     
@@ -262,6 +273,12 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return .quiz
         case .quizInfo:
             return .quizInfo
+        case .quizSolutionHeader:
+            return .quizSolutionHeader
+        case .quizSolutionText:
+            return .quizSolutionText
+        case .quizSolutionInfo:
+            return .quizSolutionInfo
         }
     }
     
@@ -285,6 +302,12 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return 1004
         case .quizInfo:
             return 1005
+        case .quizSolutionHeader:
+            return 1006
+        case .quizSolutionText:
+            return 1007
+        case .quizSolutionInfo:
+            return 1008
         }
     }
     
@@ -352,6 +375,14 @@ private enum CreatePollEntry: ItemListNodeEntry {
             })
         case let .quizInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .quizSolutionHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .quizSolutionText(placeholder, text):
+            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 400, display: true), sectionId: self.section, style: .blocks, textUpdated: { text in
+                arguments.updateSolutionText(text)
+            })
+        case let .quizSolutionInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -371,6 +402,7 @@ private struct CreatePollControllerState: Equatable {
     var isAnonymous: Bool = true
     var isMultipleChoice: Bool = false
     var isQuiz: Bool = false
+    var solutionText: String = ""
 }
 
 private func createPollControllerEntries(presentationData: PresentationData, peer: Peer, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
@@ -410,14 +442,24 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     if canBePublic {
         entries.append(.anonymousVotes(presentationData.strings.CreatePoll_Anonymous, state.isAnonymous))
     }
+    var isQuiz = false
     if let defaultIsQuiz = defaultIsQuiz {
         if !defaultIsQuiz {
             entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
+        } else {
+            isQuiz = true
         }
     } else {
         entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
         entries.append(.quiz(presentationData.strings.CreatePoll_Quiz, state.isQuiz))
         entries.append(.quizInfo(presentationData.strings.CreatePoll_QuizInfo))
+        isQuiz = state.isQuiz
+    }
+    
+    if isQuiz {
+        entries.append(.quizSolutionHeader("EXPLANATION"))
+        entries.append(.quizSolutionText(placeholder: "Add a Comment (Optional)", text: state.solutionText))
+        entries.append(.quizSolutionInfo("Users will see this comment after choosing a wrong answer, good for educational purposes."))
     }
     
     return entries
@@ -663,6 +705,12 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
         if value {
             displayQuizTooltipImpl?(value)
         }
+    }, updateSolutionText: { text in
+        updateState { state in
+            var state = state
+            state.solutionText = text
+            return state
+        }
     })
     
     let previousOptionIds = Atomic<[Int]?>(value: nil)
@@ -726,14 +774,23 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             } else {
                 publicity = .public
             }
+            var resolvedSolution: String?
             let kind: TelegramMediaPollKind
             if state.isQuiz {
                 kind = .quiz
+                resolvedSolution = state.solutionText.isEmpty ? nil : state.solutionText
             } else {
                 kind = .poll(multipleAnswers: state.isMultipleChoice)
             }
+            
+            var deadlineTimeout: Int32?
+            #if DEBUG
+            deadlineTimeout = 65
+            #endif
+            
             dismissImpl?()
-            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: []), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
+            
+            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution), isClosed: false, deadlineTimeout: deadlineTimeout)), replyToMessageId: nil, localGroupingKey: nil))
         })
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

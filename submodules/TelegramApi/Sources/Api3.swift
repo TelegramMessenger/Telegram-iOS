@@ -3963,21 +3963,6 @@ public extension Api {
                 }
             }
             public struct stats {
-                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1421720550)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    channel.serialize(buffer, true)
-                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.stats.BroadcastStats?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastStats
-                        }
-                        return result
-                    })
-                }
-            
                 public static func loadAsyncGraph(flags: Int32, token: String, x: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1646092192)
@@ -3989,6 +3974,22 @@ public extension Api {
                         var result: Api.StatsGraph?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.StatsGraph
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel, tzOffset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-433058374)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    serializeInt32(tzOffset, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel), ("tzOffset", tzOffset)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.BroadcastStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastStats
                         }
                         return result
                     })
