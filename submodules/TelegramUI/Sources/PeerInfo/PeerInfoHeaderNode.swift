@@ -443,7 +443,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     func updateEntryIsHidden(entry: AvatarGalleryEntry?) {
-        if let entry = entry, let index = self.galleryEntries.index(of: entry) {
+        if let entry = entry, let index = self.galleryEntries.firstIndex(of: entry) {
             self.currentItemNode?.isHidden = index == self.currentIndex
         } else {
             self.currentItemNode?.isHidden = false
@@ -649,7 +649,6 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
         let currentStripMidX = floor(currentStripMinX + stripWidth / 2.0)
         let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
-        let maxStripOffset: CGFloat = 0.0
         let stripOffset: CGFloat = min(0.0, max(size.width - stripInset - lastStripMaxX, size.width / 2.0 - currentStripMidX))
         for i in 0 ..< self.stripNodes.count {
             let stripX: CGFloat = stripInset + CGFloat(i) * (stripWidth + stripSpacing)
@@ -698,14 +697,17 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         }
     }
     
-    func update(peer: Peer?, theme: PresentationTheme) {
+    func update(peer: Peer?, theme: PresentationTheme, avatarSize: CGFloat) {
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
             if peer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: 100.0, height: 100.0), storeUnrounded: true)
+            self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
+            
+            self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
+            self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
         }
     }
 }
@@ -752,7 +754,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         }
     }
     
-    func update(peer: Peer?, updatingAvatar: PeerInfoUpdatingAvatar?, theme: PresentationTheme) {
+    func update(peer: Peer?, updatingAvatar: PeerInfoUpdatingAvatar?, theme: PresentationTheme, avatarSize: CGFloat) {
         if let peer = peer {
             let overrideImage: AvatarNodeImageOverride?
             if canEditPeerInfo(peer: peer) {
@@ -761,12 +763,12 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     case let .image(representation):
                         overrideImage = .image(representation)
                     case .none:
-                        overrideImage = .none
+                        overrideImage = AvatarNodeImageOverride.none
                     }
                     self.activityIndicator.isHidden = false
                     self.updatingAvatarOverlay.isHidden = false
                     if self.updatingAvatarOverlay.image == nil {
-                        self.updatingAvatarOverlay.image = generateFilledCircleImage(diameter: 100.0, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
+                        self.updatingAvatarOverlay.image = generateFilledCircleImage(diameter: avatarSize, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
                     }
                 } else {
                     overrideImage = .editAvatarIcon
@@ -778,7 +780,9 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                 self.activityIndicator.isHidden = true
                 self.updatingAvatarOverlay.isHidden = true
             }
-            self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: false, displayDimensions: CGSize(width: 100.0, height: 100.0))
+            self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
+            self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+            self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
         }
     }
     
@@ -838,8 +842,8 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         |> take(1))
     }
     
-    func update(size: CGSize, isExpanded: Bool, peer: Peer?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
-        self.avatarContainerNode.update(peer: peer, theme: theme)
+    func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
+        self.avatarContainerNode.update(peer: peer, theme: theme, avatarSize: avatarSize)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -857,7 +861,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     }
     
     func animateAvatarCollapse(transition: ContainedViewLayoutTransition) {
-        if let currentItemNode = self.listContainerNode.currentItemNode, let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage, case let .animated(duration, curve) = transition {
+        if let currentItemNode = self.listContainerNode.currentItemNode, let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage, case .animated = transition {
             let avatarCopyView = UIImageView()
             avatarCopyView.image = unroundedImage
             avatarCopyView.frame = self.avatarContainerNode.avatarNode.frame
@@ -894,7 +898,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     
     var action: (() -> Void)?
     
-    override init() {
+    init() {
         self.regularTextNode = ImmediateTextNode()
         self.whiteTextNode = ImmediateTextNode()
         self.whiteTextNode.isHidden = true
@@ -903,7 +907,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        super.init()
+        super.init(pointerStyle: .default)
         
         self.addSubnode(self.regularTextNode)
         self.addSubnode(self.whiteTextNode)
@@ -916,7 +920,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.action?()
     }
     
-    func update(key: PeerInfoHeaderNavigationButtonKey, presentationData: PresentationData) -> CGSize {
+    func update(key: PeerInfoHeaderNavigationButtonKey, presentationData: PresentationData, height: CGFloat) -> CGSize {
         let textSize: CGSize
         if self.key != key || self.theme !== presentationData.theme {
             self.key = key
@@ -951,7 +955,6 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         }
         
         let inset: CGFloat = 0.0
-        let height: CGFloat = 44.0
         
         let textFrame = CGRect(origin: CGPoint(x: inset, y: floor((height - textSize.height) / 2.0)), size: textSize)
         self.regularTextNode.frame = textFrame
@@ -1025,7 +1028,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                         self?.performAction?(spec.key)
                     }
                 }
-                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData)
+                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
                 var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
                 let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
                 nextButtonOrigin -= buttonSize.width + 4.0
@@ -1412,12 +1415,12 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         self.itemNodes[key]?.layer.addShakeAnimation()
     }
     
-    func update(width: CGFloat, safeInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, peer: Peer?, cachedData: CachedPeerData?, isContact: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let avatarSize: CGFloat = 100.0
+    func update(width: CGFloat, safeInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, peer: Peer?, cachedData: CachedPeerData?, isContact: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         transition.updateFrameAdditiveToCenter(node: self.avatarNode, frame: CGRect(origin: avatarFrame.center, size: CGSize()))
         
-        var contentHeight: CGFloat = statusBarHeight + 10.0 + 100.0 + 20.0
+        var contentHeight: CGFloat = statusBarHeight + 10.0 + avatarSize + 20.0
         
         var fieldKeys: [PeerInfoHeaderTextFieldNodeKey] = []
         if let user = peer as? TelegramUser {
@@ -1630,7 +1633,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.requestAvatarExpansion?(self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
             }
         } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first{
-            let avatarNode = self.avatarListNode.avatarContainerNode.avatarNode
+            let _ = self.avatarListNode.avatarContainerNode.avatarNode
             self.requestAvatarExpansion?(self.avatarListNode.listContainerNode.galleryEntries, nil, self.avatarTransitionArguments(entry: entry))
         }
     }
@@ -1671,7 +1674,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
     
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
@@ -1693,7 +1696,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
-        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, peer: state.isEditing ? peer : nil, cachedData: cachedData, isContact: isContact, presentationData: presentationData, transition: transition)
+        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, cachedData: cachedData, isContact: isContact, presentationData: presentationData, transition: transition)
         transition.updateFrame(node: self.editingContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -contentOffset), size: CGSize(width: width, height: editingContentHeight)))
         
         var transitionSourceHeight: CGFloat = 0.0
@@ -1718,14 +1721,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
             }
         } else {
-            let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / (212.0)))
+            let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
+            let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / (112.0 + avatarSize)))
             transition.updateAlpha(node: self.expandedBackgroundNode, alpha: backgroundTransitionFraction)
         }
         
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let defaultButtonSize: CGFloat = 40.0
-        let defaultMaxButtonSpacing: CGFloat = 40.0
         let expandedAvatarControlsHeight: CGFloat = 61.0
         let expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
@@ -1787,7 +1790,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], transition: transition)
         
-        let avatarSize: CGFloat = 100.0
+        let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         
@@ -1838,7 +1841,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         }
-        let avatarListFrame = CGRect(origin: CGPoint(), size: expandedAvatarListSize)
         
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
@@ -1859,8 +1861,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             })
         }
         
-        self.avatarListNode.update(size: CGSize(), isExpanded: self.isAvatarExpanded, peer: peer, theme: presentationData.theme, transition: transition)
-        self.editingContentNode.avatarNode.update(peer: peer, updatingAvatar: state.updatingAvatar, theme: presentationData.theme)
+        self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, theme: presentationData.theme, transition: transition)
+        self.editingContentNode.avatarNode.update(peer: peer, updatingAvatar: state.updatingAvatar, theme: presentationData.theme, avatarSize: avatarSize)
         if additive {
             transition.updateSublayerTransformScaleAdditive(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
         } else {
@@ -1938,8 +1940,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.avatarListNode.listContainerNode.update(size: expandedAvatarListSize, peer: peer, transition: transition)
         
+        let panelWithAvatarHeight: CGFloat = 112.0 + avatarSize
         let buttonsCollapseStart = titleCollapseOffset
-        let buttonsCollapseEnd = 212.0 - (navigationHeight - statusBarHeight) + 10.0
+        let buttonsCollapseEnd = panelWithAvatarHeight - (navigationHeight - statusBarHeight) + 10.0
         
         let buttonsCollapseFraction = max(0.0, contentOffset - buttonsCollapseStart) / (buttonsCollapseEnd - buttonsCollapseStart)
         
@@ -1949,8 +1952,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             rawHeight = expandedAvatarHeight
             height = max(navigationHeight, rawHeight - contentOffset)
         } else {
-            rawHeight = navigationHeight + 212.0
-            height = navigationHeight + max(0.0, 212.0 - contentOffset)
+            rawHeight = navigationHeight + panelWithAvatarHeight
+            height = navigationHeight + max(0.0, panelWithAvatarHeight - contentOffset)
         }
         
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
@@ -2184,7 +2187,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             resolvedRegularHeight = expandedAvatarListSize.height + expandedAvatarControlsHeight
         } else {
-            resolvedRegularHeight = 212.0 + navigationHeight
+            resolvedRegularHeight = 112.0 + avatarSize + navigationHeight
         }
         
         let backgroundFrame: CGRect

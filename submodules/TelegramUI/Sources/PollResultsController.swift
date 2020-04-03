@@ -18,25 +18,30 @@ private final class PollResultsControllerArguments {
     let collapseOption: (Data) -> Void
     let expandOption: (Data) -> Void
     let openPeer: (RenderedPeer) -> Void
+    let expandSolution: () -> Void
     
-    init(context: AccountContext, collapseOption: @escaping (Data) -> Void, expandOption: @escaping (Data) -> Void, openPeer: @escaping (RenderedPeer) -> Void) {
+    init(context: AccountContext, collapseOption: @escaping (Data) -> Void, expandOption: @escaping (Data) -> Void, openPeer: @escaping (RenderedPeer) -> Void, expandSolution: @escaping () -> Void) {
         self.context = context
         self.collapseOption = collapseOption
         self.expandOption = expandOption
         self.openPeer = openPeer
+        self.expandSolution = expandSolution
     }
 }
 
 private enum PollResultsSection {
     case text
+    case solution
     case option(Int)
     
     var rawValue: Int32 {
         switch self {
         case .text:
             return 0
+        case .solution:
+            return 1
         case let .option(index):
-            return 1 + Int32(index)
+            return 2 + Int32(index)
         }
     }
 }
@@ -45,6 +50,8 @@ private enum PollResultsEntryId: Hashable {
     case text
     case optionPeer(Int, Int)
     case optionExpand(Int)
+    case solutionHeader
+    case solutionText
 }
 
 private enum PollResultsItemTag: ItemListItemTag, Equatable {
@@ -63,6 +70,8 @@ private enum PollResultsEntry: ItemListNodeEntry {
     case text(String)
     case optionPeer(optionId: Int, index: Int, peer: RenderedPeer, optionText: String, optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
     case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String, enabled: Bool)
+    case solutionHeader(String)
+    case solutionText(String)
     
     var section: ItemListSectionId {
         switch self {
@@ -72,6 +81,8 @@ private enum PollResultsEntry: ItemListNodeEntry {
             return PollResultsSection.option(optionPeer.optionId).rawValue
         case let .optionExpand(optionExpand):
             return PollResultsSection.option(optionExpand.optionId).rawValue
+        case .solutionHeader, .solutionText:
+            return PollResultsSection.solution.rawValue
         }
     }
     
@@ -83,6 +94,10 @@ private enum PollResultsEntry: ItemListNodeEntry {
             return .optionPeer(optionPeer.optionId, optionPeer.index)
         case let .optionExpand(optionExpand):
             return .optionExpand(optionExpand.optionId)
+        case .solutionHeader:
+            return .solutionHeader
+        case .solutionText:
+            return .solutionText
         }
     }
     
@@ -95,9 +110,33 @@ private enum PollResultsEntry: ItemListNodeEntry {
             default:
                 return true
             }
+        case .solutionHeader:
+            switch rhs {
+            case .text:
+                return false
+            case .solutionHeader:
+                return false
+            default:
+                return true
+            }
+        case .solutionText:
+            switch rhs {
+            case .text:
+                return false
+            case .solutionHeader:
+                return false
+            case .solutionText:
+                return false
+            default:
+                return true
+            }
         case let .optionPeer(lhsOptionPeer):
             switch rhs {
             case .text:
+                return false
+            case .solutionHeader:
+                return false
+            case .solutionText:
                 return false
             case let .optionPeer(rhsOptionPeer):
                 if lhsOptionPeer.optionId == rhsOptionPeer.optionId {
@@ -115,6 +154,10 @@ private enum PollResultsEntry: ItemListNodeEntry {
         case let .optionExpand(lhsOptionExpand):
             switch rhs {
             case .text:
+                return false
+            case .solutionHeader:
+                return false
+            case .solutionText:
                 return false
             case let .optionPeer(rhsOptionPeer):
                 if lhsOptionExpand.optionId == rhsOptionPeer.optionId {
@@ -137,6 +180,10 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case let .text(text):
             return ItemListTextItem(presentationData: presentationData, text: .large(text), sectionId: self.section)
+        case let .solutionHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .solutionText(text):
+            return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
         case let .optionPeer(optionId, _, peer, optionText, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
             let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, additionalText: optionAdditionalText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
@@ -156,6 +203,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
 
 private struct PollResultsControllerState: Equatable {
     var expandedOptions: [Data: Int] = [:]
+    var isSolutionExpanded: Bool = false
 }
 
 private func pollResultsControllerEntries(presentationData: PresentationData, poll: TelegramMediaPoll, state: PollResultsControllerState, resultsState: PollResultsState) -> [PollResultsEntry] {
@@ -171,12 +219,18 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     
     entries.append(.text(poll.text))
     
+    if let solution = poll.results.solution, !solution.isEmpty {
+        //TODO:localize
+        entries.append(.solutionHeader("EXPLANATION"))
+        entries.append(.solutionText(solution))
+    }
+    
     var optionVoterCount: [Int: Int32] = [:]
     let totalVoterCount = poll.results.totalVoters ?? 0
     var optionPercentage: [Int] = []
     
     if totalVoterCount != 0 {
-        if let voters = poll.results.voters, let totalVoters = poll.results.totalVoters {
+        if let voters = poll.results.voters, let _ = poll.results.totalVoters {
             for i in 0 ..< poll.options.count {
                 inner: for optionVoters in voters {
                     if optionVoters.opaqueIdentifier == poll.options[i].opaqueIdentifier {
@@ -215,7 +269,6 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
             }
         } else {
             if let optionState = resultsState.options[option.opaqueIdentifier], !optionState.peers.isEmpty {
-                var hasMore = false
                 let optionExpandedAtCount = state.expandedOptions[option.opaqueIdentifier]
                 
                 let peers = optionState.peers
@@ -307,6 +360,8 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
                 pushControllerImpl?(controller)
             }
         }
+    }, expandSolution: {
+        
     })
     
     let previousWasEmpty = Atomic<Bool?>(value: nil)

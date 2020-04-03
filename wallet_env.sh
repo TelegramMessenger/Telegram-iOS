@@ -50,6 +50,18 @@ if [ "$WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP" == "" ]; then
 	exit 1
 fi
 
+if [ "$CODESIGNING_DATA_PATH" == "" ]; then
+	echo "Set CODESIGNING_DATA_PATH to the path to a folder containing valid provisioning profiles corresponding to the chosen bundle ID ($WALLET_BUNDLE_ID)"
+	echo "Example: export CODESIGNING_DATA_PATH=\"\$HOME/wallet-provisioning-profiles\""
+	exit 1
+fi
+
+if [ "$BUILD_NUMBER" == "" ]; then
+	echo "Set BUILD_NUMBER to a number that will be used as a version string for the build"
+	echo "Example: export BUILD_NUMBER=100"
+	exit 1
+fi
+
 export DEVELOPMENT_CODE_SIGN_IDENTITY="$DEVELOPMENT_CODE_SIGN_IDENTITY"
 export DISTRIBUTION_CODE_SIGN_IDENTITY="$DISTRIBUTION_CODE_SIGN_IDENTITY"
 export WALLET_DEVELOPMENT_TEAM="$WALLET_DEVELOPMENT_TEAM"

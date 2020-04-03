@@ -955,4 +955,10 @@ public struct PresentationResourcesChat {
             return mediaBubbleCornerImage(incoming: incoming, radius: mainRadius, inset: inset)
         })
     }
+    
+    public static func chatBubbleLamp(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatBubbleLamp(incoming: incoming), { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/Lamp"), color: incoming ? theme.chat.message.incoming.accentControlColor : theme.chat.message.outgoing.accentControlColor)
+        })
+    }
 }

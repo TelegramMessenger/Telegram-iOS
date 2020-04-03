@@ -1527,6 +1527,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in
         }, openPollCreation: { _ in
+        }, displayPollSolution: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -3720,7 +3721,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var contentHeight: CGFloat = 0.0
         
-        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
+        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: headerHeight))
         if additive {
             transition.updateFrameAdditive(node: self.headerNode, frame: headerFrame)
@@ -3953,7 +3954,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         if let (layout, navigationHeight) = self.validLayout {
             if !additive {
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, state: self.state, transition: transition, additive: additive)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -3977,9 +3978,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let selectionPanelNode = self.paneContainerNode.selectionPanelNode {
                 bottomInset = max(bottomInset, selectionPanelNode.bounds.height)
             }
-            
+                        
+            let navigationBarHeight: CGFloat = layout.isModalOverlay ? 56.0 : 44.0
             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: paneAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
-            self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: 44.0))
+            self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight))
             self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded
             
             var navigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []
@@ -4009,7 +4011,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .selectionDone, isForExpandedView: true))
                 }
             }
-            self.headerNode.navigationButtonContainer.update(size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: 44.0), presentationData: self.presentationData, buttons: navigationButtons, expandFraction: effectiveAreaExpansionFraction, transition: transition)
+            self.headerNode.navigationButtonContainer.update(size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight), presentationData: self.presentationData, buttons: navigationButtons, expandFraction: effectiveAreaExpansionFraction, transition: transition)
         }
     }
     
@@ -4453,7 +4455,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
             if let (layout, _) = self.screenNode.validLayout {
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, contentOffset: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, isContact: self.screenNode.data?.isContact ?? false, state: self.screenNode.state, transition: transition, additive: false)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, contentOffset: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, isContact: self.screenNode.data?.isContact ?? false, state: self.screenNode.state, transition: transition, additive: false)
             }
             
             let titleScale = (fraction * previousTitleNode.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.bounds.height

@@ -56,6 +56,8 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     private let label: ImmediateTextNode
     private let accessibilityArea: AccessibilityAreaNode
     
+    private var pointerInteraction: PointerInteraction?
+    
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -99,6 +101,20 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
             self?.buttonPressed()
             return true
         }
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        self.pointerInteraction = PointerInteraction(node: self, style: .hover, willEnter: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.backgroundNode.backgroundColor = strongSelf.theme.itemHighlightedBackgroundColor
+            }
+        }, willExit: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.backgroundNode.backgroundColor = strongSelf.theme.itemBackgroundColor
+            }
+        })
     }
     
     func setItem(_ item: ActionSheetButtonItem) {

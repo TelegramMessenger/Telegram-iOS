@@ -72,7 +72,7 @@ final class NavigationSplitContainer: ASDisplayNode {
     }
     
     func update(layout: ContainerViewLayout, masterControllers: [ViewController], detailControllers: [ViewController], transition: ContainedViewLayoutTransition) {
-        let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
+        let masterWidth: CGFloat = 375.0 // min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
         let detailWidth = layout.size.width - masterWidth
         
         self.masterScrollToTopView.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: masterWidth, height: 1.0))

@@ -92,6 +92,15 @@ public extension ContainerViewLayout {
         return insets
     }
     
+    var isModalOverlay: Bool {
+        if case .tablet = self.deviceMetrics.type {
+            if case .regular = self.metrics.widthClass {
+                return abs(max(self.size.width, self.size.height) - self.deviceMetrics.screenSize.height) > 1.0
+            }
+        }
+        return false
+    }
+    
     var isNonExclusive: Bool {
         if case .tablet = self.deviceMetrics.type {
             if case .compact = self.metrics.widthClass {

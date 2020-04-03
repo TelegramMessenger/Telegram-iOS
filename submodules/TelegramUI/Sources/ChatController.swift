@@ -1637,6 +1637,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
                     return;
                 }
+                if false {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: "controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers"), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
+                    return;
+                }
                 #endif
                 
                 controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers
@@ -1654,7 +1658,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let resultPoll = resultPoll else {
                         return
                     }
-                    guard let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
+                    guard let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
                         return
                     }
                     
@@ -1686,6 +1690,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 strongSelf.selectPollOptionFeedback?.error()
                                                 
                                                 itemNode.animateQuizInvalidOptionSelected()
+                                                
+                                                if let solution = resultPoll.results.solution {
+                                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: solution), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
+                                                }
                                             }
                                         }
                                     }
@@ -1930,6 +1938,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.presentPollCreation(isQuiz: isQuiz)
+        }, displayPollSolution: { [weak self] text in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: text), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -5439,6 +5452,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if peer.smallProfileImage == nil {
                                 expandAvatar = false
                             }
+                            if let validLayout = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
+                                expandAvatar = false
+                            }
                             if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true) {
                                 strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }
@@ -7197,6 +7213,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         var mode: PeerInfoControllerMode = .generic
                                         if let _ = fromMessage {
                                             mode = .group(selfPeerId)
+                                        }
+                                        var expandAvatar = expandAvatar
+                                        if peer.smallProfileImage == nil {
+                                            expandAvatar = false
+                                        }
+                                        if let validLayout = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
+                                            expandAvatar = false
                                         }
                                         if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: false) {
                                             strongSelf.effectiveNavigationController?.pushViewController(infoController)

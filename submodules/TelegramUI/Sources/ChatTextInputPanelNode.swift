@@ -385,7 +385,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textPlaceholderNode = ImmediateTextNode()
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
-        self.attachmentButton = HighlightableButtonNode()
+        self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
         self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
         self.attachmentButton.isAccessibilityElement = true
         self.attachmentButtonDisabledNode = HighlightableButtonNode()
@@ -399,11 +399,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
         self.attachmentButtonDisabledNode.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
-        self.addSubnode(self.attachmentButton)
-        self.addSubnode(self.attachmentButtonDisabledNode)
-        
-        self.addSubnode(self.actionButtons)
-        
+  
         self.actionButtons.sendButtonLongPressed = { [weak self] node, gesture in
             self?.interfaceInteraction?.displaySendMessageOptions(node, gesture)
         }
@@ -476,6 +472,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.addSubnode(self.textInputBackgroundNode)
         
         self.addSubnode(self.textPlaceholderNode)
+        
+        self.addSubnode(self.attachmentButton)
+        self.addSubnode(self.attachmentButtonDisabledNode)
+          
+        self.addSubnode(self.actionButtons)
         
         self.view.addSubview(self.searchLayoutClearButton)
         

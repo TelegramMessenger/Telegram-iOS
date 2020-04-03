@@ -49,7 +49,7 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
     
     var pressed: (() -> Void)?
     
-    override init() {
+    init() {
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
         self.highlightedTextNode = TextNode()

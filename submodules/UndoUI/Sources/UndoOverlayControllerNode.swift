@@ -137,6 +137,19 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .info(text):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = max(5, min(8, text.count / 14))
             case let .actionSucceeded(title, text, cancel):
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -296,6 +309,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.panelWrapperNode.addSubnode(self.timerTextNode)
         case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified:
             break
+        case .info:
+            self.isUserInteractionEnabled = false
         }
         self.statusNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
@@ -350,7 +365,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     @objc private func undoButtonPressed() {
-        self.action(.undo)
+        let _ = self.action(.undo)
         self.dismiss()
     }
     
@@ -359,7 +374,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.remainingSeconds -= 1
         }
         if self.remainingSeconds == 0 {
-            self.action(.commit)
+            let _ = self.action(.commit)
             self.dismiss()
         } else {
             if !self.timerTextNode.bounds.size.width.isZero, let snapshot = self.timerTextNode.view.snapshotContentTree() {

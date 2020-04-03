@@ -106,6 +106,8 @@ private final class TabBarItemNode: ASDisplayNode {
     
     var swiped: ((TabBarItemSwipeDirection) -> Void)?
     
+    var pointerInteraction: PointerInteraction?
+    
     override init() {
         self.extractedContainerNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -162,6 +164,12 @@ private final class TabBarItemNode: ASDisplayNode {
         let rightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
         rightSwipe.direction = .right
         self.containerNode.view.addGestureRecognizer(rightSwipe)*/
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.pointerInteraction = PointerInteraction(node: self, style: .rectangle(CGSize(width: 90.0, height: 50.0)))
     }
     
     @objc private func swipeGesture(_ gesture: UISwipeGestureRecognizer) {
