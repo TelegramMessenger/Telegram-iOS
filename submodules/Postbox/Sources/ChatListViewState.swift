@@ -138,6 +138,8 @@ private final class ChatListViewSpaceState {
         self.halfLimit = halfLimit
         self.orderedEntries = OrderedChatListViewEntries(anchorIndex: anchorIndex.index, lowerOrAtAnchor: [], higherThanAnchor: [])
         self.fillSpace(postbox: postbox)
+        
+        self.checkEntries(postbox: postbox)
     }
     
     private func fillSpace(postbox: Postbox) {
@@ -790,7 +792,34 @@ private final class ChatListViewSpaceState {
         if hadRemovals {
             self.fillSpace(postbox: postbox)
         }
+        
+        self.checkEntries(postbox: postbox)
+        
         return hasUpdates
+    }
+    
+    private func checkEntries(postbox: Postbox) {
+        #if DEBUG
+        if case .group(.root, .includePinned, nil) = self.space {
+            let allEntries = self.orderedEntries.lowerOrAtAnchor + self.orderedEntries.higherThanAnchor
+            if !allEntries.isEmpty {
+                assert(allEntries.sorted(by: { $0.index < $1.index }) == allEntries)
+                
+                func mapEntry(_ entry: ChatListIntermediateEntry) -> MutableChatListEntry {
+                    switch entry {
+                    case let .message(index, messageIndex):
+                        return .IntermediateMessageEntry(index: index, messageIndex: messageIndex)
+                    case let .hole(hole):
+                        return .HoleEntry(hole)
+                    }
+                }
+                
+                let loadedEntries = postbox.chatListTable.entries(groupId: .root, from: (allEntries[0].index.predecessor, true), to: (allEntries[allEntries.count - 1].index.successor, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1000, predicate: nil).map(mapEntry)
+                
+                assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
+            }
+        }
+        #endif
     }
     
     private func add(entry: MutableChatListEntry) -> Bool {
