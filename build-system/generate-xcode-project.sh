@@ -23,16 +23,19 @@ if [ "$INSTALLED_XCODE_VERSION" != "$XCODE_VERSION" ]; then
 fi
 
 GEN_DIRECTORY="build-input/gen/project"
-rm -rf "$GEN_DIRECTORY"
 mkdir -p "$GEN_DIRECTORY"
+
+TULSI_DIRECTORY="build-input/gen/project"
+TULSI_APP="build-input/gen/project/Tulsi.app"
+TULSI="$TULSI_APP/Contents/MacOS/Tulsi"
+
+rm -rf "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj"
+rm -rf "$TULSI_APP"
 
 pushd "build-system/tulsi"
 "$BAZEL" build //:tulsi --xcode_version="$XCODE_VERSION"
 popd
 
-TULSI_DIRECTORY="build-input/gen/project"
-TULSI_APP="build-input/gen/project/Tulsi.app"
-TULSI="$TULSI_APP/Contents/MacOS/Tulsi"
 mkdir -p "$TULSI_DIRECTORY"
 
 unzip -oq "build-system/tulsi/bazel-bin/tulsi.zip" -d "$TULSI_DIRECTORY"
