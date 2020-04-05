@@ -841,11 +841,11 @@ private struct MutableChatListEntryIndex: Hashable, Comparable {
     var isMessage: Bool
     
     var predecessor: MutableChatListEntryIndex {
-        return MutableChatListEntryIndex(index: self.index.predecessor, isMessage: true)
+        return MutableChatListEntryIndex(index: self.index.predecessor, isMessage: self.isMessage)
     }
     
     var successor: MutableChatListEntryIndex {
-        return MutableChatListEntryIndex(index: self.index.successor, isMessage: true)
+        return MutableChatListEntryIndex(index: self.index.successor, isMessage: self.isMessage)
     }
     
     static let absoluteLowerBound = MutableChatListEntryIndex(index: .absoluteLowerBound, isMessage: true)
