@@ -393,6 +393,9 @@ private final class ChatListViewSpaceState {
                             }
                             if self.add(entry: .IntermediateMessageEntry(index: updatedIndex, messageIndex: messageIndex)) {
                                 hasUpdates = true
+                            } else {
+                                hasUpdates = true
+                                hadRemovals = true
                             }
                         } else {
                             continue inner
@@ -404,6 +407,9 @@ private final class ChatListViewSpaceState {
                         if spaceGroupId == groupId && !pinned.include {
                             if self.add(entry: .HoleEntry(hole)) {
                                 hasUpdates = true
+                            } else {
+                                hasUpdates = true
+                                hadRemovals = true
                             }
                         }
                     case .peers:
@@ -545,6 +551,9 @@ private final class ChatListViewSpaceState {
                                         case let .message(index, messageIndex):
                                             if self.add(entry: .IntermediateMessageEntry(index: index, messageIndex: messageIndex)) {
                                                 hasUpdates = true
+                                            } else {
+                                                hasUpdates = true
+                                                hadRemovals = true
                                             }
                                         default:
                                             break
@@ -743,6 +752,9 @@ private final class ChatListViewSpaceState {
                                         case let .message(index, messageIndex):
                                             if self.add(entry: .IntermediateMessageEntry(index: index, messageIndex: messageIndex)) {
                                                 hasUpdates = true
+                                            } else {
+                                                hasUpdates = true
+                                                hadRemovals = true
                                             }
                                         default:
                                             break
