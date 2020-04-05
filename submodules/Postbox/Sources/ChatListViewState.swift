@@ -800,7 +800,7 @@ private final class ChatListViewSpaceState {
     
     private func checkEntries(postbox: Postbox) {
         #if DEBUG
-        if case .group(.root, .includePinned, nil) = self.space {
+        if case .group(.root, .notPinned, nil) = self.space {
             let allEntries = self.orderedEntries.lowerOrAtAnchor + self.orderedEntries.higherThanAnchor
             if !allEntries.isEmpty {
                 assert(allEntries.sorted(by: { $0.index < $1.index }) == allEntries)
