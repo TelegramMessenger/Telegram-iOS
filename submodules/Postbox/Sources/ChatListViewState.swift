@@ -865,7 +865,7 @@ private final class ChatListViewSpaceState {
                 }
             }
             
-            if insertionIndex == self.orderedEntries.higherThanAnchor.count {
+            if insertionIndex == self.orderedEntries.higherThanAnchor.count - 1 {
                 return false
             }
             self.orderedEntries.insertHigherThanAnchorAtArrayIndex(insertionIndex, value: entry)
