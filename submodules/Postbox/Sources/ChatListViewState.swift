@@ -804,9 +804,7 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if hadRemovals {
-            self.fillSpace(postbox: postbox)
-        }
+        self.fillSpace(postbox: postbox)
         
         self.checkEntries(postbox: postbox)
         self.checkReplayEntries(postbox: postbox)
