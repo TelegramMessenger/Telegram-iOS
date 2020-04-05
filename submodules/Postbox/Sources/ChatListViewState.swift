@@ -834,7 +834,7 @@ private final class ChatListViewSpaceState {
                 }
             }
             
-            if insertionIndex == 0 && self.orderedEntries.lowerOrAtAnchor.count >= self.halfLimit {
+            if insertionIndex == 0 {
                 return false
             }
             self.orderedEntries.insertLowerOrAtAnchorAtArrayIndex(insertionIndex, value: entry)
@@ -853,7 +853,7 @@ private final class ChatListViewSpaceState {
                 }
             }
             
-            if insertionIndex == self.orderedEntries.higherThanAnchor.count && self.orderedEntries.higherThanAnchor.count >= self.halfLimit {
+            if insertionIndex == self.orderedEntries.higherThanAnchor.count {
                 return false
             }
             self.orderedEntries.insertHigherThanAnchorAtArrayIndex(insertionIndex, value: entry)
