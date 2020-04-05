@@ -381,6 +381,9 @@ private final class ChatListViewSpaceState {
                         }
                         if self.add(entry: .IntermediateMessageEntry(index: updatedIndex, messageIndex: messageIndex)) {
                             hasUpdates = true
+                        } else {
+                            hasUpdates = true
+                            hadRemovals = true
                         }
                     case let .peers(peerIds, asPinned):
                         if let peerIndex = peerIds.firstIndex(of: index.messageIndex.id.peerId) {
