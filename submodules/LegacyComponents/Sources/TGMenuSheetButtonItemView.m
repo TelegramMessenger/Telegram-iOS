@@ -11,7 +11,7 @@
 
 const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
-@interface TGMenuSheetButtonItemView () <UIPointerInteractionDelegate>
+@interface TGMenuSheetButtonItemView () //<UIPointerInteractionDelegate>
 {
     bool _dark;
     bool _requiresDivider;
@@ -58,36 +58,36 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
                 strongSelf.highlightUpdateBlock(highlighted);
         };
         
-        if (iosMajorVersion() > 13 || (iosMajorVersion() == 13 && iosMinorVersion() >= 4)) {
-            UIPointerInteraction *pointerInteraction = [[UIPointerInteraction alloc] initWithDelegate:self];
-            [self addInteraction:pointerInteraction];
-        }
+//        if (iosMajorVersion() > 13 || (iosMajorVersion() == 13 && iosMinorVersion() >= 4)) {
+//            UIPointerInteraction *pointerInteraction = [[UIPointerInteraction alloc] initWithDelegate:self];
+//            [self addInteraction:pointerInteraction];
+//        }
     }
     return self;
 }
 
-- (UIPointerStyle *)pointerInteraction:(UIPointerInteraction *)interaction styleForRegion:(UIPointerRegion *)region {
-    if (interaction.view != nil) {
-        UITargetedPreview *targetedPreview = [[UITargetedPreview alloc] initWithView:interaction.view];
-        UIPointerHoverEffect *effect = [UIPointerHoverEffect effectWithPreview:targetedPreview];
-        effect.preferredTintMode = UIPointerEffectTintModeNone;
-        effect.prefersScaledContent = false;
-        return [UIPointerStyle styleWithEffect:effect shape:nil];
-    }
-    return nil;
-}
-
-- (void)pointerInteraction:(UIPointerInteraction *)interaction willEnterRegion:(UIPointerRegion *)region animator:(id<UIPointerInteractionAnimating>)animator {
-    [animator addAnimations:^{
-        _highlightView.alpha = 0.75f;
-    }];
-}
-
-- (void)pointerInteraction:(UIPointerInteraction *)interaction willExitRegion:(UIPointerRegion *)region animator:(id<UIPointerInteractionAnimating>)animator {
-    [animator addAnimations:^{
-        _highlightView.alpha = 0.0f;
-    }];
-}
+//- (UIPointerStyle *)pointerInteraction:(UIPointerInteraction *)interaction styleForRegion:(UIPointerRegion *)region {
+//    if (interaction.view != nil) {
+//        UITargetedPreview *targetedPreview = [[UITargetedPreview alloc] initWithView:interaction.view];
+//        UIPointerHoverEffect *effect = [UIPointerHoverEffect effectWithPreview:targetedPreview];
+//        effect.preferredTintMode = UIPointerEffectTintModeNone;
+//        effect.prefersScaledContent = false;
+//        return [UIPointerStyle styleWithEffect:effect shape:nil];
+//    }
+//    return nil;
+//}
+//
+//- (void)pointerInteraction:(UIPointerInteraction *)interaction willEnterRegion:(UIPointerRegion *)region animator:(id<UIPointerInteractionAnimating>)animator {
+//    [animator addAnimations:^{
+//        _highlightView.alpha = 0.75f;
+//    }];
+//}
+//
+//- (void)pointerInteraction:(UIPointerInteraction *)interaction willExitRegion:(UIPointerRegion *)region animator:(id<UIPointerInteractionAnimating>)animator {
+//    [animator addAnimations:^{
+//        _highlightView.alpha = 0.0f;
+//    }];
+//}
 
 - (void)setDark
 {
