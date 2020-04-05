@@ -337,6 +337,12 @@ public final class PostboxEncoder {
         self.encodeObject(value, forKey: "_")
     }
     
+    public func encodeCodable<T: Codable>(_ value: T, forKey key: StaticString) {
+        if let data = try? JSONEncoder().encode(value) {
+            self.encodeData(data, forKey: key)
+        }
+    }
+    
     public func encodeObject(_ value: PostboxCoding, forKey key: StaticString) {
         self.encodeKey(key)
         var t: Int8 = ValueType.Object.rawValue
@@ -920,6 +926,14 @@ public final class PostboxDecoder {
     
     public func decodeRootObject() -> PostboxCoding? {
         return self.decodeObjectForKey("_")
+    }
+    
+    public func decodeCodable<T: Codable>(_ type: T.Type, forKey key: StaticString) -> T? {
+        if let data = self.decodeDataForKey(key) {
+            return try? JSONDecoder().decode(T.self, from: data)
+        } else {
+            return nil
+        }
     }
     
     public func decodeObjectForKey(_ key: StaticString) -> PostboxCoding? {
