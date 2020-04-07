@@ -90,13 +90,14 @@ private final class StickerPackContainer: ASDisplayNode {
     var expandProgress: CGFloat = 0.0
     var expandScrollProgress: CGFloat = 0.0
     var modalProgress: CGFloat = 0.0
-    let expandProgressUpdated: (StickerPackContainer, ContainedViewLayoutTransition) -> Void
+    var isAnimatingAutoscroll: Bool = false
+    let expandProgressUpdated: (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void
     
     private var isDismissed: Bool = false
     
     private let interaction: StickerPackPreviewInteraction
     
-    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
         self.index = index
         self.context = context
         self.presentationData = presentationData
@@ -201,7 +202,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     resetOffset = true
                 }
                 strongSelf.modalProgress = modalProgress
-                strongSelf.expandProgressUpdated(strongSelf, .animated(duration: 0.4, curve: .spring))
+                strongSelf.expandProgressUpdated(strongSelf, .animated(duration: 0.4, curve: .spring), .immediate)
             }
             
             if resetOffset {
@@ -228,7 +229,9 @@ private final class StickerPackContainer: ASDisplayNode {
                         duration = 0.5
                     }
                     
+                    strongSelf.isAnimatingAutoscroll = true
                     strongSelf.gridNode.autoscroll(toOffset: offset, duration: duration)
+                    strongSelf.isAnimatingAutoscroll = false
                 }
                 updatedOffset = contentOffset
             }
@@ -505,7 +508,13 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         let contentOffset = (1.0 - expandScrollProgress) * (-gridInsets.top)
-        self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
+        if case let .animated(duration, _) = transition {
+            self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: contentOffset), duration: duration)
+        } else {
+            if expandScrollProgress.isZero {
+            }
+            self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
+        }
         
         self.expandScrollProgress = expandScrollProgress
         self.expandProgress = expandProgress
@@ -602,7 +611,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         if expandUpdated {
-            self.expandProgressUpdated(self, expandProgressTransition)
+            self.expandProgressUpdated(self, expandProgressTransition, self.isAnimatingAutoscroll ? transition : .immediate)
         }
         
         if !transition.isAnimated {
@@ -742,10 +751,12 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             if abs(indexOffset) <= 1 {
                 let containerTransition: ContainedViewLayoutTransition
                 let container: StickerPackContainer
+                var wasAdded = false
                 if let current = self.containers[i] {
                     containerTransition = transition
                     container = current
                 } else {
+                    wasAdded = true
                     containerTransition = .immediate
                     let index = i
                     container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPack: self.stickerPacks[i], decideNextAction: { [weak self] container, action in
@@ -782,17 +793,17 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                         return .navigatedNext
                     }, requestDismiss: { [weak self] in
                         self?.dismiss()
-                    }, expandProgressUpdated: { [weak self] container, transition in
+                    }, expandProgressUpdated: { [weak self] container, transition, expandTransition in
                         guard let strongSelf = self, let layout = strongSelf.validLayout else {
                             return
                         }
                         if index == strongSelf.selectedStickerPackIndex, let container = strongSelf.containers[strongSelf.selectedStickerPackIndex] {
                             let modalProgress = container.modalProgress
                             strongSelf.modalProgressUpdated(modalProgress, transition)
-                            strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                            strongSelf.containerLayoutUpdated(layout, transition: expandTransition)
                             for (otherIndex, otherContainer) in strongSelf.containers {
                                 if otherContainer !== container {
-                                    otherContainer.syncExpandProgress(expandScrollProgress: container.expandScrollProgress, expandProgress: container.expandProgress, modalProgress: container.modalProgress, transition: .immediate)
+                                    otherContainer.syncExpandProgress(expandScrollProgress: container.expandScrollProgress, expandProgress: container.expandProgress, modalProgress: container.modalProgress, transition: expandTransition)
                                 }
                             }
                         }
@@ -809,9 +820,11 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                     container.updateLayout(layout: layout, transition: containerTransition)
                 }
                 
-                if let selectedContainer = self.containers[self.selectedStickerPackIndex] {
-                    if selectedContainer !== container {
-                        container.syncExpandProgress(expandScrollProgress: selectedContainer.expandScrollProgress, expandProgress: selectedContainer.expandProgress, modalProgress: selectedContainer.modalProgress, transition: .immediate)
+                if wasAdded {
+                    if let selectedContainer = self.containers[self.selectedStickerPackIndex] {
+                        if selectedContainer !== container {
+                            container.syncExpandProgress(expandScrollProgress: selectedContainer.expandScrollProgress, expandProgress: selectedContainer.expandProgress, modalProgress: selectedContainer.modalProgress, transition: .immediate)
+                        }
                     }
                 }
             } else {
