@@ -285,6 +285,8 @@ class StackEntry {
   Ref<T> as_object() && {
     return dynamic_move_as<T, t_object>();
   }
+  bool for_each_scalar(const std::function<bool(const StackEntry&)>& func) const;
+  void for_each_scalar(const std::function<void(const StackEntry&)>& func) const;
   void dump(std::ostream& os) const;
   void print_list(std::ostream& os) const;
   std::string to_string() const;
@@ -549,6 +551,8 @@ class Stack : public td::CntObject {
       push(std::move(val));
     }
   }
+  bool for_each_scalar(const std::function<bool(const StackEntry&)>& func) const;
+  void for_each_scalar(const std::function<void(const StackEntry&)>& func) const;
   // mode: +1 = add eoln, +2 = Lisp-style lists
   void dump(std::ostream& os, int mode = 1) const;
   bool serialize(vm::CellBuilder& cb, int mode = 0) const;

@@ -24,7 +24,10 @@
 #include "vm/excno.hpp"
 #include "vm/vm.h"
 #include "vm/dict.h"
+#include "vm/boc.h"
 #include "Ed25519.h"
+
+#include "openssl/digest.hpp"
 
 namespace vm {
 
@@ -395,45 +398,6 @@ void register_ton_crypto_ops(OpcodeTable& cp0) {
       .insert(OpcodeInstr::mksimple(0xf902, 16, "SHA256U", exec_compute_sha256))
       .insert(OpcodeInstr::mksimple(0xf910, 16, "CHKSIGNU", std::bind(exec_ed25519_check_signature, _1, false)))
       .insert(OpcodeInstr::mksimple(0xf911, 16, "CHKSIGNS", std::bind(exec_ed25519_check_signature, _1, true)));
-}
-
-struct VmStorageStat {
-  td::uint64 cells{0}, bits{0}, refs{0}, limit;
-  td::HashSet<CellHash> visited;
-  VmStorageStat(td::uint64 _limit) : limit(_limit) {
-  }
-  bool add_storage(Ref<Cell> cell);
-  bool add_storage(const CellSlice& cs);
-  bool check_visited(const CellHash& cell_hash) {
-    return visited.insert(cell_hash).second;
-  }
-  bool check_visited(const Ref<Cell>& cell) {
-    return check_visited(cell->get_hash());
-  }
-};
-
-bool VmStorageStat::add_storage(Ref<Cell> cell) {
-  if (cell.is_null() || !check_visited(cell)) {
-    return true;
-  }
-  if (cells >= limit) {
-    return false;
-  }
-  ++cells;
-  bool special;
-  auto cs = load_cell_slice_special(std::move(cell), special);
-  return cs.is_valid() && add_storage(std::move(cs));
-}
-
-bool VmStorageStat::add_storage(const CellSlice& cs) {
-  bits += cs.size();
-  refs += cs.size_refs();
-  for (unsigned i = 0; i < cs.size_refs(); i++) {
-    if (!add_storage(cs.prefetch_ref(i))) {
-      return false;
-    }
-  }
-  return true;
 }
 
 int exec_compute_data_size(VmState* st, int mode) {

@@ -30,8 +30,6 @@ file-base +".pk" load-keypair nip constant config_pk
 boc-filename file>B B>boc
 dup <s csr. cr
 
-{ 2drop true } : is-valid-config?
-
 dup idx is-valid-config? not abort"not a valid value for chosen configuration parameter"
 
 // create a message

@@ -15,6 +15,6 @@ struct PortableTestTraits {
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Portable, ExtendTest, PortableTestTraits);
+INSTANTIATE_TYPED_TEST_SUITE_P(Portable, ExtendTest, PortableTestTraits);
 
 }  // namespace crc32c

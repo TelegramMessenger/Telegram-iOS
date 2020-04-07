@@ -244,6 +244,14 @@ if (NOT ANDROID) # _FILE_OFFSET_BITS is broken in ndk r15 and r15b and doesn't w
   add_definitions(-D_FILE_OFFSET_BITS=64)
 endif()
 
+set(INTERNAL_COMPILE "0")
+
+set(TONLIB_COMPILE "0")
+#BEGIN tonlib
+  add_definitions(-D_TONLIB_COMPILE=1)
+  set(TONLIB_COMPILE "1")
+#END tonlib
+
 include(AddCXXCompilerFlag)
 if (MSVC)
   add_cxx_compiler_flag("/experimental:external /external:anglebrackets /external:W0")

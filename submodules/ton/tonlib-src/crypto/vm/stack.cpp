@@ -289,6 +289,31 @@ Ref<Atom> StackEntry::as_atom() && {
   return move_as<Atom, t_atom>();
 }
 
+bool StackEntry::for_each_scalar(const std::function<bool(const StackEntry&)>& func) const {
+  auto t = as<Tuple, t_tuple>();
+  if (t.not_null()) {
+    for (const auto& entry : *t) {
+      if (!entry.for_each_scalar(func)) {
+        return false;
+      }
+    }
+    return true;
+  } else {
+    return func(*this);
+  }
+}
+
+void StackEntry::for_each_scalar(const std::function<void(const StackEntry&)>& func) const {
+  auto t = as<Tuple, t_tuple>();
+  if (t.not_null()) {
+    for (const auto& entry : *t) {
+      entry.for_each_scalar(func);
+    }
+  } else {
+    func(*this);
+  }
+}
+
 const StackEntry& tuple_index(const Tuple& tup, unsigned idx) {
   if (idx >= tup->size()) {
     throw VmError{Excno::range_chk, "tuple index out of range"};
@@ -670,6 +695,21 @@ void Stack::push_cellslice(Ref<CellSlice> cs) {
 
 void Stack::push_maybe_cellslice(Ref<CellSlice> cs) {
   push_maybe(std::move(cs));
+}
+
+bool Stack::for_each_scalar(const std::function<bool(const StackEntry&)>& func) const {
+  for (const auto& v : stack) {
+    if (!v.for_each_scalar(func)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void Stack::for_each_scalar(const std::function<void(const StackEntry&)>& func) const {
+  for (const auto& v : stack) {
+    v.for_each_scalar(func);
+  }
 }
 
 /*

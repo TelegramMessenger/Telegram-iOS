@@ -1,48 +1,61 @@
-# Build matrix / environment variable are explained on:
+# Build matrix / environment variables are explained on:
 # http://about.travis-ci.org/docs/user/build-configuration/
 # This file can be validated on: http://lint.travis-ci.org/
 
-sudo: false
-dist: trusty
 language: cpp
+dist: xenial
+osx_image: xcode10.2
 
 compiler:
-  - gcc
-  - clang
+- gcc
+- clang
 os:
-  - linux
-  - osx
+- linux
+- osx
 
 env:
-  - GLOG=1 BUILD_TYPE=Debug
-  - GLOG=1 BUILD_TYPE=RelWithDebInfo
-  - GLOG=0 BUILD_TYPE=Debug
-  - GLOG=0 BUILD_TYPE=RelWithDebInfo
+- GLOG=1 SHARED_LIB=0 BUILD_TYPE=Debug
+- GLOG=1 SHARED_LIB=0 BUILD_TYPE=RelWithDebInfo
+- GLOG=0 SHARED_LIB=0 BUILD_TYPE=Debug
+- GLOG=0 SHARED_LIB=0 BUILD_TYPE=RelWithDebInfo
+- GLOG=0 SHARED_LIB=1 BUILD_TYPE=Debug
+- GLOG=0 SHARED_LIB=1 BUILD_TYPE=RelWithDebInfo
 
 addons:
   apt:
-    # List of whitelisted in travis packages for ubuntu-trusty can be found here:
-    #   https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-trusty
-    # List of whitelisted in travis apt-sources:
-    #   https://github.com/travis-ci/apt-source-whitelist/blob/master/ubuntu.json
     sources:
+    - llvm-toolchain-xenial-8
     - ubuntu-toolchain-r-test
-    - llvm-toolchain-trusty-6.0
+    packages:
+    - clang-8
+    - cmake
+    - gcc-9
+    - g++-9
+    - ninja-build
+  homebrew:
     packages:
     - cmake
-    - gcc-8
-    - g++-8
-    - clang-6.0
+    - gcc@9
+    - llvm@8
+    - ninja
+    update: true
 
 install:
-# Travis doesn't have a nice way to install homebrew packages yet.
-# https://github.com/travis-ci/travis-ci/issues/5377
-- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update; fi
-# https://github.com/Homebrew/brew/issues/1742
-- if [ "$TRAVIS_OS_NAME" == "osx" ]; then rm -f /usr/local/include/c++ ; fi
-- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install gcc@8; fi
-# /usr/bin/gcc is stuck to old versions by on both Linux and OSX.
-- if [ "$CXX" = "g++" ]; then export CXX="g++-8" CC="gcc-8"; fi
+# The following Homebrew packages aren't linked by default, and need to be
+# prepended to the path explicitly.
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    export PATH="$(brew --prefix llvm)/bin:$PATH";
+  fi
+# /usr/bin/gcc points to an older compiler on both Linux and macOS.
+- if [ "$CXX" = "g++" ]; then export CXX="g++-9" CC="gcc-9"; fi
+# /usr/bin/clang points to an older compiler on both Linux and macOS.
+#
+# Homebrew's llvm package doesn't ship a versioned clang++ binary, so the values
+# below don't work on macOS. Fortunately, the path change above makes the
+# default values (clang and clang++) resolve to the correct compiler on macOS.
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+    if [ "$CXX" = "clang++" ]; then export CXX="clang++-8" CC="clang-8"; fi;
+  fi
 - echo ${CC}
 - echo ${CXX}
 - ${CXX} --version
@@ -50,7 +63,8 @@ install:
 
 before_script:
 - mkdir -p build && cd build
-- cmake .. -DCRC32C_USE_GLOG=$GLOG -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+- cmake .. -G Ninja -DCRC32C_USE_GLOG=$GLOG -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+           -DBUILD_SHARED_LIBS=$SHARED_LIB
 - cmake --build .
 - cd ..
 

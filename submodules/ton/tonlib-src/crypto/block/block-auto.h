@@ -1866,6 +1866,41 @@ struct MessageRelaxed::Record {
 };
 
 //
+// headers for type `MessageAny`
+//
+
+struct MessageAny final : TLB_Complex {
+  enum { cons1 };
+  static constexpr int cons_len_exact = 0;
+  struct Record {
+    typedef MessageAny type_class;
+    Ref<CellSlice> x;  	// Message Any
+    Record() = default;
+    Record(Ref<CellSlice> _x) : x(std::move(_x)) {}
+  };
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& x) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> x) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "MessageAny";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+extern const MessageAny t_MessageAny;
+
+//
 // headers for type `IntermediateAddress`
 //
 
@@ -2183,9 +2218,9 @@ extern const InMsgDescr t_InMsgDescr;
 //
 
 struct OutMsg final : TLB_Complex {
-  enum { msg_export_ext, msg_export_new, msg_export_imm, msg_export_tr, msg_export_deq_imm, msg_export_deq, msg_export_tr_req };
-  static constexpr int cons_len_exact = 3;
-  static constexpr unsigned char cons_tag[7] = { 0, 1, 2, 3, 4, 6, 7 };
+  enum { msg_export_ext, msg_export_new, msg_export_imm, msg_export_tr, msg_export_deq_imm, msg_export_deq, msg_export_deq_short, msg_export_tr_req };
+  static constexpr char cons_len[8] = { 3, 3, 3, 3, 3, 4, 4, 3 };
+  static constexpr unsigned char cons_tag[8] = { 0, 1, 2, 3, 4, 12, 13, 7 };
   struct Record_msg_export_ext {
     typedef OutMsg type_class;
     Ref<Cell> msg;  	// msg : ^(Message Any)
@@ -2211,10 +2246,11 @@ struct OutMsg final : TLB_Complex {
   struct Record_msg_export_deq {
     typedef OutMsg type_class;
     Ref<Cell> out_msg;  	// out_msg : ^MsgEnvelope
-    unsigned long long import_block_lt;  	// import_block_lt : uint64
+    long long import_block_lt;  	// import_block_lt : uint63
     Record_msg_export_deq() = default;
-    Record_msg_export_deq(Ref<Cell> _out_msg, unsigned long long _import_block_lt) : out_msg(std::move(_out_msg)), import_block_lt(_import_block_lt) {}
+    Record_msg_export_deq(Ref<Cell> _out_msg, long long _import_block_lt) : out_msg(std::move(_out_msg)), import_block_lt(_import_block_lt) {}
   };
+  struct Record_msg_export_deq_short;
   struct Record_msg_export_tr_req {
     typedef OutMsg type_class;
     Ref<Cell> out_msg;  	// out_msg : ^MsgEnvelope
@@ -2264,13 +2300,17 @@ struct OutMsg final : TLB_Complex {
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_msg_export_tr& data) const;
   bool cell_pack_msg_export_tr(Ref<vm::Cell>& cell_ref, Ref<Cell> out_msg, Ref<Cell> imported) const;
   bool unpack(vm::CellSlice& cs, Record_msg_export_deq& data) const;
-  bool unpack_msg_export_deq(vm::CellSlice& cs, Ref<Cell>& out_msg, unsigned long long& import_block_lt) const;
+  bool unpack_msg_export_deq(vm::CellSlice& cs, Ref<Cell>& out_msg, long long& import_block_lt) const;
   bool cell_unpack(Ref<vm::Cell> cell_ref, Record_msg_export_deq& data) const;
-  bool cell_unpack_msg_export_deq(Ref<vm::Cell> cell_ref, Ref<Cell>& out_msg, unsigned long long& import_block_lt) const;
+  bool cell_unpack_msg_export_deq(Ref<vm::Cell> cell_ref, Ref<Cell>& out_msg, long long& import_block_lt) const;
   bool pack(vm::CellBuilder& cb, const Record_msg_export_deq& data) const;
-  bool pack_msg_export_deq(vm::CellBuilder& cb, Ref<Cell> out_msg, unsigned long long import_block_lt) const;
+  bool pack_msg_export_deq(vm::CellBuilder& cb, Ref<Cell> out_msg, long long import_block_lt) const;
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_msg_export_deq& data) const;
-  bool cell_pack_msg_export_deq(Ref<vm::Cell>& cell_ref, Ref<Cell> out_msg, unsigned long long import_block_lt) const;
+  bool cell_pack_msg_export_deq(Ref<vm::Cell>& cell_ref, Ref<Cell> out_msg, long long import_block_lt) const;
+  bool unpack(vm::CellSlice& cs, Record_msg_export_deq_short& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_msg_export_deq_short& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_msg_export_deq_short& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_msg_export_deq_short& data) const;
   bool unpack(vm::CellSlice& cs, Record_msg_export_tr_req& data) const;
   bool unpack_msg_export_tr_req(vm::CellSlice& cs, Ref<Cell>& out_msg, Ref<Cell>& imported) const;
   bool cell_unpack(Ref<vm::Cell> cell_ref, Record_msg_export_tr_req& data) const;
@@ -2293,7 +2333,7 @@ struct OutMsg final : TLB_Complex {
   }
   int check_tag(const vm::CellSlice& cs) const override;
   int get_tag(const vm::CellSlice& cs) const override {
-    return cs.bselect(3, 0xdf);
+    return cs.bselect_ext(4, 0x7155);
   }
 };
 
@@ -2304,6 +2344,16 @@ struct OutMsg::Record_msg_export_imm {
   Ref<Cell> reimport;  	// reimport : ^InMsg
   Record_msg_export_imm() = default;
   Record_msg_export_imm(Ref<Cell> _out_msg, Ref<Cell> _transaction, Ref<Cell> _reimport) : out_msg(std::move(_out_msg)), transaction(std::move(_transaction)), reimport(std::move(_reimport)) {}
+};
+
+struct OutMsg::Record_msg_export_deq_short {
+  typedef OutMsg type_class;
+  td::BitArray<256> msg_env_hash;  	// msg_env_hash : bits256
+  int next_workchain;  	// next_workchain : int32
+  unsigned long long next_addr_pfx;  	// next_addr_pfx : uint64
+  unsigned long long import_block_lt;  	// import_block_lt : uint64
+  Record_msg_export_deq_short() = default;
+  Record_msg_export_deq_short(const td::BitArray<256>& _msg_env_hash, int _next_workchain, unsigned long long _next_addr_pfx, unsigned long long _import_block_lt) : msg_env_hash(_msg_env_hash), next_workchain(_next_workchain), next_addr_pfx(_next_addr_pfx), import_block_lt(_import_block_lt) {}
 };
 
 extern const OutMsg t_OutMsg;
@@ -4897,23 +4947,32 @@ struct FutureSplitMerge final : TLB_Complex {
 extern const FutureSplitMerge t_FutureSplitMerge;
 
 //
-// headers for type `ShardDescr`
+// headers for auxiliary type `ShardDescr_aux`
 //
 
-struct ShardDescr final : TLB_Complex {
-  enum { shard_descr };
-  static constexpr int cons_len_exact = 4;
-  static constexpr unsigned char cons_tag[1] = { 11 };
-  struct Record;
+struct ShardDescr_aux final : TLB_Complex {
+  enum { cons1 };
+  static constexpr int cons_len_exact = 0;
+  struct Record {
+    typedef ShardDescr_aux type_class;
+    Ref<CellSlice> fees_collected;  	// fees_collected : CurrencyCollection
+    Ref<CellSlice> funds_created;  	// funds_created : CurrencyCollection
+    Record() = default;
+    Record(Ref<CellSlice> _fees_collected, Ref<CellSlice> _funds_created) : fees_collected(std::move(_fees_collected)), funds_created(std::move(_funds_created)) {}
+  };
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
   bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& fees_collected, Ref<CellSlice>& funds_created) const;
   bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& fees_collected, Ref<CellSlice>& funds_created) const;
   bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> fees_collected, Ref<CellSlice> funds_created) const;
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> fees_collected, Ref<CellSlice> funds_created) const;
   bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
   std::ostream& print_type(std::ostream& os) const override {
-    return os << "ShardDescr";
+    return os << "ShardDescr_aux";
   }
   int check_tag(const vm::CellSlice& cs) const override;
   int get_tag(const vm::CellSlice& cs) const override {
@@ -4921,7 +4980,39 @@ struct ShardDescr final : TLB_Complex {
   }
 };
 
-struct ShardDescr::Record {
+extern const ShardDescr_aux t_ShardDescr_aux;
+
+//
+// headers for type `ShardDescr`
+//
+
+struct ShardDescr final : TLB_Complex {
+  enum { shard_descr_new, shard_descr };
+  static constexpr int cons_len_exact = 4;
+  static constexpr unsigned char cons_tag[2] = { 10, 11 };
+  struct Record_shard_descr;
+  struct Record_shard_descr_new;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record_shard_descr& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_shard_descr& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_shard_descr& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_shard_descr& data) const;
+  bool unpack(vm::CellSlice& cs, Record_shard_descr_new& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_shard_descr_new& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_shard_descr_new& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_shard_descr_new& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ShardDescr";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return cs.bselect(4, 0xc00);
+  }
+};
+
+struct ShardDescr::Record_shard_descr {
   typedef ShardDescr type_class;
   unsigned seq_no;  	// seq_no : uint32
   unsigned reg_mc_seqno;  	// reg_mc_seqno : uint32
@@ -4942,8 +5033,32 @@ struct ShardDescr::Record {
   Ref<CellSlice> split_merge_at;  	// split_merge_at : FutureSplitMerge
   Ref<CellSlice> fees_collected;  	// fees_collected : CurrencyCollection
   Ref<CellSlice> funds_created;  	// funds_created : CurrencyCollection
-  Record() = default;
-  Record(unsigned _seq_no, unsigned _reg_mc_seqno, unsigned long long _start_lt, unsigned long long _end_lt, const td::BitArray<256>& _root_hash, const td::BitArray<256>& _file_hash, bool _before_split, bool _before_merge, bool _want_split, bool _want_merge, bool _nx_cc_updated, int _flags, unsigned _next_catchain_seqno, unsigned long long _next_validator_shard, unsigned _min_ref_mc_seqno, unsigned _gen_utime, Ref<CellSlice> _split_merge_at, Ref<CellSlice> _fees_collected, Ref<CellSlice> _funds_created) : seq_no(_seq_no), reg_mc_seqno(_reg_mc_seqno), start_lt(_start_lt), end_lt(_end_lt), root_hash(_root_hash), file_hash(_file_hash), before_split(_before_split), before_merge(_before_merge), want_split(_want_split), want_merge(_want_merge), nx_cc_updated(_nx_cc_updated), flags(_flags), next_catchain_seqno(_next_catchain_seqno), next_validator_shard(_next_validator_shard), min_ref_mc_seqno(_min_ref_mc_seqno), gen_utime(_gen_utime), split_merge_at(std::move(_split_merge_at)), fees_collected(std::move(_fees_collected)), funds_created(std::move(_funds_created)) {}
+  Record_shard_descr() = default;
+  Record_shard_descr(unsigned _seq_no, unsigned _reg_mc_seqno, unsigned long long _start_lt, unsigned long long _end_lt, const td::BitArray<256>& _root_hash, const td::BitArray<256>& _file_hash, bool _before_split, bool _before_merge, bool _want_split, bool _want_merge, bool _nx_cc_updated, int _flags, unsigned _next_catchain_seqno, unsigned long long _next_validator_shard, unsigned _min_ref_mc_seqno, unsigned _gen_utime, Ref<CellSlice> _split_merge_at, Ref<CellSlice> _fees_collected, Ref<CellSlice> _funds_created) : seq_no(_seq_no), reg_mc_seqno(_reg_mc_seqno), start_lt(_start_lt), end_lt(_end_lt), root_hash(_root_hash), file_hash(_file_hash), before_split(_before_split), before_merge(_before_merge), want_split(_want_split), want_merge(_want_merge), nx_cc_updated(_nx_cc_updated), flags(_flags), next_catchain_seqno(_next_catchain_seqno), next_validator_shard(_next_validator_shard), min_ref_mc_seqno(_min_ref_mc_seqno), gen_utime(_gen_utime), split_merge_at(std::move(_split_merge_at)), fees_collected(std::move(_fees_collected)), funds_created(std::move(_funds_created)) {}
+};
+
+struct ShardDescr::Record_shard_descr_new {
+  typedef ShardDescr type_class;
+  unsigned seq_no;  	// seq_no : uint32
+  unsigned reg_mc_seqno;  	// reg_mc_seqno : uint32
+  unsigned long long start_lt;  	// start_lt : uint64
+  unsigned long long end_lt;  	// end_lt : uint64
+  td::BitArray<256> root_hash;  	// root_hash : bits256
+  td::BitArray<256> file_hash;  	// file_hash : bits256
+  bool before_split;  	// before_split : Bool
+  bool before_merge;  	// before_merge : Bool
+  bool want_split;  	// want_split : Bool
+  bool want_merge;  	// want_merge : Bool
+  bool nx_cc_updated;  	// nx_cc_updated : Bool
+  int flags;  	// flags : ## 3
+  unsigned next_catchain_seqno;  	// next_catchain_seqno : uint32
+  unsigned long long next_validator_shard;  	// next_validator_shard : uint64
+  unsigned min_ref_mc_seqno;  	// min_ref_mc_seqno : uint32
+  unsigned gen_utime;  	// gen_utime : uint32
+  Ref<CellSlice> split_merge_at;  	// split_merge_at : FutureSplitMerge
+  ShardDescr_aux::Record r1;  	// ^[$_ fees_collected:CurrencyCollection funds_created:CurrencyCollection ]
+  Record_shard_descr_new() = default;
+  Record_shard_descr_new(unsigned _seq_no, unsigned _reg_mc_seqno, unsigned long long _start_lt, unsigned long long _end_lt, const td::BitArray<256>& _root_hash, const td::BitArray<256>& _file_hash, bool _before_split, bool _before_merge, bool _want_split, bool _want_merge, bool _nx_cc_updated, int _flags, unsigned _next_catchain_seqno, unsigned long long _next_validator_shard, unsigned _min_ref_mc_seqno, unsigned _gen_utime, Ref<CellSlice> _split_merge_at, const ShardDescr_aux::Record& _r1) : seq_no(_seq_no), reg_mc_seqno(_reg_mc_seqno), start_lt(_start_lt), end_lt(_end_lt), root_hash(_root_hash), file_hash(_file_hash), before_split(_before_split), before_merge(_before_merge), want_split(_want_split), want_merge(_want_merge), nx_cc_updated(_nx_cc_updated), flags(_flags), next_catchain_seqno(_next_catchain_seqno), next_validator_shard(_next_validator_shard), min_ref_mc_seqno(_min_ref_mc_seqno), gen_utime(_gen_utime), split_merge_at(std::move(_split_merge_at)), r1(_r1) {}
 };
 
 extern const ShardDescr t_ShardDescr;
@@ -6355,6 +6470,46 @@ struct WorkchainDescr::Record {
 extern const WorkchainDescr t_WorkchainDescr;
 
 //
+// headers for type `ComplaintPricing`
+//
+
+struct ComplaintPricing final : TLB_Complex {
+  enum { complaint_prices };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 26 };
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_complaint_prices(vm::CellSlice& cs, Ref<CellSlice>& deposit, Ref<CellSlice>& bit_price, Ref<CellSlice>& cell_price) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_complaint_prices(Ref<vm::Cell> cell_ref, Ref<CellSlice>& deposit, Ref<CellSlice>& bit_price, Ref<CellSlice>& cell_price) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_complaint_prices(vm::CellBuilder& cb, Ref<CellSlice> deposit, Ref<CellSlice> bit_price, Ref<CellSlice> cell_price) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_complaint_prices(Ref<vm::Cell>& cell_ref, Ref<CellSlice> deposit, Ref<CellSlice> bit_price, Ref<CellSlice> cell_price) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ComplaintPricing";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ComplaintPricing::Record {
+  typedef ComplaintPricing type_class;
+  Ref<CellSlice> deposit;  	// deposit : Grams
+  Ref<CellSlice> bit_price;  	// bit_price : Grams
+  Ref<CellSlice> cell_price;  	// cell_price : Grams
+  Record() = default;
+  Record(Ref<CellSlice> _deposit, Ref<CellSlice> _bit_price, Ref<CellSlice> _cell_price) : deposit(std::move(_deposit)), bit_price(std::move(_bit_price)), cell_price(std::move(_cell_price)) {}
+};
+
+extern const ComplaintPricing t_ComplaintPricing;
+
+//
 // headers for type `BlockCreateFees`
 //
 
@@ -6813,7 +6968,7 @@ extern const ValidatorSignedTempKey t_ValidatorSignedTempKey;
 //
 
 struct ConfigParam final : TLB_Complex {
-  enum { cons32, cons33, cons34, cons35, cons36, cons37, config_mc_block_limits, config_block_limits, cons14, cons0, cons1, cons2, cons3, cons4, cons6, cons7, cons9, cons10, cons12, cons15, cons16, cons17, cons18, cons31, cons39, cons11, cons28, cons8, config_mc_gas_prices, config_gas_prices, cons29, config_mc_fwd_prices, config_fwd_prices };
+  enum { cons32, cons33, cons34, cons35, cons36, cons37, cons13, config_mc_block_limits, config_block_limits, cons14, cons0, cons1, cons2, cons3, cons4, cons6, cons7, cons9, cons10, cons12, cons15, cons16, cons17, cons18, cons31, cons39, cons11, cons28, cons8, config_mc_gas_prices, config_gas_prices, cons29, config_mc_fwd_prices, config_fwd_prices };
   static constexpr int cons_len_exact = 0;
   int m_;
   ConfigParam(int m) : m_(m) {}
@@ -6889,6 +7044,12 @@ struct ConfigParam final : TLB_Complex {
     Ref<CellSlice> workchains;  	// workchains : HashmapE 32 WorkchainDescr
     Record_cons12() = default;
     Record_cons12(Ref<CellSlice> _workchains) : workchains(std::move(_workchains)) {}
+  };
+  struct Record_cons13 {
+    typedef ConfigParam type_class;
+    Ref<CellSlice> x;  	// ComplaintPricing
+    Record_cons13() = default;
+    Record_cons13(Ref<CellSlice> _x) : x(std::move(_x)) {}
   };
   struct Record_cons14 {
     typedef ConfigParam type_class;
@@ -7099,6 +7260,14 @@ struct ConfigParam final : TLB_Complex {
   bool pack_cons12(vm::CellBuilder& cb, Ref<CellSlice> workchains) const;
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_cons12& data) const;
   bool cell_pack_cons12(Ref<vm::Cell>& cell_ref, Ref<CellSlice> workchains) const;
+  bool unpack(vm::CellSlice& cs, Record_cons13& data) const;
+  bool unpack_cons13(vm::CellSlice& cs, Ref<CellSlice>& x) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_cons13& data) const;
+  bool cell_unpack_cons13(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const;
+  bool pack(vm::CellBuilder& cb, const Record_cons13& data) const;
+  bool pack_cons13(vm::CellBuilder& cb, Ref<CellSlice> x) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_cons13& data) const;
+  bool cell_pack_cons13(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const;
   bool unpack(vm::CellSlice& cs, Record_cons14& data) const;
   bool unpack_cons14(vm::CellSlice& cs, Ref<CellSlice>& x) const;
   bool cell_unpack(Ref<vm::Cell> cell_ref, Record_cons14& data) const;
@@ -7532,6 +7701,126 @@ struct TopBlockDescrSet final : TLB_Complex {
 };
 
 extern const TopBlockDescrSet t_TopBlockDescrSet;
+
+//
+// headers for type `ComplaintDescr`
+//
+
+struct ComplaintDescr final : TLB_Complex {
+  enum { no_blk_gen };
+  static constexpr int cons_len_exact = 32;
+  static constexpr unsigned cons_tag[1] = { 0x7e545dda };
+  struct Record;
+  int get_size(const vm::CellSlice& cs) const override {
+    return 0x202c0;
+  }
+  bool skip(vm::CellSlice& cs) const override {
+    return cs.advance_ext(0x202c0);
+  }
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ComplaintDescr";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ComplaintDescr::Record {
+  typedef ComplaintDescr type_class;
+  Ref<CellSlice> mc_blk_ref;  	// mc_blk_ref : ExtBlkRef
+  unsigned from_utime;  	// from_utime : uint32
+  unsigned to_utime;  	// to_utime : uint32
+  Ref<Cell> state_proof;  	// state_proof : ^Cell
+  Ref<Cell> prod_proof;  	// prod_proof : ^Cell
+  Record() = default;
+  Record(Ref<CellSlice> _mc_blk_ref, unsigned _from_utime, unsigned _to_utime, Ref<Cell> _state_proof, Ref<Cell> _prod_proof) : mc_blk_ref(std::move(_mc_blk_ref)), from_utime(_from_utime), to_utime(_to_utime), state_proof(std::move(_state_proof)), prod_proof(std::move(_prod_proof)) {}
+};
+
+extern const ComplaintDescr t_ComplaintDescr;
+
+//
+// headers for type `ValidatorComplaint`
+//
+
+struct ValidatorComplaint final : TLB_Complex {
+  enum { validator_complaint };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0xba };
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ValidatorComplaint";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ValidatorComplaint::Record {
+  typedef ValidatorComplaint type_class;
+  RefInt256 validator_pubkey;  	// validator_pubkey : uint256
+  Ref<Cell> description;  	// description : ^ComplaintDescr
+  int severity;  	// severity : uint8
+  RefInt256 reward_addr;  	// reward_addr : uint256
+  Ref<CellSlice> paid;  	// paid : Grams
+  Ref<CellSlice> suggested_fine;  	// suggested_fine : Grams
+  unsigned suggested_fine_part;  	// suggested_fine_part : uint32
+  Record() = default;
+  Record(RefInt256 _validator_pubkey, Ref<Cell> _description, int _severity, RefInt256 _reward_addr, Ref<CellSlice> _paid, Ref<CellSlice> _suggested_fine, unsigned _suggested_fine_part) : validator_pubkey(std::move(_validator_pubkey)), description(std::move(_description)), severity(_severity), reward_addr(std::move(_reward_addr)), paid(std::move(_paid)), suggested_fine(std::move(_suggested_fine)), suggested_fine_part(_suggested_fine_part) {}
+};
+
+extern const ValidatorComplaint t_ValidatorComplaint;
+
+//
+// headers for type `ValidatorComplaintStatus`
+//
+
+struct ValidatorComplaintStatus final : TLB_Complex {
+  enum { complaint_status };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0x2d };
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ValidatorComplaintStatus";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ValidatorComplaintStatus::Record {
+  typedef ValidatorComplaintStatus type_class;
+  Ref<Cell> complaint;  	// complaint : ^ValidatorComplaint
+  Ref<CellSlice> voters;  	// voters : HashmapE 16 True
+  RefInt256 vset_id;  	// vset_id : uint256
+  long long weight_remaining;  	// weight_remaining : int64
+  Record() = default;
+  Record(Ref<Cell> _complaint, Ref<CellSlice> _voters, RefInt256 _vset_id, long long _weight_remaining) : complaint(std::move(_complaint)), voters(std::move(_voters)), vset_id(std::move(_vset_id)), weight_remaining(_weight_remaining) {}
+};
+
+extern const ValidatorComplaintStatus t_ValidatorComplaintStatus;
 
 //
 // headers for type `VmCellSlice`
@@ -8763,10 +9052,10 @@ extern const RefT t_Ref_StateInit;
 extern const Either t_Either_StateInit_Ref_StateInit;
 // Maybe (Either StateInit ^StateInit)
 extern const Maybe t_Maybe_Either_StateInit_Ref_StateInit;
-// #<= 96
-extern const NatLeq t_natleq_96;
 // Message Any
 extern const Message t_Message_Any;
+// #<= 96
+extern const NatLeq t_natleq_96;
 // ^(Message Any)
 extern const RefT t_Ref_Message_Any;
 // ^Transaction
@@ -8777,6 +9066,8 @@ extern const RefT t_Ref_MsgEnvelope;
 extern const HashmapAugE t_HashmapAugE_256_InMsg_ImportFees;
 // ^InMsg
 extern const RefT t_Ref_InMsg;
+// uint63
+extern const UInt t_uint63;
 // HashmapAugE 256 OutMsg CurrencyCollection
 extern const HashmapAugE t_HashmapAugE_256_OutMsg_CurrencyCollection;
 // HashmapAugE 352 EnqueuedMsg uint64
@@ -8800,7 +9091,7 @@ extern const Maybe t_Maybe_Ref_Message_Any;
 // HashmapE 15 ^(Message Any)
 extern const HashmapE t_HashmapE_15_Ref_Message_Any;
 // ^[$_ in_msg:(Maybe ^(Message Any)) out_msgs:(HashmapE 15 ^(Message Any)) ]
-extern const RefT t_Ref_TYPE_1613;
+extern const RefT t_Ref_TYPE_1614;
 // HASH_UPDATE Account
 extern const HASH_UPDATE t_HASH_UPDATE_Account;
 // ^(HASH_UPDATE Account)
@@ -8818,7 +9109,7 @@ extern const Maybe t_Maybe_VarUInteger_3;
 // Maybe int32
 extern const Maybe t_Maybe_int32;
 // ^[$_ gas_used:(VarUInteger 7) gas_limit:(VarUInteger 7) gas_credit:(Maybe (VarUInteger 3)) mode:int8 exit_code:int32 exit_arg:(Maybe int32) vm_steps:uint32 vm_init_state_hash:bits256 vm_final_state_hash:bits256 ]
-extern const RefT t_Ref_TYPE_1624;
+extern const RefT t_Ref_TYPE_1625;
 // uint16
 extern const UInt t_uint16;
 // Maybe TrStoragePhase
@@ -8852,7 +9143,7 @@ extern const HashmapE t_HashmapE_256_LibDescr;
 // Maybe BlkMasterInfo
 extern const Maybe t_Maybe_BlkMasterInfo;
 // ^[$_ overload_history:uint64 underload_history:uint64 total_balance:CurrencyCollection total_validator_fees:CurrencyCollection libraries:(HashmapE 256 LibDescr) master_ref:(Maybe BlkMasterInfo) ]
-extern const RefT t_Ref_TYPE_1638;
+extern const RefT t_Ref_TYPE_1639;
 // ^McStateExtra
 extern const RefT t_Ref_McStateExtra;
 // Maybe ^McStateExtra
@@ -8890,11 +9181,13 @@ extern const RefT t_Ref_McBlockExtra;
 // Maybe ^McBlockExtra
 extern const Maybe t_Maybe_Ref_McBlockExtra;
 // ^[$_ from_prev_blk:CurrencyCollection to_next_blk:CurrencyCollection imported:CurrencyCollection exported:CurrencyCollection ]
-extern const RefT t_Ref_TYPE_1649;
-// ^[$_ fees_imported:CurrencyCollection recovered:CurrencyCollection created:CurrencyCollection minted:CurrencyCollection ]
 extern const RefT t_Ref_TYPE_1650;
+// ^[$_ fees_imported:CurrencyCollection recovered:CurrencyCollection created:CurrencyCollection minted:CurrencyCollection ]
+extern const RefT t_Ref_TYPE_1651;
 // ## 3
 extern const NatWidth t_natwidth_3;
+// ^[$_ fees_collected:CurrencyCollection funds_created:CurrencyCollection ]
+extern const RefT t_Ref_TYPE_1655;
 // BinTree ShardDescr
 extern const BinTree t_BinTree_ShardDescr;
 // ^(BinTree ShardDescr)
@@ -8918,7 +9211,7 @@ extern const NatWidth t_natwidth_16;
 // Maybe ExtBlkRef
 extern const Maybe t_Maybe_ExtBlkRef;
 // ^[$_ flags:(## 16) {<= flags 1} validator_info:ValidatorInfo prev_blocks:OldMcBlocksInfo after_key_block:Bool last_key_block:(Maybe ExtBlkRef) block_create_stats:flags.0?BlockCreateStats ]
-extern const RefT t_Ref_TYPE_1667;
+extern const RefT t_Ref_TYPE_1669;
 // ^SignedCertificate
 extern const RefT t_Ref_SignedCertificate;
 // HashmapE 16 CryptoSignaturePair
@@ -8926,7 +9219,7 @@ extern const HashmapE t_HashmapE_16_CryptoSignaturePair;
 // Maybe ^InMsg
 extern const Maybe t_Maybe_Ref_InMsg;
 // ^[$_ prev_blk_signatures:(HashmapE 16 CryptoSignaturePair) recover_create_msg:(Maybe ^InMsg) mint_msg:(Maybe ^InMsg) ]
-extern const RefT t_Ref_TYPE_1675;
+extern const RefT t_Ref_TYPE_1677;
 // Hashmap 16 ValidatorDescr
 extern const Hashmap t_Hashmap_16_ValidatorDescr;
 // HashmapE 16 ValidatorDescr
@@ -8971,6 +9264,10 @@ extern const Maybe t_Maybe_Ref_BlockSignatures;
 extern const RefT t_Ref_TopBlockDescr;
 // HashmapE 96 ^TopBlockDescr
 extern const HashmapE t_HashmapE_96_Ref_TopBlockDescr;
+// ^ComplaintDescr
+extern const RefT t_Ref_ComplaintDescr;
+// ^ValidatorComplaint
+extern const RefT t_Ref_ValidatorComplaint;
 // int257
 extern const Int t_int257;
 // ## 10
@@ -8984,7 +9281,7 @@ extern const NatWidth t_natwidth_24;
 // HashmapE 4 VmStackValue
 extern const HashmapE t_HashmapE_4_VmStackValue;
 // ^[$_ max_limit:int64 cur_limit:int64 credit:int64 ]
-extern const RefT t_Ref_TYPE_1709;
+extern const RefT t_Ref_TYPE_1715;
 // HashmapE 256 ^Cell
 extern const HashmapE t_HashmapE_256_Ref_Cell;
 // uint13
@@ -8999,8 +9296,6 @@ extern const Int t_int16;
 extern const Maybe t_Maybe_int16;
 // ^VmCont
 extern const RefT t_Ref_VmCont;
-// uint63
-extern const UInt t_uint63;
 // ^DNSRecord
 extern const RefT t_Ref_DNSRecord;
 // HashmapE 16 ^DNSRecord

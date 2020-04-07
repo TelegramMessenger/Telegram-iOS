@@ -25,7 +25,7 @@
 #include "ton/ton-shard.h"
 
 #include "vm/cells/MerkleProof.h"
-#include "openssl/digest.h"
+#include "openssl/digest.hpp"
 #include "Ed25519.h"
 
 namespace block {

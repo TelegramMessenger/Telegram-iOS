@@ -380,6 +380,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return engine_validator_keyHash::fetch(p);
     case engine_validator_oneStat::ID:
       return engine_validator_oneStat::fetch(p);
+    case engine_validator_proposalVote::ID:
+      return engine_validator_proposalVote::fetch(p);
     case engine_validator_signature::ID:
       return engine_validator_signature::fetch(p);
     case engine_validator_stats::ID:
@@ -650,6 +652,8 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return engine_validator_controlQuery::fetch(p);
     case engine_validator_createElectionBid::ID:
       return engine_validator_createElectionBid::fetch(p);
+    case engine_validator_createProposalVote::ID:
+      return engine_validator_createProposalVote::fetch(p);
     case engine_validator_delAdnlId::ID:
       return engine_validator_delAdnlId::fetch(p);
     case engine_validator_delDhtId::ID:
@@ -9142,6 +9146,50 @@ void engine_validator_oneStat::store(td::TlStorerToString &s, const char *field_
   }
 }
 
+engine_validator_proposalVote::engine_validator_proposalVote()
+  : perm_key_()
+  , to_send_()
+{}
+
+engine_validator_proposalVote::engine_validator_proposalVote(td::Bits256 const &perm_key_, td::BufferSlice &&to_send_)
+  : perm_key_(perm_key_)
+  , to_send_(std::move(to_send_))
+{}
+
+const std::int32_t engine_validator_proposalVote::ID;
+
+object_ptr<engine_validator_proposalVote> engine_validator_proposalVote::fetch(td::TlParser &p) {
+  return make_object<engine_validator_proposalVote>(p);
+}
+
+engine_validator_proposalVote::engine_validator_proposalVote(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : perm_key_(TlFetchInt256::parse(p))
+  , to_send_(TlFetchBytes<td::BufferSlice>::parse(p))
+#undef FAIL
+{}
+
+void engine_validator_proposalVote::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(perm_key_, s);
+  TlStoreString::store(to_send_, s);
+}
+
+void engine_validator_proposalVote::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(perm_key_, s);
+  TlStoreString::store(to_send_, s);
+}
+
+void engine_validator_proposalVote::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "engine_validator_proposalVote");
+    s.store_field("perm_key", perm_key_);
+    s.store_bytes_field("to_send", to_send_);
+    s.store_class_end();
+  }
+}
+
 engine_validator_signature::engine_validator_signature()
   : signature_()
 {}
@@ -15536,6 +15584,52 @@ void engine_validator_createElectionBid::store(td::TlStorerToString &s, const ch
 engine_validator_createElectionBid::ReturnType engine_validator_createElectionBid::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchBoxed<TlFetchObject<engine_validator_electionBid>, 598899261>::parse(p);
+#undef FAIL
+}
+
+engine_validator_createProposalVote::engine_validator_createProposalVote()
+  : vote_()
+{}
+
+engine_validator_createProposalVote::engine_validator_createProposalVote(td::BufferSlice &&vote_)
+  : vote_(std::move(vote_))
+{}
+
+const std::int32_t engine_validator_createProposalVote::ID;
+
+object_ptr<engine_validator_createProposalVote> engine_validator_createProposalVote::fetch(td::TlParser &p) {
+  return make_object<engine_validator_createProposalVote>(p);
+}
+
+engine_validator_createProposalVote::engine_validator_createProposalVote(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : vote_(TlFetchBytes<td::BufferSlice>::parse(p))
+#undef FAIL
+{}
+
+void engine_validator_createProposalVote::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(498278765);
+  TlStoreString::store(vote_, s);
+}
+
+void engine_validator_createProposalVote::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(498278765);
+  TlStoreString::store(vote_, s);
+}
+
+void engine_validator_createProposalVote::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "engine_validator_createProposalVote");
+    s.store_bytes_field("vote", vote_);
+    s.store_class_end();
+  }
+}
+
+engine_validator_createProposalVote::ReturnType engine_validator_createProposalVote::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<engine_validator_proposalVote>, 2137401069>::parse(p);
 #undef FAIL
 }
 

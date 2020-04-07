@@ -811,13 +811,15 @@ struct OutMsg final : TLB_Complex {
     msg_export_imm = 2,
     msg_export_tr = 3,
     msg_export_deq_imm = 4,
-    msg_export_deq = 6,
+    msg_export_deq = 12,
+    msg_export_deq_short = 13,
     msg_export_tr_req = 7
   };
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
   int get_tag(const vm::CellSlice& cs) const override {
-    return (int)cs.prefetch_ulong(3);
+    int t = (int)cs.prefetch_ulong(3);
+    return t != 6 ? t : (int)cs.prefetch_ulong(4);
   }
   bool get_export_value(vm::CellBuilder& cb, vm::CellSlice& cs) const;
   bool get_created_lt(vm::CellSlice& cs, unsigned long long& created_lt) const;

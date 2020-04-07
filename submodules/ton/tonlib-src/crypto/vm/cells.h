@@ -14,25 +14,15 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
-
-#include <ostream>
-#include "common/refcnt.hpp"
-#include "common/bitstring.h"
-#include "common/bigint.hpp"
-#include "common/refint.h"
 
 #include "vm/cells/Cell.h"
 #include "vm/cells/CellBuilder.h"
 #include "vm/cells/DataCell.h"
 #include "vm/cells/UsageCell.h"
 #include "vm/cells/VirtualCell.h"
-
-#include "td/utils/Slice.h"
-#include "td/utils/StringBuilder.h"
-#include "openssl/digest.h"
 
 // H_i(cell) = H(cell_i)
 // cell.hash = sha256(

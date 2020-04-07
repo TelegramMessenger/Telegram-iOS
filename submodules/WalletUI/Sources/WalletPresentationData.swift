@@ -221,6 +221,7 @@ enum WalletThemeResourceKey: Int32 {
     case itemListClearInputIcon
     case itemListDisclosureArrow
     case navigationShareIcon
+    case transactionLockIcon
     
     case clockMin
     case clockFrame
@@ -304,6 +305,12 @@ func clockMinImage(_ theme: WalletTheme) -> UIImage? {
             let strokeWidth: CGFloat = 1.0
             context.fill(CGRect(x: (11.0 - strokeWidth) / 2.0, y: (11.0 - strokeWidth) / 2.0, width: 11.0 / 2.0 - strokeWidth, height: strokeWidth))
         })
+    })
+}
+
+func walletTransactionLockIcon(_ theme: WalletTheme) -> UIImage? {
+    return theme.image(WalletThemeResourceKey.clockMin.rawValue, { theme in
+        return generateTintedImage(image: UIImage(bundleImageName: "Wallet/EncryptedComment"), color: theme.list.itemSecondaryTextColor)
     })
 }
 

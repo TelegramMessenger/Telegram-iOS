@@ -171,7 +171,16 @@ struct MsgProcessedUpto {
                 ton::BlockSeqno other_mc_seqno) const &;
   // NB: this is for checking whether we have already imported an internal message
   bool already_processed(const EnqueuedMsgDescr& msg) const;
+  bool can_check_processed() const {
+    return (bool)compute_shard_end_lt;
+  }
+  std::ostream& print(std::ostream& os) const;
+  std::string to_str() const;
 };
+
+static inline std::ostream& operator<<(std::ostream& os, const MsgProcessedUpto& proc) {
+  return proc.print(os);
+}
 
 struct MsgProcessedUptoCollection {
   ton::ShardIdFull owner;
@@ -197,8 +206,15 @@ struct MsgProcessedUptoCollection {
   bool combine_with(const MsgProcessedUptoCollection& other);
   // NB: this is for checking whether we have already imported an internal message
   bool already_processed(const EnqueuedMsgDescr& msg) const;
+  bool can_check_processed() const;
   bool for_each_mcseqno(std::function<bool(ton::BlockSeqno)>) const;
+  std::ostream& print(std::ostream& os) const;
+  std::string to_str() const;
 };
+
+static inline std::ostream& operator<<(std::ostream& os, const MsgProcessedUptoCollection& proc_coll) {
+  return proc_coll.print(os);
+}
 
 struct ParamLimits {
   enum { limits_cnt = 4 };

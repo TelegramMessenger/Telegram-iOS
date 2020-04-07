@@ -293,7 +293,8 @@ class DictionaryFixed : public DictionaryBase {
                                                              bool remove_prefix = false) const;
   bool dict_check_for_each(Ref<Cell> dict, td::BitPtr key_buffer, int n, int total_key_len,
                            const foreach_func_t& foreach_func, bool invert_first = false) const;
-  std::pair<Ref<Cell>, int> dict_filter(Ref<Cell> dict, td::BitPtr key, int n, const filter_func_t& check_leaf) const;
+  std::pair<Ref<Cell>, int> dict_filter(Ref<Cell> dict, td::BitPtr key, int n, const filter_func_t& check_leaf,
+                                        int& skip_rest) const;
   Ref<Cell> dict_combine_with(Ref<Cell> dict1, Ref<Cell> dict2, td::BitPtr key_buffer, int n, int total_key_len,
                               const combine_func_t& combine_func, int mode = 0, int skip1 = 0, int skip2 = 0) const;
   bool dict_scan_diff(Ref<Cell> dict1, Ref<Cell> dict2, td::BitPtr key_buffer, int n, int total_key_len,

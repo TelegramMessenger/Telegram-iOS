@@ -151,6 +151,9 @@ message$_ {X:Type} info:CommonMsgInfo
 message$_ {X:Type} info:CommonMsgInfoRelaxed
   init:(Maybe (Either StateInit ^StateInit))
   body:(Either X ^X) = MessageRelaxed X;
+  
+_ (Message Any) = MessageAny;
+
 //
 interm_addr_regular$0 use_dest_bits:(#<= 96) 
   = IntermediateAddress;
@@ -190,7 +193,10 @@ msg_export_new$001 out_msg:^MsgEnvelope
     transaction:^Transaction = OutMsg;
 msg_export_tr$011  out_msg:^MsgEnvelope 
     imported:^InMsg = OutMsg;
-msg_export_deq$110 out_msg:^MsgEnvelope  // out_msg_hash:bits256 ?
+msg_export_deq$1100 out_msg:^MsgEnvelope
+    import_block_lt:uint63 = OutMsg;
+msg_export_deq_short$1101 msg_env_hash:bits256
+    next_workchain:int32 next_addr_pfx:uint64
     import_block_lt:uint64 = OutMsg;
 msg_export_tr_req$111 out_msg:^MsgEnvelope 
     imported:^InMsg = OutMsg;
@@ -478,6 +484,18 @@ shard_descr#b seq_no:uint32 reg_mc_seqno:uint32
   fees_collected:CurrencyCollection
   funds_created:CurrencyCollection = ShardDescr;
 
+shard_descr_new#a seq_no:uint32 reg_mc_seqno:uint32
+  start_lt:uint64 end_lt:uint64
+  root_hash:bits256 file_hash:bits256 
+  before_split:Bool before_merge:Bool
+  want_split:Bool want_merge:Bool
+  nx_cc_updated:Bool flags:(## 3) { flags = 0 }
+  next_catchain_seqno:uint32 next_validator_shard:uint64
+  min_ref_mc_seqno:uint32 gen_utime:uint32
+  split_merge_at:FutureSplitMerge
+  ^[ fees_collected:CurrencyCollection
+     funds_created:CurrencyCollection ] = ShardDescr;
+
 _ (HashmapE 32 ^(BinTree ShardDescr)) = ShardHashes;
 
 bta_leaf$0 {X:Type} {Y:Type} extra:Y leaf:X = BinTreeAug X Y;
@@ -603,6 +621,9 @@ workchain#a6 enabled_since:uint32 actual_min_split:(## 8)
 
 _ workchains:(HashmapE 32 WorkchainDescr) = ConfigParam 12;
 
+complaint_prices#1a deposit:Grams bit_price:Grams cell_price:Grams = ComplaintPricing; 
+_ ComplaintPricing = ConfigParam 13;
+
 block_grams_created#6b masterchain_block_fee:Grams basechain_block_fee:Grams
   = BlockCreateFees;
 _ BlockCreateFees = ConfigParam 14;
@@ -695,6 +716,13 @@ top_block_descr#d5 proof_for:BlockIdExt signatures:(Maybe ^BlockSignatures)
 //  COLLATED DATA
 //
 top_block_descr_set#4ac789f3 collection:(HashmapE 96 ^TopBlockDescr) = TopBlockDescrSet;
+
+//
+//  VALIDATOR MISBEHAVIOR COMPLAINTS
+//
+no_blk_gen mc_blk_ref:ExtBlkRef from_utime:uint32 to_utime:uint32 state_proof:^Cell prod_proof:^Cell = ComplaintDescr;
+validator_complaint#ba validator_pubkey:uint256 description:^ComplaintDescr severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams suggested_fine_part:uint32 = ValidatorComplaint;
+complaint_status#2d complaint:^ValidatorComplaint voters:(HashmapE 16 True) vset_id:uint256 weight_remaining:int64 = ValidatorComplaintStatus;
 
 //
 //  TVM REFLECTION

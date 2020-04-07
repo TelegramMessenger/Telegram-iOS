@@ -4419,6 +4419,69 @@ bool MessageRelaxed::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 
 
 //
+// code for type `MessageAny`
+//
+
+int MessageAny::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
+}
+
+bool MessageAny::skip(vm::CellSlice& cs) const {
+  return t_Message_Any.skip(cs);
+}
+
+bool MessageAny::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Message_Any.validate_skip(ops, cs, weak);
+}
+
+bool MessageAny::unpack(vm::CellSlice& cs, MessageAny::Record& data) const {
+  return t_Message_Any.fetch_to(cs, data.x);
+}
+
+bool MessageAny::unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& x) const {
+  return t_Message_Any.fetch_to(cs, x);
+}
+
+bool MessageAny::cell_unpack(Ref<vm::Cell> cell_ref, MessageAny::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool MessageAny::cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons1(cs, x) && cs.empty_ext();
+}
+
+bool MessageAny::pack(vm::CellBuilder& cb, const MessageAny::Record& data) const {
+  return t_Message_Any.store_from(cb, data.x);
+}
+
+bool MessageAny::pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> x) const {
+  return t_Message_Any.store_from(cb, x);
+}
+
+bool MessageAny::cell_pack(Ref<vm::Cell>& cell_ref, const MessageAny::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool MessageAny::cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const {
+  vm::CellBuilder cb;
+  return pack_cons1(cb, std::move(x)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool MessageAny::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open()
+      && pp.field()
+      && t_Message_Any.print_skip(pp, cs)
+      && pp.close();
+}
+
+const MessageAny t_MessageAny;
+
+//
 // code for type `IntermediateAddress`
 //
 constexpr char IntermediateAddress::cons_len[3];
@@ -5303,7 +5366,8 @@ const InMsgDescr t_InMsgDescr;
 //
 // code for type `OutMsg`
 //
-constexpr unsigned char OutMsg::cons_tag[7];
+constexpr char OutMsg::cons_len[8];
+constexpr unsigned char OutMsg::cons_tag[8];
 
 int OutMsg::check_tag(const vm::CellSlice& cs) const {
   switch (get_tag(cs)) {
@@ -5316,7 +5380,9 @@ int OutMsg::check_tag(const vm::CellSlice& cs) const {
   case msg_export_tr:
     return cs.have(3) ? msg_export_tr : -1;
   case msg_export_deq:
-    return cs.have(3) ? msg_export_deq : -1;
+    return cs.have(4) ? msg_export_deq : -1;
+  case msg_export_deq_short:
+    return cs.have(4) ? msg_export_deq_short : -1;
   case msg_export_tr_req:
     return cs.have(3) ? msg_export_tr_req : -1;
   case msg_export_deq_imm:
@@ -5337,6 +5403,8 @@ bool OutMsg::skip(vm::CellSlice& cs) const {
     return cs.advance_ext(0x20003);
   case msg_export_deq:
     return cs.advance_ext(0x10043);
+  case msg_export_deq_short:
+    return cs.advance(420);
   case msg_export_tr_req:
     return cs.advance_ext(0x20003);
   case msg_export_deq_imm:
@@ -5365,9 +5433,11 @@ bool OutMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
         && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
         && t_InMsg.validate_skip_ref(ops, cs, weak);
   case msg_export_deq:
-    return cs.advance(3)
+    return cs.advance(4)
         && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
-        && cs.advance(64);
+        && cs.advance(63);
+  case msg_export_deq_short:
+    return cs.advance(420);
   case msg_export_tr_req:
     return cs.advance(3)
         && t_MsgEnvelope.validate_skip_ref(ops, cs, weak)
@@ -5479,15 +5549,15 @@ bool OutMsg::cell_unpack_msg_export_tr(Ref<vm::Cell> cell_ref, Ref<Cell>& out_ms
 }
 
 bool OutMsg::unpack(vm::CellSlice& cs, OutMsg::Record_msg_export_deq& data) const {
-  return cs.fetch_ulong(3) == 6
+  return cs.fetch_ulong(4) == 12
       && cs.fetch_ref_to(data.out_msg)
-      && cs.fetch_uint_to(64, data.import_block_lt);
+      && cs.fetch_uint_to(63, data.import_block_lt);
 }
 
-bool OutMsg::unpack_msg_export_deq(vm::CellSlice& cs, Ref<Cell>& out_msg, unsigned long long& import_block_lt) const {
-  return cs.fetch_ulong(3) == 6
+bool OutMsg::unpack_msg_export_deq(vm::CellSlice& cs, Ref<Cell>& out_msg, long long& import_block_lt) const {
+  return cs.fetch_ulong(4) == 12
       && cs.fetch_ref_to(out_msg)
-      && cs.fetch_uint_to(64, import_block_lt);
+      && cs.fetch_uint_to(63, import_block_lt);
 }
 
 bool OutMsg::cell_unpack(Ref<vm::Cell> cell_ref, OutMsg::Record_msg_export_deq& data) const {
@@ -5496,10 +5566,24 @@ bool OutMsg::cell_unpack(Ref<vm::Cell> cell_ref, OutMsg::Record_msg_export_deq& 
   return unpack(cs, data) && cs.empty_ext();
 }
 
-bool OutMsg::cell_unpack_msg_export_deq(Ref<vm::Cell> cell_ref, Ref<Cell>& out_msg, unsigned long long& import_block_lt) const {
+bool OutMsg::cell_unpack_msg_export_deq(Ref<vm::Cell> cell_ref, Ref<Cell>& out_msg, long long& import_block_lt) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack_msg_export_deq(cs, out_msg, import_block_lt) && cs.empty_ext();
+}
+
+bool OutMsg::unpack(vm::CellSlice& cs, OutMsg::Record_msg_export_deq_short& data) const {
+  return cs.fetch_ulong(4) == 13
+      && cs.fetch_bits_to(data.msg_env_hash.bits(), 256)
+      && cs.fetch_int_to(32, data.next_workchain)
+      && cs.fetch_uint_to(64, data.next_addr_pfx)
+      && cs.fetch_uint_to(64, data.import_block_lt);
+}
+
+bool OutMsg::cell_unpack(Ref<vm::Cell> cell_ref, OutMsg::Record_msg_export_deq_short& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
 }
 
 bool OutMsg::unpack(vm::CellSlice& cs, OutMsg::Record_msg_export_tr_req& data) const {
@@ -5641,15 +5725,15 @@ bool OutMsg::cell_pack_msg_export_tr(Ref<vm::Cell>& cell_ref, Ref<Cell> out_msg,
 }
 
 bool OutMsg::pack(vm::CellBuilder& cb, const OutMsg::Record_msg_export_deq& data) const {
-  return cb.store_long_bool(6, 3)
+  return cb.store_long_bool(12, 4)
       && cb.store_ref_bool(data.out_msg)
-      && cb.store_ulong_rchk_bool(data.import_block_lt, 64);
+      && cb.store_ulong_rchk_bool(data.import_block_lt, 63);
 }
 
-bool OutMsg::pack_msg_export_deq(vm::CellBuilder& cb, Ref<Cell> out_msg, unsigned long long import_block_lt) const {
-  return cb.store_long_bool(6, 3)
+bool OutMsg::pack_msg_export_deq(vm::CellBuilder& cb, Ref<Cell> out_msg, long long import_block_lt) const {
+  return cb.store_long_bool(12, 4)
       && cb.store_ref_bool(out_msg)
-      && cb.store_ulong_rchk_bool(import_block_lt, 64);
+      && cb.store_ulong_rchk_bool(import_block_lt, 63);
 }
 
 bool OutMsg::cell_pack(Ref<vm::Cell>& cell_ref, const OutMsg::Record_msg_export_deq& data) const {
@@ -5657,9 +5741,22 @@ bool OutMsg::cell_pack(Ref<vm::Cell>& cell_ref, const OutMsg::Record_msg_export_
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
-bool OutMsg::cell_pack_msg_export_deq(Ref<vm::Cell>& cell_ref, Ref<Cell> out_msg, unsigned long long import_block_lt) const {
+bool OutMsg::cell_pack_msg_export_deq(Ref<vm::Cell>& cell_ref, Ref<Cell> out_msg, long long import_block_lt) const {
   vm::CellBuilder cb;
   return pack_msg_export_deq(cb, std::move(out_msg), import_block_lt) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool OutMsg::pack(vm::CellBuilder& cb, const OutMsg::Record_msg_export_deq_short& data) const {
+  return cb.store_long_bool(13, 4)
+      && cb.store_bits_bool(data.msg_env_hash.cbits(), 256)
+      && cb.store_long_rchk_bool(data.next_workchain, 32)
+      && cb.store_ulong_rchk_bool(data.next_addr_pfx, 64)
+      && cb.store_ulong_rchk_bool(data.import_block_lt, 64);
+}
+
+bool OutMsg::cell_pack(Ref<vm::Cell>& cell_ref, const OutMsg::Record_msg_export_deq_short& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
 bool OutMsg::pack(vm::CellBuilder& cb, const OutMsg::Record_msg_export_tr_req& data) const {
@@ -5743,10 +5840,18 @@ bool OutMsg::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && t_InMsg.print_ref(pp, cs.fetch_ref())
         && pp.close();
   case msg_export_deq:
-    return cs.advance(3)
+    return cs.advance(4)
         && pp.open("msg_export_deq")
         && pp.field("out_msg")
         && t_MsgEnvelope.print_ref(pp, cs.fetch_ref())
+        && pp.fetch_uint_field(cs, 63, "import_block_lt")
+        && pp.close();
+  case msg_export_deq_short:
+    return cs.advance(4)
+        && pp.open("msg_export_deq_short")
+        && pp.fetch_bits_field(cs, 256, "msg_env_hash")
+        && pp.fetch_int_field(cs, 32, "next_workchain")
+        && pp.fetch_uint_field(cs, 64, "next_addr_pfx")
         && pp.fetch_uint_field(cs, 64, "import_block_lt")
         && pp.close();
   case msg_export_tr_req:
@@ -11676,38 +11781,143 @@ bool FutureSplitMerge::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 const FutureSplitMerge t_FutureSplitMerge;
 
 //
-// code for type `ShardDescr`
+// code for auxiliary type `ShardDescr_aux`
 //
-constexpr unsigned char ShardDescr::cons_tag[1];
 
-int ShardDescr::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(4) == 11 ? shard_descr : -1;
+int ShardDescr_aux::check_tag(const vm::CellSlice& cs) const {
+  return cons1;
 }
 
-bool ShardDescr::skip(vm::CellSlice& cs) const {
-  int flags;
-  return cs.advance(713)
-      && cs.fetch_uint_to(3, flags)
-      && flags == 0
-      && cs.advance(160)
-      && t_FutureSplitMerge.skip(cs)
-      && t_CurrencyCollection.skip(cs)
+bool ShardDescr_aux::skip(vm::CellSlice& cs) const {
+  return t_CurrencyCollection.skip(cs)
       && t_CurrencyCollection.skip(cs);
 }
 
-bool ShardDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
-  int flags;
-  return cs.fetch_ulong(4) == 11
-      && cs.advance(709)
-      && cs.fetch_uint_to(3, flags)
-      && flags == 0
-      && cs.advance(160)
-      && t_FutureSplitMerge.validate_skip(ops, cs, weak)
-      && t_CurrencyCollection.validate_skip(ops, cs, weak)
+bool ShardDescr_aux::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_CurrencyCollection.validate_skip(ops, cs, weak)
       && t_CurrencyCollection.validate_skip(ops, cs, weak);
 }
 
-bool ShardDescr::unpack(vm::CellSlice& cs, ShardDescr::Record& data) const {
+bool ShardDescr_aux::unpack(vm::CellSlice& cs, ShardDescr_aux::Record& data) const {
+  return t_CurrencyCollection.fetch_to(cs, data.fees_collected)
+      && t_CurrencyCollection.fetch_to(cs, data.funds_created);
+}
+
+bool ShardDescr_aux::unpack_cons1(vm::CellSlice& cs, Ref<CellSlice>& fees_collected, Ref<CellSlice>& funds_created) const {
+  return t_CurrencyCollection.fetch_to(cs, fees_collected)
+      && t_CurrencyCollection.fetch_to(cs, funds_created);
+}
+
+bool ShardDescr_aux::cell_unpack(Ref<vm::Cell> cell_ref, ShardDescr_aux::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ShardDescr_aux::cell_unpack_cons1(Ref<vm::Cell> cell_ref, Ref<CellSlice>& fees_collected, Ref<CellSlice>& funds_created) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons1(cs, fees_collected, funds_created) && cs.empty_ext();
+}
+
+bool ShardDescr_aux::pack(vm::CellBuilder& cb, const ShardDescr_aux::Record& data) const {
+  return t_CurrencyCollection.store_from(cb, data.fees_collected)
+      && t_CurrencyCollection.store_from(cb, data.funds_created);
+}
+
+bool ShardDescr_aux::pack_cons1(vm::CellBuilder& cb, Ref<CellSlice> fees_collected, Ref<CellSlice> funds_created) const {
+  return t_CurrencyCollection.store_from(cb, fees_collected)
+      && t_CurrencyCollection.store_from(cb, funds_created);
+}
+
+bool ShardDescr_aux::cell_pack(Ref<vm::Cell>& cell_ref, const ShardDescr_aux::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ShardDescr_aux::cell_pack_cons1(Ref<vm::Cell>& cell_ref, Ref<CellSlice> fees_collected, Ref<CellSlice> funds_created) const {
+  vm::CellBuilder cb;
+  return pack_cons1(cb, std::move(fees_collected), std::move(funds_created)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ShardDescr_aux::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open()
+      && pp.field("fees_collected")
+      && t_CurrencyCollection.print_skip(pp, cs)
+      && pp.field("funds_created")
+      && t_CurrencyCollection.print_skip(pp, cs)
+      && pp.close();
+}
+
+const ShardDescr_aux t_ShardDescr_aux;
+
+//
+// code for type `ShardDescr`
+//
+constexpr unsigned char ShardDescr::cons_tag[2];
+
+int ShardDescr::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case shard_descr:
+    return cs.prefetch_ulong(4) == 11 ? shard_descr : -1;
+  case shard_descr_new:
+    return cs.have(4) ? shard_descr_new : -1;
+  }
+  return -1;
+}
+
+bool ShardDescr::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case shard_descr: {
+    int flags;
+    return cs.advance(713)
+        && cs.fetch_uint_to(3, flags)
+        && flags == 0
+        && cs.advance(160)
+        && t_FutureSplitMerge.skip(cs)
+        && t_CurrencyCollection.skip(cs)
+        && t_CurrencyCollection.skip(cs);
+    }
+  case shard_descr_new: {
+    int flags;
+    return cs.advance(713)
+        && cs.fetch_uint_to(3, flags)
+        && flags == 0
+        && cs.advance(160)
+        && t_FutureSplitMerge.skip(cs)
+        && cs.advance_refs(1);
+    }
+  }
+  return false;
+}
+
+bool ShardDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case shard_descr: {
+    int flags;
+    return cs.fetch_ulong(4) == 11
+        && cs.advance(709)
+        && cs.fetch_uint_to(3, flags)
+        && flags == 0
+        && cs.advance(160)
+        && t_FutureSplitMerge.validate_skip(ops, cs, weak)
+        && t_CurrencyCollection.validate_skip(ops, cs, weak)
+        && t_CurrencyCollection.validate_skip(ops, cs, weak);
+    }
+  case shard_descr_new: {
+    int flags;
+    return cs.advance(713)
+        && cs.fetch_uint_to(3, flags)
+        && flags == 0
+        && cs.advance(160)
+        && t_FutureSplitMerge.validate_skip(ops, cs, weak)
+        && t_ShardDescr_aux.validate_skip_ref(ops, cs, weak);
+    }
+  }
+  return false;
+}
+
+bool ShardDescr::unpack(vm::CellSlice& cs, ShardDescr::Record_shard_descr& data) const {
   return cs.fetch_ulong(4) == 11
       && cs.fetch_uint_to(32, data.seq_no)
       && cs.fetch_uint_to(32, data.reg_mc_seqno)
@@ -11731,13 +11941,42 @@ bool ShardDescr::unpack(vm::CellSlice& cs, ShardDescr::Record& data) const {
       && t_CurrencyCollection.fetch_to(cs, data.funds_created);
 }
 
-bool ShardDescr::cell_unpack(Ref<vm::Cell> cell_ref, ShardDescr::Record& data) const {
+bool ShardDescr::cell_unpack(Ref<vm::Cell> cell_ref, ShardDescr::Record_shard_descr& data) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack(cs, data) && cs.empty_ext();
 }
 
-bool ShardDescr::pack(vm::CellBuilder& cb, const ShardDescr::Record& data) const {
+bool ShardDescr::unpack(vm::CellSlice& cs, ShardDescr::Record_shard_descr_new& data) const {
+  return cs.fetch_ulong(4) == 10
+      && cs.fetch_uint_to(32, data.seq_no)
+      && cs.fetch_uint_to(32, data.reg_mc_seqno)
+      && cs.fetch_uint_to(64, data.start_lt)
+      && cs.fetch_uint_to(64, data.end_lt)
+      && cs.fetch_bits_to(data.root_hash.bits(), 256)
+      && cs.fetch_bits_to(data.file_hash.bits(), 256)
+      && cs.fetch_bool_to(data.before_split)
+      && cs.fetch_bool_to(data.before_merge)
+      && cs.fetch_bool_to(data.want_split)
+      && cs.fetch_bool_to(data.want_merge)
+      && cs.fetch_bool_to(data.nx_cc_updated)
+      && cs.fetch_uint_to(3, data.flags)
+      && data.flags == 0
+      && cs.fetch_uint_to(32, data.next_catchain_seqno)
+      && cs.fetch_uint_to(64, data.next_validator_shard)
+      && cs.fetch_uint_to(32, data.min_ref_mc_seqno)
+      && cs.fetch_uint_to(32, data.gen_utime)
+      && t_FutureSplitMerge.fetch_to(cs, data.split_merge_at)
+      && t_ShardDescr_aux.cell_unpack(cs.fetch_ref(), data.r1);
+}
+
+bool ShardDescr::cell_unpack(Ref<vm::Cell> cell_ref, ShardDescr::Record_shard_descr_new& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ShardDescr::pack(vm::CellBuilder& cb, const ShardDescr::Record_shard_descr& data) const {
   return cb.store_long_bool(11, 4)
       && cb.store_ulong_rchk_bool(data.seq_no, 32)
       && cb.store_ulong_rchk_bool(data.reg_mc_seqno, 32)
@@ -11761,40 +12000,103 @@ bool ShardDescr::pack(vm::CellBuilder& cb, const ShardDescr::Record& data) const
       && t_CurrencyCollection.store_from(cb, data.funds_created);
 }
 
-bool ShardDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ShardDescr::Record& data) const {
+bool ShardDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ShardDescr::Record_shard_descr& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ShardDescr::pack(vm::CellBuilder& cb, const ShardDescr::Record_shard_descr_new& data) const {
+  Ref<vm::Cell> tmp_cell;
+  return cb.store_long_bool(10, 4)
+      && cb.store_ulong_rchk_bool(data.seq_no, 32)
+      && cb.store_ulong_rchk_bool(data.reg_mc_seqno, 32)
+      && cb.store_ulong_rchk_bool(data.start_lt, 64)
+      && cb.store_ulong_rchk_bool(data.end_lt, 64)
+      && cb.store_bits_bool(data.root_hash.cbits(), 256)
+      && cb.store_bits_bool(data.file_hash.cbits(), 256)
+      && cb.store_ulong_rchk_bool(data.before_split, 1)
+      && cb.store_ulong_rchk_bool(data.before_merge, 1)
+      && cb.store_ulong_rchk_bool(data.want_split, 1)
+      && cb.store_ulong_rchk_bool(data.want_merge, 1)
+      && cb.store_ulong_rchk_bool(data.nx_cc_updated, 1)
+      && cb.store_ulong_rchk_bool(data.flags, 3)
+      && data.flags == 0
+      && cb.store_ulong_rchk_bool(data.next_catchain_seqno, 32)
+      && cb.store_ulong_rchk_bool(data.next_validator_shard, 64)
+      && cb.store_ulong_rchk_bool(data.min_ref_mc_seqno, 32)
+      && cb.store_ulong_rchk_bool(data.gen_utime, 32)
+      && t_FutureSplitMerge.store_from(cb, data.split_merge_at)
+      && t_ShardDescr_aux.cell_pack(tmp_cell, data.r1)
+      && cb.store_ref_bool(std::move(tmp_cell));
+}
+
+bool ShardDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ShardDescr::Record_shard_descr_new& data) const {
   vm::CellBuilder cb;
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
 bool ShardDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  int flags;
-  return cs.fetch_ulong(4) == 11
-      && pp.open("shard_descr")
-      && pp.fetch_uint_field(cs, 32, "seq_no")
-      && pp.fetch_uint_field(cs, 32, "reg_mc_seqno")
-      && pp.fetch_uint_field(cs, 64, "start_lt")
-      && pp.fetch_uint_field(cs, 64, "end_lt")
-      && pp.fetch_bits_field(cs, 256, "root_hash")
-      && pp.fetch_bits_field(cs, 256, "file_hash")
-      && pp.fetch_uint_field(cs, 1, "before_split")
-      && pp.fetch_uint_field(cs, 1, "before_merge")
-      && pp.fetch_uint_field(cs, 1, "want_split")
-      && pp.fetch_uint_field(cs, 1, "want_merge")
-      && pp.fetch_uint_field(cs, 1, "nx_cc_updated")
-      && cs.fetch_uint_to(3, flags)
-      && pp.field_int(flags, "flags")
-      && flags == 0
-      && pp.fetch_uint_field(cs, 32, "next_catchain_seqno")
-      && pp.fetch_uint_field(cs, 64, "next_validator_shard")
-      && pp.fetch_uint_field(cs, 32, "min_ref_mc_seqno")
-      && pp.fetch_uint_field(cs, 32, "gen_utime")
-      && pp.field("split_merge_at")
-      && t_FutureSplitMerge.print_skip(pp, cs)
-      && pp.field("fees_collected")
-      && t_CurrencyCollection.print_skip(pp, cs)
-      && pp.field("funds_created")
-      && t_CurrencyCollection.print_skip(pp, cs)
-      && pp.close();
+  switch (get_tag(cs)) {
+  case shard_descr: {
+    int flags;
+    return cs.fetch_ulong(4) == 11
+        && pp.open("shard_descr")
+        && pp.fetch_uint_field(cs, 32, "seq_no")
+        && pp.fetch_uint_field(cs, 32, "reg_mc_seqno")
+        && pp.fetch_uint_field(cs, 64, "start_lt")
+        && pp.fetch_uint_field(cs, 64, "end_lt")
+        && pp.fetch_bits_field(cs, 256, "root_hash")
+        && pp.fetch_bits_field(cs, 256, "file_hash")
+        && pp.fetch_uint_field(cs, 1, "before_split")
+        && pp.fetch_uint_field(cs, 1, "before_merge")
+        && pp.fetch_uint_field(cs, 1, "want_split")
+        && pp.fetch_uint_field(cs, 1, "want_merge")
+        && pp.fetch_uint_field(cs, 1, "nx_cc_updated")
+        && cs.fetch_uint_to(3, flags)
+        && pp.field_int(flags, "flags")
+        && flags == 0
+        && pp.fetch_uint_field(cs, 32, "next_catchain_seqno")
+        && pp.fetch_uint_field(cs, 64, "next_validator_shard")
+        && pp.fetch_uint_field(cs, 32, "min_ref_mc_seqno")
+        && pp.fetch_uint_field(cs, 32, "gen_utime")
+        && pp.field("split_merge_at")
+        && t_FutureSplitMerge.print_skip(pp, cs)
+        && pp.field("fees_collected")
+        && t_CurrencyCollection.print_skip(pp, cs)
+        && pp.field("funds_created")
+        && t_CurrencyCollection.print_skip(pp, cs)
+        && pp.close();
+    }
+  case shard_descr_new: {
+    int flags;
+    return cs.advance(4)
+        && pp.open("shard_descr_new")
+        && pp.fetch_uint_field(cs, 32, "seq_no")
+        && pp.fetch_uint_field(cs, 32, "reg_mc_seqno")
+        && pp.fetch_uint_field(cs, 64, "start_lt")
+        && pp.fetch_uint_field(cs, 64, "end_lt")
+        && pp.fetch_bits_field(cs, 256, "root_hash")
+        && pp.fetch_bits_field(cs, 256, "file_hash")
+        && pp.fetch_uint_field(cs, 1, "before_split")
+        && pp.fetch_uint_field(cs, 1, "before_merge")
+        && pp.fetch_uint_field(cs, 1, "want_split")
+        && pp.fetch_uint_field(cs, 1, "want_merge")
+        && pp.fetch_uint_field(cs, 1, "nx_cc_updated")
+        && cs.fetch_uint_to(3, flags)
+        && pp.field_int(flags, "flags")
+        && flags == 0
+        && pp.fetch_uint_field(cs, 32, "next_catchain_seqno")
+        && pp.fetch_uint_field(cs, 64, "next_validator_shard")
+        && pp.fetch_uint_field(cs, 32, "min_ref_mc_seqno")
+        && pp.fetch_uint_field(cs, 32, "gen_utime")
+        && pp.field("split_merge_at")
+        && t_FutureSplitMerge.print_skip(pp, cs)
+        && pp.field()
+        && t_ShardDescr_aux.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for ShardDescr");
 }
 
 const ShardDescr t_ShardDescr;
@@ -14673,6 +14975,93 @@ bool WorkchainDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 const WorkchainDescr t_WorkchainDescr;
 
 //
+// code for type `ComplaintPricing`
+//
+constexpr unsigned char ComplaintPricing::cons_tag[1];
+
+int ComplaintPricing::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 26 ? complaint_prices : -1;
+}
+
+bool ComplaintPricing::skip(vm::CellSlice& cs) const {
+  return cs.advance(8)
+      && t_Grams.skip(cs)
+      && t_Grams.skip(cs)
+      && t_Grams.skip(cs);
+}
+
+bool ComplaintPricing::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 26
+      && t_Grams.validate_skip(ops, cs, weak)
+      && t_Grams.validate_skip(ops, cs, weak)
+      && t_Grams.validate_skip(ops, cs, weak);
+}
+
+bool ComplaintPricing::unpack(vm::CellSlice& cs, ComplaintPricing::Record& data) const {
+  return cs.fetch_ulong(8) == 26
+      && t_Grams.fetch_to(cs, data.deposit)
+      && t_Grams.fetch_to(cs, data.bit_price)
+      && t_Grams.fetch_to(cs, data.cell_price);
+}
+
+bool ComplaintPricing::unpack_complaint_prices(vm::CellSlice& cs, Ref<CellSlice>& deposit, Ref<CellSlice>& bit_price, Ref<CellSlice>& cell_price) const {
+  return cs.fetch_ulong(8) == 26
+      && t_Grams.fetch_to(cs, deposit)
+      && t_Grams.fetch_to(cs, bit_price)
+      && t_Grams.fetch_to(cs, cell_price);
+}
+
+bool ComplaintPricing::cell_unpack(Ref<vm::Cell> cell_ref, ComplaintPricing::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ComplaintPricing::cell_unpack_complaint_prices(Ref<vm::Cell> cell_ref, Ref<CellSlice>& deposit, Ref<CellSlice>& bit_price, Ref<CellSlice>& cell_price) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_complaint_prices(cs, deposit, bit_price, cell_price) && cs.empty_ext();
+}
+
+bool ComplaintPricing::pack(vm::CellBuilder& cb, const ComplaintPricing::Record& data) const {
+  return cb.store_long_bool(26, 8)
+      && t_Grams.store_from(cb, data.deposit)
+      && t_Grams.store_from(cb, data.bit_price)
+      && t_Grams.store_from(cb, data.cell_price);
+}
+
+bool ComplaintPricing::pack_complaint_prices(vm::CellBuilder& cb, Ref<CellSlice> deposit, Ref<CellSlice> bit_price, Ref<CellSlice> cell_price) const {
+  return cb.store_long_bool(26, 8)
+      && t_Grams.store_from(cb, deposit)
+      && t_Grams.store_from(cb, bit_price)
+      && t_Grams.store_from(cb, cell_price);
+}
+
+bool ComplaintPricing::cell_pack(Ref<vm::Cell>& cell_ref, const ComplaintPricing::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintPricing::cell_pack_complaint_prices(Ref<vm::Cell>& cell_ref, Ref<CellSlice> deposit, Ref<CellSlice> bit_price, Ref<CellSlice> cell_price) const {
+  vm::CellBuilder cb;
+  return pack_complaint_prices(cb, std::move(deposit), std::move(bit_price), std::move(cell_price)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintPricing::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 26
+      && pp.open("complaint_prices")
+      && pp.field("deposit")
+      && t_Grams.print_skip(pp, cs)
+      && pp.field("bit_price")
+      && t_Grams.print_skip(pp, cs)
+      && pp.field("cell_price")
+      && t_Grams.print_skip(pp, cs)
+      && pp.close();
+}
+
+const ComplaintPricing t_ComplaintPricing;
+
+//
 // code for type `BlockCreateFees`
 //
 constexpr unsigned char BlockCreateFees::cons_tag[1];
@@ -15540,6 +15929,8 @@ int ConfigParam::get_tag(const vm::CellSlice& cs) const {
     return cons11;
   case 12:
     return cons12;
+  case 13:
+    return cons13;
   case 14:
     return cons14;
   case 15:
@@ -15613,6 +16004,8 @@ int ConfigParam::check_tag(const vm::CellSlice& cs) const {
     return cons11;
   case cons12:
     return cons12;
+  case cons13:
+    return cons13;
   case cons14:
     return cons14;
   case cons15:
@@ -15698,6 +16091,9 @@ bool ConfigParam::skip(vm::CellSlice& cs) const {
   case cons12:
     return t_HashmapE_32_WorkchainDescr.skip(cs)
         && m_ == 12;
+  case cons13:
+    return t_ComplaintPricing.skip(cs)
+        && m_ == 13;
   case cons14:
     return t_BlockCreateFees.skip(cs)
         && m_ == 14;
@@ -15814,6 +16210,9 @@ bool ConfigParam::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
   case cons12:
     return t_HashmapE_32_WorkchainDescr.validate_skip(ops, cs, weak)
         && m_ == 12;
+  case cons13:
+    return t_ComplaintPricing.validate_skip(ops, cs, weak)
+        && m_ == 13;
   case cons14:
     return t_BlockCreateFees.validate_skip(ops, cs, weak)
         && m_ == 14;
@@ -16155,6 +16554,28 @@ bool ConfigParam::cell_unpack_cons12(Ref<vm::Cell> cell_ref, Ref<CellSlice>& wor
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack_cons12(cs, workchains) && cs.empty_ext();
+}
+
+bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons13& data) const {
+  return t_ComplaintPricing.fetch_to(cs, data.x)
+      && m_ == 13;
+}
+
+bool ConfigParam::unpack_cons13(vm::CellSlice& cs, Ref<CellSlice>& x) const {
+  return t_ComplaintPricing.fetch_to(cs, x)
+      && m_ == 13;
+}
+
+bool ConfigParam::cell_unpack(Ref<vm::Cell> cell_ref, ConfigParam::Record_cons13& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConfigParam::cell_unpack_cons13(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_cons13(cs, x) && cs.empty_ext();
 }
 
 bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons14& data) const {
@@ -16855,6 +17276,26 @@ bool ConfigParam::cell_pack_cons12(Ref<vm::Cell>& cell_ref, Ref<CellSlice> workc
   return pack_cons12(cb, std::move(workchains)) && std::move(cb).finalize_to(cell_ref);
 }
 
+bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons13& data) const {
+  return t_ComplaintPricing.store_from(cb, data.x)
+      && m_ == 13;
+}
+
+bool ConfigParam::pack_cons13(vm::CellBuilder& cb, Ref<CellSlice> x) const {
+  return t_ComplaintPricing.store_from(cb, x)
+      && m_ == 13;
+}
+
+bool ConfigParam::cell_pack(Ref<vm::Cell>& cell_ref, const ConfigParam::Record_cons13& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConfigParam::cell_pack_cons13(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) const {
+  vm::CellBuilder cb;
+  return pack_cons13(cb, std::move(x)) && std::move(cb).finalize_to(cell_ref);
+}
+
 bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons14& data) const {
   return t_BlockCreateFees.store_from(cb, data.x)
       && m_ == 14;
@@ -17341,6 +17782,12 @@ bool ConfigParam::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && pp.field("workchains")
         && t_HashmapE_32_WorkchainDescr.print_skip(pp, cs)
         && m_ == 12
+        && pp.close();
+  case cons13:
+    return pp.open()
+        && pp.field()
+        && t_ComplaintPricing.print_skip(pp, cs)
+        && m_ == 13
         && pp.close();
   case cons14:
     return pp.open()
@@ -18029,6 +18476,205 @@ bool TopBlockDescrSet::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 }
 
 const TopBlockDescrSet t_TopBlockDescrSet;
+
+//
+// code for type `ComplaintDescr`
+//
+constexpr unsigned ComplaintDescr::cons_tag[1];
+
+int ComplaintDescr::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(32) == 0x7e545dda ? no_blk_gen : -1;
+}
+
+bool ComplaintDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(32) == 0x7e545dda
+      && cs.advance_ext(0x202a0);
+}
+
+bool ComplaintDescr::unpack(vm::CellSlice& cs, ComplaintDescr::Record& data) const {
+  return cs.fetch_ulong(32) == 0x7e545dda
+      && cs.fetch_subslice_to(608, data.mc_blk_ref)
+      && cs.fetch_uint_to(32, data.from_utime)
+      && cs.fetch_uint_to(32, data.to_utime)
+      && cs.fetch_ref_to(data.state_proof)
+      && cs.fetch_ref_to(data.prod_proof);
+}
+
+bool ComplaintDescr::cell_unpack(Ref<vm::Cell> cell_ref, ComplaintDescr::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ComplaintDescr::pack(vm::CellBuilder& cb, const ComplaintDescr::Record& data) const {
+  return cb.store_long_bool(0x7e545dda, 32)
+      && cb.append_cellslice_chk(data.mc_blk_ref, 608)
+      && cb.store_ulong_rchk_bool(data.from_utime, 32)
+      && cb.store_ulong_rchk_bool(data.to_utime, 32)
+      && cb.store_ref_bool(data.state_proof)
+      && cb.store_ref_bool(data.prod_proof);
+}
+
+bool ComplaintDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ComplaintDescr::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(32) == 0x7e545dda
+      && pp.open("no_blk_gen")
+      && pp.field("mc_blk_ref")
+      && t_ExtBlkRef.print_skip(pp, cs)
+      && pp.fetch_uint_field(cs, 32, "from_utime")
+      && pp.fetch_uint_field(cs, 32, "to_utime")
+      && pp.field("state_proof")
+      && t_Anything.print_ref(pp, cs.fetch_ref())
+      && pp.field("prod_proof")
+      && t_Anything.print_ref(pp, cs.fetch_ref())
+      && pp.close();
+}
+
+const ComplaintDescr t_ComplaintDescr;
+
+//
+// code for type `ValidatorComplaint`
+//
+constexpr unsigned char ValidatorComplaint::cons_tag[1];
+
+int ValidatorComplaint::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0xba ? validator_complaint : -1;
+}
+
+bool ValidatorComplaint::skip(vm::CellSlice& cs) const {
+  return cs.advance_ext(0x10210)
+      && t_Grams.skip(cs)
+      && t_Grams.skip(cs)
+      && cs.advance(32);
+}
+
+bool ValidatorComplaint::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0xba
+      && cs.advance(256)
+      && t_ComplaintDescr.validate_skip_ref(ops, cs, weak)
+      && cs.advance(264)
+      && t_Grams.validate_skip(ops, cs, weak)
+      && t_Grams.validate_skip(ops, cs, weak)
+      && cs.advance(32);
+}
+
+bool ValidatorComplaint::unpack(vm::CellSlice& cs, ValidatorComplaint::Record& data) const {
+  return cs.fetch_ulong(8) == 0xba
+      && cs.fetch_uint256_to(256, data.validator_pubkey)
+      && cs.fetch_ref_to(data.description)
+      && cs.fetch_uint_to(8, data.severity)
+      && cs.fetch_uint256_to(256, data.reward_addr)
+      && t_Grams.fetch_to(cs, data.paid)
+      && t_Grams.fetch_to(cs, data.suggested_fine)
+      && cs.fetch_uint_to(32, data.suggested_fine_part);
+}
+
+bool ValidatorComplaint::cell_unpack(Ref<vm::Cell> cell_ref, ValidatorComplaint::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ValidatorComplaint::pack(vm::CellBuilder& cb, const ValidatorComplaint::Record& data) const {
+  return cb.store_long_bool(0xba, 8)
+      && cb.store_int256_bool(data.validator_pubkey, 256, false)
+      && cb.store_ref_bool(data.description)
+      && cb.store_ulong_rchk_bool(data.severity, 8)
+      && cb.store_int256_bool(data.reward_addr, 256, false)
+      && t_Grams.store_from(cb, data.paid)
+      && t_Grams.store_from(cb, data.suggested_fine)
+      && cb.store_ulong_rchk_bool(data.suggested_fine_part, 32);
+}
+
+bool ValidatorComplaint::cell_pack(Ref<vm::Cell>& cell_ref, const ValidatorComplaint::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ValidatorComplaint::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0xba
+      && pp.open("validator_complaint")
+      && pp.fetch_uint256_field(cs, 256, "validator_pubkey")
+      && pp.field("description")
+      && t_ComplaintDescr.print_ref(pp, cs.fetch_ref())
+      && pp.fetch_uint_field(cs, 8, "severity")
+      && pp.fetch_uint256_field(cs, 256, "reward_addr")
+      && pp.field("paid")
+      && t_Grams.print_skip(pp, cs)
+      && pp.field("suggested_fine")
+      && t_Grams.print_skip(pp, cs)
+      && pp.fetch_uint_field(cs, 32, "suggested_fine_part")
+      && pp.close();
+}
+
+const ValidatorComplaint t_ValidatorComplaint;
+
+//
+// code for type `ValidatorComplaintStatus`
+//
+constexpr unsigned char ValidatorComplaintStatus::cons_tag[1];
+
+int ValidatorComplaintStatus::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0x2d ? complaint_status : -1;
+}
+
+bool ValidatorComplaintStatus::skip(vm::CellSlice& cs) const {
+  return cs.advance_ext(0x10008)
+      && t_HashmapE_16_True.skip(cs)
+      && cs.advance(320);
+}
+
+bool ValidatorComplaintStatus::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0x2d
+      && t_ValidatorComplaint.validate_skip_ref(ops, cs, weak)
+      && t_HashmapE_16_True.validate_skip(ops, cs, weak)
+      && cs.advance(320);
+}
+
+bool ValidatorComplaintStatus::unpack(vm::CellSlice& cs, ValidatorComplaintStatus::Record& data) const {
+  return cs.fetch_ulong(8) == 0x2d
+      && cs.fetch_ref_to(data.complaint)
+      && t_HashmapE_16_True.fetch_to(cs, data.voters)
+      && cs.fetch_uint256_to(256, data.vset_id)
+      && cs.fetch_int_to(64, data.weight_remaining);
+}
+
+bool ValidatorComplaintStatus::cell_unpack(Ref<vm::Cell> cell_ref, ValidatorComplaintStatus::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ValidatorComplaintStatus::pack(vm::CellBuilder& cb, const ValidatorComplaintStatus::Record& data) const {
+  return cb.store_long_bool(0x2d, 8)
+      && cb.store_ref_bool(data.complaint)
+      && t_HashmapE_16_True.store_from(cb, data.voters)
+      && cb.store_int256_bool(data.vset_id, 256, false)
+      && cb.store_long_rchk_bool(data.weight_remaining, 64);
+}
+
+bool ValidatorComplaintStatus::cell_pack(Ref<vm::Cell>& cell_ref, const ValidatorComplaintStatus::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ValidatorComplaintStatus::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0x2d
+      && pp.open("complaint_status")
+      && pp.field("complaint")
+      && t_ValidatorComplaint.print_ref(pp, cs.fetch_ref())
+      && pp.field("voters")
+      && t_HashmapE_16_True.print_skip(pp, cs)
+      && pp.fetch_uint256_field(cs, 256, "vset_id")
+      && pp.fetch_int_field(cs, 64, "weight_remaining")
+      && pp.close();
+}
+
+const ValidatorComplaintStatus t_ValidatorComplaintStatus;
 
 //
 // code for type `VmCellSlice`
@@ -21496,13 +22142,14 @@ const HashmapE t_HashmapE_256_SimpleLib{256, t_SimpleLib};
 const RefT t_Ref_StateInit{t_StateInit};
 const Either t_Either_StateInit_Ref_StateInit{t_StateInit, t_Ref_StateInit};
 const Maybe t_Maybe_Either_StateInit_Ref_StateInit{t_Either_StateInit_Ref_StateInit};
-const NatLeq t_natleq_96{96};
 const Message t_Message_Any{t_Anything};
+const NatLeq t_natleq_96{96};
 const RefT t_Ref_Message_Any{t_Message_Any};
 const RefT t_Ref_Transaction{t_Transaction};
 const RefT t_Ref_MsgEnvelope{t_MsgEnvelope};
 const HashmapAugE t_HashmapAugE_256_InMsg_ImportFees{256, t_InMsg, t_ImportFees};
 const RefT t_Ref_InMsg{t_InMsg};
+const UInt t_uint63{63};
 const HashmapAugE t_HashmapAugE_256_OutMsg_CurrencyCollection{256, t_OutMsg, t_CurrencyCollection};
 const HashmapAugE t_HashmapAugE_352_EnqueuedMsg_uint64{352, t_EnqueuedMsg, t_uint64};
 const HashmapE t_HashmapE_96_ProcessedUpto{96, t_ProcessedUpto};
@@ -21514,7 +22161,7 @@ const HashmapAugE t_HashmapAugE_256_ShardAccount_DepthBalanceInfo{256, t_ShardAc
 const UInt t_uint15{15};
 const Maybe t_Maybe_Ref_Message_Any{t_Ref_Message_Any};
 const HashmapE t_HashmapE_15_Ref_Message_Any{15, t_Ref_Message_Any};
-const RefT t_Ref_TYPE_1613{t_Transaction_aux};
+const RefT t_Ref_TYPE_1614{t_Transaction_aux};
 const HASH_UPDATE t_HASH_UPDATE_Account{t_Account};
 const RefT t_Ref_HASH_UPDATE_Account{t_HASH_UPDATE_Account};
 const RefT t_Ref_TransactionDescr{t_TransactionDescr};
@@ -21523,7 +22170,7 @@ const HashmapAugE t_HashmapAugE_256_AccountBlock_CurrencyCollection{256, t_Accou
 const VarUInteger t_VarUInteger_3{3};
 const Maybe t_Maybe_VarUInteger_3{t_VarUInteger_3};
 const Maybe t_Maybe_int32{t_int32};
-const RefT t_Ref_TYPE_1624{t_TrComputePhase_aux};
+const RefT t_Ref_TYPE_1625{t_TrComputePhase_aux};
 const UInt t_uint16{16};
 const Maybe t_Maybe_TrStoragePhase{t_TrStoragePhase};
 const Maybe t_Maybe_TrCreditPhase{t_TrCreditPhase};
@@ -21540,7 +22187,7 @@ const RefT t_Ref_OutMsgQueueInfo{t_OutMsgQueueInfo};
 const RefT t_Ref_ShardAccounts{t_ShardAccounts};
 const HashmapE t_HashmapE_256_LibDescr{256, t_LibDescr};
 const Maybe t_Maybe_BlkMasterInfo{t_BlkMasterInfo};
-const RefT t_Ref_TYPE_1638{t_ShardStateUnsplit_aux};
+const RefT t_Ref_TYPE_1639{t_ShardStateUnsplit_aux};
 const RefT t_Ref_McStateExtra{t_McStateExtra};
 const Maybe t_Maybe_Ref_McStateExtra{t_Ref_McStateExtra};
 const RefT t_Ref_ShardStateUnsplit{t_ShardStateUnsplit};
@@ -21559,9 +22206,10 @@ const RefT t_Ref_OutMsgDescr{t_OutMsgDescr};
 const RefT t_Ref_ShardAccountBlocks{t_ShardAccountBlocks};
 const RefT t_Ref_McBlockExtra{t_McBlockExtra};
 const Maybe t_Maybe_Ref_McBlockExtra{t_Ref_McBlockExtra};
-const RefT t_Ref_TYPE_1649{t_ValueFlow_aux};
-const RefT t_Ref_TYPE_1650{t_ValueFlow_aux1};
+const RefT t_Ref_TYPE_1650{t_ValueFlow_aux};
+const RefT t_Ref_TYPE_1651{t_ValueFlow_aux1};
 const NatWidth t_natwidth_3{3};
+const RefT t_Ref_TYPE_1655{t_ShardDescr_aux};
 const BinTree t_BinTree_ShardDescr{t_ShardDescr};
 const RefT t_Ref_BinTree_ShardDescr{t_BinTree_ShardDescr};
 const HashmapE t_HashmapE_32_Ref_BinTree_ShardDescr{32, t_Ref_BinTree_ShardDescr};
@@ -21573,11 +22221,11 @@ const HashmapE t_HashmapE_256_CreatorStats{256, t_CreatorStats};
 const HashmapAugE t_HashmapAugE_256_CreatorStats_uint32{256, t_CreatorStats, t_uint32};
 const NatWidth t_natwidth_16{16};
 const Maybe t_Maybe_ExtBlkRef{t_ExtBlkRef};
-const RefT t_Ref_TYPE_1667{t_McStateExtra_aux};
+const RefT t_Ref_TYPE_1669{t_McStateExtra_aux};
 const RefT t_Ref_SignedCertificate{t_SignedCertificate};
 const HashmapE t_HashmapE_16_CryptoSignaturePair{16, t_CryptoSignaturePair};
 const Maybe t_Maybe_Ref_InMsg{t_Ref_InMsg};
-const RefT t_Ref_TYPE_1675{t_McBlockExtra_aux};
+const RefT t_Ref_TYPE_1677{t_McBlockExtra_aux};
 const Hashmap t_Hashmap_16_ValidatorDescr{16, t_ValidatorDescr};
 const HashmapE t_HashmapE_16_ValidatorDescr{16, t_ValidatorDescr};
 const Hashmap t_Hashmap_32_True{32, t_True};
@@ -21600,13 +22248,15 @@ const RefT t_Ref_BlockSignatures{t_BlockSignatures};
 const Maybe t_Maybe_Ref_BlockSignatures{t_Ref_BlockSignatures};
 const RefT t_Ref_TopBlockDescr{t_TopBlockDescr};
 const HashmapE t_HashmapE_96_Ref_TopBlockDescr{96, t_Ref_TopBlockDescr};
+const RefT t_Ref_ComplaintDescr{t_ComplaintDescr};
+const RefT t_Ref_ValidatorComplaint{t_ValidatorComplaint};
 const Int t_int257{257};
 const NatWidth t_natwidth_10{10};
 const NatLeq t_natleq_4{4};
 const RefT t_Ref_VmStackValue{t_VmStackValue};
 const NatWidth t_natwidth_24{24};
 const HashmapE t_HashmapE_4_VmStackValue{4, t_VmStackValue};
-const RefT t_Ref_TYPE_1709{t_VmGasLimits_aux};
+const RefT t_Ref_TYPE_1715{t_VmGasLimits_aux};
 const HashmapE t_HashmapE_256_Ref_Cell{256, t_RefCell};
 const UInt t_uint13{13};
 const Maybe t_Maybe_uint13{t_uint13};
@@ -21614,7 +22264,6 @@ const Maybe t_Maybe_VmStack{t_VmStack};
 const Int t_int16{16};
 const Maybe t_Maybe_int16{t_int16};
 const RefT t_Ref_VmCont{t_VmCont};
-const UInt t_uint63{63};
 const RefT t_Ref_DNSRecord{t_DNSRecord};
 const HashmapE t_HashmapE_16_Ref_DNSRecord{16, t_Ref_DNSRecord};
 
@@ -21639,6 +22288,7 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("TickTock", &t_TickTock)
       && func("SimpleLib", &t_SimpleLib)
       && func("StateInit", &t_StateInit)
+      && func("MessageAny", &t_MessageAny)
       && func("IntermediateAddress", &t_IntermediateAddress)
       && func("MsgEnvelope", &t_MsgEnvelope)
       && func("Transaction", &t_Transaction)
@@ -21721,6 +22371,7 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("ConfigProposal", &t_ConfigProposal)
       && func("ConfigProposalStatus", &t_ConfigProposalStatus)
       && func("WorkchainDescr", &t_WorkchainDescr)
+      && func("ComplaintPricing", &t_ComplaintPricing)
       && func("BlockCreateFees", &t_BlockCreateFees)
       && func("StoragePrices", &t_StoragePrices)
       && func("GasLimitsPrices", &t_GasLimitsPrices)
@@ -21736,6 +22387,9 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("BlockProof", &t_BlockProof)
       && func("TopBlockDescr", &t_TopBlockDescr)
       && func("TopBlockDescrSet", &t_TopBlockDescrSet)
+      && func("ComplaintDescr", &t_ComplaintDescr)
+      && func("ValidatorComplaint", &t_ValidatorComplaint)
+      && func("ValidatorComplaintStatus", &t_ValidatorComplaintStatus)
       && func("VmStackValue", &t_VmStackValue)
       && func("VmCellSlice", &t_VmCellSlice)
       && func("VmCont", &t_VmCont)

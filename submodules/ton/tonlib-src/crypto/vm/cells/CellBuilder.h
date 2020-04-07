@@ -107,9 +107,9 @@ class CellBuilder : public td::CntObject {
   CellBuilder& store_bits_same(std::size_t bit_count, bool val);
   bool store_bits_bool(const unsigned char* str, std::size_t bit_count, int bit_offset = 0);
   bool store_bits_bool(td::ConstBitPtr bs, std::size_t bit_count);
-  template <unsigned n>
-  bool store_bits_bool(const td::BitArray<n>& ba) {
-    return store_bits_bool(ba.cbits(), n);
+  template <typename T>
+  bool store_bits_bool(const T& ba) {
+    return store_bits_bool(ba.bits(), ba.size());
   }
   bool store_bits_same_bool(std::size_t bit_count, bool val);
   CellBuilder& store_zeroes(std::size_t bit_count) {
@@ -181,9 +181,9 @@ class CellBuilder : public td::CntObject {
   bool finalize_to(Ref<Cell>& res, bool special = false) {
     return (res = finalize(special)).not_null();
   }
-  CellSlice as_cellslice() const&;
+  CellSlice as_cellslice() const &;
   CellSlice as_cellslice() &&;
-  Ref<CellSlice> as_cellslice_ref() const&;
+  Ref<CellSlice> as_cellslice_ref() const &;
   Ref<CellSlice> as_cellslice_ref() &&;
   static td::int64 get_total_cell_builders() {
     return get_thread_safe_counter().sum();

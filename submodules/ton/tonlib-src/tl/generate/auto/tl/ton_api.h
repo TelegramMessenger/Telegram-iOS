@@ -264,6 +264,8 @@ class engine_validator_keyHash;
 
 class engine_validator_oneStat;
 
+class engine_validator_proposalVote;
+
 class engine_validator_signature;
 
 class engine_validator_stats;
@@ -4977,6 +4979,31 @@ class engine_validator_oneStat final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class engine_validator_proposalVote final : public Object {
+ public:
+  td::Bits256 perm_key_;
+  td::BufferSlice to_send_;
+
+  engine_validator_proposalVote();
+
+  engine_validator_proposalVote(td::Bits256 const &perm_key_, td::BufferSlice &&to_send_);
+
+  static const std::int32_t ID = 2137401069;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<engine_validator_proposalVote> fetch(td::TlParser &p);
+
+  explicit engine_validator_proposalVote(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class engine_validator_signature final : public Object {
  public:
   td::BufferSlice signature_;
@@ -8429,6 +8456,34 @@ class engine_validator_createElectionBid final : public Function {
   static object_ptr<engine_validator_createElectionBid> fetch(td::TlParser &p);
 
   explicit engine_validator_createElectionBid(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class engine_validator_createProposalVote final : public Function {
+ public:
+  td::BufferSlice vote_;
+
+  engine_validator_createProposalVote();
+
+  explicit engine_validator_createProposalVote(td::BufferSlice &&vote_);
+
+  static const std::int32_t ID = 498278765;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<engine_validator_proposalVote>;
+
+  static object_ptr<engine_validator_createProposalVote> fetch(td::TlParser &p);
+
+  explicit engine_validator_createProposalVote(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 

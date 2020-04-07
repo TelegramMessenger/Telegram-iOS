@@ -1,0 +1,67 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+86400 30 * =: expire-in
+false =: critical
+-1 =: old-hash
+
+begin-options
+     " <index> <new-value-boc> [-x <expire-in>] [-c] [-H <old-hash>] [<savefile>]" +cr +tab
+    +"Creates a new configuration proposal for setting configuration parameter <index> to <new-value-boc> (`null` means no new value), "
+    +"and saves it as an internal message body into <savefile>.boc ('config-msg-body.boc' by default)"
+     disable-digit-options generic-help-setopt
+  "c" "--critical" { true =: critical } short-long-option
+    "Creates a critical parameter change proposal" option-help
+  "x" "--expires-in" { parse-int =: expire-in } short-long-option-arg
+    "Sets proposal expiration time in seconds (default " expire-in (.) $+ +")" option-help
+  "H" "--old-hash" { (hex-number) not abort"256-bit hex number expected as hash" =: old-hash }
+     short-long-option-arg
+     "Sets the required cell hash of existing parameter value (0 means no value)" option-help 
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# dup 2 < swap 3 > or ' usage if
+3 :$1..n
+
+$1 parse-int dup =: param-idx
+  32 fits not abort"parameter index out of range"
+$2 =: boc-filename
+$3 "config-msg-body.boc" replace-if-null =: savefile
+expire-in now + =: expire-at
+
+boc-filename dup "null" $= {
+  ."New value of configuration parameter" param-idx . ."is null" cr drop null
+} {
+  ."Loading new value of configuration parameter " param-idx . ."from file " dup type cr
+  boc-filename file>B B>boc
+  dup <s csr. cr
+} cond
+=: param-value
+
+param-value param-idx is-valid-config? not abort"not a valid value for chosen configuration parameter"
+
+critical { ."Critical" } { ."Non-critical" } cond
+." configuration proposal will expire at " expire-at . ."(in " expire-in . ."seconds)" cr
+
+now 32 << param-idx + =: query-id
+."Query id is " query-id . cr
+
+// create message body
+<b x{6e565052} s, query-id 64 u, expire-at 32 u, 
+  <b x{f3} s, param-idx 32 i, param-value dict, 
+     old-hash tuck 0>= tuck 1 i, -rot { 256 u, } { drop } cond b> ref, 
+  critical 1 i, b>
+
+dup ."resulting internal message body: " <s csr. cr
+2 boc+>B dup Bx. cr
+
+param-value dup null? { drop } {
+  totalcsize swap ."(a total of " . ."data bits, " . ."cell references -> " 
+  drop dup Blen . ."BoC data bytes)" cr
+} cond
+
+savefile tuck B>file
+."(Saved to file " type .")" cr

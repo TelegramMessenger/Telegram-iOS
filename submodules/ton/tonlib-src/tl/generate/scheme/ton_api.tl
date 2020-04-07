@@ -598,6 +598,7 @@ engine.validator.success = engine.validator.Success;
 engine.validator.jsonConfig data:string = engine.validator.JsonConfig;
 
 engine.validator.electionBid election_date:int perm_key:int256 adnl_addr:int256 to_send_payload:bytes = engine.validator.ElectionBid; 
+engine.validator.proposalVote perm_key:int256 to_send:bytes = engine.validator.ProposalVote;
 
 engine.validator.dhtServerStatus id:int256 status:int = engine.validator.DhtServerStatus;
 engine.validator.dhtServersStatus servers:(vector engine.validator.dhtServerStatus) = engine.validator.DhtServersStatus;
@@ -638,6 +639,7 @@ engine.validator.getConfig = engine.validator.JsonConfig;
 engine.validator.setVerbosity verbosity:int = engine.validator.Success; 
 
 engine.validator.createElectionBid election_date:int election_addr:string wallet:string = engine.validator.ElectionBid;
+engine.validator.createProposalVote vote:bytes = engine.validator.ProposalVote; 
 
 engine.validator.checkDhtServers id:int256 = engine.validator.DhtServersStatus;
 

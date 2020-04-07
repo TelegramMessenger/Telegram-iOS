@@ -27,9 +27,26 @@
 #include <limits>
 
 namespace ton {
-td::Ref<vm::Cell> HighloadWallet::get_init_state(const td::Ed25519::PublicKey& public_key,
-                                                 td::uint32 wallet_id) noexcept {
-  auto code = get_init_code();
+td::optional<td::int32> HighloadWallet::guess_revision(const vm::Cell::Hash& code_hash) {
+  for (td::int32 i = 1; i <= 2; i++) {
+    if (get_init_code(i)->get_hash() == code_hash) {
+      return i;
+    }
+  }
+  return {};
+}
+td::optional<td::int32> HighloadWallet::guess_revision(const block::StdAddress& address,
+                                                       const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) {
+  for (td::int32 i = 1; i <= 2; i++) {
+    if (GenericAccount::get_address(address.workchain, get_init_state(public_key, wallet_id, i)) == address) {
+      return i;
+    }
+  }
+  return {};
+}
+td::Ref<vm::Cell> HighloadWallet::get_init_state(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id,
+                                                 td::int32 revision) noexcept {
+  auto code = get_init_code(revision);
   auto data = get_init_data(public_key, wallet_id);
   return GenericAccount::get_init_state(std::move(code), std::move(data));
 }
@@ -80,12 +97,12 @@ td::Ref<vm::Cell> HighloadWallet::make_a_gift_message(const td::Ed25519::Private
   return vm::CellBuilder().store_bytes(signature).append_cellslice(vm::load_cell_slice(message_outer)).finalize();
 }
 
-td::Ref<vm::Cell> HighloadWallet::get_init_code() noexcept {
-  return SmartContractCode::get_code(SmartContractCode::HighloadWalletV1);
+td::Ref<vm::Cell> HighloadWallet::get_init_code(td::int32 revision) noexcept {
+  return SmartContractCode::get_code(SmartContractCode::HighloadWalletV1, revision);
 }
 
 vm::CellHash HighloadWallet::get_init_code_hash() noexcept {
-  return get_init_code()->get_hash();
+  return get_init_code(0)->get_hash();
 }
 
 td::Ref<vm::Cell> HighloadWallet::get_init_data(const td::Ed25519::PublicKey& public_key,

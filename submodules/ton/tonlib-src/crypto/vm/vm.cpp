@@ -44,7 +44,8 @@ VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, int flags, Ref<Cell> _
     , quit0(true, 0)
     , quit1(true, 1)
     , log(log)
-    , libraries(std::move(_libraries)) {
+    , libraries(std::move(_libraries))
+    , stack_trace((flags >> 2) & 1) {
   ensure_throw(init_cp(0));
   set_c4(std::move(_data));
   if (init_c7.not_null()) {
@@ -63,7 +64,8 @@ VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, const GasLimits& gas, 
     , quit1(true, 1)
     , log(log)
     , gas(gas)
-    , libraries(std::move(_libraries)) {
+    , libraries(std::move(_libraries))
+    , stack_trace((flags >> 2) & 1) {
   ensure_throw(init_cp(0));
   set_c4(std::move(_data));
   if (init_c7.not_null()) {

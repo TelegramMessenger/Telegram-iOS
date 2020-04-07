@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "common/bitstring.h"
 #include <cstring>
@@ -22,7 +22,7 @@
 #include "td/utils/as.h"
 #include "td/utils/bits.h"
 #include "td/utils/misc.h"
-#include "crypto/openssl/digest.h"
+#include "crypto/openssl/digest.hpp"
 
 namespace td {
 

@@ -1,0 +1,65 @@
+#!/usr/bin/fift -s
+"Asm.fif" include
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+// only the next three lines differ in elector/configuration smart contract upgrades
+"configuration" =: name
+"auto/config-code.fif" =: src-file
+-1000 =: param-idx
+
+86400 30 * =: expire-in
+true =: critical
+-1 =: old-hash
+
+{ show-options-help 1 halt } : usage
+{ name $+ } : +name
+
+begin-options
+     " [-s <fift-asm-code>] [-x <expire-in>] [-H <old-hash>] [<savefile>]" +cr +tab
+    +"Creates a new configuration proposal for upgrading the " +name +" smart contract code to <fift-asm-code> ('" src-file $+ +"' by default), "
+    +"and saves it as an internal message body into <savefile>.boc ('config-msg-body.boc' by default)"
+     disable-digit-options generic-help-setopt
+  "x" "--expires-in" { parse-int =: expire-in } short-long-option-arg
+    "Sets proposal expiration time in seconds (default " expire-in (.) $+ +")" option-help
+  "s" "--source" { =: src-file } short-long-option-arg
+    "Fift assembler source file for the new " +name +" smart contract code ('"
+    src-file $+ +"' by default)" option-help
+  "H" "--old-hash" { (hex-number) not abort"256-bit hex number expected as hash" =: old-hash }
+     short-long-option-arg
+     "Sets the required cell hash of existing parameter value (0 means no value)" option-help 
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# 1 > ' usage if
+1 :$1..n
+
+$1 "config-msg-body.boc" replace-if-null =: savefile
+expire-in now + =: expire-at
+
+."Assembling new " name type ." smart contract code from " src-file type cr
+src-file include
+dup <s 12 u@ 0xFF0 <> abort"not valid smart contract code"
+<b swap ref, b> =: param-value
+
+critical { ."Critical" } { ."Non-critical" } cond
+." configuration proposal for configuration parameter " param-idx .
+."will expire at " expire-at . ."(in " expire-in . ."seconds)" cr
+
+now 32 << param-idx + =: query-id
+."Query id is " query-id . cr
+
+// create message body
+<b x{6e565052} s, query-id 64 u, expire-at 32 u, 
+  <b x{f3} s, param-idx 32 i, param-value dict, 
+     old-hash tuck 0>= tuck 1 i, -rot { 256 u, } { drop } cond b> ref, 
+  critical 1 i, b>
+
+dup ."resulting internal message body: " <s csr. cr
+2 boc+>B dup Bx. cr
+param-value totalcsize swap ."(a total of " . ."data bits, " . ."cell references -> "
+drop dup Blen . ."BoC data bytes)" cr
+
+savefile tuck B>file
+."(Saved to file " type .")" cr

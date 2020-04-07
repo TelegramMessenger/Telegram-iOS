@@ -22,6 +22,7 @@
 #include "td/utils/Status.h"
 #include "td/utils/buffer.h"
 #include "td/utils/HashMap.h"
+#include "td/utils/HashSet.h"
 
 namespace vm {
 using td::Ref;
@@ -125,6 +126,21 @@ struct CellStorageStat {
   bool add_used_storage(const CellSlice& cs, bool kill_dup = true, unsigned skip_count_root = 0);
   bool add_used_storage(CellSlice&& cs, bool kill_dup = true, unsigned skip_count_root = 0);
   bool add_used_storage(Ref<vm::Cell> cell, bool kill_dup = true, unsigned skip_count_root = 0);
+};
+
+struct VmStorageStat {
+  td::uint64 cells{0}, bits{0}, refs{0}, limit;
+  td::HashSet<CellHash> visited;
+  VmStorageStat(td::uint64 _limit) : limit(_limit) {
+  }
+  bool add_storage(Ref<Cell> cell);
+  bool add_storage(const CellSlice& cs);
+  bool check_visited(const CellHash& cell_hash) {
+    return visited.insert(cell_hash).second;
+  }
+  bool check_visited(const Ref<Cell>& cell) {
+    return check_visited(cell->get_hash());
+  }
 };
 
 struct CellSerializationInfo {

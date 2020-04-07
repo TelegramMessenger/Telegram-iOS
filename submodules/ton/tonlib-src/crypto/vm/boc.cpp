@@ -1131,4 +1131,28 @@ void NewCellStorageStat::dfs(Ref<Cell> cell, bool need_stat, bool need_proof_sta
   }
 }
 
+bool VmStorageStat::add_storage(Ref<Cell> cell) {
+  if (cell.is_null() || !check_visited(cell)) {
+    return true;
+  }
+  if (cells >= limit) {
+    return false;
+  }
+  ++cells;
+  bool special;
+  auto cs = load_cell_slice_special(std::move(cell), special);
+  return cs.is_valid() && add_storage(std::move(cs));
+}
+
+bool VmStorageStat::add_storage(const CellSlice& cs) {
+  bits += cs.size();
+  refs += cs.size_refs();
+  for (unsigned i = 0; i < cs.size_refs(); i++) {
+    if (!add_storage(cs.prefetch_ref(i))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace vm

@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -115,7 +115,7 @@ class Bignum {
     return set_hex_str(hs.str);
   }
   Bignum& swap(Bignum& x) {
-    BN_swap(val, x.val);
+    std::swap(val, x.val);
     return *this;
   }
   BIGNUM* bn_ptr() {

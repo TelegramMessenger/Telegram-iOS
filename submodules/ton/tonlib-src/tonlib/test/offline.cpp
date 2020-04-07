@@ -566,6 +566,7 @@ TEST(Tonlib, ConfigCache) {
   using tonlib_api::make_object;
   Client client;
 
+  td::rmrf("testdir").ignore();
   td::mkdir("testdir").ignore();
   // init
   sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(
@@ -595,8 +596,8 @@ TEST(Tonlib, ConfigCache) {
       "workchain": -1,
       "shard": -9223372036854775808,
       "seqno": 0,
-      "root_hash": "VXSXxDHhTALFxReyTZRd8E4Ya3ySOmpOWAS4rBX9XBY=",
-      "file_hash": "eh9yveSz1qMdJ7mOsO+I+H77jkLr9NpAuEkoJuseXBo="
+      "root_hash": "F6OpKZKqvqeFp6CQmFomXNMfMj2EnaUSOXN+Mh+wVWk=",
+      "file_hash": "XplPz01CXAps5qeSWUtxcyBfdAo5zVb1N979KLSKD24="
     }
   }
 })abc";

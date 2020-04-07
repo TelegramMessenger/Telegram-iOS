@@ -4,6 +4,7 @@ PROGRAM{
   DECLPROC load_data
   DECLPROC store_data
   DECLPROC parse_vote_config
+  DECLPROC get_vote_config_internal
   DECLPROC get_vote_config
   DECLPROC check_validator_set
   DECLPROC send_answer
@@ -16,17 +17,24 @@ PROGRAM{
   DECLPROC get_validator_descr
   DECLPROC unpack_validator_descr
   DECLPROC parse_config_proposal
+  DECLPROC accept_proposal
+  DECLPROC perform_proposed_action
   DECLPROC unpack_proposal_status
+  DECLPROC update_proposal_status
   DECLPROC begin_pack_proposal_status
-  DECLPROC new_proposal
-  DECLPROC unpack_proposal
-  DECLPROC pack_proposal
   DECLPROC register_vote
+  DECLPROC proceed_register_vote
+  DECLPROC scan_proposal
+  DECLPROC scan_random_proposal
   DECLPROC register_voting_proposal
   DECLPROC recv_internal
   DECLPROC recv_external
   DECLPROC run_ticktock
   85143 DECLMETHOD seqno
+  DECLPROC unpack_proposal
+  94347 DECLMETHOD get_proposal
+  107394 DECLMETHOD list_proposals
+  75077 DECLMETHOD proposal_storage_price
   set_conf_param PROC:<{
     //  index value
     c4 PUSH	//  index value _3
@@ -71,36 +79,37 @@ PROGRAM{
     SWAP	//  cs _4
     54 EQINT	//  cs _8
     44 THROWIFNOT
-    8 LDU	//  _12 cs
-    8 LDU	//  _12 _15 cs
-    8 LDU	//  _12 _15 _18 cs
-    8 LDU	//  _12 _15 _18 _21 cs
-    32 LDU	//  _12 _15 _18 _21 _24 cs
-    32 LDU	//  _12 _15 _18 _21 _24 _27 cs
-    32 LDU	//  _12 _15 _18 _21 _24 _27 _30 cs
-    32 LDU	//  _12 _15 _18 _21 _24 _27 _30 _33 cs
-    8 -ROLL	//  cs _12 _15 _18 _21 _24 _27 _30 _33
-    8 TUPLE	//  cs res
-    SWAP	//  res cs
+    8 LDU	//  _11 cs
+    8 LDU	//  _11 _14 cs
+    8 LDU	//  _11 _14 _17 cs
+    8 LDU	//  _11 _14 _17 _20 cs
+    32 LDU	//  _11 _14 _17 _20 _23 cs
+    32 LDU	//  _11 _14 _17 _20 _23 _26 cs
+    32 LDU	//  _11 _14 _17 _20 _23 _26 _29 cs
+    32 LDU	//  res res res res res res res res cs
     ENDS
   }>
-  get_vote_config PROCREF:<{
-    //  critical?
-    11 PUSHINT	//  critical? _2=11
-    CONFIGOPTPARAM	//  critical? _3
+  get_vote_config_internal PROCREF:<{
+    //  critical? cparam11
     CTOS	//  critical? cs
-    8 LDU	//  critical? _6 cs
+    8 LDU	//  critical? _5 cs
     SWAP
-    145 PUSHINT	//  critical? cs _6 _9=145
-    EQUAL	//  critical? cs _10
+    145 PUSHINT	//  critical? cs _5 _8=145
+    EQUAL	//  critical? cs _9
     44 THROWIFNOT
     SWAP	//  cs critical?
     IF:<{	//  cs
-      LDREF	//  _19 _18
+      LDREF	//  _18 _17
       NIP	//  cs
     }>	//  cs
-    PLDREF	//  _14
-    parse_vote_config INLINECALLDICT	//  _15
+    PLDREF	//  _13
+    parse_vote_config INLINECALLDICT	//  _19 _20 _21 _22 _23 _24 _25 _26
+  }>
+  get_vote_config PROC:<{
+    //  critical?
+    11 PUSHINT	//  critical? _1=11
+    CONFIGOPTPARAM	//  critical? _2
+    get_vote_config_internal INLINECALLDICT	//  _4 _5 _6 _7 _8 _9 _10 _11
   }>
   check_validator_set PROC:<{
     //  vset
@@ -177,7 +186,7 @@ PROGRAM{
     //  param old_code
     2DROP	// 
   }>
-  perform_action PROC:<{
+  perform_action PROCREF:<{
     //  cfg_dict public_key action cs
     OVER
     1130778657 PUSHINT	//  cfg_dict public_key action cs action _4=1130778657
@@ -239,20 +248,18 @@ PROGRAM{
     40 THROWIFNOT
     96 PUSHINT	//  vset cs _19
     SDSKIPFIRST	//  vset cs
-    64 LDU	//  vset total_weight cs
+    64 LDU	//  vset _23 cs
+    LDDICT	//  vset total_weight dict cs
+    ENDS
   }>
   get_validator_descr PROCREF:<{
     //  idx
-    get_current_vset INLINECALLDICT	//  idx _13 _14 _15
-    s2 POP	//  idx cs total_weight
-    NEWC
-    ROT	//  idx total_weight _6 cs
-    STSLICER	//  idx total_weight _7
-    ENDC	//  idx total_weight dict
-    s1 s2 XCHG
-    16 PUSHINT	//  total_weight idx dict _11=16
+    get_current_vset INLINECALLDICT	//  idx _9 _10 _11
+    s2 POP	//  idx dict total_weight
+    -ROT
+    16 PUSHINT	//  total_weight idx dict _7=16
     DICTUGET
-    NULLSWAPIFNOT	//  total_weight _16 _17
+    NULLSWAPIFNOT	//  total_weight _12 _13
     DROP	//  total_weight value
     SWAP	//  value total_weight
   }>
@@ -293,6 +300,119 @@ PROGRAM{
     }>
     ENDS
   }>
+  accept_proposal PROCREF:<{
+    //  cfg_dict proposal critical?
+    SWAP	//  cfg_dict critical? proposal
+    parse_config_proposal INLINECALLDICT	//  cfg_dict critical? param_id param_val req_hash
+    s2 s4 PUSH2
+    32 PUSHINT	//  cfg_dict critical? param_id param_val req_hash param_id cfg_dict _8=32
+    DICTIGETOPTREF	//  cfg_dict critical? param_id param_val req_hash cur_val
+    DUP	//  cfg_dict critical? param_id param_val req_hash cur_val cur_val
+    ISNULL	//  cfg_dict critical? param_id param_val req_hash cur_val _11
+    IF:<{	//  cfg_dict critical? param_id param_val req_hash cur_val
+      DROP	//  cfg_dict critical? param_id param_val req_hash
+      0 PUSHINT	//  cfg_dict critical? param_id param_val req_hash _12=0
+    }>ELSE<{	//  cfg_dict critical? param_id param_val req_hash cur_val
+      HASHCU	//  cfg_dict critical? param_id param_val req_hash _12
+    }>	//  cfg_dict critical? param_id param_val req_hash cur_hash
+    OVER	//  cfg_dict critical? param_id param_val req_hash cur_hash req_hash
+    NEQ	//  cfg_dict critical? param_id param_val req_hash _15
+    SWAP	//  cfg_dict critical? param_id param_val _15 req_hash
+    -1 GTINT	//  cfg_dict critical? param_id param_val _15 _17
+    AND	//  cfg_dict critical? param_id param_val _18
+    IFJMP:<{	//  cfg_dict critical? param_id param_val
+      3 BLKDROP	//  cfg_dict
+      0 PUSHINT	//  cfg_dict _19=0
+      PUSHNULL	//  cfg_dict _19=0 _20
+    }>	//  cfg_dict critical? param_id param_val
+    9 PUSHINT	//  cfg_dict critical? param_id param_val _22=9
+    s4 PUSH
+    32 PUSHINT	//  cfg_dict critical? param_id param_val _22=9 cfg_dict _23=32
+    DICTIGETOPTREF	//  cfg_dict critical? param_id param_val mparams
+    s2 s(-1) PUXC
+    32 PUSHINT	//  cfg_dict critical? param_id param_val param_id mparams _27=32
+    DICTIGET
+    NULLSWAPIFNOT	//  cfg_dict critical? param_id param_val _49 _50
+    NIP	//  cfg_dict critical? param_id param_val found?
+    OVER	//  cfg_dict critical? param_id param_val found? param_val
+    ISNULL	//  cfg_dict critical? param_id param_val found? _29
+    AND	//  cfg_dict critical? param_id param_val _30
+    IFJMP:<{	//  cfg_dict critical? param_id param_val
+      3 BLKDROP	//  cfg_dict
+      0 PUSHINT	//  cfg_dict _31=0
+      PUSHNULL	//  cfg_dict _31=0 _32
+    }>	//  cfg_dict critical? param_id param_val
+    10 PUSHINT	//  cfg_dict critical? param_id param_val _34=10
+    s4 PUSH
+    32 PUSHINT	//  cfg_dict critical? param_id param_val _34=10 cfg_dict _35=32
+    DICTIGETOPTREF	//  cfg_dict critical? param_id param_val cparams
+    s2 s(-1) PUXC
+    32 PUSHINT	//  cfg_dict critical? param_id param_val param_id cparams _38=32
+    DICTIGET
+    NULLSWAPIFNOT	//  cfg_dict critical? param_id param_val _51 _52
+    NIP	//  cfg_dict critical? param_id param_val found?
+    s0 s3 XCHG2	//  cfg_dict param_val param_id found? critical?
+    LESS	//  cfg_dict param_val param_id _40
+    IFJMP:<{	//  cfg_dict param_val param_id
+      2DROP	//  cfg_dict
+      0 PUSHINT	//  cfg_dict _41=0
+      PUSHNULL	//  cfg_dict _41=0 _42
+    }>	//  cfg_dict param_val param_id
+    s1 s(-1) s2 PU2XC
+    32 PUSHINT	//  param_id param_val param_val param_id cfg_dict _44=32
+    DICTISETREF	//  param_id param_val cfg_dict
+    -ROT	//  cfg_dict param_id param_val
+  }>
+  perform_proposed_action PROCREF:<{
+    //  cfg_dict public_key param_id param_val
+    OVER
+    -999 PUSHINT	//  cfg_dict public_key param_id param_val param_id _4=-999
+    EQUAL	//  cfg_dict public_key param_id param_val _5
+    IFJMP:<{	//  cfg_dict public_key param_id param_val
+      2 1 BLKDROP2	//  cfg_dict param_val
+      DUP	//  cfg_dict param_val param_val
+      ISNULL	//  cfg_dict param_val _6
+      IF:<{	//  cfg_dict param_val
+        DROP	//  cfg_dict
+        0 PUSHINT	//  cfg_dict _7=0
+      }>ELSE<{	//  cfg_dict param_val
+        CTOS	//  cfg_dict _9
+        256 PLDU	//  cfg_dict _7
+      }>
+    }>	//  cfg_dict public_key param_id param_val
+    DUP	//  cfg_dict public_key param_id param_val param_val
+    ISNULL	//  cfg_dict public_key param_id param_val _12
+    IFJMP:<{	//  cfg_dict public_key param_id param_val
+      2DROP	//  cfg_dict public_key
+    }>	//  cfg_dict public_key param_id param_val
+    OVER
+    -1000 PUSHINT	//  cfg_dict public_key param_id param_val param_id _13=-1000
+    EQUAL	//  cfg_dict public_key param_id param_val _14
+    IFJMP:<{	//  cfg_dict public_key param_id param_val
+      NIP	//  cfg_dict public_key param_val
+      CTOS	//  cfg_dict public_key cs
+      LDREF	//  cfg_dict public_key new_code cs
+      OVER	//  cfg_dict public_key new_code cs new_code
+      SETCODE
+      c3 PUSH	//  cfg_dict public_key new_code cs old_code
+      s0 s2 XCHG	//  cfg_dict public_key old_code cs new_code
+      CTOS	//  cfg_dict public_key old_code cs _23
+      BLESS	//  cfg_dict public_key old_code cs _24
+      c3 POP
+      SWAP	//  cfg_dict public_key cs old_code
+      after_code_upgrade CALLDICT
+      0 THROW
+    }>	//  cfg_dict public_key param_id param_val
+    SWAP
+    -1001 PUSHINT	//  cfg_dict public_key param_val param_id _29=-1001
+    EQUAL	//  cfg_dict public_key param_val _30
+    IF:<{	//  cfg_dict public_key param_val
+      CTOS	//  cfg_dict public_key cs
+      change_elector_code CALLDICT
+    }>ELSE<{
+      DROP	//  cfg_dict public_key
+    }>
+  }>
   unpack_proposal_status PROCREF:<{
     //  cs
     8 LDI	//  _2 cs
@@ -305,6 +425,40 @@ PROGRAM{
     LDDICT	//  _10 _13 _15 _18 cs
     64 LDI	//  _10 _13 _15 _18 _20 cs
     256 LDU	//  _10 _13 _15 _18 _20 _23 cs
+  }>
+  update_proposal_status PROCREF:<{
+    //  rest weight_remaining critical?
+    get_vote_config INLINECALLDICT	//  rest weight_remaining _43 _44 _45 _46 _47 _48 _49 _50
+    s4 s7 XCHG
+    7 BLKDROP	//  rest weight_remaining max_losses
+    s0 s2 XCHG	//  max_losses weight_remaining rest
+    8 LDU	//  max_losses weight_remaining _15 rest
+    8 LDU	//  max_losses weight_remaining _15 _18 rest
+    8 LDU	//  max_losses weight_remaining _15 _18 _56 _55
+    DROP	//  max_losses weight_remaining rounds_remaining wins losses
+    s0 s3 XCHG	//  max_losses losses rounds_remaining wins weight_remaining
+    -1 GTINT	//  max_losses losses rounds_remaining wins _25
+    s1 s3 XCHG	//  max_losses wins rounds_remaining losses _25
+    SUB	//  max_losses wins rounds_remaining losses
+    s0 s3 PUXC	//  losses wins rounds_remaining losses max_losses
+    GREATER	//  losses wins rounds_remaining _27
+    IFJMP:<{	//  losses wins rounds_remaining
+      3 BLKDROP	// 
+      PUSHNULL	//  _28
+    }>	//  losses wins rounds_remaining
+    DEC	//  losses wins rounds_remaining
+    DUP	//  losses wins rounds_remaining rounds_remaining
+    0 LESSINT	//  losses wins rounds_remaining _32
+    IFJMP:<{	//  losses wins rounds_remaining
+      3 BLKDROP	// 
+      PUSHNULL	//  _33
+    }>	//  losses wins rounds_remaining
+    NEWC	//  losses wins rounds_remaining _34
+    8 STU	//  losses wins _36
+    8 STU	//  losses _38
+    8 STU	//  _40
+    ENDC	//  _41
+    CTOS	//  _42
   }>
   begin_pack_proposal_status PROC:<{
     //  expires proposal critical? voters weight_remaining vset_id
@@ -321,124 +475,264 @@ PROGRAM{
     64 STI	//  vset_id _19
     256 STU	//  _21
   }>
-  new_proposal PROC:<{
-    //  cs
-    PUSHNULL	//  cs _1
-    0 PUSHINT	//  cs _1 _2=0
-    s0 s1 s2 XCPUXC	//  _1 _2=0 _3=0 cs
-  }>
-  unpack_proposal PROC:<{
-    //  cs
-    LDDICT	//  _1 cs
-    64 LDU	//  _1 _3 cs
-    256 LDU	//  _1 _3 _6 cs
-  }>
-  pack_proposal PROC:<{
-    //  voters sum_weight vset_id body
-    s0 s3 XCHG
-    NEWC	//  body sum_weight vset_id voters _4
-    STDICT	//  body sum_weight vset_id _5
-    s1 s2 XCHG	//  body vset_id sum_weight _5
-    64 STU	//  body vset_id _7
-    256 STU	//  body _9
-    SWAP	//  _9 body
-    STSLICER	//  _10
-  }>
-  register_vote PROC:<{
-    //  vote_dict action cs idx weight total_weight cur_vset_id
-    s0 s5 XCHG
-    1 PUSHINT	//  vote_dict cur_vset_id cs idx weight total_weight action _13=1
-    AND	//  vote_dict cur_vset_id cs idx weight total_weight _14
-    IF:<{	//  vote_dict cur_vset_id cs idx weight total_weight
-      s3 PUSH	//  vote_dict cur_vset_id cs idx weight total_weight cs
-      HASHSU	//  vote_dict cur_vset_id cs idx weight total_weight hash
-      s0 s6 PUSH2
-      8 PUSHPOW2	//  vote_dict cur_vset_id cs idx weight total_weight hash hash vote_dict _16=256
-      DICTUGET
-      NULLSWAPIFNOT	//  vote_dict cur_vset_id cs idx weight total_weight hash entry found?
-    }>ELSE<{	//  vote_dict cur_vset_id cs idx weight total_weight
-      s3 PUSH	//  vote_dict cur_vset_id cs idx weight total_weight cs
-      256 PLDU	//  vote_dict cur_vset_id cs idx weight total_weight hash
-      s0 s6 PUSH2
-      8 PUSHPOW2	//  vote_dict cur_vset_id cs idx weight total_weight hash hash vote_dict _20=256
-      DICTUGET
-      NULLSWAPIFNOT	//  vote_dict cur_vset_id cs idx weight total_weight hash entry found?
-      DUP	//  vote_dict cur_vset_id cs idx weight total_weight hash entry found? found?
-      42 THROWIFNOT
-    }>
-    IF:<{	//  vote_dict cur_vset_id cs idx weight total_weight hash entry
-      s5 POP	//  vote_dict cur_vset_id entry idx weight total_weight hash
-      s0 s4 XCHG	//  vote_dict cur_vset_id hash idx weight total_weight entry
-      unpack_proposal INLINECALLDICT	//  vote_dict cur_vset_id hash idx weight total_weight _65 _66 _67 _68
-    }>ELSE<{	//  vote_dict cur_vset_id cs idx weight total_weight hash entry
-      DROP	//  vote_dict cur_vset_id cs idx weight total_weight hash
-      PUSHNULL	//  vote_dict cur_vset_id cs idx weight total_weight hash _30
-      s5 s0 s6 XC2PU
-      0 PUSHINT
-      s0 s1 s3 XCHG3	//  vote_dict cur_vset_id hash idx weight total_weight _65 _66 _67 _68
-    }>	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight vset_id body
-    s1 s8 XCPU	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body vset_id cur_vset_id
-    NEQ	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _32
-    IF:<{	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
-      NIP
-      PUSHNULL
-      s2 POP
-      0 PUSHINT
-      SWAP	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight=0 body
-    }>	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
-    s5 s2 PUSH2
-    16 PUSHINT	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body idx voters _37=16
+  register_vote PROCREF:<{
+    //  vote_dict phash idx weight
+    s2 s3 PUSH2
+    8 PUSHPOW2	//  vote_dict phash idx weight phash vote_dict _6=256
     DICTUGET
-    NULLSWAPIFNOT	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _73 _74
-    NIP	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body found?
-    IFJMP:<{	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
-      8 BLKDROP	//  vote_dict
-      PUSHNULL	//  vote_dict _60
-    }>	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body
-    32 PUSHINT	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _40=32
-    NEWC	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _40=32 _41
-    NOW	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _40=32 _41 _42
-    STUX	//  vote_dict cur_vset_id hash idx weight total_weight voters sum_weight body _43
-    s0 s6 s3 XCHG3
-    16 PUSHINT	//  vote_dict cur_vset_id hash body weight total_weight sum_weight _43 idx voters _44=16
-    DICTUSETB	//  vote_dict cur_vset_id hash body weight total_weight sum_weight voters
-    s0 s3 XCHG	//  vote_dict cur_vset_id hash body voters total_weight sum_weight weight
-    ADD	//  vote_dict cur_vset_id hash body voters total_weight sum_weight
-    DUP	//  vote_dict cur_vset_id hash body voters total_weight sum_weight sum_weight
-    3 MULCONST	//  vote_dict cur_vset_id hash body voters total_weight sum_weight _48
-    s0 s2 XCHG	//  vote_dict cur_vset_id hash body voters _48 sum_weight total_weight
-    1 LSHIFT#	//  vote_dict cur_vset_id hash body voters _48 sum_weight _50
-    s1 s2 XCHG	//  vote_dict cur_vset_id hash body voters sum_weight _48 _50
-    GREATER	//  vote_dict cur_vset_id hash body voters sum_weight _51
-    IFJMP:<{	//  vote_dict cur_vset_id hash body voters sum_weight
-      2DROP
-      1 2 BLKDROP2
+    NULLSWAPIFNOT	//  vote_dict phash idx weight pstatus found?
+    IFNOTJMP:<{	//  vote_dict phash idx weight pstatus
+      4 BLKDROP	//  vote_dict
+      PUSHNULL	//  vote_dict _8
+      -1 PUSHINT	//  vote_dict _8 _9=-1
+    }>	//  vote_dict phash idx weight pstatus
+    get_current_vset INLINECALLDICT	//  vote_dict phash idx weight pstatus _111 _112 _113
+    DROP	//  vote_dict phash idx weight pstatus cur_vset total_weight
+    SWAP	//  vote_dict phash idx weight pstatus total_weight cur_vset
+    HASHCU	//  vote_dict phash idx weight pstatus total_weight cur_vset_id
+    s0 s2 XCHG	//  vote_dict phash idx weight cur_vset_id total_weight pstatus
+    unpack_proposal_status INLINECALLDICT	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest
+    s6 PUSH
+    NOW	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest expires _24
+    LEQ	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest _25
+    IFJMP:<{	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest
+      11 BLKDROP	//  vote_dict phash
+      SWAP
+      8 PUSHPOW2	//  phash vote_dict _27=256
+      DICTUDEL	//  _121 _122
+      DROP	//  vote_dict
+      PUSHNULL	//  vote_dict _29
+      -1 PUSHINT	//  vote_dict _29 _30=-1
+    }>	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest
+    s1 s8 PUSH2	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest vset_id cur_vset_id
+    NEQ	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest _31
+    IF:<{	//  vote_dict phash idx weight cur_vset_id total_weight expires proposal critical? voters weight_remaining vset_id rest
+      NIP
+      s2 POP	//  vote_dict phash idx weight vset_id total_weight expires proposal critical? rest weight_remaining
+      s2 PUSH	//  vote_dict phash idx weight vset_id total_weight expires proposal critical? rest weight_remaining critical?
+      update_proposal_status INLINECALLDICT	//  vote_dict phash idx weight vset_id total_weight expires proposal critical? rest
+      PUSHNULL	//  vote_dict phash idx weight vset_id total_weight expires proposal critical? rest voters
+      s0 s5 XCHG
+      3 PUSHINT	//  vote_dict phash idx weight vset_id voters expires proposal critical? rest total_weight _34=3
+      2 MULRSHIFT#	//  vote_dict phash idx weight vset_id voters expires proposal critical? rest weight_remaining
+      s1 s5 XCHG	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining
+    }>ELSE<{
+      s7 POP
+      s7 POP	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining
+    }>
+    s5 PUSH	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining rest
+    ISNULL	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining _37
+    IFJMP:<{	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining
+      9 BLKDROP	//  vote_dict phash
+      SWAP
+      8 PUSHPOW2	//  phash vote_dict _39=256
+      DICTUDEL	//  _123 _124
+      DROP	//  vote_dict
+      PUSHNULL	//  vote_dict _41
+      -1 PUSHINT	//  vote_dict _41 _42=-1
+    }>	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining
+    s8 s1 PUSH2
+    16 PUSHINT	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining idx voters _45=16
+    DICTUGET
+    NULLSWAPIFNOT	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining _125 _126
+    NIP	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining found?
+    IFJMP:<{	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining
+      10 BLKDROP	//  vote_dict
+      PUSHNULL	//  vote_dict _47
+      -2 PUSHINT	//  vote_dict _47 _48=-2
+    }>	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining
+    NOW	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining _50
+    NEWC	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining _50 _51
+    32 STU	//  vote_dict phash idx weight vset_id rest expires proposal critical? voters weight_remaining _53
+    s9 s2 XCHG2
+    16 PUSHINT	//  vote_dict phash weight_remaining weight vset_id rest expires proposal critical? _53 idx voters _54=16
+    DICTUSETB	//  vote_dict phash weight_remaining weight vset_id rest expires proposal critical? voters
+    s7 PUSH	//  vote_dict phash weight_remaining weight vset_id rest expires proposal critical? voters old_wr
+    s8 s7 XCHG2	//  vote_dict phash voters old_wr vset_id rest expires proposal critical? weight_remaining weight
+    SUB	//  vote_dict phash voters old_wr vset_id rest expires proposal critical? weight_remaining
+    s0 s6 PUXC	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical? weight_remaining old_wr
+    XOR	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical? _58
+    -1 GTINT	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical? _60
+    IFJMP:<{	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical?
+      3 4 BLKSWAP	//  vote_dict phash rest expires proposal critical? voters weight_remaining vset_id
+      begin_pack_proposal_status INLINECALLDICT	//  vote_dict phash rest _62
+      SWAP	//  vote_dict phash _62 rest
+      STSLICER	//  vote_dict phash _63
       s0 s2 XCHG
-      8 PUSHPOW2	//  body hash vote_dict _53=256
-      DICTUDEL	//  body _75 _76
-      DROP	//  body vote_dict
-      SWAP	//  vote_dict body
-    }>	//  vote_dict cur_vset_id hash body voters sum_weight
-    2SWAP
-    s1 s4 XCHG	//  vote_dict hash voters sum_weight cur_vset_id body
-    pack_proposal INLINECALLDICT	//  vote_dict hash _56
+      8 PUSHPOW2	//  _63 phash vote_dict _64=256
+      DICTUSETB	//  vote_dict
+      PUSHNULL	//  vote_dict _66
+      2 PUSHINT	//  vote_dict _66 _67=2
+    }>	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical?
+    DUP	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical? critical?
+    get_vote_config INLINECALLDICT	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical? _127 _128 _129 _130 _131 _132 _133 _134
+    s5 s7 XCHG
+    7 BLKDROP	//  vote_dict phash voters weight_remaining vset_id rest expires proposal critical? min_wins
+    s0 s4 XCHG	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? rest
+    8 LDU	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? _80 rest
+    8 LDU	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? _80 _83 rest
+    8 LDU	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? _80 _83 _140 _139
+    DROP	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? rounds_remaining wins losses
+    SWAP	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? rounds_remaining losses wins
+    INC	//  vote_dict phash voters weight_remaining vset_id min_wins expires proposal critical? rounds_remaining losses wins
+    s0 s6 PUXC	//  vote_dict phash voters weight_remaining vset_id wins expires proposal critical? rounds_remaining losses wins min_wins
+    GEQ	//  vote_dict phash voters weight_remaining vset_id wins expires proposal critical? rounds_remaining losses _91
+    IFJMP:<{	//  vote_dict phash voters weight_remaining vset_id wins expires proposal critical? rounds_remaining losses
+      2DROP
+      s5 s6 XCHG2
+      5 BLKDROP	//  vote_dict phash critical? proposal
+      s2 s3 XCHG2
+      8 PUSHPOW2	//  proposal critical? phash vote_dict _93=256
+      DICTUDEL	//  proposal critical? _141 _142
+      DROP	//  proposal critical? vote_dict
+      6 PUSHINT
+      ROT	//  proposal vote_dict _95=6 critical?
+      SUB	//  proposal vote_dict _96
+      s1 s2 XCHG	//  vote_dict proposal _96
+    }>	//  vote_dict phash voters weight_remaining vset_id wins expires proposal critical? rounds_remaining losses
+    s4 s5 XCHG
+    s3 s4 XCHG
+    s2 s3 XCHG
+    s8 s7 s6 XCHG3	//  vote_dict phash wins rounds_remaining losses expires proposal critical? voters weight_remaining vset_id
+    begin_pack_proposal_status INLINECALLDICT	//  vote_dict phash wins rounds_remaining losses _98
+    s1 s2 XCHG	//  vote_dict phash wins losses rounds_remaining _98
+    8 STU	//  vote_dict phash wins losses _100
+    s1 s2 XCHG	//  vote_dict phash losses wins _100
+    8 STU	//  vote_dict phash losses _102
+    8 STU	//  vote_dict phash _104
     s0 s2 XCHG
-    8 PUSHPOW2	//  _56 hash vote_dict _57=256
+    8 PUSHPOW2	//  _104 phash vote_dict _105=256
     DICTUSETB	//  vote_dict
-    PUSHNULL	//  vote_dict _59
+    PUSHNULL	//  vote_dict _107
+    2 PUSHINT	//  vote_dict _107 _108=2
+  }>
+  proceed_register_vote PROCREF:<{
+    //  phash idx weight
+    load_data INLINECALLDICT	//  phash idx weight cfg_dict stored_seqno public_key vote_dict
+    s6 s1 s3 XCHG3
+    s5 s4 XCHG2	//  stored_seqno public_key cfg_dict vote_dict phash idx weight
+    register_vote INLINECALLDICT	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status
+    s3 s5 s4 PUSH3
+    s5 PUSH	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status cfg_dict stored_seqno public_key vote_dict
+    store_data INLINECALLDICT
+    OVER	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status accepted_proposal
+    ISNULL	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status _12
+    IFNOT:<{	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status
+      6 PUSHINT	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status _14=6
+      OVER	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status _14=6 status
+      SUB	//  stored_seqno public_key cfg_dict vote_dict accepted_proposal status critical?
+      s4 s4 s0 XCHG3	//  stored_seqno public_key status vote_dict cfg_dict accepted_proposal critical?
+      accept_proposal INLINECALLDICT	//  stored_seqno public_key status vote_dict cfg_dict param_id param_val
+      s2 s6 s5 PUSH3
+      s6 PUSH	//  stored_seqno public_key status vote_dict cfg_dict param_id param_val cfg_dict stored_seqno public_key vote_dict
+      store_data INLINECALLDICT
+      OVER	//  stored_seqno public_key status vote_dict cfg_dict param_id param_val param_id
+      IF:<{	//  stored_seqno public_key status vote_dict cfg_dict param_id param_val
+        COMMIT
+        s2 s3 XCHG
+        s2 s5 XCHG	//  stored_seqno vote_dict status cfg_dict public_key param_id param_val
+        perform_proposed_action INLINECALLDICT	//  stored_seqno vote_dict status cfg_dict public_key
+        s4 s0 s3 XCHG3	//  status cfg_dict stored_seqno public_key vote_dict
+        store_data INLINECALLDICT
+      }>ELSE<{
+        s4 s6 XCHG
+        6 BLKDROP	//  status
+      }>
+    }>ELSE<{
+      5 1 BLKDROP2	//  status
+    }>
+  }>
+  scan_proposal PROCREF:<{
+    //  phash pstatus
+    NIP	//  pstatus
+    get_current_vset INLINECALLDICT	//  pstatus _35 _36 _37
+    DROP	//  pstatus cur_vset total_weight
+    SWAP	//  pstatus total_weight cur_vset
+    HASHCU	//  pstatus total_weight cur_vset_id
+    s2 PUSH	//  pstatus total_weight cur_vset_id pstatus
+    unpack_proposal_status INLINECALLDICT	//  pstatus total_weight cur_vset_id _38 _39 _40 _41 _42 _43 _44
+    s3 POP	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining vset_id
+    s5 PUSH
+    NOW	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining vset_id expires _16
+    LEQ	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining vset_id _17
+    IFJMP:<{	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining vset_id
+      9 BLKDROP	// 
+      PUSHNULL	//  _18
+      TRUE	//  _18 _19
+    }>	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining vset_id
+    s6 PUSH	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining vset_id cur_vset_id
+    EQUAL	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining _20
+    IFJMP:<{	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining
+      7 BLKDROP	//  pstatus
+      FALSE	//  pstatus _21
+    }>	//  pstatus total_weight cur_vset_id expires proposal critical? rest weight_remaining
+    s7 POP	//  weight_remaining total_weight vset_id expires proposal critical? rest
+    s0 s6 s6 XC2PU	//  critical? total_weight vset_id expires proposal rest weight_remaining critical?
+    update_proposal_status INLINECALLDICT	//  critical? total_weight vset_id expires proposal rest
+    PUSHNULL	//  critical? total_weight vset_id expires proposal rest voters
+    s0 s5 XCHG
+    3 PUSHINT	//  critical? voters vset_id expires proposal rest total_weight _24=3
+    2 MULRSHIFT#	//  critical? voters vset_id expires proposal rest weight_remaining
+    OVER	//  critical? voters vset_id expires proposal rest weight_remaining rest
+    ISNULL	//  critical? voters vset_id expires proposal rest weight_remaining _27
+    IFJMP:<{	//  critical? voters vset_id expires proposal rest weight_remaining
+      7 BLKDROP	// 
+      PUSHNULL	//  _28
+      TRUE	//  _28 _29
+    }>	//  critical? voters vset_id expires proposal rest weight_remaining
+    s3 s5 XCHG
+    s2 s4 XCHG
+    s3 s6 XCHG
+    s6 s0 s6 XCHG3	//  rest expires proposal critical? voters weight_remaining vset_id
+    begin_pack_proposal_status INLINECALLDICT	//  rest _30
+    SWAP	//  _30 rest
+    STSLICER	//  _31
+    ENDC	//  _32
+    CTOS	//  _33
+    TRUE	//  _33 _34
+  }>
+  scan_random_proposal PROCREF:<{
+    //  vote_dict
+    RANDU256	//  vote_dict _4
+    OVER
+    8 PUSHPOW2	//  vote_dict _4 vote_dict _5=256
+    DICTUGETNEXTEQ
+    NULLSWAPIFNOT2	//  vote_dict pstatus phash found?
+    IFNOTJMP:<{	//  vote_dict pstatus phash
+      2DROP	//  vote_dict
+    }>	//  vote_dict pstatus phash
+    s0 s1 PUXC	//  vote_dict phash phash pstatus
+    scan_proposal INLINECALLDICT	//  vote_dict phash pstatus changed?
+    IF:<{	//  vote_dict phash pstatus
+      DUP	//  vote_dict phash pstatus pstatus
+      ISNULL	//  vote_dict phash pstatus _9
+      IF:<{	//  vote_dict phash pstatus
+        DROP	//  vote_dict phash
+        SWAP
+        8 PUSHPOW2	//  phash vote_dict _11=256
+        DICTUDEL	//  _21 _22
+        DROP	//  vote_dict
+      }>ELSE<{	//  vote_dict phash pstatus
+        s0 s2 XCHG
+        8 PUSHPOW2	//  pstatus phash vote_dict _14=256
+        DICTUSET	//  vote_dict
+      }>
+    }>ELSE<{
+      2DROP	//  vote_dict
+    }>
   }>
   register_voting_proposal PROCREF:<{
     //  cs msg_value
     SWAP	//  msg_value cs
     32 LDU	//  msg_value _5 cs
     LDREF	//  msg_value _5 _8 cs
-    1 LDI	//  msg_value _5 _8 _159 _158
+    1 LDI	//  msg_value _5 _8 _156 _155
     DROP	//  msg_value expire_at proposal critical?
     s2 PUSH	//  msg_value expire_at proposal critical? expire_at
     30 RSHIFT#	//  msg_value expire_at proposal critical? _14
     IF:<{	//  msg_value expire_at proposal critical?
-      NOW	//  msg_value expire_at proposal critical? _15
-      s1 s3 XCHG	//  msg_value critical? proposal expire_at _15
+      s0 s2 XCHG
+      NOW	//  msg_value critical? proposal expire_at _15
       SUB	//  msg_value critical? proposal expire_at
       s0 s2 XCHG	//  msg_value expire_at proposal critical?
     }>	//  msg_value expire_at proposal critical?
@@ -469,7 +763,7 @@ PROGRAM{
       s3 s(-1) PUXC
       32 PUSHINT	//  msg_value expire_at proposal critical? param_id param_val hash param_id m_params _37=32
       DICTIGET
-      NULLSWAPIFNOT	//  msg_value expire_at proposal critical? param_id param_val hash _163 _164
+      NULLSWAPIFNOT	//  msg_value expire_at proposal critical? param_id param_val hash _160 _161
       NIP	//  msg_value expire_at proposal critical? param_id param_val hash found?
       IF:<{	//  msg_value expire_at proposal critical? param_id param_val hash
         DROP	//  msg_value expire_at proposal critical? param_id param_val
@@ -478,7 +772,7 @@ PROGRAM{
     }>
     OVER	//  msg_value expire_at proposal critical? param_id param_val hash param_val
     CDEPTH	//  msg_value expire_at proposal critical? param_id param_val hash _40
-    8 PUSHPOW2	//  msg_value expire_at proposal critical? param_id param_val hash _40 _41=256
+    7 PUSHPOW2	//  msg_value expire_at proposal critical? param_id param_val hash _40 _41=128
     GEQ	//  msg_value expire_at proposal critical? param_id param_val hash _42
     IF:<{	//  msg_value expire_at proposal critical? param_id param_val hash
       DROP	//  msg_value expire_at proposal critical? param_id param_val
@@ -496,7 +790,7 @@ PROGRAM{
       s1 s3 XCHG
       32 PUSHINT	//  msg_value expire_at proposal critical? hash param_val param_id crit_params _51=32
       DICTIGET
-      NULLSWAPIFNOT	//  msg_value expire_at proposal critical? hash param_val _165 _166
+      NULLSWAPIFNOT	//  msg_value expire_at proposal critical? hash param_val _162 _163
       NIP	//  msg_value expire_at proposal critical? hash param_val found?
       IF:<{	//  msg_value expire_at proposal critical? hash param_val
         -3279055188 PUSHINT
@@ -513,43 +807,42 @@ PROGRAM{
     }>	//  msg_value expire_at proposal critical? hash param_val
     NIP	//  msg_value expire_at proposal critical? param_val
     OVER	//  msg_value expire_at proposal critical? param_val critical?
-    get_vote_config INLINECALLDICT	//  msg_value expire_at proposal critical? param_val vote_cfg
-    8 UNTUPLE	//  msg_value expire_at proposal critical? param_val _167 _168 _169 _170 _171 _172 _173 _174
+    get_vote_config INLINECALLDICT	//  msg_value expire_at proposal critical? param_val _172 _173 _174 _175 _176 _177 _178 _179
     s4 POP
     s4 POP
     s5 POP	//  msg_value expire_at proposal critical? param_val max_store_sec max_tot_rounds bit_price cell_price min_store_sec
     s8 s(-1) PUXC	//  msg_value expire_at proposal critical? param_val max_store_sec max_tot_rounds bit_price cell_price expire_at min_store_sec
-    LESS	//  msg_value expire_at proposal critical? param_val max_store_sec max_tot_rounds bit_price cell_price _67
+    LESS	//  msg_value expire_at proposal critical? param_val max_store_sec max_tot_rounds bit_price cell_price _66
     IFJMP:<{	//  msg_value expire_at proposal critical? param_val max_store_sec max_tot_rounds bit_price cell_price
       9 BLKDROP	// 
-      -3313004649 PUSHINT	//  _68=-3313004649
+      -3313004649 PUSHINT	//  _67=-3313004649
     }>	//  msg_value expire_at proposal critical? param_val max_store_sec max_tot_rounds bit_price cell_price
     s7 s3 XCHG2	//  msg_value bit_price proposal critical? param_val cell_price max_tot_rounds expire_at max_store_sec
     MIN	//  msg_value bit_price proposal critical? param_val cell_price max_tot_rounds expire_at
     s0 s3 XCHG
-    10 PUSHPOW2	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds param_val _73=1024
-    CDATASIZE	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds _175 _176 _177
+    10 PUSHPOW2	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds param_val _72=1024
+    CDATASIZE	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds _180 _181 _182
     s2 POP	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds refs bits
-    10 PUSHPOW2	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds refs bits _76=1024
-    ADD	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds refs _77
-    s1 s7 XCHG	//  msg_value refs proposal critical? expire_at cell_price max_tot_rounds bit_price _77
-    MUL	//  msg_value refs proposal critical? expire_at cell_price max_tot_rounds _78
-    s0 s6 XCHG	//  msg_value _78 proposal critical? expire_at cell_price max_tot_rounds refs
-    2 ADDCONST	//  msg_value _78 proposal critical? expire_at cell_price max_tot_rounds _80
-    s1 s2 XCHG	//  msg_value _78 proposal critical? expire_at max_tot_rounds cell_price _80
-    MUL	//  msg_value _78 proposal critical? expire_at max_tot_rounds _81
-    s1 s5 XCHG	//  msg_value max_tot_rounds proposal critical? expire_at _78 _81
+    10 PUSHPOW2	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds refs bits _75=1024
+    ADD	//  msg_value bit_price proposal critical? expire_at cell_price max_tot_rounds refs _76
+    s1 s7 XCHG	//  msg_value refs proposal critical? expire_at cell_price max_tot_rounds bit_price _76
+    MUL	//  msg_value refs proposal critical? expire_at cell_price max_tot_rounds _77
+    s0 s6 XCHG	//  msg_value _77 proposal critical? expire_at cell_price max_tot_rounds refs
+    2 ADDCONST	//  msg_value _77 proposal critical? expire_at cell_price max_tot_rounds _79
+    s1 s2 XCHG	//  msg_value _77 proposal critical? expire_at max_tot_rounds cell_price _79
+    MUL	//  msg_value _77 proposal critical? expire_at max_tot_rounds _80
+    s1 s5 XCHG	//  msg_value max_tot_rounds proposal critical? expire_at _77 _80
     ADD	//  msg_value max_tot_rounds proposal critical? expire_at pps
     s0 s1 PUSH2	//  msg_value max_tot_rounds proposal critical? expire_at pps pps expire_at
     MUL	//  msg_value max_tot_rounds proposal critical? expire_at pps price
-    NOW	//  msg_value max_tot_rounds proposal critical? expire_at pps price _85
-    s1 s3 XCHG	//  msg_value max_tot_rounds proposal critical? price pps expire_at _85
+    s0 s2 XCHG
+    NOW	//  msg_value max_tot_rounds proposal critical? price pps expire_at _84
     ADD	//  msg_value max_tot_rounds proposal critical? price pps expire_at
     load_data INLINECALLDICT	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict
     s8 PUSH	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict proposal
     HASHCU	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict phash
     s0 s1 PUSH2
-    8 PUSHPOW2	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict phash phash vote_dict _96=256
+    8 PUSHPOW2	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict phash phash vote_dict _95=256
     DICTUGET
     NULLSWAPIFNOT	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict phash pstatus found?
     IFJMP:<{	//  msg_value max_tot_rounds proposal critical? price pps expire_at cfg_dict stored_seqno public_key vote_dict phash pstatus
@@ -559,40 +852,40 @@ PROGRAM{
       s0 s5 XCHG	//  msg_value vote_dict phash critical? public_key pps expire_at cfg_dict stored_seqno pstatus
       unpack_proposal_status INLINECALLDICT	//  msg_value vote_dict phash critical? public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id rest
       s4 s12 PUXC	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id r_critical? critical?
-      NEQ	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id _106
+      NEQ	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id _105
       IFJMP:<{	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id
         15 BLKDROP	// 
-        -3279055189 PUSHINT	//  _107=-3279055189
+        -3279055189 PUSHINT	//  _106=-3279055189
       }>	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id
       s5 s8 PUSH2	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id expires expire_at
-      GEQ	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id _108
+      GEQ	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id _107
       IFJMP:<{	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id
         15 BLKDROP	// 
-        -3245109829 PUSHINT	//  _109=-3245109829
+        -3245109829 PUSHINT	//  _108=-3245109829
       }>	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno expires r_proposal r_critical? voters weight_remaining vset_id
       s8 s5 PUXC	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining expire_at expires
-      SUB	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining _110
-      14 PUSHPOW2	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining _110 _111=16384
-      ADD	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining _112
-      s1 s9 XCHG	//  msg_value vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters pps _112
+      SUB	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining _109
+      14 PUSHPOW2	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining _109 _110=16384
+      ADD	//  msg_value vote_dict phash rest public_key pps expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters weight_remaining _111
+      s1 s9 XCHG	//  msg_value vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters pps _111
       MUL	//  msg_value vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters price
       s13 s13 XCPU	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters msg_value price
-      SUB	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters _114
-      30 PUSHPOW2	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters _114 _117
-      LESS	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters _118
+      SUB	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters _113
+      30 PUSHPOW2	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters _113 _116
+      LESS	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters _117
       IFJMP:<{	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters
         13 BLKDROP	// 
-        -4032919844 PUSHINT	//  _119=-4032919844
+        -4032919844 PUSHINT	//  _118=-4032919844
       }>	//  price vote_dict phash rest public_key weight_remaining expire_at cfg_dict stored_seqno vset_id r_proposal r_critical? voters
       s5 s6 XCHG
       s0 s1 s4 XCHG3
       s7 s7 XCHG2
       s0 s3 XCHG	//  price vote_dict phash rest public_key stored_seqno cfg_dict expire_at r_proposal r_critical? voters weight_remaining vset_id
-      begin_pack_proposal_status INLINECALLDICT	//  price vote_dict phash rest public_key stored_seqno cfg_dict _121
-      s0 s4 XCHG2	//  price vote_dict phash cfg_dict public_key stored_seqno _121 rest
-      STSLICER	//  price vote_dict phash cfg_dict public_key stored_seqno _122
+      begin_pack_proposal_status INLINECALLDICT	//  price vote_dict phash rest public_key stored_seqno cfg_dict _120
+      s0 s4 XCHG2	//  price vote_dict phash cfg_dict public_key stored_seqno _120 rest
+      STSLICER	//  price vote_dict phash cfg_dict public_key stored_seqno _121
       s0 s4 s5 XCHG3
-      8 PUSHPOW2	//  price public_key stored_seqno cfg_dict _122 phash vote_dict _123=256
+      8 PUSHPOW2	//  price public_key stored_seqno cfg_dict _121 phash vote_dict _122=256
       DICTUSETB	//  price public_key stored_seqno cfg_dict vote_dict
       s1 s3 XCHG	//  price cfg_dict stored_seqno public_key vote_dict
       store_data INLINECALLDICT
@@ -600,33 +893,32 @@ PROGRAM{
     DROP
     s6 POP	//  msg_value max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vote_dict
     s10 s6 XCPU	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key msg_value price
-    SUB	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _126
-    30 PUSHPOW2	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _126 _129
-    LESS	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _130
+    SUB	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _125
+    30 PUSHPOW2	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _125 _128
+    LESS	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _129
     IFJMP:<{	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key
       10 BLKDROP	// 
-      -4032919844 PUSHINT	//  _131=-4032919844
+      -4032919844 PUSHINT	//  _130=-4032919844
     }>	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key
-    get_current_vset INLINECALLDICT	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _191 _192 _193
+    get_current_vset INLINECALLDICT	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _196 _197 _198
     DROP	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset total_weight
-    3 PUSHINT	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset total_weight _138=3
-    1 LSHIFT#DIV	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset _139
-    INC	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset weight_remaining
-    0 PUSHINT	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset weight_remaining _143=0
-    PUSHNULL	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset weight_remaining _143=0 _144
-    s0 s3 XCHG	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _144 weight_remaining _143=0 vset
-    HASHCU	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _144 weight_remaining _143=0 _145
+    3 PUSHINT	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset total_weight _136=3
+    2 MULRSHIFT#	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset weight_remaining
+    0 PUSHINT	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset weight_remaining _140=0
+    PUSHNULL	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key vset weight_remaining _140=0 _141
+    s0 s3 XCHG	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _141 weight_remaining _140=0 vset
+    HASHCU	//  vote_dict max_tot_rounds proposal critical? price phash expire_at cfg_dict stored_seqno public_key _141 weight_remaining _140=0 _142
     s5 s7 XCHG
     s4 s11 XCHG
     s1 s10 XCHG
-    s3 s3 s0 XCHG3	//  vote_dict max_tot_rounds public_key _143=0 price phash stored_seqno cfg_dict expire_at proposal critical? _144 weight_remaining _145
-    begin_pack_proposal_status INLINECALLDICT	//  vote_dict max_tot_rounds public_key _143=0 price phash stored_seqno cfg_dict _146
-    s1 s7 XCHG	//  vote_dict cfg_dict public_key _143=0 price phash stored_seqno max_tot_rounds _146
-    8 STU	//  vote_dict cfg_dict public_key _143=0 price phash stored_seqno _148
-    s1 s4 XCHG	//  vote_dict cfg_dict public_key stored_seqno price phash _143=0 _148
-    16 STU	//  vote_dict cfg_dict public_key stored_seqno price phash _150
+    s3 s3 s0 XCHG3	//  vote_dict max_tot_rounds public_key _140=0 price phash stored_seqno cfg_dict expire_at proposal critical? _141 weight_remaining _142
+    begin_pack_proposal_status INLINECALLDICT	//  vote_dict max_tot_rounds public_key _140=0 price phash stored_seqno cfg_dict _143
+    s1 s7 XCHG	//  vote_dict cfg_dict public_key _140=0 price phash stored_seqno max_tot_rounds _143
+    8 STU	//  vote_dict cfg_dict public_key _140=0 price phash stored_seqno _145
+    s1 s4 XCHG	//  vote_dict cfg_dict public_key stored_seqno price phash _140=0 _145
+    16 STU	//  vote_dict cfg_dict public_key stored_seqno price phash _147
     s0 s1 s6 XCHG3
-    8 PUSHPOW2	//  price cfg_dict public_key stored_seqno _150 phash vote_dict _151=256
+    8 PUSHPOW2	//  price cfg_dict public_key stored_seqno _147 phash vote_dict _148=256
     DICTUSETB	//  price cfg_dict public_key stored_seqno vote_dict
     s1 s2 XCHG	//  price cfg_dict stored_seqno public_key vote_dict
     store_data INLINECALLDICT
@@ -636,106 +928,138 @@ PROGRAM{
     SWAP	//  msg_value in_msg in_msg_cell
     CTOS	//  msg_value in_msg cs
     4 LDU	//  msg_value in_msg flags cs
-    LDMSGADDR	//  msg_value in_msg flags s_addr cs
-    OVER	//  msg_value in_msg flags s_addr cs s_addr
-    REWRITESTDADDR	//  msg_value in_msg flags s_addr cs src_wc src_addr
-    SWAP	//  msg_value in_msg flags s_addr cs src_addr src_wc
-    INC	//  msg_value in_msg flags s_addr cs src_addr _16
-    s0 s4 XCHG
-    1 PUSHINT	//  msg_value in_msg _16 s_addr cs src_addr flags _17=1
-    AND	//  msg_value in_msg _16 s_addr cs src_addr _18
-    s1 s4 XCHG	//  msg_value in_msg src_addr s_addr cs _16 _18
-    OR	//  msg_value in_msg src_addr s_addr cs _19
-    s4 PUSH	//  msg_value in_msg src_addr s_addr cs _19 in_msg
-    SEMPTY	//  msg_value in_msg src_addr s_addr cs _19 _20
-    OR	//  msg_value in_msg src_addr s_addr cs _21
-    IFJMP:<{	//  msg_value in_msg src_addr s_addr cs
-      5 BLKDROP	// 
-    }>	//  msg_value in_msg src_addr s_addr cs
-    s0 s3 XCHG	//  msg_value cs src_addr s_addr in_msg
-    32 LDU	//  msg_value cs src_addr s_addr tag in_msg
-    64 LDU	//  msg_value cs src_addr s_addr tag query_id in_msg
+    LDMSGADDR	//  msg_value in_msg flags _128 _127
+    DROP	//  msg_value in_msg flags s_addr
+    DUP	//  msg_value in_msg flags s_addr s_addr
+    REWRITESTDADDR	//  msg_value in_msg flags s_addr src_wc src_addr
+    SWAP	//  msg_value in_msg flags s_addr src_addr src_wc
+    INC	//  msg_value in_msg flags s_addr src_addr _16
+    s0 s3 XCHG
+    1 PUSHINT	//  msg_value in_msg _16 s_addr src_addr flags _17=1
+    AND	//  msg_value in_msg _16 s_addr src_addr _18
+    s1 s3 XCHG	//  msg_value in_msg src_addr s_addr _16 _18
+    OR	//  msg_value in_msg src_addr s_addr _19
+    s3 PUSH	//  msg_value in_msg src_addr s_addr _19 in_msg
+    SEMPTY	//  msg_value in_msg src_addr s_addr _19 _20
+    OR	//  msg_value in_msg src_addr s_addr _21
+    IFJMP:<{	//  msg_value in_msg src_addr s_addr
+      4 BLKDROP	// 
+    }>	//  msg_value in_msg src_addr s_addr
+    s0 s2 XCHG	//  msg_value s_addr src_addr in_msg
+    32 LDU	//  msg_value s_addr src_addr tag in_msg
+    64 LDU	//  msg_value s_addr src_addr tag query_id in_msg
     s2 PUSH
-    1314280276 PUSHINT	//  msg_value cs src_addr s_addr tag query_id in_msg tag _30=1314280276
-    EQUAL	//  msg_value cs src_addr s_addr tag query_id in_msg _31
-    IFJMP:<{	//  msg_value cs src_addr s_addr tag query_id in_msg
+    1314280276 PUSHINT	//  msg_value s_addr src_addr tag query_id in_msg tag _30=1314280276
+    EQUAL	//  msg_value s_addr src_addr tag query_id in_msg _31
+    IFJMP:<{	//  msg_value s_addr src_addr tag query_id in_msg
       s2 POP
-      s4 POP
-      s4 POP	//  in_msg query_id src_addr s_addr
-      s0 s3 XCHG	//  s_addr query_id src_addr in_msg
-      LDREF	//  s_addr query_id src_addr vset in_msg
+      s4 POP	//  query_id s_addr src_addr in_msg
+      LDREF	//  query_id s_addr src_addr vset in_msg
       ENDS
-      1 PUSHINT	//  s_addr query_id src_addr vset _37=1
-      CONFIGOPTPARAM	//  s_addr query_id src_addr vset elector_param
-      DUP	//  s_addr query_id src_addr vset elector_param elector_param
-      ISNULL	//  s_addr query_id src_addr vset elector_param _40
-      IF:<{	//  s_addr query_id src_addr vset elector_param
-        DROP	//  s_addr query_id src_addr vset
-        -1 PUSHINT	//  s_addr query_id src_addr vset _41=-1
-      }>ELSE<{	//  s_addr query_id src_addr vset elector_param
-        CTOS	//  s_addr query_id src_addr vset _43
-        256 PLDU	//  s_addr query_id src_addr vset _41
-      }>	//  s_addr query_id src_addr vset elector_addr
+      1 PUSHINT	//  query_id s_addr src_addr vset _37=1
+      CONFIGOPTPARAM	//  query_id s_addr src_addr vset elector_param
+      DUP	//  query_id s_addr src_addr vset elector_param elector_param
+      ISNULL	//  query_id s_addr src_addr vset elector_param _40
+      IF:<{	//  query_id s_addr src_addr vset elector_param
+        DROP	//  query_id s_addr src_addr vset
+        -1 PUSHINT	//  query_id s_addr src_addr vset _41=-1
+      }>ELSE<{	//  query_id s_addr src_addr vset elector_param
+        CTOS	//  query_id s_addr src_addr vset _43
+        256 PLDU	//  query_id s_addr src_addr vset _41
+      }>	//  query_id s_addr src_addr vset elector_addr
       s0 s2 XCHG
       FALSE
-      s0 s3 XCHG	//  s_addr query_id ok vset src_addr elector_addr
-      EQUAL	//  s_addr query_id ok vset _48
-      IF:<{	//  s_addr query_id ok vset
-        NIP	//  s_addr query_id vset
-        DUP	//  s_addr query_id vset vset
-        check_validator_set CALLDICT	//  s_addr query_id vset t_since t_until
-        NOW	//  s_addr query_id vset t_since t_until t
-        s2 s(-1) PUXC	//  s_addr query_id vset t_since t_until t_since t
-        GREATER	//  s_addr query_id vset t_since t_until _54
-        s0 s2 XCHG	//  s_addr query_id vset _54 t_until t_since
-        GREATER	//  s_addr query_id vset _54 _55
-        AND	//  s_addr query_id vset ok
-        SWAP	//  s_addr query_id ok vset
-      }>	//  s_addr query_id ok vset
-      SWAP	//  s_addr query_id vset ok
-      IFJMP:<{	//  s_addr query_id vset
-        36 PUSHINT	//  s_addr query_id vset _57=36
-        SWAP	//  s_addr query_id _57=36 vset
+      s0 s3 XCHG	//  query_id s_addr ok vset src_addr elector_addr
+      EQUAL	//  query_id s_addr ok vset _48
+      IF:<{	//  query_id s_addr ok vset
+        NIP	//  query_id s_addr vset
+        DUP	//  query_id s_addr vset vset
+        check_validator_set CALLDICT	//  query_id s_addr vset t_since t_until
+        OVER
+        NOW	//  query_id s_addr vset t_since t_until t_since t
+        GREATER	//  query_id s_addr vset t_since t_until _54
+        s0 s2 XCHG	//  query_id s_addr vset _54 t_until t_since
+        GREATER	//  query_id s_addr vset _54 _55
+        AND	//  query_id s_addr vset ok
+        SWAP	//  query_id s_addr ok vset
+      }>	//  query_id s_addr ok vset
+      SWAP	//  query_id s_addr vset ok
+      IFJMP:<{	//  query_id s_addr vset
+        36 PUSHINT	//  query_id s_addr vset _57=36
+        SWAP	//  query_id s_addr _57=36 vset
         set_conf_param CALLDICT
+        SWAP
         4000730955 PUSHINT	//  s_addr query_id _59=4000730955
         send_confirmation INLINECALLDICT
-      }>	//  s_addr query_id vset
-      DROP	//  s_addr query_id
+      }>	//  query_id s_addr vset
+      DROP	//  query_id s_addr
+      SWAP
       4000730991 PUSHINT	//  s_addr query_id _61=4000730991
       send_error INLINECALLDICT
-    }>	//  msg_value cs src_addr s_addr tag query_id in_msg
-    DROP
-    s3 POP	//  msg_value cs query_id s_addr tag
-    DUP
-    1851150418 PUSHINT	//  msg_value cs query_id s_addr tag tag _63=1851150418
-    EQUAL	//  msg_value cs query_id s_addr tag _64
-    IFJMP:<{	//  msg_value cs query_id s_addr tag
-      DROP	//  msg_value cs query_id s_addr
-      s2 s3 XCHG2	//  s_addr query_id cs msg_value
-      register_voting_proposal INLINECALLDICT	//  s_addr query_id price
-      64 PUSHINT	//  s_addr query_id price mode=64
-      OVER	//  s_addr query_id price mode=64 price
-      NEGATE	//  s_addr query_id price mode=64 ans_tag
-      s2 PUSH	//  s_addr query_id price mode=64 ans_tag price
-      -1 GTINT	//  s_addr query_id price mode=64 ans_tag _72
-      IF:<{	//  s_addr query_id price mode=64 ans_tag
-        2DROP	//  s_addr query_id price
-        4 PUSHINT	//  s_addr query_id price _73=4
+    }>	//  msg_value s_addr src_addr tag query_id in_msg
+    s3 POP	//  msg_value s_addr in_msg tag query_id
+    OVER
+    1851150418 PUSHINT	//  msg_value s_addr in_msg tag query_id tag _63=1851150418
+    EQUAL	//  msg_value s_addr in_msg tag query_id _64
+    IFJMP:<{	//  msg_value s_addr in_msg tag query_id
+      NIP	//  msg_value s_addr in_msg query_id
+      s0 s3 XCHG	//  query_id s_addr in_msg msg_value
+      register_voting_proposal INLINECALLDICT	//  query_id s_addr price
+      64 PUSHINT	//  query_id s_addr price mode=64
+      OVER	//  query_id s_addr price mode=64 price
+      NEGATE	//  query_id s_addr price mode=64 ans_tag
+      s2 PUSH	//  query_id s_addr price mode=64 ans_tag price
+      -1 GTINT	//  query_id s_addr price mode=64 ans_tag _72
+      IF:<{	//  query_id s_addr price mode=64 ans_tag
+        2DROP	//  query_id s_addr price
+        4 PUSHINT	//  query_id s_addr price _73=4
         RAWRESERVE
-        3998634066 PUSHINT	//  s_addr query_id ans_tag=3998634066
-        7 PUSHPOW2	//  s_addr query_id ans_tag=3998634066 mode=128
+        3998634066 PUSHINT	//  query_id s_addr ans_tag=3998634066
+        7 PUSHPOW2	//  query_id s_addr ans_tag=3998634066 mode=128
       }>ELSE<{
-        s2 POP	//  s_addr query_id ans_tag mode
+        s2 POP	//  query_id s_addr ans_tag mode
       }>
+      s2 s3 XCHG	//  s_addr query_id ans_tag mode
       send_answer CALLDICT
-    }>	//  msg_value cs query_id s_addr tag
-    4 1 BLKDROP2	//  tag
+    }>	//  msg_value s_addr in_msg tag query_id
+    s4 POP	//  query_id s_addr in_msg tag
+    DUP
+    1450144869 PUSHINT	//  query_id s_addr in_msg tag tag _78=1450144869
+    EQUAL	//  query_id s_addr in_msg tag _79
+    IFJMP:<{	//  query_id s_addr in_msg tag
+      DROP	//  query_id s_addr in_msg
+      9 PUSHPOW2	//  query_id s_addr in_msg _82=512
+      LDSLICEX	//  query_id s_addr signature in_msg
+      DUP	//  query_id s_addr signature msg_body in_msg
+      32 LDU	//  query_id s_addr signature msg_body _88 in_msg
+      16 LDU	//  query_id s_addr signature msg_body _88 _91 in_msg
+      256 LDU	//  query_id s_addr signature msg_body sign_tag idx phash in_msg
+      ENDS
+      s0 s2 XCHG
+      1450144837 PUSHINT	//  query_id s_addr signature msg_body phash idx sign_tag _99=1450144837
+      EQUAL	//  query_id s_addr signature msg_body phash idx _100
+      37 THROWIFNOT
+      DUP	//  query_id s_addr signature msg_body phash idx idx
+      get_validator_descr INLINECALLDICT	//  query_id s_addr signature msg_body phash idx _147 _148
+      DROP	//  query_id s_addr signature msg_body phash idx vdescr
+      unpack_validator_descr INLINECALLDICT	//  query_id s_addr signature msg_body phash idx val_pubkey weight
+      s4 s5 s5 XCHG3	//  query_id s_addr weight idx phash msg_body signature val_pubkey
+      CHKSIGNS	//  query_id s_addr weight idx phash _109
+      34 THROWIFNOT
+      s0 s2 XCHG	//  query_id s_addr phash idx weight
+      proceed_register_vote INLINECALLDICT	//  query_id s_addr res
+      3597947456 PUSHINT	//  query_id s_addr res _113=3597947456
+      ADD	//  query_id s_addr _114
+      s1 s2 XCHG	//  s_addr query_id _114
+      send_confirmation INLINECALLDICT
+    }>	//  query_id s_addr in_msg tag
+    3 1 BLKDROP2	//  tag
     DUP	//  tag tag
-    0 EQINT	//  tag _80
+    0 EQINT	//  tag _118
     SWAP
-    31 PUSHPOW2	//  _80 tag _83
-    AND	//  _80 _84
-    OR	//  _85
+    31 PUSHPOW2	//  _118 tag _121
+    AND	//  _118 _122
+    OR	//  _123
     37 THROWIFNOT
   }>
   recv_external PROC:<{
@@ -746,13 +1070,14 @@ PROGRAM{
     32 LDU	//  signature in_msg action cs
     32 LDU	//  signature in_msg action msg_seqno cs
     32 LDU	//  signature in_msg action msg_seqno valid_until cs
-    NOW	//  signature in_msg action msg_seqno valid_until cs _19
-    s1 s2 XCHG	//  signature in_msg action msg_seqno cs valid_until _19
+    SWAP
+    NOW	//  signature in_msg action msg_seqno cs valid_until _19
     LESS	//  signature in_msg action msg_seqno cs _20
     35 THROWIF
     DUP	//  signature in_msg action msg_seqno cs cs
     SDEPTH	//  signature in_msg action msg_seqno cs _23
-    64 GTINT	//  signature in_msg action msg_seqno cs _25
+    7 PUSHPOW2	//  signature in_msg action msg_seqno cs _23 _24=128
+    GREATER	//  signature in_msg action msg_seqno cs _25
     39 THROWIF
     load_data INLINECALLDICT	//  signature in_msg action msg_seqno cs cfg_dict stored_seqno public_key vote_dict
     s5 s2 XCPU	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key msg_seqno stored_seqno
@@ -760,134 +1085,220 @@ PROGRAM{
     33 THROWIFNOT
     s5 PUSH
     1450144869 PUSHINT	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key action _35=1450144869
-    SUB	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _36
-    -2 PUSHINT	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _36 _37=-2
-    AND	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _38
-    IFNOTJMP:<{	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key
-      s0 s3 XCHG	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno cs
-      16 LDU	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs
-      OVER	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs idx
-      get_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs vdescr total_weight
-      SWAP	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs total_weight vdescr
-      unpack_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs total_weight val_pubkey weight
-      s0 s10 XCHG	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs total_weight val_pubkey in_msg
-      HASHSU	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs total_weight val_pubkey _50
-      s0 s11 s11 XCHG3	//  total_weight weight action vote_dict public_key cfg_dict stored_seqno idx cs _50 signature val_pubkey
-      CHKSIGNU	//  total_weight weight action vote_dict public_key cfg_dict stored_seqno idx cs _51
+    EQUAL	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _36
+    IFJMP:<{	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key
+      s5 POP	//  signature in_msg public_key vote_dict cs cfg_dict stored_seqno
+      s0 s2 XCHG	//  signature in_msg public_key vote_dict stored_seqno cfg_dict cs
+      16 LDU	//  signature in_msg public_key vote_dict stored_seqno cfg_dict _39 cs
+      256 LDU	//  signature in_msg public_key vote_dict stored_seqno cfg_dict idx phash cs
+      ENDS
+      OVER	//  signature in_msg public_key vote_dict stored_seqno cfg_dict idx phash idx
+      get_validator_descr INLINECALLDICT	//  signature in_msg public_key vote_dict stored_seqno cfg_dict idx phash _96 _97
+      DROP	//  signature in_msg public_key vote_dict stored_seqno cfg_dict idx phash vdescr
+      unpack_validator_descr INLINECALLDICT	//  signature in_msg public_key vote_dict stored_seqno cfg_dict idx phash val_pubkey weight
+      s8 s9 s9 XCHG3	//  weight phash public_key vote_dict stored_seqno cfg_dict idx in_msg signature val_pubkey
+      CHKSIGNS	//  weight phash public_key vote_dict stored_seqno cfg_dict idx _53
       34 THROWIFNOT
       ACCEPT
-      s0 s2 XCHG	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno
-      INC	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno
-      s3 s0 s4 PUSH3
-      s8 PUSH	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno cfg_dict stored_seqno public_key vote_dict
+      s0 s2 XCHG	//  weight phash public_key vote_dict idx cfg_dict stored_seqno
+      INC	//  weight phash public_key vote_dict idx cfg_dict _57
+      32 MODPOW2#	//  weight phash public_key vote_dict idx cfg_dict stored_seqno
+      2 3 BLKSWAP	//  weight phash idx cfg_dict stored_seqno public_key vote_dict
       store_data INLINECALLDICT
       COMMIT
-      s2 PUSH
-      10 PUSHPOW2	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno cs _61=1024
-      SDATASIZE	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _104 _105 _106
-      3 BLKDROP	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno
-      34 PUSHINT	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _64=34
-      CONFIGOPTPARAM	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _65
-      HASHCU	//  total_weight weight action vote_dict public_key cfg_dict cs idx stored_seqno _66
-      s5 s7 XCHG
-      s3 s4 XCHG
-      s2 s3 XCHG
-      s8 s9 s0 XCHG3	//  stored_seqno cfg_dict public_key vote_dict action cs idx weight total_weight _66
-      register_vote CALLDICT	//  stored_seqno cfg_dict public_key vote_dict accepted
-      s3 s4 s2 PUSH3
-      s4 PUSH	//  stored_seqno cfg_dict public_key vote_dict accepted cfg_dict stored_seqno public_key vote_dict
-      store_data INLINECALLDICT
-      DUP	//  stored_seqno cfg_dict public_key vote_dict accepted accepted
-      ISNULL	//  stored_seqno cfg_dict public_key vote_dict accepted _69
-      IFNOT:<{	//  stored_seqno cfg_dict public_key vote_dict accepted
-        32 LDU	//  stored_seqno cfg_dict public_key vote_dict _70 accepted
-        s3 s4 XCHG
-        s2 s4 XCHG	//  stored_seqno vote_dict cfg_dict public_key _70 accepted
-        perform_action CALLDICT	//  stored_seqno vote_dict cfg_dict public_key
-        s3 s0 s3 XCHG3	//  cfg_dict stored_seqno public_key vote_dict
-        store_data INLINECALLDICT
-      }>ELSE<{
-        5 BLKDROP	// 
-      }>
+      ROT	//  phash idx weight
+      proceed_register_vote INLINECALLDICT	//  _64
+      DROP	// 
     }>	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key
     s0 s6 XCHG	//  signature public_key action vote_dict cs cfg_dict stored_seqno in_msg
-    HASHSU	//  signature public_key action vote_dict cs cfg_dict stored_seqno _76
-    s0 s7 s6 XC2PU	//  stored_seqno public_key action vote_dict cs cfg_dict _76 signature public_key
-    CHKSIGNU	//  stored_seqno public_key action vote_dict cs cfg_dict _77
+    HASHSU	//  signature public_key action vote_dict cs cfg_dict stored_seqno _66
+    s0 s7 s6 XC2PU	//  stored_seqno public_key action vote_dict cs cfg_dict _66 signature public_key
+    CHKSIGNU	//  stored_seqno public_key action vote_dict cs cfg_dict _67
     34 THROWIFNOT
     ACCEPT
     s0 s5 XCHG	//  cfg_dict public_key action vote_dict cs stored_seqno
-    INC	//  cfg_dict public_key action vote_dict cs stored_seqno
+    INC	//  cfg_dict public_key action vote_dict cs _71
+    32 MODPOW2#	//  cfg_dict public_key action vote_dict cs stored_seqno
     s5 s0 s4 PUSH3
     s5 PUSH	//  cfg_dict public_key action vote_dict cs stored_seqno cfg_dict stored_seqno public_key vote_dict
     store_data INLINECALLDICT
     COMMIT
     s3 s5 XCHG
     s4 s5 s5 XCHG3	//  stored_seqno vote_dict cfg_dict public_key action cs
-    perform_action CALLDICT	//  stored_seqno vote_dict cfg_dict public_key
+    perform_action INLINECALLDICT	//  stored_seqno vote_dict cfg_dict public_key
     s3 s0 s3 XCHG3	//  cfg_dict stored_seqno public_key vote_dict
     store_data INLINECALLDICT
   }>
   run_ticktock PROC:<{
     //  is_tock
     DROP	// 
-    c4 PUSH	//  _2
-    CTOS	//  cs
-    LDREF	//  cfg_dict cs
-    32 PUSHINT	//  cfg_dict cs kl=32
-    36 PUSHINT	//  cfg_dict cs kl=32 _10=36
-    s3 s1 PUSH2	//  cfg_dict cs kl=32 _10=36 cfg_dict kl=32
-    DICTIGETOPTREF	//  cfg_dict cs kl=32 next_vset
-    DUP	//  cfg_dict cs kl=32 next_vset next_vset
-    ISNULL	//  cfg_dict cs kl=32 next_vset _12
-    IFNOT:<{	//  cfg_dict cs kl=32 next_vset
-      DUP	//  cfg_dict cs kl=32 next_vset next_vset
-      CTOS	//  cfg_dict cs kl=32 next_vset ds
-      DUP	//  cfg_dict cs kl=32 next_vset ds ds
-      SBITS	//  cfg_dict cs kl=32 next_vset ds _15
-      39 GTINT	//  cfg_dict cs kl=32 next_vset ds _17
-      IF:<{	//  cfg_dict cs kl=32 next_vset ds
-        8 LDU	//  cfg_dict cs kl=32 next_vset tag ds
-        32 PLDU	//  cfg_dict cs kl=32 next_vset tag since
-        NOW	//  cfg_dict cs kl=32 next_vset tag since _25
-        LEQ	//  cfg_dict cs kl=32 next_vset tag _26
-        SWAP	//  cfg_dict cs kl=32 next_vset _26 tag
-        18 EQINT	//  cfg_dict cs kl=32 next_vset _26 _28
-        AND	//  cfg_dict cs kl=32 next_vset _29
-        IF:<{	//  cfg_dict cs kl=32 next_vset
+    load_data INLINECALLDICT	//  cfg_dict stored_seqno public_key vote_dict
+    32 PUSHINT	//  cfg_dict stored_seqno public_key vote_dict kl=32
+    36 PUSHINT	//  cfg_dict stored_seqno public_key vote_dict kl=32 _9=36
+    s5 s1 PUSH2	//  cfg_dict stored_seqno public_key vote_dict kl=32 _9=36 cfg_dict kl=32
+    DICTIGETOPTREF	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset
+    FALSE	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated?
+    OVER	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? next_vset
+    ISNULL	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? _13
+    IFNOT:<{	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated?
+      OVER	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? next_vset
+      CTOS	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? ds
+      DUP	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? ds ds
+      SBITS	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? ds _16
+      39 GTINT	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? ds _18
+      IF:<{	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? ds
+        8 LDU	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? tag ds
+        32 PLDU	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? tag since
+        NOW	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? tag since _26
+        LEQ	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? tag _27
+        SWAP	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? _27 tag
+        18 EQINT	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? _27 _29
+        AND	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated? _30
+        IF:<{	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset updated?
+          DROP	//  cfg_dict stored_seqno public_key vote_dict kl=32 next_vset
           34 PUSHINT
           ROT
-          s4 s4 XCPU	//  kl=32 cs next_vset _32=34 cfg_dict kl=32
-          DICTISETGETOPTREF	//  kl=32 cs cfg_dict cur_vset
-          s3 s1 s0 PUXCPU	//  kl=32 cs cur_vset _35=32 cfg_dict kl=32
-          DICTISETGETOPTREF	//  kl=32 cs _51 _52
-          DROP	//  kl=32 cs cfg_dict
-          36 PUSHINT	//  kl=32 cs cfg_dict _38=36
-          s0 s1 s3 XCHG3	//  cs _38=36 cfg_dict kl=32
-          DICTIDEL	//  cs _53 _54
-          DROP	//  cs cfg_dict
-          SWAP	//  cfg_dict cs
+          s6 s6 XCPU	//  kl=32 stored_seqno public_key vote_dict next_vset _33=34 cfg_dict kl=32
+          DICTISETGETOPTREF	//  kl=32 stored_seqno public_key vote_dict cfg_dict cur_vset
+          s5 s1 s0 PUXCPU	//  kl=32 stored_seqno public_key vote_dict cur_vset _36=32 cfg_dict kl=32
+          DICTISETGETOPTREF	//  kl=32 stored_seqno public_key vote_dict _52 _53
+          DROP	//  kl=32 stored_seqno public_key vote_dict cfg_dict
+          36 PUSHINT	//  kl=32 stored_seqno public_key vote_dict cfg_dict _39=36
+          s0 s1 s5 XCHG3	//  vote_dict stored_seqno public_key _39=36 cfg_dict kl=32
+          DICTIDEL	//  vote_dict stored_seqno public_key _54 _55
+          DROP	//  vote_dict stored_seqno public_key cfg_dict
+          s0 s3 XCHG
+          TRUE	//  cfg_dict stored_seqno public_key vote_dict updated?
         }>ELSE<{
-          2DROP	//  cfg_dict cs
+          2 1 BLKDROP2	//  cfg_dict stored_seqno public_key vote_dict updated?
         }>
       }>ELSE<{
-        3 BLKDROP	//  cfg_dict cs
+        s1 s3 XCHG
+        3 BLKDROP	//  cfg_dict stored_seqno public_key vote_dict updated?
       }>
     }>ELSE<{
-      2DROP	//  cfg_dict cs
+      2 1 BLKDROP2	//  cfg_dict stored_seqno public_key vote_dict updated?
     }>
-    SWAP
-    NEWC	//  cs cfg_dict _40
-    STREF	//  cs _41
-    SWAP	//  _41 cs
-    STSLICER	//  _42
-    ENDC	//  _43
-    c4 POP
+    IFNOT:<{	//  cfg_dict stored_seqno public_key vote_dict
+      scan_random_proposal INLINECALLDICT	//  cfg_dict stored_seqno public_key vote_dict
+    }>	//  cfg_dict stored_seqno public_key vote_dict
+    store_data INLINECALLDICT
   }>
   seqno PROC:<{
     // 
     c4 PUSH	//  _0
     CTOS	//  _1
     32 PLDU	//  _3
+  }>
+  unpack_proposal PROCREF:<{
+    //  pstatus
+    unpack_proposal_status INLINECALLDICT	//  expires proposal critical? voters weight_remaining vset_id rest
+    PUSHNULL	//  expires proposal critical? voters weight_remaining vset_id rest voters_list
+    32 PUSHPOW2	//  expires proposal critical? voters weight_remaining vset_id rest voters_list voter_id
+    UNTIL:<{
+      s5 PUSH
+      16 PUSHINT	//  expires proposal critical? voters weight_remaining vset_id rest voters_list voter_id voters _17=16
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  expires proposal critical? voters weight_remaining vset_id rest voters_list _48 _47 _49
+      s2 POP	//  expires proposal critical? voters weight_remaining vset_id rest voters_list f voter_id
+      OVER	//  expires proposal critical? voters weight_remaining vset_id rest voters_list f voter_id f
+      IF:<{	//  expires proposal critical? voters weight_remaining vset_id rest voters_list f voter_id
+        s0 s2 PUXC	//  expires proposal critical? voters weight_remaining vset_id rest voter_id f voter_id voters_list
+        CONS	//  expires proposal critical? voters weight_remaining vset_id rest voter_id f voters_list
+        s0 s2 XCHG	//  expires proposal critical? voters weight_remaining vset_id rest voters_list f voter_id
+      }>	//  expires proposal critical? voters weight_remaining vset_id rest voters_list f voter_id
+      SWAP	//  expires proposal critical? voters weight_remaining vset_id rest voters_list voter_id f
+      NOT	//  expires proposal critical? voters weight_remaining vset_id rest voters_list voter_id _20
+    }>	//  expires proposal critical? voters weight_remaining vset_id rest voters_list voter_id
+    DROP
+    s4 POP	//  expires proposal critical? voters_list weight_remaining vset_id rest
+    8 LDU	//  expires proposal critical? voters_list weight_remaining vset_id _24 rest
+    8 LDU	//  expires proposal critical? voters_list weight_remaining vset_id _24 _27 rest
+    8 LDU	//  expires proposal critical? voters_list weight_remaining vset_id rounds_remaining losses wins rest
+    ENDS
+    s0 s7 XCHG	//  expires wins critical? voters_list weight_remaining vset_id rounds_remaining losses proposal
+    parse_config_proposal INLINECALLDICT	//  expires wins critical? voters_list weight_remaining vset_id rounds_remaining losses param_id param_val param_hash
+    TRIPLE	//  expires wins critical? voters_list weight_remaining vset_id rounds_remaining losses _39
+    s0 s6 XCHG
+    s0 s7 XCHG
+    s3 s5 XCHG
+    s3 s4 XCHG	//  expires critical? _39 vset_id voters_list weight_remaining rounds_remaining losses wins
+    9 TUPLE	//  _38
+  }>
+  get_proposal PROC:<{
+    //  phash
+    load_data INLINECALLDICT	//  phash _12 _13 _14 _15
+    3 1 BLKDROP2	//  phash vote_dict
+    8 PUSHPOW2	//  phash vote_dict _8=256
+    DICTUGET
+    NULLSWAPIFNOT	//  pstatus found?
+    IFNOTJMP:<{	//  pstatus
+      DROP	// 
+      PUSHNULL	//  _10
+    }>	//  pstatus
+    unpack_proposal INLINECALLDICT	//  _11
+  }>
+  list_proposals PROC:<{
+    // 
+    load_data INLINECALLDICT	//  _25 _26 _27 _28
+    3 1 BLKDROP2	//  vote_dict
+    256 PUSHPOW2DEC	//  vote_dict phash
+    PUSHNULL	//  vote_dict phash list
+    UNTIL:<{
+      s1 s2 XCPU
+      8 PUSHPOW2	//  vote_dict list phash vote_dict _19=256
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  vote_dict list pstatus phash f
+      DUP	//  vote_dict list pstatus phash f f
+      IF:<{	//  vote_dict list pstatus phash f
+        s0 s2 XCHG	//  vote_dict list f phash pstatus
+        unpack_proposal INLINECALLDICT	//  vote_dict list f phash _22
+        s1 s(-1) PUXC	//  vote_dict list f phash phash _22
+        PAIR	//  vote_dict list f phash _21
+        s0 s3 XCHG2	//  vote_dict phash f _21 list
+        CONS	//  vote_dict phash f list
+        s0 s2 XCHG	//  vote_dict list f phash
+      }>ELSE<{
+        s2 POP	//  vote_dict list f phash
+      }>
+      SWAP	//  vote_dict list phash f
+      NOT	//  vote_dict list phash _24
+      s1 s2 XCHG	//  vote_dict phash list _24
+    }>	//  vote_dict phash list
+    2 1 BLKDROP2	//  list
+  }>
+  proposal_storage_price PROC:<{
+    //  critical? seconds bits refs
+    c4 PUSH	//  critical? seconds bits refs _5
+    CTOS	//  critical? seconds bits refs _6
+    PLDREF	//  critical? seconds bits refs cfg_dict
+    11 PUSHINT	//  critical? seconds bits refs cfg_dict _9=11
+    SWAP
+    32 PUSHINT	//  critical? seconds bits refs _9=11 cfg_dict _10=32
+    DICTIGETOPTREF	//  critical? seconds bits refs cparam11
+    s1 s4 XCHG	//  refs seconds bits critical? cparam11
+    get_vote_config_internal INLINECALLDICT	//  refs seconds bits _32 _33 _34 _35 _36 _37 _38 _39
+    4 4 BLKDROP2	//  refs seconds bits min_store_sec max_store_sec bit_price cell_price
+    s5 s3 PUXC	//  refs seconds bits cell_price max_store_sec bit_price seconds min_store_sec
+    LESS	//  refs seconds bits cell_price max_store_sec bit_price _21
+    IFJMP:<{	//  refs seconds bits cell_price max_store_sec bit_price
+      6 BLKDROP	// 
+      -1 PUSHINT	//  _22=-1
+    }>	//  refs seconds bits cell_price max_store_sec bit_price
+    s4 s4 XCHG2	//  refs bit_price bits cell_price seconds max_store_sec
+    MIN	//  refs bit_price bits cell_price seconds
+    s0 s2 XCHG
+    10 PUSHPOW2	//  refs bit_price seconds cell_price bits _24=1024
+    ADD	//  refs bit_price seconds cell_price _25
+    s1 s3 XCHG	//  refs cell_price seconds bit_price _25
+    MUL	//  refs cell_price seconds _26
+    s0 s3 XCHG	//  _26 cell_price seconds refs
+    2 ADDCONST	//  _26 cell_price seconds _28
+    s1 s2 XCHG	//  _26 seconds cell_price _28
+    MUL	//  _26 seconds _29
+    s1 s2 XCHG	//  seconds _26 _29
+    ADD	//  seconds _30
+    SWAP	//  _30 seconds
+    MUL	//  _31
   }>
 }END>c

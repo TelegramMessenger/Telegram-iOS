@@ -247,3 +247,16 @@ recursive append-long-bytes {
 
 // ( x a b -- a<=x<=b )
 { 2 pick >= -rot >= and } : in-range?
+
+// ( c i -- ? )  Checks whether c is a valid value for config param #i
+def? config-valid? {
+  { nip 0>= { ."warning: cannot check validity of configuration parameter value, use create-state instead of fift to check validity" cr } if
+    true } : config-valid?
+} ifnot
+
+{ dup -1000 = { drop <s ref@ <s 12 u@ 0xFF0 = } {
+  dup -1001 = { drop <s ref@ <s 12 u@ 0xFF0 = } {
+  over null? { 2drop true } {
+  config-valid?
+  } cond } cond } cond
+} : is-valid-config?

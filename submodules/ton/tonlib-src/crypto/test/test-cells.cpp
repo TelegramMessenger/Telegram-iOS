@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <algorithm>
 #include <string>
@@ -580,7 +580,7 @@ bool check_exp(std::ostream& stream, const td::NegExpBinTable& tab, double x) {
   }
   double y = yy.to_double() * exp2(-252);
   double y0 = exp(x);
-  bool ok = (abs(y - y0) < 1e-15);
+  bool ok = (fabs(y - y0) < 1e-15);
   if (!ok) {
     stream << "exp(" << x << ") = exp(" << xx << " * 2^(-52)) = " << yy << " / 2^252 = " << y << " (correct value is "
            << y0 << ") " << (ok ? "match" : "incorrect") << std::endl;

@@ -55,12 +55,15 @@
 #include "td/utils/port/path.h"
 #include "td/utils/port/signals.h"
 
-#include "tonlib/keys/Mnemonic.h"
-
 #include "block.h"
 #include "block-parse.h"
 #include "block-auto.h"
 #include "mc-config.h"
+
+#if defined(_INTERNAL_COMPILE) || defined(_TONLIB_COMPILE)
+# define WITH_TONLIB
+# include "tonlib/keys/Mnemonic.h"
+#endif
 
 #define PDO(__op) \
   if (!(__op)) {  \
@@ -596,6 +599,18 @@ void interpret_set_config_param(vm::Stack& stack) {
   }
 }
 
+void interpret_check_config_param(vm::Stack& stack) {
+  int x = stack.pop_smallint_range(0x7fffffff, 0x80000000);
+  Ref<vm::Cell> value = stack.pop_cell();
+  if (verbosity > 2 && x >= 0) {
+    std::cerr << "checking validity as configuration parameter #" << x << " of ";
+    // vm::load_cell_slice(value).print_rec(std::cerr);
+    block::gen::ConfigParam{x}.print_ref(std::cerr, value);
+    std::cerr << std::endl;
+  }
+  stack.push_bool(x < 0 || block::gen::ConfigParam{x}.validate_ref(value));
+}
+
 void interpret_is_shard_state(vm::Stack& stack) {
   Ref<vm::Cell> cell = stack.pop_cell();
   if (verbosity > 4) {
@@ -636,6 +651,7 @@ void interpret_sub_extra_currencies(vm::Stack& stack) {
   stack.push_bool(ok);
 }
 
+#ifdef WITH_TONLIB
 void interpret_mnemonic_to_privkey(vm::Stack& stack, int mode) {
   td::SecureString str{td::Slice{stack.pop_string()}};
   auto res = tonlib::Mnemonic::create(std::move(str), td::SecureString());
@@ -652,6 +668,7 @@ void interpret_mnemonic_to_privkey(vm::Stack& stack, int mode) {
   }
   stack.push_bytes(key.as_slice());
 }
+#endif
 
 void init_words_custom(fift::Dictionary& d) {
   using namespace std::placeholders;
@@ -663,6 +680,7 @@ void init_words_custom(fift::Dictionary& d) {
   d.def_stack_word("globalid! ", interpret_set_global_id);
   d.def_stack_word("config@ ", interpret_get_config_param);
   d.def_stack_word("config! ", interpret_set_config_param);
+  d.def_stack_word("config-valid? ", interpret_check_config_param);
   d.def_stack_word("(configdict) ", interpret_get_config_dict);
   d.def_stack_word("register_smc ", interpret_register_smartcontract);
   d.def_stack_word("set_config_smc ", interpret_set_config_smartcontract);
@@ -671,8 +689,10 @@ void init_words_custom(fift::Dictionary& d) {
   d.def_stack_word("isWorkchainDescr? ", interpret_is_workchain_descr);
   d.def_stack_word("CC+? ", interpret_add_extra_currencies);
   d.def_stack_word("CC-? ", interpret_sub_extra_currencies);
+#ifdef WITH_TONLIB
   d.def_stack_word("mnemo>priv ", std::bind(interpret_mnemonic_to_privkey, _1, 0));
   d.def_stack_word("mnemo>pub ", std::bind(interpret_mnemonic_to_privkey, _1, 1));
+#endif
 }
 
 tlb::TypenameLookup tlb_dict;

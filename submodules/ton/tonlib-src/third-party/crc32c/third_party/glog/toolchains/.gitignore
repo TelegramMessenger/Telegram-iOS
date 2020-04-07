@@ -1,0 +1,2 @@
+# allow toolchain files to be tracked by git
+!*.cmake

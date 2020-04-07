@@ -714,6 +714,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"engine.validator.jsonConfig", 321753611},
     {"engine.validator.keyHash", -1027168946},
     {"engine.validator.oneStat", -1533527315},
+    {"engine.validator.proposalVote", 2137401069},
     {"engine.validator.signature", -76791000},
     {"engine.validator.stats", 1565119343},
     {"engine.validator.success", -1276860789},
@@ -853,6 +854,7 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"engine.validator.checkDhtServers", -773578550},
     {"engine.validator.controlQuery", -1535722048},
     {"engine.validator.createElectionBid", -451038907},
+    {"engine.validator.createProposalVote", 498278765},
     {"engine.validator.delAdnlId", 691696882},
     {"engine.validator.delDhtId", -2063770818},
     {"engine.validator.delListeningPort", 828094543},
@@ -3726,6 +3728,21 @@ Status from_json(ton_api::engine_validator_oneStat &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::engine_validator_proposalVote &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "perm_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.perm_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "to_send", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.to_send_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::engine_validator_signature &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "signature", JsonValue::Type::Null, true));
@@ -5868,6 +5885,15 @@ Status from_json(ton_api::engine_validator_createElectionBid &to, JsonObject &fr
   }
   return Status::OK();
 }
+Status from_json(ton_api::engine_validator_createProposalVote &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "vote", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.vote_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::engine_validator_delAdnlId &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "key_hash", JsonValue::Type::Null, true));
@@ -7788,6 +7814,12 @@ void to_json(JsonValueScope &jv, const ton_api::engine_validator_oneStat &object
   jo << ctie("key", ToJson(object.key_));
   jo << ctie("value", ToJson(object.value_));
 }
+void to_json(JsonValueScope &jv, const ton_api::engine_validator_proposalVote &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "engine.validator.proposalVote");
+  jo << ctie("perm_key", ToJson(object.perm_key_));
+  jo << ctie("to_send", ToJson(JsonBytes{object.to_send_}));
+}
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_signature &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "engine.validator.signature");
@@ -8722,6 +8754,11 @@ void to_json(JsonValueScope &jv, const ton_api::engine_validator_createElectionB
   jo << ctie("election_date", ToJson(object.election_date_));
   jo << ctie("election_addr", ToJson(object.election_addr_));
   jo << ctie("wallet", ToJson(object.wallet_));
+}
+void to_json(JsonValueScope &jv, const ton_api::engine_validator_createProposalVote &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "engine.validator.createProposalVote");
+  jo << ctie("vote", ToJson(JsonBytes{object.vote_}));
 }
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_delAdnlId &object) {
   auto jo = jv.enter_object();

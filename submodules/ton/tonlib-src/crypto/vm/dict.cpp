@@ -1670,12 +1670,17 @@ Ref<vm::Cell> DictionaryFixed::extract_prefix_subdict_root(td::ConstBitPtr prefi
 }
 
 std::pair<Ref<Cell>, int> DictionaryFixed::dict_filter(Ref<Cell> dict, td::BitPtr key, int n,
-                                                       const DictionaryFixed::filter_func_t& check_leaf) const {
+                                                       const DictionaryFixed::filter_func_t& check_leaf,
+                                                       int& skip_rest) const {
   // std::cerr << "dictionary filter for " << n << "-bit key = " << (key + n - key_bits).to_hex(key_bits - n)
   //           << std::endl;
   if (dict.is_null()) {
     // empty dictionary, return unchanged
     return {{}, 0};
+  }
+  if (skip_rest >= 0) {
+    // either drop subtree completely (if skip_rest>0), or retain it completely (if skip_rest=0)
+    return {{}, skip_rest};
   }
   LabelParser label{std::move(dict), n, label_mode()};
   assert(label.l_bits >= 0 && label.l_bits <= n);
@@ -1684,6 +1689,11 @@ std::pair<Ref<Cell>, int> DictionaryFixed::dict_filter(Ref<Cell> dict, td::BitPt
   if (label.l_bits == n) {
     // leaf
     int res = check_leaf(label.remainder.write(), key - key_bits, key_bits);
+    if (res >= (1 << 30)) {
+      // skip all, or retain all
+      res &= (1 << 30) - 1;
+      skip_rest = (res ? 0 : (1 << 30));
+    }
     return {{}, res < 0 ? res : !res};
   }
   // fork, process left and right subtrees
@@ -1691,19 +1701,20 @@ std::pair<Ref<Cell>, int> DictionaryFixed::dict_filter(Ref<Cell> dict, td::BitPt
   key[-1] = false;
   int delta = label.l_bits + 1;
   n -= delta;
-  auto left_res = dict_filter(label.remainder->prefetch_ref(0), key, n, check_leaf);
+  auto left_res = dict_filter(label.remainder->prefetch_ref(0), key, n, check_leaf, skip_rest);
   if (left_res.second < 0) {
     return left_res;
   }
   key[-1] = true;
-  auto right_res = dict_filter(label.remainder->prefetch_ref(1), key, n, check_leaf);
+  auto right_res = dict_filter(label.remainder->prefetch_ref(1), key, n, check_leaf, skip_rest);
   if ((left_res.second | right_res.second) <= 0) {
     // error in right, or both left and right unchanged
     return right_res;
   }
   auto left = left_res.second ? std::move(left_res.first) : label.remainder->prefetch_ref(0);
   auto right = right_res.second ? std::move(right_res.first) : label.remainder->prefetch_ref(1);
-  auto changes = left_res.second + right_res.second;
+  // 2^30 is effectively infinity, meaning that we dropped whole branches with unknown # of nodes
+  auto changes = ((left_res.second | right_res.second) & (1 << 30)) ? (1 << 30) : left_res.second + right_res.second;
   label.clear();
   if (left.is_null()) {
     if (right.is_null()) {
@@ -1735,8 +1746,9 @@ std::pair<Ref<Cell>, int> DictionaryFixed::dict_filter(Ref<Cell> dict, td::BitPt
 
 int DictionaryFixed::filter(DictionaryFixed::filter_func_t check_leaf) {
   force_validate();
+  int skip_rest = -1;
   unsigned char buffer[DictionaryFixed::max_key_bytes];
-  auto res = dict_filter(get_root_cell(), td::BitPtr{buffer}, key_bits, check_leaf);
+  auto res = dict_filter(get_root_cell(), td::BitPtr{buffer}, key_bits, check_leaf, skip_rest);
   if (res.second > 0) {
     // std::cerr << "after filter (" << res.second << " changes): new augmented dictionary root is:\n";
     // vm::load_cell_slice(res.first).print_rec(std::cerr);

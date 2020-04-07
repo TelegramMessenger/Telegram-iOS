@@ -331,11 +331,12 @@ TEST(Tonlib, HighloadWallet) {
 
   td::Ed25519::PrivateKey priv_key{td::SecureString{new_wallet_pk}};
   auto pub_key = priv_key.get_public_key().move_as_ok();
-  auto init_state = ton::HighloadWallet::get_init_state(pub_key, 239);
+  auto init_state = ton::HighloadWallet::get_init_state(pub_key, 239, -1);
   auto init_message = ton::HighloadWallet::get_init_message(priv_key, 239);
   auto address = ton::GenericAccount::get_address(0, init_state);
 
-  ton::HighloadWallet wallet({ton::HighloadWallet::get_init_code(), ton::HighloadWallet::get_init_data(pub_key, 239)});
+  ton::HighloadWallet wallet(
+      {ton::HighloadWallet::get_init_code(-1), ton::HighloadWallet::get_init_data(pub_key, 239)});
   ASSERT_EQ(239u, wallet.get_wallet_id().ok());
   ASSERT_EQ(0u, wallet.get_seqno().ok());
   CHECK(pub_key.as_octet_string() == wallet.get_public_key().ok().as_octet_string());

@@ -578,6 +578,15 @@ bool MsgProcessedUptoCollection::already_processed(const EnqueuedMsgDescr& msg) 
   return false;
 }
 
+bool MsgProcessedUptoCollection::can_check_processed() const {
+  for (const auto& entry : list) {
+    if (!entry.can_check_processed()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool MsgProcessedUptoCollection::for_each_mcseqno(std::function<bool(ton::BlockSeqno)> func) const {
   for (const auto& entry : list) {
     if (!func(entry.mc_seqno)) {
@@ -585,6 +594,36 @@ bool MsgProcessedUptoCollection::for_each_mcseqno(std::function<bool(ton::BlockS
     }
   }
   return true;
+}
+
+std::ostream& MsgProcessedUpto::print(std::ostream& os) const {
+  return os << "[" << ton::shard_to_str(shard) << "," << mc_seqno << "," << last_inmsg_lt << ","
+            << last_inmsg_hash.to_hex() << "]";
+}
+
+std::ostream& MsgProcessedUptoCollection::print(std::ostream& os) const {
+  os << "MsgProcessedUptoCollection of " << owner.to_str() << " = {";
+  int i = 0;
+  for (const auto& entry : list) {
+    if (i++) {
+      os << ", ";
+    }
+    os << entry;
+  }
+  os << "}";
+  return os;
+}
+
+std::string MsgProcessedUpto::to_str() const {
+  std::ostringstream os;
+  print(os);
+  return os.str();
+}
+
+std::string MsgProcessedUptoCollection::to_str() const {
+  std::ostringstream os;
+  print(os);
+  return os.str();
 }
 
 // unpacks some fields from EnqueuedMsg

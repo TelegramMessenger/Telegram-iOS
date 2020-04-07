@@ -157,7 +157,7 @@ Masterchain swap
  *
  */
 // version capabilities
-0 capCreateStats config.version!
+1 capCreateStats capBounceMsgBody or capReportVersion or capShortDeque or config.version!
 // max-validators max-main-validators min-validators
 // 9 4 1 config.validator_num!
 1000 100 13 config.validator_num!
@@ -202,13 +202,16 @@ smc1_addr config.minter_smc!
 1000000000000 -17 of-cc 666666666666 239 of-cc cc+ config.to_mint!
 
 ( 0 1 9 10 12 14 15 16 17 18 20 21 22 23 24 25 28 34 ) config.mandatory_params!
-( -1000 -1001 0 1 9 10 12 14 15 16 17 32 34 36 ) config.critical_params!
+( -999 -1000 -1001 0 1 9 10 12 14 15 16 17 32 34 36 ) config.critical_params!
 
-// [ min_tot_rounds max_tot_rounds min_wins max_losses min_store_sec max_store_sec bit_price cell_price ]
+// [ min_tot_rounds max_tot_rounds min_wins max_losses min_store_sec max_store_sec bit_pps cell_pps ]
 // first for ordinary proposals, then for critical proposals
-_( 2 3 2 2 1000000 10000000 GR$.001 GR$.2 )
-_( 4 7 4 2 5000000 20000000 GR$.002 GR$.8 )
+_( 2 3 2 2 1000000 10000000 1 500 )
+_( 4 7 4 2 5000000 20000000 2 1000 )
 config.param_proposals_setup!
+
+// deposit bit_pps cell_pps
+GR$100 1 500 config.complaint_prices!
 
 "validator-keys" +suffix +".pub" file>B
 { dup Blen } { 32 B| swap dup ."Validator public key = " Bx. cr

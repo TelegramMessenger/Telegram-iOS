@@ -85,6 +85,8 @@ class TestNode : public td::actor::Actor {
   bool ex_mode_ = false;
   std::vector<td::BufferSlice> ex_queries_;
 
+  std::map<td::Bits256, Ref<vm::Cell>> cell_cache_;
+
   std::unique_ptr<ton::adnl::AdnlExtClient::Callback> make_callback();
 
   struct TransId {
@@ -178,6 +180,9 @@ class TestNode : public td::actor::Actor {
   void got_creator_stats(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, int req_mode, int mode,
                          td::Bits256 start_after, ton::UnixTime min_utime, td::BufferSlice state_proof,
                          td::BufferSlice data_proof, int count, int req_count, bool complete);
+  bool cache_cell(Ref<vm::Cell> cell);
+  bool list_cached_cells() const;
+  bool dump_cached_cell(td::Slice hash_pfx, td::Slice type_name = {});
   // parser
   bool do_parse_line();
   bool show_help(std::string command);
@@ -217,6 +222,7 @@ class TestNode : public td::actor::Actor {
   bool show_new_blkids(bool all = false);
   bool complete_blkid(ton::BlockId partial_blkid, ton::BlockIdExt& complete_blkid) const;
   td::Promise<td::Unit> trivial_promise();
+  static const tlb::TypenameLookup& get_tlb_dict();
 
  public:
   void conn_ready() {

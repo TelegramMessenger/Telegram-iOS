@@ -35,13 +35,23 @@
 #include "td/utils/uint128.h"
 #include "ton/ton-types.h"
 #include "ton/ton-shard.h"
-#include "crypto/openssl/digest.h"
+#include "openssl/digest.hpp"
 #include <stack>
 #include <algorithm>
 
 namespace block {
 using namespace std::literals::string_literals;
 using td::Ref;
+
+#define DBG(__n) dbg(__n)&&
+#define DSTART int __dcnt = 0;
+#define DEB DBG(++__dcnt)
+
+static inline bool dbg(int c) TD_UNUSED;
+static inline bool dbg(int c) {
+  std::cerr << '[' << (char)('0' + c / 10) << (char)('0' + c % 10) << ']';
+  return true;
+}
 
 Config::Config(Ref<vm::Cell> config_root, const td::Bits256& config_addr, int _mode)
     : mode(_mode), config_addr(config_addr), config_root(std::move(config_root)) {
@@ -691,29 +701,51 @@ void McShardHash::set_fsm(FsmState fsm, ton::UnixTime fsm_utime, ton::UnixTime f
 }
 
 Ref<McShardHash> McShardHash::unpack(vm::CellSlice& cs, ton::ShardIdFull id) {
-  gen::ShardDescr::Record descr;
-  CurrencyCollection fees_collected, funds_created;
-  if (!(tlb::unpack_exact(cs, descr) && fees_collected.unpack(descr.fees_collected) &&
-        funds_created.unpack(descr.funds_created))) {
-    return {};  // throw ?
+  int tag = gen::t_ShardDescr.get_tag(cs);
+  if (tag < 0) {
+    return {};
   }
-  auto res = Ref<McShardHash>(true, ton::BlockId{id, (unsigned)descr.seq_no}, descr.start_lt, descr.end_lt,
-                              descr.gen_utime, descr.root_hash, descr.file_hash, fees_collected, funds_created,
-                              descr.reg_mc_seqno, descr.min_ref_mc_seqno, descr.next_catchain_seqno,
-                              descr.next_validator_shard, /* descr.nx_cc_updated */ false, descr.before_split,
-                              descr.before_merge, descr.want_split, descr.want_merge);
+  auto create = [&id](auto& descr, Ref<vm::CellSlice> fees, Ref<vm::CellSlice> funds) {
+    CurrencyCollection fees_collected, funds_created;
+    if (!(fees_collected.unpack(std::move(fees)) && funds_created.unpack(std::move(funds)))) {
+      return Ref<McShardHash>{};
+    }
+    return td::make_ref<McShardHash>(ton::BlockId{id, (unsigned)descr.seq_no}, descr.start_lt, descr.end_lt,
+                                     descr.gen_utime, descr.root_hash, descr.file_hash, fees_collected, funds_created,
+                                     descr.reg_mc_seqno, descr.min_ref_mc_seqno, descr.next_catchain_seqno,
+                                     descr.next_validator_shard, /* descr.nx_cc_updated */ false, descr.before_split,
+                                     descr.before_merge, descr.want_split, descr.want_merge);
+  };
+  Ref<McShardHash> res;
+  Ref<vm::CellSlice> fsm_cs;
+  if (tag == gen::ShardDescr::shard_descr) {
+    gen::ShardDescr::Record_shard_descr descr;
+    if (tlb::unpack_exact(cs, descr)) {
+      fsm_cs = std::move(descr.split_merge_at);
+      res = create(descr, std::move(descr.fees_collected), std::move(descr.funds_created));
+    }
+  } else {
+    gen::ShardDescr::Record_shard_descr_new descr;
+    if (tlb::unpack_exact(cs, descr)) {
+      fsm_cs = std::move(descr.split_merge_at);
+      res = create(descr, std::move(descr.r1.fees_collected), std::move(descr.r1.funds_created));
+    }
+  }
+  if (res.is_null()) {
+    return res;
+  }
   McShardHash& sh = res.unique_write();
-  switch (gen::t_FutureSplitMerge.get_tag(*(descr.split_merge_at))) {
+  switch (gen::t_FutureSplitMerge.get_tag(*fsm_cs)) {
     case gen::FutureSplitMerge::fsm_none:
       return res;
     case gen::FutureSplitMerge::fsm_split:
-      if (gen::t_FutureSplitMerge.unpack_fsm_split(descr.split_merge_at.write(), sh.fsm_utime_, sh.fsm_interval_)) {
+      if (gen::t_FutureSplitMerge.unpack_fsm_split(fsm_cs.write(), sh.fsm_utime_, sh.fsm_interval_)) {
         sh.fsm_ = FsmState::fsm_split;
         return res;
       }
       break;
     case gen::FutureSplitMerge::fsm_merge:
-      if (gen::t_FutureSplitMerge.unpack_fsm_merge(descr.split_merge_at.write(), sh.fsm_utime_, sh.fsm_interval_)) {
+      if (gen::t_FutureSplitMerge.unpack_fsm_merge(fsm_cs.write(), sh.fsm_utime_, sh.fsm_interval_)) {
         sh.fsm_ = FsmState::fsm_merge;
         return res;
       }
@@ -726,7 +758,7 @@ Ref<McShardHash> McShardHash::unpack(vm::CellSlice& cs, ton::ShardIdFull id) {
 
 bool McShardHash::pack(vm::CellBuilder& cb) const {
   if (!(is_valid()                                        // (validate)
-        && cb.store_long_bool(11, 4)                      // shard_descr#b
+        && cb.store_long_bool(10, 4)                      // shard_descr_new#a
         && cb.store_long_bool(blk_.id.seqno, 32)          // seq_no:uint32
         && cb.store_long_bool(reg_mc_seqno_, 32)          // reg_mc_seqno:uint32
         && cb.store_long_bool(start_lt_, 64)              // start_lt:uint64
@@ -760,9 +792,11 @@ bool McShardHash::pack(vm::CellBuilder& cb) const {
     default:
       return false;
   }
-  return ok                                    // split_merge_at:FutureSplitMerge
-         && fees_collected_.store_or_zero(cb)  // fees_collected:CurrencyCollection
-         && funds_created_.store_or_zero(cb);  // funds_created:CurrencyCollection = ShardDescr;
+  vm::CellBuilder cb2;
+  return ok                                             // split_merge_at:FutureSplitMerge
+         && fees_collected_.store_or_zero(cb2)          // ^[ fees_collected:CurrencyCollection
+         && funds_created_.store_or_zero(cb2)           //    funds_created:CurrencyCollection ]
+         && cb.store_builder_ref_bool(std::move(cb2));  // = ShardDescr;
 }
 
 Ref<McShardHash> McShardHash::from_block(Ref<vm::Cell> block_root, const ton::FileHash& fhash, bool init_fees) {
@@ -982,27 +1016,45 @@ Ref<McShardHash> ShardConfig::get_shard_hash(ton::ShardIdFull id, bool exact) co
   }
 }
 
+bool McShardHash::extract_cc_seqno(vm::CellSlice& cs, ton::CatchainSeqno* cc) {
+  auto get = [&cs, cc](auto& rec) {
+    if (tlb::unpack_exact(cs, rec)) {
+      *cc = rec.next_catchain_seqno;
+      return true;
+    } else {
+      *cc = std::numeric_limits<ton::CatchainSeqno>::max();
+      return false;
+    }
+  };
+  if (block::gen::t_ShardDescr.get_tag(cs) == block::gen::ShardDescr::shard_descr) {
+    gen::ShardDescr::Record_shard_descr rec;
+    return get(rec);
+  } else {
+    gen::ShardDescr::Record_shard_descr_new rec;
+    return get(rec);
+  }
+}
+
 ton::CatchainSeqno ShardConfig::get_shard_cc_seqno(ton::ShardIdFull shard) const {
   if (shard.is_masterchain() || !shard.is_valid()) {
     return std::numeric_limits<ton::CatchainSeqno>::max();
   }
   ton::ShardIdFull true_id;
-  gen::ShardDescr::Record info;
+  ton::CatchainSeqno cc_seqno, cc_seqno2;
   vm::CellSlice cs;
   if (!(get_shard_hash_raw(cs, shard - 1, true_id, false) &&
         (ton::shard_is_ancestor(true_id, shard) || ton::shard_is_parent(shard, true_id)) &&
-        tlb::unpack_exact(cs, info))) {
+        McShardHash::extract_cc_seqno(cs, &cc_seqno))) {
     return std::numeric_limits<ton::CatchainSeqno>::max();
   }
-  ton::CatchainSeqno cc_seqno = info.next_catchain_seqno;
   if (ton::shard_is_ancestor(true_id, shard)) {
     return cc_seqno;
   }
   if (!(get_shard_hash_raw(cs, shard + 1, true_id, false) && ton::shard_is_parent(shard, true_id) &&
-        tlb::unpack_exact(cs, info))) {
+        McShardHash::extract_cc_seqno(cs, &cc_seqno2))) {
     return std::numeric_limits<ton::CatchainSeqno>::max();
   }
-  return std::max(cc_seqno, info.next_catchain_seqno) + 1;
+  return std::max(cc_seqno, cc_seqno2) + 1;
 }
 
 ton::LogicalTime ShardConfig::get_shard_end_lt_ext(ton::AccountIdPrefixFull acc, ton::ShardIdFull& actual_shard) const {
@@ -1147,9 +1199,10 @@ bool ShardConfig::process_sibling_shard_hashes(std::function<int(McShardHash&, c
     Ref<vm::Cell> root;
     ok = ok && (n == 32) && csr->size_ext() == 0x10000 && std::move(csr)->prefetch_ref_to(root) &&
          process_workchain_sibling_shard_hashes(root, Ref<vm::Cell>{}, ton::ShardIdFull{(int)key.get_int(32)}, func) >=
-             0 &&
-         cb.store_ref_bool(std::move(root));
-    return true;
+             0;
+    bool f = cb.store_ref_bool(std::move(root));
+    ok &= f;
+    return f;
   });
   return ok;
 }

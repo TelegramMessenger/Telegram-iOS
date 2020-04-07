@@ -18,7 +18,7 @@ namespace crc32c {
 template<typename TestTraits>
 class ExtendTest : public testing::Test {};
 
-TYPED_TEST_CASE_P(ExtendTest);
+TYPED_TEST_SUITE_P(ExtendTest);
 
 TYPED_TEST_P(ExtendTest, StandardResults) {
   // From rfc3720 section B.4.
@@ -101,7 +101,7 @@ TYPED_TEST_P(ExtendTest, LargeBufferSlicing) {
   }
 }
 
-REGISTER_TYPED_TEST_CASE_P(ExtendTest,
+REGISTER_TYPED_TEST_SUITE_P(ExtendTest,
     StandardResults,
     HelloWorld,
     BufferSlicing,

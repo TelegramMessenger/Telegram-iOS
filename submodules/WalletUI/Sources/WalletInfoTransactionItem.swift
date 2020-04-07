@@ -117,6 +117,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
     private let feesNode: TextNode
     private let dateNode: TextNode
     private var statusNode: StatusClockNode?
+    private let lockIconNode: ASImageNode
     
     private let activateArea: AccessibilityAreaNode
     
@@ -149,6 +150,10 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
+        self.lockIconNode = ASImageNode()
+        self.lockIconNode.displaysAsynchronously = false
+        self.lockIconNode.displayWithoutProcessing = true
+        
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .left
@@ -179,6 +184,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.addSubnode(self.titleSignNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.lockIconNode)
         self.addSubnode(self.directionNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.descriptionNode)
@@ -202,11 +208,13 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         return { item, params, hasPrevious, hasNext, dateHeaderAtBottom in
             var updatedTheme: WalletTheme?
             
+            var lockIconImage: UIImage?
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
+                lockIconImage = walletTransactionLockIcon(item.theme)
             }
             let iconImage: UIImage? = transactionIcon
-            let iconSize = /*iconImage?.size ??*/ CGSize(width: 14.0, height: 12.0)
+            let iconSize = CGSize(width: 14.0, height: 12.0)
             
             let leftInset = 16.0 + params.leftInset
             
@@ -248,7 +256,6 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                             case .raw:
                                 break
                             case .encryptedText:
-                                description.append("Encrypted Comment")
                                 descriptionIsMonospace = true
                             case let .plainText(text):
                                 description.append(text)
@@ -282,7 +289,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                         case .raw:
                             description = ""
                         case .encryptedText:
-                            description = "Encrypted Comment"
+                            description = ""
                             descriptionIsMonospace = true
                         case let .plainText(text):
                             description = text
@@ -378,6 +385,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                         strongSelf.iconNode.image = iconImage
+                        strongSelf.lockIconNode.image = lockIconImage
                     }
                     
                     let _ = titleSignApply()
@@ -421,6 +429,11 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let dateFrame = CGRect(origin: CGPoint(x: params.width - leftInset - dateLayout.size.width, y: topInset), size: dateLayout.size)
                     strongSelf.dateNode.frame = dateFrame
                     
+                    if let image = strongSelf.lockIconNode.image {
+                        strongSelf.lockIconNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - image.size.width + 4.0, y: dateFrame.maxY + 17.0), size: image.size)
+                    }
+                    
+                    var hasEncryptedComment = false
                     switch item.walletTransaction {
                     case .pending:
                         let statusNode: StatusClockNode
@@ -433,12 +446,30 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                         }
                         let statusSize = CGSize(width: 11.0, height: 11.0)
                         statusNode.frame = CGRect(origin: CGPoint(x: dateFrame.minX - statusSize.width - 4.0, y: dateFrame.minY + floor((dateFrame.height - statusSize.height) / 2.0) - UIScreenPixel), size: statusSize)
-                    case .completed:
+                    case let .completed(transaction):
                         if let statusNode = strongSelf.statusNode {
                             strongSelf.statusNode = nil
                             statusNode.removeFromSupernode()
                         }
+                        
+                        if let inMessage = transaction.inMessage {
+                            switch inMessage.contents {
+                            case .encryptedText:
+                                hasEncryptedComment = true
+                            default:
+                                break
+                            }
+                        }
+                        for message in transaction.outMessages {
+                            switch message.contents {
+                            case .encryptedText:
+                                hasEncryptedComment = true
+                            default:
+                                break
+                            }
+                        }
                     }
+                    strongSelf.lockIconNode.isHidden = !hasEncryptedComment
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topHighlightInset + -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel * 2.0 - topHighlightInset))
                 }

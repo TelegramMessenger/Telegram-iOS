@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "td/utils/BigNum.h"
 
@@ -98,7 +98,7 @@ BigNum BigNum::from_binary(Slice str) {
 }
 
 BigNum BigNum::from_le_binary(Slice str) {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_BORINGSSL)
   return BigNum(make_unique<Impl>(BN_lebin2bn(str.ubegin(), narrow_cast<int>(str.size()), nullptr)));
 #else
   LOG(FATAL) << "Unsupported from_le_binary";
@@ -132,7 +132,11 @@ BigNum::BigNum(unique_ptr<Impl> &&impl) : impl_(std::move(impl)) {
 }
 
 void BigNum::ensure_const_time() {
+#if !defined(OPENSSL_IS_BORINGSSL)
   BN_set_flags(impl_->big_num, BN_FLG_CONSTTIME);
+#else
+  LOG(FATAL) << "Unsupported BN_FLG_CONSTTIME";
+#endif
 }
 
 int BigNum::get_num_bits() const {
@@ -217,7 +221,7 @@ string BigNum::to_binary(int exact_size) const {
 }
 
 string BigNum::to_le_binary(int exact_size) const {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_BORINGSSL)
   int num_size = get_num_bytes();
   if (exact_size == -1) {
     exact_size = num_size;

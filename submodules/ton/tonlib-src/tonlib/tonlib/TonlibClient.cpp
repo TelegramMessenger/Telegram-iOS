@@ -412,6 +412,14 @@ class AccountState {
           {ton::HighloadWalletV2::get_init_code(wallet_revision_), ton::WalletV3::get_init_data(key, wallet_id_)});
       return wallet_type_;
     }
+    o_revision = ton::HighloadWallet::guess_revision(address_, key, wallet_id_);
+    if (o_revision) {
+      wallet_type_ = WalletType::HighloadWalletV1;
+      wallet_revision_ = o_revision.value();
+      set_new_state(
+          {ton::HighloadWallet::get_init_code(wallet_revision_), ton::WalletV3::get_init_data(key, wallet_id_)});
+      return wallet_type_;
+    }
     o_revision = ton::ManualDns::guess_revision(address_, key, wallet_id_);
     if (o_revision) {
       wallet_type_ = WalletType::ManualDns;
@@ -428,11 +436,6 @@ class AccountState {
                address_.addr) {
       set_new_state({ton::Wallet::get_init_code(), ton::Wallet::get_init_data(key)});
       wallet_type_ = WalletType::Wallet;
-    } else if (ton::GenericAccount::get_address(address_.workchain,
-                                                ton::HighloadWallet::get_init_state(key, wallet_id_))
-                   .addr == address_.addr) {
-      set_new_state({ton::HighloadWallet::get_init_code(), ton::HighloadWallet::get_init_data(key, wallet_id_)});
-      wallet_type_ = WalletType::HighloadWalletV1;
     }
     return wallet_type_;
   }
@@ -491,6 +494,12 @@ class AccountState {
     o_revision = ton::HighloadWalletV2::guess_revision(code_hash);
     if (o_revision) {
       wallet_type_ = WalletType::HighloadWalletV2;
+      wallet_revision_ = o_revision.value();
+      return wallet_type_;
+    }
+    o_revision = ton::HighloadWallet::guess_revision(code_hash);
+    if (o_revision) {
+      wallet_type_ = WalletType::HighloadWalletV1;
       wallet_revision_ = o_revision.value();
       return wallet_type_;
     }
@@ -1438,7 +1447,8 @@ td::Result<block::StdAddress> get_account_address(
   TRY_RESULT(key_bytes, get_public_key(test_wallet_state.public_key_));
   auto key = td::Ed25519::PublicKey(td::SecureString(key_bytes.key));
   return ton::GenericAccount::get_address(
-      0 /*zerochain*/, ton::HighloadWallet::get_init_state(key, static_cast<td::uint32>(test_wallet_state.wallet_id_)));
+      0 /*zerochain*/,
+      ton::HighloadWallet::get_init_state(key, static_cast<td::uint32>(test_wallet_state.wallet_id_), revision));
 }
 
 td::Result<block::StdAddress> get_account_address(

@@ -548,6 +548,9 @@ bool downcast_call(Object &obj, const T &func) {
     case engine_validator_oneStat::ID:
       func(static_cast<engine_validator_oneStat &>(obj));
       return true;
+    case engine_validator_proposalVote::ID:
+      func(static_cast<engine_validator_proposalVote &>(obj));
+      return true;
     case engine_validator_signature::ID:
       func(static_cast<engine_validator_signature &>(obj));
       return true;
@@ -951,6 +954,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case engine_validator_createElectionBid::ID:
       func(static_cast<engine_validator_createElectionBid &>(obj));
+      return true;
+    case engine_validator_createProposalVote::ID:
+      func(static_cast<engine_validator_createProposalVote &>(obj));
       return true;
     case engine_validator_delAdnlId::ID:
       func(static_cast<engine_validator_delAdnlId &>(obj));

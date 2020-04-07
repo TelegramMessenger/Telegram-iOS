@@ -934,7 +934,7 @@ struct AsmOp {
   void out_indent_nl(std::ostream& os, bool no_nl = false) const;
   std::string to_string() const;
   void compute_gconst() {
-    gconst = (is_custom() && (op == "PUSHNULL" || op == "NEWC" || op == "NEWB" || op == "TRUE" || op == "FALSE"));
+    gconst = (is_custom() && (op == "PUSHNULL" || op == "NEWC" || op == "NEWB" || op == "TRUE" || op == "FALSE" || op == "NOW"));
   }
   bool is_nop() const {
     return t == a_none && op.empty();

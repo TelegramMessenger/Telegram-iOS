@@ -52,6 +52,8 @@
 
 #include <openssl/sha.h>
 
+#include "openssl/digest.hpp"
+
 namespace vm {
 
 std::vector<int> do_get_serialization_modes() {

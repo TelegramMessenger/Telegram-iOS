@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "common/refcnt.hpp"
@@ -284,7 +284,7 @@ class BitSliceGen {
     ensure_throw(set_size_bool(bits));
     return *this;
   }
-  BitSliceGen subslice(unsigned from, unsigned bits) const& {
+  BitSliceGen subslice(unsigned from, unsigned bits) const & {
     return BitSliceGen(*this, from, bits);
   }
   BitSliceGen subslice(unsigned from, unsigned bits) && {
@@ -574,6 +574,14 @@ class BitArray {
   }
   std::string to_binary() const {
     return bitstring::bits_to_binary(cbits(), size());
+  }
+  long from_hex(td::Slice hex_str, bool allow_partial = false) {
+    auto res = bitstring::parse_bitstring_hex_literal(data(), m, hex_str.begin(), hex_str.end());
+    return allow_partial ? std::min<long>(res, n) : (res == n ? res : -1);
+  }
+  long from_binary(td::Slice bin_str, bool allow_partial = false) {
+    auto res = bitstring::parse_bitstring_binary_literal(bits(), n, bin_str.begin(), bin_str.end());
+    return allow_partial ? std::min<long>(res, n) : (res == n ? res : -1);
   }
   int compare(const BitArray& other) const {
     return (n % 8 == 0) ? std::memcmp(data(), other.data(), n / 8) : bitstring::bits_memcmp(bits(), other.bits(), n);

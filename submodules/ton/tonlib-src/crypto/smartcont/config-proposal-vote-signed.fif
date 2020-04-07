@@ -1,0 +1,72 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+"vote-query.boc" =: savefile
+false =: internal?
+-1 =: seqno
+0 0 2=: config-addr
+-1 =: expire-at
+
+{ ."usage: " @' $0 type ." (-i | <config-addr> <config-seqno> <expire-at>) <validator-idx> <proposal-hash> <validator-pubkey> <validator-signature> [<savefile>]" cr
+  ."Creates an external message addressed to the configuration smart contract <config-addr> and current sequence number <config-seqno> containing a signed request expiring at unixtime <expire-at> to vote for configuration proposal <proposal-hash> (decimal; prefix with '0x' if needed) on behalf of validator with zero-based index <validator-idx> and (Base64) public key <validator-pubkey> in current validator set (as stored in configuration parameter 34)" cr
+  ."<validator-signature> must be the base64 representation of Ed25519 signature of the previously generated unsigned request by means of <validator-pubkey>" cr
+  ."If -i is selected, instead generates the body of an internal message to be sent to the configuration smart contract from any smartcontract residing in the masterchain" cr
+  ."The result is saved into <savefile> (" savefile type ." by default), to be sent later by the lite-client" cr 1 halt
+} : usage
+
+$# dup 5 < swap 8 > or ' usage if
+8 :$1..n
+
+{ $* @ dup null? ' dup ' uncons cond $* ! } : $next
+$1 "-i" $= { $next drop true =: internal? "vote-msg-body.boc" =: savefile } if
+
+internal? {
+  $next true parse-load-address drop over 1+ abort"configuration smart contract must be in masterchain"
+    2=: config-addr
+  $next parse-int =: seqno
+  $next parse-int dup 30 1<< < { now + 1000 + 2000 /c 2000 * } if
+    dup =: expire-at
+    dup now <= abort"expiration time must be in the future"
+    32 ufits not abort"invalid expiration time"
+} ifnot
+$# dup 4 < swap 5 > or ' usage if
+$1 parse-int dup =: val-idx
+  16 ufits not abort"validator index out of range"
+$2 parse-int dup =: prop-hash
+  256 ufits not abort"invalid proposal hash"
+$3 base64>B dup Blen 36 <> abort"validator Ed25519 public key must be exactly 36 bytes long"
+  32 B>u@+ 0xC6B41348 <> abort"invalid Ed25519 public key: unknown magic number"
+  =: pubkey
+$4 base64>B dup Blen 64 <> abort"validator Ed25519 signature must be exactly 64 bytes long"
+  =: signature
+$5 savefile replace-if-null =: savefile
+
+internal? {
+  ."Creating the body of an internal message to be sent to the configuration smart contract" cr }
+{ ."Creating an external message to configuration smart contract "
+  config-addr 2dup 6 .Addr ." = " .addr cr
+} cond
+."containing a signed request " internal? { ."expiring at " expire-at . } ifnot 
+."to vote for configuration proposal 0x" prop-hash 64x.
+."on behalf of validator with index " val-idx . "and public key" pubkey Bx. cr
+
+internal? { B{566f7445} } {
+  B{566f7465} seqno 32 u>B B+ expire-at 32 u>B B+
+} cond
+val-idx 16 u>B B+ prop-hash 256 u>B B+ dup =: to_sign
+."String to sign is " Bx. cr
+
+to_sign signature pubkey ed25519_chksign not abort"Ed25519 signature is invalid"
+."Provided a valid Ed25519 signature " signature Bx. ." with validator public key " pubkey Bx. cr
+
+now 32 << prop-hash 32 1<< mod + =: query-id
+
+<b internal? { x{566f7465} s, query-id 64 u, }
+   { b{1000100} s, config-addr addr, 0 Gram, b{00} s, } cond
+   signature B, to_sign B, b>
+cr 
+internal? { ."Internal message body is " } { ."External message is " } cond
+dup <s csr. cr
+
+2 boc+>B savefile tuck B>file ."Saved to file " type cr

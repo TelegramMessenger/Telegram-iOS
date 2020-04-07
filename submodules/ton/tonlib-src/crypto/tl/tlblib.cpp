@@ -375,4 +375,10 @@ const TLB* TypenameLookup::lookup(std::string str) const {
   return it != types.end() ? it->second : nullptr;
 }
 
+const TLB* TypenameLookup::lookup(td::Slice str) const {
+  auto it = std::lower_bound(types.begin(), types.end(), str,
+                             [](const auto& x, const auto& y) { return td::Slice(x.first) < y; });
+  return it != types.end() && td::Slice(it->first) == str ? it->second : nullptr;
+}
+
 }  // namespace tlb

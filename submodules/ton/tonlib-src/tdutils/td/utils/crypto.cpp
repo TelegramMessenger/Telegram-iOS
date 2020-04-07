@@ -253,6 +253,13 @@ int pq_factorize(Slice pq_str, string *p_str, string *q_str) {
   return 0;
 }
 
+#ifdef OPENSSL_IS_BORINGSSL
+extern "C" {
+void AES_ige_encrypt(const unsigned char *in_ptr, unsigned char *out, size_t length, const AES_KEY *key,
+                     unsigned char *ivec, const int enc);
+}
+#endif
+
 static void aes_ige_xcrypt(Slice aes_key, MutableSlice aes_iv, Slice from, MutableSlice to, bool encrypt_flag) {
   CHECK(aes_key.size() == 32);
   CHECK(aes_iv.size() == 16);

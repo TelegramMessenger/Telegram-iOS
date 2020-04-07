@@ -1,0 +1,46 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+"validator-to-sign.req" =: savefile
+false =: internal?
+-1 =: seqno
+-1 =: expire-at
+
+{ ."usage: " @' $0 type ." (-i | <cfg-seqno> <expire-at>) <validator-idx> <proposal-hash> [<savefile>]" cr
+  ."Creates an unsigned request expiring at unixtime <expire-at> to vote for configuration proposal <proposal-hash> (decimal; prefix with '0x' if needed) on behalf of validator with zero-based index <validator-idx> in current validator set (as stored in configuration parameter 34)." cr
+  ."If -i is selected, prepares unsigned request to be incorporated into an internal message instead." cr
+  ."The result is saved into <savefile> (" savefile type ." by default) and output in hexadecimal form, to be signed later by the validator public key" cr 1 halt
+} : usage
+
+$# dup 3 < swap 5 > or ' usage if
+5 :$1..n
+{ $* @ dup null? ' dup ' uncons cond $* ! } : $next
+
+$1 "-i" $= { $next drop true =: internal? } if
+
+internal? {
+  $next parse-int =: seqno
+  $next parse-int dup 30 1<< < { now + 1000 + 2000 /c 2000 * } if
+    dup =: expire-at
+    dup now <= abort"expiration time must be in the future"
+    32 ufits not abort"invalid expiration time"
+} ifnot
+$# dup 2 < swap 3 > or ' usage if
+$1 parse-int dup =: val-idx
+  16 ufits not abort"validator index out of range"
+$2 parse-int dup =: prop-hash
+  256 ufits not abort"invalid proposal hash"
+$3 savefile replace-if-null =: savefile
+
+."Creating a request " internal? { ."with seqno " seqno . ."expiring at " expire-at . } ifnot 
+."to vote for configuration proposal 0x" prop-hash 64x.
+."on behalf of validator with index " val-idx . cr
+
+internal? { B{566f7445} } {
+  B{566f7465} seqno 32 u>B B+ expire-at 32 u>B B+
+} cond
+val-idx 16 u>B B+ prop-hash 256 u>B B+ 
+dup Bx. cr
+dup B>base64url type cr
+savefile tuck B>file ."Saved to file " type cr

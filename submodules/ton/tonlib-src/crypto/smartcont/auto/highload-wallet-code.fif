@@ -16,8 +16,8 @@ PROGRAM{
     32 LDU	//  signature in_msg _9 cs
     32 LDU	//  signature in_msg _9 _12 cs
     32 LDU	//  signature in_msg subwallet_id valid_until msg_seqno cs
-    NOW	//  signature in_msg subwallet_id valid_until msg_seqno cs _19
-    s1 s3 XCHG	//  signature in_msg subwallet_id cs msg_seqno valid_until _19
+    s0 s2 XCHG
+    NOW	//  signature in_msg subwallet_id cs msg_seqno valid_until _19
     LEQ	//  signature in_msg subwallet_id cs msg_seqno _20
     35 THROWIF
     c4 PUSH	//  signature in_msg subwallet_id cs msg_seqno _23

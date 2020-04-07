@@ -1,0 +1,112 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+{ show-options-help 1 halt } : usage
+
+"" =: comment  // comment for simple transfers
+true =: allow-bounce
+false =: force-bounce
+3 =: send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
+60 =: timeout   // external message expires in 60 seconds
+variable extra-currencies
+{ extra-currencies @ cc+ extra-currencies ! } : extra-cc+!
+
+begin-options
+     " <filename-base> <dest-addr> <subwallet-id> <amount> [-x <extra-amount>*<extra-currency-id>] [-n|-b] [-t<timeout>] [-B <body-boc>] [-C <comment>] [<savefile>]" +cr +tab
+    +"Creates one request to highload wallet created by new-highload-wallet-v2.fif, with private key loaded from file <filename-base>.pk "
+    +"and address from <filename-base><subwallet-id>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)"
+    disable-digit-options generic-help-setopt
+  "n" "--no-bounce" { false =: allow-bounce } short-long-option
+    "Clears bounce flag" option-help
+  "b" "--force-bounce" { true =: force-bounce } short-long-option
+    "Forces bounce flag" option-help
+  "x" "--extra" { $>xcc extra-cc+! } short-long-option-arg
+    "Indicates the amount of extra currencies to be transfered" option-help
+  "t" "--timeout" { parse-int =: timeout } short-long-option-arg
+    "Sets expiration timeout in seconds (" timeout (.) $+ +" by default)" option-help
+  "B" "--body" { =: body-boc-file } short-long-option-arg
+    "Sets the payload of the transfer message" option-help
+  "C" "--comment" { =: comment } short-long-option-arg
+    "Sets the comment to be sent in the transfer message" option-help
+  "m" "--mode" { parse-int =: send-mode } short-long-option-arg
+    "Sets transfer mode (0..255) for SENDRAWMSG (" send-mode (.) $+ +" by default)"
+    option-help
+  "h" "--help" { usage } short-long-option
+    "Shows a help message" option-help
+parse-options
+
+$# dup 4 < swap 5 > or ' usage if
+5 :$1..n
+
+true constant bounce
+$1 =: file-base
+$2 bounce parse-load-address force-bounce or allow-bounce and =: bounce 2=: dest_addr
+$3 parse-int =: subwallet-id
+$4 $>cc extra-cc+! extra-currencies @ 2=: amount
+$5 "wallet-query" replace-if-null =: savefile
+{ subwallet-id (.) $+ } : +subwallet
+
+file-base +subwallet +".addr" load-address
+2dup 2constant wallet_addr
+."Source wallet address = " 2dup .addr cr 6 .Addr cr
+file-base +".pk" load-keypair nip constant wallet_pk
+
+def? body-boc-file { @' body-boc-file file>B B>boc } { comment simple-transfer-body } cond
+constant body-cell
+
+."Transferring " amount .GR+cc ."to account "
+dest_addr 2dup bounce 7 + .Addr ." = " .addr 
+."subwallet-id=0x" subwallet-id x.
+."timeout=" timeout . ."bounce=" bounce . cr
+."Body of transfer message is " body-cell <s csr. cr
+
+variable orders   dictnew orders !
+variable order#   order# 0!
+// c --
+{ <s order# @ dup 254 >= abort"more than 254 orders"
+  orders @ 16 udict!+ not abort"cannot add order to dictionary"
+  orders ! order# 1+!
+} : add-order
+// b body -- b'
+{ tuck <s 2dup 1 s-fits-with? not rot over 1 i, -rot
+  { drop swap ref, } { s, nip } cond
+} : append-msg-body
+// ng wc addr bounce body -- c
+{ <b b{01} s, rot 1 i, b{000100} s, 2swap addr, rot Gram,
+  0 9 64 32 + + 1+ u, swap append-msg-body b>
+} : create-int-msg
+// ng wc addr bnc --
+{ ."Transferring " 3 roll .GR ."to account " 
+  -rot 2dup 4 pick 7 + .Addr ." = " .addr ." bounce=" . cr
+} : .transfer
+// addr$ ng -- c
+{ swap parse-smc-addr force-bounce or allow-bounce and  // ng wc addr bnc 
+  2over 2over .transfer
+  <b 0 32 u, b> create-int-msg
+} : create-simple-transfer
+// c m -- c'
+{ <b swap 8 u, swap ref, b> } : create-order
+
+// addr$ ng --
+{ create-simple-transfer send-mode create-order add-order } : send
+{ bl word bl word $>GR send } : SEND
+
+// create internal message
+<b b{01} s, bounce 1 i, b{000} s, dest_addr Addr, amount Gram+cc, 0 9 64 32 + + u,
+  body-cell <s 2dup 1 s-fits-with? not rot over 1 i, -rot { drop body-cell ref, } { s, } cond
+b>
+send-mode create-order add-order
+
+// create external message
+now timeout + 32 << <b orders @ dict, b> hashu 32 1<<1- and + =: query_id
+<b subwallet-id 32 i, query_id 64 u, orders @ dict, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint
+<b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,
+   swap B, swap <s s, b>
+dup ."resulting external message: " <s csr. cr
+2 boc+>B dup Bx. cr
+."Query_id is " query_id dup . ."= 0x" X. cr
+savefile +".boc" tuck B>file
+."(Saved to file " type .")" cr

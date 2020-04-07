@@ -26,6 +26,8 @@ begin-options
     "Sets the payload of the transfer message" option-help
   "C" "--comment" { =: comment } short-long-option-arg
     "Sets the comment to be sent in the transfer message" option-help
+  "I" "--with-init" { =: init-file } short-long-option-arg
+    "Indicates filename with BoC containing StateInit for internal message" option-help
   "m" "--mode" { parse-int =: send-mode } short-long-option-arg
     "Sets transfer mode (0..255) for SENDRAWMSG (" send-mode (.) $+ +" by default)"
     option-help
@@ -52,13 +54,17 @@ file-base +".pk" load-keypair nip constant wallet_pk
 def? body-boc-file { @' body-boc-file file>B B>boc } { comment simple-transfer-body } cond
 constant body-cell
 
+def? init-file { @' init-file file>B B>boc <s b{11} swap |_ } { b{0} } cond
+=: state-init
+
 ."Transferring " amount .GR+cc ."to account "
 dest_addr 2dup bounce 7 + .Addr ." = " .addr 
 ."seqno=0x" seqno x. ."bounce=" bounce . cr
 ."Body of transfer message is " body-cell <s csr. cr
+."StateInit is " state-init csr. cr
   
 // create a message
-<b b{01} s, bounce 1 i, b{000} s, dest_addr Addr, amount Gram+cc, 0 9 64 32 + + u,
+<b b{01} s, bounce 1 i, b{000} s, dest_addr Addr, amount Gram+cc, 0 8 64 32 + + u, state-init s,
   body-cell <s 2dup 1 s-fits-with? not rot over 1 i, -rot { drop body-cell ref, } { s, } cond
 b>
 <b seqno 32 u, send-mode 8 u, swap ref, b>

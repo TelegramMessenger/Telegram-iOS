@@ -103,6 +103,7 @@ const auto& get_map() {
 }  // namespace
 
 td::Result<td::Ref<vm::Cell>> SmartContractCode::load(td::Slice name) {
+  LOG(ERROR) << "LOAD " << name;
   auto& map = get_map();
   auto it = map.find(name);
   if (it == map.end()) {

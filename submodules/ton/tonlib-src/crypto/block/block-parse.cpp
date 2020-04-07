@@ -1844,9 +1844,13 @@ bool OutMsg::skip(vm::CellSlice& cs) const {
              && t_Ref_MsgEnvelope.skip(cs)  // out_msg:^MsgEnvelope
              && RefTo<InMsg>{}.skip(cs);    // reimport:^InMsg
     case msg_export_deq:
-      return cs.advance(3)                  // msg_export_deq$110
+      return cs.advance(4)                  // msg_export_deq$1100
              && t_Ref_MsgEnvelope.skip(cs)  // out_msg:^MsgEnvelope
-             && cs.advance(64);             // import_block_lt:uint64
+             && cs.advance(63);             // import_block_lt:uint63
+    case msg_export_deq_short:
+      return cs.advance(
+          4 + 256 + 32 + 64 +
+          64);  // msg_export_deq_short$1101 msg_env_hash:bits256 next_workchain:int32 next_addr_pfx:uint64 import_block_lt:uint64
     case msg_export_tr_req:
       return cs.advance(3)                  // msg_export_tr_req$111
              && t_Ref_MsgEnvelope.skip(cs)  // out_msg:^MsgEnvelope
@@ -1879,9 +1883,13 @@ bool OutMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
              && t_Ref_MsgEnvelope.validate_skip(ops, cs, weak)  // out_msg:^MsgEnvelope
              && RefTo<InMsg>{}.validate_skip(ops, cs, weak);    // reimport:^InMsg
     case msg_export_deq:
-      return cs.advance(3)                                      // msg_export_deq$110
+      return cs.advance(4)                                      // msg_export_deq$1100
              && t_Ref_MsgEnvelope.validate_skip(ops, cs, weak)  // out_msg:^MsgEnvelope
-             && cs.advance(64);                                 // import_block_lt:uint64
+             && cs.advance(63);                                 // import_block_lt:uint63
+    case msg_export_deq_short:
+      return cs.advance(
+          4 + 256 + 32 + 64 +
+          64);  // msg_export_deq_short$1101 msg_env_hash:bits256 next_workchain:int32 next_addr_pfx:uint64 import_block_lt:uint64
     case msg_export_tr_req:
       return cs.advance(3)                                      // msg_export_tr_req$111
              && t_Ref_MsgEnvelope.validate_skip(ops, cs, weak)  // out_msg:^MsgEnvelope
@@ -1902,7 +1910,9 @@ bool OutMsg::get_export_value(vm::CellBuilder& cb, vm::CellSlice& cs) const {
     case msg_export_deq_imm:  // dequeuing record for outbound message delivered in this very block, no value exported
       return cs.have(3, 2) && t_CurrencyCollection.null_value(cb);
     case msg_export_deq:  // dequeueing record for outbound message, no exported value
-      return cs.have(3, 1) && t_CurrencyCollection.null_value(cb);
+      return cs.have(4 + 63, 1) && t_CurrencyCollection.null_value(cb);
+    case msg_export_deq_short:  // dequeueing record for outbound message, no exported value
+      return cs.have(4 + 256 + 32 + 64 + 64) && t_CurrencyCollection.null_value(cb);
     case msg_export_new:     // newly-generated outbound internal message, queued
     case msg_export_tr:      // transit internal message, queued
     case msg_export_tr_req:  // transit internal message, re-queued from this shardchain
@@ -1941,6 +1951,7 @@ bool OutMsg::get_created_lt(vm::CellSlice& cs, unsigned long long& created_lt) c
     case msg_export_new:
     case msg_export_tr:
     case msg_export_deq:
+    case msg_export_deq_short:
     case msg_export_deq_imm:
     case msg_export_tr_req:
       if (cs.have(3, 1)) {

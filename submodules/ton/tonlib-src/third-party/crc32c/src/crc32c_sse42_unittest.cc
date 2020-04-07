@@ -17,7 +17,7 @@ struct Sse42TestTraits {
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Sse42, ExtendTest, Sse42TestTraits);
+INSTANTIATE_TYPED_TEST_SUITE_P(Sse42, ExtendTest, Sse42TestTraits);
 
 #endif  // HAVE_SSE42 && (defined(_M_X64) || defined(__x86_64__))
 

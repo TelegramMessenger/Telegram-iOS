@@ -594,6 +594,7 @@ class TypenameLookup {
   bool register_type(const char* name, const TLB* tp);
   bool register_types(register_func_t func);
   const TLB* lookup(std::string str) const;
+  const TLB* lookup(td::Slice str) const;
 };
 
 }  // namespace tlb

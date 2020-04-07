@@ -32,15 +32,18 @@ class HighloadWallet : public ton::SmartContract, public WalletInterface {
   }
   static constexpr unsigned max_message_size = vm::CellString::max_bytes;
   static constexpr unsigned max_gifts_size = 254;
-  static td::Ref<vm::Cell> get_init_state(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept;
+  static td::Ref<vm::Cell> get_init_state(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id,
+                                          td::int32 revision) noexcept;
   static td::Ref<vm::Cell> get_init_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id) noexcept;
   static td::Ref<vm::Cell> make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
                                                td::uint32 seqno, td::uint32 valid_until, td::Span<Gift> gifts) noexcept;
 
-  static td::Ref<vm::Cell> get_init_code() noexcept;
+  static td::Ref<vm::Cell> get_init_code(td::int32 revision) noexcept;
   static vm::CellHash get_init_code_hash() noexcept;
   static td::Ref<vm::Cell> get_init_data(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept;
-
+  static td::optional<td::int32> guess_revision(const vm::Cell::Hash& code_hash);
+  static td::optional<td::int32> guess_revision(const block::StdAddress& address,
+                                                const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id);
   td::Result<td::uint32> get_seqno() const;
   td::Result<td::uint32> get_wallet_id() const;
 

@@ -873,8 +873,8 @@ PROGRAM{
   }>
   dnsresolve PROC:<{
     //  domain category
-    NOW	//  domain category _6
-    s1 s2 XCHG	//  category domain _6
+    SWAP
+    NOW	//  category domain _6
     dnsdictlookup INLINECALLDICT	//  category exp cat_table exact? pfx
     s0 s3 XCHG	//  category pfx cat_table exact? exp
     IFNOTJMP:<{	//  category pfx cat_table exact?

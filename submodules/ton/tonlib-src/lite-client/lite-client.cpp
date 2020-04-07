@@ -232,6 +232,68 @@ bool TestNode::complete_blkid(ton::BlockId partial_blkid, ton::BlockIdExt& compl
   return false;
 }
 
+const tlb::TypenameLookup& TestNode::get_tlb_dict() {
+  static tlb::TypenameLookup tlb_dict = []() {
+    tlb::TypenameLookup tlb_dict0;
+    tlb_dict0.register_types(block::gen::register_simple_types);
+    return tlb_dict0;
+  }();
+  return tlb_dict;
+}
+
+bool TestNode::list_cached_cells() const {
+  for (const auto& kv : cell_cache_) {
+    td::TerminalIO::out() << kv.first.to_hex() << std::endl;
+  }
+  return true;
+}
+
+bool TestNode::dump_cached_cell(td::Slice hash_pfx, td::Slice type_name) {
+  if (hash_pfx.size() > 64) {
+    return false;
+  }
+  td::Bits256 hv_min;
+  int len = (int)hv_min.from_hex(hash_pfx, true);
+  if (len < 0 || len > 256) {
+    return set_error("cannot parse hex cell hash prefix");
+  }
+  (hv_min.bits() + len).fill(false, 256 - len);
+  const tlb::TLB* tptr = nullptr;
+  block::gen::ConfigParam tpconf(0);
+  if (type_name.size()) {
+    td::int32 idx;
+    if (type_name.substr(0, 11) == "ConfigParam" && convert_int32(type_name.substr(11), idx) && idx >= 0) {
+      tpconf = block::gen::ConfigParam(idx);
+      tptr = &tpconf;
+    } else {
+      tptr = get_tlb_dict().lookup(type_name);
+    }
+    if (!tptr) {
+      return set_error("unknown TL-B type");
+    }
+    td::TerminalIO::out() << "dumping cells as values of TLB type " << tptr->get_type_name() << std::endl;
+  }
+  auto it = std::lower_bound(cell_cache_.begin(), cell_cache_.end(), hv_min,
+                             [](const auto& x, const auto& y) { return x.first < y; });
+  int cnt = 0;
+  for (; it != cell_cache_.end() && it->first.bits().equals(hv_min.bits(), len); ++it) {
+    std::ostringstream os;
+    os << "C{" << it->first.to_hex() << "} =" << std::endl;
+    vm::load_cell_slice(it->second).print_rec(print_limit_, os, 2);
+    if (tptr) {
+      tptr->print_ref(print_limit_, os, it->second, 2);
+      os << std::endl;
+    }
+    td::TerminalIO::out() << os.str();
+    ++cnt;
+  }
+  if (!cnt) {
+    LOG(ERROR) << "no known cells with specified hash prefix";
+    return false;
+  }
+  return true;
+}
+
 bool TestNode::get_server_time() {
   auto b = ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getTime>(), true);
   return envelope_send_query(std::move(b), [&, Self = actor_id(this) ](td::Result<td::BufferSlice> res)->void {
@@ -863,6 +925,10 @@ bool TestNode::show_help(std::string command) {
          "updated after <start-utime> by validator public "
          "key\n"
          "known\tShows the list of all known block ids\n"
+         "knowncells\tShows the list of hashes of all known (cached) cells\n"
+         "dumpcell <hex-hash-pfx>\nDumps a cached cell by a prefix of its hash\n"
+         "dumpcellas <tlb-type> <hex-hash-pfx>\nFinds a cached cell by a prefix of its hash and prints it as a value "
+         "of <tlb-type>\n"
          "privkey <filename>\tLoads a private key from file\n"
          "help [<command>]\tThis help\n"
          "quit\tExit\n";
@@ -966,6 +1032,13 @@ bool TestNode::do_parse_line() {
            get_creator_stats(blkid, mode, count, hash, utime);
   } else if (word == "known") {
     return eoln() && show_new_blkids(true);
+  } else if (word == "knowncells") {
+    return eoln() && list_cached_cells();
+  } else if (word == "dumpcell" || word == "dumpcellas") {
+    td::Slice chash;
+    td::Slice tname;
+    return (word == "dumpcell" || get_word_to(tname)) && get_word_to(chash) && seekeoln() &&
+           dump_cached_cell(chash, tname);
   } else if (word == "quit" && eoln()) {
     LOG(INFO) << "Exiting";
     stop();
@@ -1061,6 +1134,16 @@ td::int64 TestNode::compute_method_id(std::string method) {
   return method_id;
 }
 
+bool TestNode::cache_cell(Ref<vm::Cell> cell) {
+  if (cell.is_null()) {
+    return false;
+  }
+  td::Bits256 hash = cell->get_hash().bits();
+  LOG(INFO) << "caching cell " << hash.to_hex();
+  auto res = cell_cache_.emplace(hash, std::move(cell));
+  return res.second;
+}
+
 bool TestNode::parse_run_method(ton::WorkchainId workchain, ton::StdSmcAddress addr, ton::BlockIdExt ref_blkid,
                                 std::string method_name, bool ext_mode) {
   auto R = vm::parse_stack_entries(td::Slice(parse_ptr_, parse_end_));
@@ -1068,9 +1151,17 @@ bool TestNode::parse_run_method(ton::WorkchainId workchain, ton::StdSmcAddress a
     return set_error(R.move_as_error().to_string());
   }
   parse_ptr_ = parse_end_;
-  auto P = td::PromiseCreator::lambda([](td::Result<std::vector<vm::StackEntry>> R) {
+  auto P = td::PromiseCreator::lambda([this](td::Result<std::vector<vm::StackEntry>> R) {
     if (R.is_error()) {
       LOG(ERROR) << R.move_as_error();
+    } else {
+      for (const auto& v : R.move_as_ok()) {
+        v.for_each_scalar([this](const vm::StackEntry& val) {
+          if (val.is_cell()) {
+            cache_cell(val.as_cell());
+          }
+        });
+      }
     }
   });
   return start_run_method(workchain, addr, ref_blkid, method_name, R.move_as_ok(), ext_mode ? 0x1f : 0, std::move(P));
@@ -1294,7 +1385,8 @@ bool TestNode::show_dns_record(std::ostream& os, int cat, Ref<vm::Cell> value, b
     case block::gen::DNSRecord::dns_smc_address: {
       block::gen::DNSRecord::Record_dns_smc_address rec;
       if (tlb::unpack_exact(cs, rec) && block::tlb::t_MsgAddressInt.extract_std_address(rec.smc_addr, wc, addr)) {
-        os << "\tsmart contract " << wc << ":" << addr.to_hex() << " = " << block::StdAddress{wc, addr}.rserialize(true);
+        os << "\tsmart contract " << wc << ":" << addr.to_hex() << " = "
+           << block::StdAddress{wc, addr}.rserialize(true);
       }
       break;
     }
@@ -1619,9 +1711,13 @@ void TestNode::run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt
       case block::gen::AccountState::account_uninit:
         LOG(ERROR) << "account " << workchain << ":" << addr.to_hex()
                    << " not initialized yet (cannot run any methods)";
+        promise.set_error(td::Status::Error(PSLICE() << "account " << workchain << ":" << addr.to_hex()
+                                                     << " not initialized yet (cannot run any methods)"));
         return;
       case block::gen::AccountState::account_frozen:
         LOG(ERROR) << "account " << workchain << ":" << addr.to_hex() << " frozen (cannot run any methods)";
+        promise.set_error(td::Status::Error(PSLICE() << "account " << workchain << ":" << addr.to_hex()
+                                                     << " frozen (cannot run any methods)"));
         return;
     }
     CHECK(store.state.write().fetch_ulong(1) == 1);  // account_init$1 _:StateInit = AccountState;
@@ -1638,7 +1734,7 @@ void TestNode::run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt
       stack->dump(os, 3);
       out << os.str();
     }
-    long long gas_limit = vm::GasLimits::infty;
+    long long gas_limit = /* vm::GasLimits::infty */ 10000000;
     // OstreamLogger ostream_logger(ctx.error_stream);
     // auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
     vm::GasLimits gas{gas_limit};
@@ -1649,10 +1745,27 @@ void TestNode::run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt
     // vm.incr_stack_trace(1);    // enable stack dump after each step
     LOG(INFO) << "starting VM to run method `" << method << "` (" << method_id << ") of smart contract " << workchain
               << ":" << addr.to_hex();
-    int exit_code = ~vm.run();
+    int exit_code;
+    try {
+      exit_code = ~vm.run();
+    } catch (vm::VmVirtError& err) {
+      LOG(ERROR) << "virtualization error while running VM to locally compute runSmcMethod result: " << err.get_msg();
+      promise.set_error(
+          td::Status::Error(PSLICE() << "virtualization error while running VM to locally compute runSmcMethod result: "
+                                     << err.get_msg()));
+      exit_code = -1001;
+    } catch (vm::VmError& err) {
+      LOG(ERROR) << "error while running VM to locally compute runSmcMethod result: " << err.get_msg();
+      promise.set_error(td::Status::Error(PSLICE() << "error while running VM to locally compute runSmcMethod result: "
+                                                   << err.get_msg()));
+      exit_code = -1000;
+    }
     LOG(DEBUG) << "VM terminated with exit code " << exit_code;
     if (mode > 0) {
       LOG(DEBUG) << "remote VM exit code is " << remote_exit_code;
+      if (remote_exit_code == ~(int)vm::Excno::out_of_gas) {
+        LOG(WARNING) << "remote server ran out of gas while performing this request; consider using runmethodfull";
+      }
     }
     if (exit_code != 0) {
       LOG(ERROR) << "VM terminated with error code " << exit_code;
@@ -1673,13 +1786,17 @@ void TestNode::run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt
       } else {
         auto res = vm::std_boc_deserialize(std::move(remote_result));
         if (res.is_error()) {
-          LOG(ERROR) << "cannot deserialize remote VM result boc: " << res.move_as_error();
+          auto err = res.move_as_error();
+          LOG(ERROR) << "cannot deserialize remote VM result boc: " << err;
+          promise.set_error(
+              td::Status::Error(PSLICE() << "cannot deserialize remote VM result boc: " << std::move(err)));
           return;
         }
         auto cs = vm::load_cell_slice(res.move_as_ok());
         Ref<vm::Stack> remote_stack;
         if (!(vm::Stack::deserialize_to(cs, remote_stack, 0) && cs.empty_ext())) {
           LOG(ERROR) << "remote VM result boc cannot be deserialized as a VmStack";
+          promise.set_error(td::Status::Error("remote VM result boc cannot be deserialized as a VmStack"));
           return;
         }
         std::ostringstream os;
@@ -1692,8 +1809,11 @@ void TestNode::run_smc_method(int mode, ton::BlockIdExt ref_blk, ton::BlockIdExt
     promise.set_result(stack->extract_contents());
   } catch (vm::VmVirtError& err) {
     out << "virtualization error while parsing runSmcMethod result: " << err.get_msg();
+    promise.set_error(
+        td::Status::Error(PSLICE() << "virtualization error while parsing runSmcMethod result: " << err.get_msg()));
   } catch (vm::VmError& err) {
     out << "error while parsing runSmcMethod result: " << err.get_msg();
+    promise.set_error(td::Status::Error(PSLICE() << "error while parsing runSmcMethod result: " << err.get_msg()));
   }
 }
 

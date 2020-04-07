@@ -17,7 +17,7 @@ struct Arm64TestTraits {
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Arm64, ExtendTest, Arm64TestTraits);
+INSTANTIATE_TYPED_TEST_SUITE_P(Arm64, ExtendTest, Arm64TestTraits);
 
 #endif  // HAVE_ARM64_CRC32C
 

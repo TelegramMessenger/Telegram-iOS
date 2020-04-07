@@ -273,6 +273,7 @@ struct McShardHash : public McShardHashI {
   bool pack(vm::CellBuilder& cb) const;
   static Ref<McShardHash> unpack(vm::CellSlice& cs, ton::ShardIdFull id);
   static Ref<McShardHash> from_block(Ref<vm::Cell> block_root, const ton::FileHash& _fhash, bool init_fees = false);
+  static bool extract_cc_seqno(vm::CellSlice& cs, ton::CatchainSeqno* cc);
   McShardHash* make_copy() const override {
     return new McShardHash(*this);
   }

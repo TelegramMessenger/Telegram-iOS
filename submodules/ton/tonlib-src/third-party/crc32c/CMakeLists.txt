@@ -3,7 +3,7 @@
 # found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 cmake_minimum_required(VERSION 3.1)
-project(Crc32c VERSION 0.1.0 LANGUAGES C CXX)
+project(Crc32c VERSION 1.1.0 LANGUAGES C CXX)
 
 # This project can use C11, but will gracefully decay down to C89.
 set(CMAKE_C_STANDARD 11)
@@ -26,12 +26,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   endif(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
 
   # Disable C++ exceptions.
-  string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHs-c-")
   add_definitions(-D_HAS_EXCEPTIONS=0)
 
   # Disable RTTI.
-  string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
 else(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   # Use -Wall for clang and gcc.
@@ -50,11 +50,11 @@ else(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   endif(NOT CMAKE_CXX_FLAGS MATCHES "-Werror")
 
   # Disable C++ exceptions.
-  string(REGEX REPLACE "-fexceptions" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  string(REGEX REPLACE "-fexceptions" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
 
   # Disable RTTI.
-  string(REGEX REPLACE "-frtti" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  string(REGEX REPLACE "-frtti" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
@@ -229,6 +229,11 @@ if(HAVE_ARM64_CRC32C)
   endif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif(HAVE_ARM64_CRC32C)
 
+# CMake only enables PIC by default in SHARED and MODULE targets.
+if(BUILD_SHARED_LIBS)
+  set_property(TARGET crc32c_arm64 PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+endif(BUILD_SHARED_LIBS)
+
 # SSE4.2 code is built separately, so we don't accidentally compile unsupported
 # instructions into code that gets run without SSE4.2 support.
 add_library(crc32c_sse42 OBJECT "")
@@ -245,6 +250,11 @@ if(HAVE_SSE42)
     target_compile_options(crc32c_sse42 PRIVATE "-msse4.2")
   endif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif(HAVE_SSE42)
+
+# CMake only enables PIC by default in SHARED and MODULE targets.
+if(BUILD_SHARED_LIBS)
+  set_property(TARGET crc32c_sse42 PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+endif(BUILD_SHARED_LIBS)
 
 add_library(crc32c ""
   # TODO(pwnall): Move the TARGET_OBJECTS generator expressions to the PRIVATE
@@ -276,6 +286,9 @@ target_include_directories(crc32c
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+set_target_properties(crc32c
+  PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
 
 # Warnings as errors in Visual Studio for this project's targets.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")

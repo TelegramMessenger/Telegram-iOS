@@ -52,7 +52,7 @@ struct ApiTestTraits {
   }
 };
 
-INSTANTIATE_TYPED_TEST_CASE_P(Api, ExtendTest, ApiTestTraits);
+INSTANTIATE_TYPED_TEST_SUITE_P(Api, ExtendTest, ApiTestTraits);
 
 }  // namespace crc32c
 
