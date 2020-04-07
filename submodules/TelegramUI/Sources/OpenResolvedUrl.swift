@@ -90,7 +90,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
-            if false {
+            if true {
                 var mainStickerPack: StickerPackReference?
                 var stickerPacks: [StickerPackReference] = []
                 if let message = contentContext as? Message {

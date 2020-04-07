@@ -427,7 +427,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in
         }, openPollCreation: { _ in
-        }, displayPollSolution: { _ in
+        }, displayPollSolution: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

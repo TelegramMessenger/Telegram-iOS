@@ -175,7 +175,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
-    private var contentNodes: [ChatMessageBubbleContentNode] = []
+    private(set) var contentNodes: [ChatMessageBubbleContentNode] = []
     private var mosaicStatusNode: ChatMessageDateAndStatusNode?
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     

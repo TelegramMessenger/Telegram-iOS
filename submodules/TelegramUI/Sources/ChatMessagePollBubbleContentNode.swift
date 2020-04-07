@@ -851,6 +851,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private let statusNode: ChatMessageDateAndStatusNode
     private var optionNodes: [ChatMessagePollOptionNode] = []
     
+    var solutionTipSourceNode: ASDisplayNode? {
+        return self.solutionButtonNode
+    }
+    
     private var poll: TelegramMediaPoll?
     
     required init() {
@@ -1452,16 +1456,16 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 timerTransition.updateTransformScale(node: timerNode, scale: 0.1)
                             }
                             
-                            if (strongSelf.timerNode == nil || !displayDeadline), let poll = poll, case .anonymous = poll.publicity, case .quiz = poll.kind, let solution = poll.results.solution, !solution.isEmpty, (isClosed || hasSelected) {
+                            if (strongSelf.timerNode == nil || !displayDeadline), let poll = poll, case .quiz = poll.kind, let solution = poll.results.solution, !solution.isEmpty, (isClosed || hasSelected) {
                                 let solutionButtonNode: SolutionButtonNode
                                 if let current = strongSelf.solutionButtonNode {
                                     solutionButtonNode = current
                                 } else {
                                     solutionButtonNode = SolutionButtonNode(pressed: {
-                                        guard let strongSelf = self, let item = strongSelf.item else {
+                                        guard let strongSelf = self, let solutionButtonNode = strongSelf.solutionButtonNode, let item = strongSelf.item else {
                                             return
                                         }
-                                        item.controllerInteraction.displayPollSolution(solution)
+                                        item.controllerInteraction.displayPollSolution(solution, solutionButtonNode)
                                     })
                                     strongSelf.solutionButtonNode = solutionButtonNode
                                     strongSelf.addSubnode(solutionButtonNode)

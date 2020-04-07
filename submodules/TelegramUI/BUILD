@@ -202,6 +202,7 @@ swift_library(
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/Svg:Svg",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     visibility = [
         "//visibility:public",

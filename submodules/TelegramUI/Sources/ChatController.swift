@@ -58,6 +58,7 @@ import PhoneNumberFormat
 import SettingsUI
 import UrlWhitelist
 import TelegramIntents
+import TooltipUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -1692,7 +1693,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 itemNode.animateQuizInvalidOptionSelected()
                                                 
                                                 if let solution = resultPoll.results.solution {
-                                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: solution), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
+                                                    for contentNode in itemNode.contentNodes {
+                                                        if let contentNode = contentNode as? ChatMessagePollBubbleContentNode, let sourceNode = contentNode.solutionTipSourceNode {
+                                                            let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view)
+                                                            
+                                                            strongSelf.present(TooltipScreen(text: solution, icon: .info, location: absoluteFrame, shouldDismissOnTouch: { _ in
+                                                                return true
+                                                            }), in: .current)
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -1938,11 +1947,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.presentPollCreation(isQuiz: isQuiz)
-        }, displayPollSolution: { [weak self] text in
+        }, displayPollSolution: { [weak self] text, sourceNode in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: text), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
+            let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: -12.0, dy: 0.0)
+            strongSelf.present(TooltipScreen(text: text, icon: .info, location: absoluteFrame, shouldDismissOnTouch: { _ in
+                return true
+            }), in: .current)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

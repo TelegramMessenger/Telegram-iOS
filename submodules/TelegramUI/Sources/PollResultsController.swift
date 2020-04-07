@@ -219,11 +219,11 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     
     entries.append(.text(poll.text))
     
-    if let solution = poll.results.solution, !solution.isEmpty {
+    /*if let solution = poll.results.solution, !solution.isEmpty {
         //TODO:localize
         entries.append(.solutionHeader("EXPLANATION"))
         entries.append(.solutionText(solution))
-    }
+    }*/
     
     var optionVoterCount: [Int: Int32] = [:]
     let totalVoterCount = poll.results.totalVoters ?? 0

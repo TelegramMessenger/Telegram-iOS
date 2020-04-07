@@ -392,6 +392,10 @@ public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small:
         let fullSizeData = value._1
         let fullSizeComplete = value._2
         return { arguments in
+            if thumbnailData == nil && fullSizeData == nil {
+                return nil
+            }
+            
             let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
             
             let drawingRect = arguments.drawingRect
@@ -483,6 +487,10 @@ public func chatMessageAnimatedSticker(postbox: Postbox, file: TelegramMediaFile
         let fullSizeData = value._1
         let fullSizeComplete = value._2
         return { arguments in
+            if thumbnailData == nil && fullSizeData == nil {
+                return nil
+            }
+            
             let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             let drawingRect = arguments.drawingRect
