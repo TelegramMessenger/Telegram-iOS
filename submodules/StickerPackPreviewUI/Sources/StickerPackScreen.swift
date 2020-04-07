@@ -605,6 +605,12 @@ private final class StickerPackContainer: ASDisplayNode {
             self.expandProgressUpdated(self, expandProgressTransition)
         }
         
+        if !transition.isAnimated {
+            self.backgroundNode.layer.removeAllAnimations()
+            self.titleContainer.layer.removeAllAnimations()
+            self.titleSeparatorNode.layer.removeAllAnimations()
+        }
+        
         let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: max(minBackgroundY, unclippedBackgroundY)), size: CGSize(width: layout.size.width, height: layout.size.height))
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.titleContainer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((50.0) / 2.0)), size: CGSize()))

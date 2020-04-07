@@ -378,6 +378,20 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
         
         let fromOffset: CGPoint = self.scrollView.contentOffset
+        let fromBounds = CGRect(origin: fromOffset, size: self.scrollView.bounds.size)
+        self.applyingContentOffset = true
+        self.scrollView.setContentOffset(toOffset, animated: false)
+        self.applyingContentOffset = false
+        let toBounds = self.scrollView.bounds
+        let animation = self.scrollView.layer.makeAnimation(from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: duration)
+        self.scrollView.layer.add(animation, forKey: "autoscroll")
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: .spring)
+        
+        self.applyPresentationLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0, customTransition: transition), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, synchronousLoads: false, updatingLayout: false, completion: { _ in })
+        self.updateVisibleContentOffset()
+        
+        /*let fromOffset: CGPoint = self.scrollView.contentOffset
         
         self.autoscrollingAnimator = DisplayLinkAnimator(duration: duration, from: 0.0, to: 1.0, update: { [weak self] t in
             guard let strongSelf = self else {
@@ -392,13 +406,20 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             }
             strongSelf.autoscrollingAnimator?.invalidate()
             strongSelf.autoscrollingAnimator = nil
-        })
+        })*/
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         if let autoscrollingAnimator = self.autoscrollingAnimator {
             self.autoscrollingAnimator = nil
             autoscrollingAnimator.invalidate()
+        }
+        
+        if let _ = self.scrollView.layer.animation(forKey: "autoscroll") {
+            if let presentationLayer = self.scrollView.layer.presentation() {
+                self.scrollView.bounds = presentationLayer.bounds
+            }
+            self.scrollView.layer.removeAnimation(forKey: "autoscroll")
         }
         
         self.updateItemNodeVisibilititesAndScrolling()
@@ -627,10 +648,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
-    private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, layoutTransactionOffset: CGFloat, scrollToItem: GridNodeScrollToItem? = nil) -> GridNodePresentationLayoutTransition {
+    private func generatePresentationLayoutTransition(stationaryItems: GridNodeStationaryItems = .none, layoutTransactionOffset: CGFloat, scrollToItem: GridNodeScrollToItem? = nil, customTransition: ContainedViewLayoutTransition? = nil) -> GridNodePresentationLayoutTransition {
         if CGFloat(0.0).isLess(than: self.gridLayout.size.width) && CGFloat(0.0).isLess(than: self.gridLayout.size.height) {
             var transitionDirectionHint: GridNodePreviousItemsTransitionDirectionHint = .up
-            var transition: ContainedViewLayoutTransition = .immediate
+            var transition: ContainedViewLayoutTransition = customTransition ?? .immediate
             let contentOffset: CGPoint
             var updatedStationaryItems = stationaryItems
             if let scrollToItem = scrollToItem {
