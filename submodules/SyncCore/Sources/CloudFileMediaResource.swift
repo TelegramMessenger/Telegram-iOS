@@ -374,7 +374,7 @@ public final class CloudStickerPackThumbnailMediaResource: TelegramMediaResource
     }
     
     public func isEqual(to: MediaResource) -> Bool {
-        if let to = to as? CloudPeerPhotoSizeMediaResource {
+        if let to = to as? CloudStickerPackThumbnailMediaResource {
             return self.datacenterId == to.datacenterId && self.volumeId == to.volumeId && self.localId == to.localId
         } else {
             return false
