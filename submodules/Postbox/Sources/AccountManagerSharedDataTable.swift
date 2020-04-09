@@ -11,7 +11,7 @@ final class AccountManagerSharedDataTable: Table {
     func get(key: ValueBoxKey) -> PreferencesEntry? {
         if let object = self.values[key] {
             return object
-        } else if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
+        } else  if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
             return object
         } else {
             return nil
