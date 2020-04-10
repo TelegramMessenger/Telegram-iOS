@@ -11,6 +11,9 @@ static_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AppBundle:AppBundle",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/TextFormat:TextFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

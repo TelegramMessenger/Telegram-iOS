@@ -286,6 +286,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var mediaRestrictedTooltipController: TooltipController?
     private var mediaRestrictedTooltipControllerMode = true
     
+    private var currentMessageTooltipScreens: [TooltipScreen] = []
+    
     private weak var slowmodeTooltipController: ChatSlowmodeHintController?
     
     private weak var currentContextController: ContextController?
@@ -1695,11 +1697,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 if let solution = resultPoll.results.solution {
                                                     for contentNode in itemNode.contentNodes {
                                                         if let contentNode = contentNode as? ChatMessagePollBubbleContentNode, let sourceNode = contentNode.solutionTipSourceNode {
-                                                            let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view)
-                                                            
-                                                            strongSelf.present(TooltipScreen(text: solution, icon: .info, location: absoluteFrame, shouldDismissOnTouch: { _ in
-                                                                return true
-                                                            }), in: .current)
+                                                            let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: 0.0, dy: 0.0)
+                                                            let tooltipScreen = TooltipScreen(text: solution.text, textEntities: solution.entities, icon: nil, location: absoluteFrame, shouldDismissOnTouch: { point in
+                                                                return .dismiss(consume: absoluteFrame.contains(point))
+                                                            }, openUrl: { url in
+                                                                self?.openUrl(url, concealed: false)
+                                                            })
+                                                            tooltipScreen.becameDismissed = { tooltipScreen in
+                                                                guard let strongSelf = self else {
+                                                                    return
+                                                                }
+                                                                strongSelf.currentMessageTooltipScreens.removeAll(where: { $0 === tooltipScreen })
+                                                            }
+                                                            strongSelf.currentMessageTooltipScreens.append(tooltipScreen)
+                                                            strongSelf.present(tooltipScreen, in: .current)
                                                         }
                                                     }
                                                 }
@@ -1947,14 +1958,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.presentPollCreation(isQuiz: isQuiz)
-        }, displayPollSolution: { [weak self] text, sourceNode in
+        }, displayPollSolution: { [weak self] solution, sourceNode in
             guard let strongSelf = self else {
                 return
             }
-            let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: -12.0, dy: 0.0)
-            strongSelf.present(TooltipScreen(text: text, icon: .info, location: absoluteFrame, shouldDismissOnTouch: { _ in
-                return true
-            }), in: .current)
+            let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: 0.0, dy: 0.0)
+            let tooltipScreen = TooltipScreen(text: solution.text, textEntities: solution.entities, icon: nil, location: absoluteFrame, shouldDismissOnTouch: { point in
+                return .dismiss(consume: absoluteFrame.contains(point))
+            }, openUrl: { url in
+                self?.openUrl(url, concealed: false)
+            })
+            tooltipScreen.becameDismissed = { tooltipScreen in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.currentMessageTooltipScreens.removeAll(where: { $0 === tooltipScreen })
+            }
+            strongSelf.currentMessageTooltipScreens.append(tooltipScreen)
+            strongSelf.present(tooltipScreen, in: .current)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -2667,6 +2688,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func loadDisplayNode() {
         self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, controller: self)
+        
+        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset in
+            guard let strongSelf = self else {
+                return
+            }
+            for tooltipScreen in strongSelf.currentMessageTooltipScreens {
+                tooltipScreen.addRelativeScrollingOffset(-offset)
+            }
+        }
         
         self.chatDisplayNode.peerView = self.peerView
         

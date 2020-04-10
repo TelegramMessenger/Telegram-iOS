@@ -76,13 +76,17 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?) {
+    private let presetText: String?
+    
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
         self.presentError = presentError
+        
+        self.presetText = presetText
         
         self.defaultAction = defaultAction
         self.requestLayout = requestLayout
@@ -139,6 +143,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
         
         self.inputFieldNode = ShareInputFieldNode(theme: ShareInputFieldNodeTheme(presentationTheme: self.presentationData.theme), placeholder: self.presentationData.strings.ShareMenu_Comment)
+        self.inputFieldNode.text = presetText ?? ""
+        self.inputFieldNode.preselectText()
         self.inputFieldNode.alpha = 0.0
         
         self.actionSeparatorNode = ASDisplayNode()
@@ -176,7 +182,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     strongSelf.peersContentNode?.updateFoundPeers()
                 }
                 
-                strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty, inputField: true, actions: strongSelf.defaultAction == nil)
+                strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil, inputField: true, actions: strongSelf.defaultAction == nil)
                 
                 strongSelf.updateButton()
                 
@@ -228,6 +234,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         self.updateButton()
+        
+        if self.presetText != nil {
+            self.setActionNodesHidden(false, inputField: true, actions: true, animated: false)
+        }
     }
     
     deinit {
@@ -279,13 +289,15 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.actionButtonNode.badgeTextColor = presentationData.theme.actionSheet.opaqueItemBackgroundColor
     }
     
-    func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false) {
+    func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false, animated: Bool = true) {
         func updateActionNodesAlpha(_ nodes: [ASDisplayNode], alpha: CGFloat) {
             for node in nodes {
                 if !node.alpha.isEqual(to: alpha) {
                     let previousAlpha = node.alpha
                     node.alpha = alpha
-                    node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32)
+                    if animated {
+                        node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32)
+                    }
                     
                     if let inputNode = node as? ShareInputFieldNode, alpha.isZero {
                         inputNode.deactivateInput()
@@ -362,7 +374,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     if contentNode is ShareSearchContainerNode {
                         self.setActionNodesHidden(true, inputField: true, actions: true)
                     } else if !(contentNode is ShareLoadingContainerNode) {
-                        self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty, actions: true)
+                        self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil, actions: true)
                     }
                 } else {
                     if let contentNode = self.contentNode {
@@ -409,13 +421,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         var bottomGridInset: CGFloat = 0
  
         var actionButtonHeight: CGFloat = 0
-        if self.defaultAction != nil || !self.controllerInteraction!.selectedPeers.isEmpty {
+        if self.defaultAction != nil || !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil {
             actionButtonHeight = buttonHeight
             bottomGridInset += actionButtonHeight
         }
  
         let inputHeight = self.inputFieldNode.updateLayout(width: contentContainerFrame.size.width, transition: transition)
-        if !self.controllerInteraction!.selectedPeers.isEmpty {
+        if !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil {
             bottomGridInset += inputHeight
         }
         
@@ -503,7 +515,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     @objc func actionButtonPressed() {
-        if self.controllerInteraction!.selectedPeers.isEmpty {
+        if self.controllerInteraction!.selectedPeers.isEmpty && self.presetText == nil {
             if let defaultAction = self.defaultAction {
                 defaultAction.action()
             }
@@ -658,7 +670,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
-        })
+        }, extendedInitialReveal: self.presetText != nil)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             let _ = (recentlySearchedPeers(postbox: context.account.postbox)
@@ -783,13 +795,21 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private func updateButton() {
         if self.controllerInteraction!.selectedPeers.isEmpty {
-            if let defaultAction = self.defaultAction {
+            if self.presetText != nil {
+                self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
+                self.actionButtonNode.isEnabled = false
+                self.actionButtonNode.badge = nil
+            } else if let defaultAction = self.defaultAction {
                 self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
             } else {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
+                self.actionButtonNode.isEnabled = false
+                self.actionButtonNode.badge = nil
             }
         } else {
+            self.actionButtonNode.isEnabled = true
             self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             self.actionButtonNode.badge = "\(self.controllerInteraction!.selectedPeers.count)"
         }

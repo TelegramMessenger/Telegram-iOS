@@ -129,11 +129,16 @@ public func requestClosePoll(postbox: Postbox, network: Network, stateManager: A
         if poll.deadlineTimeout != nil {
             pollFlags |= 1 << 4
         }
-        if poll.results.solution != nil {
+        
+        var mappedSolution: String?
+        var mappedSolutionEntities: [Api.MessageEntity]?
+        if let solution = poll.results.solution {
+            mappedSolution = solution.text
+            mappedSolutionEntities = apiTextAttributeEntities(TextEntitiesMessageAttribute(entities: solution.entities), associatedPeers: SimpleDictionary())
             pollMediaFlags |= 1 << 1
         }
         
-        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(flags: pollMediaFlags, poll: .poll(id: poll.pollId.id, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: poll.results.solution, solutionEntities: poll.results.solution != nil ? [] : nil), replyMarkup: nil, entities: nil, scheduleDate: nil))
+        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(flags: pollMediaFlags, poll: .poll(id: poll.pollId.id, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: mappedSolution, solutionEntities: mappedSolutionEntities), replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

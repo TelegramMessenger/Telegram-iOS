@@ -16,6 +16,7 @@ static_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/TextFormat:TextFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

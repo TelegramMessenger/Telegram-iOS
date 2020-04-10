@@ -17,6 +17,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

@@ -29,10 +29,15 @@ extension TelegramMediaPollOptionVoters {
 extension TelegramMediaPollResults {
     init(apiResults: Api.PollResults) {
         switch apiResults {
-            case let .pollResults(_, results, totalVoters, recentVoters, solution, _):
+            case let .pollResults(_, results, totalVoters, recentVoters, solution, solutionEntities):
+                var parsedSolution: TelegramMediaPollResults.Solution?
+                if let solution = solution, let solutionEntities = solutionEntities, !solution.isEmpty {
+                    parsedSolution = TelegramMediaPollResults.Solution(text: solution, entities: messageTextEntitiesFromApiEntities(solutionEntities))
+                }
+                
                 self.init(voters: results.flatMap({ $0.map(TelegramMediaPollOptionVoters.init(apiVoters:)) }), totalVoters: totalVoters, recentVoters: recentVoters.flatMap { recentVoters in
                     return recentVoters.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
-                    } ?? [], solution: solution)
+                    } ?? [], solution: parsedSolution)
         }
     }
 }

@@ -902,6 +902,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     itemNode.frame = item.frame
                 }
                 itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads && itemInBounds)
+                itemNode.updateAbsoluteRect(item.frame, within: bounds.size)
             } else {
                 let itemNode = self.items[item.index].node(layout: presentationLayoutTransition.layout.layout, synchronousLoad: synchronousLoads && itemInBounds)
                 itemNode.frame = item.frame
@@ -909,6 +910,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 addedNodes = true
                 itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads)
                 self.setupNode?(itemNode)
+                itemNode.updateAbsoluteRect(item.frame, within: bounds.size)
             }
         }
         

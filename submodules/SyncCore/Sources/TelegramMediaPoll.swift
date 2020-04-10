@@ -50,12 +50,22 @@ public struct TelegramMediaPollOptionVoters: Equatable, PostboxCoding {
 }
 
 public struct TelegramMediaPollResults: Equatable, PostboxCoding {
+    public struct Solution: Equatable {
+        public let text: String
+        public let entities: [MessageTextEntity]
+        
+        public init(text: String, entities: [MessageTextEntity]) {
+            self.text = text
+            self.entities = entities
+        }
+    }
+    
     public let voters: [TelegramMediaPollOptionVoters]?
     public let totalVoters: Int32?
     public let recentVoters: [PeerId]
-    public let solution: String?
+    public let solution: TelegramMediaPollResults.Solution?
     
-    public init(voters: [TelegramMediaPollOptionVoters]?, totalVoters: Int32?, recentVoters: [PeerId], solution: String?) {
+    public init(voters: [TelegramMediaPollOptionVoters]?, totalVoters: Int32?, recentVoters: [PeerId], solution: TelegramMediaPollResults.Solution?) {
         self.voters = voters
         self.totalVoters = totalVoters
         self.recentVoters = recentVoters
@@ -66,7 +76,12 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
         self.voters = decoder.decodeOptionalObjectArrayWithDecoderForKey("v")
         self.totalVoters = decoder.decodeOptionalInt32ForKey("t")
         self.recentVoters = decoder.decodeInt64ArrayForKey("rv").map(PeerId.init)
-        self.solution = decoder.decodeOptionalStringForKey("sol")
+        if let text = decoder.decodeOptionalStringForKey("sol") {
+            let entities: [MessageTextEntity] = decoder.decodeObjectArrayWithDecoderForKey("solent")
+            self.solution = TelegramMediaPollResults.Solution(text: text, entities: entities)
+        } else {
+            self.solution = nil
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -82,7 +97,8 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
         }
         encoder.encodeInt64Array(self.recentVoters.map { $0.toInt64() }, forKey: "rv")
         if let solution = self.solution {
-            encoder.encodeString(solution, forKey: "sol")
+            encoder.encodeString(solution.text, forKey: "sol")
+            encoder.encodeObjectArray(solution.entities, forKey: "solent")
         } else {
             encoder.encodeNil(forKey: "sol")
         }
@@ -248,11 +264,11 @@ public final class TelegramMediaPoll: Media, Equatable {
                 }
                 updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
                     return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count, isCorrect: correctOpaqueIdentifiers.contains(voters.opaqueIdentifier))
-                }), totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution)
+                }), totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution)
             } else if let updatedVoters = results.voters {
-                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution)
+                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution)
             } else {
-                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution)
+                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution)
             }
         } else {
             updatedResults = results

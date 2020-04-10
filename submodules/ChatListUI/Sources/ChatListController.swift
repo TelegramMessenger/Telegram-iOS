@@ -1198,16 +1198,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
                         }
                         
-                        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX - 14.0, y: absoluteFrame.minY - 8.0), size: CGSize())
+                        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
                         
                         parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: location, shouldDismissOnTouch: { point in
                             guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
-                                return true
+                                return .dismiss(consume: false)
                             }
                             if parentController.isPointInsideContentArea(point: point) {
-                                return false
+                                return .ignore
                             }
-                            return true
+                            return .dismiss(consume: false)
                         }), in: .current)
                     }
                 }

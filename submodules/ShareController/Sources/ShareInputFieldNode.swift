@@ -68,6 +68,8 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private let inputInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 10.0, right: 16.0)
     private let accessoryButtonsWidth: CGFloat = 10.0
     
+    private var selectTextOnce: Bool = false
+    
     var text: String {
         get {
             return self.textInputNode.attributedText?.string ?? ""
@@ -124,7 +126,13 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.addSubnode(self.placeholderNode)
         self.addSubnode(self.clearButton)
         
+        self.textInputNode.textView.showsVerticalScrollIndicator = false
+        
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
+    }
+    
+    func preselectText() {
+        self.selectTextOnce = true
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -165,6 +173,13 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
         self.placeholderNode.isHidden = true
         self.clearButton.isHidden = false
+        
+        if self.selectTextOnce {
+            self.selectTextOnce = false
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: {
+                self.textInputNode.selectedRange = NSRange(self.text.startIndex ..< self.text.endIndex, in: self.text)
+            })
+        }
     }
     
     func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
@@ -196,5 +211,6 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     @objc func clearPressed() {
         self.textInputNode.attributedText = nil
         self.deactivateInput()
+        self.updateHeight?()
     }
 }
