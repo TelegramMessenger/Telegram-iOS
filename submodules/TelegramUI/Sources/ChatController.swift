@@ -2689,12 +2689,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func loadDisplayNode() {
         self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, controller: self)
         
-        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset in
+        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition in
             guard let strongSelf = self else {
                 return
             }
             for tooltipScreen in strongSelf.currentMessageTooltipScreens {
-                tooltipScreen.addRelativeScrollingOffset(-offset)
+                tooltipScreen.addRelativeScrollingOffset(-offset, transition: transition)
             }
         }
         

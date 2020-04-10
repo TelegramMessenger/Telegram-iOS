@@ -240,8 +240,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0), duration: 0.2, removeOnCompletion: false, additive: true)
     }
     
-    func addRelativeScrollingOffset(_ value: CGFloat) {
+    func addRelativeScrollingOffset(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
         self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: value)
+        transition.animateOffsetAdditive(node: self.scrollingContainer, offset: -value)
     }
 }
 
@@ -322,8 +323,8 @@ public final class TooltipScreen: ViewController {
         self.controllerNode.updateLayout(layout: layout, transition: transition)
     }
     
-    public func addRelativeScrollingOffset(_ value: CGFloat) {
-        self.controllerNode.addRelativeScrollingOffset(value)
+    public func addRelativeScrollingOffset(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.controllerNode.addRelativeScrollingOffset(value, transition: transition)
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
