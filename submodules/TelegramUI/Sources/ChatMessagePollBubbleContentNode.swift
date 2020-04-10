@@ -996,8 +996,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
+                let additionalTextRightInset: CGFloat = 24.0
+                
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
+                let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset - additionalTextRightInset, height: constrainedSize.height)
                 
                 var edited = false
                 if item.attributes.updatingMedia != nil {
@@ -1142,6 +1144,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 
                 var boundingSize: CGSize = textFrameWithoutInsets.size
+                boundingSize.width += additionalTextRightInset
                 boundingSize.width = max(boundingSize.width, typeLayout.size.width)
                 boundingSize.width = max(boundingSize.width, votersLayout.size.width + 4.0 + (statusSize?.width ?? 0.0))
                 boundingSize.width = max(boundingSize.width, buttonSubmitInactiveTextLayout.size.width + 4.0 + (statusSize?.width ?? 0.0))
@@ -1456,7 +1459,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 timerTransition.updateTransformScale(node: timerNode, scale: 0.1)
                             }
                             
-                            if (strongSelf.timerNode == nil || !displayDeadline), let poll = poll, case .quiz = poll.kind, let solution = poll.results.solution, !solution.isEmpty, (isClosed || hasSelected) {
+                            if (strongSelf.timerNode == nil || !displayDeadline), let poll = poll, case .quiz = poll.kind, let solution = poll.results.solution, (isClosed || hasSelected) {
                                 let solutionButtonNode: SolutionButtonNode
                                 if let current = strongSelf.solutionButtonNode {
                                     solutionButtonNode = current

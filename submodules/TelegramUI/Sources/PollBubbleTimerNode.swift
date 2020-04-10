@@ -11,9 +11,8 @@ private func textForTimeout(value: Int) -> String {
     } else {
         let minutes = value / 60
         let seconds = value % 60
-        let minutesPadding = minutes < 10 ? "0" : ""
         let secondsPadding = seconds < 10 ? "0" : ""
-        return "\(minutesPadding)\(minutes):\(secondsPadding)\(seconds)"
+        return "\(minutes):\(secondsPadding)\(seconds)"
     }
 }
 

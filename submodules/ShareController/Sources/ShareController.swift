@@ -287,6 +287,7 @@ public final class ShareController: ViewController {
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private let subject: ShareControllerSubject
+    private let presetText: String?
     private let switchableAccounts: [AccountWithInfo]
     private let immediatePeerId: PeerId?
     
@@ -299,15 +300,16 @@ public final class ShareController: ViewController {
     
     public var dismissed: ((Bool) -> Void)?
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
-        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, preferredAction: preferredAction, showInChat: showInChat, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId)
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, presetText: presetText, preferredAction: preferredAction, showInChat: showInChat, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId)
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
         self.subject = subject
+        self.presetText = presetText
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.switchableAccounts = switchableAccounts
@@ -428,7 +430,7 @@ public final class ShareController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ShareControllerNode(sharedContext: self.sharedContext, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
+        self.displayNode = ShareControllerNode(sharedContext: self.sharedContext, presetText: self.presetText, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, presentError: { [weak self] title, text in
             guard let strongSelf = self else {
@@ -457,9 +459,10 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     if !text.isEmpty {
-                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                        messages.append(.message(text: url + "\n\n" + text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    } else {
+                        messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                     }
-                    messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .text(string):

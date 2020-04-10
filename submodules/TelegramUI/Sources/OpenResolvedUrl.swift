@@ -19,6 +19,7 @@ import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
 import SettingsUI
 import UrlHandling
+import ShareController
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -224,25 +225,46 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             
             if let to = to {
-                let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
-                let _ = (context.account.postbox.searchContacts(query: query)
-                |> deliverOnMainQueue).start(next: { (peers, _) in
-                    for case let peer as TelegramUser in peers {
-                        if peer.phone == query {
-                            continueWithPeer(peer.id)
-                            break
+                if to.hasPrefix("@") {
+                    let _ = (resolvePeerByName(account: context.account, name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
+                    |> deliverOnMainQueue).start(next: { peerId in
+                        if let peerId = peerId {
+                            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                            |> deliverOnMainQueue).start(next: { peer in
+                                context.sharedContext.applicationBindings.dismissNativeController()
+                                continueWithPeer(peer.id)
+                            })
+                        }
+                    })
+                } else {
+                    let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
+                    let _ = (context.account.postbox.searchContacts(query: query)
+                    |> deliverOnMainQueue).start(next: { (peers, _) in
+                        for case let peer as TelegramUser in peers {
+                            if peer.phone == query {
+                                context.sharedContext.applicationBindings.dismissNativeController()
+                                continueWithPeer(peer.id)
+                                break
+                            }
+                        }
+                    })
+                }
+            } else {
+                if let url = url, !url.isEmpty {
+                    let shareController = ShareController(context: context, subject: .url(url), presetText: text, externalShare: false, immediateExternalShare: false)
+                    present(shareController, nil)
+                    context.sharedContext.applicationBindings.dismissNativeController()
+                } else {
+                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                    controller.peerSelected = { [weak controller] peerId in
+                        if let strongController = controller {
+                            strongController.dismiss()
+                            continueWithPeer(peerId)
                         }
                     }
-                })
-            } else {
-                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                controller.peerSelected = { [weak controller] peerId in
-                    if let strongController = controller {
-                        strongController.dismiss()
-                        continueWithPeer(peerId)
-                    }
+                    context.sharedContext.applicationBindings.dismissNativeController()
+                    navigationController?.pushViewController(controller)
                 }
-                navigationController?.pushViewController(controller)
             }
         case let .wallpaper(parameter):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

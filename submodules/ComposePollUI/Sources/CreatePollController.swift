@@ -11,6 +11,7 @@ import PresentationDataUtils
 import AccountContext
 import AlertUI
 import PresentationDataUtils
+import TextFormat
 
 private struct OrderedLinkedListItemOrderingId: RawRepresentable, Hashable {
     var rawValue: Int
@@ -378,7 +379,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
         case let .quizSolutionHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .quizSolutionText(placeholder, text):
-            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 400, display: true), sectionId: self.section, style: .blocks, textUpdated: { text in
+            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 200, display: true), sectionId: self.section, style: .blocks, textUpdated: { text in
                 arguments.updateSolutionText(text)
             })
         case let .quizSolutionInfo(text):
@@ -749,6 +750,9 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             if !hasSelectedOptions {
                 enabled = false
             }
+            if state.solutionText.count > 200 {
+                enabled = false
+            }
         }
         if nonEmptyOptionCount < 2 {
             enabled = false
@@ -774,11 +778,14 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             } else {
                 publicity = .public
             }
-            var resolvedSolution: String?
+            var resolvedSolution: TelegramMediaPollResults.Solution?
             let kind: TelegramMediaPollKind
             if state.isQuiz {
                 kind = .quiz
-                resolvedSolution = state.solutionText.isEmpty ? nil : state.solutionText
+                if !state.solutionText.isEmpty {
+                    let entities = generateTextEntities(state.solutionText, enabledTypes: [.url])
+                    resolvedSolution = TelegramMediaPollResults.Solution(text: state.solutionText, entities: entities)
+                }
             } else {
                 kind = .poll(multipleAnswers: state.isMultipleChoice)
             }

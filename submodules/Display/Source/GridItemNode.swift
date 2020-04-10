@@ -18,4 +18,7 @@ open class GridItemNode: ASDisplayNode {
     
     open func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
     }
+    
+    open func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+    }
 }

@@ -16,18 +16,16 @@ private final class WalletSendScreenArguments {
     let context: WalletContext
     let updateState: ((WalletSendScreenState) -> WalletSendScreenState) -> Void
     let updateText: (WalletSendScreenEntryTag, String) -> Void
-    let updateIsEncrypted: (Bool) -> Void
     let selectInputItem: (WalletSendScreenEntryTag) -> Void
     let scrollToBottom: () -> Void
     let dismissInput: () -> Void
     let openQrScanner: () -> Void
     let proceed: () -> Void
     
-    init(context: WalletContext, updateState: @escaping ((WalletSendScreenState) -> WalletSendScreenState) -> Void, updateText: @escaping (WalletSendScreenEntryTag, String) -> Void, updateIsEncrypted: @escaping (Bool) -> Void, selectInputItem: @escaping (WalletSendScreenEntryTag) -> Void, scrollToBottom: @escaping () -> Void, dismissInput: @escaping () -> Void, openQrScanner: @escaping () -> Void, proceed: @escaping () -> Void) {
+    init(context: WalletContext, updateState: @escaping ((WalletSendScreenState) -> WalletSendScreenState) -> Void, updateText: @escaping (WalletSendScreenEntryTag, String) -> Void, selectInputItem: @escaping (WalletSendScreenEntryTag) -> Void, scrollToBottom: @escaping () -> Void, dismissInput: @escaping () -> Void, openQrScanner: @escaping () -> Void, proceed: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.updateText = updateText
-        self.updateIsEncrypted = updateIsEncrypted
         self.selectInputItem = selectInputItem
         self.scrollToBottom = scrollToBottom
         self.dismissInput = dismissInput
@@ -64,7 +62,6 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
     case addressInfo(WalletTheme, String)
     case commentHeader(WalletTheme, String)
     case comment(WalletTheme, String, String, Bool)
-    case commentEncryption(WalletTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -72,7 +69,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             return WalletSendScreenSection.amount.rawValue
         case .addressHeader, .address, .addressInfo:
             return WalletSendScreenSection.address.rawValue
-        case .commentHeader, .comment, .commentEncryption:
+        case .commentHeader, .comment:
             return WalletSendScreenSection.comment.rawValue
         }
     }
@@ -93,8 +90,6 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             return 5
         case .comment:
             return 6
-        case .commentEncryption:
-            return 7
         }
     }
     
@@ -138,12 +133,6 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             }
         case let .comment(lhsTheme, lhsPlaceholder, lhsText, lhsSendEnabled):
             if case let .comment(rhsTheme, rhsPlaceholder, rhsText, rhsSendEnabled) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsText == rhsText, lhsSendEnabled == rhsSendEnabled {
-                return true
-            } else {
-                return false
-            }
-        case let .commentEncryption(lhsTheme, lhsText, lhsValue):
-            if case let .commentEncryption(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsText == rhsText, lhsValue == rhsValue {
                 return true
             } else {
                 return false
@@ -268,10 +257,6 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
                     arguments.proceed()
                 }
             })
-        case let .commentEncryption(theme, text, value):
-            return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.updateIsEncrypted(value)
-            })
         }
     }
 }
@@ -280,7 +265,6 @@ private struct WalletSendScreenState: Equatable {
     var address: String
     var amount: String
     var comment: String
-    var isCommentEncrypted: Bool
 }
 
 private func walletSendScreenEntries(presentationData: WalletPresentationData, balance: Int64?, state: WalletSendScreenState, sendEnabled: Bool) -> [WalletSendScreenEntry] {
@@ -300,7 +284,6 @@ private func walletSendScreenEntries(presentationData: WalletPresentationData, b
         
     entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
     entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment, sendEnabled))
-    entries.append(.commentEncryption(presentationData.theme, presentationData.strings.Wallet_Send_EncryptComment, state.isCommentEncrypted))
     
     return entries
 }
@@ -316,7 +299,7 @@ private final class WalletSendScreenImpl: ItemListController, WalletSendScreen {
 public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil, comment: String? = nil) -> ViewController {    
     let presentationData = context.presentationData
    
-    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: comment ?? "", isCommentEncrypted: true)
+    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: comment ?? "")
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((WalletSendScreenState) -> WalletSendScreenState) -> Void = { f in
@@ -355,12 +338,6 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             return state
         }
         ensureItemVisibleImpl?(tag, false)
-    }, updateIsEncrypted: { value in
-        updateState { state in
-            var state = state
-            state.isCommentEncrypted = value
-            return state
-        }
     }, selectInputItem: { tag in
         selectInputItemImpl?(tag)
     }, scrollToBottom: {
@@ -417,7 +394,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             
-            let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, comment: commentData ?? Data(), encryptComment: state.isCommentEncrypted, timeout: 0)
+            let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, comment: commentData ?? Data(), encryptComment: true, timeout: 0)
             |> deliverOnMainQueue).start(next: { [weak controller] verificationResult in
                 controller?.dismiss()
                 
@@ -478,7 +455,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                     |> deliverOnMainQueue).start(next: { serverSalt in
                         if let serverSalt = serverSalt {
                             if let commentData = state.comment.data(using: .utf8) {
-                                pushImpl?(WalletSplashScreen(context: context, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: state.isCommentEncrypted && !verificationResult.canNotEncryptComment, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
+                                pushImpl?(WalletSplashScreen(context: context, mode: .sending(WalletSplashModeSending(walletInfo: walletInfo, address: state.address, amount: amount, comment: commentData, encryptComment: !verificationResult.canNotEncryptComment, randomId: randomId, serverSalt: serverSalt)), walletCreatedPreloadState: nil))
                             }
                         }
                     })

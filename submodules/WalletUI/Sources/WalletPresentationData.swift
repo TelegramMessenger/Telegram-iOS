@@ -309,7 +309,7 @@ func clockMinImage(_ theme: WalletTheme) -> UIImage? {
 }
 
 func walletTransactionLockIcon(_ theme: WalletTheme) -> UIImage? {
-    return theme.image(WalletThemeResourceKey.clockMin.rawValue, { theme in
+    return theme.image(WalletThemeResourceKey.transactionLockIcon.rawValue, { theme in
         return generateTintedImage(image: UIImage(bundleImageName: "Wallet/EncryptedComment"), color: theme.list.itemSecondaryTextColor)
     })
 }

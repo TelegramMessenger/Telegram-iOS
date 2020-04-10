@@ -80,6 +80,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let controllerInteraction: ShareControllerInteraction
     private let switchToAnotherAccount: () -> Void
+    private let extendedInitialReveal: Bool
     
     let accountPeer: Peer
     private let foundPeers = Promise<[RenderedPeer]>([])
@@ -107,7 +108,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, extendedInitialReveal: Bool) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
@@ -116,6 +117,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.controllerInteraction = controllerInteraction
         self.accountPeer = accountPeer
         self.switchToAnotherAccount = switchToAnotherAccount
+        self.extendedInitialReveal = extendedInitialReveal
         
         self.peersValue.set(.single(peers))
         
@@ -261,7 +263,12 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         var rowCount = itemCount / itemsPerRow + (itemCount % itemsPerRow != 0 ? 1 : 0)
         rowCount = max(rowCount, 4)
         
-        let minimallyRevealedRowCount: CGFloat = 3.7
+        let minimallyRevealedRowCount: CGFloat
+        if self.extendedInitialReveal {
+            minimallyRevealedRowCount = 4.6
+        } else {
+            minimallyRevealedRowCount = 3.7
+        }
         let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
         
         let gridTopInset = max(0.0, size.height - floor(initiallyRevealedRowCount * itemWidth) - 14.0)

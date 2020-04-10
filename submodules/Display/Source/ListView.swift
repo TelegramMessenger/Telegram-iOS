@@ -198,6 +198,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
+    public final var didScrollWithOffset: ((CGFloat) -> Void)?
+    
     private var topItemOverscrollBackground: ListViewOverscrollBackgroundNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
     
@@ -752,6 +754,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         //CATransaction.setDisableActions(true)
         
         let deltaY = scrollView.contentOffset.y - self.lastContentOffset.y
+        self.didScrollWithOffset?(deltaY)
+        
         self.generalAccumulatedDeltaY += deltaY
         if abs(self.generalAccumulatedDeltaY) > 14.0 {
             let direction: GeneralScrollDirection = self.generalAccumulatedDeltaY < 0 ? .up : .down

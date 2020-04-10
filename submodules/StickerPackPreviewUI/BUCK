@@ -25,6 +25,7 @@ static_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/ArchivedStickerPacksNotice:ArchivedStickerPacksNotice",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

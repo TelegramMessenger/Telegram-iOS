@@ -490,7 +490,6 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.commentDecryptButtonTitle.displaysAsynchronously = false
         
         self.commentDecryptButton = HighlightableButtonNode()
-        self.commentDecryptButton.hitTestSlop = UIEdgeInsets(top: -10.0, left: -10.0, bottom: -10.0, right: -10.0)
         
         self.addressTextNode = ImmediateTextNode()
         self.addressTextNode.maximumNumberOfLines = 4
@@ -813,8 +812,8 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         
         let decryptSize = self.commentDecryptButtonTitle.updateLayout(CGSize(width: layout.size.width - 40.0, height: .greatestFiniteMagnitude))
         let decryptButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - decryptSize.width) / 2.0), y: commentMaxY + 10.0), size: decryptSize)
-        transition.updateFrame(node: self.commentDecryptButton, frame: decryptButtonFrame)
-        transition.updateFrame(node: self.commentDecryptButtonTitle, frame: CGRect(origin: CGPoint(), size: decryptSize))
+        transition.updateFrame(node: self.commentDecryptButton, frame: decryptButtonFrame.insetBy(dx: -10.0, dy: -10.0))
+        transition.updateFrame(node: self.commentDecryptButtonTitle, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: decryptSize))
         
         if self.walletTransaction.isEncrypted {
             commentMaxY = decryptButtonFrame.maxY + 10.0

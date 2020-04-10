@@ -178,10 +178,14 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         if poll.deadlineTimeout != nil {
             pollFlags |= 1 << 4
         }
-        if poll.results.solution != nil {
+        var mappedSolution: String?
+        var mappedSolutionEntities: [Api.MessageEntity]?
+        if let solution = poll.results.solution {
+            mappedSolution = solution.text
+            mappedSolutionEntities = apiTextAttributeEntities(TextEntitiesMessageAttribute(entities: solution.entities), associatedPeers: SimpleDictionary())
             pollMediaFlags |= 1 << 1
         }
-        let inputPoll = Api.InputMedia.inputMediaPoll(flags: pollMediaFlags, poll: Api.Poll.poll(id: 0, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: poll.results.solution, solutionEntities: poll.results.solution != nil ? [] : nil)
+        let inputPoll = Api.InputMedia.inputMediaPoll(flags: pollMediaFlags, poll: Api.Poll.poll(id: 0, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: mappedSolution, solutionEntities: mappedSolutionEntities)
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil)))
     } else if let _ = media as? TelegramMediaDice {
         let input = Api.InputMedia.inputMediaDice

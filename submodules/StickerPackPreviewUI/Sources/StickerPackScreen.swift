@@ -10,6 +10,7 @@ import AccountContext
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import ShimmerEffect
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -51,6 +52,7 @@ private enum StickerPackAction {
 private enum StickerPackNextAction {
     case navigatedNext
     case dismiss
+    case ignored
 }
 
 private final class StickerPackContainer: ASDisplayNode {
@@ -68,7 +70,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private let actionAreaSeparatorNode: ASDisplayNode
     private let buttonNode: HighlightableButtonNode
     private let titleNode: ImmediateTextNode
-    private let titlePlaceholderNode: ASDisplayNode
+    private var titlePlaceholderNode: ShimmerEffectNode?
     private let titleContainer: ASDisplayNode
     private let titleSeparatorNode: ASDisplayNode
     
@@ -80,6 +82,7 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private var itemsDisposable: Disposable?
     private(set) var currentStickerPack: (StickerPackCollectionInfo, [ItemCollectionItem], Bool)?
+    private var didReceiveStickerPackResult = false
     
     private let isReadyValue = Promise<Bool>()
     private var didSetReady = false
@@ -121,16 +124,13 @@ private final class StickerPackContainer: ASDisplayNode {
         self.actionAreaBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
         
         self.actionAreaSeparatorNode = ASDisplayNode()
-        self.actionAreaSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.actionAreaSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
         self.buttonNode = HighlightableButtonNode()
         self.titleNode = ImmediateTextNode()
-        self.titlePlaceholderNode = ASDisplayNode()
-        self.titlePlaceholderNode.alpha = 0.0
-        self.titlePlaceholderNode.backgroundColor = presentationData.theme.list.mediaPlaceholderColor
         self.titleContainer = ASDisplayNode()
         self.titleSeparatorNode = ASDisplayNode()
-        self.titleSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.titleSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
         self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: true)
         
@@ -143,7 +143,6 @@ private final class StickerPackContainer: ASDisplayNode {
         self.addSubnode(self.buttonNode)
         
         self.titleContainer.addSubnode(self.titleNode)
-        self.titleContainer.addSubnode(self.titlePlaceholderNode)
         self.addSubnode(self.titleContainer)
         self.addSubnode(self.titleSeparatorNode)
         
@@ -354,13 +353,15 @@ private final class StickerPackContainer: ASDisplayNode {
             switch strongSelf.decideNextAction(strongSelf, installed ? .remove : .add) {
             case .dismiss:
                 strongSelf.requestDismiss()
-            case .navigatedNext:
+            case .navigatedNext, .ignored:
                 strongSelf.updateStickerPackContents(.result(info: info, items: items, installed: !installed))
             }
         })
     }
     
     private func updateStickerPackContents(_ contents: LoadedStickerPack) {
+        self.didReceiveStickerPackResult = true
+        
         var entries: [StickerPackPreviewGridEntry] = []
         
         var updateLayout = false
@@ -393,7 +394,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.nextStableId += 1
                 entries.append(StickerPackPreviewGridEntry(index: entries.count, stableId: resolvedStableId, stickerItem: nil, isEmpty: false))
             }
-            self.titlePlaceholderNode.alpha = 1.0
+            if self.titlePlaceholderNode == nil {
+                let titlePlaceholderNode = ShimmerEffectNode()
+                self.titlePlaceholderNode = titlePlaceholderNode
+                self.titleContainer.addSubnode(titlePlaceholderNode)
+            }
         case .none:
             entries = []
             self.buttonNode.setTitle(self.presentationData.strings.Common_Close.uppercased(), with: Font.semibold(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
@@ -404,10 +409,9 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.nextStableId += 1
                 entries.append(StickerPackPreviewGridEntry(index: entries.count, stableId: resolvedStableId, stickerItem: nil, isEmpty: true))
             }
-            if !self.titlePlaceholderNode.alpha.isZero {
-                self.titlePlaceholderNode.alpha = 0.0
-                self.titlePlaceholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            if let titlePlaceholderNode = self.titlePlaceholderNode {
+                self.titlePlaceholderNode = nil
+                titlePlaceholderNode.removeFromSupernode()
             }
         case let .result(info, items, installed):
             if !items.isEmpty && self.currentStickerPack == nil {
@@ -441,15 +445,12 @@ private final class StickerPackContainer: ASDisplayNode {
                     context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
                 })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 25)
                 self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
-                if self.titleNode.attributedText == nil {
-                    self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                }
             }
             
             if self.titleNode.attributedText == nil {
-                if !self.titlePlaceholderNode.alpha.isZero {
-                    self.titlePlaceholderNode.alpha = 0.0
-                    self.titlePlaceholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                if let titlePlaceholderNode = self.titlePlaceholderNode {
+                    self.titlePlaceholderNode = nil
+                    titlePlaceholderNode.removeFromSupernode()
                 }
             }
             
@@ -480,16 +481,21 @@ private final class StickerPackContainer: ASDisplayNode {
         let previousEntries = self.currentEntries
         self.currentEntries = entries
         
+        if let titlePlaceholderNode = self.titlePlaceholderNode {
+            let fakeTitleSize = CGSize(width: 160.0, height: 22.0)
+            let titlePlaceholderFrame = CGRect(origin: CGPoint(x: floor((-fakeTitleSize.width) / 2.0), y: floor((-fakeTitleSize.height) / 2.0)), size: fakeTitleSize)
+            titlePlaceholderNode.frame = titlePlaceholderFrame
+            let theme = self.presentationData.theme
+            titlePlaceholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.roundedRect(rect: CGRect(origin: CGPoint(), size: titlePlaceholderFrame.size), cornerRadius: 4.0)], size: titlePlaceholderFrame.size)
+            updateLayout = true
+        }
+        
         if updateLayout, let (layout, _, _, _) = self.validLayout {
             let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 12.0 * 2.0, height: .greatestFiniteMagnitude))
             self.titleNode.frame = CGRect(origin: CGPoint(x: floor((-titleSize.width) / 2.0), y: floor((-titleSize.height) / 2.0)), size: titleSize)
             
             self.updateLayout(layout: layout, transition: .immediate)
         }
-        
-        let fakeTitleSize = CGSize(width: 160.0, height: 22.0)
-        self.titlePlaceholderNode.frame = CGRect(origin: CGPoint(x: floor((-fakeTitleSize.width) / 2.0), y: floor((-fakeTitleSize.height) / 2.0)), size: fakeTitleSize)
-        
         
         let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme, scrollToItem: scrollToItem)
         self.enqueueTransaction(transaction)
@@ -571,11 +577,17 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if !strongSelf.didSetReady {
-                strongSelf.didSetReady = true
-                strongSelf.isReadyValue.set(.single(true))
+            if strongSelf.didReceiveStickerPackResult {
+                if !strongSelf.didSetReady {
+                    strongSelf.didSetReady = true
+                    strongSelf.isReadyValue.set(.single(true))
+                }
             }
         })
+        
+        if let titlePlaceholderNode = self.titlePlaceholderNode {
+            titlePlaceholderNode.updateAbsoluteRect(titlePlaceholderNode.frame.offsetBy(dx: self.titleContainer.frame.minX, dy: self.titleContainer.frame.minY - gridInsets.top - gridFrame.minY), within: gridFrame.size)
+        }
         
         if firstTime {
             while !self.enqueuedTransactions.isEmpty {
@@ -596,6 +608,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let expandHeight: CGFloat = 100.0
         let expandProgress = max(0.0, min(1.0, offsetFromInitialPosition / expandHeight))
         let expandScrollProgress = 1.0 - max(0.0, min(1.0, presentationLayout.contentOffset.y / (-gridInsets.top)))
+        let modalProgress = max(0.0, min(1.0, expandScrollProgress))
         
         let expandProgressTransition = transition
         var expandUpdated = false
@@ -607,6 +620,11 @@ private final class StickerPackContainer: ASDisplayNode {
         
         if abs(self.expandProgress - expandProgress) > CGFloat.ulpOfOne {
             self.expandProgress = expandProgress
+            expandUpdated = true
+        }
+        
+        if abs(self.modalProgress - modalProgress) > CGFloat.ulpOfOne {
+            self.modalProgress = modalProgress
             expandUpdated = true
         }
         
@@ -703,7 +721,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.sendSticker = sendSticker
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
         self.dimNode.alpha = 0.0
         
         self.containerContainingNode = ASDisplayNode()
@@ -769,7 +787,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                             switch action {
                             case .add:
                                 var allAdded = true
-                                for i in index + 1 ..< strongSelf.stickerPacks.count {
+                                for _ in index + 1 ..< strongSelf.stickerPacks.count {
                                     if let container = strongSelf.containers[index], let (_, _, installed) = container.currentStickerPack {
                                         if !installed {
                                             allAdded = false
@@ -784,6 +802,8 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                             case .remove:
                                 if strongSelf.stickerPacks.count == 1 {
                                     return .dismiss
+                                } else {
+                                    return .ignored
                                 }
                             }
                         }
@@ -801,7 +821,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                             let modalProgress = container.modalProgress
                             strongSelf.modalProgressUpdated(modalProgress, transition)
                             strongSelf.containerLayoutUpdated(layout, transition: expandTransition)
-                            for (otherIndex, otherContainer) in strongSelf.containers {
+                            for (_, otherContainer) in strongSelf.containers {
                                 if otherContainer !== container {
                                     otherContainer.syncExpandProgress(expandScrollProgress: container.expandScrollProgress, expandProgress: container.expandProgress, modalProgress: container.modalProgress, transition: expandTransition)
                                 }
@@ -881,11 +901,16 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             let deltaOffset = self.relativeToSelectedStickerPackTransition
             self.relativeToSelectedStickerPackTransition = 0.0
             if let layout = self.validLayout {
-                let existingIndices = Array(self.containers.keys)
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
-                self.containerLayoutUpdated(layout, transition: transition)
+                var previousFrames: [Int: CGRect] = [:]
                 for (key, container) in self.containers {
-                    if !existingIndices.contains(key) {
+                    previousFrames[key] = container.frame
+                }
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                self.containerLayoutUpdated(layout, transition: .immediate)
+                for (key, container) in self.containers {
+                    if let previousFrame = previousFrames[key] {
+                        transition.animatePositionAdditive(node: container, offset: CGPoint(x: previousFrame.minX - container.frame.minX, y: 0.0))
+                    } else {
                         transition.animatePositionAdditive(node: container, offset: CGPoint(x: -deltaOffset, y: 0.0))
                     }
                 }
@@ -936,8 +961,18 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             }
         }
         
-        let result = super.hitTest(point, with: event)
-        return result
+        if let result = super.hitTest(point, with: event) {
+            for (index, container) in self.containers {
+                if result.isDescendant(of: container.view) {
+                    if index != self.selectedStickerPackIndex {
+                        return self.containerContainingNode.view
+                    }
+                }
+            }
+            return result
+        } else {
+            return nil
+        }
     }
     
     @objc private func dimNodeTapGesture(_ recognizer: UITapGestureRecognizer) {
