@@ -689,11 +689,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             return lhs.0 == rhs.0 && lhs.1 == rhs.1
         })
         |> afterNext { (resolved, _) in
-            let _ = storage.updateMergedLocalWalletConfiguration { current in
+            let _ = storage.updateMergedLocalWalletConfiguration({ current in
                 var current = current
                 current.resolved = resolved
                 return current
-            }
+            }).start()
         }
         
         let resolvedInitialConfig = (

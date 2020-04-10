@@ -76,21 +76,22 @@ builder pack_complaint_status(cell complaint, cell voters, int vset_id, int weig
     .store_int(weight_remaining, 64);
 }
 
-;; validator_complaint#ba validator_pubkey:uint256 description:^ComplaintDescr
-;;   severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams
+;; validator_complaint#bc validator_pubkey:uint256 description:^ComplaintDescr
+;;   created_at:uint32 severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams
 ;;   suggested_fine_part:uint32 = ValidatorComplaint;
 _ unpack_complaint(slice cs) inline_ref {
-  throw_unless(9, cs~load_int(8) == 0xba - 0x100);
-  var res = (cs~load_uint(256), cs~load_ref(), cs~load_uint(8), cs~load_uint(256), cs~load_grams(), cs~load_grams(), cs~load_uint(32));
+  throw_unless(9, cs~load_int(8) == 0xbc - 0x100);
+  var res = (cs~load_uint(256), cs~load_ref(), cs~load_uint(32), cs~load_uint(8), cs~load_uint(256), cs~load_grams(), cs~load_grams(), cs~load_uint(32));
   cs.end_parse();
   return res;
 }
 
-builder pack_complaint(int validator_pubkey, cell description, int severity, int reward_addr, int paid, int suggested_fine, int suggested_fine_part) inline_ref {
+builder pack_complaint(int validator_pubkey, cell description, int created_at, int severity, int reward_addr, int paid, int suggested_fine, int suggested_fine_part) inline_ref {
   return begin_cell()
-    .store_int(0xba - 0x100, 8)
+    .store_int(0xbc - 0x100, 8)
     .store_uint(validator_pubkey, 256)
     .store_ref(description)
+    .store_uint(created_at, 32)
     .store_uint(severity, 8)
     .store_uint(reward_addr, 256)
     .store_grams(paid)
@@ -459,8 +460,9 @@ int register_complaint(s_addr, complaint, msg_value) {
   if (expire_in <= 0) { ;; already expired
     return -4;
   }
-  var (validator_pubkey, description, severity, reward_addr, paid, suggested_fine, suggested_fine_part) = unpack_complaint(complaint);
+  var (validator_pubkey, description, created_at, severity, reward_addr, paid, suggested_fine, suggested_fine_part) = unpack_complaint(complaint);
   reward_addr = src_addr;
+  created_at = now();
   ;; compute complaint storage/creation price
   var (deposit, bit_price, cell_price) = get_complaint_prices();
   var (_, bits, refs) = slice_compute_data_size(complaint, 4096);
@@ -470,7 +472,7 @@ int register_complaint(s_addr, complaint, msg_value) {
     return -5;
   }
   ;; re-pack modified complaint
-  cell complaint = pack_complaint(validator_pubkey, description, severity, reward_addr, paid, suggested_fine, suggested_fine_part).end_cell();
+  cell complaint = pack_complaint(validator_pubkey, description, created_at, severity, reward_addr, paid, suggested_fine, suggested_fine_part).end_cell();
   var (unfreeze_at, stake_held, vset_hash, frozen_dict, total_stake, bonuses, complaints) = unpack_past_election(fs);
   var (fs, f) = frozen_dict.udict_get?(256, validator_pubkey);
   ifnot (f) { ;; no such validator, cannot complain
@@ -502,7 +504,7 @@ int register_complaint(s_addr, complaint, msg_value) {
 }
 
 (cell, cell, int) punish(credits, frozen, complaint) inline_ref {
-  var (validator_pubkey, description, severity, reward_addr, paid, suggested_fine, suggested_fine_part) = complaint.begin_parse().unpack_complaint();
+  var (validator_pubkey, description, created_at, severity, reward_addr, paid, suggested_fine, suggested_fine_part) = complaint.begin_parse().unpack_complaint();
   var (cs, f) = frozen.udict_get?(256, validator_pubkey);
   ifnot (f) {
     ;; no validator to punish
@@ -1072,4 +1074,74 @@ int compute_returned_stake(int wallet_addr) method_id {
   (_, var credits) = (cs~load_dict(), cs~load_dict());
   var (val, f) = credits.udict_get?(256, wallet_addr);
   return f ? val~load_grams() : 0;
+}
+
+;; returns the list of past election ids
+tuple past_election_ids() method_id {
+  var (elect, credits, past_elections, grams, active_id, active_hash) = load_data();
+  var id = (1 << 32);
+  var list = null();
+  do {
+    (id, var fs, var f) = past_elections.udict_get_prev?(32, id);
+    if (f) {
+      list = cons(id, list);
+    }
+  } until (~ f);
+  return list;
+}
+
+tuple past_elections() method_id {
+  var (elect, credits, past_elections, grams, active_id, active_hash) = load_data();
+  var id = (1 << 32);
+  var list = null();
+  do {
+    (id, var fs, var found) = past_elections.udict_get_prev?(32, id);
+    if (found) {
+      var info = [unpack_past_election(fs)];
+      list = cons(pair(id, info), list);
+    }
+  } until (~ found);
+  return list;
+}
+
+_ complete_unpack_complaint(slice cs) inline_ref {
+  var (complaint, voters, vset_id, weight_remaining) = cs.unpack_complaint_status();
+  var voters_list = null();
+  var voter_id = (1 << 32);
+  do {
+    (voter_id, _, var f) = voters.udict_get_prev?(16, voter_id);
+    if (f) {
+      voters_list = cons(voter_id, voters_list);
+    }
+  } until (~ f);
+  return [[complaint.begin_parse().unpack_complaint()], voters_list, vset_id, weight_remaining];
+}
+
+cell get_past_complaints(int election_id) inline_ref {
+  var (elect, credits, past_elections, grams, active_id, active_hash) = load_data();
+  var (fs, found?) = past_elections.udict_get?(32, election_id);
+  ifnot (found?) {
+    return null();
+  }
+  var (unfreeze_at, stake_held, vset_hash, frozen_dict, total_stake, bonuses, complaints) = unpack_past_election(fs);
+  return complaints;
+}
+
+_ show_complaint(int election_id, int chash) method_id {
+  var complaints = get_past_complaints(election_id);
+  var (cs, found) = complaints.udict_get?(256, chash);
+  return found ? complete_unpack_complaint(cs) : null();
+}
+
+tuple list_complaints(int election_id) method_id {
+  var complaints = get_past_complaints(election_id);
+  int id = (1 << 255) + ((1 << 255) - 1);
+  var list = null();
+  do {
+    (id, var cs, var found?) = complaints.udict_get_prev?(256, id);
+    if (found?) {
+      list = cons(pair(id, complete_unpack_complaint(cs)), list);
+    }
+  } until (~ found?);
+  return list;
 }

@@ -31,10 +31,12 @@
 #include "block-db.h"
 #include "block-auto.h"
 #include "block-parse.h"
+#include "mc-config.h"
 #include "vm/cp0.h"
 #include <getopt.h>
 
 using td::Ref;
+using namespace std::literals::string_literals;
 
 int verbosity;
 
@@ -45,6 +47,12 @@ struct IntError {
   IntError(const char* _msg) : err_msg(_msg) {
   }
 };
+
+void throw_err(td::Status err) {
+  if (err.is_error()) {
+    throw IntError{err.to_string()};
+  }
+}
 
 td::Ref<vm::Cell> load_boc(std::string filename) {
   std::cerr << "loading bag-of-cell file " << filename << std::endl;
@@ -62,6 +70,8 @@ td::Ref<vm::Cell> load_boc(std::string filename) {
   }
   return boc.get_root_cell();
 }
+
+std::vector<Ref<vm::Cell>> loaded_boc;
 
 void test1() {
   block::ShardId id{ton::masterchainId}, id2{ton::basechainId, 0x11efULL << 48};
@@ -190,6 +200,49 @@ void test2(vm::CellSlice& cs) {
             << block::gen::HashmapE{32, block::gen::t_uint16}.validate_upto(1024, cs) << std::endl;
 }
 
+td::Status test_vset() {
+  if (loaded_boc.size() != 2) {
+    return td::Status::Error(
+        "must have exactly two boc files (with a masterchain Block and with ConfigParams) for vset compute test");
+  }
+  std::cerr << "running test_vset()\n";
+  TRY_RESULT(config, block::Config::unpack_config(vm::load_cell_slice_ref(loaded_boc[1])));
+  std::cerr << "config unpacked\n";
+  auto cv_root = config->get_config_param(34);
+  if (cv_root.is_null()) {
+    return td::Status::Error("no config parameter 34");
+  }
+  std::cerr << "config param #34 obtained\n";
+  TRY_RESULT(cur_validators, block::Config::unpack_validator_set(std::move(cv_root)));
+  // auto vconf = config->get_catchain_validators_config();
+  std::cerr << "validator set unpacked\n";
+  std::cerr << "unpacking ShardHashes\n";
+  block::ShardConfig shards;
+  if (!shards.unpack(vm::load_cell_slice_ref(loaded_boc[0]))) {
+    return td::Status::Error("cannot unpack ShardConfig");
+  }
+  std::cerr << "ShardHashes initialized\n";
+  ton::ShardIdFull shard{0, 0x6e80000000000000};
+  ton::CatchainSeqno cc_seqno = std::max(48763, 48763) + 1 + 1;
+  ton::UnixTime now = 1586169666;
+  cc_seqno = shards.get_shard_cc_seqno(shard);
+  std::cerr << "shard=" << shard.to_str() << " cc_seqno=" << cc_seqno << " time=" << now << std::endl;
+  if (cc_seqno == ~0U) {
+    return td::Status::Error("cannot compute cc_seqno for shard "s + shard.to_str());
+  }
+  auto nodes = config->compute_validator_set(shard, *cur_validators, now, cc_seqno);
+  if (nodes.empty()) {
+    return td::Status::Error(PSTRING() << "compute_validator_set() for " << shard.to_str() << "," << now << ","
+                                       << cc_seqno << " returned empty list");
+  }
+  for (auto& x : nodes) {
+    std::cout << "weight=" << x.weight << " key=" << x.key.as_bits256().to_hex() << " addr=" << x.addr.to_hex()
+              << std::endl;
+  }
+  // ...
+  return td::Status::OK();
+}
+
 void usage() {
   std::cout << "usage: dump-block [-t<typename>][-S][<boc-file>]\n\tor dump-block -h\n\tDumps specified blockchain "
                "block or state "
@@ -202,8 +255,11 @@ int main(int argc, char* const argv[]) {
   int new_verbosity_level = VERBOSITY_NAME(INFO);
   const char* tname = nullptr;
   const tlb::TLB* type = &block::gen::t_Block;
+  bool vset_compute_test = false;
+  bool store_loaded = false;
+  int dump = 3;
   auto zerostate = std::make_unique<block::ZerostateInfo>();
-  while ((i = getopt(argc, argv, "CSt:hv:")) != -1) {
+  while ((i = getopt(argc, argv, "CSt:hqv:")) != -1) {
     switch (i) {
       case 'C':
         type = &block::gen::t_VmCont;
@@ -218,6 +274,12 @@ int main(int argc, char* const argv[]) {
       case 'v':
         new_verbosity_level = VERBOSITY_NAME(FATAL) + (verbosity = td::to_integer<int>(td::Slice(optarg)));
         break;
+      case 'q':
+        type = &block::gen::t_ShardHashes;
+        vset_compute_test = true;
+        store_loaded = true;
+        dump = 0;
+        break;
       case 'h':
         usage();
         std::exit(2);
@@ -228,17 +290,22 @@ int main(int argc, char* const argv[]) {
   }
   SET_VERBOSITY_LEVEL(new_verbosity_level);
   try {
-    bool done = false;
+    int loaded = 0;
     while (optind < argc) {
       auto boc = load_boc(argv[optind++]);
       if (boc.is_null()) {
-        std::cerr << "(invalid boc)" << std::endl;
+        std::cerr << "(invalid boc in file" << argv[optind - 1] << ")" << std::endl;
         std::exit(2);
       } else {
-        done = true;
-        vm::CellSlice cs{vm::NoVm(), boc};
-        cs.print_rec(std::cout);
-        std::cout << std::endl;
+        if (store_loaded) {
+          loaded_boc.push_back(boc);
+        }
+        ++loaded;
+        if (dump & 1) {
+          vm::CellSlice cs{vm::NoVm(), boc};
+          cs.print_rec(std::cout);
+          std::cout << std::endl;
+        }
         if (!type) {
           tlb::TypenameLookup dict(block::gen::register_simple_types);
           type = dict.lookup(tname);
@@ -247,20 +314,31 @@ int main(int argc, char* const argv[]) {
             std::exit(3);
           }
         }
-        type->print_ref(std::cout, boc);
-        std::cout << std::endl;
+        if (dump & 2) {
+          type->print_ref(std::cout, boc);
+          std::cout << std::endl;
+        }
         bool ok = type->validate_ref(1048576, boc);
         std::cout << "(" << (ok ? "" : "in") << "valid " << *type << ")" << std::endl;
+        if (vset_compute_test) {
+          if (!ok || loaded > 2) {
+            std::cerr << "fatal: validity check failed\n";
+            exit(3);
+          }
+          type = &block::gen::t_ConfigParams;
+        }
       }
     }
-    if (!done) {
+    if (vset_compute_test) {
+      throw_err(test_vset());
+    } else if (!loaded) {
       test1();
     }
   } catch (IntError& err) {
-    std::cerr << "caught internal error " << err.err_msg << std::endl;
+    std::cerr << "internal error: " << err.err_msg << std::endl;
     return 1;
   } catch (vm::VmError& err) {
-    std::cerr << "caught vm error " << err.get_msg() << std::endl;
+    std::cerr << "vm error: " << err.get_msg() << std::endl;
     return 1;
   }
   return 0;

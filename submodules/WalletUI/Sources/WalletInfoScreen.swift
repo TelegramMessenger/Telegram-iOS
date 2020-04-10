@@ -561,9 +561,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private let stateDisposable = MetaDisposable()
     private let transactionListDisposable = MetaDisposable()
-    private let transactionDecryptionKey = Promise<WalletTransactionDecryptionKey?>()
-    private var transactionDecryptionKeyRequested = false
-    private var transactionDecryptionKeyValue: WalletTransactionDecryptionKey?
+    private let transactionDecryptionKey = Promise<WalletTransactionDecryptionKey?>(nil)
     private var transactionDecryptionKeyDisposable: Disposable?
     
     private var listOffset: CGFloat?
@@ -738,7 +736,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             subject = .address(address)
         }
         let pollCombinedState: Signal<Never, NoError> = (
-            getCombinedWalletState(storage: context.storage, subject: subject, transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: false)
+            getCombinedWalletState(storage: context.storage, subject: subject, tonInstance: context.tonInstance, onlyCached: false)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
@@ -769,7 +767,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.transactionDecryptionKeyValue = value
             if let value = value, let currentEntries = strongSelf.currentEntries {
                 var encryptedTransactions: [WalletTransactionId: WalletTransaction] = [:]
                 for entry in currentEntries {
@@ -918,7 +915,43 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             subject = .address(self.address)
         }
         
-        self.stateDisposable.set((getCombinedWalletState(storage: self.context.storage, subject: subject, transactionDecryptionKey: self.transactionDecryptionKeyValue, tonInstance: self.context.tonInstance, onlyCached: false)
+        let transactionDecryptionKey = self.transactionDecryptionKey
+        let tonInstance = self.context.tonInstance
+        let processedWalletState = getCombinedWalletState(storage: self.context.storage, subject: subject, tonInstance: self.context.tonInstance, onlyCached: false)
+        |> mapToSignal { state -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+            return transactionDecryptionKey.get()
+            |> castError(GetCombinedWalletStateError.self)
+            |> take(1)
+            |> mapToSignal { decryptionKey -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+                guard let decryptionKey = decryptionKey else {
+                    return .single(state)
+                }
+                switch state {
+                case let .cached(value):
+                    if let value = value {
+                        return decryptWalletState(decryptionKey: decryptionKey, state: value, tonInstance: tonInstance)
+                        |> map { decryptedState -> CombinedWalletStateResult in
+                            return .cached(decryptedState)
+                        }
+                        |> `catch` { _ -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+                            return .single(state)
+                        }
+                    } else {
+                        return .single(state)
+                    }
+                case let .updated(value):
+                    return decryptWalletState(decryptionKey: decryptionKey, state: value, tonInstance: tonInstance)
+                    |> map { decryptedState -> CombinedWalletStateResult in
+                        return .updated(decryptedState)
+                    }
+                    |> `catch` { _ -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+                        return .single(state)
+                    }
+                }
+            }
+        }
+        
+        self.stateDisposable.set((processedWalletState
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -1082,7 +1115,24 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 break
             }
         }
-        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: lastTransactionId, transactionDecryptionKey: self.transactionDecryptionKeyValue, tonInstance: self.context.tonInstance)
+        let transactionDecryptionKey = self.transactionDecryptionKey
+        let tonInstance = self.context.tonInstance
+        let processedTransactions = getWalletTransactions(address: self.address, previousId: lastTransactionId, tonInstance: self.context.tonInstance)
+        |> mapToSignal { transactions -> Signal<[WalletTransaction], GetWalletTransactionsError> in
+            return transactionDecryptionKey.get()
+            |> castError(GetWalletTransactionsError.self)
+            |> take(1)
+            |> mapToSignal { decryptionKey -> Signal<[WalletTransaction], GetWalletTransactionsError> in
+                guard let decryptionKey = decryptionKey else {
+                    return .single(transactions)
+                }
+                return decryptWalletTransactions(decryptionKey: decryptionKey, transactions: transactions, tonInstance: tonInstance)
+                |> `catch` { _ -> Signal<[WalletTransaction], GetWalletTransactionsError> in
+                    return .single(transactions)
+                }
+            }
+        }
+        self.transactionListDisposable.set((processedTransactions
         |> deliverOnMainQueue).start(next: { [weak self] transactions in
             guard let strongSelf = self else {
                 return
@@ -1146,57 +1196,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         }
         
         self.replaceEntries(updatedEntries)
-        
-        if !self.transactionDecryptionKeyRequested && false {
-            var encryptedTransactions: [WalletTransactionId: WalletTransaction] = [:]
-            for entry in updatedEntries {
-                switch entry {
-                case .empty:
-                    break
-                case let .transaction(_, transaction):
-                    switch transaction {
-                    case let .completed(transaction):
-                        var isEncrypted = false
-                        if let inMessage = transaction.inMessage {
-                            switch inMessage.contents {
-                            case .encryptedText:
-                                isEncrypted = true
-                            default:
-                                break
-                            }
-                        }
-                        for outMessage in transaction.outMessages {
-                            switch outMessage.contents {
-                            case .encryptedText:
-                                isEncrypted = true
-                            default:
-                                break
-                            }
-                        }
-                        if isEncrypted {
-                            encryptedTransactions[transaction.transactionId] = transaction
-                        }
-                    case .pending:
-                        break
-                    }
-                }
-            }
-            if !encryptedTransactions.isEmpty, let walletInfo = self.walletInfo {
-                let keychain = self.context.keychain
-                self.transactionDecryptionKeyRequested = true
-                self.transactionDecryptionKey.set(self.context.getServerSalt()
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Data?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { serverSalt -> Signal<WalletTransactionDecryptionKey?, NoError> in
-                    guard let serverSalt = serverSalt else {
-                        return .single(nil)
-                    }
-                    return walletTransactionDecryptionKey(keychain: keychain, walletInfo: walletInfo, localPassword: serverSalt)
-                })
-            }
-        }
     }
     
     private func replaceEntries(_ updatedEntries: [WalletInfoListEntry]) {

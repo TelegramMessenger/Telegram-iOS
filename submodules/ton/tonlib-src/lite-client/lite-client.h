@@ -142,8 +142,8 @@ class TestNode : public td::actor::Actor {
                           std::string domain, std::string qdomain, int cat, int mode, int used_bits,
                           Ref<vm::Cell> value);
   bool show_dns_record(std::ostream& os, int cat, Ref<vm::Cell> value, bool raw_dump);
-  bool get_all_shards(bool use_last = true, ton::BlockIdExt blkid = {});
-  void got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::BufferSlice data);
+  bool get_all_shards(std::string filename = "", bool use_last = true, ton::BlockIdExt blkid = {});
+  void got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::BufferSlice data, std::string filename);
   bool get_config_params(ton::BlockIdExt blkid, td::Promise<td::Unit> do_after, int mode = 0, std::string filename = "",
                          std::vector<int> params = {});
   void got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, td::BufferSlice state_proof,

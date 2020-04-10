@@ -50,6 +50,12 @@ PROGRAM{
   123541 DECLMETHOD participant_list
   86698 DECLMETHOD participant_list_extended
   130944 DECLMETHOD compute_returned_stake
+  104565 DECLMETHOD past_election_ids
+  81558 DECLMETHOD past_elections
+  DECLPROC complete_unpack_complaint
+  DECLPROC get_past_complaints
+  77853 DECLMETHOD show_complaint
+  70210 DECLMETHOD list_complaints
   load_data PROCREF:<{
     // 
     c4 PUSH	//  _1
@@ -161,34 +167,37 @@ PROGRAM{
     //  cs
     8 LDI	//  _2 cs
     SWAP	//  cs _2
-    -70 EQINT	//  cs _8
+    -68 EQINT	//  cs _8
     9 THROWIFNOT
     256 LDU	//  _11 cs
     LDREF	//  _11 _14 cs
-    8 LDU	//  _11 _14 _16 cs
-    256 LDU	//  _11 _14 _16 _19 cs
-    LDGRAMS	//  _11 _14 _16 _19 _22 cs
-    LDGRAMS	//  _11 _14 _16 _19 _22 _24 cs
-    32 LDU	//  res res res res res res res cs
+    32 LDU	//  _11 _14 _16 cs
+    8 LDU	//  _11 _14 _16 _19 cs
+    256 LDU	//  _11 _14 _16 _19 _22 cs
+    LDGRAMS	//  _11 _14 _16 _19 _22 _25 cs
+    LDGRAMS	//  _11 _14 _16 _19 _22 _25 _27 cs
+    32 LDU	//  res res res res res res res res cs
     ENDS
   }>
   pack_complaint PROCREF:<{
-    //  validator_pubkey description severity reward_addr paid suggested_fine suggested_fine_part
-    -70 PUSHINT	//  validator_pubkey description severity reward_addr paid suggested_fine suggested_fine_part _9
-    NEWC	//  validator_pubkey description severity reward_addr paid suggested_fine suggested_fine_part _9 _10
-    8 STI	//  validator_pubkey description severity reward_addr paid suggested_fine suggested_fine_part _12
-    s1 s7 XCHG	//  suggested_fine_part description severity reward_addr paid suggested_fine validator_pubkey _12
-    256 STU	//  suggested_fine_part description severity reward_addr paid suggested_fine _14
-    s1 s5 XCHG	//  suggested_fine_part suggested_fine severity reward_addr paid description _14
-    STREF	//  suggested_fine_part suggested_fine severity reward_addr paid _15
-    s1 s3 XCHG	//  suggested_fine_part suggested_fine paid reward_addr severity _15
-    8 STU	//  suggested_fine_part suggested_fine paid reward_addr _17
-    256 STU	//  suggested_fine_part suggested_fine paid _19
-    SWAP	//  suggested_fine_part suggested_fine _19 paid
-    STGRAMS	//  suggested_fine_part suggested_fine _20
-    SWAP	//  suggested_fine_part _20 suggested_fine
-    STGRAMS	//  suggested_fine_part _21
-    32 STU	//  _23
+    //  validator_pubkey description created_at severity reward_addr paid suggested_fine suggested_fine_part
+    -68 PUSHINT	//  validator_pubkey description created_at severity reward_addr paid suggested_fine suggested_fine_part _10
+    NEWC	//  validator_pubkey description created_at severity reward_addr paid suggested_fine suggested_fine_part _10 _11
+    8 STI	//  validator_pubkey description created_at severity reward_addr paid suggested_fine suggested_fine_part _13
+    s1 s8 XCHG	//  suggested_fine_part description created_at severity reward_addr paid suggested_fine validator_pubkey _13
+    256 STU	//  suggested_fine_part description created_at severity reward_addr paid suggested_fine _15
+    s1 s6 XCHG	//  suggested_fine_part suggested_fine created_at severity reward_addr paid description _15
+    STREF	//  suggested_fine_part suggested_fine created_at severity reward_addr paid _16
+    s1 s4 XCHG	//  suggested_fine_part suggested_fine paid severity reward_addr created_at _16
+    32 STU	//  suggested_fine_part suggested_fine paid severity reward_addr _18
+    s1 s2 XCHG	//  suggested_fine_part suggested_fine paid reward_addr severity _18
+    8 STU	//  suggested_fine_part suggested_fine paid reward_addr _20
+    256 STU	//  suggested_fine_part suggested_fine paid _22
+    SWAP	//  suggested_fine_part suggested_fine _22 paid
+    STGRAMS	//  suggested_fine_part suggested_fine _23
+    SWAP	//  suggested_fine_part _23 suggested_fine
+    STGRAMS	//  suggested_fine_part _24
+    32 STU	//  _26
   }>
   parse_complaint_prices PROC:<{
     //  info
@@ -880,7 +889,7 @@ PROGRAM{
       3 BLKDROP	// 
       -3 PUSHINT	//  _12=-3
     }>	//  msg_value complaint src_addr
-    load_data INLINECALLDICT	//  msg_value complaint src_addr _129 _130 _131 _132 _133 _134
+    load_data INLINECALLDICT	//  msg_value complaint src_addr _131 _132 _133 _134 _135 _136
     s3 s5 XCHG
     5 BLKDROP	//  msg_value complaint src_addr past_elections
     s0 s2 XCHG	//  msg_value past_elections src_addr complaint
@@ -904,93 +913,95 @@ PROGRAM{
       -4 PUSHINT	//  _36=-4
     }>	//  msg_value past_elections src_addr election_id complaint fs expire_in
     s2 PUSH	//  msg_value past_elections src_addr election_id complaint fs expire_in complaint
-    unpack_complaint INLINECALLDICT	//  msg_value past_elections src_addr election_id complaint fs expire_in _139 _140 _141 _142 _143 _144 _145
-    2 2 BLKDROP2	//  msg_value past_elections reward_addr election_id complaint fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part
-    get_complaint_prices INLINECALLDICT	//  msg_value past_elections reward_addr election_id complaint fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit bit_price cell_price
-    s0 s10 XCHG
-    12 PUSHPOW2	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit bit_price complaint _52=4096
-    SDATASIZE	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit bit_price _149 _150 _151
-    s2 POP	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit bit_price refs bits
-    10 PUSHPOW2	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit bit_price refs bits _55=1024
-    ADD	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit bit_price refs _56
-    ROT	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit refs _56 bit_price
-    MUL	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit refs _57
-    SWAP	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit _57 refs
-    2 ADDCONST	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit _57 _59
-    s0 s10 XCHG2	//  msg_value past_elections reward_addr election_id _57 fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit _59 cell_price
-    MUL	//  msg_value past_elections reward_addr election_id _57 fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part deposit _60
-    s1 s9 XCHG	//  msg_value past_elections reward_addr election_id deposit fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part _57 _60
-    ADD	//  msg_value past_elections reward_addr election_id deposit fs expire_in validator_pubkey description severity suggested_fine suggested_fine_part pps
-    s0 s6 XCHG2	//  msg_value past_elections reward_addr election_id deposit fs suggested_fine_part validator_pubkey description severity suggested_fine pps expire_in
-    MUL	//  msg_value past_elections reward_addr election_id deposit fs suggested_fine_part validator_pubkey description severity suggested_fine _62
-    s0 s7 XCHG2	//  msg_value past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity _62 deposit
-    ADD	//  msg_value past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity paid
+    unpack_complaint INLINECALLDICT	//  msg_value past_elections src_addr election_id complaint fs expire_in _141 _142 _143 _144 _145 _146 _147 _148
+    2 2 BLKDROP2
+    s3 POP	//  msg_value past_elections reward_addr election_id complaint fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine
+    NOW	//  msg_value past_elections reward_addr election_id complaint fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at
+    get_complaint_prices INLINECALLDICT	//  msg_value past_elections reward_addr election_id complaint fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit bit_price cell_price
+    s0 s11 XCHG
+    12 PUSHPOW2	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit bit_price complaint _54=4096
+    SDATASIZE	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit bit_price _152 _153 _154
+    s2 POP	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit bit_price refs bits
+    10 PUSHPOW2	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit bit_price refs bits _57=1024
+    ADD	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit bit_price refs _58
+    ROT	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit refs _58 bit_price
+    MUL	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit refs _59
+    SWAP	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit _59 refs
+    2 ADDCONST	//  msg_value past_elections reward_addr election_id cell_price fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit _59 _61
+    s0 s11 XCHG2	//  msg_value past_elections reward_addr election_id _59 fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit _61 cell_price
+    MUL	//  msg_value past_elections reward_addr election_id _59 fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at deposit _62
+    s1 s10 XCHG	//  msg_value past_elections reward_addr election_id deposit fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at _59 _62
+    ADD	//  msg_value past_elections reward_addr election_id deposit fs expire_in validator_pubkey description suggested_fine_part severity suggested_fine created_at pps
+    s0 s7 XCHG2	//  msg_value past_elections reward_addr election_id deposit fs created_at validator_pubkey description suggested_fine_part severity suggested_fine pps expire_in
+    MUL	//  msg_value past_elections reward_addr election_id deposit fs created_at validator_pubkey description suggested_fine_part severity suggested_fine _64
+    s0 s8 XCHG2	//  msg_value past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity _64 deposit
+    ADD	//  msg_value past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity paid
     DUP
-    30 PUSHPOW2	//  msg_value past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity paid paid _66
-    ADD	//  msg_value past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity paid _67
-    s0 s11 XCHG2	//  paid past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity _67 msg_value
-    LESS	//  paid past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity _68
-    IFJMP:<{	//  paid past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity
-      10 BLKDROP	// 
-      -5 PUSHINT	//  _69=-5
-    }>	//  paid past_elections reward_addr election_id suggested_fine fs suggested_fine_part validator_pubkey description severity
-    s2 PUSH
-    s8 s10 s6 XCPU2
-    s6 PUSH	//  paid past_elections validator_pubkey election_id suggested_fine fs suggested_fine_part validator_pubkey description severity reward_addr paid suggested_fine suggested_fine_part
-    pack_complaint INLINECALLDICT	//  paid past_elections validator_pubkey election_id suggested_fine fs suggested_fine_part _71
+    30 PUSHPOW2	//  msg_value past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity paid paid _68
+    ADD	//  msg_value past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity paid _69
+    s0 s12 XCHG2	//  paid past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity _69 msg_value
+    LESS	//  paid past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity _70
+    IFJMP:<{	//  paid past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity
+      11 BLKDROP	// 
+      -5 PUSHINT	//  _71=-5
+    }>	//  paid past_elections reward_addr election_id suggested_fine fs created_at validator_pubkey description suggested_fine_part severity
+    s4 s0 s3 XC2PU
+    s9 s11 s7 XCPU2
+    s7 PUSH	//  paid past_elections validator_pubkey election_id suggested_fine fs suggested_fine_part validator_pubkey description created_at severity reward_addr paid suggested_fine suggested_fine_part
+    pack_complaint INLINECALLDICT	//  paid past_elections validator_pubkey election_id suggested_fine fs suggested_fine_part _73
     ENDC	//  paid past_elections validator_pubkey election_id suggested_fine fs suggested_fine_part complaint
     s0 s2 XCHG	//  paid past_elections validator_pubkey election_id suggested_fine complaint suggested_fine_part fs
     unpack_past_election INLINECALLDICT	//  paid past_elections validator_pubkey election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses complaints
     s11 s3 XCPU
-    8 PUSHPOW2	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses validator_pubkey frozen_dict _83=256
+    8 PUSHPOW2	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses validator_pubkey frozen_dict _85=256
     DICTUGET
     NULLSWAPIFNOT	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses fs f
     IFNOTJMP:<{	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses fs
       14 BLKDROP	// 
-      -6 PUSHINT	//  _85=-6
+      -6 PUSHINT	//  _87=-6
     }>	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses fs
-    320 PUSHINT	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses fs _89
+    320 PUSHINT	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses fs _91
     SDSKIPFIRST	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses fs
-    LDGRAMS	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses _162 _161
+    LDGRAMS	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses _165 _164
     DROP	//  paid past_elections complaints election_id suggested_fine complaint suggested_fine_part unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses validator_stake
     s0 s7 PUXC	//  paid past_elections complaints election_id suggested_fine complaint validator_stake unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses validator_stake suggested_fine_part
-    32 MULRSHIFT#	//  paid past_elections complaints election_id suggested_fine complaint validator_stake unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses _98
-    s1 s9 XCHG	//  paid past_elections complaints election_id bonuses complaint validator_stake unfreeze_at stake_held vset_hash frozen_dict total_stake suggested_fine _98
+    32 MULRSHIFT#	//  paid past_elections complaints election_id suggested_fine complaint validator_stake unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses _100
+    s1 s9 XCHG	//  paid past_elections complaints election_id bonuses complaint validator_stake unfreeze_at stake_held vset_hash frozen_dict total_stake suggested_fine _100
     ADD	//  paid past_elections complaints election_id bonuses complaint validator_stake unfreeze_at stake_held vset_hash frozen_dict total_stake fine
     s0 s6 PUXC	//  paid past_elections complaints election_id bonuses complaint fine unfreeze_at stake_held vset_hash frozen_dict total_stake fine validator_stake
-    GREATER	//  paid past_elections complaints election_id bonuses complaint fine unfreeze_at stake_held vset_hash frozen_dict total_stake _100
+    GREATER	//  paid past_elections complaints election_id bonuses complaint fine unfreeze_at stake_held vset_hash frozen_dict total_stake _102
     IFJMP:<{	//  paid past_elections complaints election_id bonuses complaint fine unfreeze_at stake_held vset_hash frozen_dict total_stake
       12 BLKDROP	// 
-      -7 PUSHINT	//  _101=-7
+      -7 PUSHINT	//  _103=-7
     }>	//  paid past_elections complaints election_id bonuses complaint fine unfreeze_at stake_held vset_hash frozen_dict total_stake
     s5 s11 XCPU	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict fine paid
-    LEQ	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict _102
+    LEQ	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict _104
     IFJMP:<{	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict
       11 BLKDROP	// 
-      -8 PUSHINT	//  _103=-8
+      -8 PUSHINT	//  _105=-8
     }>	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict
-    PUSHNULL	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict _105
-    0 PUSHINT	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict _105 _106=0
+    PUSHNULL	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict _107
+    0 PUSHINT	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict _107 _108=0
     s0 s7 PUSH2
-    3 -ROLL	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict complaint _105 _106=0 _107=0
+    3 -ROLL	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict complaint _107 _108=0 _109=0
     pack_complaint_status INLINECALLDICT	//  paid past_elections complaints election_id bonuses complaint total_stake unfreeze_at stake_held vset_hash frozen_dict cstatus
     s0 s6 XCHG	//  paid past_elections complaints election_id bonuses cstatus total_stake unfreeze_at stake_held vset_hash frozen_dict complaint
     HASHCU	//  paid past_elections complaints election_id bonuses cstatus total_stake unfreeze_at stake_held vset_hash frozen_dict cpl_id
     s6 s0 s9 XCHG3
-    8 PUSHPOW2	//  paid past_elections frozen_dict election_id bonuses vset_hash total_stake unfreeze_at stake_held cstatus cpl_id complaints _112=256
-    DICTUADDB	//  paid past_elections frozen_dict election_id bonuses vset_hash total_stake unfreeze_at stake_held complaints _111
+    8 PUSHPOW2	//  paid past_elections frozen_dict election_id bonuses vset_hash total_stake unfreeze_at stake_held cstatus cpl_id complaints _114=256
+    DICTUADDB	//  paid past_elections frozen_dict election_id bonuses vset_hash total_stake unfreeze_at stake_held complaints _113
     IFNOTJMP:<{	//  paid past_elections frozen_dict election_id bonuses vset_hash total_stake unfreeze_at stake_held complaints
       10 BLKDROP	// 
-      -9 PUSHINT	//  _114=-9
+      -9 PUSHINT	//  _116=-9
     }>	//  paid past_elections frozen_dict election_id bonuses vset_hash total_stake unfreeze_at stake_held complaints
     s6 s5 s0 XCHG3
     s3 s7 XCHG
     s2 s7 XCHG	//  paid past_elections election_id unfreeze_at stake_held vset_hash frozen_dict total_stake bonuses complaints
-    pack_past_election INLINECALLDICT	//  paid past_elections election_id _116
+    pack_past_election INLINECALLDICT	//  paid past_elections election_id _118
     s0 s2 XCHG
-    32 PUSHINT	//  paid _116 election_id past_elections _117=32
+    32 PUSHINT	//  paid _118 election_id past_elections _119=32
     DICTUSETB	//  paid past_elections
-    load_data INLINECALLDICT	//  paid past_elections _165 _166 _167 _168 _169 _170
+    load_data INLINECALLDICT	//  paid past_elections _168 _169 _170 _171 _172 _173
     s3 POP	//  paid past_elections elect credits active_hash grams active_id
     s4 s5 XCHG
     s3 s4 XCHG
@@ -999,53 +1010,54 @@ PROGRAM{
   }>
   punish PROCREF:<{
     //  credits frozen complaint
-    CTOS	//  credits frozen _10
-    unpack_complaint INLINECALLDICT	//  credits frozen _61 _62 _63 _64 _65 _66 _67
+    CTOS	//  credits frozen _11
+    unpack_complaint INLINECALLDICT	//  credits frozen _62 _63 _64 _65 _66 _67 _68 _69
     s4 POP
-    s4 POP	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid
+    s4 POP
+    s4 POP	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr
     s4 s5 PUSH2
-    8 PUSHPOW2	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid validator_pubkey frozen _14=256
+    8 PUSHPOW2	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr validator_pubkey frozen _15=256
     DICTUGET
-    NULLSWAPIFNOT	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid cs f
-    IFNOTJMP:<{	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid cs
+    NULLSWAPIFNOT	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr cs f
+    IFNOTJMP:<{	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr cs
       6 BLKDROP	//  credits frozen
-      0 PUSHINT	//  credits frozen _16=0
-    }>	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid cs
-    256 LDU	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid _21 cs
-    64 LDU	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid _21 _24 cs
-    LDGRAMS	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid _21 _24 _27 cs
-    1 LDI	//  credits frozen validator_pubkey suggested_fine suggested_fine_part reward_addr paid addr weight stake banned cs
+      0 PUSHINT	//  credits frozen _17=0
+    }>	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr cs
+    256 LDU	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr _22 cs
+    64 LDU	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr _22 _25 cs
+    LDGRAMS	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr _22 _25 _28 cs
+    1 LDI	//  credits frozen validator_pubkey paid suggested_fine suggested_fine_part reward_addr addr weight stake banned cs
     ENDS
-    s1 s6 PUXC	//  credits frozen validator_pubkey suggested_fine banned reward_addr paid addr weight stake stake suggested_fine_part
-    32 MULRSHIFT#	//  credits frozen validator_pubkey suggested_fine banned reward_addr paid addr weight stake _37
-    s1 s7 XCHG	//  credits frozen validator_pubkey stake banned reward_addr paid addr weight suggested_fine _37
-    ADD	//  credits frozen validator_pubkey stake banned reward_addr paid addr weight _38
-    s6 s(-1) PUXC	//  credits frozen validator_pubkey stake banned reward_addr paid addr weight stake _38
-    MIN	//  credits frozen validator_pubkey stake banned reward_addr paid addr weight fine
-    s6 s6 XCPU	//  credits frozen validator_pubkey fine banned reward_addr paid addr weight stake fine
-    SUB	//  credits frozen validator_pubkey fine banned reward_addr paid addr weight stake
+    s1 s5 PUXC	//  credits frozen validator_pubkey paid suggested_fine banned reward_addr addr weight stake stake suggested_fine_part
+    32 MULRSHIFT#	//  credits frozen validator_pubkey paid suggested_fine banned reward_addr addr weight stake _38
+    s1 s6 XCHG	//  credits frozen validator_pubkey paid stake banned reward_addr addr weight suggested_fine _38
+    ADD	//  credits frozen validator_pubkey paid stake banned reward_addr addr weight _39
+    s5 s(-1) PUXC	//  credits frozen validator_pubkey paid stake banned reward_addr addr weight stake _39
+    MIN	//  credits frozen validator_pubkey paid stake banned reward_addr addr weight fine
+    s5 s5 XCPU	//  credits frozen validator_pubkey paid fine banned reward_addr addr weight stake fine
+    SUB	//  credits frozen validator_pubkey paid fine banned reward_addr addr weight stake
     s0 s2 XCHG
-    NEWC	//  credits frozen validator_pubkey fine banned reward_addr paid stake weight addr _42
-    256 STU	//  credits frozen validator_pubkey fine banned reward_addr paid stake weight _44
-    64 STU	//  credits frozen validator_pubkey fine banned reward_addr paid stake _46
-    SWAP	//  credits frozen validator_pubkey fine banned reward_addr paid _46 stake
-    STGRAMS	//  credits frozen validator_pubkey fine banned reward_addr paid _47
-    s1 s3 XCHG	//  credits frozen validator_pubkey fine paid reward_addr banned _47
-    1 STI	//  credits frozen validator_pubkey fine paid reward_addr _49
+    NEWC	//  credits frozen validator_pubkey paid fine banned reward_addr stake weight addr _43
+    256 STU	//  credits frozen validator_pubkey paid fine banned reward_addr stake weight _45
+    64 STU	//  credits frozen validator_pubkey paid fine banned reward_addr stake _47
+    SWAP	//  credits frozen validator_pubkey paid fine banned reward_addr _47 stake
+    STGRAMS	//  credits frozen validator_pubkey paid fine banned reward_addr _48
+    s1 s2 XCHG	//  credits frozen validator_pubkey paid fine reward_addr banned _48
+    1 STI	//  credits frozen validator_pubkey paid fine reward_addr _50
     s0 s4 s5 XCHG3
-    8 PUSHPOW2	//  credits paid reward_addr fine _49 validator_pubkey frozen _50=256
-    DICTUSETB	//  credits paid reward_addr fine frozen
-    OVER	//  credits paid reward_addr fine frozen fine
-    3 RSHIFT#	//  credits paid reward_addr fine frozen _54
-    s0 s4 XCHG	//  credits _54 reward_addr fine frozen paid
-    3 LSHIFT#	//  credits _54 reward_addr fine frozen _56
-    s1 s4 XCHG	//  credits frozen reward_addr fine _54 _56
-    MIN	//  credits frozen reward_addr fine reward
-    TUCK	//  credits frozen reward_addr reward fine reward
-    SUB	//  credits frozen reward_addr reward fine
-    s4 s4 s4 XCHG3	//  fine frozen credits reward_addr reward
-    ~credit_to INLINECALLDICT	//  fine frozen credits
-    s0 s2 XCHG	//  credits frozen fine
+    8 PUSHPOW2	//  credits fine reward_addr paid _50 validator_pubkey frozen _51=256
+    DICTUSETB	//  credits fine reward_addr paid frozen
+    s3 PUSH	//  credits fine reward_addr paid frozen fine
+    3 RSHIFT#	//  credits fine reward_addr paid frozen _55
+    s0 s2 XCHG	//  credits fine reward_addr _55 frozen paid
+    3 LSHIFT#	//  credits fine reward_addr _55 frozen _57
+    s1 s2 XCHG	//  credits fine reward_addr frozen _55 _57
+    MIN	//  credits fine reward_addr frozen reward
+    s3 s3 XCPU	//  credits reward reward_addr frozen fine reward
+    SUB	//  credits reward reward_addr frozen fine
+    s4 s4 s3 XCHG3	//  frozen fine credits reward_addr reward
+    ~credit_to INLINECALLDICT	//  frozen fine credits
+    -ROT	//  credits frozen fine
   }>
   register_vote PROCREF:<{
     //  complaints chash idx weight
@@ -2223,5 +2235,147 @@ PROGRAM{
       DROP	// 
       0 PUSHINT	//  _14=0
     }>
+  }>
+  past_election_ids PROC:<{
+    // 
+    load_data INLINECALLDICT	//  _19 _20 _21 _22 _23 _24
+    s3 s5 XCHG
+    5 BLKDROP	//  past_elections
+    32 PUSHPOW2	//  past_elections id
+    PUSHNULL	//  past_elections id list
+    UNTIL:<{
+      s1 s2 XCPU
+      32 PUSHINT	//  past_elections list id past_elections _15=32
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  past_elections list _26 _25 _27
+      s2 POP	//  past_elections list f id
+      OVER	//  past_elections list f id f
+      IF:<{	//  past_elections list f id
+        s0 s2 PUXC	//  past_elections id f id list
+        CONS	//  past_elections id f list
+        s0 s2 XCHG	//  past_elections list f id
+      }>	//  past_elections list f id
+      SWAP	//  past_elections list id f
+      NOT	//  past_elections list id _18
+      s1 s2 XCHG	//  past_elections id list _18
+    }>	//  past_elections id list
+    2 1 BLKDROP2	//  list
+  }>
+  past_elections PROC:<{
+    // 
+    load_data INLINECALLDICT	//  _23 _24 _25 _26 _27 _28
+    s3 s5 XCHG
+    5 BLKDROP	//  past_elections
+    32 PUSHPOW2	//  past_elections id
+    PUSHNULL	//  past_elections id list
+    UNTIL:<{
+      s1 s2 XCPU
+      32 PUSHINT	//  past_elections list id past_elections _15=32
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  past_elections list fs id found
+      DUP	//  past_elections list fs id found found
+      IF:<{	//  past_elections list fs id found
+        s0 s2 XCHG	//  past_elections list found id fs
+        unpack_past_election INLINECALLDICT	//  past_elections list found id _32 _33 _34 _35 _36 _37 _38
+        7 TUPLE	//  past_elections list found id info
+        s1 s(-1) PUXC	//  past_elections list found id id info
+        PAIR	//  past_elections list found id _20
+        s0 s3 XCHG2	//  past_elections id found _20 list
+        CONS	//  past_elections id found list
+        s0 s2 XCHG	//  past_elections list found id
+      }>ELSE<{
+        s2 POP	//  past_elections list found id
+      }>
+      SWAP	//  past_elections list id found
+      NOT	//  past_elections list id _22
+      s1 s2 XCHG	//  past_elections id list _22
+    }>	//  past_elections id list
+    2 1 BLKDROP2	//  list
+  }>
+  complete_unpack_complaint PROCREF:<{
+    //  cs
+    unpack_complaint_status INLINECALLDICT	//  complaint voters vset_id weight_remaining
+    PUSHNULL	//  complaint voters vset_id weight_remaining voters_list
+    32 PUSHPOW2	//  complaint voters vset_id weight_remaining voters_list voter_id
+    UNTIL:<{
+      s4 PUSH
+      16 PUSHINT	//  complaint voters vset_id weight_remaining voters_list voter_id voters _14=16
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  complaint voters vset_id weight_remaining voters_list _27 _26 _28
+      s2 POP	//  complaint voters vset_id weight_remaining voters_list f voter_id
+      OVER	//  complaint voters vset_id weight_remaining voters_list f voter_id f
+      IF:<{	//  complaint voters vset_id weight_remaining voters_list f voter_id
+        s0 s2 PUXC	//  complaint voters vset_id weight_remaining voter_id f voter_id voters_list
+        CONS	//  complaint voters vset_id weight_remaining voter_id f voters_list
+        s0 s2 XCHG	//  complaint voters vset_id weight_remaining voters_list f voter_id
+      }>	//  complaint voters vset_id weight_remaining voters_list f voter_id
+      SWAP	//  complaint voters vset_id weight_remaining voters_list voter_id f
+      NOT	//  complaint voters vset_id weight_remaining voters_list voter_id _17
+    }>	//  complaint voters vset_id weight_remaining voters_list voter_id
+    DROP
+    s3 POP	//  complaint voters_list vset_id weight_remaining
+    s0 s3 XCHG	//  weight_remaining voters_list vset_id complaint
+    CTOS	//  weight_remaining voters_list vset_id _20
+    unpack_complaint INLINECALLDICT	//  weight_remaining voters_list vset_id _29 _30 _31 _32 _33 _34 _35 _36
+    8 TUPLE	//  weight_remaining voters_list vset_id _19
+    s0 s3 XCHG	//  _19 voters_list vset_id weight_remaining
+    4 TUPLE	//  _18
+  }>
+  get_past_complaints PROCREF:<{
+    //  election_id
+    load_data INLINECALLDICT	//  election_id _21 _22 _23 _24 _25 _26
+    s3 s5 XCHG
+    5 BLKDROP	//  election_id past_elections
+    32 PUSHINT	//  election_id past_elections _10=32
+    DICTUGET
+    NULLSWAPIFNOT	//  fs found?
+    IFNOTJMP:<{	//  fs
+      DROP	// 
+      PUSHNULL	//  _12
+    }>	//  fs
+    unpack_past_election INLINECALLDICT	//  _29 _30 _31 _32 _33 _34 _35
+    6 1 BLKDROP2	//  complaints
+  }>
+  show_complaint PROC:<{
+    //  election_id chash
+    SWAP	//  chash election_id
+    get_past_complaints INLINECALLDICT	//  chash complaints
+    8 PUSHPOW2	//  chash complaints _6=256
+    DICTUGET
+    NULLSWAPIFNOT	//  cs found
+    IF:<{	//  cs
+      complete_unpack_complaint INLINECALLDICT	//  _8
+    }>ELSE<{	//  cs
+      DROP	// 
+      PUSHNULL	//  _8
+    }>
+  }>
+  list_complaints PROC:<{
+    //  election_id
+    get_past_complaints INLINECALLDICT	//  complaints
+    256 PUSHPOW2DEC	//  complaints id
+    PUSHNULL	//  complaints id list
+    UNTIL:<{
+      s1 s2 XCPU
+      8 PUSHPOW2	//  complaints list id complaints _17=256
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  complaints list cs id found?
+      DUP	//  complaints list cs id found? found?
+      IF:<{	//  complaints list cs id found?
+        s0 s2 XCHG	//  complaints list found? id cs
+        complete_unpack_complaint INLINECALLDICT	//  complaints list found? id _19
+        s1 s(-1) PUXC	//  complaints list found? id id _19
+        PAIR	//  complaints list found? id _20
+        s0 s3 XCHG2	//  complaints id found? _20 list
+        CONS	//  complaints id found? list
+        s0 s2 XCHG	//  complaints list found? id
+      }>ELSE<{
+        s2 POP	//  complaints list found? id
+      }>
+      SWAP	//  complaints list id found?
+      NOT	//  complaints list id _22
+      s1 s2 XCHG	//  complaints id list _22
+    }>	//  complaints id list
+    2 1 BLKDROP2	//  list
   }>
 }END>c

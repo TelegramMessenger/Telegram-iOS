@@ -6801,39 +6801,49 @@ extern const MsgForwardPrices t_MsgForwardPrices;
 //
 
 struct CatchainConfig final : TLB_Complex {
-  enum { catchain_config };
+  enum { catchain_config, catchain_config_new };
   static constexpr int cons_len_exact = 8;
-  static constexpr unsigned char cons_tag[1] = { 0xc1 };
-  struct Record;
-  int get_size(const vm::CellSlice& cs) const override {
-    return 136;
-  }
-  bool skip(vm::CellSlice& cs) const override {
-    return cs.advance(136);
-  }
+  static constexpr unsigned char cons_tag[2] = { 0xc1, 0xc2 };
+  struct Record_catchain_config;
+  struct Record_catchain_config_new;
+  bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
-  bool unpack(vm::CellSlice& cs, Record& data) const;
-  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
-  bool pack(vm::CellBuilder& cb, const Record& data) const;
-  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool unpack(vm::CellSlice& cs, Record_catchain_config& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_catchain_config& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_catchain_config& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_catchain_config& data) const;
+  bool unpack(vm::CellSlice& cs, Record_catchain_config_new& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_catchain_config_new& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_catchain_config_new& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_catchain_config_new& data) const;
   bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
   std::ostream& print_type(std::ostream& os) const override {
     return os << "CatchainConfig";
   }
   int check_tag(const vm::CellSlice& cs) const override;
-  int get_tag(const vm::CellSlice& cs) const override {
-    return 0;
-  }
+  int get_tag(const vm::CellSlice& cs) const override;
 };
 
-struct CatchainConfig::Record {
+struct CatchainConfig::Record_catchain_config {
   typedef CatchainConfig type_class;
   unsigned mc_catchain_lifetime;  	// mc_catchain_lifetime : uint32
   unsigned shard_catchain_lifetime;  	// shard_catchain_lifetime : uint32
   unsigned shard_validators_lifetime;  	// shard_validators_lifetime : uint32
   unsigned shard_validators_num;  	// shard_validators_num : uint32
-  Record() = default;
-  Record(unsigned _mc_catchain_lifetime, unsigned _shard_catchain_lifetime, unsigned _shard_validators_lifetime, unsigned _shard_validators_num) : mc_catchain_lifetime(_mc_catchain_lifetime), shard_catchain_lifetime(_shard_catchain_lifetime), shard_validators_lifetime(_shard_validators_lifetime), shard_validators_num(_shard_validators_num) {}
+  Record_catchain_config() = default;
+  Record_catchain_config(unsigned _mc_catchain_lifetime, unsigned _shard_catchain_lifetime, unsigned _shard_validators_lifetime, unsigned _shard_validators_num) : mc_catchain_lifetime(_mc_catchain_lifetime), shard_catchain_lifetime(_shard_catchain_lifetime), shard_validators_lifetime(_shard_validators_lifetime), shard_validators_num(_shard_validators_num) {}
+};
+
+struct CatchainConfig::Record_catchain_config_new {
+  typedef CatchainConfig type_class;
+  int flags;  	// flags : ## 7
+  bool shuffle_mc_validators;  	// shuffle_mc_validators : Bool
+  unsigned mc_catchain_lifetime;  	// mc_catchain_lifetime : uint32
+  unsigned shard_catchain_lifetime;  	// shard_catchain_lifetime : uint32
+  unsigned shard_validators_lifetime;  	// shard_validators_lifetime : uint32
+  unsigned shard_validators_num;  	// shard_validators_num : uint32
+  Record_catchain_config_new() = default;
+  Record_catchain_config_new(int _flags, bool _shuffle_mc_validators, unsigned _mc_catchain_lifetime, unsigned _shard_catchain_lifetime, unsigned _shard_validators_lifetime, unsigned _shard_validators_num) : flags(_flags), shuffle_mc_validators(_shuffle_mc_validators), mc_catchain_lifetime(_mc_catchain_lifetime), shard_catchain_lifetime(_shard_catchain_lifetime), shard_validators_lifetime(_shard_validators_lifetime), shard_validators_num(_shard_validators_num) {}
 };
 
 extern const CatchainConfig t_CatchainConfig;
@@ -6843,32 +6853,30 @@ extern const CatchainConfig t_CatchainConfig;
 //
 
 struct ConsensusConfig final : TLB_Complex {
-  enum { consensus_config };
+  enum { consensus_config, consensus_config_new };
   static constexpr int cons_len_exact = 8;
-  static constexpr unsigned char cons_tag[1] = { 0xd6 };
-  struct Record;
-  int get_size(const vm::CellSlice& cs) const override {
-    return 264;
-  }
-  bool skip(vm::CellSlice& cs) const override {
-    return cs.advance(264);
-  }
+  static constexpr unsigned char cons_tag[2] = { 0xd6, 0xd7 };
+  struct Record_consensus_config;
+  struct Record_consensus_config_new;
+  bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
-  bool unpack(vm::CellSlice& cs, Record& data) const;
-  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
-  bool pack(vm::CellBuilder& cb, const Record& data) const;
-  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool unpack(vm::CellSlice& cs, Record_consensus_config& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_consensus_config& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_consensus_config& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_consensus_config& data) const;
+  bool unpack(vm::CellSlice& cs, Record_consensus_config_new& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_consensus_config_new& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_consensus_config_new& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_consensus_config_new& data) const;
   bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
   std::ostream& print_type(std::ostream& os) const override {
     return os << "ConsensusConfig";
   }
   int check_tag(const vm::CellSlice& cs) const override;
-  int get_tag(const vm::CellSlice& cs) const override {
-    return 0;
-  }
+  int get_tag(const vm::CellSlice& cs) const override;
 };
 
-struct ConsensusConfig::Record {
+struct ConsensusConfig::Record_consensus_config {
   typedef ConsensusConfig type_class;
   int round_candidates;  	// round_candidates : #
   unsigned next_candidate_delay_ms;  	// next_candidate_delay_ms : uint32
@@ -6878,8 +6886,24 @@ struct ConsensusConfig::Record {
   unsigned catchain_max_deps;  	// catchain_max_deps : uint32
   unsigned max_block_bytes;  	// max_block_bytes : uint32
   unsigned max_collated_bytes;  	// max_collated_bytes : uint32
-  Record() = default;
-  Record(int _round_candidates, unsigned _next_candidate_delay_ms, unsigned _consensus_timeout_ms, unsigned _fast_attempts, unsigned _attempt_duration, unsigned _catchain_max_deps, unsigned _max_block_bytes, unsigned _max_collated_bytes) : round_candidates(_round_candidates), next_candidate_delay_ms(_next_candidate_delay_ms), consensus_timeout_ms(_consensus_timeout_ms), fast_attempts(_fast_attempts), attempt_duration(_attempt_duration), catchain_max_deps(_catchain_max_deps), max_block_bytes(_max_block_bytes), max_collated_bytes(_max_collated_bytes) {}
+  Record_consensus_config() = default;
+  Record_consensus_config(int _round_candidates, unsigned _next_candidate_delay_ms, unsigned _consensus_timeout_ms, unsigned _fast_attempts, unsigned _attempt_duration, unsigned _catchain_max_deps, unsigned _max_block_bytes, unsigned _max_collated_bytes) : round_candidates(_round_candidates), next_candidate_delay_ms(_next_candidate_delay_ms), consensus_timeout_ms(_consensus_timeout_ms), fast_attempts(_fast_attempts), attempt_duration(_attempt_duration), catchain_max_deps(_catchain_max_deps), max_block_bytes(_max_block_bytes), max_collated_bytes(_max_collated_bytes) {}
+};
+
+struct ConsensusConfig::Record_consensus_config_new {
+  typedef ConsensusConfig type_class;
+  int flags;  	// flags : ## 7
+  bool new_catchain_ids;  	// new_catchain_ids : Bool
+  int round_candidates;  	// round_candidates : ## 8
+  unsigned next_candidate_delay_ms;  	// next_candidate_delay_ms : uint32
+  unsigned consensus_timeout_ms;  	// consensus_timeout_ms : uint32
+  unsigned fast_attempts;  	// fast_attempts : uint32
+  unsigned attempt_duration;  	// attempt_duration : uint32
+  unsigned catchain_max_deps;  	// catchain_max_deps : uint32
+  unsigned max_block_bytes;  	// max_block_bytes : uint32
+  unsigned max_collated_bytes;  	// max_collated_bytes : uint32
+  Record_consensus_config_new() = default;
+  Record_consensus_config_new(int _flags, bool _new_catchain_ids, int _round_candidates, unsigned _next_candidate_delay_ms, unsigned _consensus_timeout_ms, unsigned _fast_attempts, unsigned _attempt_duration, unsigned _catchain_max_deps, unsigned _max_block_bytes, unsigned _max_collated_bytes) : flags(_flags), new_catchain_ids(_new_catchain_ids), round_candidates(_round_candidates), next_candidate_delay_ms(_next_candidate_delay_ms), consensus_timeout_ms(_consensus_timeout_ms), fast_attempts(_fast_attempts), attempt_duration(_attempt_duration), catchain_max_deps(_catchain_max_deps), max_block_bytes(_max_block_bytes), max_collated_bytes(_max_collated_bytes) {}
 };
 
 extern const ConsensusConfig t_ConsensusConfig;
@@ -7752,7 +7776,7 @@ extern const ComplaintDescr t_ComplaintDescr;
 struct ValidatorComplaint final : TLB_Complex {
   enum { validator_complaint };
   static constexpr int cons_len_exact = 8;
-  static constexpr unsigned char cons_tag[1] = { 0xba };
+  static constexpr unsigned char cons_tag[1] = { 0xbc };
   struct Record;
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
@@ -7774,13 +7798,14 @@ struct ValidatorComplaint::Record {
   typedef ValidatorComplaint type_class;
   RefInt256 validator_pubkey;  	// validator_pubkey : uint256
   Ref<Cell> description;  	// description : ^ComplaintDescr
+  unsigned created_at;  	// created_at : uint32
   int severity;  	// severity : uint8
   RefInt256 reward_addr;  	// reward_addr : uint256
   Ref<CellSlice> paid;  	// paid : Grams
   Ref<CellSlice> suggested_fine;  	// suggested_fine : Grams
   unsigned suggested_fine_part;  	// suggested_fine_part : uint32
   Record() = default;
-  Record(RefInt256 _validator_pubkey, Ref<Cell> _description, int _severity, RefInt256 _reward_addr, Ref<CellSlice> _paid, Ref<CellSlice> _suggested_fine, unsigned _suggested_fine_part) : validator_pubkey(std::move(_validator_pubkey)), description(std::move(_description)), severity(_severity), reward_addr(std::move(_reward_addr)), paid(std::move(_paid)), suggested_fine(std::move(_suggested_fine)), suggested_fine_part(_suggested_fine_part) {}
+  Record(RefInt256 _validator_pubkey, Ref<Cell> _description, unsigned _created_at, int _severity, RefInt256 _reward_addr, Ref<CellSlice> _paid, Ref<CellSlice> _suggested_fine, unsigned _suggested_fine_part) : validator_pubkey(std::move(_validator_pubkey)), description(std::move(_description)), created_at(_created_at), severity(_severity), reward_addr(std::move(_reward_addr)), paid(std::move(_paid)), suggested_fine(std::move(_suggested_fine)), suggested_fine_part(_suggested_fine_part) {}
 };
 
 extern const ValidatorComplaint t_ValidatorComplaint;

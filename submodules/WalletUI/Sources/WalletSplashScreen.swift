@@ -80,7 +80,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: false)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -91,7 +91,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: false)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -171,7 +171,7 @@ public final class WalletSplashScreen: ViewController {
             
             strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Wallet_WordImport_Continue, style: .plain, target: strongSelf, action: #selector(strongSelf.sendGramsContinuePressed)), animated: false)
             
-            let check = getCombinedWalletState(storage: strongSelf.context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: strongSelf.context.tonInstance, onlyCached: false)
+            let check = getCombinedWalletState(storage: strongSelf.context.storage, subject: .wallet(walletInfo), tonInstance: strongSelf.context.tonInstance, onlyCached: false)
             |> mapToSignal { state -> Signal<Bool, GetCombinedWalletStateError> in
                 switch state {
                 case .cached:

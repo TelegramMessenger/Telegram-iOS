@@ -679,7 +679,18 @@ config_fwd_prices#_ MsgForwardPrices = ConfigParam 25;
 
 catchain_config#c1 mc_catchain_lifetime:uint32 shard_catchain_lifetime:uint32 
   shard_validators_lifetime:uint32 shard_validators_num:uint32 = CatchainConfig;
+
+catchain_config_new#c2 flags:(## 7) { flags = 0 } shuffle_mc_validators:Bool
+  mc_catchain_lifetime:uint32 shard_catchain_lifetime:uint32
+  shard_validators_lifetime:uint32 shard_validators_num:uint32 = CatchainConfig;
+
 consensus_config#d6 round_candidates:# { round_candidates >= 1 }
+  next_candidate_delay_ms:uint32 consensus_timeout_ms:uint32
+  fast_attempts:uint32 attempt_duration:uint32 catchain_max_deps:uint32
+  max_block_bytes:uint32 max_collated_bytes:uint32 = ConsensusConfig;
+
+consensus_config_new#d7 flags:(## 7) { flags = 0 } new_catchain_ids:Bool
+  round_candidates:(## 8) { round_candidates >= 1 }
   next_candidate_delay_ms:uint32 consensus_timeout_ms:uint32
   fast_attempts:uint32 attempt_duration:uint32 catchain_max_deps:uint32
   max_block_bytes:uint32 max_collated_bytes:uint32 = ConsensusConfig;
@@ -721,7 +732,7 @@ top_block_descr_set#4ac789f3 collection:(HashmapE 96 ^TopBlockDescr) = TopBlockD
 //  VALIDATOR MISBEHAVIOR COMPLAINTS
 //
 no_blk_gen mc_blk_ref:ExtBlkRef from_utime:uint32 to_utime:uint32 state_proof:^Cell prod_proof:^Cell = ComplaintDescr;
-validator_complaint#ba validator_pubkey:uint256 description:^ComplaintDescr severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams suggested_fine_part:uint32 = ValidatorComplaint;
+validator_complaint#bc validator_pubkey:uint256 description:^ComplaintDescr created_at:uint32 severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams suggested_fine_part:uint32 = ValidatorComplaint;
 complaint_status#2d complaint:^ValidatorComplaint voters:(HashmapE 16 True) vset_id:uint256 weight_remaining:int64 = ValidatorComplaintStatus;
 
 //

@@ -63,7 +63,7 @@ inline bool is_special_ident(sym_idx_t idx) {
  */
 
 // TE ::= TA | TA -> TE
-// TA ::= int | ... | cont | var | _ | () | ( TE { , TE } )
+// TA ::= int | ... | cont | var | _ | () | ( TE { , TE } ) | [ TE { , TE } ]
 TypeExpr* parse_type(Lexer& lex);
 
 TypeExpr* parse_type1(Lexer& lex) {
@@ -113,7 +113,7 @@ TypeExpr* parse_type1(Lexer& lex) {
     return c == ')' ? TypeExpr::new_unit() : TypeExpr::new_tuple({});
   }
   auto t1 = parse_type(lex);
-  if (lex.tp() != ',') {
+  if (lex.tp() == ')') {
     lex.expect(c);
     return t1;
   }
@@ -346,7 +346,7 @@ Expr* parse_expr100(Lexer& lex, CodeBlob& code, bool nv) {
       return res;
     }
     Expr* res = parse_expr(lex, code, nv);
-    if (lex.tp() != ',') {
+    if (lex.tp() == ')') {
       lex.expect(clbr);
       return res;
     }

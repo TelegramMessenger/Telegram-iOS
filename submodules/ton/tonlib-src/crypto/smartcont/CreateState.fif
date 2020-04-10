@@ -142,12 +142,12 @@ variable special-dict
 { make-msg-fwd-prices 24 config! } : config.mc_fwd_prices!
 { make-msg-fwd-prices 25 config! } : config.fwd_prices!
 
-// mc-cc-lifetime sh-cc-lifetime sh-val-lifetime sh-val-num
-{ 4 0 reverse <b x{c1} s, swap 32 u, swap 32 u, swap 32 u, swap 32 u, b> 
+// mc-cc-lifetime sh-cc-lifetime sh-val-lifetime sh-val-num mc-shuffle
+{ 4 1 reverse <b x{c201_} s, swap 1 i, swap 32 u, swap 32 u, swap 32 u, swap 32 u, b>
 } : make-catchain-params
 { make-catchain-params 28 config! } : config.catchain_params!
-// round-candidates next-cand-delay-ms consensus-timeout-ms fast-attempts attempt-duration cc-max-deps max-block-size max-collated-size
-{ 8 0 reverse <b x{d6} s, { swap 32 u, } 8 times b> } : make-vsession-params
+// round-candidates next-cand-delay-ms consensus-timeout-ms fast-attempts attempt-duration cc-max-deps max-block-size max-collated-size new-cc-ids
+{ 8 1 reverse <b x{d701_} s, swap 1 i, swap 8 u, { swap 32 u, } 7 times b> } : make-vsession-params
 { make-vsession-params 29 config! } : config.consensus_params!
 
 // b [underload soft hard] -- b'

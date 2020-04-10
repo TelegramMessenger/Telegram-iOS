@@ -23,7 +23,7 @@
     from all source files in the program, then also delete it here.
     along with TON Blockchain.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <iostream>
 

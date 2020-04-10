@@ -15640,18 +15640,59 @@ const MsgForwardPrices t_MsgForwardPrices;
 //
 // code for type `CatchainConfig`
 //
-constexpr unsigned char CatchainConfig::cons_tag[1];
+constexpr unsigned char CatchainConfig::cons_tag[2];
+
+int CatchainConfig::get_tag(const vm::CellSlice& cs) const {
+  switch (cs.bselect(6, 0x3000000000000ULL)) {
+  case 0:
+    return cs.bit_at(6) ? catchain_config_new : catchain_config;
+  default:
+    return -1;
+  }
+}
 
 int CatchainConfig::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(8) == 0xc1 ? catchain_config : -1;
+  switch (get_tag(cs)) {
+  case catchain_config:
+    return cs.prefetch_ulong(8) == 0xc1 ? catchain_config : -1;
+  case catchain_config_new:
+    return cs.prefetch_ulong(8) == 0xc2 ? catchain_config_new : -1;
+  }
+  return -1;
+}
+
+bool CatchainConfig::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case catchain_config:
+    return cs.advance(136);
+  case catchain_config_new: {
+    int flags;
+    return cs.advance(8)
+        && cs.fetch_uint_to(7, flags)
+        && flags == 0
+        && cs.advance(129);
+    }
+  }
+  return false;
 }
 
 bool CatchainConfig::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
-  return cs.fetch_ulong(8) == 0xc1
-      && cs.advance(128);
+  switch (get_tag(cs)) {
+  case catchain_config:
+    return cs.fetch_ulong(8) == 0xc1
+        && cs.advance(128);
+  case catchain_config_new: {
+    int flags;
+    return cs.fetch_ulong(8) == 0xc2
+        && cs.fetch_uint_to(7, flags)
+        && flags == 0
+        && cs.advance(129);
+    }
+  }
+  return false;
 }
 
-bool CatchainConfig::unpack(vm::CellSlice& cs, CatchainConfig::Record& data) const {
+bool CatchainConfig::unpack(vm::CellSlice& cs, CatchainConfig::Record_catchain_config& data) const {
   return cs.fetch_ulong(8) == 0xc1
       && cs.fetch_uint_to(32, data.mc_catchain_lifetime)
       && cs.fetch_uint_to(32, data.shard_catchain_lifetime)
@@ -15659,13 +15700,30 @@ bool CatchainConfig::unpack(vm::CellSlice& cs, CatchainConfig::Record& data) con
       && cs.fetch_uint_to(32, data.shard_validators_num);
 }
 
-bool CatchainConfig::cell_unpack(Ref<vm::Cell> cell_ref, CatchainConfig::Record& data) const {
+bool CatchainConfig::cell_unpack(Ref<vm::Cell> cell_ref, CatchainConfig::Record_catchain_config& data) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack(cs, data) && cs.empty_ext();
 }
 
-bool CatchainConfig::pack(vm::CellBuilder& cb, const CatchainConfig::Record& data) const {
+bool CatchainConfig::unpack(vm::CellSlice& cs, CatchainConfig::Record_catchain_config_new& data) const {
+  return cs.fetch_ulong(8) == 0xc2
+      && cs.fetch_uint_to(7, data.flags)
+      && data.flags == 0
+      && cs.fetch_bool_to(data.shuffle_mc_validators)
+      && cs.fetch_uint_to(32, data.mc_catchain_lifetime)
+      && cs.fetch_uint_to(32, data.shard_catchain_lifetime)
+      && cs.fetch_uint_to(32, data.shard_validators_lifetime)
+      && cs.fetch_uint_to(32, data.shard_validators_num);
+}
+
+bool CatchainConfig::cell_unpack(Ref<vm::Cell> cell_ref, CatchainConfig::Record_catchain_config_new& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool CatchainConfig::pack(vm::CellBuilder& cb, const CatchainConfig::Record_catchain_config& data) const {
   return cb.store_long_bool(0xc1, 8)
       && cb.store_ulong_rchk_bool(data.mc_catchain_lifetime, 32)
       && cb.store_ulong_rchk_bool(data.shard_catchain_lifetime, 32)
@@ -15673,19 +15731,53 @@ bool CatchainConfig::pack(vm::CellBuilder& cb, const CatchainConfig::Record& dat
       && cb.store_ulong_rchk_bool(data.shard_validators_num, 32);
 }
 
-bool CatchainConfig::cell_pack(Ref<vm::Cell>& cell_ref, const CatchainConfig::Record& data) const {
+bool CatchainConfig::cell_pack(Ref<vm::Cell>& cell_ref, const CatchainConfig::Record_catchain_config& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool CatchainConfig::pack(vm::CellBuilder& cb, const CatchainConfig::Record_catchain_config_new& data) const {
+  return cb.store_long_bool(0xc2, 8)
+      && cb.store_ulong_rchk_bool(data.flags, 7)
+      && data.flags == 0
+      && cb.store_ulong_rchk_bool(data.shuffle_mc_validators, 1)
+      && cb.store_ulong_rchk_bool(data.mc_catchain_lifetime, 32)
+      && cb.store_ulong_rchk_bool(data.shard_catchain_lifetime, 32)
+      && cb.store_ulong_rchk_bool(data.shard_validators_lifetime, 32)
+      && cb.store_ulong_rchk_bool(data.shard_validators_num, 32);
+}
+
+bool CatchainConfig::cell_pack(Ref<vm::Cell>& cell_ref, const CatchainConfig::Record_catchain_config_new& data) const {
   vm::CellBuilder cb;
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
 bool CatchainConfig::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  return cs.fetch_ulong(8) == 0xc1
-      && pp.open("catchain_config")
-      && pp.fetch_uint_field(cs, 32, "mc_catchain_lifetime")
-      && pp.fetch_uint_field(cs, 32, "shard_catchain_lifetime")
-      && pp.fetch_uint_field(cs, 32, "shard_validators_lifetime")
-      && pp.fetch_uint_field(cs, 32, "shard_validators_num")
-      && pp.close();
+  switch (get_tag(cs)) {
+  case catchain_config:
+    return cs.fetch_ulong(8) == 0xc1
+        && pp.open("catchain_config")
+        && pp.fetch_uint_field(cs, 32, "mc_catchain_lifetime")
+        && pp.fetch_uint_field(cs, 32, "shard_catchain_lifetime")
+        && pp.fetch_uint_field(cs, 32, "shard_validators_lifetime")
+        && pp.fetch_uint_field(cs, 32, "shard_validators_num")
+        && pp.close();
+  case catchain_config_new: {
+    int flags;
+    return cs.fetch_ulong(8) == 0xc2
+        && pp.open("catchain_config_new")
+        && cs.fetch_uint_to(7, flags)
+        && pp.field_int(flags, "flags")
+        && flags == 0
+        && pp.fetch_uint_field(cs, 1, "shuffle_mc_validators")
+        && pp.fetch_uint_field(cs, 32, "mc_catchain_lifetime")
+        && pp.fetch_uint_field(cs, 32, "shard_catchain_lifetime")
+        && pp.fetch_uint_field(cs, 32, "shard_validators_lifetime")
+        && pp.fetch_uint_field(cs, 32, "shard_validators_num")
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for CatchainConfig");
 }
 
 const CatchainConfig t_CatchainConfig;
@@ -15693,21 +15785,74 @@ const CatchainConfig t_CatchainConfig;
 //
 // code for type `ConsensusConfig`
 //
-constexpr unsigned char ConsensusConfig::cons_tag[1];
+constexpr unsigned char ConsensusConfig::cons_tag[2];
+
+int ConsensusConfig::get_tag(const vm::CellSlice& cs) const {
+  switch (cs.bselect(6, 0x60000000000000ULL)) {
+  case 0:
+    return cs.bit_at(7) ? consensus_config_new : consensus_config;
+  default:
+    return -1;
+  }
+}
 
 int ConsensusConfig::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(8) == 0xd6 ? consensus_config : -1;
+  switch (get_tag(cs)) {
+  case consensus_config:
+    return cs.prefetch_ulong(8) == 0xd6 ? consensus_config : -1;
+  case consensus_config_new:
+    return cs.prefetch_ulong(8) == 0xd7 ? consensus_config_new : -1;
+  }
+  return -1;
+}
+
+bool ConsensusConfig::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case consensus_config: {
+    int round_candidates;
+    return cs.advance(8)
+        && cs.fetch_uint_to(32, round_candidates)
+        && 1 <= round_candidates
+        && cs.advance(224);
+    }
+  case consensus_config_new: {
+    int flags, round_candidates;
+    return cs.advance(8)
+        && cs.fetch_uint_to(7, flags)
+        && flags == 0
+        && cs.advance(1)
+        && cs.fetch_uint_to(8, round_candidates)
+        && 1 <= round_candidates
+        && cs.advance(224);
+    }
+  }
+  return false;
 }
 
 bool ConsensusConfig::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
-  int round_candidates;
-  return cs.fetch_ulong(8) == 0xd6
-      && cs.fetch_uint_to(32, round_candidates)
-      && 1 <= round_candidates
-      && cs.advance(224);
+  switch (get_tag(cs)) {
+  case consensus_config: {
+    int round_candidates;
+    return cs.fetch_ulong(8) == 0xd6
+        && cs.fetch_uint_to(32, round_candidates)
+        && 1 <= round_candidates
+        && cs.advance(224);
+    }
+  case consensus_config_new: {
+    int flags, round_candidates;
+    return cs.fetch_ulong(8) == 0xd7
+        && cs.fetch_uint_to(7, flags)
+        && flags == 0
+        && cs.advance(1)
+        && cs.fetch_uint_to(8, round_candidates)
+        && 1 <= round_candidates
+        && cs.advance(224);
+    }
+  }
+  return false;
 }
 
-bool ConsensusConfig::unpack(vm::CellSlice& cs, ConsensusConfig::Record& data) const {
+bool ConsensusConfig::unpack(vm::CellSlice& cs, ConsensusConfig::Record_consensus_config& data) const {
   return cs.fetch_ulong(8) == 0xd6
       && cs.fetch_uint_to(32, data.round_candidates)
       && 1 <= data.round_candidates
@@ -15720,13 +15865,35 @@ bool ConsensusConfig::unpack(vm::CellSlice& cs, ConsensusConfig::Record& data) c
       && cs.fetch_uint_to(32, data.max_collated_bytes);
 }
 
-bool ConsensusConfig::cell_unpack(Ref<vm::Cell> cell_ref, ConsensusConfig::Record& data) const {
+bool ConsensusConfig::cell_unpack(Ref<vm::Cell> cell_ref, ConsensusConfig::Record_consensus_config& data) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack(cs, data) && cs.empty_ext();
 }
 
-bool ConsensusConfig::pack(vm::CellBuilder& cb, const ConsensusConfig::Record& data) const {
+bool ConsensusConfig::unpack(vm::CellSlice& cs, ConsensusConfig::Record_consensus_config_new& data) const {
+  return cs.fetch_ulong(8) == 0xd7
+      && cs.fetch_uint_to(7, data.flags)
+      && data.flags == 0
+      && cs.fetch_bool_to(data.new_catchain_ids)
+      && cs.fetch_uint_to(8, data.round_candidates)
+      && 1 <= data.round_candidates
+      && cs.fetch_uint_to(32, data.next_candidate_delay_ms)
+      && cs.fetch_uint_to(32, data.consensus_timeout_ms)
+      && cs.fetch_uint_to(32, data.fast_attempts)
+      && cs.fetch_uint_to(32, data.attempt_duration)
+      && cs.fetch_uint_to(32, data.catchain_max_deps)
+      && cs.fetch_uint_to(32, data.max_block_bytes)
+      && cs.fetch_uint_to(32, data.max_collated_bytes);
+}
+
+bool ConsensusConfig::cell_unpack(Ref<vm::Cell> cell_ref, ConsensusConfig::Record_consensus_config_new& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ConsensusConfig::pack(vm::CellBuilder& cb, const ConsensusConfig::Record_consensus_config& data) const {
   return cb.store_long_bool(0xd6, 8)
       && cb.store_ulong_rchk_bool(data.round_candidates, 32)
       && 1 <= data.round_candidates
@@ -15739,26 +15906,72 @@ bool ConsensusConfig::pack(vm::CellBuilder& cb, const ConsensusConfig::Record& d
       && cb.store_ulong_rchk_bool(data.max_collated_bytes, 32);
 }
 
-bool ConsensusConfig::cell_pack(Ref<vm::Cell>& cell_ref, const ConsensusConfig::Record& data) const {
+bool ConsensusConfig::cell_pack(Ref<vm::Cell>& cell_ref, const ConsensusConfig::Record_consensus_config& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ConsensusConfig::pack(vm::CellBuilder& cb, const ConsensusConfig::Record_consensus_config_new& data) const {
+  return cb.store_long_bool(0xd7, 8)
+      && cb.store_ulong_rchk_bool(data.flags, 7)
+      && data.flags == 0
+      && cb.store_ulong_rchk_bool(data.new_catchain_ids, 1)
+      && cb.store_ulong_rchk_bool(data.round_candidates, 8)
+      && 1 <= data.round_candidates
+      && cb.store_ulong_rchk_bool(data.next_candidate_delay_ms, 32)
+      && cb.store_ulong_rchk_bool(data.consensus_timeout_ms, 32)
+      && cb.store_ulong_rchk_bool(data.fast_attempts, 32)
+      && cb.store_ulong_rchk_bool(data.attempt_duration, 32)
+      && cb.store_ulong_rchk_bool(data.catchain_max_deps, 32)
+      && cb.store_ulong_rchk_bool(data.max_block_bytes, 32)
+      && cb.store_ulong_rchk_bool(data.max_collated_bytes, 32);
+}
+
+bool ConsensusConfig::cell_pack(Ref<vm::Cell>& cell_ref, const ConsensusConfig::Record_consensus_config_new& data) const {
   vm::CellBuilder cb;
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
 bool ConsensusConfig::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  int round_candidates;
-  return cs.fetch_ulong(8) == 0xd6
-      && pp.open("consensus_config")
-      && cs.fetch_uint_to(32, round_candidates)
-      && pp.field_int(round_candidates, "round_candidates")
-      && 1 <= round_candidates
-      && pp.fetch_uint_field(cs, 32, "next_candidate_delay_ms")
-      && pp.fetch_uint_field(cs, 32, "consensus_timeout_ms")
-      && pp.fetch_uint_field(cs, 32, "fast_attempts")
-      && pp.fetch_uint_field(cs, 32, "attempt_duration")
-      && pp.fetch_uint_field(cs, 32, "catchain_max_deps")
-      && pp.fetch_uint_field(cs, 32, "max_block_bytes")
-      && pp.fetch_uint_field(cs, 32, "max_collated_bytes")
-      && pp.close();
+  switch (get_tag(cs)) {
+  case consensus_config: {
+    int round_candidates;
+    return cs.fetch_ulong(8) == 0xd6
+        && pp.open("consensus_config")
+        && cs.fetch_uint_to(32, round_candidates)
+        && pp.field_int(round_candidates, "round_candidates")
+        && 1 <= round_candidates
+        && pp.fetch_uint_field(cs, 32, "next_candidate_delay_ms")
+        && pp.fetch_uint_field(cs, 32, "consensus_timeout_ms")
+        && pp.fetch_uint_field(cs, 32, "fast_attempts")
+        && pp.fetch_uint_field(cs, 32, "attempt_duration")
+        && pp.fetch_uint_field(cs, 32, "catchain_max_deps")
+        && pp.fetch_uint_field(cs, 32, "max_block_bytes")
+        && pp.fetch_uint_field(cs, 32, "max_collated_bytes")
+        && pp.close();
+    }
+  case consensus_config_new: {
+    int flags, round_candidates;
+    return cs.fetch_ulong(8) == 0xd7
+        && pp.open("consensus_config_new")
+        && cs.fetch_uint_to(7, flags)
+        && pp.field_int(flags, "flags")
+        && flags == 0
+        && pp.fetch_uint_field(cs, 1, "new_catchain_ids")
+        && cs.fetch_uint_to(8, round_candidates)
+        && pp.field_int(round_candidates, "round_candidates")
+        && 1 <= round_candidates
+        && pp.fetch_uint_field(cs, 32, "next_candidate_delay_ms")
+        && pp.fetch_uint_field(cs, 32, "consensus_timeout_ms")
+        && pp.fetch_uint_field(cs, 32, "fast_attempts")
+        && pp.fetch_uint_field(cs, 32, "attempt_duration")
+        && pp.fetch_uint_field(cs, 32, "catchain_max_deps")
+        && pp.fetch_uint_field(cs, 32, "max_block_bytes")
+        && pp.fetch_uint_field(cs, 32, "max_collated_bytes")
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for ConsensusConfig");
 }
 
 const ConsensusConfig t_ConsensusConfig;
@@ -16138,10 +16351,10 @@ bool ConfigParam::skip(vm::CellSlice& cs) const {
     return cs.advance(264)
         && m_ == 25;
   case cons28:
-    return cs.advance(136)
+    return t_CatchainConfig.skip(cs)
         && m_ == 28;
   case cons29:
-    return cs.advance(264)
+    return t_ConsensusConfig.skip(cs)
         && m_ == 29;
   case cons31:
     return t_HashmapE_256_True.skip(cs)
@@ -16815,12 +17028,12 @@ bool ConfigParam::cell_unpack_config_fwd_prices(Ref<vm::Cell> cell_ref, Ref<Cell
 }
 
 bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons28& data) const {
-  return cs.fetch_subslice_to(136, data.x)
+  return t_CatchainConfig.fetch_to(cs, data.x)
       && m_ == 28;
 }
 
 bool ConfigParam::unpack_cons28(vm::CellSlice& cs, Ref<CellSlice>& x) const {
-  return cs.fetch_subslice_to(136, x)
+  return t_CatchainConfig.fetch_to(cs, x)
       && m_ == 28;
 }
 
@@ -16837,12 +17050,12 @@ bool ConfigParam::cell_unpack_cons28(Ref<vm::Cell> cell_ref, Ref<CellSlice>& x) 
 }
 
 bool ConfigParam::unpack(vm::CellSlice& cs, ConfigParam::Record_cons29& data) const {
-  return cs.fetch_subslice_to(264, data.x)
+  return t_ConsensusConfig.fetch_to(cs, data.x)
       && m_ == 29;
 }
 
 bool ConfigParam::unpack_cons29(vm::CellSlice& cs, Ref<CellSlice>& x) const {
-  return cs.fetch_subslice_to(264, x)
+  return t_ConsensusConfig.fetch_to(cs, x)
       && m_ == 29;
 }
 
@@ -17513,12 +17726,12 @@ bool ConfigParam::cell_pack_config_fwd_prices(Ref<vm::Cell>& cell_ref, Ref<CellS
 }
 
 bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons28& data) const {
-  return cb.append_cellslice_chk(data.x, 136)
+  return t_CatchainConfig.store_from(cb, data.x)
       && m_ == 28;
 }
 
 bool ConfigParam::pack_cons28(vm::CellBuilder& cb, Ref<CellSlice> x) const {
-  return cb.append_cellslice_chk(x, 136)
+  return t_CatchainConfig.store_from(cb, x)
       && m_ == 28;
 }
 
@@ -17533,12 +17746,12 @@ bool ConfigParam::cell_pack_cons28(Ref<vm::Cell>& cell_ref, Ref<CellSlice> x) co
 }
 
 bool ConfigParam::pack(vm::CellBuilder& cb, const ConfigParam::Record_cons29& data) const {
-  return cb.append_cellslice_chk(data.x, 264)
+  return t_ConsensusConfig.store_from(cb, data.x)
       && m_ == 29;
 }
 
 bool ConfigParam::pack_cons29(vm::CellBuilder& cb, Ref<CellSlice> x) const {
-  return cb.append_cellslice_chk(x, 264)
+  return t_ConsensusConfig.store_from(cb, x)
       && m_ == 29;
 }
 
@@ -18542,30 +18755,31 @@ const ComplaintDescr t_ComplaintDescr;
 constexpr unsigned char ValidatorComplaint::cons_tag[1];
 
 int ValidatorComplaint::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(8) == 0xba ? validator_complaint : -1;
+  return cs.prefetch_ulong(8) == 0xbc ? validator_complaint : -1;
 }
 
 bool ValidatorComplaint::skip(vm::CellSlice& cs) const {
-  return cs.advance_ext(0x10210)
+  return cs.advance_ext(0x10230)
       && t_Grams.skip(cs)
       && t_Grams.skip(cs)
       && cs.advance(32);
 }
 
 bool ValidatorComplaint::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
-  return cs.fetch_ulong(8) == 0xba
+  return cs.fetch_ulong(8) == 0xbc
       && cs.advance(256)
       && t_ComplaintDescr.validate_skip_ref(ops, cs, weak)
-      && cs.advance(264)
+      && cs.advance(296)
       && t_Grams.validate_skip(ops, cs, weak)
       && t_Grams.validate_skip(ops, cs, weak)
       && cs.advance(32);
 }
 
 bool ValidatorComplaint::unpack(vm::CellSlice& cs, ValidatorComplaint::Record& data) const {
-  return cs.fetch_ulong(8) == 0xba
+  return cs.fetch_ulong(8) == 0xbc
       && cs.fetch_uint256_to(256, data.validator_pubkey)
       && cs.fetch_ref_to(data.description)
+      && cs.fetch_uint_to(32, data.created_at)
       && cs.fetch_uint_to(8, data.severity)
       && cs.fetch_uint256_to(256, data.reward_addr)
       && t_Grams.fetch_to(cs, data.paid)
@@ -18580,9 +18794,10 @@ bool ValidatorComplaint::cell_unpack(Ref<vm::Cell> cell_ref, ValidatorComplaint:
 }
 
 bool ValidatorComplaint::pack(vm::CellBuilder& cb, const ValidatorComplaint::Record& data) const {
-  return cb.store_long_bool(0xba, 8)
+  return cb.store_long_bool(0xbc, 8)
       && cb.store_int256_bool(data.validator_pubkey, 256, false)
       && cb.store_ref_bool(data.description)
+      && cb.store_ulong_rchk_bool(data.created_at, 32)
       && cb.store_ulong_rchk_bool(data.severity, 8)
       && cb.store_int256_bool(data.reward_addr, 256, false)
       && t_Grams.store_from(cb, data.paid)
@@ -18596,11 +18811,12 @@ bool ValidatorComplaint::cell_pack(Ref<vm::Cell>& cell_ref, const ValidatorCompl
 }
 
 bool ValidatorComplaint::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  return cs.fetch_ulong(8) == 0xba
+  return cs.fetch_ulong(8) == 0xbc
       && pp.open("validator_complaint")
       && pp.fetch_uint256_field(cs, 256, "validator_pubkey")
       && pp.field("description")
       && t_ComplaintDescr.print_ref(pp, cs.fetch_ref())
+      && pp.fetch_uint_field(cs, 32, "created_at")
       && pp.fetch_uint_field(cs, 8, "severity")
       && pp.fetch_uint256_field(cs, 256, "reward_addr")
       && pp.field("paid")

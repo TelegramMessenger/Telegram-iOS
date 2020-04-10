@@ -23,7 +23,7 @@
     exception statement from your version. If you delete this exception statement 
     from all source files in the program, then also delete it here.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "tl_writer_java.h"
 

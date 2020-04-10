@@ -521,7 +521,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         })
     })
     
-    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: true)
+    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: true)
     |> map { combinedState -> WalletState? in
         var state: WalletState?
         switch combinedState {
@@ -535,7 +535,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
     |> `catch` { _ -> Signal<WalletState?, NoError> in
         return .single(nil)
         |> then(
-            getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), transactionDecryptionKey: nil, tonInstance: context.tonInstance, onlyCached: false)
+            getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: false)
             |> map { combinedState -> WalletState? in
                 var state: WalletState?
                 switch combinedState {

@@ -334,7 +334,7 @@ std::string UnifyError::message() const {
 
 void check_width_compat(TypeExpr* te1, TypeExpr* te2) {
   if (te1->minw > te2->maxw || te2->minw > te1->maxw) {
-    std::ostringstream os{"cannot unify types of widths "};
+    std::ostringstream os{"cannot unify types of widths ", std::ios_base::ate};
     te1->show_width(os);
     os << " and ";
     te2->show_width(os);

@@ -552,6 +552,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return validator_group::fetch(p);
     case validator_groupEx::ID:
       return validator_groupEx::fetch(p);
+    case validator_groupNew::ID:
+      return validator_groupNew::fetch(p);
     case validator_config_global::ID:
       return validator_config_global::fetch(p);
     case validator_config_local::ID:
@@ -566,6 +568,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return validatorSession_candidateId::fetch(p);
     case validatorSession_config::ID:
       return validatorSession_config::fetch(p);
+    case validatorSession_configNew::ID:
+      return validatorSession_configNew::fetch(p);
     case validatorSession_message_startSession::ID:
       return validatorSession_message_startSession::fetch(p);
     case validatorSession_message_finishSession::ID:
@@ -13118,6 +13122,8 @@ object_ptr<validator_Group> validator_Group::fetch(td::TlParser &p) {
       return validator_group::fetch(p);
     case validator_groupEx::ID:
       return validator_groupEx::fetch(p);
+    case validator_groupNew::ID:
+      return validator_groupNew::fetch(p);
     default:
       FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
   }
@@ -13247,6 +13253,80 @@ void validator_groupEx::store(td::TlStorerToString &s, const char *field_name) c
     s.store_field("workchain", workchain_);
     s.store_field("shard", shard_);
     s.store_field("vertical_seqno", vertical_seqno_);
+    s.store_field("catchain_seqno", catchain_seqno_);
+    s.store_field("config_hash", config_hash_);
+    { const std::vector<object_ptr<validator_groupMember>> &v = members_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("members", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+validator_groupNew::validator_groupNew()
+  : workchain_()
+  , shard_()
+  , vertical_seqno_()
+  , last_key_block_seqno_()
+  , catchain_seqno_()
+  , config_hash_()
+  , members_()
+{}
+
+validator_groupNew::validator_groupNew(std::int32_t workchain_, std::int64_t shard_, std::int32_t vertical_seqno_, std::int32_t last_key_block_seqno_, std::int32_t catchain_seqno_, td::Bits256 const &config_hash_, std::vector<object_ptr<validator_groupMember>> &&members_)
+  : workchain_(workchain_)
+  , shard_(shard_)
+  , vertical_seqno_(vertical_seqno_)
+  , last_key_block_seqno_(last_key_block_seqno_)
+  , catchain_seqno_(catchain_seqno_)
+  , config_hash_(config_hash_)
+  , members_(std::move(members_))
+{}
+
+const std::int32_t validator_groupNew::ID;
+
+object_ptr<validator_Group> validator_groupNew::fetch(td::TlParser &p) {
+  return make_object<validator_groupNew>(p);
+}
+
+validator_groupNew::validator_groupNew(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : workchain_(TlFetchInt::parse(p))
+  , shard_(TlFetchLong::parse(p))
+  , vertical_seqno_(TlFetchInt::parse(p))
+  , last_key_block_seqno_(TlFetchInt::parse(p))
+  , catchain_seqno_(TlFetchInt::parse(p))
+  , config_hash_(TlFetchInt256::parse(p))
+  , members_(TlFetchVector<TlFetchObject<validator_groupMember>>::parse(p))
+#undef FAIL
+{}
+
+void validator_groupNew::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(workchain_, s);
+  TlStoreBinary::store(shard_, s);
+  TlStoreBinary::store(vertical_seqno_, s);
+  TlStoreBinary::store(last_key_block_seqno_, s);
+  TlStoreBinary::store(catchain_seqno_, s);
+  TlStoreBinary::store(config_hash_, s);
+  TlStoreVector<TlStoreObject>::store(members_, s);
+}
+
+void validator_groupNew::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(workchain_, s);
+  TlStoreBinary::store(shard_, s);
+  TlStoreBinary::store(vertical_seqno_, s);
+  TlStoreBinary::store(last_key_block_seqno_, s);
+  TlStoreBinary::store(catchain_seqno_, s);
+  TlStoreBinary::store(config_hash_, s);
+  TlStoreVector<TlStoreObject>::store(members_, s);
+}
+
+void validator_groupNew::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "validator_groupNew");
+    s.store_field("workchain", workchain_);
+    s.store_field("shard", shard_);
+    s.store_field("vertical_seqno", vertical_seqno_);
+    s.store_field("last_key_block_seqno", last_key_block_seqno_);
     s.store_field("catchain_seqno", catchain_seqno_);
     s.store_field("config_hash", config_hash_);
     { const std::vector<object_ptr<validator_groupMember>> &v = members_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("members", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
@@ -13562,6 +13642,20 @@ void validatorSession_candidateId::store(td::TlStorerToString &s, const char *fi
   }
 }
 
+object_ptr<validatorSession_Config> validatorSession_Config::fetch(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return nullptr;
+  int constructor = p.fetch_int();
+  switch (constructor) {
+    case validatorSession_config::ID:
+      return validatorSession_config::fetch(p);
+    case validatorSession_configNew::ID:
+      return validatorSession_configNew::fetch(p);
+    default:
+      FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
+  }
+#undef FAIL
+}
+
 validatorSession_config::validatorSession_config()
   : catchain_idle_timeout_()
   , catchain_max_deps_()
@@ -13586,7 +13680,7 @@ validatorSession_config::validatorSession_config(double catchain_idle_timeout_, 
 
 const std::int32_t validatorSession_config::ID;
 
-object_ptr<validatorSession_config> validatorSession_config::fetch(td::TlParser &p) {
+object_ptr<validatorSession_Config> validatorSession_config::fetch(td::TlParser &p) {
   return make_object<validatorSession_config>(p);
 }
 
@@ -13638,6 +13732,92 @@ void validatorSession_config::store(td::TlStorerToString &s, const char *field_n
     s.store_field("max_round_attempts", max_round_attempts_);
     s.store_field("max_block_size", max_block_size_);
     s.store_field("max_collated_data_size", max_collated_data_size_);
+    s.store_class_end();
+  }
+}
+
+validatorSession_configNew::validatorSession_configNew()
+  : catchain_idle_timeout_()
+  , catchain_max_deps_()
+  , round_candidates_()
+  , next_candidate_delay_()
+  , round_attempt_duration_()
+  , max_round_attempts_()
+  , max_block_size_()
+  , max_collated_data_size_()
+  , new_catchain_ids_()
+{}
+
+validatorSession_configNew::validatorSession_configNew(double catchain_idle_timeout_, std::int32_t catchain_max_deps_, std::int32_t round_candidates_, double next_candidate_delay_, std::int32_t round_attempt_duration_, std::int32_t max_round_attempts_, std::int32_t max_block_size_, std::int32_t max_collated_data_size_, bool new_catchain_ids_)
+  : catchain_idle_timeout_(catchain_idle_timeout_)
+  , catchain_max_deps_(catchain_max_deps_)
+  , round_candidates_(round_candidates_)
+  , next_candidate_delay_(next_candidate_delay_)
+  , round_attempt_duration_(round_attempt_duration_)
+  , max_round_attempts_(max_round_attempts_)
+  , max_block_size_(max_block_size_)
+  , max_collated_data_size_(max_collated_data_size_)
+  , new_catchain_ids_(new_catchain_ids_)
+{}
+
+const std::int32_t validatorSession_configNew::ID;
+
+object_ptr<validatorSession_Config> validatorSession_configNew::fetch(td::TlParser &p) {
+  return make_object<validatorSession_configNew>(p);
+}
+
+validatorSession_configNew::validatorSession_configNew(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : catchain_idle_timeout_(TlFetchDouble::parse(p))
+  , catchain_max_deps_(TlFetchInt::parse(p))
+  , round_candidates_(TlFetchInt::parse(p))
+  , next_candidate_delay_(TlFetchDouble::parse(p))
+  , round_attempt_duration_(TlFetchInt::parse(p))
+  , max_round_attempts_(TlFetchInt::parse(p))
+  , max_block_size_(TlFetchInt::parse(p))
+  , max_collated_data_size_(TlFetchInt::parse(p))
+  , new_catchain_ids_(TlFetchBool::parse(p))
+#undef FAIL
+{}
+
+void validatorSession_configNew::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(catchain_idle_timeout_, s);
+  TlStoreBinary::store(catchain_max_deps_, s);
+  TlStoreBinary::store(round_candidates_, s);
+  TlStoreBinary::store(next_candidate_delay_, s);
+  TlStoreBinary::store(round_attempt_duration_, s);
+  TlStoreBinary::store(max_round_attempts_, s);
+  TlStoreBinary::store(max_block_size_, s);
+  TlStoreBinary::store(max_collated_data_size_, s);
+  TlStoreBool::store(new_catchain_ids_, s);
+}
+
+void validatorSession_configNew::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(catchain_idle_timeout_, s);
+  TlStoreBinary::store(catchain_max_deps_, s);
+  TlStoreBinary::store(round_candidates_, s);
+  TlStoreBinary::store(next_candidate_delay_, s);
+  TlStoreBinary::store(round_attempt_duration_, s);
+  TlStoreBinary::store(max_round_attempts_, s);
+  TlStoreBinary::store(max_block_size_, s);
+  TlStoreBinary::store(max_collated_data_size_, s);
+  TlStoreBool::store(new_catchain_ids_, s);
+}
+
+void validatorSession_configNew::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "validatorSession_configNew");
+    s.store_field("catchain_idle_timeout", catchain_idle_timeout_);
+    s.store_field("catchain_max_deps", catchain_max_deps_);
+    s.store_field("round_candidates", round_candidates_);
+    s.store_field("next_candidate_delay", next_candidate_delay_);
+    s.store_field("round_attempt_duration", round_attempt_duration_);
+    s.store_field("max_round_attempts", max_round_attempts_);
+    s.store_field("max_block_size", max_block_size_);
+    s.store_field("max_collated_data_size", max_collated_data_size_);
+    s.store_field("new_catchain_ids", new_catchain_ids_);
     s.store_class_end();
   }
 }

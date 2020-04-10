@@ -885,7 +885,7 @@ public enum CombinedWalletStateSubject {
     case address(String)
 }
 
-public func getCombinedWalletState(storage: WalletStorageInterface, subject: CombinedWalletStateSubject, transactionDecryptionKey: WalletTransactionDecryptionKey?, tonInstance: TonInstance, onlyCached: Bool) -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> {
+public func getCombinedWalletState(storage: WalletStorageInterface, subject: CombinedWalletStateSubject, tonInstance: TonInstance, onlyCached: Bool) -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> {
     switch subject {
     case let .wallet(walletInfo):
         return storage.getWalletRecords()
@@ -935,21 +935,14 @@ public func getCombinedWalletState(storage: WalletStorageInterface, subject: Com
                     |> mapToSignal { walletState, syncUtime -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
                         let topTransactions: Signal<[WalletTransaction], GetCombinedWalletStateError>
                         if walletState.lastTransactionId == cachedState?.walletState.lastTransactionId {
-                            if let topTransactionsValue = cachedState?.topTransactions, let transactionDecryptionKey = transactionDecryptionKey {
-                                topTransactions = decryptWalletTransactions(decryptionKey: transactionDecryptionKey, transactions: topTransactionsValue, tonInstance: tonInstance)
-                                |> mapError { _ -> GetCombinedWalletStateError in
-                                    return .generic
-                                }
-                            } else {
-                                topTransactions = .single(cachedState?.topTransactions ?? [])
-                            }
+                            topTransactions = .single(cachedState?.topTransactions ?? [])
                         } else {
                             if cachedState == nil {
-                                topTransactions = getWalletTransactions(address: address, previousId: nil, transactionDecryptionKey: transactionDecryptionKey, tonInstance: tonInstance)
+                                topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
                                 |> retry(1.0, maxDelay: 5.0, onQueue: .concurrentDefaultQueue())
                                 |> castError(GetCombinedWalletStateError.self)
                             } else {
-                                topTransactions = getWalletTransactions(address: address, previousId: nil, transactionDecryptionKey: transactionDecryptionKey, tonInstance: tonInstance)
+                                topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
                                 |> mapError { error -> GetCombinedWalletStateError in
                                     if case .network = error {
                                         return .network
@@ -1011,7 +1004,7 @@ public func getCombinedWalletState(storage: WalletStorageInterface, subject: Com
         |> mapToSignal { walletState, syncUtime -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
             let topTransactions: Signal<[WalletTransaction], GetCombinedWalletStateError>
             
-            topTransactions = getWalletTransactions(address: address, previousId: nil, transactionDecryptionKey: nil, tonInstance: tonInstance)
+            topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
             |> mapError { _ -> GetCombinedWalletStateError in
                 return .generic
             }
@@ -1446,13 +1439,20 @@ public func decryptWalletTransactions(decryptionKey: WalletTransactionDecryption
     }
 }
 
-public func getWalletTransactions(address: String, previousId: WalletTransactionId?, transactionDecryptionKey: WalletTransactionDecryptionKey?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
-    return getWalletTransactionsOnce(address: address, previousId: previousId, transactionDecryptionKey: transactionDecryptionKey, tonInstance: tonInstance)
+public func decryptWalletState(decryptionKey: WalletTransactionDecryptionKey, state: CombinedWalletState, tonInstance: TonInstance) -> Signal<CombinedWalletState, DecryptWalletTransactionsError> {
+    return decryptWalletTransactions(decryptionKey: decryptionKey, transactions: state.topTransactions, tonInstance: tonInstance)
+    |> map { transactions in
+        return state.withTopTransactions(transactions)
+    }
+}
+
+public func getWalletTransactions(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
+    return getWalletTransactionsOnce(address: address, previousId: previousId, tonInstance: tonInstance)
     |> mapToSignal { transactions in
         guard let lastTransaction = transactions.last, transactions.count >= 2 else {
             return .single(transactions)
         }
-        return getWalletTransactionsOnce(address: address, previousId: lastTransaction.transactionId, transactionDecryptionKey: transactionDecryptionKey, tonInstance: tonInstance)
+        return getWalletTransactionsOnce(address: address, previousId: lastTransaction.transactionId, tonInstance: tonInstance)
         |> map { additionalTransactions in
             var result = transactions
             var existingIds = Set(result.map { $0.transactionId })
@@ -1479,7 +1479,7 @@ private enum WalletLastTransactionIdError {
     case network
 }
 
-private func getWalletTransactionsOnce(address: String, previousId: WalletTransactionId?, transactionDecryptionKey: WalletTransactionDecryptionKey?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
+private func getWalletTransactionsOnce(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
     let previousIdValue: Signal<WalletTransactionId?, GetWalletTransactionsError>
     if let previousId = previousId {
         previousIdValue = .single(previousId)
@@ -1512,64 +1512,7 @@ private func getWalletTransactionsOnce(address: String, previousId: WalletTransa
                 }
             })
             |> mapToSignal { transactions -> Signal<[WalletTransaction], GetWalletTransactionsError> in
-                if let transactionDecryptionKey = transactionDecryptionKey {
-                    enum EncryptedMessagePath: Equatable {
-                        case inMessage
-                        case outMessage(Int)
-                    }
-                    var encryptedMessages: [(Int, EncryptedMessagePath, WalletTransactionEncryptedMessageData)] = []
-                    for i in 0 ..< transactions.count {
-                        if let inMessage = transactions[i].inMessage {
-                            switch inMessage.contents {
-                            case let .encryptedText(data):
-                                encryptedMessages.append((i, .inMessage, data))
-                            default:
-                                break
-                            }
-                        }
-                        for outIndex in 0 ..< transactions[i].outMessages.count {
-                            switch transactions[i].outMessages[outIndex].contents {
-                            case let .encryptedText(data):
-                                encryptedMessages.append((i, .outMessage(outIndex), data))
-                            default:
-                                break
-                            }
-                        }
-                    }
-                    if !encryptedMessages.isEmpty {
-                        return tonInstance.decryptWalletTransactions(decryptionKey: transactionDecryptionKey, encryptedMessages: encryptedMessages.map { $0.2 })
-                        |> map { contentsList -> [WalletTransaction] in
-                            var result: [WalletTransaction] = []
-                            for transactionIndex in 0 ..< transactions.count {
-                                let transaction = transactions[transactionIndex]
-                                
-                                var inMessage = transaction.inMessage
-                                var outMessages = transaction.outMessages
-                                
-                                for encryptedIndex in 0 ..< encryptedMessages.count {
-                                    if encryptedMessages[encryptedIndex].0 == transactionIndex {
-                                        switch encryptedMessages[encryptedIndex].1 {
-                                        case .inMessage:
-                                            inMessage = inMessage?.withContents(contentsList[encryptedIndex])
-                                        case let .outMessage(outIndex):
-                                            outMessages[outIndex] = outMessages[outIndex].withContents(contentsList[encryptedIndex])
-                                        }
-                                    }
-                                }
-                                
-                                result.append(WalletTransaction(data: transaction.data, transactionId: transaction.transactionId, timestamp: transaction.timestamp, storageFee: transaction.storageFee, otherFee: transaction.otherFee, inMessage: inMessage, outMessages: outMessages))
-                            }
-                            return result
-                        }
-                        |> `catch` { _ -> Signal<[WalletTransaction], GetWalletTransactionsError> in
-                            return .single(transactions)
-                        }
-                    } else {
-                        return .single(transactions)
-                    }
-                } else {
-                    return .single(transactions)
-                }
+                return .single(transactions)
             }
         } else {
             return .single([])

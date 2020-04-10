@@ -25,7 +25,8 @@ hashu dup =: basestate0_rhash
 ."root hash=" dup 64x. space 256 u>B dup B>base64url type cr
 "basestate0" +suffix +".rhash" B>file
 
-basestate0_rhash basestate0_fhash now 0 2 32 0 add-std-workchain
+// root-hash file-hash start-at actual-min-split min-split-depth max-split-depth wc-id
+basestate0_rhash basestate0_fhash now 0 4 8 0 add-std-workchain
 config.workchains!
 
 // SmartContract #1 (Simple wallet)
@@ -157,7 +158,7 @@ Masterchain swap
  *
  */
 // version capabilities
-1 capCreateStats capBounceMsgBody or capReportVersion or capShortDeque or config.version!
+1 capCreateStats capBounceMsgBody or capReportVersion or capShortDequeue or config.version!
 // max-validators max-main-validators min-validators
 // 9 4 1 config.validator_num!
 1000 100 13 config.validator_num!
@@ -183,15 +184,15 @@ config.special!
 // lump_price bit_price cell_price ihr_factor first_frac next_frac
 1000000 1000 sg* 100000 sg* 3/2 sg*/ 1/3 sg*/ 1/3 sg*/ config.fwd_prices!
 10000000 10000 sg* 1000000 sg* 3/2 sg*/ 1/3 sg*/ 1/3 sg*/ config.mc_fwd_prices!
-// mc-cc-lifetime sh-cc-lifetime sh-val-lifetime sh-val-num
-250 250 1000 7 config.catchain_params!
-// round-candidates next-cand-delay-ms consensus-timeout-ms fast-attempts attempt-duration cc-max-deps max-block-size max-collated-size
-3 2000 16000 3 8 4 2 *Mi 2 *Mi config.consensus_params!
+// mc-cc-lifetime sh-cc-lifetime sh-val-lifetime sh-val-num mc-shuffle
+250 250 1000 7 true config.catchain_params!
+// round-candidates next-cand-delay-ms consensus-timeout-ms fast-attempts attempt-duration cc-max-deps max-block-size max-collated-size new-cc-ids
+3 2000 16000 3 8 4 2 *Mi 2 *Mi true config.consensus_params!
 
 
-128 *Ki 512 *Ki 1 *Mi triple  // [ underload soft hard ] : block bytes limit
-100000 500000 1000000 triple  // gas limits
-1000 5000 10000 triple        // lt limits
+128 *Ki 512 *Ki 1 *Mi triple      // [ underload soft hard ] : block bytes limit
+2000000 10000000 20000000 triple  // gas limits
+1000 5000 10000 triple            // lt limits
 triple dup untriple config.mc_block_limits!
 untriple config.block_limits!
 

@@ -607,7 +607,7 @@ bool Transaction::unpack_input_msg(bool ihr_delivered, const ActionPhaseConfig* 
   return true;
 }
 
-bool Transaction::prepare_storage_phase(const StoragePhaseConfig& cfg, bool force_collect) {
+bool Transaction::prepare_storage_phase(const StoragePhaseConfig& cfg, bool force_collect, bool adjust_msg_value) {
   if (now < account.last_paid) {
     return false;
   }
@@ -656,6 +656,9 @@ bool Transaction::prepare_storage_phase(const StoragePhaseConfig& cfg, bool forc
           break;
       }
     }
+  }
+  if (adjust_msg_value && msg_balance_remaining.grams > balance.grams) {
+    msg_balance_remaining.grams = balance.grams;
   }
   total_fees += res->fees_collected;
   storage_phase = std::move(res);
@@ -773,7 +776,7 @@ bool Transaction::compute_gas_limits(ComputePhase& cp, const ComputePhaseConfig&
   } else {
     // originally use only gas bought using remaining message balance
     // if the message is "accepted" by the smart contract, the gas limit will be set to gas_max
-    cp.gas_limit = cfg.gas_bought_for(msg_balance_remaining.grams);
+    cp.gas_limit = std::min(cfg.gas_bought_for(msg_balance_remaining.grams), cp.gas_max);
     if (!block::tlb::t_Message.is_internal(in_msg)) {
       // external messages carry no balance, give them some credit to check whether they are accepted
       cp.gas_credit = std::min(cfg.gas_credit, cp.gas_max);

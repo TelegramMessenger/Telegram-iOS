@@ -806,6 +806,9 @@ bool downcast_call(Object &obj, const T &func) {
     case validator_groupEx::ID:
       func(static_cast<validator_groupEx &>(obj));
       return true;
+    case validator_groupNew::ID:
+      func(static_cast<validator_groupNew &>(obj));
+      return true;
     case validator_config_global::ID:
       func(static_cast<validator_config_global &>(obj));
       return true;
@@ -826,6 +829,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case validatorSession_config::ID:
       func(static_cast<validatorSession_config &>(obj));
+      return true;
+    case validatorSession_configNew::ID:
+      func(static_cast<validatorSession_configNew &>(obj));
       return true;
     case validatorSession_message_startSession::ID:
       func(static_cast<validatorSession_message_startSession &>(obj));
@@ -2063,6 +2069,9 @@ bool downcast_call(validator_Group &obj, const T &func) {
     case validator_groupEx::ID:
       func(static_cast<validator_groupEx &>(obj));
       return true;
+    case validator_groupNew::ID:
+      func(static_cast<validator_groupNew &>(obj));
+      return true;
     default:
       return false;
   }
@@ -2082,6 +2091,26 @@ bool downcast_call(validator_config_Local &obj, const T &func) {
       return true;
     case validator_config_random_local::ID:
       func(static_cast<validator_config_random_local &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(validatorSession_Config &obj, const T &func) {
+  switch (obj.get_id()) {
+    case validatorSession_config::ID:
+      func(static_cast<validatorSession_config &>(obj));
+      return true;
+    case validatorSession_configNew::ID:
+      func(static_cast<validatorSession_configNew &>(obj));
       return true;
     default:
       return false;

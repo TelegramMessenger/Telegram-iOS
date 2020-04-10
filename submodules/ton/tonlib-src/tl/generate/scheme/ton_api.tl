@@ -303,6 +303,8 @@ validatorSession.candidate src:int256 round:int root_hash:int256 data:bytes coll
 
 validatorSession.config catchain_idle_timeout:double catchain_max_deps:int round_candidates:int next_candidate_delay:double round_attempt_duration:int
         max_round_attempts:int max_block_size:int max_collated_data_size:int = validatorSession.Config;
+validatorSession.configNew catchain_idle_timeout:double catchain_max_deps:int round_candidates:int next_candidate_delay:double round_attempt_duration:int
+        max_round_attempts:int max_block_size:int max_collated_data_size:int new_catchain_ids:Bool = validatorSession.Config;
 
 ---functions---
 
@@ -515,6 +517,7 @@ db.files.package.value package_id:int key:Bool temp:Bool firstblocks:(vector db.
 validator.groupMember public_key_hash:int256 adnl:int256 weight:long = engine.validator.GroupMember; 
 validator.group workchain:int shard:long catchain_seqno:int config_hash:int256 members:(vector validator.groupMember) = validator.Group; 
 validator.groupEx workchain:int shard:long vertical_seqno:int catchain_seqno:int config_hash:int256 members:(vector validator.groupMember) = validator.Group; 
+validator.groupNew workchain:int shard:long vertical_seqno:int last_key_block_seqno:int catchain_seqno:int config_hash:int256 members:(vector validator.groupMember) = validator.Group; 
 
 ---functions---
 

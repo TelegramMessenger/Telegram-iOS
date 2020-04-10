@@ -408,8 +408,8 @@ class AccountState {
     if (o_revision) {
       wallet_type_ = WalletType::HighloadWalletV2;
       wallet_revision_ = o_revision.value();
-      set_new_state(
-          {ton::HighloadWalletV2::get_init_code(wallet_revision_), ton::WalletV3::get_init_data(key, wallet_id_)});
+      set_new_state({ton::HighloadWalletV2::get_init_code(wallet_revision_),
+                     ton::HighloadWalletV2::get_init_data(key, wallet_id_)});
       return wallet_type_;
     }
     o_revision = ton::HighloadWallet::guess_revision(address_, key, wallet_id_);
@@ -417,7 +417,7 @@ class AccountState {
       wallet_type_ = WalletType::HighloadWalletV1;
       wallet_revision_ = o_revision.value();
       set_new_state(
-          {ton::HighloadWallet::get_init_code(wallet_revision_), ton::WalletV3::get_init_data(key, wallet_id_)});
+          {ton::HighloadWallet::get_init_code(wallet_revision_), ton::HighloadWallet::get_init_data(key, wallet_id_)});
       return wallet_type_;
     }
     o_revision = ton::ManualDns::guess_revision(address_, key, wallet_id_);
