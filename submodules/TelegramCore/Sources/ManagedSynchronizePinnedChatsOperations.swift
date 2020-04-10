@@ -200,7 +200,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                     readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                     
                     if let apiChannelPts = apiChannelPts {
-                        chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
+                        chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
                     }
                     
                     notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)

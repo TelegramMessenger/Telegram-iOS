@@ -205,6 +205,7 @@ private enum CreatePollEntryTag: Equatable, ItemListItemTag {
     case text
     case option(Int)
     case optionsInfo
+    case solution
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? CreatePollEntryTag {
@@ -381,7 +382,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
         case let .quizSolutionText(placeholder, text):
             return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 200, display: true), sectionId: self.section, style: .blocks, textUpdated: { text in
                 arguments.updateSolutionText(text)
-            })
+            }, tag: CreatePollEntryTag.solution)
         case let .quizSolutionInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
@@ -404,6 +405,7 @@ private struct CreatePollControllerState: Equatable {
     var isMultipleChoice: Bool = false
     var isQuiz: Bool = false
     var solutionText: String = ""
+    var isEditingSolution: Bool = false
 }
 
 private func createPollControllerEntries(presentationData: PresentationData, peer: Peer, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
@@ -481,6 +483,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     var dismissImpl: (() -> Void)?
     var ensureTextVisibleImpl: (() -> Void)?
     var ensureOptionVisibleImpl: ((Int) -> Void)?
+    var ensureSolutionVisibleImpl: (() -> Void)?
     var displayQuizTooltipImpl: ((Bool) -> Void)?
     var attemptNavigationImpl: (() -> Bool)?
     
@@ -497,6 +500,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             var state = state
             state.focusOptionId = nil
             state.text = value
+            state.isEditingSolution = false
             return state
         }
         ensureTextVisibleImpl?()
@@ -710,8 +714,11 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
         updateState { state in
             var state = state
             state.solutionText = text
+            state.focusOptionId = nil
+            state.isEditingSolution = true
             return state
         }
+        ensureSolutionVisibleImpl?()
     })
     
     let previousOptionIds = Atomic<[Int]?>(value: nil)
@@ -818,6 +825,9 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             } else {
                 ensureVisibleItemTag = focusItemTag
             }
+        } else if state.isEditingSolution {
+            focusItemTag = CreatePollEntryTag.solution
+            ensureVisibleItemTag = focusItemTag
         } else {
             focusItemTag = CreatePollEntryTag.text
             ensureVisibleItemTag = focusItemTag
@@ -858,6 +868,27 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             let _ = controller.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListItemNode {
                     if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.text) {
+                        resultItemNode = itemNode as? ListViewItemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode)
+            }
+        })
+    }
+    ensureSolutionVisibleImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListItemNode {
+                    if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.solution) {
                         resultItemNode = itemNode as? ListViewItemNode
                         return true
                     }

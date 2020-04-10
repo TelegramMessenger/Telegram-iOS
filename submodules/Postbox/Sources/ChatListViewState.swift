@@ -240,6 +240,7 @@ private final class ChatListViewSpaceState {
             assert(higherThanAnchorMessages.count <= self.halfLimit)
             
             let allIndices = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entryIndex }
+            let allPeerIds = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entryIndex.index.messageIndex.id.peerId }
             if Set(allIndices).count != allIndices.count {
                 var existingIndices = Set<MutableChatListEntryIndex>()
                 for i in (0 ..< lowerOrAtAnchorMessages.count).reversed() {
@@ -257,6 +258,25 @@ private final class ChatListViewSpaceState {
                     }
                 }
                 assert(false)
+            }
+            if Set(allPeerIds).count != allPeerIds.count {
+                var existingPeerIds = Set<PeerId>()
+                for i in (0 ..< lowerOrAtAnchorMessages.count).reversed() {
+                    if !existingPeerIds.contains(lowerOrAtAnchorMessages[i].entryIndex.index.messageIndex.id.peerId) {
+                        existingPeerIds.insert(lowerOrAtAnchorMessages[i].entryIndex.index.messageIndex.id.peerId)
+                    } else {
+                        lowerOrAtAnchorMessages.remove(at: i)
+                    }
+                }
+                for i in (0 ..< higherThanAnchorMessages.count).reversed() {
+                    if !existingPeerIds.contains(higherThanAnchorMessages[i].entryIndex.index.messageIndex.id.peerId) {
+                        existingPeerIds.insert(higherThanAnchorMessages[i].entryIndex.index.messageIndex.id.peerId)
+                    } else {
+                        higherThanAnchorMessages.remove(at: i)
+                    }
+                }
+                assert(false)
+                preconditionFailure()
             }
             
             assert(allIndices.sorted() == allIndices)
@@ -337,8 +357,8 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        precondition(self.orderedEntries.lowerOrAtAnchor.count <= self.halfLimit)
-        precondition(self.orderedEntries.higherThanAnchor.count <= self.halfLimit)
+        assert(self.orderedEntries.lowerOrAtAnchor.count <= self.halfLimit)
+        assert(self.orderedEntries.higherThanAnchor.count <= self.halfLimit)
     }
     
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {

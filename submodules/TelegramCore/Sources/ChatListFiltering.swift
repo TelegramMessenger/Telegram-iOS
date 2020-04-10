@@ -644,7 +644,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                         transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                         
                         if let pts = pts {
-                            let channelState = ChannelState(pts: pts, invalidatedPts: pts)
+                            let channelState = ChannelState(pts: pts, invalidatedPts: pts, synchronizedUntilMessageId: nil)
                             transaction.setPeerChatState(peerId, state: channelState)
                             channelStates[peer.peerId] = channelState
                         }

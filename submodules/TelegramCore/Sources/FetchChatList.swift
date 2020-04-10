@@ -131,7 +131,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 }
                 
                 if let apiChannelPts = apiChannelPts {
-                    chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
+                    chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
                 }
                 
                 notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
