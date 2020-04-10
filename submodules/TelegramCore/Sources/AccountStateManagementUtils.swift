@@ -1544,7 +1544,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                                 updatedState.resetMessageTagSummary(peer.peerId, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
                                 updatedState.peerChatInfos[peer.peerId] = PeerChatInfo(notificationSettings: notificationSettings)
                                 if let pts = pts {
-                                    channelStates[peer.peerId] = ChannelState(pts: pts, invalidatedPts: pts)
+                                    channelStates[peer.peerId] = ChannelState(pts: pts, invalidatedPts: pts, synchronizedUntilMessageId: nil)
                                 }
                             case .dialogFolder:
                                 assertionFailure()
@@ -1708,7 +1708,7 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                         }
                         
                         if let apiChannelPts = apiChannelPts {
-                            channelStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: apiChannelPts)
+                            channelStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: apiChannelPts, synchronizedUntilMessageId: nil)
                         }
                         
                         notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -1812,7 +1812,7 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         if let previousState = updatedState.chatStates[peer.id] as? ChannelState {
                             channelState = previousState.withUpdatedPts(pts)
                         } else {
-                            channelState = ChannelState(pts: pts, invalidatedPts: nil)
+                            channelState = ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
                         }
                         updatedState.updateChannelState(peer.id, state: channelState)
                         
@@ -1893,7 +1893,7 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         if let previousState = updatedState.chatStates[peer.id] as? ChannelState {
                             channelState = previousState.withUpdatedPts(pts)
                         } else {
-                            channelState = ChannelState(pts: pts, invalidatedPts: nil)
+                            channelState = ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
                         }
                         updatedState.updateChannelState(peer.id, state: channelState)
                     case let .channelDifferenceTooLong(_, timeout, dialog, messages, chats, users):
@@ -1911,7 +1911,7 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         }
                         
                         if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount) = parameters {
-                            let channelState = ChannelState(pts: pts, invalidatedPts: pts)
+                            let channelState = ChannelState(pts: pts, invalidatedPts: pts, synchronizedUntilMessageId: nil)
                             updatedState.updateChannelState(peer.peerId, state: channelState)
                             
                             updatedState.mergeChats(chats)

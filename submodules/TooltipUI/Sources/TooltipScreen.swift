@@ -25,6 +25,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var isArrowInverted: Bool = false
     
+    private var validLayout: ContainerViewLayout?
+    
     init(text: String, textEntities: [MessageTextEntity], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
         self.icon = icon
         self.location = location
@@ -113,6 +115,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
         self.scrollingContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         let sideInset: CGFloat = 13.0
@@ -140,7 +144,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - contentInset * 2.0 - sideInset * 2.0 - animationSize.width - animationSpacing, height: .greatestFiniteMagnitude))
         
-        let backgroundWidth = textSize.width + contentInset * 2.0 + sideInset * 2.0 + animationSize.width + animationSpacing
+        let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
         let backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
         var backgroundFrame = CGRect(origin: CGPoint(x: self.location.midX - backgroundWidth / 2.0, y: self.location.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
         if backgroundFrame.minX < sideInset {
@@ -210,9 +214,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     }
     
     func animateIn() {
-        self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.01)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+        self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.01)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4, damping: 105.0)
         let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
-        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.6, additive: true)
+        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 105.0, additive: true)
         self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         let animationDelay: Double
@@ -243,6 +247,13 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     func addRelativeScrollingOffset(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
         self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: value)
         transition.animateOffsetAdditive(node: self.scrollingContainer, offset: -value)
+        
+        if let layout = self.validLayout {
+            let projectedContainerFrame = self.containerNode.frame.offsetBy(dx: 0.0, dy: -self.scrollingContainer.bounds.origin.y)
+            if projectedContainerFrame.minY - 30.0 < layout.insets(options: .statusBar).top {
+                self.requestDismiss()
+            }
+        }
     }
 }
 
