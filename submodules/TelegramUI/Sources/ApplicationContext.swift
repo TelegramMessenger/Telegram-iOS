@@ -295,6 +295,10 @@ final class AuthorizedApplicationContext {
                         let _ = (appLockContext.isCurrentlyLocked
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { locked in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
                             guard !locked else {
                                 return
                             }
@@ -316,60 +320,60 @@ final class AuthorizedApplicationContext {
                                     }
                                 }
                             }
-                        })
-                    }
-                    
-                    if chatIsVisible {
-                        return
-                    }
-                    
-                    if inAppNotificationSettings.displayPreviews {
-                       let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
-                            if let strongSelf = self {
-                                var foundOverlay = false
-                                strongSelf.mainWindow.forEachViewController({ controller in
-                                    if isOverlayControllerForChatNotificationOverlayPresentation(controller) {
-                                        foundOverlay = true
-                                        return false
+                            
+                            if chatIsVisible {
+                                return
+                            }
+                            
+                            if inAppNotificationSettings.displayPreviews {
+                               let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
+                                    if let strongSelf = self {
+                                        var foundOverlay = false
+                                        strongSelf.mainWindow.forEachViewController({ controller in
+                                            if isOverlayControllerForChatNotificationOverlayPresentation(controller) {
+                                                foundOverlay = true
+                                                return false
+                                            }
+                                            return true
+                                        }, excludeNavigationSubControllers: true)
+                                        
+                                        if foundOverlay {
+                                            return true
+                                        }
+                                        
+                                        if let topController = strongSelf.rootController.topViewController as? ViewController, isInlineControllerForChatNotificationOverlayPresentation(topController) {
+                                            return true
+                                        }
+                                        
+                                        if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = topController.chatLocation {
+                                            strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
+                                            
+                                            return false
+                                        }
+                                        
+                                        for controller in strongSelf.rootController.viewControllers {
+                                            if let controller = controller as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
+                                                return true
+                                            }
+                                        }
+                                        
+                                        strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
+                                        
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId)))
                                     }
-                                    return true
-                                }, excludeNavigationSubControllers: true)
-                                
-                                if foundOverlay {
-                                    return true
-                                }
-                                
-                                if let topController = strongSelf.rootController.topViewController as? ViewController, isInlineControllerForChatNotificationOverlayPresentation(topController) {
-                                    return true
-                                }
-                                
-                                if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = topController.chatLocation {
-                                    strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
-                                    
                                     return false
-                                }
-                                
-                                for controller in strongSelf.rootController.viewControllers {
-                                    if let controller = controller as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
-                                        return true
+                                }, expandAction: { expandData in
+                                    if let strongSelf = self {
+                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
+                                        //chatController.navigation_setNavigationController(strongSelf.rootController)
+                                        chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
+                                        //strongSelf.rootController.pushViewController(chatController)
+                                        (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                                     }
-                                }
-                                
-                                strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
-                                
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId)))
+                                }))
                             }
-                            return false
-                        }, expandAction: { expandData in
-                            if let strongSelf = self {
-                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
-                                //chatController.navigation_setNavigationController(strongSelf.rootController)
-                                chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
-                                //strongSelf.rootController.pushViewController(chatController)
-                                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
-                            }
-                        }))
+                        })
                     }
                 }
             }
