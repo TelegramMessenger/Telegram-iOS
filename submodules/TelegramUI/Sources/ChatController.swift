@@ -1696,7 +1696,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 
                                                 if let solution = resultPoll.results.solution {
                                                     for contentNode in itemNode.contentNodes {
-                                                        if let contentNode = contentNode as? ChatMessagePollBubbleContentNode, let sourceNode = contentNode.solutionTipSourceNode {
+                                                        if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
+                                                            let sourceNode = contentNode.solutionTipSourceNode
                                                             strongSelf.controllerInteraction?.displayPollSolution(solution, sourceNode)
                                                         }
                                                     }

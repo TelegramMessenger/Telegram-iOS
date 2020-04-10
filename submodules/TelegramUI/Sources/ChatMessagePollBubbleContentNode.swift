@@ -841,7 +841,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
     private let typeNode: TextNode
     private var timerNode: PollBubbleTimerNode?
-    private var solutionButtonNode: SolutionButtonNode?
+    private let solutionButtonNode: SolutionButtonNode
     private let avatarsNode: MergedAvatarsNode
     private let votersNode: TextNode
     private let buttonSubmitInactiveTextNode: TextNode
@@ -851,11 +851,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private let statusNode: ChatMessageDateAndStatusNode
     private var optionNodes: [ChatMessagePollOptionNode] = []
     
-    var solutionTipSourceNode: ASDisplayNode? {
+    private var poll: TelegramMediaPoll?
+    
+    var solutionTipSourceNode: ASDisplayNode {
         return self.solutionButtonNode
     }
-    
-    private var poll: TelegramMediaPoll?
     
     required init() {
         self.textNode = TextNode()
@@ -877,6 +877,12 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.votersNode.contentMode = .topLeft
         self.votersNode.contentsScale = UIScreenScale
         self.votersNode.displaysAsynchronously = true
+        
+        var displaySolution: (() -> Void)?
+        self.solutionButtonNode = SolutionButtonNode(pressed: {
+            displaySolution?()
+        })
+        self.solutionButtonNode.alpha = 0.0
         
         self.buttonSubmitInactiveTextNode = TextNode()
         self.buttonSubmitInactiveTextNode.isUserInteractionEnabled = false
@@ -906,10 +912,18 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.typeNode)
         self.addSubnode(self.avatarsNode)
         self.addSubnode(self.votersNode)
+        self.addSubnode(self.solutionButtonNode)
         self.addSubnode(self.buttonSubmitInactiveTextNode)
         self.addSubnode(self.buttonSubmitActiveTextNode)
         self.addSubnode(self.buttonViewResultsTextNode)
         self.addSubnode(self.buttonNode)
+        
+        displaySolution = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item, let poll = strongSelf.poll, let solution = poll.results.solution else {
+                return
+            }
+            item.controllerInteraction.displayPollSolution(solution, strongSelf.solutionButtonNode)
+        }
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
@@ -1459,43 +1473,29 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 timerTransition.updateTransformScale(node: timerNode, scale: 0.1)
                             }
                             
-                            if (strongSelf.timerNode == nil || !displayDeadline), let poll = poll, case .quiz = poll.kind, let solution = poll.results.solution, (isClosed || hasSelected) {
-                                let solutionButtonNode: SolutionButtonNode
-                                if let current = strongSelf.solutionButtonNode {
-                                    solutionButtonNode = current
-                                } else {
-                                    solutionButtonNode = SolutionButtonNode(pressed: {
-                                        guard let strongSelf = self, let solutionButtonNode = strongSelf.solutionButtonNode, let item = strongSelf.item else {
-                                            return
-                                        }
-                                        item.controllerInteraction.displayPollSolution(solution, solutionButtonNode)
-                                    })
-                                    strongSelf.solutionButtonNode = solutionButtonNode
-                                    strongSelf.addSubnode(solutionButtonNode)
-                                    
+                            let solutionButtonSize = CGSize(width: 32.0, height: 32.0)
+                            let solutionButtonFrame = CGRect(origin: CGPoint(x: resultSize.width - layoutConstants.text.bubbleInsets.right - solutionButtonSize.width + 5.0, y: typeFrame.minY - 16.0), size: solutionButtonSize)
+                            strongSelf.solutionButtonNode.frame = solutionButtonFrame
+                            
+                            if (strongSelf.timerNode == nil || !displayDeadline), let poll = poll, case .quiz = poll.kind, let _ = poll.results.solution, (isClosed || hasSelected) {
+                                if strongSelf.solutionButtonNode.alpha.isZero {
                                     let timerTransition: ContainedViewLayoutTransition
                                     if animation.isAnimated {
                                         timerTransition = .animated(duration: 0.25, curve: .easeInOut)
                                     } else {
                                         timerTransition = .immediate
                                     }
-                                    solutionButtonNode.alpha = 0.0
-                                    timerTransition.updateAlpha(node: solutionButtonNode, alpha: 1.0)
+                                    timerTransition.updateAlpha(node: strongSelf.solutionButtonNode, alpha: 1.0)
                                 }
-                                let buttonSize = CGSize(width: 32.0, height: 32.0)
-                                solutionButtonNode.update(size: buttonSize, theme: item.presentationData.theme.theme, incoming: item.message.flags.contains(.Incoming))
-                                solutionButtonNode.frame = CGRect(origin: CGPoint(x: resultSize.width - layoutConstants.text.bubbleInsets.right - buttonSize.width + 5.0, y: typeFrame.minY - 16.0), size: buttonSize)
-                            } else if let solutionButtonNode = strongSelf.solutionButtonNode {
+                                strongSelf.solutionButtonNode.update(size: solutionButtonSize, theme: item.presentationData.theme.theme, incoming: item.message.flags.contains(.Incoming))
+                            } else if !strongSelf.solutionButtonNode.alpha.isZero {
                                 let timerTransition: ContainedViewLayoutTransition
                                 if animation.isAnimated {
                                     timerTransition = .animated(duration: 0.25, curve: .easeInOut)
                                 } else {
                                     timerTransition = .immediate
                                 }
-                                timerTransition.updateAlpha(node: solutionButtonNode, alpha: 0.0, completion: { [weak solutionButtonNode] _ in
-                                    solutionButtonNode?.removeFromSupernode()
-                                })
-                                timerTransition.updateTransformScale(node: solutionButtonNode, scale: 0.1)
+                                timerTransition.updateAlpha(node: strongSelf.solutionButtonNode, alpha: 0.0)
                             }
                             
                             let avatarsFrame = CGRect(origin: CGPoint(x: typeFrame.maxX + 6.0, y: typeFrame.minY + floor((typeFrame.height - mergedImageSize) / 2.0)), size: CGSize(width: mergedImageSize + mergedImageSpacing * 2.0, height: mergedImageSize))
@@ -1699,7 +1699,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             if self.avatarsNode.isUserInteractionEnabled, !self.avatarsNode.isHidden, self.avatarsNode.frame.contains(point) {
                 return .ignore
             }
-            if let solutionButtonNode = self.solutionButtonNode, solutionButtonNode.isUserInteractionEnabled, !solutionButtonNode.isHidden, solutionButtonNode.frame.contains(point) {
+            if self.solutionButtonNode.isUserInteractionEnabled, !self.solutionButtonNode.isHidden, !self.solutionButtonNode.alpha.isZero, self.solutionButtonNode.frame.contains(point) {
                 return .ignore
             }
             return .none
