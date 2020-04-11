@@ -240,7 +240,7 @@ private final class ChatListViewSpaceState {
             assert(higherThanAnchorMessages.count <= self.halfLimit)
             
             let allIndices = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entryIndex }
-            let allPeerIds = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entryIndex.index.messageIndex.id.peerId }
+            let allEntityIds = (lowerOrAtAnchorMessages + higherThanAnchorMessages).map { $0.entityId }
             if Set(allIndices).count != allIndices.count {
                 var existingIndices = Set<MutableChatListEntryIndex>()
                 for i in (0 ..< lowerOrAtAnchorMessages.count).reversed() {
@@ -259,18 +259,18 @@ private final class ChatListViewSpaceState {
                 }
                 assert(false)
             }
-            if Set(allPeerIds).count != allPeerIds.count {
-                var existingPeerIds = Set<PeerId>()
+            if Set(allEntityIds).count != allEntityIds.count {
+                var existingEntityIds = Set<MutableChatListEntryEntityId>()
                 for i in (0 ..< lowerOrAtAnchorMessages.count).reversed() {
-                    if !existingPeerIds.contains(lowerOrAtAnchorMessages[i].entryIndex.index.messageIndex.id.peerId) {
-                        existingPeerIds.insert(lowerOrAtAnchorMessages[i].entryIndex.index.messageIndex.id.peerId)
+                    if !existingEntityIds.contains(lowerOrAtAnchorMessages[i].entityId) {
+                        existingEntityIds.insert(lowerOrAtAnchorMessages[i].entityId)
                     } else {
                         lowerOrAtAnchorMessages.remove(at: i)
                     }
                 }
                 for i in (0 ..< higherThanAnchorMessages.count).reversed() {
-                    if !existingPeerIds.contains(higherThanAnchorMessages[i].entryIndex.index.messageIndex.id.peerId) {
-                        existingPeerIds.insert(higherThanAnchorMessages[i].entryIndex.index.messageIndex.id.peerId)
+                    if !existingEntityIds.contains(higherThanAnchorMessages[i].entityId) {
+                        existingEntityIds.insert(higherThanAnchorMessages[i].entityId)
                     } else {
                         higherThanAnchorMessages.remove(at: i)
                     }
@@ -938,6 +938,11 @@ private struct MutableChatListEntryIndex: Hashable, Comparable {
     }
 }
 
+private enum MutableChatListEntryEntityId: Hashable {
+    case hole(MessageIndex)
+    case peer(PeerId)
+}
+
 private extension MutableChatListEntry {
     var messagePeerId: PeerId? {
         switch self {
@@ -958,6 +963,17 @@ private extension MutableChatListEntry {
             return MutableChatListEntryIndex(index: messageEntry.index, isMessage: true)
         case let .HoleEntry(hole):
             return MutableChatListEntryIndex(index: ChatListIndex(pinningIndex: nil, messageIndex: hole.index), isMessage: false)
+        }
+    }
+    
+    var entityId: MutableChatListEntryEntityId {
+        switch self {
+        case let .IntermediateMessageEntry(intermediateMessageEntry):
+            return .peer(intermediateMessageEntry.index.messageIndex.id.peerId)
+        case let .MessageEntry(messageEntry):
+            return .peer(messageEntry.index.messageIndex.id.peerId)
+        case let .HoleEntry(hole):
+            return .hole(hole.index)
         }
     }
 }
