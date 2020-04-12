@@ -257,7 +257,10 @@ private final class ChatListViewSpaceState {
                         higherThanAnchorMessages.remove(at: i)
                     }
                 }
+                postboxLog("allIndices not unique: \(allIndices)")
+                
                 assert(false)
+                //preconditionFailure()
             }
             if Set(allEntityIds).count != allEntityIds.count {
                 var existingEntityIds = Set<MutableChatListEntryEntityId>()
@@ -275,8 +278,11 @@ private final class ChatListViewSpaceState {
                         higherThanAnchorMessages.remove(at: i)
                     }
                 }
+                
+                postboxLog("existingEntityIds not unique: \(allEntityIds)")
+                postboxLog("allIndices: \(allIndices)")
                 assert(false)
-                preconditionFailure()
+                //preconditionFailure()
             }
             
             assert(allIndices.sorted() == allIndices)
