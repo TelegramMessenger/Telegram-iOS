@@ -204,7 +204,7 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                         }
                     }
                 }
-                result.append((filter, count, hasUnmutedUnread))
+                result.append((filter, max(0, count), hasUnmutedUnread))
             }
             
             return (totalBadge, result)

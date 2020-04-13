@@ -322,7 +322,7 @@ open class ASButtonNode: ASControlNode {
                 imageOrigin = CGPoint(x: titleOrigin.x - self.contentSpacing - imageSize.width, y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
             default:
                 titleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedTitleSize.height) / 2.0))
-                highlightedTitleOrigin = CGPoint(x: floor((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
+                highlightedTitleOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - self.calculatedHighlightedTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedHighlightedTitleSize.height) / 2.0))
                 disabledTitleOrigin = CGPoint(x: floor((contentRect.width - self.calculatedDisabledTitleSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - self.calculatedDisabledTitleSize.height) / 2.0))
                 imageOrigin = CGPoint(x: floor((contentRect.width - imageSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - imageSize.height) / 2.0))
             }

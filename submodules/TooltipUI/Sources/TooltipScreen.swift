@@ -129,8 +129,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 openActiveTextItem(.textMention(mention), .tap)
             } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 openActiveTextItem(.botCommand(command), .tap)
-            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? String {
-                openActiveTextItem(.hashtag(hashtag), .tap)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                openActiveTextItem(.hashtag(hashtag.hashtag), .tap)
             }
         }
         
@@ -146,8 +146,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 openActiveTextItem(.textMention(mention), .longTap)
             } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 openActiveTextItem(.botCommand(command), .longTap)
-            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? String {
-                openActiveTextItem(.hashtag(hashtag), .longTap)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                openActiveTextItem(.hashtag(hashtag.hashtag), .longTap)
             }
         }
     }
