@@ -2,7 +2,9 @@
 #define CONFIG_H
 
 // enable threading
-#define LOTTIE_THREAD_SUPPORT
+//#define LOTTIE_THREAD_SUPPORT
+
+#define LOTTIE_THREAD_SAFE
 
 //enable logging
 //#define LOTTIE_LOGGING_SUPPORT

@@ -6,8 +6,8 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-        "//submodules/Display:Display",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
