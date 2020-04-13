@@ -102,6 +102,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     chatPeer = maybeChatPeer
                 } else {
                     primaryPeer = maybeChatPeer
+                    chatPeer = maybeChatPeer
                 }
                 
                 var enabled = true
