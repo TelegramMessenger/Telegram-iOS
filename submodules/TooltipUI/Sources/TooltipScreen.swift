@@ -8,6 +8,20 @@ import AppBundle
 import SyncCore
 import TelegramCore
 import TextFormat
+import Postbox
+
+public enum TooltipActiveTextItem {
+    case url(String)
+    case mention(PeerId, String)
+    case textMention(String)
+    case botCommand(String)
+    case hashtag(String)
+}
+
+public enum TooltipActiveTextAction {
+    case tap
+    case longTap
+}
 
 private final class TooltipScreenNode: ViewControllerTracingNode {
     private let icon: TooltipScreen.Icon?
@@ -27,7 +41,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
+    init(text: String, textEntities: [MessageTextEntity], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
         self.icon = icon
         self.location = location
         self.shouldDismissOnTouch = shouldDismissOnTouch
@@ -93,8 +107,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 TelegramTextAttributes.PeerMention,
                 TelegramTextAttributes.PeerTextMention,
                 TelegramTextAttributes.BotCommand,
-                TelegramTextAttributes.Hashtag,
-                TelegramTextAttributes.Timecode
+                TelegramTextAttributes.Hashtag
             ]
             
             for attribute in highlightedAttributes {
@@ -105,11 +118,36 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             return nil
         }
         self.textNode.tapAttributeAction = { [weak self] attributes in
-            guard let strongSelf = self else {
+            guard let _ = self else {
                 return
             }
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                openUrl(url)
+                openActiveTextItem(.url(url), .tap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                openActiveTextItem(.mention(mention.peerId, mention.mention), .tap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                openActiveTextItem(.textMention(mention), .tap)
+            } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+                openActiveTextItem(.botCommand(command), .tap)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? String {
+                openActiveTextItem(.hashtag(hashtag), .tap)
+            }
+        }
+        
+        self.textNode.longTapAttributeAction = { [weak self] attributes in
+            guard let _ = self else {
+                return
+            }
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                openActiveTextItem(.url(url), .longTap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                openActiveTextItem(.mention(mention.peerId, mention.mention), .longTap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                openActiveTextItem(.textMention(mention), .longTap)
+            } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+                openActiveTextItem(.botCommand(command), .longTap)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? String {
+                openActiveTextItem(.hashtag(hashtag), .longTap)
             }
         }
     }
@@ -119,7 +157,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.scrollingContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
         
-        let sideInset: CGFloat = 13.0
+        let sideInset: CGFloat = 13.0 + layout.safeInsets.left
         let bottomInset: CGFloat = 10.0
         let contentInset: CGFloat = 9.0
         let contentVerticalInset: CGFloat = 11.0
@@ -142,7 +180,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSpacing = 8.0
         }
         
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - contentInset * 2.0 - sideInset * 2.0 - animationSize.width - animationSpacing, height: .greatestFiniteMagnitude))
+        let containerWidth = max(100.0, min(layout.size.width, 614.0) - (sideInset + layout.safeInsets.left) * 2.0)
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing, height: .greatestFiniteMagnitude))
         
         let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
         let backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
@@ -273,7 +313,7 @@ public final class TooltipScreen: ViewController {
     private let icon: TooltipScreen.Icon?
     private let location: CGRect
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
-    private let openUrl: (String) -> Void
+    private let openActiveTextItem: (TooltipActiveTextItem, TooltipActiveTextAction) -> Void
     
     private var controllerNode: TooltipScreenNode {
         return self.displayNode as! TooltipScreenNode
@@ -284,13 +324,13 @@ public final class TooltipScreen: ViewController {
     
     public var becameDismissed: ((TooltipScreen) -> Void)?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openUrl: @escaping (String) -> Void = { _ in }) {
+    public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
         self.text = text
         self.textEntities = textEntities
         self.icon = icon
         self.location = location
         self.shouldDismissOnTouch = shouldDismissOnTouch
-        self.openUrl = openUrl
+        self.openActiveTextItem = openActiveTextItem
         
         super.init(navigationBarPresentationData: nil)
         
@@ -317,7 +357,7 @@ public final class TooltipScreen: ViewController {
                 return
             }
             strongSelf.dismiss()
-        }, openUrl: self.openUrl)
+        }, openActiveTextItem: self.openActiveTextItem)
         self.displayNodeDidLoad()
     }
     

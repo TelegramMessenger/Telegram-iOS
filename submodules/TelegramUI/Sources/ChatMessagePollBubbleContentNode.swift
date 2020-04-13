@@ -15,7 +15,7 @@ import TelegramPresentationData
 func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
     if poll.isClosed {
         return true
-    } else if let deadlineTimeout = poll.deadlineTimeout, message.id.namespace == Namespaces.Message.Cloud {
+    }/* else if let deadlineTimeout = poll.deadlineTimeout, message.id.namespace == Namespaces.Message.Cloud {
         let startDate: Int32
         if let forwardInfo = message.forwardInfo {
             startDate = forwardInfo.date
@@ -29,7 +29,7 @@ func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool 
         } else {
             return false
         }
-    } else {
+    }*/ else {
         return false
     }
 }
@@ -1382,7 +1382,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if textLayout.hasRTL {
-                                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right, y: textFrame.origin.y), size: textFrame.size)
+                                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right - additionalTextRightInset, y: textFrame.origin.y), size: textFrame.size)
                             } else {
                                 strongSelf.textNode.frame = textFrame
                             }

@@ -361,7 +361,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.view.addGestureRecognizer(trackingRecognizer)
 
         self.view.addGestureRecognizer(ListViewReorderingGestureRecognizer(shouldBegin: { [weak self] point in
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.isTracking {
                 if let index = strongSelf.itemIndexAtPoint(point) {
                     for i in 0 ..< strongSelf.itemNodes.count {
                         if strongSelf.itemNodes[i].index == index {

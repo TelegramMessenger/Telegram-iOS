@@ -25,6 +25,12 @@ final class ListViewReorderingGestureRecognizer: UIGestureRecognizer {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
+        if self.numberOfTouches > 1 {
+            self.state = .failed
+            self.ended()
+            return
+        }
+        
         if self.state == .possible {
             if let location = touches.first?.location(in: self.view), self.shouldBegin(location) {
                 self.initialLocation = location

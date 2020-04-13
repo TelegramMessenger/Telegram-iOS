@@ -1962,8 +1962,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: 0.0, dy: 0.0)
                 let tooltipScreen = TooltipScreen(text: solution.text, textEntities: solution.entities, icon: nil, location: absoluteFrame, shouldDismissOnTouch: { point in
                     return .dismiss(consume: absoluteFrame.contains(point))
-                }, openUrl: { url in
-                    self?.openUrl(url, concealed: false)
+                }, openActiveTextItem: { item, action in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    switch item {
+                    case let .url(url):
+                        switch action {
+                        case .tap:
+                            strongSelf.openUrl(url, concealed: false)
+                        case .longTap:
+                            strongSelf.controllerInteraction?.longTap(.url(url), nil)
+                        }
+                    case let .mention(peerId, mention):
+                        switch action {
+                        case .tap:
+                            strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                        case .longTap:
+                            strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
+                        }
+                    case let .textMention(mention):
+                        switch action {
+                        case .tap:
+                            strongSelf.controllerInteraction?.openPeerMention(mention)
+                        case .longTap:
+                            strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
+                        }
+                    case let .botCommand(command):
+                        switch action {
+                        case .tap:
+                            strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                        case .longTap:
+                            strongSelf.controllerInteraction?.longTap(.command(command), nil)
+                        }
+                    case let .hashtag(hashtag):
+                        switch action {
+                        case .tap:
+                            strongSelf.controllerInteraction?.openHashtag(nil, hashtag)
+                        case .longTap:
+                            strongSelf.controllerInteraction?.longTap(.hashtag(hashtag), nil)
+                        }
+                    }
                 })
                 tooltipScreen.becameDismissed = { tooltipScreen in
                     guard let strongSelf = self else {

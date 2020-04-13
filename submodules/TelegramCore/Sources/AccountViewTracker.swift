@@ -402,6 +402,7 @@ public final class AccountViewTracker {
     }
     
     private func updatePolls(viewId: Int32, messageIds: Set<MessageId>, messages: [MessageId: Message]) {
+        let queue = self.queue
         self.queue.async {
             var addedMessageIds: [MessageId] = []
             var removedMessageIds: [MessageId] = []
@@ -446,13 +447,59 @@ public final class AccountViewTracker {
             if let account = self.account {
                 for messageId in addedMessageIds {
                     if self.pollDisposables[messageId] == nil {
-                        var signal: Signal<Never, NoError> = fetchPoll(account: account, messageId: messageId)
-                        |> ignoreValues
-                        signal = (signal |> then(
-                            .complete()
-                            |> delay(30.0, queue: Queue.concurrentDefaultQueue())
-                        )) |> restart
-                        self.pollDisposables[messageId] = signal.start()
+                        var deadlineTimer: Signal<Bool, NoError> = .single(false)
+                        
+                        if let message = messages[messageId] {
+                            for media in message.media {
+                                if let poll = media as? TelegramMediaPoll {
+                                    if let deadlineTimeout = poll.deadlineTimeout, message.id.namespace == Namespaces.Message.Cloud {
+                                        let startDate: Int32
+                                        if let forwardInfo = message.forwardInfo {
+                                            startDate = forwardInfo.date
+                                        } else {
+                                            startDate = message.timestamp
+                                        }
+                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                        let remainingTime = timestamp - startDate - 1
+                                        
+                                        if remainingTime > 0 {
+                                            deadlineTimer = .single(false)
+                                            |> then(
+                                                .single(true)
+                                                |> suspendAwareDelay(Double(remainingTime), queue: queue)
+                                            )
+                                        } else {
+                                            deadlineTimer = .single(true)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        let pollSignal: Signal<Never, NoError> = deadlineTimer
+                        |> distinctUntilChanged
+                        |> mapToSignal { reachedDeadline -> Signal<Never, NoError> in
+                            if reachedDeadline {
+                                var signal = fetchPoll(account: account, messageId: messageId)
+                                |> ignoreValues
+                                signal = (signal |> then(
+                                    .complete()
+                                    |> delay(0.5, queue: Queue.concurrentDefaultQueue())
+                                ))
+                                |> restart
+                                return signal
+                            } else {
+                                var signal = fetchPoll(account: account, messageId: messageId)
+                                |> ignoreValues
+                                signal = (signal |> then(
+                                    .complete()
+                                    |> delay(30.0, queue: Queue.concurrentDefaultQueue())
+                                ))
+                                |> restart
+                                return signal
+                            }
+                        }
+                        self.pollDisposables[messageId] = pollSignal.start()
                     } else {
                         assertionFailure()
                     }

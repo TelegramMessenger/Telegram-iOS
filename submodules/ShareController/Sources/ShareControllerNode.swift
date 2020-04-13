@@ -801,7 +801,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.actionButtonNode.badge = nil
             } else if let defaultAction = self.defaultAction {
                 self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
-                self.actionButtonNode.isEnabled = false
+                self.actionButtonNode.isEnabled = true
                 self.actionButtonNode.badge = nil
             } else {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)

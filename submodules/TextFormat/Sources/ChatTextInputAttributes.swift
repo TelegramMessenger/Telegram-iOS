@@ -46,12 +46,17 @@ public struct ChatTextFontAttributes: OptionSet {
     public static let blockQuote = ChatTextFontAttributes(rawValue: 1 << 3)
 }
 
-public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor) -> NSAttributedString {
+public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?) -> NSAttributedString {
     let result = NSMutableAttributedString(string: stateText.string)
     let fullRange = NSRange(location: 0, length: result.length)
     
     result.addAttribute(NSAttributedString.Key.font, value: Font.regular(fontSize), range: fullRange)
     result.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: fullRange)
+    let style = NSMutableParagraphStyle()
+    if let writingDirection = writingDirection {
+        style.baseWritingDirection = writingDirection
+    }
+    result.addAttribute(NSAttributedString.Key.paragraphStyle, value: style, range: fullRange)
     
     stateText.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
         var fontAttributes: ChatTextFontAttributes = []
@@ -404,19 +409,112 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
         return
     }
     
+    var writingDirection: NSWritingDirection?
+    if let style = initialAttributedText.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
+        writingDirection = style.baseWritingDirection
+    }
+    
     var text: NSString = initialAttributedText.string as NSString
     var fullRange = NSRange(location: 0, length: initialAttributedText.length)
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
     refreshTextMentions(text: text, initialAttributedText: initialAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor)
+    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection)
     
     text = resultAttributedText.string as NSString
     fullRange = NSRange(location: 0, length: initialAttributedText.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor)
+    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection)
+    
+    if !resultAttributedText.isEqual(to: initialAttributedText) {
+        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
+        
+        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: Font.regular(baseFontSize), range: fullRange)
+        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
+        
+        attributedText.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
+            var fontAttributes: ChatTextFontAttributes = []
+            
+            for (key, value) in attributes {
+                if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.panelControlAccentColor, range: range)
+                    
+                    if theme.chat.inputPanel.panelControlAccentColor.isEqual(theme.chat.inputPanel.primaryTextColor) {
+                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                    }
+                } else if key == ChatTextInputAttributes.bold {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    fontAttributes.insert(.bold)
+                } else if key == ChatTextInputAttributes.italic {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    fontAttributes.insert(.italic)
+                } else if key == ChatTextInputAttributes.monospace {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    fontAttributes.insert(.monospace)
+                } else if key == ChatTextInputAttributes.strikethrough {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.strikethroughStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                } else if key == ChatTextInputAttributes.underline {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                }
+            }
+                
+            if !fontAttributes.isEmpty {
+                var font: UIFont?
+                if fontAttributes == [.bold, .italic, .monospace] {
+                    font = Font.semiboldItalicMonospace(baseFontSize)
+                } else if fontAttributes == [.bold, .italic] {
+                    font = Font.semiboldItalic(baseFontSize)
+                } else if fontAttributes == [.bold, .monospace] {
+                    font = Font.semiboldMonospace(baseFontSize)
+                } else if fontAttributes == [.italic, .monospace] {
+                    font = Font.italicMonospace(baseFontSize)
+                } else if fontAttributes == [.bold] {
+                    font = Font.semibold(baseFontSize)
+                } else if fontAttributes == [.italic] {
+                    font = Font.italic(baseFontSize)
+                } else if fontAttributes == [.monospace] {
+                    font = Font.monospace(baseFontSize)
+                }
+                
+                if let font = font {
+                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: font, range: range)
+                }
+            }
+        })
+    }
+}
+
+public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat) {
+    guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
+        return
+    }
+    
+    var writingDirection: NSWritingDirection?
+    if let style = initialAttributedText.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
+        writingDirection = style.baseWritingDirection
+    }
+    
+    var text: NSString = initialAttributedText.string as NSString
+    var fullRange = NSRange(location: 0, length: initialAttributedText.length)
+    var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
+    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection)
+    
+    text = resultAttributedText.string as NSString
+    fullRange = NSRange(location: 0, length: initialAttributedText.length)
+    attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
+    refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
+    
+    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection)
     
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
@@ -489,6 +587,9 @@ public func refreshChatTextInputTypingAttributes(_ textNode: ASEditableTextNode,
         NSAttributedString.Key.font: Font.regular(baseFontSize),
         NSAttributedString.Key.foregroundColor: theme.chat.inputPanel.primaryTextColor
     ]
+    let style = NSMutableParagraphStyle()
+    style.baseWritingDirection = .natural
+    filteredAttributes[NSAttributedString.Key.paragraphStyle] = style
     if let attributedText = textNode.attributedText, attributedText.length != 0 {
         let attributes = attributedText.attributes(at: max(0, min(textNode.selectedRange.location - 1, attributedText.length - 1)), effectiveRange: nil)
         for (key, value) in attributes {

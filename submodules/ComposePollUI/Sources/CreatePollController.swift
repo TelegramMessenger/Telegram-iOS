@@ -160,9 +160,10 @@ private final class CreatePollControllerArguments {
     let updateMultipleChoice: (Bool) -> Void
     let displayMultipleChoiceDisabled: () -> Void
     let updateQuiz: (Bool) -> Void
-    let updateSolutionText: (String) -> Void
+    let updateSolutionText: (NSAttributedString) -> Void
+    let solutionTextFocused: (Bool) -> Void
     
-    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void, updateSolutionText: @escaping (String) -> Void) {
+    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void, updateSolutionText: @escaping (NSAttributedString) -> Void, solutionTextFocused: @escaping (Bool) -> Void) {
         self.updatePollText = updatePollText
         self.updateOptionText = updateOptionText
         self.moveToNextOption = moveToNextOption
@@ -176,6 +177,7 @@ private final class CreatePollControllerArguments {
         self.displayMultipleChoiceDisabled = displayMultipleChoiceDisabled
         self.updateQuiz = updateQuiz
         self.updateSolutionText = updateSolutionText
+        self.solutionTextFocused = solutionTextFocused
     }
 }
 
@@ -216,6 +218,18 @@ private enum CreatePollEntryTag: Equatable, ItemListItemTag {
     }
 }
 
+private struct SolutionText: Equatable {
+    var value: NSAttributedString
+    
+    init(value: NSAttributedString) {
+        self.value = value
+    }
+    
+    static func ==(lhs: SolutionText, rhs: SolutionText) -> Bool {
+        return lhs.value.isEqual(to: rhs.value)
+    }
+}
+
 private enum CreatePollEntry: ItemListNodeEntry {
     case textHeader(String, ItemListSectionHeaderAccessoryText)
     case text(String, String, Int)
@@ -227,7 +241,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
     case quiz(String, Bool)
     case quizInfo(String)
     case quizSolutionHeader(String)
-    case quizSolutionText(placeholder: String, text: String)
+    case quizSolutionText(placeholder: String, text: SolutionText)
     case quizSolutionInfo(String)
     
     var section: ItemListSectionId {
@@ -380,8 +394,10 @@ private enum CreatePollEntry: ItemListNodeEntry {
         case let .quizSolutionHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .quizSolutionText(placeholder, text):
-            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 200, display: true), sectionId: self.section, style: .blocks, textUpdated: { text in
+            return CreatePollTextInputItem(presentationData: presentationData, text: text.value, placeholder: placeholder, maxLength: CreatePollTextInputItemTextLimit(value: 200, display: true), sectionId: self.section, style: .blocks, textUpdated: { text in
                 arguments.updateSolutionText(text)
+            }, updatedFocus: { value in
+                arguments.solutionTextFocused(value)
             }, tag: CreatePollEntryTag.solution)
         case let .quizSolutionInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -404,7 +420,7 @@ private struct CreatePollControllerState: Equatable {
     var isAnonymous: Bool = true
     var isMultipleChoice: Bool = false
     var isQuiz: Bool = false
-    var solutionText: String = ""
+    var solutionText: SolutionText = SolutionText(value: NSAttributedString(string: ""))
     var isEditingSolution: Bool = false
 }
 
@@ -460,6 +476,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     }
     
     if isQuiz {
+        //TODO:localize
         entries.append(.quizSolutionHeader("EXPLANATION"))
         entries.append(.quizSolutionText(placeholder: "Add a Comment (Optional)", text: state.solutionText))
         entries.append(.quizSolutionInfo("Users will see this comment after choosing a wrong answer, good for educational purposes."))
@@ -481,6 +498,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var ensureTextVisibleImpl: (() -> Void)?
     var ensureOptionVisibleImpl: ((Int) -> Void)?
     var ensureSolutionVisibleImpl: (() -> Void)?
@@ -713,12 +731,16 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     }, updateSolutionText: { text in
         updateState { state in
             var state = state
-            state.solutionText = text
+            state.solutionText = SolutionText(value: text)
             state.focusOptionId = nil
             state.isEditingSolution = true
             return state
         }
         ensureSolutionVisibleImpl?()
+    }, solutionTextFocused: { isFocused in
+        if isFocused {
+            ensureSolutionVisibleImpl?()
+        }
     })
     
     let previousOptionIds = Atomic<[Int]?>(value: nil)
@@ -757,7 +779,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             if !hasSelectedOptions {
                 enabled = false
             }
-            if state.solutionText.count > 200 {
+            if state.solutionText.value.string.count > 200 {
                 enabled = false
             }
         }
@@ -789,9 +811,9 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             let kind: TelegramMediaPollKind
             if state.isQuiz {
                 kind = .quiz
-                if !state.solutionText.isEmpty {
-                    let entities = generateTextEntities(state.solutionText, enabledTypes: [.url])
-                    resolvedSolution = TelegramMediaPollResults.Solution(text: state.solutionText, entities: entities)
+                if !state.solutionText.value.string.isEmpty {
+                    let entities = generateTextEntities(state.solutionText.value.string, enabledTypes: .url, currentEntities: generateChatInputTextEntities(state.solutionText.value))
+                    resolvedSolution = TelegramMediaPollResults.Solution(text: state.solutionText.value.string, entities: entities)
                 }
             } else {
                 kind = .poll(multipleAnswers: state.isMultipleChoice)
@@ -1032,6 +1054,11 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
                         } else {
                             didReorder = previousIndex != options.count
                             options.append(reorderOption.item, id: reorderOption.ordering.id)
+                            
+                            if options.count < maxOptionCount {
+                                options.append(CreatePollControllerOption(text: "", id: state.nextOptionId, isSelected: false), id: nil)
+                                state.nextOptionId += 1
+                            }
                         }
                     }
                 } else if beforeAll {
@@ -1049,6 +1076,12 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
                 state.options = options
             }
             return state
+        }
+        
+        if didReorder {
+            DispatchQueue.main.async {
+                dismissInputImpl?()
+            }
         }
         
         return .single(didReorder)
@@ -1077,6 +1110,9 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             return true
         }
         return false
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     controller.isOpaqueWhenInOverlay = true
     controller.blocksBackgroundWhenInOverlay = true
