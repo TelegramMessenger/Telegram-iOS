@@ -33,7 +33,7 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.textReturned = { [weak self] query in
             self?.queryUpdated?(query)
         }
-        self.searchBar.textUpdated = { [weak self] query in
+        self.searchBar.textUpdated = { [weak self] query, _ in
             if query.isEmpty {
                 self?.queryUpdated?(query)
             }

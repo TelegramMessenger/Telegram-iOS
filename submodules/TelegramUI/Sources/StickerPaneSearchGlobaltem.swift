@@ -205,13 +205,12 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.updatePreviewing(animated: false)
     }
     
-    override func layout() {
-        super.layout()
+    override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
         guard let item = self.item else {
             return
         }
         
-        let params = ListViewItemLayoutParams(width: self.bounds.size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height)
+        let params = ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: size.height)
         
         var topOffset: CGFloat = 12.0
         if item.topSeparator {
@@ -230,15 +229,19 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.appliedItem = item
         
         var updateButtonBackgroundImage: UIImage?
-        if currentItem?.theme !== item.theme {
-            updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddPackButtonImage(item.theme)
+        if currentItem?.theme !== item.theme || currentItem?.installed != item.installed {
+            if item.installed {
+                updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddedPackButtonImage(item.theme)
+            } else {
+                updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddPackButtonImage(item.theme)
+            }
         }
         let unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.theme)
         
         let leftInset: CGFloat = 14.0
         let rightInset: CGFloat = 16.0
         
-        let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Install, font: buttonFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.installed ? item.strings.Stickers_Installed : item.strings.Stickers_Install, font: buttonFont, textColor: item.installed ? item.theme.list.itemCheckColors.fillColor : item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.info.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0 - installLayout.size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
@@ -260,21 +263,15 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
         strongSelf.installButtonNode.frame = buttonFrame
     
-        if item.installed {
-            strongSelf.installButtonNode.isHidden = true
-            strongSelf.installBackgroundNode.isHidden = true
-            strongSelf.installTextNode.isHidden = true
-        } else {
-            strongSelf.installButtonNode.isHidden = false
-            strongSelf.installBackgroundNode.isHidden = false
-            strongSelf.installTextNode.isHidden = false
-        }
+        strongSelf.installButtonNode.isHidden = false
+        strongSelf.installBackgroundNode.isHidden = false
+        strongSelf.installTextNode.isHidden = false
     
         let titleFrame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: 2.0 + topOffset), size: titleLayout.size)
         strongSelf.titleNode.frame = titleFrame
         strongSelf.descriptionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: 23.0 + topOffset), size: descriptionLayout.size)
     
-        if false && item.unread {
+        if item.unread {
             strongSelf.unreadNode.isHidden = false
         } else {
             strongSelf.unreadNode.isHidden = true
@@ -309,7 +306,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
                 strongSelf.addSubnode(node)
             }
             if file.fileId != node.file?.fileId {
-                node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: false)
+                node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads)
             }
             if let dimensions = file.dimensions {
                 let imageSize = dimensions.cgSize.aspectFitted(itemSize)

@@ -166,8 +166,8 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
 private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.recentGifs(theme))
-    if let hasUnreadTrending = hasUnreadTrending, hasUnreadTrending {
-        entries.append(.trending(true, theme))
+    if let hasUnreadTrending = hasUnreadTrending {
+        entries.append(.trending(hasUnreadTrending, theme))
     }
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
         entries.append(.savedStickers(theme))
@@ -211,9 +211,6 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
         entries.append(.peerSpecific(theme: theme, peer: peer))
     }
     
-    if let hasUnreadTrending = hasUnreadTrending, !hasUnreadTrending {
-        entries.append(.trending(false, theme))
-    }
     entries.append(.settings(theme))
     return entries
 }
@@ -371,7 +368,7 @@ private func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> S
 private enum ChatMediaInputPaneType {
     case gifs
     case stickers
-    case trending
+    //case trending
 }
 
 private struct ChatMediaInputPaneArrangement {
@@ -421,7 +418,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private var animatingStickerPaneOut = false
     private let gifPane: ChatMediaInputGifPane
     private var animatingGifPaneOut = false
-    private let trendingPane: ChatMediaInputTrendingPane
+    //private let trendingPane: ChatMediaInputTrendingPane
     private var animatingTrendingPaneOut = false
     
     private var panRecognizer: UIPanGestureRecognizer?
@@ -494,11 +491,11 @@ final class ChatMediaInputNode: ChatInputNode {
         })
         
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
-        self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
+        /*self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
-        }, isPane: true)
+        }, isPane: true)*/
         
-        self.paneArrangement = ChatMediaInputPaneArrangement(panes: [.gifs, .stickers, .trending], currentIndex: 1, indexTransition: 0.0)
+        self.paneArrangement = ChatMediaInputPaneArrangement(panes: [.gifs, .stickers, /*.trending*/], currentIndex: 1, indexTransition: 0.0)
         
         super.init()
         
@@ -508,7 +505,18 @@ final class ChatMediaInputNode: ChatInputNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentGifs.rawValue {
                     strongSelf.setCurrentPane(.gifs, transition: .animated(duration: 0.25, curve: .spring))
                 } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
-                    strongSelf.setCurrentPane(.trending, transition: .animated(duration: 0.25, curve: .spring))
+                    strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
+                        context: strongSelf.context,
+                        sendSticker: {
+                            fileReference, sourceNode, sourceRect in
+                            if let strongSelf = self {
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                            } else {
+                                return false
+                            }
+                        }
+                    ))
+                    //strongSelf.setCurrentPane(.trending, transition: .animated(duration: 0.25, curve: .spring))
                 } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring), collectionIdHint: collectionId.namespace)
                     strongSelf.currentStickerPacksCollectionPosition = .navigate(index: nil, collectionId: collectionId)
@@ -823,7 +831,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.initializedArrangement = true
                     var currentPane = strongSelf.paneArrangement.panes[strongSelf.paneArrangement.currentIndex]
                     if view.entries.isEmpty {
-                        currentPane = .trending
+                        //currentPane = .trending
                     }
                     if currentPane != strongSelf.paneArrangement.panes[strongSelf.paneArrangement.currentIndex] {
                         strongSelf.setCurrentPane(currentPane, transition: .immediate)
@@ -878,7 +886,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.stickerPane.inputNodeInteraction = self.inputNodeInteraction
         self.gifPane.inputNodeInteraction = self.inputNodeInteraction
-        self.trendingPane.inputNodeInteraction = self.inputNodeInteraction
+        //self.trendingPane.inputNodeInteraction = self.inputNodeInteraction
         
         paneDidScrollImpl = { [weak self] pane, state, transition in
             self?.updatePaneDidScroll(pane: pane, state: state, transition: transition)
@@ -943,7 +951,7 @@ final class ChatMediaInputNode: ChatInputNode {
             
             self.stickerPane.updateThemeAndStrings(theme: theme, strings: strings)
             self.gifPane.updateThemeAndStrings(theme: theme, strings: strings)
-            self.trendingPane.updateThemeAndStrings(theme: theme, strings: strings)
+            //self.trendingPane.updateThemeAndStrings(theme: theme, strings: strings)
             
             self.themeAndStringsPromise.set(.single((theme, strings)))
         }
@@ -1038,7 +1046,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         }
                     }
                 } else {
-                    panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.trendingPane]
+                    panes = [strongSelf.gifPane, strongSelf.stickerPane/*, strongSelf.trendingPane*/]
                 }
                 let panelPoint = strongSelf.view.convert(point, to: strongSelf.collectionListPanel.view)
                 if panelPoint.y < strongSelf.collectionListPanel.frame.maxY {
@@ -1191,8 +1199,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     } else if let collectionIdHint = collectionIdHint {
                         self.setHighlightedItemCollectionId(ItemCollectionId(namespace: collectionIdHint, id: 0))
                     }
-                case .trending:
-                    self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))
+                /*case .trending:
+                    self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))*/
             }
             /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
                 self.controllerInteraction.updateInputMode { current in
@@ -1221,9 +1229,9 @@ final class ChatMediaInputNode: ChatInputNode {
                 self.inputNodeInteraction.highlightedItemCollectionId = collectionId
             }
         } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
-            if self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending {
+            /*if self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending {
                 self.inputNodeInteraction.highlightedItemCollectionId = collectionId
-            }
+            }*/
         } else {
             self.inputNodeInteraction.highlightedStickerItemCollectionId = collectionId
             if self.paneArrangement.panes[self.paneArrangement.currentIndex] == .stickers {
@@ -1286,8 +1294,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     return self.stickerPane.collectionListPanelOffset
                 case .gifs:
                     return self.gifPane.collectionListPanelOffset
-                case .trending:
-                    return self.trendingPane.collectionListPanelOffset
+                /*case .trending:
+                    return self.trendingPane.collectionListPanelOffset*/
             }
         }
         
@@ -1369,7 +1377,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             self.stickerPane.collectionListPanelOffset = 0.0
             self.gifPane.collectionListPanelOffset = 0.0
-            self.trendingPane.collectionListPanelOffset = 0.0
+            //self.trendingPane.collectionListPanelOffset = 0.0
             self.updateAppearanceTransition(transition: transition)
         } else {
             panelHeight = standardInputHeight
@@ -1398,11 +1406,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                 }
                             }
                         case .trending:
-                            self.trendingPane.gridNode.forEachItemNode { itemNode in
+                            /*self.trendingPane.gridNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
                                     placeholderNode = itemNode
                                 }
-                            }
+                            }*/
+                            break
                         }
                     }
                     
@@ -1467,7 +1476,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         self.stickerPane.layer.removeAnimation(forKey: "position")
                         transition.updateFrame(node: self.stickerPane, frame: paneFrame)
                     }
-                case .trending:
+                /*case .trending:
                     if self.trendingPane.supernode == nil {
                         self.insertSubnode(self.trendingPane, belowSubnode: self.collectionListContainer)
                         self.trendingPane.frame = CGRect(origin: CGPoint(x: width, y: 0.0), size: CGSize(width: width, height: panelHeight))
@@ -1475,13 +1484,13 @@ final class ChatMediaInputNode: ChatInputNode {
                     if self.trendingPane.frame != paneFrame {
                         self.trendingPane.layer.removeAnimation(forKey: "position")
                         transition.updateFrame(node: self.trendingPane, frame: paneFrame)
-                    }
+                    }*/
             }
         }
         
         self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
         self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible && visiblePanes.contains(where: { $0.0 == .stickers }), deviceMetrics: deviceMetrics, transition: transition)
-        self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
+        //self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
         
         if self.gifPane.supernode != nil {
             if !visiblePanes.contains(where: { $0.0 == .gifs }) {
@@ -1533,7 +1542,7 @@ final class ChatMediaInputNode: ChatInputNode {
             self.animatingStickerPaneOut = false
         }
         
-        if self.trendingPane.supernode != nil {
+        /*if self.trendingPane.supernode != nil {
             if !visiblePanes.contains(where: { $0.0 == .trending }) {
                 if case .animated = transition {
                     if !self.animatingTrendingPaneOut {
@@ -1556,7 +1565,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         } else {
             self.animatingTrendingPaneOut = false
-        }
+        }*/
         
         if !displaySearch, let searchContainerNode = self.searchContainerNode {
             self.searchContainerNode = nil
@@ -1576,12 +1585,13 @@ final class ChatMediaInputNode: ChatInputNode {
                         }
                     }
                 case .trending:
-                    self.trendingPane.gridNode.forEachItemNode { itemNode in
+                    /*self.trendingPane.gridNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
                             placeholderNode = itemNode
                         }
                     }
-                    paneIsEmpty = true
+                    paneIsEmpty = true*/
+                    break
                 }
             }
             if let placeholderNode = placeholderNode {
@@ -1644,7 +1654,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             
             self.searchContainerNode?.contentNode.updatePreviewing(animated: animated)
-            self.trendingPane.updatePreviewing(animated: animated)
+            //self.trendingPane.updatePreviewing(animated: animated)
         }
     }
     
@@ -1661,11 +1671,11 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.animatingStickerPaneOut = false
                     self.stickerPane.removeFromSupernode()
                 }
-                self.trendingPane.layer.removeAllAnimations()
+                /*self.trendingPane.layer.removeAllAnimations()
                 if self.animatingTrendingPaneOut {
                     self.animatingTrendingPaneOut = false
                     self.trendingPane.removeFromSupernode()
-            }
+                }*/
             case .changed:
                 if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                     let translationX = -recognizer.translation(in: self.view).x

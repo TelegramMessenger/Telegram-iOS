@@ -19,11 +19,11 @@ import UndoUI
 
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
-    let install: (StickerPackCollectionInfo, [ItemCollectionItem]) -> Void
+    let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem]) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
@@ -107,7 +107,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
-                interaction.install(info, topItems)
+                interaction.install(info, topItems, !installed)
             }, getItemIsPreviewed: { item in
                 return interaction.getItemIsPreviewed(item)
             })
@@ -232,87 +232,93 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 })
                 strongSelf.controllerInteraction.presentController(controller, nil)
             }
-        }, install: { [weak self] info, items in
+        }, install: { [weak self] info, items, install in
             guard let strongSelf = self else {
                 return
             }
             let account = strongSelf.context.account
-            var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-            |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                switch result {
-                case let .result(info, items, installed):
-                    if installed {
-                        return .complete()
-                    } else {
-                        return preloadedStickerPackThumbnail(account: account, info: info, items: items)
-                        |> filter { $0 }
-                        |> ignoreValues
-                        |> then(
-                            addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                            |> ignoreValues
-                        )
-                        |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+            if install {
+                var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                    switch result {
+                    case let .result(info, items, installed):
+                        if installed {
                             return .complete()
+                        } else {
+                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
+                            |> filter { $0 }
+                            |> ignoreValues
+                            |> then(
+                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                                |> ignoreValues
+                            )
+                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                                return .complete()
+                            }
+                            |> then(.single((info, items)))
                         }
-                        |> then(.single((info, items)))
+                    case .fetching:
+                        break
+                    case .none:
+                        break
                     }
-                case .fetching:
-                    break
-                case .none:
-                    break
+                    return .complete()
                 }
-                return .complete()
-            }
-            |> deliverOnMainQueue
-            
-            let context = strongSelf.context
-            var cancelImpl: (() -> Void)?
-            let progressSignal = Signal<Never, NoError> { subscriber in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                    cancelImpl?()
-                }))
-                self?.controllerInteraction.presentController(controller, nil)
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
-                    }
-                }
-            }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.12, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            installSignal = installSignal
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
-                }
-            }
-            cancelImpl = {
-                self?.installDisposable.set(nil)
-            }
+                |> deliverOnMainQueue
                 
-            strongSelf.installDisposable.set(installSignal.start(next: { info, items in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                var animateInAsReplacement = false
-                if let navigationController = strongSelf.controllerInteraction.navigationController() {
-                    for controller in navigationController.overlayControllers {
-                        if let controller = controller as? UndoOverlayController {
-                            controller.dismissWithCommitActionAndReplacementAnimation()
-                            animateInAsReplacement = true
+                let context = strongSelf.context
+                var cancelImpl: (() -> Void)?
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    self?.controllerInteraction.presentController(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
                         }
                     }
                 }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.12, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
                 
-                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                    return true
+                installSignal = installSignal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                cancelImpl = {
+                    self?.installDisposable.set(nil)
+                }
+                    
+                strongSelf.installDisposable.set(installSignal.start(next: { info, items in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    var animateInAsReplacement = false
+                    if let navigationController = strongSelf.controllerInteraction.navigationController() {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
+                            }
+                        }
+                    }
+                    
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        return true
+                    }))
                 }))
-            }))
+            } else {
+                let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
+                |> deliverOnMainQueue).start(next: { _ in
+                })
+            }
         }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self {
                 let _ = strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)

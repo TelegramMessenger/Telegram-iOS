@@ -143,22 +143,26 @@ func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
     var contactIds = transaction.getContactPeerIds()
     var updated = false
     for user in apiUsers {
-        let isContact: Bool
+        var isContact: Bool?
         switch user {
-            case let .user(user):
+        case let .user(user):
+            if (user.flags & (1 << 20)) == 0 {
                 isContact = (user.flags & (1 << 11)) != 0
-            case .userEmpty:
-                isContact = false
-        }
-        if isContact {
-            if !contactIds.contains(user.peerId) {
-                contactIds.insert(user.peerId)
-                updated = true
             }
-        } else {
-            if contactIds.contains(user.peerId) {
-                contactIds.remove(user.peerId)
-                updated = true
+        case .userEmpty:
+            isContact = false
+        }
+        if let isContact = isContact {
+            if isContact {
+                if !contactIds.contains(user.peerId) {
+                    contactIds.insert(user.peerId)
+                    updated = true
+                }
+            } else {
+                if contactIds.contains(user.peerId) {
+                    contactIds.remove(user.peerId)
+                    updated = true
+                }
             }
         }
     }

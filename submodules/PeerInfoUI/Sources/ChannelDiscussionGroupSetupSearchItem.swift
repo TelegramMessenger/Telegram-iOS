@@ -132,7 +132,7 @@ private final class ChannelDiscussionSearchNavigationContentNode: NavigationBarC
             self?.cancel()
         }
         
-        self.searchBar.textUpdated = { [weak self] query in
+        self.searchBar.textUpdated = { [weak self] query, _ in
             self?.queryUpdated?(query)
         }
         

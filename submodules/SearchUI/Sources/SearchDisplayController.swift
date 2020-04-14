@@ -27,7 +27,7 @@ public final class SearchDisplayController {
         self.mode = mode
         self.contentNode = contentNode
         
-        self.searchBar.textUpdated = { [weak contentNode] text in
+        self.searchBar.textUpdated = { [weak contentNode] text, _ in
             contentNode?.searchTextUpdated(text: text)
         }
         self.searchBar.cancel = { [weak self] in

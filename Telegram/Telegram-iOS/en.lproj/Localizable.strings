@@ -2152,6 +2152,7 @@
 "Notification.GameScoreSelfSimple_0" = "scored %@";
 
 "Stickers.Install" = "ADD";
+"Stickers.Installed" = "ADDED";
 
 "MaskStickerSettings.Title" = "Masks";
 "MaskStickerSettings.Info" = "You can add masks to photos and videos you send. To do this, open the photo editor before sending a photo or video.";

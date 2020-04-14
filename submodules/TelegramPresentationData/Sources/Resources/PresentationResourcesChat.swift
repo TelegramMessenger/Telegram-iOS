@@ -254,6 +254,12 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatInputMediaPanelAddedPackButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelAddedPackButtonImage.rawValue, { theme in
+            return generateStretchableFilledCircleImage(diameter: 28.0, color: theme.list.itemCheckColors.fillColor.withAlphaComponent(0.08), strokeColor: nil, strokeWidth: 1.0, backgroundColor: nil)
+        })
+    }
+    
     public static func chatInputMediaPanelGridSetupImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelGridSetupImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridSetupIcon"), color: theme.chat.inputMediaPanel.panelIconColor.withAlphaComponent(0.65))

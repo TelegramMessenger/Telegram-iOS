@@ -47,7 +47,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             self?.interaction.dismissMessageSearch()
         }
         
-        self.searchBar.textUpdated = { [weak self] query in
+        self.searchBar.textUpdated = { [weak self] query, _ in
             self?.interaction.updateMessageSearch(query)
         }
         

@@ -102,7 +102,7 @@ private func chatMessageStickerDatas(postbox: Postbox, file: TelegramMediaFile, 
 
 public func chatMessageAnimatedStickerDatas(postbox: Postbox, file: TelegramMediaFile, small: Bool, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, fetched: Bool, onlyFullSize: Bool, synchronousLoad: Bool) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     let thumbnailResource = chatMessageStickerResource(file: file, small: true)
-    let resource = chatMessageStickerResource(file: file, small: small)
+    let resource = chatMessageStickerResource(file: file, small: false)
     
     let firstFrameRepresentation = CachedAnimatedStickerFirstFrameRepresentation(width: Int32(size.width), height: Int32(size.height), fitzModifier: fitzModifier)
     let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: firstFrameRepresentation, complete: false, fetch: false, attemptSynchronously: synchronousLoad)
