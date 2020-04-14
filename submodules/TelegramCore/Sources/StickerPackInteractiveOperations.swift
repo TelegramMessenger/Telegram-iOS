@@ -16,21 +16,25 @@ public func addStickerPackInteractively(postbox: Postbox, info: StickerPackColle
                 namespace = nil
         }
         if let namespace = namespace {
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .add([info.id]))
-            var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
-            if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
+            var mappedInfo = info
+            if items.isEmpty {
+                mappedInfo = StickerPackCollectionInfo(id: info.id, flags: info.flags, accessHash: info.accessHash, title: info.title, shortName: info.shortName, thumbnail: info.thumbnail, hash: Int32(bitPattern: arc4random()), count: info.count)
+            }
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .add([mappedInfo.id]), noDelay: items.isEmpty)
+            var updatedInfos = transaction.getItemCollectionsInfos(namespace: mappedInfo.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
+            if let index = updatedInfos.firstIndex(where: { $0.id == mappedInfo.id }) {
                 let currentInfo = updatedInfos[index]
                 updatedInfos.remove(at: index)
                 updatedInfos.insert(currentInfo, at: 0)
             } else {
                 if let positionInList = positionInList, positionInList <= updatedInfos.count {
-                    updatedInfos.insert(info, at: positionInList)
+                    updatedInfos.insert(mappedInfo, at: positionInList)
                 } else {
-                    updatedInfos.insert(info, at: 0)
+                    updatedInfos.insert(mappedInfo, at: 0)
                 }
-                transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
+                transaction.replaceItemCollectionItems(collectionId: mappedInfo.id, items: items)
             }
-            transaction.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
+            transaction.replaceItemCollectionInfos(namespace: mappedInfo.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
         }
     }
 }
@@ -59,10 +63,10 @@ public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionI
                 case .archive:
                     content = .archive([id])
             }
-            let index = transaction.getItemCollectionsInfos(namespace: id.namespace).index(where: { $0.0 == id })
+            let index = transaction.getItemCollectionsInfos(namespace: id.namespace).firstIndex(where: { $0.0 == id })
             let items = transaction.getItemCollectionItems(collectionId: id)
             
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content, noDelay: false)
             transaction.removeItemCollection(collectionId: id)
             return index.flatMap { ($0, items) }
         } else {

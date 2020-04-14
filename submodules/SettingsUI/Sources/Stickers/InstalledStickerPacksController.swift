@@ -801,7 +801,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             }
             let restPacks = infos.filter { !processedPacks.contains($0.0) }
             let sortedPacks = restPacks + tempSortedPacks
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespaceForMode(mode), content: .sync)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespaceForMode(mode), content: .sync, noDelay: false)
             transaction.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: sortedPacks)
         }
         |> deliverOnMainQueue).start(completed: {

@@ -311,7 +311,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 }
                 let account = strongSelf.context.account
                 if install {
-                    var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                    let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: []).start()
+                    /*var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                     |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                         switch result {
                         case let .result(info, items, installed):
@@ -385,7 +386,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                         strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                             return true
                         }))*/
-                    }))
+                    }))*/
                 } else {
                     let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
                     |> deliverOnMainQueue).start(next: { _ in
@@ -1080,7 +1081,8 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
             }
             let account = strongSelf.context.account
             if install {
-                var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: []).start()
+                /*var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                     switch result {
                     case let .result(info, items, installed):
@@ -1155,7 +1157,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                     /*strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))*/
-                }))
+                }))*/
             } else {
                 let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
                 |> deliverOnMainQueue).start(next: { _ in

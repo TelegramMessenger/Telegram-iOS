@@ -2760,8 +2760,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 return false
             }
         }) {
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync)
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync, noDelay: false)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync, noDelay: false)
         } else {
             var syncStickers = false
             var syncMasks = false
@@ -2865,10 +2865,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 }
             }
             if syncStickers {
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync)
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync, noDelay: false)
             }
             if syncMasks {
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync)
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync, noDelay: false)
             }
         }
     }

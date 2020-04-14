@@ -9,15 +9,18 @@ public enum SynchronizeInstalledStickerPacksOperationNamespace: Int32 {
 public final class SynchronizeInstalledStickerPacksOperation: PostboxCoding {
     public let previousPacks: [ItemCollectionId]
     public let archivedPacks: [ItemCollectionId]
+    public let noDelay: Bool
     
-    public init(previousPacks: [ItemCollectionId], archivedPacks: [ItemCollectionId]) {
+    public init(previousPacks: [ItemCollectionId], archivedPacks: [ItemCollectionId], noDelay: Bool) {
         self.previousPacks = previousPacks
         self.archivedPacks = archivedPacks
+        self.noDelay = noDelay
     }
     
     public init(decoder: PostboxDecoder) {
         self.previousPacks = ItemCollectionId.decodeArrayFromBuffer(decoder.decodeBytesForKey("p")!)
         self.archivedPacks = decoder.decodeBytesForKey("ap").flatMap(ItemCollectionId.decodeArrayFromBuffer) ?? []
+        self.noDelay = decoder.decodeInt32ForKey("nd", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -27,6 +30,7 @@ public final class SynchronizeInstalledStickerPacksOperation: PostboxCoding {
         buffer.reset()
         ItemCollectionId.encodeArrayToBuffer(self.archivedPacks, buffer: buffer)
         encoder.encodeBytes(buffer, forKey: "ap")
+        encoder.encodeInt32(self.noDelay ? 1 : 0, forKey: "nd")
     }
 }
 

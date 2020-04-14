@@ -8,7 +8,7 @@ public enum AddSynchronizeInstalledStickerPacksOperationContent {
     case archive([ItemCollectionId])
 }
 
-public func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: ItemCollectionId.Namespace, content: AddSynchronizeInstalledStickerPacksOperationContent) {
+public func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: ItemCollectionId.Namespace, content: AddSynchronizeInstalledStickerPacksOperationContent, noDelay: Bool) {
     let operationNamespace: SynchronizeInstalledStickerPacksOperationNamespace
     switch namespace {
         case Namespaces.ItemCollection.CloudStickerPacks:
@@ -18,10 +18,10 @@ public func addSynchronizeInstalledStickerPacksOperation(transaction: Transactio
         default:
             return
     }
-    addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: operationNamespace, content: content)
+    addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: operationNamespace, content: content, noDelay: noDelay)
 }
 
-func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: SynchronizeInstalledStickerPacksOperationNamespace, content: AddSynchronizeInstalledStickerPacksOperationContent) {
+func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, namespace: SynchronizeInstalledStickerPacksOperationNamespace, content: AddSynchronizeInstalledStickerPacksOperationContent, noDelay: Bool) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag
     let itemCollectionNamespace: ItemCollectionId.Namespace
@@ -62,7 +62,7 @@ func addSynchronizeInstalledStickerPacksOperation(transaction: Transaction, name
                 }
             }
     }
-    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousPacks, archivedPacks: archivedPacks)
+    let operationContents = SynchronizeInstalledStickerPacksOperation(previousPacks: previousPacks, archivedPacks: archivedPacks, noDelay: noDelay)
     if let updateLocalIndex = updateLocalIndex {
         let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: 0, id: 0), tag: tag, tagLocalIndex: updateLocalIndex)
     }

@@ -201,7 +201,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
     }
     var index = 0
     for (_, info, item) in view.collectionInfos {
-        if let info = info as? StickerPackCollectionInfo {
+        if let info = info as? StickerPackCollectionInfo, item != nil {
             entries.append(.stickerPack(index: index, info: info, topItem: item as? StickerPackItem, theme: theme))
             index += 1
         }
