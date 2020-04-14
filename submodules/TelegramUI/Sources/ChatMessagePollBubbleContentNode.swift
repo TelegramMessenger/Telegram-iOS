@@ -1440,7 +1440,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                         guard let strongSelf = self, let item = strongSelf.item else {
                                             return
                                         }
-                                        item.controllerInteraction.requestMessageUpdate(item.message.id)
+                                        //item.controllerInteraction.requestMessageUpdate(item.message.id)
                                     }
                                     
                                     let timerTransition: ContainedViewLayoutTransition

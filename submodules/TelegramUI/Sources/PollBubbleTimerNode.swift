@@ -110,7 +110,7 @@ final class PollBubbleTimerNode: ASDisplayNode {
         
         if let deadlineTimestamp = params.deadlineTimestamp {
             let fractionalTimestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            fractionalTimeout = max(0.0, Double(deadlineTimestamp) - fractionalTimestamp)
+            fractionalTimeout = min(Double(params.timeout), max(0.0, Double(deadlineTimestamp) + 1.0 - fractionalTimestamp))
         } else {
             fractionalTimeout = Double(params.timeout)
         }
