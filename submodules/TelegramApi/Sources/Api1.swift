@@ -1363,22 +1363,23 @@ public struct messages {
     
     }
     public enum FeaturedStickers: TypeConstructorDescription {
-        case featuredStickersNotModified
-        case featuredStickers(hash: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
+        case featuredStickersNotModified(count: Int32)
+        case featuredStickers(hash: Int32, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .featuredStickersNotModified:
+                case .featuredStickersNotModified(let count):
                     if boxed {
-                        buffer.appendInt32(82699215)
+                        buffer.appendInt32(-958657434)
                     }
-                    
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     break
-                case .featuredStickers(let hash, let sets, let unread):
+                case .featuredStickers(let hash, let count, let sets, let unread):
                     if boxed {
-                        buffer.appendInt32(-123893531)
+                        buffer.appendInt32(-1230257343)
                     }
                     serializeInt32(hash, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(sets.count))
                     for item in sets {
@@ -1395,32 +1396,43 @@ public struct messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .featuredStickersNotModified:
-                return ("featuredStickersNotModified", [])
-                case .featuredStickers(let hash, let sets, let unread):
-                return ("featuredStickers", [("hash", hash), ("sets", sets), ("unread", unread)])
+                case .featuredStickersNotModified(let count):
+                return ("featuredStickersNotModified", [("count", count)])
+                case .featuredStickers(let hash, let count, let sets, let unread):
+                return ("featuredStickers", [("hash", hash), ("count", count), ("sets", sets), ("unread", unread)])
     }
     }
     
         public static func parse_featuredStickersNotModified(_ reader: BufferReader) -> FeaturedStickers? {
-            return Api.messages.FeaturedStickers.featuredStickersNotModified
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.FeaturedStickers.featuredStickersNotModified(count: _1!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_featuredStickers(_ reader: BufferReader) -> FeaturedStickers? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: [Api.StickerSetCovered]?
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.StickerSetCovered]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
             }
-            var _3: [Int64]?
+            var _4: [Int64]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _4 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.FeaturedStickers.featuredStickers(hash: _1!, sets: _2!, unread: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.FeaturedStickers.featuredStickers(hash: _1!, count: _2!, sets: _3!, unread: _4!)
             }
             else {
                 return nil

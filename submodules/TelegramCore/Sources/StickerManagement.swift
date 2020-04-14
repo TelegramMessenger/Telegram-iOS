@@ -46,25 +46,44 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
         |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Void in
                 switch result {
-                    case .featuredStickersNotModified:
-                        break
-                    case let .featuredStickers(_, sets, unread):
-                        let unreadIds = Set(unread)
-                        var updatedPacks: [FeaturedStickerPackItem] = []
-                        for set in sets {
-                            var (info, items) = parsePreviewStickerSet(set)
-                            if let previousPack = initialPackMap[info.id.id] {
-                                if previousPack.info.hash == info.hash {
-                                    items = previousPack.topItems
-                                }
+                case .featuredStickersNotModified:
+                    break
+                case let .featuredStickers(_, _, sets, unread):
+                    let unreadIds = Set(unread)
+                    var updatedPacks: [FeaturedStickerPackItem] = []
+                    for set in sets {
+                        var (info, items) = parsePreviewStickerSet(set)
+                        if let previousPack = initialPackMap[info.id.id] {
+                            if previousPack.info.hash == info.hash {
+                                items = previousPack.topItems
                             }
-                            updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                         }
-                        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
+                        updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
+                    }
+                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
                 }
             }
         }
     } |> switchToLatest
+}
+
+public func requestOldFeaturedStickerPacks(network: Network, postbox: Postbox, offset: Int, limit: Int) -> Signal<[FeaturedStickerPackItem], NoError> {
+    return network.request(Api.functions.messages.getOldFeaturedStickers(offset: Int32(offset), limit: Int32(limit), hash: 0))
+    |> retryRequest
+    |> map { result -> [FeaturedStickerPackItem] in
+        switch result {
+        case .featuredStickersNotModified:
+            return []
+        case let .featuredStickers(_, _, sets, unread):
+            let unreadIds = Set(unread)
+            var updatedPacks: [FeaturedStickerPackItem] = []
+            for set in sets {
+                let (info, items) = parsePreviewStickerSet(set)
+                updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
+            }
+            return updatedPacks
+        }
+    }
 }
 
 public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: ItemCollectionId) -> Signal<Void, NoError> {

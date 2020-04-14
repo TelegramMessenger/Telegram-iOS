@@ -177,12 +177,23 @@ private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries:
     return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
 
-private func featuredScreenEntries(featuredEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings, fixedUnread: Set<ItemCollectionId>) -> [FeaturedEntry] {
+private func featuredScreenEntries(featuredEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings, fixedUnread: Set<ItemCollectionId>, additionalPacks: [FeaturedStickerPackItem]) -> [FeaturedEntry] {
     var result: [FeaturedEntry] = []
     var index = 0
+    var existingIds = Set<ItemCollectionId>()
     for item in featuredEntries {
-        result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0)))
-        index += 1
+        if !existingIds.contains(item.info.id) {
+            existingIds.insert(item.info.id)
+            result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0)))
+            index += 1
+        }
+    }
+    for item in additionalPacks {
+        if !existingIds.contains(item.info.id) {
+            existingIds.insert(item.info.id)
+            result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0)))
+            index += 1
+        }
     }
     return result
 }
@@ -195,12 +206,18 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     
     let gridNode: GridNode
     
+    private let additionalPacks = Promise<[FeaturedStickerPackItem]>([])
+    private var additionalPacksValue: [FeaturedStickerPackItem] = []
+    private var canLoadMore: Bool = true
+    private var isLoadingMore: Bool = false
+    
     private var enqueuedTransitions: [FeaturedTransition] = []
     
     private var validLayout: ContainerViewLayout?
     
     private var disposable: Disposable?
     private let installDisposable = MetaDisposable()
+    private let loadMoreDisposable = MetaDisposable()
     
     private var searchNode: FeaturedPaneSearchContentNode?
     
@@ -250,6 +267,12 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 }
                 if !addedRead.isEmpty {
                     let _ = markFeaturedStickerPacksAsSeenInteractively(postbox: strongSelf.context.account.postbox, ids: addedRead).start()
+                }
+                
+                if bottomIndex >= strongSelf.gridNode.items.count - 15 {
+                    if strongSelf.canLoadMore {
+                        strongSelf.loadMore()
+                    }
                 }
             }
         }
@@ -405,8 +428,13 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             return (items, fixedUnread)
         }
         
-        self.disposable = (combineLatest(queue: .mainQueue(), mappedFeatured, context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), context.sharedContext.presentationData)
-        |> map { featuredEntries, view, presentationData -> FeaturedTransition in
+        self.disposable = (combineLatest(queue: .mainQueue(),
+            mappedFeatured,
+            self.additionalPacks.get(),
+            context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]),
+            context.sharedContext.presentationData
+        )
+        |> map { featuredEntries, additionalPacks, view, presentationData -> FeaturedTransition in
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
                 if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
@@ -415,7 +443,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                     }
                 }
             }
-            let entries = featuredScreenEntries(featuredEntries: featuredEntries.0, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings, fixedUnread: featuredEntries.1)
+            let entries = featuredScreenEntries(featuredEntries: featuredEntries.0, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings, fixedUnread: featuredEntries.1, additionalPacks: additionalPacks)
             let previous = previousEntries.swap(entries)
             
             return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: previous == nil)
@@ -446,6 +474,32 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     deinit {
         self.disposable?.dispose()
         self.installDisposable.dispose()
+        self.loadMoreDisposable.dispose()
+    }
+    
+    private func loadMore() {
+        if self.isLoadingMore || !self.canLoadMore {
+            return
+        }
+        self.isLoadingMore = true
+        self.loadMoreDisposable.set((requestOldFeaturedStickerPacks(network: self.context.account.network, postbox: self.context.account.postbox, offset: self.additionalPacksValue.count, limit: 50)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let strongSelf = self else {
+                return
+            }
+            var existingIds = Set(strongSelf.additionalPacksValue.map { $0.info.id })
+            var updatedItems = strongSelf.additionalPacksValue
+            for item in result {
+                if !existingIds.contains(item.info.id) {
+                    existingIds.insert(item.info.id)
+                    updatedItems.append(item)
+                }
+            }
+            strongSelf.additionalPacksValue = updatedItems
+            strongSelf.additionalPacks.set(.single(strongSelf.additionalPacksValue))
+            strongSelf.canLoadMore = result.count >= 50
+            strongSelf.isLoadingMore = false
+        }))
     }
     
     override func didLoad() {
