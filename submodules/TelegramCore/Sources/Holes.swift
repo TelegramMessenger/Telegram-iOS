@@ -6,7 +6,7 @@ import MtProtoKit
 
 import SyncCore
 
-private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
+func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .photoOrVideo {
         return Api.MessagesFilter.inputMessagesFilterPhotoVideo
     } else if tagMask == .file {
