@@ -548,16 +548,6 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                 for info in resultingCollectionInfos {
                     resultingInfos[info.0.id] = info
                 }
-                for (id, info) in resultingInfos {
-                    if info.0.shortName.lowercased() == "thevirus" {
-                        print("id1 = \(id)")
-                    }
-                }
-                for (id, info) in localInfos {
-                    if info.shortName.lowercased() == "thevirus" {
-                        print("id1 = \(id)")
-                    }
-                }
                 
                 let resolvedItems = resolveStickerPacks(network: network, remoteInfos: resultingInfos, localInfos: localInfos)
                 

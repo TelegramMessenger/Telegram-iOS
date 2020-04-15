@@ -84,7 +84,7 @@ public extension ContainerViewLayout {
     func insets(options: ContainerViewLayoutInsetOptions) -> UIEdgeInsets {
         var insets = self.intrinsicInsets
         if let statusBarHeight = self.statusBarHeight, options.contains(.statusBar) {
-            insets.top += statusBarHeight
+            insets.top = max(statusBarHeight, insets.top)
         }
         if let inputHeight = self.inputHeight, options.contains(.input) {
             insets.bottom = max(inputHeight, insets.bottom)

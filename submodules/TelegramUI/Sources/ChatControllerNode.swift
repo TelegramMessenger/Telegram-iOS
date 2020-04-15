@@ -247,6 +247,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         super.init()
         
+        self.controller?.presentationContext.topLevelSubview = { [weak self] in
+            guard let strongSelf = self else {
+                return nil
+            }
+            return strongSelf.titleAccessoryPanelContainer.view
+        }
+        
         self.setViewBlock({
             return ChatControllerNodeView()
         })
@@ -1086,6 +1093,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let messageActionSheetControllerAdditionalInset = self.messageActionSheetControllerAdditionalInset {
             listInsets.top = listInsets.top + messageActionSheetControllerAdditionalInset
         }
+        
+        var childredLayout = layout
+        childredLayout.intrinsicInsets = UIEdgeInsets(top: listInsets.bottom, left: listInsets.right, bottom: listInsets.top, right: listInsets.left)
+        self.controller?.presentationContext.containerLayoutUpdated(childredLayout, transition: transition)
         
         listViewTransaction(ListViewUpdateSizeAndInsets(size: contentBounds.size, insets: listInsets, scrollIndicatorInsets: listScrollIndicatorInsets, duration: duration, curve: curve, ensureTopInsetForOverlayHighlightedItems: ensureTopInsetForOverlayHighlightedItems), additionalScrollDistance, scrollToTop, { [weak self] in
             if let strongSelf = self {

@@ -25,7 +25,7 @@ public enum TooltipActiveTextAction {
 
 private final class TooltipScreenNode: ViewControllerTracingNode {
     private let icon: TooltipScreen.Icon?
-    private let location: CGRect
+    private let location: TooltipScreen.Location
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
     private let requestDismiss: () -> Void
     
@@ -41,7 +41,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
+    init(text: String, textEntities: [MessageTextEntity], icon: TooltipScreen.Icon?, location: TooltipScreen.Location, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
         self.icon = icon
         self.location = location
         self.shouldDismissOnTouch = shouldDismissOnTouch
@@ -184,27 +184,35 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let textSize = self.textNode.updateLayout(CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing, height: .greatestFiniteMagnitude))
         
-        let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
+        var backgroundFrame: CGRect
+        
         let backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
-        var backgroundFrame = CGRect(origin: CGPoint(x: self.location.midX - backgroundWidth / 2.0, y: self.location.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
-        if backgroundFrame.minX < sideInset {
-            backgroundFrame.origin.x = sideInset
-        }
-        if backgroundFrame.maxX > layout.size.width - sideInset {
-            backgroundFrame.origin.x = layout.size.width - sideInset - backgroundFrame.width
-        }
+        
         var invertArrow = false
-        if backgroundFrame.minY < layout.insets(options: .statusBar).top {
-            backgroundFrame.origin.y = self.location.maxY + bottomInset
-            invertArrow = true
+        switch self.location {
+        case let .point(rect):
+            let backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
+            backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+            if backgroundFrame.minX < sideInset {
+                backgroundFrame.origin.x = sideInset
+            }
+            if backgroundFrame.maxX > layout.size.width - sideInset {
+                backgroundFrame.origin.x = layout.size.width - sideInset - backgroundFrame.width
+            }
+            if backgroundFrame.minY < layout.insets(options: .statusBar).top {
+                backgroundFrame.origin.y = rect.maxY + bottomInset
+                invertArrow = true
+            }
+            self.isArrowInverted = invertArrow
+        case .top:
+            backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.insets(options: [.statusBar]).top + 13.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: backgroundHeight))
         }
-        self.isArrowInverted = invertArrow
         
         transition.updateFrame(node: self.containerNode, frame: backgroundFrame)
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-        if let image = self.arrowNode.image {
+        if let image = self.arrowNode.image, case let .point(rect) = self.location {
             let arrowSize = image.size
-            let arrowCenterX = self.location.midX
+            let arrowCenterX = rect.midX
             
             let arrowFrame: CGRect
             
@@ -219,11 +227,13 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             ContainedViewLayoutTransition.immediate.updateTransformScale(node: self.arrowContainer, scale: CGPoint(x: 1.0, y: invertArrow ? -1.0 : 1.0))
             
             self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowFrame.size)
+        } else {
+            self.arrowNode.isHidden = true
         }
         
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: floor((backgroundHeight - textSize.height) / 2.0)), size: textSize))
         
-        transition.updateFrame(node: self.animatedStickerNode, frame: CGRect(origin: CGPoint(x: contentInset - animationInset, y: floor((backgroundHeight - animationSize.height) / 2.0) - animationInset), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0)))
+        transition.updateFrame(node: self.animatedStickerNode, frame: CGRect(origin: CGPoint(x: contentInset - animationInset, y: contentVerticalInset - animationInset), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0)))
         self.animatedStickerNode.updateLayout(size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
     }
     
@@ -254,10 +264,19 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     }
     
     func animateIn() {
-        self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.01)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4, damping: 105.0)
-        let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
-        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 105.0, additive: true)
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        switch self.location {
+        case .top:
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.containerNode.layer.animateScale(from: 0.96, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            if let _ = self.validLayout {
+                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -13.0 - self.backgroundNode.frame.height), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            }
+        case .point:
+            self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.01)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4, damping: 105.0)
+            let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
+            self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 105.0, additive: true)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
         
         let animationDelay: Double
         switch self.icon {
@@ -275,13 +294,24 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-            completion()
-        })
-        self.containerNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-        
-        let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
-        self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0), duration: 0.2, removeOnCompletion: false, additive: true)
+        switch self.location {
+        case .top:
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+            self.containerNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            if let _ = self.validLayout {
+                self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -13.0 - self.backgroundNode.frame.height), duration: 0.3, removeOnCompletion: false, additive: true)
+            }
+        case .point:
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+            self.containerNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            
+            let arrowY: CGFloat = self.isArrowInverted ? self.arrowContainer.frame.minY : self.arrowContainer.frame.maxY
+            self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0), duration: 0.2, removeOnCompletion: false, additive: true)
+        }
     }
     
     func addRelativeScrollingOffset(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -308,10 +338,15 @@ public final class TooltipScreen: ViewController {
         case dismiss(consume: Bool)
     }
     
-    private let text: String
-    private let textEntities: [MessageTextEntity]
+    public enum Location {
+        case point(CGRect)
+        case top
+    }
+    
+    public let text: String
+    public let textEntities: [MessageTextEntity]
     private let icon: TooltipScreen.Icon?
-    private let location: CGRect
+    private let location: TooltipScreen.Location
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
     private let openActiveTextItem: (TooltipActiveTextItem, TooltipActiveTextAction) -> Void
     
@@ -324,7 +359,7 @@ public final class TooltipScreen: ViewController {
     
     public var becameDismissed: ((TooltipScreen) -> Void)?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: CGRect, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
+    public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: TooltipScreen.Location, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
         self.text = text
         self.textEntities = textEntities
         self.icon = icon
@@ -346,7 +381,7 @@ public final class TooltipScreen: ViewController {
         
         self.controllerNode.animateIn()
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 20.0, execute: { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 15.0, execute: { [weak self] in
             self?.dismiss()
         })
     }

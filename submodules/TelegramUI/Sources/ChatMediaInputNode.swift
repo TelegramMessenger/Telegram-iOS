@@ -1579,9 +1579,13 @@ final class ChatMediaInputNode: ChatInputNode {
                     placeholderNode = self.gifPane.searchPlaceholderNode
                     paneIsEmpty = self.gifPane.isEmpty
                 case .sticker:
+                    paneIsEmpty = true
                     self.stickerPane.gridNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
                             placeholderNode = itemNode
+                        }
+                        if let _ = itemNode as? ChatMediaInputStickerGridItemNode {
+                            paneIsEmpty = false
                         }
                     }
                 case .trending:

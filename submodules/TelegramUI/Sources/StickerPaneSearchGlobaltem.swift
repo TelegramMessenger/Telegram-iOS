@@ -37,6 +37,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let account: Account
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let listAppearance: Bool
     let info: StickerPackCollectionInfo
     let topItems: [StickerPackItem]
     let grid: Bool
@@ -53,10 +54,11 @@ final class StickerPaneSearchGlobalItem: GridItem {
         return self.grid ? nil : (128.0 + (self.topSeparator ? 12.0 : 0.0))
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
+        self.listAppearance = listAppearance
         self.info = info
         self.topItems = topItems
         self.grid = grid
@@ -95,6 +97,9 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let installTextNode: TextNode
     private let installBackgroundNode: ASImageNode
     private let installButtonNode: HighlightTrackingButtonNode
+    private let uninstallTextNode: TextNode
+    private let uninstallBackgroundNode: ASImageNode
+    private let uninstallButtonNode: HighlightTrackingButtonNode
     private var itemNodes: [TrendingTopItemNode]
     private let topSeparatorNode: ASDisplayNode
     
@@ -149,6 +154,18 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         
         self.installButtonNode = HighlightTrackingButtonNode()
         
+        self.uninstallTextNode = TextNode()
+        self.uninstallTextNode.isUserInteractionEnabled = false
+        self.uninstallTextNode.contentMode = .left
+        self.uninstallTextNode.contentsScale = UIScreen.main.scale
+        
+        self.uninstallBackgroundNode = ASImageNode()
+        self.uninstallBackgroundNode.isLayerBacked = true
+        self.uninstallBackgroundNode.displayWithoutProcessing = true
+        self.uninstallBackgroundNode.displaysAsynchronously = false
+        
+        self.uninstallButtonNode = HighlightTrackingButtonNode()
+        
         self.topSeparatorNode = ASDisplayNode()
         self.topSeparatorNode.isLayerBacked = true
         
@@ -162,6 +179,9 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.addSubnode(self.installBackgroundNode)
         self.addSubnode(self.installTextNode)
         self.addSubnode(self.installButtonNode)
+        self.addSubnode(self.uninstallBackgroundNode)
+        self.addSubnode(self.uninstallTextNode)
+        self.addSubnode(self.uninstallButtonNode)
         self.addSubnode(self.topSeparatorNode)
         
         self.installButtonNode.highligthedChanged = { [weak self] highlighted in
@@ -179,8 +199,24 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
                 }
             }
         }
-        
         self.installButtonNode.addTarget(self, action: #selector(self.installPressed), forControlEvents: .touchUpInside)
+        
+        self.uninstallButtonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.uninstallBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.uninstallBackgroundNode.alpha = 0.4
+                    strongSelf.uninstallTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.uninstallTextNode.alpha = 0.4
+                } else {
+                    strongSelf.uninstallBackgroundNode.alpha = 1.0
+                    strongSelf.uninstallBackgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.uninstallTextNode.alpha = 1.0
+                    strongSelf.uninstallTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        self.uninstallButtonNode.addTarget(self, action: #selector(self.installPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -219,9 +255,14 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         
         self.topSeparatorNode.isHidden = !item.topSeparator
         self.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: CGSize(width: params.width - 16.0 * 2.0, height: UIScreenPixel))
-        self.topSeparatorNode.backgroundColor = item.theme.chat.inputMediaPanel.stickersSectionTextColor.withAlphaComponent(0.3)
+        if item.listAppearance {
+            self.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+        } else {
+            self.topSeparatorNode.backgroundColor = item.theme.chat.inputMediaPanel.stickersSectionTextColor.withAlphaComponent(0.3)
+        }
         
         let makeInstallLayout = TextNode.asyncLayout(self.installTextNode)
+        let makeUninstallLayout = TextNode.asyncLayout(self.uninstallTextNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
         
@@ -229,32 +270,36 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.appliedItem = item
         
         var updateButtonBackgroundImage: UIImage?
-        if currentItem?.theme !== item.theme || currentItem?.installed != item.installed {
-            if item.installed {
-                updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddedPackButtonImage(item.theme)
-            } else {
-                updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddPackButtonImage(item.theme)
-            }
+        var updateUninstallButtonBackgroundImage: UIImage?
+        if currentItem?.theme !== item.theme {
+            updateUninstallButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddedPackButtonImage(item.theme)
+            updateButtonBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddPackButtonImage(item.theme)
         }
         let unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.theme)
         
         let leftInset: CGFloat = 14.0
         let rightInset: CGFloat = 16.0
         
-        let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.installed ? item.strings.Stickers_Installed : item.strings.Stickers_Install, font: buttonFont, textColor: item.installed ? item.theme.list.itemCheckColors.fillColor : item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Install, font: buttonFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.info.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0 - installLayout.size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (uninstallLayout, uninstallApply) = makeUninstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Installed, font: buttonFont, textColor: item.theme.list.itemCheckColors.fillColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.info.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0 - max(installLayout.size.width, uninstallLayout.size.width), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.StickerPack_StickerCount(item.info.count), font: statusFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
         let strongSelf = self
     
         let _ = installApply()
+        let _ = uninstallApply()
         let _ = titleApply()
         let _ = descriptionApply()
     
         if let updateButtonBackgroundImage = updateButtonBackgroundImage {
             strongSelf.installBackgroundNode.image = updateButtonBackgroundImage
+        }
+        if let updateUninstallButtonBackgroundImage = updateUninstallButtonBackgroundImage {
+            strongSelf.uninstallBackgroundNode.image = updateUninstallButtonBackgroundImage
         }
     
         let installWidth: CGFloat = installLayout.size.width + 32.0
@@ -262,10 +307,20 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         strongSelf.installBackgroundNode.frame = buttonFrame
         strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
         strongSelf.installButtonNode.frame = buttonFrame
+        
+        let uninstallWidth: CGFloat = uninstallLayout.size.width + 32.0
+        let uninstallButtonFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - uninstallWidth, y: 4.0 + topOffset), size: CGSize(width: uninstallWidth, height: 28.0))
+        strongSelf.uninstallBackgroundNode.frame = uninstallButtonFrame
+        strongSelf.uninstallTextNode.frame = CGRect(origin: CGPoint(x: uninstallButtonFrame.minX + floor((uninstallButtonFrame.width - uninstallLayout.size.width) / 2.0), y: uninstallButtonFrame.minY + floor((uninstallButtonFrame.height - uninstallLayout.size.height) / 2.0) + 1.0), size: uninstallLayout.size)
+        strongSelf.uninstallButtonNode.frame = uninstallButtonFrame
     
-        strongSelf.installButtonNode.isHidden = false
-        strongSelf.installBackgroundNode.isHidden = false
-        strongSelf.installTextNode.isHidden = false
+        strongSelf.installButtonNode.isHidden = item.installed
+        strongSelf.installBackgroundNode.isHidden = item.installed
+        strongSelf.installTextNode.isHidden = item.installed
+        
+        strongSelf.uninstallButtonNode.isHidden = !item.installed
+        strongSelf.uninstallBackgroundNode.isHidden = !item.installed
+        strongSelf.uninstallTextNode.isHidden = !item.installed
     
         let titleFrame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: 2.0 + topOffset), size: titleLayout.size)
         strongSelf.titleNode.frame = titleFrame

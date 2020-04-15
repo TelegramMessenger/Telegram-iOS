@@ -56,7 +56,7 @@ public final class PresentationContext {
     
     private var presentationDisposables = DisposableSet()
     
-    var topLevelSubview: () -> UIView? = { nil }
+    public var topLevelSubview: () -> UIView? = { nil }
     
     var isCurrentlyOpaque: Bool {
         for (controller, _) in self.controllers {

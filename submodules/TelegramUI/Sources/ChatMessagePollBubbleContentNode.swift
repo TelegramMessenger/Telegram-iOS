@@ -1009,6 +1009,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let message = item.message
                 
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                var isBotChat: Bool = false
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramUser, peer.botInfo != nil {
+                    isBotChat = true
+                }
                 
                 let additionalTextRightInset: CGFloat = 24.0
                 
@@ -1120,8 +1124,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                let votersString: String
-                if let poll = poll, let totalVoters = poll.results.totalVoters {
+                let votersString: String?
+                
+                if isBotChat {
+                    votersString = nil
+                } else if let poll = poll, let totalVoters = poll.results.totalVoters {
                     switch poll.kind {
                     case .poll:
                         if totalVoters == 0 {
@@ -1139,7 +1146,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     votersString = " "
                 }
-                let (votersLayout, votersApply) = makeVotersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: votersString, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
+                let (votersLayout, votersApply) = makeVotersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: votersString ?? "", font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 
                 let (buttonSubmitInactiveTextLayout, buttonSubmitInactiveTextApply) = makeSubmitInactiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.accentControlDisabledColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 let (buttonSubmitActiveTextLayout, buttonSubmitActiveTextApply) = makeSubmitActiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
@@ -1274,7 +1281,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     let optionsVotersSpacing: CGFloat = 11.0
                     let optionsButtonSpacing: CGFloat = 9.0
                     let votersBottomSpacing: CGFloat = 11.0
-                    resultSize.height += optionsVotersSpacing + votersLayout.size.height + votersBottomSpacing
+                    if votersString != nil {
+                        resultSize.height += optionsVotersSpacing + votersLayout.size.height + votersBottomSpacing
+                    } else {
+                        resultSize.height += 26.0
+                    }
                     
                     let buttonSubmitInactiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitInactiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitInactiveTextLayout.size)
                     let buttonSubmitActiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitActiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitActiveTextLayout.size)
@@ -1437,7 +1448,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.timerNode = timerNode
                                     strongSelf.addSubnode(timerNode)
                                     timerNode.reachedTimeout = {
-                                        guard let strongSelf = self, let item = strongSelf.item else {
+                                        guard let strongSelf = self, let _ = strongSelf.item else {
                                             return
                                         }
                                         //item.controllerInteraction.requestMessageUpdate(item.message.id)
@@ -1502,6 +1513,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.avatarsNode.frame = avatarsFrame
                             strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
                             strongSelf.avatarsNode.update(context: item.context, peers: avatarPeers, synchronousLoad: synchronousLoad)
+                            strongSelf.avatarsNode.isHidden = isBotChat
                             let alphaTransition: ContainedViewLayoutTransition
                             if animation.isAnimated {
                                 alphaTransition = .animated(duration: 0.25, curve: .easeInOut)
@@ -1540,6 +1552,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private func updateSelection() {
         guard let item = self.item, let poll = self.poll else {
             return
+        }
+        
+        var isBotChat: Bool = false
+        if let peer = item.message.peers[item.message.id.peerId] as? TelegramUser, peer.botInfo != nil {
+            isBotChat = true
         }
         
         let disableAllActions = false
@@ -1593,8 +1610,14 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         } else {
             if case .public = poll.publicity, hasResults, !disableAllActions {
                 self.votersNode.isHidden = true
-                self.buttonViewResultsTextNode.isHidden = false
-                self.buttonNode.isHidden = false
+                
+                if isBotChat {
+                    self.buttonViewResultsTextNode.isHidden = true
+                    self.buttonNode.isHidden = true
+                } else {
+                    self.buttonViewResultsTextNode.isHidden = false
+                    self.buttonNode.isHidden = false
+                }
                 
                 if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                     self.buttonNode.isUserInteractionEnabled = false
@@ -1650,11 +1673,16 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 return .none
             }
         } else {
+            var isBotChat: Bool = false
+            if let item = self.item, let peer = item.message.peers[item.message.id.peerId] as? TelegramUser, peer.botInfo != nil {
+                isBotChat = true
+            }
+            
             for optionNode in self.optionNodes {
                 if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
                         return .ignore
-                    } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option {
+                    } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option, !isBotChat {
                         switch poll.publicity {
                         case .anonymous:
                             let string: String

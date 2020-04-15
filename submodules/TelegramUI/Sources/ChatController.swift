@@ -373,6 +373,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
+        self.automaticallyControlPresentationContextLayout = false
         self.blocksBackgroundWhenInOverlay = true
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -1950,7 +1951,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            var foundItemNode: ListViewItemNode?
+            
+            /*var foundItemNode: ListViewItemNode?
             strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView {
                     if sourceNode.view.isDescendant(of: itemNode.view) {
@@ -1959,6 +1961,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             if let foundItemNode = foundItemNode {
+                
                 let absoluteFrame = sourceNode.view.convert(sourceNode.bounds, to: strongSelf.view).insetBy(dx: 0.0, dy: -4.0).offsetBy(dx: 0.0, dy: 0.0)
                 let tooltipScreen = TooltipScreen(text: solution.text, textEntities: solution.entities, icon: nil, location: absoluteFrame, shouldDismissOnTouch: { point in
                     return .dismiss(consume: absoluteFrame.contains(point))
@@ -2012,7 +2015,82 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.currentMessageTooltipScreens.append((tooltipScreen, foundItemNode))
                 strongSelf.present(tooltipScreen, in: .current)
+            }*/
+            
+            var found = false
+            strongSelf.forEachController({ controller in
+                if let controller = controller as? TooltipScreen {
+                    if controller.text == solution.text && controller.textEntities == solution.entities {
+                        found = true
+                        return false
+                    }
+                }
+                return true
+            })
+            if found {
+                return
             }
+            
+            let tooltipScreen = TooltipScreen(text: solution.text, textEntities: solution.entities, icon: .info, location: .top, shouldDismissOnTouch: { point in
+                return .ignore
+            }, openActiveTextItem: { item, action in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch item {
+                case let .url(url):
+                    switch action {
+                    case .tap:
+                        strongSelf.openUrl(url, concealed: false)
+                    case .longTap:
+                        strongSelf.controllerInteraction?.longTap(.url(url), nil)
+                    }
+                case let .mention(peerId, mention):
+                    switch action {
+                    case .tap:
+                        strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                    case .longTap:
+                        strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
+                    }
+                case let .textMention(mention):
+                    switch action {
+                    case .tap:
+                        strongSelf.controllerInteraction?.openPeerMention(mention)
+                    case .longTap:
+                        strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
+                    }
+                case let .botCommand(command):
+                    switch action {
+                    case .tap:
+                        strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                    case .longTap:
+                        strongSelf.controllerInteraction?.longTap(.command(command), nil)
+                    }
+                case let .hashtag(hashtag):
+                    switch action {
+                    case .tap:
+                        strongSelf.controllerInteraction?.openHashtag(nil, hashtag)
+                    case .longTap:
+                        strongSelf.controllerInteraction?.longTap(.hashtag(hashtag), nil)
+                    }
+                }
+            })
+            /*tooltipScreen.becameDismissed = { tooltipScreen in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.currentMessageTooltipScreens.removeAll(where: { $0.0 === tooltipScreen })
+            }
+            strongSelf.currentMessageTooltipScreens.append((tooltipScreen, foundItemNode))*/
+            
+            strongSelf.forEachController({ controller in
+                if let controller = controller as? TooltipScreen {
+                    controller.dismiss()
+                }
+                return true
+            })
+            
+            strongSelf.present(tooltipScreen, in: .current)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

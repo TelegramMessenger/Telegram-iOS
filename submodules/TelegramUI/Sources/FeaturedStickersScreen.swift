@@ -89,7 +89,7 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
     
     func item(account: Account, interaction: FeaturedInteraction, grid: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, info: self.info, topItems: self.topItems, grid: grid, topSeparator: self.topSeparator, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, grid: grid, topSeparator: self.topSeparator, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info, !self.installed)
@@ -303,6 +303,9 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         self.searchNode?.updateActivity = { [weak self] activity in
             self?.controller?.searchNavigationNode?.setActivity(activity)
         }
+        self.searchNode?.deactivateSearchBar = { [weak self] in
+            self?.view.endEditing(true)
+        }
         
         let interaction = FeaturedInteraction(
             installPack: { [weak self] info, install in
@@ -478,6 +481,15 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         self.loadMoreDisposable.dispose()
     }
     
+    func updatePresentationData(presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        
+        self.searchNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
+    }
+    
     private func loadMore() {
         if self.isLoadingMore || !self.canLoadMore {
             return
@@ -505,6 +517,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
             guard let strongSelf = self else {
@@ -667,7 +681,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         if let searchNode = self.searchNode {
             let searchNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top))
             transition.updateFrame(node: searchNode, frame: searchNodeFrame)
-            searchNode.updateLayout(size: searchNodeFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom, inputHeight: layout.inputHeight ?? 0.0, deviceMetrics: layout.deviceMetrics, transition: transition)
+            searchNode.updateLayout(size: searchNodeFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + layout.safeInsets.bottom, inputHeight: layout.inputHeight ?? 0.0, deviceMetrics: layout.deviceMetrics, transition: transition)
         }
         
         let itemSize: CGSize
@@ -677,7 +691,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             itemSize = CGSize(width: layout.size.width, height: 128.0)
         }
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: insets.top, left: layout.safeInsets.left, bottom: insets.bottom, right: layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: insets.top, left: layout.safeInsets.left, bottom: insets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)))
         
@@ -751,6 +765,7 @@ final class FeaturedStickersScreen: ViewController {
     }
     
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -777,10 +792,34 @@ final class FeaturedStickersScreen: ViewController {
         self.searchNavigationNode = searchNavigationNode
         
         self.navigationBar?.setContentNode(searchNavigationNode, animated: false)
+        
+        self.presentationDataDisposable = (context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previous = strongSelf.presentationData
+                strongSelf.presentationData = presentationData
+                
+                if previous.theme !== presentationData.theme || previous.strings !== presentationData.strings {
+                    strongSelf.updatePresentationData()
+                }
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updatePresentationData() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        
+        self.searchNavigationNode?.updatePresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
+        self.controllerNode.updatePresentationData(presentationData: presentationData)
     }
     
     override public func loadDisplayNode() {
@@ -816,8 +855,8 @@ final class FeaturedStickersScreen: ViewController {
 }
 
 private final class SearchNavigationContentNode: NavigationBarContentNode {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     private let cancel: () -> Void
     
@@ -849,6 +888,13 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.textUpdated = { [weak self] query, languageCode in
             self?.queryUpdated?(query, languageCode)
         }
+    }
+    
+    func updatePresentationData(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
+        self.searchBar.updateThemeAndStrings(theme:  SearchBarNodeTheme(theme: theme), strings: strings)
     }
     
     func setQueryUpdated(_ f: @escaping (String, String?) -> Void) {
@@ -951,7 +997,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)
