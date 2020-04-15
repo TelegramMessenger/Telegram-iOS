@@ -1346,6 +1346,12 @@ final class ChatMediaInputNode: ChatInputNode {
         }
     }
     
+    func simulateUpdateLayout(isVisible: Bool) {
+        if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, _) = self.validLayout {
+            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+        }
+    }
+    
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         var searchMode: ChatMediaInputSearchMode?
         if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = self.validLayout, case let .media(_, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded, case let .search(mode) = expanded {

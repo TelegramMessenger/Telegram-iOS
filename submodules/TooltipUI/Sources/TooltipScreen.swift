@@ -357,6 +357,7 @@ public final class TooltipScreen: ViewController {
     private var validLayout: ContainerViewLayout?
     private var isDismissed: Bool = false
     
+    public var willBecomeDismissed: ((TooltipScreen) -> Void)?
     public var becameDismissed: ((TooltipScreen) -> Void)?
     
     public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: TooltipScreen.Location, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
@@ -381,7 +382,7 @@ public final class TooltipScreen: ViewController {
         
         self.controllerNode.animateIn()
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 15.0, execute: { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 5.0, execute: { [weak self] in
             self?.dismiss()
         })
     }
@@ -418,6 +419,7 @@ public final class TooltipScreen: ViewController {
             return
         }
         self.isDismissed = true
+        self.willBecomeDismissed?(self)
         self.controllerNode.animateOut(completion: { [weak self] in
             guard let strongSelf = self else {
                 return

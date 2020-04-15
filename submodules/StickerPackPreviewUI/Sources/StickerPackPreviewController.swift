@@ -75,6 +75,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         
         super.init(navigationBarPresentationData: nil)
         
+        self.acceptsFocusWhenInOverlay = true
         self.statusBar.statusBarStyle = .Ignore
         
         self.stickerPackContents.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true))
@@ -257,6 +258,8 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         } else {
             return
         }
+        self.acceptsFocusWhenInOverlay = false
+        self.requestUpdateParameters()
         self.controllerNode.animateOut(completion: completion)
     }
     

@@ -21,6 +21,7 @@ private final class FeaturedInteraction {
     let openPack: (ItemCollectionInfo) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     let openSearch: () -> Void
+    let itemContext = StickerPaneSearchGlobalItemContext()
     
     init(installPack: @escaping (ItemCollectionInfo, Bool) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, openSearch: @escaping () -> Void) {
         self.installPack = installPack
@@ -95,7 +96,7 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
             interaction.installPack(info, !self.installed)
         }, getItemIsPreviewed: { item in
             return interaction.getItemIsPreviewed(item)
-        })
+        }, itemContext: interaction.itemContext)
     }
 }
 
@@ -211,6 +212,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     private var canLoadMore: Bool = true
     private var isLoadingMore: Bool = false
     
+    private var interaction: FeaturedInteraction?
+    
     private var enqueuedTransitions: [FeaturedTransition] = []
     
     private var validLayout: ContainerViewLayout?
@@ -292,14 +295,6 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             }
         )
         
-        self.searchNode = FeaturedPaneSearchContentNode(
-            context: context,
-            theme: self.presentationData.theme,
-            strings: self.presentationData.strings,
-            inputNodeInteraction: inputNodeInteraction,
-            controller: controller,
-            sendSticker: sendSticker
-        )
         self.searchNode?.updateActivity = { [weak self] activity in
             self?.controller?.searchNavigationNode?.setActivity(activity)
         }
@@ -415,6 +410,17 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             },
             openSearch: {
             }
+        )
+        self.interaction = interaction
+        
+        self.searchNode = FeaturedPaneSearchContentNode(
+            context: context,
+            theme: self.presentationData.theme,
+            strings: self.presentationData.strings,
+            inputNodeInteraction: inputNodeInteraction,
+            controller: controller,
+            sendSticker: sendSticker,
+            itemContext: interaction.itemContext
         )
         
         let previousEntries = Atomic<[FeaturedEntry]?>(value: nil)
@@ -670,6 +676,16 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         }))
     }
     
+    func inFocusUpdated(isInFocus: Bool) {
+        self.interaction?.itemContext.canPlayMedia = isInFocus
+        self.gridNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
+                itemNode.updateCanPlayMedia()
+            }
+        }
+        self.searchNode?.updateCanPlayMedia()
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstTime = self.validLayout == nil
         
@@ -817,6 +833,8 @@ final class FeaturedStickersScreen: ViewController {
     private func updatePresentationData() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        
         self.searchNavigationNode?.updatePresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.controllerNode.updatePresentationData(presentationData: presentationData)
@@ -845,6 +863,10 @@ final class FeaturedStickersScreen: ViewController {
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+    }
+    
+    override public func inFocusUpdated(isInFocus: Bool) {
+        self.controllerNode.inFocusUpdated(isInFocus: isInFocus)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -990,7 +1012,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
             return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
@@ -1003,7 +1025,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
                 interaction.install(info, topItems, !installed)
             }, getItemIsPreviewed: { item in
                 return interaction.getItemIsPreviewed(item)
-            })
+            }, itemContext: itemContext)
         }
     }
 }
@@ -1018,7 +1040,7 @@ private struct FeaturedSearchGridTransition {
     let animated: Bool
 }
 
-private func preparedFeaturedSearchEntryTransition(account: Account, theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [FeaturedSearchEntry], to toEntries: [FeaturedSearchEntry], interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> FeaturedSearchGridTransition {
+private func preparedFeaturedSearchEntryTransition(account: Account, theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [FeaturedSearchEntry], to toEntries: [FeaturedSearchEntry], interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> FeaturedSearchGridTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     var animated = false
@@ -1027,8 +1049,8 @@ private func preparedFeaturedSearchEntryTransition(account: Account, theme: Pres
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, itemContext: itemContext), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, itemContext: itemContext)) }
     
     let firstIndexInSectionOffset = 0
     
@@ -1041,6 +1063,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     private var interaction: StickerPaneSearchInteraction?
     private weak var controller: FeaturedStickersScreen?
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let itemContext: StickerPaneSearchGlobalItemContext
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -1073,11 +1096,12 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
         return !self.gridNode.isHidden
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, itemContext: StickerPaneSearchGlobalItemContext) {
         self.context = context
         self.inputNodeInteraction = inputNodeInteraction
         self.controller = controller
         self.sendSticker = sendSticker
+        self.itemContext = itemContext
         
         self.theme = theme
         self.strings = strings
@@ -1405,7 +1429,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 }
                 
                 let previousEntries = strongSelf.currentEntries.swap(entries)
-                let transition = preparedFeaturedSearchEntryTransition(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction)
+                let transition = preparedFeaturedSearchEntryTransition(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction, itemContext: strongSelf.itemContext)
                 strongSelf.enqueueTransition(transition)
                 
                 if displayResults {
@@ -1514,5 +1538,13 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
         }
         
         return super.hitTest(point, with: event)
+    }
+    
+    func updateCanPlayMedia() {
+        self.gridNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
+                itemNode.updateCanPlayMedia()
+            }
+        }
     }
 }

@@ -112,12 +112,14 @@ public final class ChatControllerInteraction {
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
     
+    var canPlayMedia: Bool = false
     var hiddenMedia: [MessageId: [Media]] = [:]
     var selectionState: ChatInterfaceSelectionState?
     var highlightedState: ChatInterfaceHighlightedState?
     var contextHighlightedState: ChatInterfaceHighlightedState?
     var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     var pollActionState: ChatInterfacePollActionState
+    var currentPollMessageWithTooltip: MessageId?
     var stickerSettings: ChatInterfaceStickerSettings
     var searchTextHighightState: (String, [MessageIndex])?
     var seenOneTimeAnimatedMedia = Set<MessageId>()

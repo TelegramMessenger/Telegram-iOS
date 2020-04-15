@@ -458,6 +458,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    private var isInFocus: Bool = false
+    
+    func inFocusUpdated(isInFocus: Bool) {
+        self.isInFocus = isInFocus
+        
+        self.inputMediaNode?.simulateUpdateLayout(isVisible: isInFocus)
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction:
         (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void) {
         let transition: ContainedViewLayoutTransition
@@ -647,7 +655,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.insertSubnode(inputNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
             }
-            inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: true)
+            inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: self.isInFocus)
         } else if let inputNode = self.inputNode {
             dismissedInputNode = inputNode
             self.inputNode = nil

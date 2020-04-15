@@ -326,6 +326,7 @@ final class BubbleSettingsController: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
         
         self.blocksBackgroundWhenInOverlay = true
+        self.acceptsFocusWhenInOverlay = true
         self.navigationPresentation = .modal
         
         self.navigationItem.title = self.presentationData.strings.Appearance_BubbleCorners_Title

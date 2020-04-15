@@ -933,6 +933,44 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.statusBarHost?.setStatusBarHidden(statusBarHidden, animated: animateStatusBarStyleTransition)
         }
         
+        var foundControllerInFocus = false
+        for container in self.overlayContainers.reversed() {
+            if foundControllerInFocus {
+                container.controller.isInFocus = false
+            } else if container.controller.acceptsFocusWhenInOverlay {
+                foundControllerInFocus = true
+                container.controller.isInFocus = true
+            }
+        }
+        
+        for container in self.modalContainers.reversed() {
+            if foundControllerInFocus {
+                container.container.isInFocus = false
+            } else {
+                foundControllerInFocus = true
+                container.container.isInFocus = true
+            }
+        }
+        
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .flat(container):
+                if foundControllerInFocus {
+                    container.isInFocus = false
+                } else {
+                    foundControllerInFocus = true
+                    container.isInFocus = true
+                }
+            case let .split(split):
+                if foundControllerInFocus {
+                    split.isInFocus = false
+                } else {
+                    foundControllerInFocus = true
+                    split.isInFocus = true
+                }
+            }
+        }
+        
         self.isUpdatingContainers = false
         
         if notifyGlobalOverlayControllersUpdated {

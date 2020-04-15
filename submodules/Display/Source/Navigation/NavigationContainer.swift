@@ -96,6 +96,17 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
+    var isInFocus: Bool = false {
+        didSet {
+            if self.isInFocus != oldValue {
+                self.inFocusUpdated(isInFocus: self.isInFocus)
+            }
+        }
+    }
+    func inFocusUpdated(isInFocus: Bool) {
+        self.state.top?.value.isInFocus = isInFocus
+    }
+    
     private var currentKeyboardLeftEdge: CGFloat = 0.0
     private var additionalKeyboardLeftEdgeOffset: CGFloat = 0.0
     
@@ -322,12 +333,14 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             if pending.isReady {
                 self.state.pending = nil
                 let previous = self.state.top
+                previous?.value.isInFocus = false
                 self.state.top = pending.value
                 var updatedLayout = layout
                 if pending.value.value.view.disableAutomaticKeyboardHandling.isEmpty {
                     updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
                 }
                 self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: updatedLayout, transition: pending.transition)
+                self.state.top?.value.isInFocus = self.isInFocus
                 statusBarTransition = pending.transition
                 if !self.isReady {
                     self.isReady = true
@@ -338,6 +351,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         
         if controllers.isEmpty && self.state.top != nil {
             let previous = self.state.top
+            previous?.value.isInFocus = false
             self.state.top = nil
             self.topTransition(from: previous, to: nil, transitionType: .pop, layout: layout, transition: .immediate)
         }

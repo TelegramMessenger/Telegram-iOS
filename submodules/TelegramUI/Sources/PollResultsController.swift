@@ -431,6 +431,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
     }
     controller.isOpaqueWhenInOverlay = true
     controller.blocksBackgroundWhenInOverlay = true
+    controller.acceptsFocusWhenInOverlay = true
     
     return controller
 }

@@ -32,6 +32,9 @@ final class StickerPaneSearchGlobalSection: GridSection {
     }
 }
 
+final class StickerPaneSearchGlobalItemContext {
+    var canPlayMedia: Bool = false
+}
 
 final class StickerPaneSearchGlobalItem: GridItem {
     let account: Account
@@ -48,13 +51,14 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let open: () -> Void
     let install: () -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
+    let itemContext: StickerPaneSearchGlobalItemContext
     
     let section: GridSection? = StickerPaneSearchGlobalSection()
     var fillsRowWithHeight: CGFloat? {
         return self.grid ? nil : (128.0 + (self.topSeparator ? 12.0 : 0.0))
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -69,6 +73,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.open = open
         self.install = install
         self.getItemIsPreviewed = getItemIsPreviewed
+        self.itemContext = itemContext
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
@@ -109,19 +114,37 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let preloadedStickerPackThumbnailDisposable = MetaDisposable()
     
     private var preloadedThumbnail = false
+    private var canPlay = false
+    
+    private var canPlayMedia: Bool = false {
+        didSet {
+            if self.canPlayMedia != oldValue {
+                self.updatePlayback()
+            }
+        }
+    }
     
     override var isVisibleInGrid: Bool {
         didSet {
             if oldValue != self.isVisibleInGrid {
-                for node in self.itemNodes {
-                    node.visibility = self.isVisibleInGrid
-                }
+                self.updatePlayback()
+            }
+        }
+    }
+    
+    private func updatePlayback() {
+        let canPlay = self.canPlayMedia && self.isVisibleInGrid
+        if canPlay != self.canPlay {
+            self.canPlay = canPlay
+            
+            for node in self.itemNodes {
+                node.visibility = self.canPlay
+            }
+            
+            if let item = self.item, self.isVisibleInGrid, !self.preloadedThumbnail {
+                self.preloadedThumbnail = true
                 
-                if let item = self.item, self.isVisibleInGrid, !self.preloadedThumbnail {
-                    self.preloadedThumbnail = true
-                    
-                    self.preloadedStickerPackThumbnailDisposable.set(preloadedStickerPackThumbnail(account: item.account, info: item.info, items: item.topItems).start())
-                }
+                self.preloadedStickerPackThumbnailDisposable.set(preloadedStickerPackThumbnail(account: item.account, info: item.info, items: item.topItems).start())
             }
         }
     }
@@ -241,6 +264,14 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.updatePreviewing(animated: false)
     }
     
+    func updateCanPlayMedia() {
+        guard let item = self.item else {
+            return
+        }
+        
+        self.canPlayMedia = item.itemContext.canPlayMedia
+    }
+    
     override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
         guard let item = self.item else {
             return
@@ -356,7 +387,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
                 node = strongSelf.itemNodes[i]
             } else {
                 node = TrendingTopItemNode()
-                node.visibility = strongSelf.isVisibleInGrid
+                node.visibility = strongSelf.canPlay
                 strongSelf.itemNodes.append(node)
                 strongSelf.addSubnode(node)
             }
@@ -376,6 +407,8 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
                 strongSelf.itemNodes.remove(at: i)
             }
         }
+        
+        self.canPlayMedia = item.itemContext.canPlayMedia
     }
     
     @objc func installPressed() {

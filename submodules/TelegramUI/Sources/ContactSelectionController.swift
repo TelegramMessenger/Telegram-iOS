@@ -81,6 +81,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.blocksBackgroundWhenInOverlay = true
+        self.acceptsFocusWhenInOverlay = true
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         

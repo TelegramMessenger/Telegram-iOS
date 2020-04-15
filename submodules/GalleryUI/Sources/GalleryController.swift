@@ -800,6 +800,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         }
         
         self.blocksBackgroundWhenInOverlay = true
+        self.acceptsFocusWhenInOverlay = true
         self.isOpaqueWhenInOverlay = true
     }
     

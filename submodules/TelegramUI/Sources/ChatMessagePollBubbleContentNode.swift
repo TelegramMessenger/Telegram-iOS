@@ -802,7 +802,7 @@ private let labelsFont = Font.regular(14.0)
 
 private final class SolutionButtonNode: HighlightableButtonNode {
     private let pressed: () -> Void
-    private let iconNode: ASImageNode
+    let iconNode: ASImageNode
     
     private var theme: PresentationTheme?
     private var incoming: Bool?
@@ -1542,6 +1542,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: resultSize.width, height: 44.0))
                             
                             strongSelf.updateSelection()
+                            strongSelf.updatePollTooltipMessageState(animated: false)
                         }
                     })
                 })
@@ -1739,6 +1740,23 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             return self.statusNode.reactionNode(value: value)
         }
         return nil
+    }
+    
+    func updatePollTooltipMessageState(animated: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        let displaySolutionButton = item.message.id != item.controllerInteraction.currentPollMessageWithTooltip
+        if displaySolutionButton != !self.solutionButtonNode.iconNode.alpha.isZero {
+            let transition: ContainedViewLayoutTransition
+            if animated {
+                transition = .animated(duration: 0.25, curve: .easeInOut)
+            } else {
+                transition = .immediate
+            }
+            transition.updateAlpha(node: self.solutionButtonNode.iconNode, alpha: displaySolutionButton ? 1.0 : 0.0)
+            transition.updateSublayerTransformScale(node: self.solutionButtonNode, scale: displaySolutionButton ? 1.0 : 0.1)
+        }
     }
 }
 

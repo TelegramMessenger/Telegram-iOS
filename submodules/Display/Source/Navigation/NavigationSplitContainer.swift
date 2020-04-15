@@ -27,6 +27,18 @@ final class NavigationSplitContainer: ASDisplayNode {
         }
     }
     
+    var isInFocus: Bool = false {
+        didSet {
+            if self.isInFocus != oldValue {
+                self.inFocusUpdated(isInFocus: self.isInFocus)
+            }
+        }
+    }
+    func inFocusUpdated(isInFocus: Bool) {
+        self.masterContainer.isInFocus = isInFocus
+        self.detailContainer.isInFocus = isInFocus
+    }
+    
     init(theme: NavigationControllerTheme, controllerRemoved: @escaping (ViewController) -> Void, scrollToTop: @escaping (NavigationSplitContainerScrollToTop) -> Void) {
         self.theme = theme
         

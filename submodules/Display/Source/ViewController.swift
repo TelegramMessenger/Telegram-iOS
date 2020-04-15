@@ -103,8 +103,13 @@ public enum TabBarItemContextActionType {
     
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
+    public final var acceptsFocusWhenInOverlay: Bool = false
     public final var automaticallyControlPresentationContextLayout: Bool = true
     public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    
+    public func requestUpdateParameters() {
+        self.modalStyleOverlayTransitionFactorUpdated?(.immediate)
+    }
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         return self.supportedOrientations
@@ -271,6 +276,16 @@ public enum TabBarItemContextActionType {
         get {
             return nil
         }
+    }
+    
+    public internal(set) var isInFocus: Bool = false {
+        didSet {
+            if self.isInFocus != oldValue {
+                self.inFocusUpdated(isInFocus: self.isInFocus)
+            }
+        }
+    }
+    open func inFocusUpdated(isInFocus: Bool) {
     }
 
     public var attemptNavigation: (@escaping () -> Void) -> Bool = { _ in

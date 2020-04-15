@@ -1116,6 +1116,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     }
     controller.isOpaqueWhenInOverlay = true
     controller.blocksBackgroundWhenInOverlay = true
+    controller.acceptsFocusWhenInOverlay = true
     controller.experimentalSnapScrollToItem = true
     controller.alwaysSynchronous = true
     
