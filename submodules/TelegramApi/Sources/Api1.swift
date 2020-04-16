@@ -10522,8 +10522,8 @@ public extension Api {
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, period: Int32?)
-        case inputMediaDice
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
+        case inputMediaDice(emoticon: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -10659,12 +10659,6 @@ public extension Api {
                     geoPoint.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
                     break
-                case .inputMediaDice:
-                    if boxed {
-                        buffer.appendInt32(-1358977017)
-                    }
-                    
-                    break
                 case .inputMediaPoll(let flags, let poll, let correctAnswers, let solution, let solutionEntities):
                     if boxed {
                         buffer.appendInt32(261416433)
@@ -10682,6 +10676,12 @@ public extension Api {
                     for item in solutionEntities! {
                         item.serialize(buffer, true)
                     }}
+                    break
+                case .inputMediaDice(let emoticon):
+                    if boxed {
+                        buffer.appendInt32(-428884101)
+                    }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -10716,10 +10716,10 @@ public extension Api {
                 return ("inputMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard)])
                 case .inputMediaGeoLive(let flags, let geoPoint, let period):
                 return ("inputMediaGeoLive", [("flags", flags), ("geoPoint", geoPoint), ("period", period)])
-                case .inputMediaDice:
-                return ("inputMediaDice", [])
                 case .inputMediaPoll(let flags, let poll, let correctAnswers, let solution, let solutionEntities):
                 return ("inputMediaPoll", [("flags", flags), ("poll", poll), ("correctAnswers", correctAnswers), ("solution", solution), ("solutionEntities", solutionEntities)])
+                case .inputMediaDice(let emoticon):
+                return ("inputMediaDice", [("emoticon", emoticon)])
     }
     }
     
@@ -11007,9 +11007,6 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_inputMediaDice(_ reader: BufferReader) -> InputMedia? {
-            return Api.InputMedia.inputMediaDice
-        }
         public static func parse_inputMediaPoll(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -11034,6 +11031,17 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.InputMedia.inputMediaPoll(flags: _1!, poll: _2!, correctAnswers: _3, solution: _4, solutionEntities: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMediaDice(_ reader: BufferReader) -> InputMedia? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputMedia.inputMediaDice(emoticon: _1!)
             }
             else {
                 return nil
@@ -15550,7 +15558,7 @@ public extension Api {
         case messageMediaDocument(flags: Int32, document: Api.Document?, ttlSeconds: Int32?)
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int32)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
-        case messageMediaDice(value: Int32)
+        case messageMediaDice(emoticon: String, value: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15648,10 +15656,11 @@ public extension Api {
                     poll.serialize(buffer, true)
                     results.serialize(buffer, true)
                     break
-                case .messageMediaDice(let value):
+                case .messageMediaDice(let emoticon, let value):
                     if boxed {
-                        buffer.appendInt32(1670374507)
+                        buffer.appendInt32(1104012937)
                     }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
                     serializeInt32(value, buffer: buffer, boxed: false)
                     break
     }
@@ -15683,8 +15692,8 @@ public extension Api {
                 return ("messageMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("userId", userId)])
                 case .messageMediaPoll(let poll, let results):
                 return ("messageMediaPoll", [("poll", poll), ("results", results)])
-                case .messageMediaDice(let value):
-                return ("messageMediaDice", [("value", value)])
+                case .messageMediaDice(let emoticon, let value):
+                return ("messageMediaDice", [("emoticon", emoticon), ("value", value)])
     }
     }
     
@@ -15891,11 +15900,14 @@ public extension Api {
             }
         }
         public static func parse_messageMediaDice(_ reader: BufferReader) -> MessageMedia? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageMedia.messageMediaDice(value: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageMedia.messageMediaDice(emoticon: _1!, value: _2!)
             }
             else {
                 return nil
@@ -16372,7 +16384,7 @@ public extension Api {
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetShortName(shortName: String)
         case inputStickerSetAnimatedEmoji
-        case inputStickerSetDice
+        case inputStickerSetDice(emoticon: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -16401,11 +16413,11 @@ public extension Api {
                     }
                     
                     break
-                case .inputStickerSetDice:
+                case .inputStickerSetDice(let emoticon):
                     if boxed {
-                        buffer.appendInt32(2044861011)
+                        buffer.appendInt32(-427863538)
                     }
-                    
+                    serializeString(emoticon, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -16420,8 +16432,8 @@ public extension Api {
                 return ("inputStickerSetShortName", [("shortName", shortName)])
                 case .inputStickerSetAnimatedEmoji:
                 return ("inputStickerSetAnimatedEmoji", [])
-                case .inputStickerSetDice:
-                return ("inputStickerSetDice", [])
+                case .inputStickerSetDice(let emoticon):
+                return ("inputStickerSetDice", [("emoticon", emoticon)])
     }
     }
     
@@ -16457,7 +16469,15 @@ public extension Api {
             return Api.InputStickerSet.inputStickerSetAnimatedEmoji
         }
         public static func parse_inputStickerSetDice(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetDice
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputStickerSet.inputStickerSetDice(emoticon: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
     }
