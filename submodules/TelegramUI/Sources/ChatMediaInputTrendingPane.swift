@@ -19,6 +19,7 @@ final class TrendingPaneInteraction {
     let openPack: (ItemCollectionInfo) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     let openSearch: () -> Void
+    let itemContext = StickerPaneSearchGlobalItemContext()
     
     init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, openSearch: @escaping () -> Void) {
         self.installPack = installPack
@@ -87,15 +88,13 @@ final class TrendingPanePackEntry: Identifiable, Comparable {
     
     func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         let info = self.info
-        let itemContext = StickerPaneSearchGlobalItemContext()
-        itemContext.canPlayMedia = true
         return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: false, info: self.info, topItems: self.topItems, grid: grid, topSeparator: self.topSeparator, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info)
         }, getItemIsPreviewed: { item in
             return interaction.getItemIsPreviewed(item)
-        }, itemContext: itemContext)
+        }, itemContext: interaction.itemContext)
     }
 }
 

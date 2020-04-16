@@ -403,6 +403,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private let gifPaneIsActiveUpdated: (Bool) -> Void
     
     private var inputNodeInteraction: ChatMediaInputNodeInteraction!
+    private var trendingInteraction: TrendingPaneInteraction?
     
     private let collectionListPanel: ASDisplayNode
     private let collectionListSeparator: ASDisplayNode
@@ -764,6 +765,7 @@ final class ChatMediaInputNode: ChatInputNode {
             return getItemIsPreviewedImpl?(item) ?? false
         }, openSearch: {
         })
+        self.trendingInteraction = trendingInteraction
         
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
@@ -1495,6 +1497,7 @@ final class ChatMediaInputNode: ChatInputNode {
         }
         
         self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
+        self.trendingInteraction?.itemContext.canPlayMedia = isVisible
         self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible && visiblePanes.contains(where: { $0.0 == .stickers }), deviceMetrics: deviceMetrics, transition: transition)
         //self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
         

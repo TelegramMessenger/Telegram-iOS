@@ -171,6 +171,8 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
             self.gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMediaInputStickerGridItemNode {
                     itemNode.updateIsPanelVisible(isVisible)
+                } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
+                    itemNode.updateCanPlayMedia()
                 }
             }
         }
