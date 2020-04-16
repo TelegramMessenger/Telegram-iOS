@@ -59,8 +59,8 @@ extension StickerPackReference {
                 self = .name(shortName)
             case .inputStickerSetAnimatedEmoji:
                 self = .animatedEmoji
-            case .inputStickerSetDice:
-                self = .dice
+            case let .inputStickerSetDice(emoticon):
+                self = .dice(emoticon)
         }
     }
 }
