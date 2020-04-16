@@ -1498,7 +1498,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                     timerTransition.updateAlpha(node: strongSelf.solutionButtonNode, alpha: 1.0)
                                 }
-                                strongSelf.solutionButtonNode.update(size: solutionButtonSize, theme: item.presentationData.theme.theme, incoming: item.message.flags.contains(.Incoming))
+                                strongSelf.solutionButtonNode.update(size: solutionButtonSize, theme: item.presentationData.theme.theme, incoming: incoming)
                             } else if !strongSelf.solutionButtonNode.alpha.isZero {
                                 let timerTransition: ContainedViewLayoutTransition
                                 if animation.isAnimated {

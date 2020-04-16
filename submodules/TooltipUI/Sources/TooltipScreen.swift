@@ -205,7 +205,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
             self.isArrowInverted = invertArrow
         case .top:
-            backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.insets(options: [.statusBar]).top + 13.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: backgroundHeight))
+            let backgroundWidth = containerWidth
+            backgroundFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundWidth) / 2.0), y: layout.insets(options: [.statusBar]).top + 13.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
         }
         
         transition.updateFrame(node: self.containerNode, frame: backgroundFrame)

@@ -633,6 +633,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: value).start()
                     }
+                    strongSelf.forEachController({ controller in
+                        if let controller = controller as? TooltipScreen {
+                            controller.dismiss()
+                        }
+                        return true
+                    })
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
@@ -1512,6 +1518,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
+                    strongSelf.forEachController({ controller in
+                        if let controller = controller as? TooltipScreen {
+                            controller.dismiss()
+                        }
+                        return true
+                    })
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             } else {
@@ -1583,6 +1595,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: topMessage)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
+                    strongSelf.forEachController({ controller in
+                        if let controller = controller as? TooltipScreen {
+                            controller.dismiss()
+                        }
+                        return true
+                    })
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
