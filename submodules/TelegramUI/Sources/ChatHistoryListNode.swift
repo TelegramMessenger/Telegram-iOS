@@ -614,7 +614,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
                 
-        let animatedEmojiStickers = combineLatest(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false), loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice, forceActualized: false))
+        let animatedEmojiStickers = combineLatest(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false), loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice("🎲"), forceActualized: false))
         |> map { animatedEmoji, dice -> [String: [StickerPackItem]] in
             var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
             switch animatedEmoji {

@@ -2261,7 +2261,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                 if case let .peer(peerId) = effectivePresentationInterfaceState.chatLocation, peerId.namespace != Namespaces.Peer.SecretChat, effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines) == "🎲" {
-                    messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice()), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
+                    messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: "🎲")), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
                     
