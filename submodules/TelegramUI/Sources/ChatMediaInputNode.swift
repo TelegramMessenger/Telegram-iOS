@@ -796,14 +796,12 @@ final class ChatMediaInputNode: ChatInputNode {
             
             var hasUnreadTrending: Bool?
             for pack in trendingPacks {
-                if !installedPacks.contains(pack.info.id) {
-                    if hasUnreadTrending == nil {
-                        hasUnreadTrending = false
-                    }
-                    if pack.unread {
-                        hasUnreadTrending = true
-                        break
-                    }
+                if hasUnreadTrending == nil {
+                    hasUnreadTrending = false
+                }
+                if pack.unread {
+                    hasUnreadTrending = true
+                    break
                 }
             }
             
