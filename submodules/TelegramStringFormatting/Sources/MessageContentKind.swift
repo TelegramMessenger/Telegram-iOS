@@ -43,7 +43,7 @@ public enum MessageContentKind: Equatable {
     case expiredVideo
     case poll(String)
     case restricted(String)
-    case dice
+    case dice(String)
     
     public var key: MessageContentKindKey {
         switch self {
@@ -169,8 +169,8 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
         }
     case let poll as TelegramMediaPoll:
         return .poll(poll.text)
-    case _ as TelegramMediaDice:
-        return .dice
+    case let dice as TelegramMediaDice:
+        return .dice(dice.emoji)
     default:
         return nil
     }
@@ -218,8 +218,8 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return ("📊 \(text)", false)
     case let .restricted(text):
         return (text, false)
-    case .dice:
-        return ("🎲", true)
+    case let .dice(emoji):
+        return (emoji, true)
     }
 }
 

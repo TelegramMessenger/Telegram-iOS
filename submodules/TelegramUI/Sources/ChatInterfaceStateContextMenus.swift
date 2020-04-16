@@ -256,7 +256,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     var loadStickerSaveStatus: MediaId?
     var loadCopyMediaResource: MediaResource?
     var isAction = false
-    var isDice = false
+    var diceEmoji: String?
     var canDiscuss = false
     if messages.count == 1 {
         for media in messages[0].media {
@@ -272,8 +272,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if !messages[0].containsSecretMedia {
                     loadCopyMediaResource = largestImageRepresentation(image.representations)?.resource
                 }
-            } else if let _ = media as? TelegramMediaDice {
-                isDice = true
+            } else if let dice = media as? TelegramMediaDice {
+                diceEmoji = dice.emoji
             }
         }
     }
@@ -425,7 +425,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             resourceAvailable = false
         }
         
-        if !messages[0].text.isEmpty || resourceAvailable || isDice {
+        if !messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -437,8 +437,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    if isDice {
-                        UIPasteboard.general.string = "🎲"
+                    if let diceEmoji = diceEmoji {
+                        UIPasteboard.general.string = diceEmoji
                     } else {
                         let copyTextWithEntities = {
                             var messageEntities: [MessageTextEntity]?

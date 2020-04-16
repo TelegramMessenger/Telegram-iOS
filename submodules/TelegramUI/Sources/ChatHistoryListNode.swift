@@ -614,8 +614,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
                 
-        let animatedEmojiStickers = combineLatest(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false), loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice, forceActualized: false))
-        |> map { animatedEmoji, dice -> [String: [StickerPackItem]] in
+        
+//        loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice, forceActualized: false)
+        
+        let animatedEmojiStickers = loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false)
+        |> map { animatedEmoji -> [String: [StickerPackItem]] in
             var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
             switch animatedEmoji {
                 case let .result(_, items, _):
@@ -631,23 +634,21 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 default:
                     break
             }
-            switch dice {
-                case let .result(_, items, _):
-                    var diceStickers: [StickerPackItem] = []
-                    for case let item as StickerPackItem in items {
-                        diceStickers.append(item)
-                    }
-                    animatedEmojiStickers["dice"] = diceStickers
-                default:
-                    break
-            }
+//            switch dice {
+//                case let .result(_, items, _):
+//                    var diceStickers: [StickerPackItem] = []
+//                    for case let item as StickerPackItem in items {
+//                        diceStickers.append(item)
+//                    }
+//                    animatedEmojiStickers["dice"] = diceStickers
+//                default:
+//                    break
+//            }
             return animatedEmojiStickers
         }
         
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
-        
-        let nextTransitionVersion = Atomic<Int>(value: 0)
-        
+                
         let updatingMedia = context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> map { value -> [MessageId: ChatUpdatingMessageMedia] in
             var result = value

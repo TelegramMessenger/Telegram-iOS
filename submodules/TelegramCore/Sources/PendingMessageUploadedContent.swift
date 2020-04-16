@@ -187,8 +187,8 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         }
         let inputPoll = Api.InputMedia.inputMediaPoll(flags: pollMediaFlags, poll: Api.Poll.poll(id: 0, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: mappedSolution, solutionEntities: mappedSolutionEntities)
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil)))
-    } else if let _ = media as? TelegramMediaDice {
-        let input = Api.InputMedia.inputMediaDice
+    } else if let dice = media as? TelegramMediaDice {
+        let input = Api.InputMedia.inputMediaDice(emoticon: dice.emoji)
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else {
         return nil
