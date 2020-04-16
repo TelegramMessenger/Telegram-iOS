@@ -15558,7 +15558,7 @@ public extension Api {
         case messageMediaDocument(flags: Int32, document: Api.Document?, ttlSeconds: Int32?)
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int32)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
-        case messageMediaDice(emoticon: String, value: Int32)
+        case messageMediaDice(value: Int32, emoticon: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15656,12 +15656,12 @@ public extension Api {
                     poll.serialize(buffer, true)
                     results.serialize(buffer, true)
                     break
-                case .messageMediaDice(let emoticon, let value):
+                case .messageMediaDice(let value, let emoticon):
                     if boxed {
-                        buffer.appendInt32(1104012937)
+                        buffer.appendInt32(1065280907)
                     }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
                     serializeInt32(value, buffer: buffer, boxed: false)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -15692,8 +15692,8 @@ public extension Api {
                 return ("messageMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("userId", userId)])
                 case .messageMediaPoll(let poll, let results):
                 return ("messageMediaPoll", [("poll", poll), ("results", results)])
-                case .messageMediaDice(let emoticon, let value):
-                return ("messageMediaDice", [("emoticon", emoticon), ("value", value)])
+                case .messageMediaDice(let value, let emoticon):
+                return ("messageMediaDice", [("value", value), ("emoticon", emoticon)])
     }
     }
     
@@ -15900,14 +15900,14 @@ public extension Api {
             }
         }
         public static func parse_messageMediaDice(_ reader: BufferReader) -> MessageMedia? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.MessageMedia.messageMediaDice(emoticon: _1!, value: _2!)
+                return Api.MessageMedia.messageMediaDice(value: _1!, emoticon: _2!)
             }
             else {
                 return nil
