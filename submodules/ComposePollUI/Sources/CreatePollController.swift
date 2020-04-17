@@ -476,10 +476,9 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     }
     
     if isQuiz {
-        //TODO:localize
-        entries.append(.quizSolutionHeader("EXPLANATION"))
-        entries.append(.quizSolutionText(placeholder: "Add a Comment (Optional)", text: state.solutionText))
-        entries.append(.quizSolutionInfo("Users will see this comment after choosing a wrong answer, good for educational purposes."))
+        entries.append(.quizSolutionHeader(presentationData.strings.CreatePoll_ExplanationHeader))
+        entries.append(.quizSolutionText(placeholder: presentationData.strings.CreatePoll_Explanation, text: state.solutionText))
+        entries.append(.quizSolutionInfo(presentationData.strings.CreatePoll_ExplanationInfo))
     }
     
     return entries
