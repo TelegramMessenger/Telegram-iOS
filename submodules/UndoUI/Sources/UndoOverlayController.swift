@@ -17,6 +17,7 @@ public enum UndoOverlayContent {
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String, text: String, cancel: String)
     case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: ItemCollectionItem?, account: Account)
+    case dice(dice: TelegramMediaDice, account: Account, text: String, action: String)
 }
 
 public enum UndoOverlayAction {
@@ -61,12 +62,12 @@ public final class UndoOverlayController: ViewController {
     }
     
     public func dismissWithCommitAction() {
-        self.action(.commit)
+        let _ = self.action(.commit)
         self.dismiss()
     }
     
     public func dismissWithCommitActionAndReplacementAnimation() {
-        self.action(.commit)
+        let _ = self.action(.commit)
         (self.displayNode as! UndoOverlayControllerNode).animateOutWithReplacement(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })

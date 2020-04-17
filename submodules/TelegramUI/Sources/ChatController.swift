@@ -1969,6 +1969,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.presentPollCreation(isQuiz: isQuiz)
         }, displayPollSolution: { [weak self] solution, sourceNode in
             self?.displayPollSolution(solution: solution, sourceNode: sourceNode, isAutomatic: false)
+        }, displayDiceTooltip: { [weak self] dice in
+            self?.displayDiceTooltip(dice: dice)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -6516,7 +6518,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.present(tooltipScreen, in: .current)
     }
-    
+        
     private func presentPollCreation(isQuiz: Bool? = nil) {
         if case .peer = self.chatLocation, let peer = self.presentationInterfaceState.renderedPeer?.peer {
             self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, isQuiz: isQuiz, completion: { [weak self] message in
@@ -6539,6 +6541,40 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
         return transformEnqueueMessages(messages, silentPosting: silentPosting)
+    }
+    
+    private func displayDiceTooltip(dice: TelegramMediaDice) {
+        guard let _ = dice.value else {
+            return
+        }
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        let value: String?
+        if dice.emoji == "🎲" {
+            value = self.presentationData.strings.Conversation_Dice_🎲
+        } else if dice.emoji == "🎯" {
+            value = self.presentationData.strings.Conversation_Dice_🎯
+        } else {
+            let key = "Conversation.Dice.\(dice.emoji)"
+            if let string = self.presentationData.strings.primaryComponent.dict[key] {
+                value = string
+            } else if let string = self.presentationData.strings.secondaryComponent?.dict[key] {
+                value = string
+            } else {
+                value = nil
+            }
+        }
+        if let value = value {
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: self.presentationData.strings.Conversation_SendDice), elevatedLayout: true, action: { [weak self] action in
+                if let strongSelf = self, action == .undo {
+                    strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), replyToMessageId: nil, localGroupingKey: nil)])
+                }
+                return false
+            }), in: .window(.root))
+        }
     }
     
     private func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil) -> [EnqueueMessage] {

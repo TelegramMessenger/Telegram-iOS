@@ -86,7 +86,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                         case let .value(value, _):
                             let animationItem: Signal<ManagedAnimationItem, NoError> = self.emojis.get()
                             |> mapToSignal { emojis -> Signal<ManagedAnimationItem, NoError> in
-                                guard emojis.count > value else {
+                                guard emojis.count >= value else {
                                     return .complete()
                                 }
                                 let file = emojis[Int(value) - 1]
@@ -134,7 +134,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case let .value(value, immediate):
                     let animationItem: Signal<ManagedAnimationItem, NoError> = self.emojis.get()
                     |> mapToSignal { emojis -> Signal<ManagedAnimationItem, NoError> in
-                        guard emojis.count > value else {
+                        guard emojis.count >= value else {
                             return .complete()
                         }
                         let file = emojis[Int(value) - 1]

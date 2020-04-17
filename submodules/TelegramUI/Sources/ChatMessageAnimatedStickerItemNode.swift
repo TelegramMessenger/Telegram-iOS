@@ -1010,18 +1010,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     })
                 } else if let dice = self.telegramDice {
                     return .optionalAction({
-                        var text: String?
-                        switch dice.emoji {
-                            case "🎲":
-                                text = item.presentationData.strings.Conversation_Dice
-                            case "🎯":
-                                text = item.presentationData.strings.Conversation_Darts
-                            default:
-                                break
-                        }
-                        if let text = text {
-                            item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id, text, self, self.imageNode.frame.offsetBy(dx: 0.0, dy: self.imageNode.frame.height / 3.0))
-                        }
+                        item.controllerInteraction.displayDiceTooltip(dice)
                     })
                 } else if let _ = self.emojiFile {
                     if let animationNode = self.animationNode as? AnimatedStickerNode {
