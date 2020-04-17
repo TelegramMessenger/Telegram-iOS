@@ -462,7 +462,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let rightInset: CGFloat = 16.0
         var contentHeight: CGFloat = 20.0
         
-        let margin: CGFloat = 16.0
+        let margin: CGFloat = 12.0
         
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let buttonMinX: CGFloat
