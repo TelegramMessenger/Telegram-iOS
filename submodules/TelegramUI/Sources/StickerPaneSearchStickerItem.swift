@@ -162,7 +162,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
                         let animationNode = AnimatedStickerNode()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
-                        self.addSubnode(animationNode)
+                        self.insertSubnode(animationNode, belowSubnode: self.textNode)
                     }
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
