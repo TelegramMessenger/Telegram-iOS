@@ -26,6 +26,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private var animatedStickerNode: AnimatedStickerNode?
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
+    private var stickerOffset: CGPoint?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -279,6 +280,46 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
                     }
                 }
+            case let .dice(dice, account, text, action):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                displayUndo = true
+                undoText = action
+                self.originalRemainingSeconds = 5
+                
+                self.stickerImageSize = CGSize(width: 48.0, height: 48.0)
+                
+                switch dice.emoji {
+                    case "🎲":
+                        self.stickerOffset = CGPoint(x: 0.0, y: -8.0)
+                    default:
+                        break
+                }
+                
+                let animatedStickerNode = AnimatedStickerNode()
+                self.animatedStickerNode = animatedStickerNode
+                
+                let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .dice(dice.emoji), forceActualized: false)
+                |> deliverOnMainQueue).start(next: { stickerPack in
+                    if let value = dice.value {
+                        switch stickerPack {
+                            case let .result(_, items, _):
+                                let item = items[Int(value) - 1]
+                                if let item = item as? StickerPackItem {
+                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct)
+                                }
+                            default:
+                                break
+                        }
+                    }
+                })
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -309,6 +350,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.panelWrapperNode.addSubnode(self.timerTextNode)
         case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified:
             break
+        case .dice:
+            self.panelWrapperNode.clipsToBounds = true
         case .info:
             self.isUserInteractionEnabled = false
         }
@@ -492,7 +535,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         if let stickerImageSize = self.stickerImageSize {
             let iconSize = stickerImageSize
-            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            var iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            
+            if let stickerOffset = self.stickerOffset {
+                iconFrame = iconFrame.offsetBy(dx: stickerOffset.x, dy: stickerOffset.y)
+            }
             
             if let stillStickerNode = self.stillStickerNode {
                 let makeImageLayout = stillStickerNode.asyncLayout()
