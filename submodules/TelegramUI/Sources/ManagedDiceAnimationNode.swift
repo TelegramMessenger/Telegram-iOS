@@ -146,8 +146,6 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                                 return .single(ManagedAnimationItem(source: .resource(context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameCount), duration: duration))
                             }
                         } else {
-                            self.setState(.rolling)
-                            
                             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                             let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
                             
@@ -159,6 +157,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                                         return data.complete
                                     }).start(next: { next in
                                         subscriber.putNext(ManagedAnimationItem(source: .resource(context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameCount), duration: duration))
+                                        subscriber.putCompletion()
                                     })
                                 
                                 return ActionDisposable {
@@ -166,7 +165,12 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                                     resourceDisposable.dispose()
                                 }
                             }
-                            return animationItem
+                            
+                            if let item = rollingAnimationItem(emoji: self.dice.emoji) {
+                                return .single(item) |> then(animationItem)
+                            } else {
+                                return animationItem
+                            }
                         }
                     }
                     

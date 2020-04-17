@@ -5475,6 +5475,7 @@ Any member of this group will be able to see messages in the channel.";
 "MuteFor.Forever" = "Mute Forever";
 
 "Conversation.Dice" = "Send a 🎲 emoji to any chat to get a random number from Telegram.";
+"Conversation.Darts" = "Send a single dart 🎯 emoji to try your luck.";
 
 "ForwardedDices_1" = "Forwarded dice";
 "ForwardedDices_2" = "2 forwarded dices";
