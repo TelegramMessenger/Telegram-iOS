@@ -294,7 +294,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 undoText = action
                 self.originalRemainingSeconds = 5
                 
-                self.stickerImageSize = CGSize(width: 48.0, height: 48.0)
+                self.stickerImageSize = CGSize(width: 42.0, height: 42.0)
                 
                 switch dice.emoji {
                     case "🎲":
