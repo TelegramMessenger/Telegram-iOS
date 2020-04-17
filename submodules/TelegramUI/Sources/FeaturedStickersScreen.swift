@@ -204,6 +204,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     private var presentationData: PresentationData
     private weak var controller: FeaturedStickersScreen?
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private var searchItemContext = StickerPaneSearchGlobalItemContext()
     
     let gridNode: GridNode
     
@@ -245,7 +246,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         self.addSubnode(self.gridNode)
         
         self.gridNode.scrollingInitiated = { [weak self] in
-            self?.view.endEditing(true)
+            self?.controller?.view.endEditing(true)
         }
         
         var processedRead = Set<ItemCollectionId>()
@@ -294,13 +295,6 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             clearRecentlyUsedStickers: {
             }
         )
-        
-        self.searchNode?.updateActivity = { [weak self] activity in
-            self?.controller?.searchNavigationNode?.setActivity(activity)
-        }
-        self.searchNode?.deactivateSearchBar = { [weak self] in
-            self?.view.endEditing(true)
-        }
         
         let interaction = FeaturedInteraction(
             installPack: { [weak self] info, install in
@@ -420,8 +414,18 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             inputNodeInteraction: inputNodeInteraction,
             controller: controller,
             sendSticker: sendSticker,
-            itemContext: interaction.itemContext
+            itemContext: self.searchItemContext
         )
+        
+        self.searchNode?.isActiveUpdated = { [weak self] in
+            self?.updateCanPlayMedia()
+        }
+        self.searchNode?.updateActivity = { [weak self] activity in
+            self?.controller?.searchNavigationNode?.setActivity(activity)
+        }
+        self.searchNode?.deactivateSearchBar = { [weak self] in
+            self?.controller?.view.endEditing(true)
+        }
         
         let previousEntries = Atomic<[FeaturedEntry]?>(value: nil)
         let context = self.context
@@ -676,14 +680,31 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         }))
     }
     
+    private var isInFocus: Bool = false
+    
     func inFocusUpdated(isInFocus: Bool) {
-        self.interaction?.itemContext.canPlayMedia = isInFocus
+        self.isInFocus = isInFocus
+        
+        if let searchNode = self.searchNode {
+            self.searchItemContext.canPlayMedia = isInFocus
+            searchNode.updateCanPlayMedia()
+        }
+        
+        self.updateCanPlayMedia()
+    }
+    
+    func updateCanPlayMedia() {
+        var isSearchActive = false
+        if let searchNode = self.searchNode {
+            isSearchActive = searchNode.isActive
+        }
+        
+        self.interaction?.itemContext.canPlayMedia = self.isInFocus && !isSearchActive
         self.gridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                 itemNode.updateCanPlayMedia()
             }
         }
-        self.searchNode?.updateCanPlayMedia()
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1095,6 +1116,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     var isActive: Bool {
         return !self.gridNode.isHidden
     }
+    var isActiveUpdated: (() -> Void)?
     
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, itemContext: StickerPaneSearchGlobalItemContext) {
         self.context = context
@@ -1438,6 +1460,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                     strongSelf.gridNode.isHidden = true
                     strongSelf.notFoundNode.isHidden = true
                 }
+                strongSelf.isActiveUpdated?()
             }
         }))
     }
