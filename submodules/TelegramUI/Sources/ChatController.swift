@@ -7995,6 +7995,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var parsedUrlValue: URL?
         if let parsed = URL(string: url) {
             parsedUrlValue = parsed
+        } else if let parsed = URL(string: "https://" + url) {
+            parsedUrlValue = parsed
         } else if let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsed = URL(string: encoded) {
             parsedUrlValue = parsed
         }
@@ -8007,7 +8009,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         latin.insert(charactersIn: "a"..."z")
         latin.insert(charactersIn: "0"..."9")
         var punctuation = CharacterSet()
-        punctuation.insert(charactersIn: ".-")
+        punctuation.insert(charactersIn: ".-/+")
         var hasLatin = false
         var hasNonLatin = false
         for c in rawHost {
