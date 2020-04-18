@@ -56,6 +56,26 @@ private struct ChatControllerNodeDerivedLayoutState {
     var upperInputPositionBound: CGFloat?
 }
 
+public struct InteractiveEmojiConfiguration {
+    static var defaultValue: InteractiveEmojiConfiguration {
+        return InteractiveEmojiConfiguration(emojis: [])
+    }
+    
+    public let emojis: [String]
+    
+    fileprivate init(emojis: [String]) {
+        self.emojis = emojis
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> InteractiveEmojiConfiguration {
+        if let data = appConfiguration.data, let value = data["emojies_send_dice"] as? [String] {
+            return InteractiveEmojiConfiguration(emojis: value)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let context: AccountContext
     let chatLocation: ChatLocation
@@ -77,7 +97,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     let backgroundNode: WallpaperBackgroundNode
-    let backgroundDisposable = MetaDisposable()
+    let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
     let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
@@ -128,6 +148,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
     var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+    
+    private var interactiveEmojis: [String] = []
+    private var interactiveEmojisDisposable: Disposable?
     
     private let selectedMessagesPromise = Promise<Set<MessageId>?>(nil)
     var selectedMessages: Set<MessageId>? {
@@ -288,11 +311,24 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, accountMediaBox: context.account.postbox.mediaBox).start(next: { [weak self] image in
-            if let strongSelf = self, let (image, final) = image {
+        self.backgroundImageDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, accountMediaBox: context.account.postbox.mediaBox).start(next: { [weak self] image in
+            if let strongSelf = self, let (image, _) = image {
                 strongSelf.backgroundNode.image = image
             }
         }))
+        
+        self.interactiveEmojisDisposable = (self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { preferencesView -> [String] in
+            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            let configuration = InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
+            return configuration.emojis
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] emojis in
+            if let strongSelf = self {
+                strongSelf.interactiveEmojis = emojis
+            }
+        })
+        
         if case .gradient = chatPresentationInterfaceState.chatWallpaper {
             self.backgroundNode.imageContentMode = .scaleToFill
         } else {
@@ -350,6 +386,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     deinit {
+        self.backgroundImageDisposable.dispose()
+        self.interactiveEmojisDisposable?.dispose()
         self.openStickersDisposable?.dispose()
         self.displayVideoUnmuteTipDisposable?.dispose()
     }
@@ -1468,7 +1506,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
-                self.backgroundDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, accountMediaBox: self.context.account.postbox.mediaBox).start(next: { [weak self] image in
+                self.backgroundImageDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, accountMediaBox: self.context.account.postbox.mediaBox).start(next: { [weak self] image in
                     if let strongSelf = self, let (image, final) = image {
                         strongSelf.backgroundNode.image = image
                     }
@@ -2261,7 +2299,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
-                if case let .peer(peerId) = effectivePresentationInterfaceState.chatLocation, peerId.namespace != Namespaces.Peer.SecretChat, ["🎲", "🎯"].contains(trimmedInputText) {
+                if case let .peer(peerId) = effectivePresentationInterfaceState.chatLocation, peerId.namespace != Namespaces.Peer.SecretChat, self.interactiveEmojis.contains(trimmedInputText) {
                     messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)

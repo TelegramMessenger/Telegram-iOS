@@ -14,14 +14,57 @@ enum ManagedDiceAnimationState: Equatable {
     case value(Int32, Bool)
 }
 
-private func rollingAnimationItem(emoji: String) -> ManagedAnimationItem? {
+private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile], NoError>, emoji: String, value: Int32?, immediate: Bool = false, roll: Bool = false, loop: Bool = false) -> Signal<ManagedAnimationItem?, NoError> {
+    return emojis
+    |> mapToSignal { diceEmojis -> Signal<ManagedAnimationItem?, NoError> in
+        if let value = value, value >= diceEmojis.count {
+            return .complete()
+        }
+        let file = diceEmojis[Int(value ?? 0)]
+        
+        if let _ = account.postbox.mediaBox.completedResourcePath(file.resource) {
+            if immediate {
+                return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), frames: .still(.end), duration: 0))
+            } else {
+                return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop))
+            }
+        } else {
+            let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+            let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
+
+            let fetched = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: file))
+            let animationItem = Signal<ManagedAnimationItem?, NoError> { subscriber in
+                let fetchedDisposable = fetched.start()
+                let resourceDisposable = (chatMessageAnimationData(postbox: account.postbox, resource: file.resource, fitzModifier: nil, width: Int(fittedSize.width), height: Int(fittedSize.height), synchronousLoad: false)
+                |> filter { data in
+                    return data.complete
+                }).start(next: { next in
+                    subscriber.putNext(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop))
+                })
+
+                return ActionDisposable {
+                    fetchedDisposable.dispose()
+                    resourceDisposable.dispose()
+                }
+            }
+            
+            if roll {
+                return rollingAnimationItem(account: account, emojis: emojis, emoji: emoji) |> then(animationItem)
+            } else {
+                return animationItem
+            }
+        }
+    }
+}
+
+private func rollingAnimationItem(account: Account, emojis: Signal<[TelegramMediaFile], NoError>, emoji: String) -> Signal<ManagedAnimationItem?, NoError> {
     switch emoji {
         case "🎲":
-            return ManagedAnimationItem(source: .local("Dice_Rolling"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 60), duration: 1.0, loop: true)
+            return .single(ManagedAnimationItem(source: .local("Dice_Rolling"), loop: true))
         case "🎯":
-            return ManagedAnimationItem(source: .local("Darts_Aiming"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 90), duration: 1.5, loop: true)
+            return .single(ManagedAnimationItem(source: .local("Darts_Aiming"), loop: true))
         default:
-            return nil
+            return animationItem(account: account, emojis: emojis, emoji: emoji, value: nil, loop: true)
     }
 }
 
@@ -63,20 +106,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         let previousState = self.diceState
         self.diceState = diceState
         
-        let frameCount: Int
-        let duration: Double
-        
-        switch dice.emoji {
-            case "🎲":
-                frameCount = 180
-                duration = 3.0
-            case "🎯":
-                frameCount = 100
-                duration = 1.6
-            default:
-                frameCount = 180
-                duration = 1.6
-        }
+        var item: Signal<ManagedAnimationItem?, NoError>? = nil
         
         let context = self.context
         if let previousState = previousState {
@@ -84,47 +114,14 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case .rolling:
                     switch diceState {
                         case let .value(value, _):
-                            let animationItem: Signal<ManagedAnimationItem, NoError> = self.emojis.get()
-                            |> mapToSignal { emojis -> Signal<ManagedAnimationItem, NoError> in
-                                guard emojis.count >= value else {
-                                    return .complete()
-                                }
-                                let file = emojis[Int(value) - 1]
-                                let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                                let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
-
-                                let fetched = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file))
-                                let animationItem = Signal<ManagedAnimationItem, NoError> { subscriber in
-                                    let fetchedDisposable = fetched.start()
-                                    let resourceDisposable = (chatMessageAnimationData(postbox: context.account.postbox, resource: file.resource, fitzModifier: nil, width: Int(fittedSize.width), height: Int(fittedSize.height), synchronousLoad: false)
-                                    |> filter { data in
-                                        return data.complete
-                                    }).start(next: { next in
-                                        subscriber.putNext(ManagedAnimationItem(source: .resource(context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameCount), duration: duration))
-                                    })
-
-                                    return ActionDisposable {
-                                        fetchedDisposable.dispose()
-                                        resourceDisposable.dispose()
-                                    }
-                                }
-                                return animationItem
-                            }
-                            
-                            self.disposable.set((animationItem |> deliverOnMainQueue).start(next: { [weak self] item in
-                                if let strongSelf = self {
-                                    strongSelf.trackTo(item: item)
-                                }
-                            }))
+                            item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji, value: value)
                         case .rolling:
                             break
                     }
                 case .value:
                     switch diceState {
                         case .rolling:
-                            if let item = rollingAnimationItem(emoji: self.dice.emoji) {
-                                self.trackTo(item: item)
-                            }
+                            item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji)
                         case .value:
                             break
                     }
@@ -132,58 +129,18 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         } else {
             switch diceState {
                 case let .value(value, immediate):
-                    let animationItem: Signal<ManagedAnimationItem, NoError> = self.emojis.get()
-                    |> mapToSignal { emojis -> Signal<ManagedAnimationItem, NoError> in
-                        guard emojis.count >= value else {
-                            return .complete()
-                        }
-                        let file = emojis[Int(value) - 1]
-                        
-                        if let _ = context.account.postbox.mediaBox.completedResourcePath(file.resource) {
-                            if immediate {
-                                return .single(ManagedAnimationItem(source: .resource(context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: frameCount, endFrame: frameCount), duration: 0.0))
-                            } else {
-                                return .single(ManagedAnimationItem(source: .resource(context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameCount), duration: duration))
-                            }
-                        } else {
-                            let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                            let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
-                            
-                            let fetched = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file))
-                            let animationItem = Signal<ManagedAnimationItem, NoError> { subscriber in
-                                let fetchedDisposable = fetched.start()
-                                let resourceDisposable = (chatMessageAnimationData(postbox: self.context.account.postbox, resource: file.resource, fitzModifier: nil, width: Int(fittedSize.width), height: Int(fittedSize.height), synchronousLoad: false)
-                                    |> filter { data in
-                                        return data.complete
-                                    }).start(next: { next in
-                                        subscriber.putNext(ManagedAnimationItem(source: .resource(context.account.postbox.mediaBox, file.resource), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameCount), duration: duration))
-                                        subscriber.putCompletion()
-                                    })
-                                
-                                return ActionDisposable {
-                                    fetchedDisposable.dispose()
-                                    resourceDisposable.dispose()
-                                }
-                            }
-                            
-                            if let item = rollingAnimationItem(emoji: self.dice.emoji) {
-                                return .single(item) |> then(animationItem)
-                            } else {
-                                return animationItem
-                            }
-                        }
-                    }
-                    
-                    self.disposable.set((animationItem |> deliverOnMainQueue).start(next: { [weak self] item in
-                        if let strongSelf = self {
-                            strongSelf.trackTo(item: item)
-                        }
-                    }))
+                    item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji, value: value, immediate: immediate, roll: true)
                 case .rolling:
-                    if let item = rollingAnimationItem(emoji: self.dice.emoji) {
-                        self.trackTo(item: item)
-                    }
+                    item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji)
             }
+        }
+        
+        if let item = item {
+            self.disposable.set((item |> deliverOnMainQueue).start(next: { [weak self] item in
+                if let strongSelf = self, let item = item {
+                    strongSelf.trackTo(item: item)
+                }
+            }))
         }
     }
 }

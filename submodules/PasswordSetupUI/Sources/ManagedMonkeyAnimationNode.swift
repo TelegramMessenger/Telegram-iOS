@@ -28,7 +28,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
     init() {
         super.init(size: CGSize(width: 136.0, height: 136.0))
         
-        self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+        self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.3))
     }
     
     deinit {
@@ -68,12 +68,12 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
     private func enqueueIdle(_ idle: ManagedMonkeyAnimationIdle) {
         switch idle {
         case .still:
-            self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+            self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.3))
         case .blink:
-            self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle1"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 30), duration: 0.3))
+            self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle1"), frames: .range(startFrame: 0, endFrame: 30), duration: 0.3))
         case .ear:
-            self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle2"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 30), duration: 0.3))
-            //self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 179), duration: 3.0))
+            self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle2"), frames: .range(startFrame: 0, endFrame: 30), duration: 0.3))
+            //self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: .range(startFrame: 0, endFrame: 179), duration: 3.0))
         }
     }
     
@@ -89,7 +89,7 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
             let upperBound = 160
             let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
             if let state = self.state, state.item.source == .local("TwoFactorSetupMonkeyTracking") {
-                let item = ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: ManagedAnimationFrameRange(startFrame: state.frameIndex ?? 0, endFrame: frameIndex), duration: 0.3)
+                let item = ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: .range(startFrame: state.frameIndex ?? 0, endFrame: frameIndex), duration: 0.3)
                 self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
                 self.didTryAdvancingState = false
                 self.updateAnimation()
@@ -97,13 +97,13 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
                 self.trackStack = self.trackStack.filter {
                     $0.source != .local("TwoFactorSetupMonkeyTracking")
                 }
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameIndex), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: .range(startFrame: 0, endFrame: frameIndex), duration: 0.3))
             }
         }
         
         func enqueueClearTracking() {
             if let state = self.state, state.item.source == .local("TwoFactorSetupMonkeyTracking") {
-                let item = ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: ManagedAnimationFrameRange(startFrame: state.frameIndex ?? 0, endFrame: 0), duration: 0.3)
+                let item = ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyTracking"), frames: .range(startFrame: state.frameIndex ?? 0, endFrame: 0), duration: 0.3)
                 self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
                 self.didTryAdvancingState = false
                 self.updateAnimation()
@@ -116,50 +116,50 @@ final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
             case let .idle(idle):
                 self.enqueueIdle(idle)
             case .eyesClosed:
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: .range(startFrame: 0, endFrame: 41), duration: 0.3))
             case .peeking:
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: .range(startFrame: 0, endFrame: 41), duration: 0.3))
             case let .tracking(value):
                 enqueueTracking(value)
             }
         case .eyesClosed:
             switch monkeyState {
             case let .idle(idle):
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: .range(startFrame: 41, endFrame: 0), duration: 0.3))
                 self.enqueueIdle(idle)
             case .eyesClosed:
                 break
             case .peeking:
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyPeek"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 14), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyPeek"), frames: .range(startFrame: 0, endFrame: 14), duration: 0.3))
             case let .tracking(value):
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: .range(startFrame: 41, endFrame: 0), duration: 0.3))
                 enqueueTracking(value)
             }
         case .peeking:
             switch monkeyState {
             case let .idle(idle):
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: .range(startFrame: 41, endFrame: 0), duration: 0.3))
                 self.enqueueIdle(idle)
             case .eyesClosed:
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyPeek"), frames: ManagedAnimationFrameRange(startFrame: 14, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyPeek"), frames: .range(startFrame: 14, endFrame: 0), duration: 0.3))
             case .peeking:
                 break
             case let .tracking(value):
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: .range(startFrame: 41, endFrame: 0), duration: 0.3))
                 enqueueTracking(value)
             }
         case let .tracking(currentValue):
             switch monkeyState {
             case let .idle(idle):
                 enqueueClearTracking()
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyIdle"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.3))
                 self.enqueueIdle(idle)
             case .eyesClosed:
                 enqueueClearTracking()
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyClose"), frames: .range(startFrame: 0, endFrame: 41), duration: 0.3))
             case .peeking:
                 enqueueClearTracking()
-                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41), duration: 0.3))
+                self.trackTo(item: ManagedAnimationItem(source: .local("TwoFactorSetupMonkeyCloseAndPeek"), frames: .range(startFrame: 0, endFrame: 41), duration: 0.3))
             case let .tracking(value):
                 if abs(currentValue - value) > CGFloat.ulpOfOne {
                     enqueueTracking(value)

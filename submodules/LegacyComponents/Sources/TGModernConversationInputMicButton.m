@@ -379,11 +379,11 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView.alpha = 0.0f;
         [[_presentation view] addSubview:_innerCircleView];
         
-        if ([_delegate respondsToSelector:@selector(micButtonDecoration)]) {
-            UIView<TGModernConversationInputMicButtonDecoration> *decoration = [_delegate micButtonDecoration];
-            _decoration = decoration;
-            [[_presentation view] addSubview:_decoration];
-        }
+//        if ([_delegate respondsToSelector:@selector(micButtonDecoration)]) {
+//            UIView<TGModernConversationInputMicButtonDecoration> *decoration = [_delegate micButtonDecoration];
+//            _decoration = decoration;
+//            [[_presentation view] addSubview:_decoration];
+//        }
         
         _outerCircleView = [[UIImageView alloc] initWithImage:[self outerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()]];
         _outerCircleView.alpha = 0.0f;

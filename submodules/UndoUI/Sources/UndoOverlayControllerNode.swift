@@ -311,7 +311,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     if let value = dice.value {
                         switch stickerPack {
                             case let .result(_, items, _):
-                                let item = items[Int(value) - 1]
+                                let item = items[Int(value)]
                                 if let item = item as? StickerPackItem {
                                     animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct)
                                 }
