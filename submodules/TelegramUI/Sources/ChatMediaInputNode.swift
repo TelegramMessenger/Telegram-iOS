@@ -809,10 +809,16 @@ final class ChatMediaInputNode: ChatInputNode {
             var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
             
             if view.higher == nil {
+                var hasTopSeparator = true
+                if gridEntries.count == 1, case .search = gridEntries[0] {
+                    hasTopSeparator = false
+                }
+                
                 var index = 0
                 for item in trendingPacks {
                     if !installedPacks.contains(item.info.id) {
-                        gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: true)))
+                        gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: hasTopSeparator)))
+                        hasTopSeparator = true
                         index += 1
                     }
                 }
