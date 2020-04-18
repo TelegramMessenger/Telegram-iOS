@@ -7945,6 +7945,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
         self.commitPurposefulAction()
         
+        var concealed = concealed
+        
         let openImpl: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -7993,12 +7995,44 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var parsedUrlValue: URL?
         if let parsed = URL(string: url) {
             parsedUrlValue = parsed
-        } else if let encoded = (url as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
+        } else if let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsed = URL(string: encoded) {
             parsedUrlValue = parsed
         }
+        print("parsedUrlValue = \(parsedUrlValue)")
+        let host = parsedUrlValue?.host ?? url
         
-        if concealed, let parsedUrlValue = parsedUrlValue, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
-            var rawDisplayUrl = url
+        let rawHost = (host as NSString).removingPercentEncoding ?? host
+        var latin = CharacterSet()
+        latin.insert(charactersIn: "A"..."Z")
+        latin.insert(charactersIn: "a"..."z")
+        latin.insert(charactersIn: "0"..."9")
+        var punctuation = CharacterSet()
+        punctuation.insert(charactersIn: ".-")
+        var hasLatin = false
+        var hasNonLatin = false
+        for c in rawHost {
+            if c.unicodeScalars.allSatisfy(punctuation.contains) {
+            } else if c.unicodeScalars.allSatisfy(latin.contains) {
+                hasLatin = true
+            } else {
+                hasNonLatin = true
+            }
+        }
+        if hasLatin && hasNonLatin {
+            concealed = true
+        }
+        
+        if let parsedUrlValue = parsedUrlValue, isConcealedUrlWhitelisted(parsedUrlValue) {
+            concealed = false
+        }
+        
+        if concealed {
+            var rawDisplayUrl: String
+            if hasNonLatin {
+                rawDisplayUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url
+            } else {
+                rawDisplayUrl = url
+            }
             let maxLength = 180
             if rawDisplayUrl.count > maxLength {
                 rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."

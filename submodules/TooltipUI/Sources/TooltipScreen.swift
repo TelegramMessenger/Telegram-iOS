@@ -32,6 +32,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let scrollingContainer: ASDisplayNode
     private let containerNode: ASDisplayNode
     private let backgroundNode: ASImageNode
+    private var effectView: UIView?
     private let arrowNode: ASImageNode
     private let arrowContainer: ASDisplayNode
     private let animatedStickerNode: AnimatedStickerNode
@@ -55,6 +56,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.image = generateAdjustedStretchableFilledCircleImage(diameter: 15.0, color: fillColor)
+        if case .top = location {
+            self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            self.containerNode.clipsToBounds = true
+            self.containerNode.cornerRadius = 9.0
+        }
         
         self.arrowNode = ASImageNode()
         let arrowSize = CGSize(width: 29.0, height: 10.0)
@@ -94,7 +100,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.arrowContainer.addSubnode(self.arrowNode)
         self.backgroundNode.addSubnode(self.arrowContainer)
-        self.containerNode.addSubnode(self.backgroundNode)
+        if let effectView = self.effectView {
+            self.containerNode.view.addSubview(effectView)
+        } else {
+            self.containerNode.addSubnode(self.backgroundNode)
+        }
         self.containerNode.addSubnode(self.textNode)
         self.containerNode.addSubnode(self.animatedStickerNode)
         self.scrollingContainer.addSubnode(self.containerNode)
@@ -211,6 +221,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         transition.updateFrame(node: self.containerNode, frame: backgroundFrame)
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        if let effectView = self.effectView {
+            transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        }
         if let image = self.arrowNode.image, case let .point(rect) = self.location {
             let arrowSize = image.size
             let arrowCenterX = rect.midX
