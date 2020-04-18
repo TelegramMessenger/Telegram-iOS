@@ -59,14 +59,14 @@ public final class ManagedAnimationState {
     }
 }
 
-public struct ManagedAnimationFrameRange: Equatable {
-    var startFrame: Int
-    var endFrame: Int
-    
-    public init(startFrame: Int, endFrame: Int) {
-        self.startFrame = startFrame
-        self.endFrame = endFrame
-    }
+public enum ManagedAnimationFramePosition {
+    case start
+    case end
+}
+
+public enum ManagedAnimationFrameRange: Equatable {
+    case range(startFrame: Int, endFrame: Int)
+    case still(ManagedAnimationFramePosition)
 }
 
 public enum ManagedAnimationSource: Equatable {
@@ -111,11 +111,11 @@ public enum ManagedAnimationSource: Equatable {
 
 public struct ManagedAnimationItem: Equatable {
     public let source: ManagedAnimationSource
-    var frames: ManagedAnimationFrameRange
-    var duration: Double
+    var frames: ManagedAnimationFrameRange?
+    var duration: Double?
     var loop: Bool
     
-    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange, duration: Double, loop: Bool = false) {
+    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false) {
         self.source = source
         self.frames = frames
         self.duration = duration
@@ -195,17 +195,42 @@ open class ManagedAnimationNode: ASDisplayNode {
         guard let state = self.state else {
             return
         }
-        let timestamp = CACurrentMediaTime()
         
-        let fps = state.fps
-        let frameRange = state.item.frames
+        let startFrame: Int
+        let endFrame: Int
+        let duration: Double
+        if let frames = state.item.frames {
+            switch frames {
+                case let .range(start, end):
+                    startFrame = start
+                    endFrame = end
+                case let .still(position):
+                    switch position {
+                        case .start:
+                            startFrame = 0
+                            endFrame = 0
+                        case .end:
+                            startFrame = state.frameCount
+                            endFrame = state.frameCount
+                    }
+            }
+        } else {
+            startFrame = 0
+            endFrame = state.frameCount
+        }
         
-        let duration: Double = state.item.duration
+        if let durationValue = state.item.duration {
+            duration = durationValue
+        } else {
+            let fps: Double = state.fps > 0 ? state.fps : 60
+            duration = Double(state.frameCount) / fps
+        }
+        
         var t = state.relativeTime / duration
         t = max(0.0, t)
         t = min(1.0, t)
         //print("\(t) \(state.item.name)")
-        let frameOffset = Int(Double(frameRange.startFrame) * (1.0 - t) + Double(frameRange.endFrame) * t)
+        let frameOffset = Int(Double(startFrame) * (1.0 - t) + Double(endFrame) * t)
         let lowerBound: Int = 0
         let upperBound = state.frameCount - 1
         let frameIndex = max(lowerBound, min(upperBound, frameOffset))
