@@ -351,7 +351,15 @@ private final class CallSessionManagerContext {
             let internalId = CallSessionInternalId()
             let context = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b))
             self.contexts[internalId] = context
-            context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start())
+            let queue = self.queue
+            context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start(error: { [weak self] _ in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                }
+            }))
             self.contextIdByStableId[stableId] = internalId
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()
