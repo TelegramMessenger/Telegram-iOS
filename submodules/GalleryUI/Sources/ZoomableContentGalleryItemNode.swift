@@ -151,13 +151,15 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
         //self.scrollView.normalZoomScale = 1.0
         self.scrollNode.view.zoomScale = 1.0
         
-        self.scrollNode.view.contentSize = normalizedContentSize
-        
-        if !(contentNode.view is TilingView) {
+        if contentNode.view is TilingView {
+            contentNode.frame = CGRect(origin: CGPoint(), size: normalizedContentSize)
+            self.scrollNode.view.contentSize = normalizedContentSize
             contentNode.transform = CATransform3DIdentity
+        } else {
+            self.scrollNode.view.contentSize = contentSize
+            contentNode.transform = CATransform3DIdentity
+            contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
         }
-
-        contentNode.frame = CGRect(origin: CGPoint(), size: normalizedContentSize)
         
         self.centerScrollViewContents(transition: transition)
         self.ignoreZoom = false
@@ -176,34 +178,54 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
             return
         }
         
-        let normalizedContentSize = contentSize.fitted(boundsSize)
+        var minScale: CGFloat
+        var maxScale: CGFloat
         
-        let scaleWidth = boundsSize.width / normalizedContentSize.width
-        let scaleHeight = boundsSize.height / normalizedContentSize.height
-        var minScale = min(scaleWidth, scaleHeight)
-        minScale = 1.0
-        
-        var maxScale = max(scaleWidth, scaleHeight)
-        maxScale = max(maxScale, minScale * 4.0)
-        
-        if (abs(maxScale - minScale) < 0.01) {
-            maxScale = minScale
-        }
-        
-        if !self.scrollNode.view.minimumZoomScale.isEqual(to: minScale) {
-            self.scrollNode.view.minimumZoomScale = minScale
-        }
-        
-        /*if !self.scrollView.normalZoomScale.isEqual(to: minScale) {
-         self.scrollView.normalZoomScale = minScale
-         }*/
-        
-        if !self.scrollNode.view.maximumZoomScale.isEqual(to: maxScale) {
-            self.scrollNode.view.maximumZoomScale = maxScale
-        }
-        
-        if let contentView = contentNode.view as? TilingView {
-            contentView.setMaximumZoomScale(maxScale, normalizedSize: normalizedContentSize)
+        if contentNode.view is TilingView {
+            let normalizedContentSize = contentSize.fitted(boundsSize)
+            
+            let scaleWidth = boundsSize.width / normalizedContentSize.width
+            let scaleHeight = boundsSize.height / normalizedContentSize.height
+            minScale = min(scaleWidth, scaleHeight)
+            minScale = 1.0
+            
+            maxScale = max(scaleWidth, scaleHeight)
+            maxScale = max(maxScale, minScale * 4.0)
+            
+            if (abs(maxScale - minScale) < 0.01) {
+                maxScale = minScale
+            }
+            
+            if !self.scrollNode.view.minimumZoomScale.isEqual(to: minScale) {
+                self.scrollNode.view.minimumZoomScale = minScale
+            }
+            
+            if !self.scrollNode.view.maximumZoomScale.isEqual(to: maxScale) {
+                self.scrollNode.view.maximumZoomScale = maxScale
+            }
+            
+            if let contentView = contentNode.view as? TilingView {
+                contentView.setMaximumZoomScale(maxScale, normalizedSize: normalizedContentSize)
+            }
+        } else {
+            let scaleWidth = boundsSize.width / contentSize.width
+            let scaleHeight = boundsSize.height / contentSize.height
+            let minScale = min(scaleWidth, scaleHeight)
+            
+            maxScale = max(scaleWidth, scaleHeight)
+            maxScale = max(maxScale, minScale * 3.0)
+            
+            if (abs(maxScale - minScale) < 0.01) {
+                maxScale = minScale
+            }
+            
+            if !self.scrollNode.view.minimumZoomScale.isEqual(to: minScale) {
+                self.scrollNode.view.minimumZoomScale = minScale
+            }
+            
+            if !self.scrollNode.view.maximumZoomScale.isEqual(to: maxScale) {
+                self.scrollNode.view.maximumZoomScale = maxScale
+            }
         }
         
         var contentFrame = contentNode.view.frame
@@ -241,7 +263,7 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
     }
     
     override open func contentSize() -> CGSize? {
-        if let (intrinsicSize, contentNode) = self.zoomableContent {
+        if let (_, contentNode) = self.zoomableContent {
             let size = contentNode.view.convert(contentNode.bounds, to: self.view).size
             return CGSize(width: floor(size.width), height: floor(size.height))
         }
