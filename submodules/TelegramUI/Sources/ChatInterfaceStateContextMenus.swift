@@ -56,6 +56,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             switch peer.info {
             case .broadcast:
                 if peer.hasPermission(.editAllMessages) || !message.flags.contains(.Incoming) {
+                    unlimitedInterval = true
                     hasEditRights = true
                 }
             case .group:
