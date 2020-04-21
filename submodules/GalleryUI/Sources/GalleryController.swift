@@ -183,7 +183,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     if let dimensions = file.dimensions {
                         pixelsCount = Int(dimensions.width) * Int(dimensions.height)
                     }
-                    if (file.size == nil || file.size! < 4 * 1024 * 1024) && pixelsCount < 4096 * 4096 {
+                    if true /*(file.size == nil || file.size! < 4 * 1024 * 1024) && pixelsCount < 4096 * 4096*/ {
                         return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
