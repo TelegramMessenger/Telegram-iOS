@@ -180,6 +180,10 @@ public final class PendingMessageManager {
             let removedMessageIds = self.pendingMessageIds.subtracting(messageIds)
             let removedSecretMessageIds = Set(removedMessageIds.filter({ $0.peerId.namespace == Namespaces.Peer.SecretChat }))
             
+            if !removedMessageIds.isEmpty {
+                Logger.shared.log("PendingMessageManager", "removed messages: \(removedMessageIds)")
+            }
+            
             var updateUploadingPeerIds = Set<PeerId>()
             var updateUploadingGroupIds = Set<Int64>()
             for id in removedMessageIds {
@@ -207,6 +211,7 @@ public final class PendingMessageManager {
             }
             
             if !addedMessageIds.isEmpty {
+                Logger.shared.log("PendingMessageManager", "added messages: \(addedMessageIds)")
                 self.beginSendingMessages(Array(addedMessageIds).sorted())
             }
             
@@ -250,6 +255,8 @@ public final class PendingMessageManager {
             for id in self.pendingMessageIds {
                 peersWithPendingMessages.insert(id.peerId)
             }
+            
+            Logger.shared.log("PendingMessageManager", "pengine messages: \(self.pendingMessageIds)")
             
             self._hasPendingMessages.set(peersWithPendingMessages)
         }
@@ -333,6 +340,8 @@ public final class PendingMessageManager {
             }
         }
         
+        Logger.shared.log("PendingMessageManager", "begin sending: \(ids)")
+        
         let disposable = MetaDisposable()
         let messages = self.postbox.messagesAtIds(ids)
         |> deliverOn(self.queue)
@@ -345,6 +354,8 @@ public final class PendingMessageManager {
         disposable.set(messages.start(next: { [weak self] messages in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
+                
+                Logger.shared.log("PendingMessageManager", "begin sending, continued: \(ids)")
                 
                 for message in messages.filter({ !$0.flags.contains(.Sending) }).sorted(by: { $0.id < $1.id }) {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
