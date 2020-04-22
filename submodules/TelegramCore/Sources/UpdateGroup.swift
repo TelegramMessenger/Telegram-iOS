@@ -1,5 +1,6 @@
 import Foundation
 import TelegramApi
+import Postbox
 
 enum UpdateGroup {
     case withPts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])
@@ -9,6 +10,7 @@ enum UpdateGroup {
     case reset
     case updatePts(pts: Int32, ptsCount: Int32)
     case updateChannelPts(channelId: Int32, pts: Int32, ptsCount: Int32)
+    case ensurePeerHasLocalState(id: PeerId)
     
     var updates: [Api.Update] {
         switch self {
@@ -20,7 +22,7 @@ enum UpdateGroup {
                 return updates
             case let .withSeq(updates, _, _, _, _):
                 return updates
-            case .reset, .updatePts, .updateChannelPts:
+            case .reset, .updatePts, .updateChannelPts, .ensurePeerHasLocalState:
                 return []
         }
     }
@@ -35,7 +37,7 @@ enum UpdateGroup {
                 return users
             case let .withSeq(_, _, _, users, _):
                 return users
-            case .reset, .updatePts, .updateChannelPts:
+            case .reset, .updatePts, .updateChannelPts, .ensurePeerHasLocalState:
                 return []
         }
     }
@@ -50,7 +52,7 @@ enum UpdateGroup {
                 return chats
             case let .withSeq(_, _, _, _, chats):
                 return chats
-            case .reset, .updatePts, .updateChannelPts:
+            case .reset, .updatePts, .updateChannelPts, .ensurePeerHasLocalState:
                 return []
         }
     }

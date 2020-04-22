@@ -109,6 +109,12 @@ private func peerIdsRequiringLocalChatStateFromUpdateGroups(_ groups: [UpdateGro
     
     for group in groups {
         peerIds.formUnion(peerIdsRequiringLocalChatStateFromUpdates(group.updates))
+        switch group {
+        case let .ensurePeerHasLocalState(peerId):
+            peerIds.insert(peerId)
+        default:
+            break
+        }
     }
     
     return peerIds

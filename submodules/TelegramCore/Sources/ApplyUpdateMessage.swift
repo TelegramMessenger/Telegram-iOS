@@ -219,6 +219,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         }
         
         stateManager.addUpdates(result)
+        stateManager.addUpdateGroups([.ensurePeerHasLocalState(id: message.id.peerId)])
     }
 }
 
@@ -355,5 +356,6 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
         stateManager.addUpdates(result)
+        stateManager.addUpdateGroups([.ensurePeerHasLocalState(id: messages[0].id.peerId)])
     }
 }
