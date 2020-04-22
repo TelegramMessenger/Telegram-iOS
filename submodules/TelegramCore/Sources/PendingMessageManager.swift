@@ -160,6 +160,7 @@ public final class PendingMessageManager {
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
     init(network: Network, postbox: Postbox, accountPeerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager, localInputActivityManager: PeerInputActivityManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext) {
+        Logger.shared.log("PendingMessageManager", "create instance")
         self.network = network
         self.postbox = postbox
         self.accountPeerId = accountPeerId
@@ -176,6 +177,8 @@ public final class PendingMessageManager {
     
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
         self.queue.async {
+            Logger.shared.log("PendingMessageManager", "update: \(messageIds)")
+            
             let addedMessageIds = messageIds.subtracting(self.pendingMessageIds)
             let removedMessageIds = self.pendingMessageIds.subtracting(messageIds)
             let removedSecretMessageIds = Set(removedMessageIds.filter({ $0.peerId.namespace == Namespaces.Peer.SecretChat }))
@@ -256,7 +259,7 @@ public final class PendingMessageManager {
                 peersWithPendingMessages.insert(id.peerId)
             }
             
-            Logger.shared.log("PendingMessageManager", "pengine messages: \(self.pendingMessageIds)")
+            Logger.shared.log("PendingMessageManager", "pending messages: \(self.pendingMessageIds)")
             
             self._hasPendingMessages.set(peersWithPendingMessages)
         }
