@@ -10,20 +10,24 @@ struct PeerChatInfo {
     var notificationSettings: PeerNotificationSettings
 }
 
+struct AccountStateChannelState: Equatable {
+    var pts: Int32
+}
+
 final class AccountInitialState {
     let state: AuthorizedAccountState.State
     let peerIds: Set<PeerId>
-    let chatStates: [PeerId: PeerChatState]
+    let channelStates: [PeerId: AccountStateChannelState]
     let peerChatInfos: [PeerId: PeerChatInfo]
     let peerIdsRequiringLocalChatState: Set<PeerId>
     let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]
     let cloudReadStates: [PeerId: PeerReadState]
     let channelsToPollExplicitely: Set<PeerId>
     
-    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, peerIdsRequiringLocalChatState: Set<PeerId>, chatStates: [PeerId: PeerChatState], peerChatInfos: [PeerId: PeerChatInfo], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState], channelsToPollExplicitely: Set<PeerId>) {
+    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, peerIdsRequiringLocalChatState: Set<PeerId>, channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], cloudReadStates: [PeerId: PeerReadState], channelsToPollExplicitely: Set<PeerId>) {
         self.state = state
         self.peerIds = peerIds
-        self.chatStates = chatStates
+        self.channelStates = channelStates
         self.peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatState
         self.peerChatInfos = peerChatInfos
         self.locallyGeneratedMessageTimestamps = locallyGeneratedMessageTimestamps
@@ -72,7 +76,9 @@ enum AccountStateMutationOperation {
     case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
     case ReadGroupFeedInbox(PeerGroupId, MessageIndex)
     case UpdateState(AuthorizedAccountState.State)
-    case UpdateChannelState(PeerId, ChannelState)
+    case UpdateChannelState(PeerId, Int32)
+    case UpdateChannelInvalidationPts(PeerId, Int32)
+    case UpdateChannelSynchronizedUntilMessage(PeerId, MessageId.Id)
     case UpdateNotificationSettings(AccountStateNotificationSettingsSubject, PeerNotificationSettings)
     case UpdateGlobalNotificationSettings(AccountStateGlobalNotificationSettingsSubject, MessageNotificationSettings)
     case MergeApiChats([Api.Chat])
@@ -110,7 +116,7 @@ struct AccountMutableState {
     
     var state: AuthorizedAccountState.State
     var peers: [PeerId: Peer]
-    var chatStates: [PeerId: PeerChatState]
+    var channelStates: [PeerId: AccountStateChannelState]
     var peerChatInfos: [PeerId: PeerChatInfo]
     var referencedMessageIds: Set<MessageId>
     var storedMessages: Set<MessageId>
@@ -139,7 +145,7 @@ struct AccountMutableState {
         self.referencedMessageIds = initialReferencedMessageIds
         self.storedMessages = initialStoredMessages
         self.readInboxMaxIds = initialReadInboxMaxIds
-        self.chatStates = initialState.chatStates
+        self.channelStates = initialState.channelStates
         self.peerChatInfos = initialState.peerChatInfos
         self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
         self.branchOperationIndex = 0
@@ -147,12 +153,12 @@ struct AccountMutableState {
         self.updatedOutgoingUniqueMessageIds = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerChatInfos: [PeerId: PeerChatInfo], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
         self.peers = peers
-        self.chatStates = chatStates
+        self.channelStates = channelStates
         self.referencedMessageIds = referencedMessageIds
         self.storedMessages = storedMessages
         self.peerChatInfos = peerChatInfos
@@ -165,7 +171,7 @@ struct AccountMutableState {
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, chatStates: self.chatStates, peerChatInfos: self.peerChatInfos, referencedMessageIds: self.referencedMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedMessageIds: self.referencedMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
@@ -269,8 +275,16 @@ struct AccountMutableState {
         self.addOperation(.UpdateState(state))
     }
     
-    mutating func updateChannelState(_ peerId: PeerId, state: ChannelState) {
-        self.addOperation(.UpdateChannelState(peerId, state))
+    mutating func updateChannelState(_ peerId: PeerId, pts: Int32) {
+        self.addOperation(.UpdateChannelState(peerId, pts))
+    }
+    
+    mutating func updateChannelInvalidationPts(_ peerId: PeerId, invalidationPts: Int32) {
+        self.addOperation(.UpdateChannelInvalidationPts(peerId, invalidationPts))
+    }
+    
+    mutating func updateChannelSynchronizedUntilMessage(_ peerId: PeerId, id: MessageId.Id) {
+        self.addOperation(.UpdateChannelSynchronizedUntilMessage(peerId, id))
     }
     
     mutating func updateNotificationSettings(_ subject: AccountStateNotificationSettingsSubject, notificationSettings: PeerNotificationSettings) {
@@ -464,8 +478,12 @@ struct AccountMutableState {
                 }
             case let .UpdateState(state):
                 self.state = state
-            case let .UpdateChannelState(peerId, channelState):
-                self.chatStates[peerId] = channelState
+            case let .UpdateChannelState(peerId, pts):
+                self.channelStates[peerId] = AccountStateChannelState(pts: pts)
+            case .UpdateChannelInvalidationPts:
+                break
+            case .UpdateChannelSynchronizedUntilMessage:
+                break
             case let .UpdateNotificationSettings(subject, notificationSettings):
                 if case let .peer(peerId) = subject {
                     if var currentInfo = self.peerChatInfos[peerId] {

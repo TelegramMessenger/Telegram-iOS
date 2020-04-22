@@ -2,70 +2,134 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-private final class ManagedSynchronizePeerReadStatesState {
-    private var synchronizeDisposables: [PeerId: (PeerReadStateSynchronizationOperation, Disposable)] = [:]
-    
-    func clearDisposables() -> [Disposable] {
-        let disposables = Array(self.synchronizeDisposables.values.map({ $0.1 }))
-        self.synchronizeDisposables.removeAll()
-        return disposables
+private final class SynchronizePeerReadStatesContextImpl {
+    private final class Operation {
+        let operation: PeerReadStateSynchronizationOperation
+        let disposable: Disposable
+        
+        init(
+            operation: PeerReadStateSynchronizationOperation,
+            disposable: Disposable
+        ) {
+            self.operation = operation
+            self.disposable = disposable
+        }
+        
+        deinit {
+            self.disposable.dispose()
+        }
     }
     
-    func update(operations: [PeerId: PeerReadStateSynchronizationOperation]) -> (removed: [Disposable], added: [(PeerId, PeerReadStateSynchronizationOperation, MetaDisposable)]) {
-        var removed: [Disposable] = []
-        var added: [(PeerId, PeerReadStateSynchronizationOperation, MetaDisposable)] = []
+    private let queue: Queue
+    private let network: Network
+    private let postbox: Postbox
+    private let stateManager: AccountStateManager
+    
+    private var disposable: Disposable?
+    
+    private var currentState: [PeerId : PeerReadStateSynchronizationOperation] = [:]
+    private var activeOperations: [PeerId: Operation] = [:]
+    private var pendingOperations: [PeerId: PeerReadStateSynchronizationOperation] = [:]
+    
+    init(queue: Queue, network: Network, postbox: Postbox, stateManager: AccountStateManager) {
+        self.queue = queue
+        self.network = network
+        self.postbox = postbox
+        self.stateManager = stateManager
         
-        for (peerId, (operation, disposable)) in self.synchronizeDisposables {
-            if operations[peerId] != operation {
-                removed.append(disposable)
-                self.synchronizeDisposables.removeValue(forKey: peerId)
+        self.disposable = (postbox.synchronizePeerReadStatesView()
+        |> deliverOn(self.queue)).start(next: { [weak self] view in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.currentState = view.operations
+            strongSelf.update()
+        })
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+    
+    func dispose() {
+    }
+    
+    private func update() {
+        let peerIds = Set(self.currentState.keys).union(Set(self.pendingOperations.keys))
+        
+        for peerId in peerIds {
+            var maybeOperation: PeerReadStateSynchronizationOperation?
+            if let operation = self.currentState[peerId] {
+                maybeOperation = operation
+            } else if let operation = self.pendingOperations[peerId] {
+                maybeOperation = operation
+                self.pendingOperations.removeValue(forKey: peerId)
+            }
+            
+            if let operation = maybeOperation {
+                if let current = self.activeOperations[peerId] {
+                    if current.operation != operation {
+                        self.pendingOperations[peerId] = operation
+                    }
+                } else {
+                    let operationDisposable = MetaDisposable()
+                    let activeOperation = Operation(
+                        operation: operation,
+                        disposable: operationDisposable
+                    )
+                    self.activeOperations[peerId] = activeOperation
+                    let signal: Signal<Never, NoError>
+                    switch operation {
+                    case .Validate:
+                        signal = synchronizePeerReadState(network: self.network, postbox: self.postbox, stateManager: self.stateManager, peerId: peerId, push: false, validate: true)
+                        |> ignoreValues
+                    case let .Push(_, thenSync):
+                        signal = synchronizePeerReadState(network: self.network, postbox: self.postbox, stateManager: stateManager, peerId: peerId, push: true, validate: thenSync)
+                        |> ignoreValues
+                    }
+                    operationDisposable.set((signal
+                    |> deliverOn(self.queue)).start(completed: { [weak self, weak activeOperation] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let activeOperation = activeOperation {
+                            if let current = strongSelf.activeOperations[peerId], current === activeOperation {
+                                strongSelf.activeOperations.removeValue(forKey: peerId)
+                                strongSelf.update()
+                            }
+                        }
+                    }))
+                }
             }
         }
-        
-        for (peerId, operation) in operations {
-            if self.synchronizeDisposables[peerId] == nil {
-                let disposable = MetaDisposable()
-                self.synchronizeDisposables[peerId] = (operation, disposable)
-                added.append((peerId, operation, disposable))
-            }
+    }
+}
+
+private final class SynchronizePeerReadStatesStatesContext {
+    private let queue: Queue
+    private let impl: QueueLocalObject<SynchronizePeerReadStatesContextImpl>
+    
+    init(network: Network, postbox: Postbox, stateManager: AccountStateManager) {
+        self.queue = Queue()
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return SynchronizePeerReadStatesContextImpl(queue: queue, network: network, postbox: postbox, stateManager: stateManager)
+        })
+    }
+    
+    func dispose() {
+        self.impl.with { impl in
+            impl.dispose()
         }
-        
-        return (removed, added)
     }
 }
 
 func managedSynchronizePeerReadStates(network: Network, postbox: Postbox, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return Signal { _ in
-        let state = Atomic(value: ManagedSynchronizePeerReadStatesState())
-        
-        let disposable = postbox.synchronizePeerReadStatesView().start(next: { view in
-            let (removed, added) = state.with { state -> (removed: [Disposable], added: [(PeerId, PeerReadStateSynchronizationOperation, MetaDisposable)]) in
-                return state.update(operations: view.operations)
-            }
-            
-            for disposable in removed {
-                disposable.dispose()
-            }
-            
-            for (peerId, operation, disposable) in added {
-                let synchronizeOperation: Signal<Void, NoError>
-                switch operation {
-                    case .Validate:
-                        synchronizeOperation = synchronizePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, push: false, validate: true)
-                    case let .Push(_, thenSync):
-                        synchronizeOperation = synchronizePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, push: true, validate: thenSync)
-                }
-                disposable.set(synchronizeOperation.start())
-            }
-        })
+        let context = SynchronizePeerReadStatesStatesContext(network: network, postbox: postbox, stateManager: stateManager)
         
         return ActionDisposable {
-            disposable.dispose()
-            for disposable in state.with({ state -> [Disposable] in
-                state.clearDisposables()
-            }) {
-                disposable.dispose()
-            }
+            context.dispose()
         }
     }
 }

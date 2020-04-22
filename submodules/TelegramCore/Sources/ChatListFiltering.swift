@@ -564,7 +564,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
             var peers: [Peer] = []
             var peerPresences: [PeerId: PeerPresence] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
-            var channelStates: [PeerId: ChannelState] = [:]
+            var channelStates: [PeerId: Int32] = [:]
             
             switch result {
             case let .peerDialogs(dialogs, messages, chats, users, _):
@@ -644,9 +644,10 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                         transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                         
                         if let pts = pts {
-                            let channelState = ChannelState(pts: pts, invalidatedPts: pts, synchronizedUntilMessageId: nil)
-                            transaction.setPeerChatState(peerId, state: channelState)
-                            channelStates[peer.peerId] = channelState
+                            if transaction.getPeerChatState(peerId) == nil {
+                                transaction.setPeerChatState(peerId, state: ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil))
+                            }
+                            channelStates[peer.peerId] = pts
                         }
                     case .dialogFolder:
                         assertionFailure()
@@ -659,9 +660,9 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                     if let storeMessage = StoreMessage(apiMessage: message) {
                         var updatedStoreMessage = storeMessage
                         if case let .Id(id) = storeMessage.id {
-                            if let channelState = channelStates[id.peerId] {
+                            if let channelPts = channelStates[id.peerId] {
                                 var updatedAttributes = storeMessage.attributes
-                                updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
                                 updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
                             }
                         }

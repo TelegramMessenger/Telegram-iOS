@@ -10,6 +10,11 @@ public final class InteractivePhoneFormatter {
     public func updateText(_ text: String) -> (String?, String) {
         self.formatter.clear()
         let string = self.formatter.inputString(text)
-        return (self.formatter.regionPrefix, string ?? "")
+        
+        var regionPrefix = self.formatter.regionPrefix
+        if let string = string, string.hasPrefix("+383") {
+            regionPrefix = "+383"
+        }
+        return (regionPrefix, string ?? "")
     }
 }

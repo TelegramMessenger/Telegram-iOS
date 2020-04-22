@@ -135,7 +135,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
     |> mapToSignal { dialogs -> Signal<Void, NoError> in
         var storeMessages: [StoreMessage] = []
         var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-        var chatStates: [PeerId: PeerChatState] = [:]
+        var channelStates: [PeerId: Int32] = [:]
         var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
         
         var remoteItemIds: [PinnedItemId] = []
@@ -200,7 +200,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                     readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                     
                     if let apiChannelPts = apiChannelPts {
-                        chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
+                        channelStates[peerId] = apiChannelPts
                     }
                     
                     notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -245,15 +245,11 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
             
             transaction.resetIncomingReadStates(readStates)
             
-            for (peerId, chatState) in chatStates {
-                if let chatState = chatState as? ChannelState {
-                    if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
-                        // skip changing state
-                    } else {
-                        transaction.setPeerChatState(peerId, state: chatState)
-                    }
+            for (peerId, pts) in channelStates {
+                if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
+                    // skip changing state
                 } else {
-                    transaction.setPeerChatState(peerId, state: chatState)
+                    transaction.setPeerChatState(peerId, state: ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil))
                 }
             }
             
