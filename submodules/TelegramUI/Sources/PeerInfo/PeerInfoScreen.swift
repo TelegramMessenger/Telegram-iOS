@@ -1529,6 +1529,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, openPollCreation: { _ in
         }, displayPollSolution: { _, _ in
         }, displayDiceTooltip: { _ in
+        }, animateDiceSuccess: {  
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
