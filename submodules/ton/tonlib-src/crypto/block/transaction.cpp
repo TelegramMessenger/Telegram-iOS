@@ -1429,6 +1429,9 @@ int Transaction::try_action_send_msg(const vm::CellSlice& cs0, ActionPhase& ap, 
     if (!tlb::csr_unpack(msg.info, erec)) {
       return -1;
     }
+    if (act_rec.mode & ~3) {
+      return -1;  // invalid mode for an external message
+    }
     info.src = std::move(erec.src);
     info.dest = std::move(erec.dest);
     // created_lt and created_at are ignored

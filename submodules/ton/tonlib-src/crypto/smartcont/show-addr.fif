@@ -18,5 +18,7 @@ dup Blen { 32 B>i@ } { drop Basechain } cond constant wallet_wc
 
 file-base +".pk" dup file-exists? {
   dup file>B dup Blen 32 <> abort"Private key must be exactly 32 bytes long"
-  =: wallet_pk ."Private key available in file " type cr
+  tuck =: wallet_pk ."Private key available in file " type cr
+  priv>pub 256 B>u@ 
+  dup ."Corresponding public key is " .pubkey ." = " 64X. cr
 } { ."Private key file " type ." not found" cr } cond

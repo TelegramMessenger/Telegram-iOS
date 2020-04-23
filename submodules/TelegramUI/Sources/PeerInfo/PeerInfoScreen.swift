@@ -3342,6 +3342,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 })
                                 return .complete()
+                            case .notMutualContact:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
                             case .tooManyChannels:
                                 let _ = (context.account.postbox.loadedPeerWithId(memberId)
                                 |> deliverOnMainQueue).start(next: { peer in
@@ -3399,7 +3405,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 return context.account.postbox.multiplePeersView(memberIds)
                 |> take(1)
                 |> deliverOnMainQueue
-                    |> castError(AddChannelMemberError.self)
+                |> castError(AddChannelMemberError.self)
                 |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
                     if memberIds.count == 1 {
                         return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: groupPeer.id, memberId: memberIds[0])
@@ -3479,6 +3485,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 default:
                                     break
                             }
+                        } else if peers.count == 1, case .notMutualContact = error {
+                            self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         } else if case .tooMuchJoined = error  {
                             self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }

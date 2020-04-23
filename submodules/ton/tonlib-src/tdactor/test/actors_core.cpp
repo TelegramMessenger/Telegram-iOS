@@ -675,7 +675,8 @@ TEST(Actor2, actor_function_result) {
      public:
       A(std::shared_ptr<td::Destructor> watcher) : watcher_(std::move(watcher)) {
       }
-      void on_result(uint32 x, uint32 y) {
+      void on_result(uint32 x, td::Result<uint32> r_y) {
+        auto y = r_y.move_as_ok();
         LOG_CHECK(x * x == y) << x << " " << y;
         if (--cnt_ == 0) {
           stop();
@@ -683,7 +684,7 @@ TEST(Actor2, actor_function_result) {
       }
       void start_up() {
         b_ = create_actor<B>(ActorOptions().with_name("B"));
-        cnt_ = 3;
+        cnt_ = 5;
         send_closure(b_, &B::query, 3, [a = std::make_unique<int>(), self = actor_id(this)](td::Result<uint32> y) {
           LOG_IF(ERROR, y.is_error()) << y.error();
           send_closure(self, &A::on_result, 3, y.ok());
@@ -696,6 +697,11 @@ TEST(Actor2, actor_function_result) {
           CHECK(!self.empty());
           send_closure(self, &A::on_result, 5, y);
         });
+        auto future = future_send_closure(b_, &B::query, 7);
+        future.finish(td::promise_send_closure(actor_id(this), &A::on_result, 7));
+        //TODO: deduce Future type (i.e. Future<td::uint32>)
+        auto future2 = future_send_closure<td::uint32>(b_, &B::query_async, 7);
+        future2.finish(td::promise_send_closure(actor_id(this), &A::on_result, 7));
       }
 
      private:
@@ -714,12 +720,12 @@ TEST(Actor2, actor_function_result) {
 }
 
 TEST(Actor2, actor_ping_pong) {
-  auto group_info = std::make_shared<core::SchedulerGroupInfo>(1);
-  core::Scheduler scheduler{group_info, SchedulerId{0}, 3};
+  Scheduler scheduler{{3}, Scheduler::Paused};
   sb.clear();
   scheduler.start();
 
   auto watcher = td::create_shared_destructor([] { SchedulerContext::get()->stop(); });
+  td::actor::set_debug(true);
   for (int i = 0; i < 2000; i++) {
     scheduler.run_in_context([watcher] {
       class PingPong : public Actor {
@@ -781,9 +787,9 @@ TEST(Actor2, actor_ping_pong) {
     });
   }
   watcher.reset();
-  while (scheduler.run(1000)) {
+  while (scheduler.run(0.1)) {
+    //scheduler.get_debug().dump();
   }
-  core::Scheduler::close_scheduler_group(*group_info);
   sb.clear();
 }
 

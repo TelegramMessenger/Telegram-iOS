@@ -121,11 +121,12 @@ struct TransactionId {
 };
 
 struct AccountState {
-  enum Type { Empty, Wallet, Dns, Unknown } type{Empty};
+  enum Type { Empty, Wallet, Dns, Pchan, Unknown } type{Empty};
   td::int64 sync_utime{-1};
   td::int64 balance{-1};
   TransactionId last_transaction_id;
   std::string address;
+  tonlib_api::object_ptr<tonlib_api::fullAccountState> state;
 
   bool is_inited() const {
     return type != Empty;
@@ -187,6 +188,10 @@ AccountState get_account_state(Client& client, std::string address) {
     case tonlib_api::dns_accountState::ID:
       res.type = AccountState::Dns;
       break;
+    case tonlib_api::pchan_accountState::ID:
+      res.type = AccountState::Pchan;
+      res.state = std::move(state);
+      break;
     default:
       res.type = AccountState::Unknown;
       break;
@@ -228,15 +233,38 @@ struct QueryInfo {
   std::string body_hash;
 };
 
+struct Message {
+  bool encrypted = false;
+  td::optional<std::string> text;
+  td::optional<td::string> raw;
+  td::optional<td::string> init_state;
+  static Message create_text(std::string text, bool encrypted) {
+    Message res;
+    res.text = text;
+    res.encrypted = encrypted;
+    return res;
+  }
+  static Message create_raw(std::string raw, std::string init_state) {
+    Message res;
+    res.raw = raw;
+    res.init_state = init_state;
+    return res;
+  }
+};
+
 td::Result<QueryId> create_send_grams_query(Client& client, const Wallet& source, std::string destination,
-                                            td::int64 amount, bool encrypted, std::string message, bool force = false,
-                                            int timeout = 0, bool fake = false) {
+                                            td::int64 amount, Message message, bool force = false, int timeout = 0,
+                                            bool fake = false) {
   std::vector<tonlib_api::object_ptr<tonlib_api::msg_message>> msgs;
   tonlib_api::object_ptr<tonlib_api::msg_Data> data;
-  if (encrypted) {
-    data = tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(std::move(message));
+  if (message.text) {
+    if (message.encrypted) {
+      data = tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(message.text.unwrap());
+    } else {
+      data = tonlib_api::make_object<tonlib_api::msg_dataText>(message.text.unwrap());
+    }
   } else {
-    data = tonlib_api::make_object<tonlib_api::msg_dataText>(std::move(message));
+    data = tonlib_api::make_object<tonlib_api::msg_dataRaw>(message.raw.unwrap(), message.init_state.unwrap());
   }
   msgs.push_back(tonlib_api::make_object<tonlib_api::msg_message>(
       tonlib_api::make_object<tonlib_api::accountAddress>(destination), "", amount, std::move(data)));
@@ -244,7 +272,7 @@ td::Result<QueryId> create_send_grams_query(Client& client, const Wallet& source
   auto r_id =
       sync_send(client, tonlib_api::make_object<tonlib_api::createQuery>(
                             fake ? source.key.get_fake_input_key() : source.key.get_input_key(), source.get_address(),
-                            timeout, tonlib_api::make_object<tonlib_api::actionMsg>(std::move(msgs), force)));
+                            timeout, tonlib_api::make_object<tonlib_api::actionMsg>(std::move(msgs), force), nullptr));
   TRY_RESULT(id, std::move(r_id));
   return QueryId{id->id_};
 }
@@ -253,7 +281,7 @@ td::Result<QueryId> create_update_dns_query(Client& client, const Wallet& dns,
                                             std::vector<tonlib_api::object_ptr<tonlib_api::dns_Action>> entries) {
   using namespace ton::tonlib_api;
   auto r_id = sync_send(client, make_object<createQuery>(dns.key.get_input_key(), dns.get_address(), 60,
-                                                         make_object<actionDns>(std::move(entries))));
+                                                         make_object<actionDns>(std::move(entries)), nullptr));
   TRY_RESULT(id, std::move(r_id));
   return QueryId{id->id_};
 }
@@ -289,7 +317,7 @@ td::Result<AccountState> wait_state_change(Client& client, const AccountState& o
   while (true) {
     auto new_state = get_account_state(client, old_state.address);
     if (new_state.last_transaction_id.lt != old_state.last_transaction_id.lt) {
-      return new_state;
+      return std::move(new_state);
     }
     if (valid_until != 0 && new_state.sync_utime >= valid_until) {
       return td::Status::Error("valid_until expired");
@@ -325,18 +353,19 @@ td::Status transfer_grams(Client& client, const Wallet& wallet, std::string addr
 
   LOG(INFO) << "Transfer: create query " << (double)amount / Gramm << " from " << wallet.address << " to " << address;
   bool encrypt = true;
-  auto r_query_id = create_send_grams_query(client, wallet, address, amount, encrypt, message, fast);
+  auto r_query_id =
+      create_send_grams_query(client, wallet, address, amount, Message::create_text(message, encrypt), fast);
   if (r_query_id.is_error()) {
     LOG(INFO) << "Send query WITHOUT message encryption " << r_query_id.error();
     encrypt = false;
-    r_query_id = create_send_grams_query(client, wallet, address, amount, encrypt, message, fast);
+    r_query_id = create_send_grams_query(client, wallet, address, amount, Message::create_text(message, encrypt), fast);
   } else {
     LOG(INFO) << "Send query WITH message encryption";
   }
   if (r_query_id.is_error() && td::begins_with(r_query_id.error().message(), "DANGEROUS_TRANSACTION")) {
     ASSERT_TRUE(dst_state.type == AccountState::Empty);
     LOG(INFO) << "Transfer: recreate query due to DANGEROUS_TRANSACTION error";
-    r_query_id = create_send_grams_query(client, wallet, address, amount, false, message, true);
+    r_query_id = create_send_grams_query(client, wallet, address, amount, Message::create_text(message, encrypt), true);
   }
 
   r_query_id.ensure();
@@ -458,8 +487,9 @@ Wallet create_empty_dns(Client& client) {
 void test_estimate_fees_without_key(Client& client, const Wallet& wallet_a, const Wallet& wallet_b) {
   LOG(ERROR) << " SUBTEST: estimate fees without key";
   {
-    auto query_id =
-        create_send_grams_query(client, wallet_a, wallet_b.address, 0, false, "???", true, 0, true).move_as_ok();
+    auto query_id = create_send_grams_query(client, wallet_a, wallet_b.address, 0, Message::create_text("???", false),
+                                            true, 0, true)
+                        .move_as_ok();
     auto fees1 = query_estimate_fees(client, query_id, false);
     auto fees2 = query_estimate_fees(client, query_id, true);
     LOG(INFO) << "Fee without ignore_chksig\t" << fees1;
@@ -562,6 +592,141 @@ void dns_resolve(Client& client, const Wallet& dns, std::string name) {
   CHECK(resolved->entries_.size() == 1);
   LOG(INFO) << to_string(resolved);
   LOG(INFO) << "OK";
+}
+
+void test_paychan(Client& client, const Wallet& giver_wallet) {
+  LOG(INFO) << "Start test paychan";
+  auto alice = create_empty_wallet(client);
+  auto bob = create_empty_wallet(client);
+
+  using namespace ton::tonlib_api;
+  int init_timeout = 10;
+  int close_timeout = 10;
+  int64 channel_id = static_cast<td::int64>(td::Random::fast_uint64());
+
+  auto get_initial_state = [&] {
+    return make_object<pchan_initialAccountState>(make_object<pchan_config>(alice.key.public_key, alice.get_address(),
+                                                                            bob.key.public_key, bob.get_address(),
+                                                                            init_timeout, close_timeout, channel_id));
+  };
+  auto account_address = sync_send(client, make_object<tonlib_api::getAccountAddress>(get_initial_state(), -1))
+                             .move_as_ok()
+                             ->account_address_;
+  auto get_account_address = [&] { return make_object<accountAddress>(account_address); };
+
+  //pchan.actionInit inc_A:int64 inc_B:int64 min_A:int64 min_B:int64 = pchan.Action;
+  //pchan.actionClose extra_A:int64 extra_B:int64 promise:pchan.promise = pchan.Action;
+  //pchan.actionTimeout = pchan.Action;
+
+  auto create_init_query = [&](auto& wallet, td::int64 inc_A, td::int64 inc_B) {
+    auto action = make_object<tonlib_api::actionPchan>(make_object<tonlib_api::pchan_actionInit>(inc_A, inc_B, 0, 0));
+    auto r_id = sync_send(client, make_object<createQuery>(wallet.key.get_input_key(), get_account_address(), 60,
+                                                           std::move(action), get_initial_state()));
+    r_id.ensure();
+    return r_id.move_as_ok();
+  };
+
+  auto send_query_via = [&](auto& wallet, auto query_info, auto destination, td::int64 value) {
+    auto transfer_id =
+        create_send_grams_query(client, wallet, std::move(destination), value,
+                                Message::create_raw(query_info->body_, query_info->init_state_), true, 60)
+            .move_as_ok();
+    ::query_send(client, transfer_id);
+  };
+  send_query_via(giver_wallet, create_init_query(alice, 1 * Gramm, 0), account_address, 11 * Gramm / 10);
+  send_query_via(giver_wallet, create_init_query(bob, 0, 1 * Gramm), account_address, 11 * Gramm / 10);
+
+  LOG(INFO) << "Wait till pchan " << account_address << " is inited ";
+  td::optional<td::int64> now;
+  while (true) {
+    client.receive(1);
+    auto state = get_account_state(client, account_address);
+    if (!now) {
+      now = state.sync_utime;
+    }
+    CHECK(now.value() + 60 > state.sync_utime);
+    if (state.type != ::AccountState::Pchan) {
+      continue;
+    }
+    auto pchan_state = tonlib_api::move_object_as<tonlib_api::pchan_accountState>(state.state->account_state_);
+    if (pchan_state->state_->get_id() != tonlib_api::pchan_stateClose::ID) {
+      continue;
+    }
+    LOG(INFO) << "Account type: " << state.type << "  " << state.sync_utime << "\n" << to_string(pchan_state->state_);
+    break;
+  }
+
+  auto create_close_query = [&](auto& x_wallet, auto& y_wallet, td::int64 A, td::int64 B) {
+    auto p = sync_send(client, make_object<pchan_signPromise>(y_wallet.key.get_input_key(),
+                                                              make_object<pchan_promise>("", A, B, channel_id)))
+                 .move_as_ok();
+    auto action = make_object<tonlib_api::actionPchan>(make_object<tonlib_api::pchan_actionClose>(0, 0, std::move(p)));
+    auto r_id = sync_send(client, make_object<createQuery>(x_wallet.key.get_input_key(), get_account_address(), 60,
+                                                           std::move(action), get_initial_state()));
+    r_id.ensure();
+    return r_id.move_as_ok();
+  };
+
+  //auto send_query_ext = [&](auto query_info) { ::query_send(client, QueryId{query_info->id_}); };
+
+  send_query_via(giver_wallet, create_close_query(alice, bob, 0, 10 * Gramm), account_address, Gramm / 10);
+  send_query_via(giver_wallet, create_close_query(bob, alice, 11 * Gramm, 0), account_address, Gramm / 10);
+
+  LOG(INFO) << "Wait till pchan " << account_address << " is closed ";
+  now = {};
+  int64 payout_A = 0;
+  int64 payout_B = 0;
+  while (true) {
+    client.receive(1);
+    auto state = get_account_state(client, account_address);
+    if (!now) {
+      now = state.sync_utime;
+    }
+    CHECK(now.value() + 60 > state.sync_utime);
+    if (state.type != ::AccountState::Pchan) {
+      continue;
+    }
+    auto pchan_state = tonlib_api::move_object_as<tonlib_api::pchan_accountState>(state.state->account_state_);
+    if (pchan_state->state_->get_id() != tonlib_api::pchan_statePayout::ID) {
+      continue;
+    }
+    LOG(INFO) << "Account type: " << state.type << "  " << state.sync_utime << "\n" << to_string(pchan_state->state_);
+    auto payout = tonlib_api::move_object_as<tonlib_api::pchan_statePayout>(pchan_state->state_);
+    payout_A = payout->A_;
+    payout_B = payout->B_;
+    break;
+  }
+
+  LOG(INFO) << "Wait till Alice has its share";
+  now = {};
+  while (payout_A != 0) {
+    auto state = get_account_state(client, alice.address);
+    if (!now) {
+      now = state.sync_utime;
+    }
+    CHECK(now.value() + 60 > state.sync_utime);
+    if (state.balance > 0) {
+      ASSERT_EQ(payout_A, state.balance);
+      LOG(INFO) << "Alice got: " << state.balance;
+      break;
+    }
+    client.receive(1);
+  }
+  LOG(INFO) << "Wait till Bob has its share";
+  now = {};
+  while (payout_B != 0) {
+    auto state = get_account_state(client, bob.address);
+    if (!now) {
+      now = state.sync_utime;
+    }
+    CHECK(now.value() + 60 > state.sync_utime);
+    if (state.balance > 0) {
+      ASSERT_EQ(payout_B, state.balance);
+      LOG(INFO) << "Bob got: " << state.balance;
+      break;
+    }
+    client.receive(1);
+  }
 }
 
 void test_dns(Client& client, const Wallet& giver_wallet) {
@@ -669,6 +834,7 @@ int main(int argc, char* argv[]) {
   // give wallet with some test grams to run test
   auto giver_wallet = import_wallet_from_pkey(client, giver_key_str, giver_key_pwd);
 
+  test_paychan(client, giver_wallet);
   test_dns(client, giver_wallet);
   test_back_and_forth_transfer(client, giver_wallet, false);
   test_back_and_forth_transfer(client, giver_wallet, true);

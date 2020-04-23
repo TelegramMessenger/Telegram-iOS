@@ -78,7 +78,18 @@ Result<RocksDb> RocksDb::open(std::string path) {
     options.bytes_per_sync = 1 << 20;
     options.writable_file_max_buffer_size = 2 << 14;
     options.statistics = statistics;
-    TRY_STATUS(from_rocksdb(rocksdb::OptimisticTransactionDB::Open(options, std::move(path), &db)));
+    rocksdb::OptimisticTransactionDBOptions occ_options;
+    occ_options.validate_policy = rocksdb::OccValidationPolicy::kValidateSerial;
+    rocksdb::ColumnFamilyOptions cf_options(options);
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
+    column_families.push_back(rocksdb::ColumnFamilyDescriptor(rocksdb::kDefaultColumnFamilyName, cf_options));
+    std::vector<rocksdb::ColumnFamilyHandle *> handles;
+    TRY_STATUS(from_rocksdb(
+        rocksdb::OptimisticTransactionDB::Open(options, occ_options, std::move(path), column_families, &handles, &db)));
+    CHECK(handles.size() == 1);
+    // i can delete the handle since DBImpl is always holding a reference to
+    // default column family
+    delete handles[0];
   }
   return RocksDb(std::shared_ptr<rocksdb::OptimisticTransactionDB>(db), std::move(statistics));
 }
@@ -161,31 +172,41 @@ Result<size_t> RocksDb::count(Slice prefix) {
   return res;
 }
 
+Status RocksDb::begin_write_batch() {
+  CHECK(!transaction_);
+  write_batch_ = std::make_unique<rocksdb::WriteBatch>();
+  return Status::OK();
+}
+
 Status RocksDb::begin_transaction() {
-  //write_batch_ = std::make_unique<rocksdb::WriteBatch>();
+  CHECK(!write_batch_);
   rocksdb::WriteOptions options;
   options.sync = true;
   transaction_.reset(db_->BeginTransaction(options, {}));
   return Status::OK();
 }
 
-Status RocksDb::commit_transaction() {
-  //CHECK(write_batch_);
-  //auto write_batch = std::move(write_batch_);
-  //rocksdb::WriteOptions options;
-  //options.sync = true;
-  //TRY_STATUS(from_rocksdb(db_->Write(options, write_batch.get())));
-  //return Status::OK();
+Status RocksDb::commit_write_batch() {
+  CHECK(write_batch_);
+  auto write_batch = std::move(write_batch_);
+  rocksdb::WriteOptions options;
+  options.sync = true;
+  return from_rocksdb(db_->Write(options, write_batch.get()));
+}
 
+Status RocksDb::commit_transaction() {
   CHECK(transaction_);
-  auto res = from_rocksdb(transaction_->Commit());
-  transaction_.reset();
-  return res;
+  auto transaction = std::move(transaction_);
+  return from_rocksdb(transaction->Commit());
+}
+
+Status RocksDb::abort_write_batch() {
+  CHECK(write_batch_);
+  write_batch_.reset();
+  return Status::OK();
 }
 
 Status RocksDb::abort_transaction() {
-  //CHECK(write_batch_);
-  //write_batch_.reset();
   CHECK(transaction_);
   transaction_.reset();
   return Status::OK();

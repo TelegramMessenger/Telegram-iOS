@@ -100,6 +100,28 @@ void send_closure(ActorIdT &&actor_id, FunctionT function, ArgsT &&... args) {
 
 #endif
 
+template <class ActorIdT, class FunctionT, class... ArgsT, class FunctionClassT = member_function_class_t<FunctionT>,
+          size_t argument_count = member_function_argument_count<FunctionT>(),
+          std::enable_if_t<argument_count == sizeof...(ArgsT), bool> with_promise = false>
+auto future_send_closure(ActorIdT &&actor_id, FunctionT function, ArgsT &&... args) {
+  using R = ::td::detail::get_ret_t<std::decay_t<FunctionT>>;
+  auto pf = make_promise_future<R>();
+  send_closure(std::forward<ActorIdT>(actor_id), std::move(function), std::forward<ArgsT>(args)...,
+               std::move(pf.first));
+  return std::move(pf.second);
+}
+
+template <class R, class ActorIdT, class FunctionT, class... ArgsT,
+          class FunctionClassT = member_function_class_t<FunctionT>,
+          size_t argument_count = member_function_argument_count<FunctionT>(),
+          std::enable_if_t<argument_count != sizeof...(ArgsT), bool> with_promise = true>
+Future<R> future_send_closure(ActorIdT &&actor_id, FunctionT function, ArgsT &&... args) {
+  auto pf = make_promise_future<R>();
+  send_closure(std::forward<ActorIdT>(actor_id), std::move(function), std::forward<ArgsT>(args)...,
+               std::move(pf.first));
+  return std::move(pf.second);
+}
+
 template <typename ActorIdT, typename FunctionT, typename... ArgsT>
 bool send_closure_bool(ActorIdT &&actor_id, FunctionT function, ArgsT &&... args) {
   send_closure(std::forward<ActorIdT>(actor_id), function, std::forward<ArgsT>(args)...);

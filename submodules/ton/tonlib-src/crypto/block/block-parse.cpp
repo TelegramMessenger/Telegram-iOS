@@ -241,6 +241,14 @@ bool MsgAddressInt::extract_std_address(vm::CellSlice& cs, ton::WorkchainId& wor
   return false;
 }
 
+bool MsgAddressInt::extract_std_address(Ref<vm::CellSlice> cs_ref, block::StdAddress& addr, bool rewrite) const {
+  return extract_std_address(std::move(cs_ref), addr.workchain, addr.addr, rewrite);
+}
+
+bool MsgAddressInt::extract_std_address(vm::CellSlice& cs, block::StdAddress& addr, bool rewrite) const {
+  return extract_std_address(cs, addr.workchain, addr.addr, rewrite);
+}
+
 bool MsgAddressInt::store_std_address(vm::CellBuilder& cb, ton::WorkchainId workchain,
                                       const ton::StdSmcAddress& addr) const {
   if (workchain >= -128 && workchain < 128) {
@@ -261,6 +269,14 @@ Ref<vm::CellSlice> MsgAddressInt::pack_std_address(ton::WorkchainId workchain, c
   } else {
     return {};
   }
+}
+
+bool MsgAddressInt::store_std_address(vm::CellBuilder& cb, const block::StdAddress& addr) const {
+  return store_std_address(cb, addr.workchain, addr.addr);
+}
+
+Ref<vm::CellSlice> MsgAddressInt::pack_std_address(const block::StdAddress& addr) const {
+  return pack_std_address(addr.workchain, addr.addr);
 }
 
 const MsgAddressInt t_MsgAddressInt;

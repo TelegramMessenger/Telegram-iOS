@@ -1,0 +1,571 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/payment-channel-code.fc` 
+PROGRAM{
+  DECLPROC unpack_data
+  DECLPROC pack_data
+  DECLPROC unpack_config
+  DECLPROC unwrap_signatures
+  DECLPROC unpack_state_init
+  DECLPROC pack_state_init
+  DECLPROC unpack_state_close
+  DECLPROC pack_state_close
+  DECLPROC send_payout
+  DECLPROC do_payout
+  DECLPROC with_init
+  DECLPROC with_close
+  DECLPROC recv_any
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  unpack_data PROCREF:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    LDREF	//  _4 cs
+    LDREF	//  res res cs
+    ENDS
+  }>
+  pack_data PROCREF:<{
+    //  config state
+    SWAP
+    NEWC	//  state config _2
+    STREF	//  state _3
+    STREF	//  _4
+    ENDC	//  _5
+    c4 POP
+  }>
+  unpack_config PROC:<{
+    //  config
+    CTOS	//  cs
+    32 LDU	//  _4 cs
+    32 LDU	//  _4 _7 cs
+    256 LDU	//  _4 _7 _10 cs
+    256 LDU	//  _4 _7 _10 _13 cs
+    LDREF	//  _4 _7 _10 _13 _16 cs
+    SWAP	//  _4 _7 _10 _13 cs _16
+    CTOS	//  _4 _7 _10 _13 cs _18
+    SWAP	//  _4 _7 _10 _13 _18 cs
+    LDREF	//  _4 _7 _10 _13 _18 _19 cs
+    SWAP	//  _4 _7 _10 _13 _18 cs _19
+    CTOS	//  _4 _7 _10 _13 _18 cs _21
+    SWAP	//  _4 _7 _10 _13 _18 _21 cs
+    64 LDU	//  res res res res res res res cs
+    ENDS
+  }>
+  unwrap_signatures PROC:<{
+    //  cs a_key b_key
+    s0 s2 XCHG	//  b_key a_key cs
+    1 LDI	//  b_key a_key a? cs
+    s0 s1 PUSH2	//  b_key a_key a? cs a_sig a?
+    IF:<{	//  b_key a_key a? cs a_sig
+      DROP	//  b_key a_key a? cs
+      LDREF	//  b_key a_key a? _8 cs
+      SWAP	//  b_key a_key a? cs _8
+      CTOS	//  b_key a_key a? cs _10
+      9 PUSHPOW2	//  b_key a_key a? cs _10 _11=512
+      PLDSLICEX	//  b_key a_key a? cs a_sig
+    }>	//  b_key a_key a? cs a_sig
+    SWAP	//  b_key a_key a? a_sig cs
+    1 LDI	//  b_key a_key a? a_sig b? cs
+    s0 s1 PUSH2	//  b_key a_key a? a_sig b? cs b_sig b?
+    IF:<{	//  b_key a_key a? a_sig b? cs b_sig
+      DROP	//  b_key a_key a? a_sig b? cs
+      LDREF	//  b_key a_key a? a_sig b? _18 cs
+      SWAP	//  b_key a_key a? a_sig b? cs _18
+      CTOS	//  b_key a_key a? a_sig b? cs _20
+      9 PUSHPOW2	//  b_key a_key a? a_sig b? cs _20 _21=512
+      PLDSLICEX	//  b_key a_key a? a_sig b? cs b_sig
+    }>	//  b_key a_key a? a_sig b? cs b_sig
+    OVER	//  b_key a_key a? a_sig b? cs b_sig cs
+    HASHSU	//  b_key a_key a? a_sig b? cs b_sig hash
+    s5 PUSH	//  b_key a_key a? a_sig b? cs b_sig hash a?
+    IF:<{	//  b_key a_key a? a_sig b? cs b_sig hash
+      31 PUSHINT	//  b_key a_key a? a_sig b? cs b_sig hash _25
+      s1 s5 s7 PUXC2	//  b_key hash a? _25 b? cs b_sig hash a_sig a_key
+      CHKSIGNU	//  b_key hash a? _25 b? cs b_sig _26
+      s1 s4 XCHG	//  b_key hash a? b_sig b? cs _25 _26
+      THROWANYIFNOT
+      s2 s4 XCHG	//  b_key b_sig a? hash b? cs
+    }>ELSE<{
+      s4 POP
+      s5 POP	//  b_key b_sig a? hash b? cs
+    }>
+    OVER	//  b_key b_sig a? hash b? cs b?
+    IF:<{	//  b_key b_sig a? hash b? cs
+      32 PUSHINT	//  b_key b_sig a? hash b? cs _28
+      s3 s5 s6 XCHG3	//  _28 cs a? b? hash b_sig b_key
+      CHKSIGNU	//  _28 cs a? b? _29
+      s1 s4 XCHG	//  b? cs a? _28 _29
+      THROWANYIFNOT
+      s1 s2 XCHG	//  cs b? a?
+    }>ELSE<{
+      s5 POP
+      s3 POP
+      DROP	//  cs b? a?
+    }>
+    SWAP	//  cs a? b?
+  }>
+  unpack_state_init PROC:<{
+    //  state
+    1 LDI	//  _1 state
+    1 LDI	//  _1 _4 state
+    LDGRAMS	//  _1 _4 _7 state
+    LDGRAMS	//  _1 _4 _7 _9 state
+    32 LDU	//  _1 _4 _7 _9 _11 state
+    LDGRAMS	//  _1 _4 _7 _9 _11 _14 state
+    LDGRAMS	//  _1 _4 _7 _9 _11 _14 _31 _30
+    DROP	//  _1 _4 _7 _9 _11 _14 _16
+  }>
+  pack_state_init PROC:<{
+    //  signed_A? signed_B? min_A min_B expire_at A B
+    0 PUSHINT	//  signed_A? signed_B? min_A min_B expire_at A B _7
+    NEWC	//  signed_A? signed_B? min_A min_B expire_at A B _7 _8
+    3 STI	//  signed_A? signed_B? min_A min_B expire_at A B _10
+    s1 s7 XCHG	//  B signed_B? min_A min_B expire_at A signed_A? _10
+    1 STI	//  B signed_B? min_A min_B expire_at A _12
+    s1 s5 XCHG	//  B A min_A min_B expire_at signed_B? _12
+    1 STI	//  B A min_A min_B expire_at _14
+    s0 s3 XCHG2	//  B A expire_at min_B _14 min_A
+    STGRAMS	//  B A expire_at min_B _15
+    SWAP	//  B A expire_at _15 min_B
+    STGRAMS	//  B A expire_at _16
+    32 STU	//  B A _18
+    SWAP	//  B _18 A
+    STGRAMS	//  B _19
+    SWAP	//  _19 B
+    STGRAMS	//  _20
+    ENDC	//  _21
+  }>
+  unpack_state_close PROC:<{
+    //  state
+    1 LDI	//  _1 state
+    1 LDI	//  _1 _4 state
+    LDGRAMS	//  _1 _4 _7 state
+    LDGRAMS	//  _1 _4 _7 _9 state
+    32 LDU	//  _1 _4 _7 _9 _11 state
+    LDGRAMS	//  _1 _4 _7 _9 _11 _14 state
+    LDGRAMS	//  _1 _4 _7 _9 _11 _14 _31 _30
+    DROP	//  _1 _4 _7 _9 _11 _14 _16
+  }>
+  pack_state_close PROC:<{
+    //  signed_A? signed_B? promise_A promise_B expire_at A B
+    1 PUSHINT	//  signed_A? signed_B? promise_A promise_B expire_at A B _7
+    NEWC	//  signed_A? signed_B? promise_A promise_B expire_at A B _7 _8
+    3 STI	//  signed_A? signed_B? promise_A promise_B expire_at A B _10
+    s1 s7 XCHG	//  B signed_B? promise_A promise_B expire_at A signed_A? _10
+    1 STI	//  B signed_B? promise_A promise_B expire_at A _12
+    s1 s5 XCHG	//  B A promise_A promise_B expire_at signed_B? _12
+    1 STI	//  B A promise_A promise_B expire_at _14
+    s0 s3 XCHG2	//  B A expire_at promise_B _14 promise_A
+    STGRAMS	//  B A expire_at promise_B _15
+    SWAP	//  B A expire_at _15 promise_B
+    STGRAMS	//  B A expire_at _16
+    32 STU	//  B A _18
+    SWAP	//  B _18 A
+    STGRAMS	//  B _19
+    SWAP	//  _19 B
+    STGRAMS	//  _20
+    ENDC	//  _21
+  }>
+  send_payout PROC:<{
+    //  s_addr amount channel_id flags
+    0x37fe7810 PUSHINT	//  s_addr amount channel_id flags _4
+    0 PUSHINT	//  s_addr amount channel_id flags _4 _5=0
+    16 PUSHINT	//  s_addr amount channel_id flags _4 _5=0 _6=16
+    NEWC	//  s_addr amount channel_id flags _4 _5=0 _6=16 _7
+    6 STU	//  s_addr amount channel_id flags _4 _5=0 _9
+    s0 s6 XCHG2	//  _5=0 amount channel_id flags _4 _9 s_addr
+    STSLICER	//  _5=0 amount channel_id flags _4 _10
+    s0 s4 XCHG2	//  _5=0 _4 channel_id flags _10 amount
+    STGRAMS	//  _5=0 _4 channel_id flags _11
+    s1 s4 XCHG	//  flags _4 channel_id _5=0 _11
+    107 STU	//  flags _4 channel_id _25
+    s1 s2 XCHG	//  flags channel_id _4 _25
+    32 STU	//  flags channel_id _27
+    64 STU	//  flags _29
+    ENDC	//  flags _30
+    SWAP	//  _30 flags
+    SENDRAWMSG
+  }>
+  do_payout PROC:<{
+    //  promise_A promise_B A B a_addr b_addr channel_id
+    ACCEPT
+    s5 s6 XCHG2	//  channel_id b_addr A B a_addr promise_B promise_A
+    SUB	//  channel_id b_addr A B a_addr diff
+    s3 PUSH	//  channel_id b_addr A B a_addr diff A
+    NEGATE	//  channel_id b_addr A B a_addr diff _10
+    s1 s(-1) PUXC	//  channel_id b_addr A B a_addr diff diff _10
+    LESS	//  channel_id b_addr A B a_addr diff _11
+    IF:<{	//  channel_id b_addr A B a_addr diff
+      DROP	//  channel_id b_addr A B a_addr
+      s2 PUSH	//  channel_id b_addr A B a_addr A
+      NEGATE	//  channel_id b_addr A B a_addr diff
+    }>	//  channel_id b_addr A B a_addr diff
+    s0 s2 PUSH2	//  channel_id b_addr A B a_addr diff diff B
+    GREATER	//  channel_id b_addr A B a_addr diff _13
+    IF:<{	//  channel_id b_addr A B a_addr diff
+      DROP	//  channel_id b_addr A B a_addr
+      OVER	//  channel_id b_addr A B a_addr diff
+    }>	//  channel_id b_addr A B a_addr diff
+    s3 s3 XCPU	//  channel_id b_addr diff B a_addr A diff
+    ADD	//  channel_id b_addr diff B a_addr A
+    s2 s3 XCHG2	//  channel_id b_addr A a_addr B diff
+    SUB	//  channel_id b_addr A a_addr B
+    s1 s2 s4 XCPU2
+    3 PUSHINT	//  channel_id b_addr A B a_addr A channel_id _16=3
+    send_payout CALLDICT
+    s2 s0 s3 XCPUXC
+    3 PUSHINT	//  B A b_addr B channel_id _18=3
+    send_payout CALLDICT
+    2 PUSHINT	//  B A _20
+    NEWC	//  B A _20 _21
+    3 STI	//  B A _23
+    SWAP	//  B _23 A
+    STGRAMS	//  B _24
+    SWAP	//  _24 B
+    STGRAMS	//  _25
+    ENDC	//  _26
+  }>
+  with_init PROC:<{
+    //  state msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout channel_id
+    s0 s8 XCHG	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout state
+    unpack_state_init CALLDICT	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout signed_A? signed_B? min_A min_B expire_at A B
+    s2 PUSH	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout signed_A? signed_B? min_A min_B expire_at A B expire_at
+    0 EQINT	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout signed_A? signed_B? min_A min_B expire_at A B _18
+    IF:<{	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout signed_A? signed_B? min_A min_B expire_at A B
+      s2 POP	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout signed_A? signed_B? min_A min_B B A
+      NOW	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout signed_A? signed_B? min_A min_B B A _19
+      s0 s7 XCHG2	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr A signed_A? signed_B? min_A min_B B _19 init_timeout
+      ADD	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr A signed_A? signed_B? min_A min_B B expire_at
+      s0 s6 XCHG2	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at A
+    }>ELSE<{
+      s7 POP	//  channel_id msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at A
+    }>
+    s0 s11 XCHG	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at msg
+    32 LDU	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg
+    0x43278a28 PUSHINT	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg _25
+    s2 s(-1) PUXC	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg op _25
+    EQUAL	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg _26
+    IFJMP:<{	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg
+      s2 s6 XCHG
+      6 BLKDROP
+      s4 POP
+      s4 POP
+      s5 POP	//  channel_id b_addr A B expire_at a_addr
+      35 PUSHINT	//  channel_id b_addr A B expire_at a_addr _27
+      s0 s2 XCHG
+      NOW	//  channel_id b_addr A B _27 a_addr expire_at _28
+      LESS	//  channel_id b_addr A B _27 a_addr _29
+      s1 s2 XCHG	//  channel_id b_addr A B a_addr _27 _29
+      THROWANYIFNOT
+      0 PUSHINT	//  channel_id b_addr A B a_addr _31=0
+      s4 s4 XCPU
+      s0 s6 XCHG	//  _31=0 _32=0 A B a_addr b_addr channel_id
+      do_payout CALLDICT	//  _33
+    }>	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg
+    36 PUSHINT	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg _34
+    0x27317822 PUSHINT	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at op msg _34 _35
+    s1 s3 XCHG	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _34 msg op _35
+    EQUAL	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _34 msg _36
+    s1 s2 XCHG	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at msg _34 _36
+    THROWANYIFNOT
+    LDGRAMS	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _43 msg
+    LDGRAMS	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _43 _45 msg
+    LDGRAMS	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _43 _45 _47 msg
+    LDGRAMS	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _43 _45 _47 _49 msg
+    64 LDU	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at _43 _45 _47 _49 _104 _103
+    DROP	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B got_channel_id
+    39 PUSHINT	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B got_channel_id _54
+    SWAP
+    18 s() PUSH	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B _54 got_channel_id channel_id
+    EQUAL	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B _54 _55
+    THROWANYIFNOT
+    33 PUSHINT	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B _57
+    s4 s3 PUSH2	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B _57 inc_A inc_B
+    ADD	//  channel_id msg_value A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B _57 _58
+    s1 17 s() XCHG	//  channel_id _57 A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B msg_value _58
+    LESS	//  channel_id _57 A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A upd_min_B _59
+    s1 16 s() XCHG	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _57 _59
+    THROWANYIF
+    34 PUSHINT	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _61
+    s13 s8 PUSH2	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _61 msg_signed_A? signed_A?
+    LESS	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _61 _62
+    s13 s8 PUSH2	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _61 _62 msg_signed_B? signed_B?
+    LESS	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _61 _62 _63
+    OR	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at inc_A inc_B upd_min_A _61 _64
+    THROWANYIFNOT
+    s13 s2 XCHG2	//  channel_id upd_min_B inc_B msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at upd_min_A A inc_A
+    ADD	//  channel_id upd_min_B inc_B msg_signed_A? msg_signed_B? a_addr b_addr B signed_A? signed_B? min_A min_B expire_at upd_min_A A
+    s7 s12 XCHG2	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr upd_min_A signed_A? signed_B? min_A min_B expire_at B inc_B
+    ADD	//  channel_id upd_min_B A msg_signed_A? msg_signed_B? a_addr b_addr upd_min_A signed_A? signed_B? min_A min_B expire_at B
+    s5 s10 XCHG2	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr upd_min_A expire_at signed_B? min_A min_B signed_A? msg_signed_A?
+    OR	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr upd_min_A expire_at signed_B? min_A min_B signed_A?
+    s2 s5 PUSH2	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr upd_min_A expire_at signed_B? min_A min_B signed_A? min_A upd_min_A
+    LESS	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr upd_min_A expire_at signed_B? min_A min_B signed_A? _69
+    IF:<{	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr upd_min_A expire_at signed_B? min_A min_B signed_A?
+      s2 POP	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr min_A expire_at signed_B? signed_A? min_B
+      s1 s4 XCHG	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr signed_A? expire_at signed_B? min_A min_B
+    }>ELSE<{
+      s5 POP	//  channel_id upd_min_B A B msg_signed_B? a_addr b_addr signed_A? expire_at signed_B? min_A min_B
+    }>
+    s2 s7 XCHG2	//  channel_id upd_min_B A B min_B a_addr b_addr signed_A? expire_at min_A signed_B? msg_signed_B?
+    OR	//  channel_id upd_min_B A B min_B a_addr b_addr signed_A? expire_at min_A signed_B?
+    s6 s9 PUSH2	//  channel_id upd_min_B A B min_B a_addr b_addr signed_A? expire_at min_A signed_B? min_B upd_min_B
+    LESS	//  channel_id upd_min_B A B min_B a_addr b_addr signed_A? expire_at min_A signed_B? _71
+    IF:<{	//  channel_id upd_min_B A B min_B a_addr b_addr signed_A? expire_at min_A signed_B?
+      s6 POP	//  channel_id min_B A B signed_B? a_addr b_addr signed_A? expire_at min_A
+      s5 s8 XCHG	//  channel_id signed_B? A B min_B a_addr b_addr signed_A? expire_at min_A
+    }>ELSE<{
+      s9 POP	//  channel_id signed_B? A B min_B a_addr b_addr signed_A? expire_at min_A
+    }>
+    s2 s8 PUSH2	//  channel_id signed_B? A B min_B a_addr b_addr signed_A? expire_at min_A signed_A? signed_B?
+    AND	//  channel_id signed_B? A B min_B a_addr b_addr signed_A? expire_at min_A _72
+    IFJMP:<{	//  channel_id signed_B? A B min_B a_addr b_addr signed_A? expire_at min_A
+      s8 POP
+      2DROP	//  channel_id min_A A B min_B a_addr b_addr
+      s5 s4 XCPU	//  channel_id b_addr A B min_B a_addr min_A A
+      GREATER	//  channel_id b_addr A B min_B a_addr _73
+      s2 s3 XCPU	//  channel_id b_addr A B _73 a_addr min_B B
+      GREATER	//  channel_id b_addr A B _73 a_addr _74
+      s1 s2 XCHG	//  channel_id b_addr A B a_addr _73 _74
+      OR	//  channel_id b_addr A B a_addr _75
+      IFJMP:<{	//  channel_id b_addr A B a_addr
+        0 PUSHINT	//  channel_id b_addr A B a_addr _76=0
+        s4 s4 XCPU
+        s0 s6 XCHG	//  _76=0 _77=0 A B a_addr b_addr channel_id
+        do_payout CALLDICT	//  _78
+      }>	//  channel_id b_addr A B a_addr
+      DROP
+      2 2 BLKDROP2	//  A B
+      0 PUSHINT	//  A B _79=0
+      s0 s0 s0 PUSH3	//  A B _79=0 _80=0 _81=0 _82=0
+      DUP	//  A B _79=0 _80=0 _81=0 _82=0 _83=0
+      2 5 BLKSWAP	//  _79=0 _80=0 _81=0 _82=0 _83=0 A B
+      pack_state_close CALLDICT	//  _84
+    }>	//  channel_id signed_B? A B min_B a_addr b_addr signed_A? expire_at min_A
+    s3 POP
+    s3 POP
+    s7 POP	//  signed_A? signed_B? A B min_B expire_at min_A
+    s1 s4 s4 XCHG3
+    s0 s3 XCHG	//  signed_A? signed_B? min_A min_B expire_at A B
+    pack_state_init CALLDICT	//  _85
+  }>
+  with_close PROC:<{
+    //  cs msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout channel_id
+    s0 s9 XCHG	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout cs
+    unpack_state_close CALLDICT	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout signed_A? signed_B? promise_A promise_B expire_at A B
+    s2 PUSH	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout signed_A? signed_B? promise_A promise_B expire_at A B expire_at
+    0 EQINT	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout signed_A? signed_B? promise_A promise_B expire_at A B _19
+    IF:<{	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout signed_A? signed_B? promise_A promise_B expire_at A B
+      s2 POP	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout signed_A? signed_B? promise_A promise_B B A
+      NOW	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr expire_timeout signed_A? signed_B? promise_A promise_B B A _20
+      s0 s7 XCHG2	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr A signed_A? signed_B? promise_A promise_B B _20 expire_timeout
+      ADD	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr A signed_A? signed_B? promise_A promise_B B expire_at
+      s0 s6 XCHG2	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at A
+    }>ELSE<{
+      s7 POP	//  channel_id msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at A
+    }>
+    s0 s13 XCHG	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg
+    32 LDU	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg
+    0x43278a28 PUSHINT	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg _26
+    s2 s(-1) PUXC	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg op _26
+    EQUAL	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg _27
+    IFJMP:<{	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg
+      2DROP
+      s3 POP
+      s3 POP
+      s6 POP
+      s6 POP
+      s6 POP
+      s6 POP	//  channel_id A B promise_B expire_at promise_A a_addr b_addr
+      35 PUSHINT	//  channel_id A B promise_B expire_at promise_A a_addr b_addr _28
+      s0 s4 XCHG
+      NOW	//  channel_id A B promise_B _28 promise_A a_addr b_addr expire_at _29
+      LESS	//  channel_id A B promise_B _28 promise_A a_addr b_addr _30
+      s1 s4 XCHG	//  channel_id A B promise_B b_addr promise_A a_addr _28 _30
+      THROWANYIFNOT
+      s1 s6 XCHG
+      s3 s5 XCHG
+      s3 s4 XCHG
+      -ROT	//  promise_A promise_B A B a_addr b_addr channel_id
+      do_payout CALLDICT	//  _32
+    }>	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg
+    37 PUSHINT	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg _33
+    0xf28ae183 PUSHINT	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at op msg _33 _34
+    s1 s3 XCHG	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at _33 msg op _34
+    EQUAL	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at _33 msg _35
+    s1 s2 XCHG	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _33 _35
+    THROWANYIFNOT
+    34 PUSHINT	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _37
+    s13 s6 PUSH2	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _37 msg_signed_A? signed_A?
+    LESS	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _37 _38
+    s13 s6 PUSH2	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _37 _38 msg_signed_B? signed_B?
+    LESS	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _37 _38 _39
+    OR	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_A? signed_B? promise_A promise_B expire_at msg _37 _40
+    THROWANYIFNOT
+    s5 s12 XCPU	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B msg signed_B? promise_A promise_B expire_at signed_A? msg_signed_A?
+    OR	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B msg signed_B? promise_A promise_B expire_at signed_A?
+    s4 s11 XCPU	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B msg signed_A? promise_A promise_B expire_at signed_B? msg_signed_B?
+    OR	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B msg signed_A? promise_A promise_B expire_at signed_B?
+    s0 s5 XCHG	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at msg
+    LDGRAMS	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at _46 msg
+    LDGRAMS	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg
+    1 LDI	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B has_sig msg
+    SWAP	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg has_sig
+    IF:<{	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg
+      LDREF	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B _55 msg
+      SWAP	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg _55
+      CTOS	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg _57
+      9 PUSHPOW2	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg _57 _58=512
+      PLDSLICEX	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg sig
+      OVER	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg sig msg
+      HASHSU	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg sig hash
+      s0 16 s() XCHG	//  channel_id A hash msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg sig msg_signed_A?
+      IFNOT:<{	//  channel_id A hash msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg sig
+        s3 POP	//  channel_id A hash msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at sig extra_B msg
+        31 PUSHINT	//  channel_id A hash msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at sig extra_B msg _62
+        s15 s3 s13 PU2XC	//  channel_id A hash msg_signed_B? _62 b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at sig extra_B msg hash sig a_key
+        CHKSIGNU	//  channel_id A hash msg_signed_B? _62 b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at sig extra_B msg _63
+        s1 s13 XCHG	//  channel_id A hash msg_signed_B? msg b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at sig extra_B _62 _63
+        THROWANYIFNOT
+        s1 s11 XCHG
+        0 PUSHINT
+        s0 s2 XCHG	//  channel_id A hash msg_signed_B? sig b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A=0 extra_B msg
+      }>ELSE<{
+        s13 POP	//  channel_id A hash msg_signed_B? sig b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg
+      }>
+      s0 s13 XCHG	//  channel_id A hash msg sig b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg_signed_B?
+      IFNOT:<{	//  channel_id A hash msg sig b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B
+        DROP	//  channel_id A hash msg sig b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A
+        32 PUSHINT	//  channel_id A hash msg sig b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A _66
+        s13 s11 s10 XCHG3	//  channel_id A expire_at msg extra_A _66 a_addr b_addr B signed_B? signed_A? promise_A promise_B hash sig b_key
+        CHKSIGNU	//  channel_id A expire_at msg extra_A _66 a_addr b_addr B signed_B? signed_A? promise_A promise_B _67
+        s1 s8 XCHG	//  channel_id A expire_at msg extra_A promise_B a_addr b_addr B signed_B? signed_A? promise_A _66 _67
+        THROWANYIFNOT
+        0 PUSHINT	//  channel_id A expire_at msg extra_A promise_B a_addr b_addr B signed_B? signed_A? promise_A extra_B=0
+        s0 s7 XCHG	//  channel_id A expire_at msg extra_A extra_B=0 a_addr b_addr B signed_B? signed_A? promise_A promise_B
+      }>ELSE<{
+        s2 s13 XCHG
+        s10 POP
+        s10 POP
+        DROP	//  channel_id A expire_at msg extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A promise_B
+      }>
+    }>ELSE<{	//  channel_id A msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr B signed_B? signed_A? promise_A promise_B expire_at extra_A extra_B msg
+      s11 POP
+      2DROP
+      s9 POP	//  channel_id A msg_signed_A? msg_signed_B? expire_at msg a_addr b_addr B signed_B? signed_A? promise_A promise_B
+      38 PUSHINT	//  channel_id A msg_signed_A? msg_signed_B? expire_at msg a_addr b_addr B signed_B? signed_A? promise_A promise_B _70
+      s11 s10 XCHG2	//  channel_id A promise_B _70 expire_at msg a_addr b_addr B signed_B? signed_A? promise_A msg_signed_A? msg_signed_B?
+      AND	//  channel_id A promise_B _70 expire_at msg a_addr b_addr B signed_B? signed_A? promise_A _71
+      s1 s9 XCHG	//  channel_id A promise_B promise_A expire_at msg a_addr b_addr B signed_B? signed_A? _70 _71
+      THROWANYIFNOT
+      0 PUSHINT	//  channel_id A promise_B promise_A expire_at msg a_addr b_addr B signed_B? signed_A? extra_A=0
+      DUP	//  channel_id A promise_B promise_A expire_at msg a_addr b_addr B signed_B? signed_A? extra_A=0 extra_B=0
+      s8 s10 XCHG
+      s0 s7 XCHG
+      s9 s9 XCHG2
+      s0 s8 XCHG	//  channel_id A expire_at msg extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A promise_B
+    }>
+    s0 s9 XCHG	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A msg
+    64 LDU	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A _78 msg
+    LDGRAMS	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A _78 _81 msg
+    LDGRAMS	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A _78 _81 _118 _117
+    DROP	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A got_channel_id update_promise_A update_promise_B
+    39 PUSHINT	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A got_channel_id update_promise_A update_promise_B _85
+    s3 s15 XCPU	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A _85 update_promise_A update_promise_B got_channel_id channel_id
+    EQUAL	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A _85 update_promise_A update_promise_B _86
+    s1 s3 XCHG	//  channel_id A expire_at promise_B extra_A extra_B a_addr b_addr B signed_B? signed_A? promise_A update_promise_B update_promise_A _85 _86
+    THROWANYIFNOT
+    ACCEPT
+    s0 s9 XCHG2	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A update_promise_A extra_A
+    ADD	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A update_promise_A
+    2DUP	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A update_promise_A promise_A update_promise_A
+    LESS	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A update_promise_A _90
+    IF:<{	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A update_promise_A
+      NIP	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A
+    }>ELSE<{
+      DROP	//  channel_id A expire_at promise_B update_promise_B extra_B a_addr b_addr B signed_B? signed_A? promise_A
+    }>
+    s7 s6 XCHG2	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? update_promise_B extra_B
+    ADD	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? update_promise_B
+    s7 s0 PUSH2	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? update_promise_B promise_B update_promise_B
+    LESS	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? update_promise_B _92
+    IF:<{	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? update_promise_B
+      s7 POP	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B?
+    }>ELSE<{
+      DROP	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B?
+    }>
+    s5 s0 PUSH2	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? signed_A? signed_B?
+    AND	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B? _93
+    IFJMP:<{	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B?
+      DROP
+      s4 POP
+      s5 POP	//  channel_id A b_addr promise_B B promise_A a_addr
+      s1 s6 XCHG
+      s3 s5 XCHG
+      s3 s4 XCHG
+      s0 s3 s3 XCHG3	//  promise_A promise_B A B a_addr b_addr channel_id
+      do_payout CALLDICT	//  _94
+    }>	//  channel_id A expire_at promise_B signed_A? promise_A a_addr b_addr B signed_B?
+    2 2 BLKDROP2
+    s7 POP	//  signed_B? A expire_at promise_B signed_A? promise_A B
+    s2 s6 XCHG
+    s5 s4 s0 XCHG3
+    s1 s2 XCHG	//  signed_A? signed_B? promise_A promise_B expire_at A B
+    pack_state_close CALLDICT	//  _95
+  }>
+  recv_any PROC:<{
+    //  msg_value msg
+    unpack_data INLINECALLDICT	//  msg_value msg config state
+    OVER	//  msg_value msg config state config
+    unpack_config CALLDICT	//  msg_value msg config state init_timeout close_timeout a_key b_key a_addr b_addr channel_id
+    s9 s4 s3 XCPU2	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg a_key b_key
+    unwrap_signatures CALLDICT	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B?
+    s9 PUSH	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state
+    CTOS	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? cs
+    3 LDU	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state_type cs
+    0 PUSHINT	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state_type cs _23
+    s2 s(-1) PUXC	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state_type cs state_type _23
+    EQUAL	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state_type cs _24
+    IF:<{	//  msg_value channel_id config state init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state_type cs
+      s11 POP	//  msg_value channel_id config cs init_timeout close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? state_type
+      s10 s13 s(-1) PUXC2
+      s4 s3 s(-2) PU2XC
+      s8 s7 s0 PUSH3
+      s0 s15 XCHG
+      18 s() PUSH	//  state_type channel_id config cs msg_signed_B? close_timeout a_key b_key a_addr b_addr msg msg_signed_A? cs msg_value msg msg_signed_A? msg_signed_B? a_addr b_addr init_timeout channel_id
+      with_init CALLDICT	//  state_type channel_id config cs msg_signed_B? close_timeout a_key b_key a_addr b_addr msg msg_signed_A? state
+      s0 s9 XCHG
+      s0 s8 XCHG	//  state_type channel_id config state cs close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B?
+    }>ELSE<{
+      s10 POP
+      s13 POP	//  state_type channel_id config state cs close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B?
+    }>
+    1 PUSHINT	//  state_type channel_id config state cs close_timeout a_key b_key a_addr b_addr msg msg_signed_A? msg_signed_B? _26
+    s1 s13 XCHG	//  msg_signed_B? channel_id config state cs close_timeout a_key b_key a_addr b_addr msg msg_signed_A? state_type _26
+    EQUAL	//  msg_signed_B? channel_id config state cs close_timeout a_key b_key a_addr b_addr msg msg_signed_A? _27
+    IF:<{	//  msg_signed_B? channel_id config state cs close_timeout a_key b_key a_addr b_addr msg msg_signed_A?
+      s8 POP	//  msg_signed_B? channel_id config msg_signed_A? cs close_timeout a_key b_key a_addr b_addr msg
+      s6 s9 XCHG
+      s0 s8 XCHG
+      s6 s10 XCHG
+      s4 s5 XCHG
+      s3 s4 XCHG
+      s1 s3 s10 XCHG3	//  config cs msg msg_signed_A? msg_signed_B? a_key b_key a_addr b_addr close_timeout channel_id
+      with_close CALLDICT	//  config state
+    }>ELSE<{
+      8 BLKDROP
+      2 2 BLKDROP2	//  config state
+    }>
+    pack_data INLINECALLDICT
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_cell in_msg
+    NIP	//  msg_value in_msg
+    recv_any CALLDICT
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    0 PUSHINT	//  in_msg _1=0
+    SWAP	//  _1=0 in_msg
+    recv_any CALLDICT
+  }>
+}END>c

@@ -31,7 +31,7 @@
 namespace block {
 using namespace std::literals::string_literals;
 
-td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blkid, ton::Bits256* store_shard_hash_to,
+td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blkid, ton::Bits256* store_state_hash_to,
                                     bool check_state_hash, td::uint32* save_utime, ton::LogicalTime* save_lt) {
   ton::RootHash vhash{root->get_hash().bits()};
   if (vhash != blkid.root_hash) {
@@ -53,7 +53,7 @@ td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blki
   if (save_lt) {
     *save_lt = info.end_lt;
   }
-  if (store_shard_hash_to) {
+  if (store_state_hash_to) {
     vm::CellSlice upd_cs{vm::NoVmSpec(), blk.state_update};
     if (!(upd_cs.is_special() && upd_cs.prefetch_long(8) == 4  // merkle update
           && upd_cs.size_ext() == 0x20228)) {
@@ -61,11 +61,11 @@ td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blki
     }
     auto upd_hash = upd_cs.prefetch_ref(1)->get_hash(0);
     if (!check_state_hash) {
-      *store_shard_hash_to = upd_hash.bits();
-    } else if (store_shard_hash_to->compare(upd_hash.bits())) {
+      *store_state_hash_to = upd_hash.bits();
+    } else if (store_state_hash_to->compare(upd_hash.bits())) {
       return td::Status::Error(PSTRING() << "state hash mismatch in block header of " << blkid.to_str()
                                          << " : header declares " << upd_hash.bits().to_hex(256) << " expected "
-                                         << store_shard_hash_to->to_hex());
+                                         << store_state_hash_to->to_hex());
     }
   }
   return td::Status::OK();

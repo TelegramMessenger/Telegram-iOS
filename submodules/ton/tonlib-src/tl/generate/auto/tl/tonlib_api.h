@@ -128,6 +128,14 @@ class options_configInfo;
 
 class options_info;
 
+class pchan_Action;
+
+class pchan_config;
+
+class pchan_promise;
+
+class pchan_State;
+
 class query_fees;
 
 class query_info;
@@ -139,6 +147,12 @@ class raw_message;
 class raw_transaction;
 
 class raw_transactions;
+
+class rwallet_actionInit;
+
+class rwallet_config;
+
+class rwallet_limit;
 
 class smc_info;
 
@@ -338,6 +352,43 @@ class dns_accountState final : public AccountState {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class rwallet_accountState final : public AccountState {
+ public:
+  std::int64_t wallet_id_;
+  std::int32_t seqno_;
+  std::int64_t unlocked_balance_;
+  object_ptr<rwallet_config> config_;
+
+  rwallet_accountState();
+
+  rwallet_accountState(std::int64_t wallet_id_, std::int32_t seqno_, std::int64_t unlocked_balance_, object_ptr<rwallet_config> &&config_);
+
+  static const std::int32_t ID = -739540008;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_accountState final : public AccountState {
+ public:
+  object_ptr<pchan_config> config_;
+  object_ptr<pchan_State> state_;
+  std::string description_;
+
+  pchan_accountState();
+
+  pchan_accountState(object_ptr<pchan_config> &&config_, object_ptr<pchan_State> &&state_, std::string const &description_);
+
+  static const std::int32_t ID = 1612869496;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class uninited_accountState final : public AccountState {
  public:
   std::string frozen_hash_;
@@ -397,6 +448,38 @@ class actionDns final : public Action {
   explicit actionDns(std::vector<object_ptr<dns_Action>> &&actions_);
 
   static const std::int32_t ID = 1193750561;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class actionPchan final : public Action {
+ public:
+  object_ptr<pchan_Action> action_;
+
+  actionPchan();
+
+  explicit actionPchan(object_ptr<pchan_Action> &&action_);
+
+  static const std::int32_t ID = -1490172447;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class actionRwallet final : public Action {
+ public:
+  object_ptr<rwallet_actionInit> action_;
+
+  actionRwallet();
+
+  explicit actionRwallet(object_ptr<rwallet_actionInit> &&action_);
+
+  static const std::int32_t ID = -117295163;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -708,6 +791,24 @@ class wallet_highload_v2_initialAccountState final : public InitialAccountState 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class rwallet_initialAccountState final : public InitialAccountState {
+ public:
+  std::string init_public_key_;
+  std::string public_key_;
+  std::int64_t wallet_id_;
+
+  rwallet_initialAccountState();
+
+  rwallet_initialAccountState(std::string const &init_public_key_, std::string const &public_key_, std::int64_t wallet_id_);
+
+  static const std::int32_t ID = 1169755156;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class dns_initialAccountState final : public InitialAccountState {
  public:
   std::string public_key_;
@@ -718,6 +819,22 @@ class dns_initialAccountState final : public InitialAccountState {
   dns_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_);
 
   static const std::int32_t ID = 1842062527;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_initialAccountState final : public InitialAccountState {
+ public:
+  object_ptr<pchan_config> config_;
+
+  pchan_initialAccountState();
+
+  explicit pchan_initialAccountState(object_ptr<pchan_config> &&config_);
+
+  static const std::int32_t ID = -1304552124;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1237,12 +1354,13 @@ class msg_Data: public Object {
 class msg_dataRaw final : public msg_Data {
  public:
   std::string body_;
+  std::string init_state_;
 
   msg_dataRaw();
 
-  explicit msg_dataRaw(std::string const &body_);
+  msg_dataRaw(std::string const &body_, std::string const &init_state_);
 
-  static const std::int32_t ID = 38878511;
+  static const std::int32_t ID = -1928962698;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1415,6 +1533,166 @@ class options_info final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class pchan_Action: public Object {
+ public:
+};
+
+class pchan_actionInit final : public pchan_Action {
+ public:
+  std::int64_t inc_A_;
+  std::int64_t inc_B_;
+  std::int64_t min_A_;
+  std::int64_t min_B_;
+
+  pchan_actionInit();
+
+  pchan_actionInit(std::int64_t inc_A_, std::int64_t inc_B_, std::int64_t min_A_, std::int64_t min_B_);
+
+  static const std::int32_t ID = 439088778;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_actionClose final : public pchan_Action {
+ public:
+  std::int64_t extra_A_;
+  std::int64_t extra_B_;
+  object_ptr<pchan_promise> promise_;
+
+  pchan_actionClose();
+
+  pchan_actionClose(std::int64_t extra_A_, std::int64_t extra_B_, object_ptr<pchan_promise> &&promise_);
+
+  static const std::int32_t ID = 1671187222;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_actionTimeout final : public pchan_Action {
+ public:
+
+  pchan_actionTimeout();
+
+  static const std::int32_t ID = 1998487795;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_config final : public Object {
+ public:
+  std::string alice_public_key_;
+  object_ptr<accountAddress> alice_address_;
+  std::string bob_public_key_;
+  object_ptr<accountAddress> bob_address_;
+  std::int32_t init_timeout_;
+  std::int32_t close_timeout_;
+  std::int64_t channel_id_;
+
+  pchan_config();
+
+  pchan_config(std::string const &alice_public_key_, object_ptr<accountAddress> &&alice_address_, std::string const &bob_public_key_, object_ptr<accountAddress> &&bob_address_, std::int32_t init_timeout_, std::int32_t close_timeout_, std::int64_t channel_id_);
+
+  static const std::int32_t ID = -2071530442;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_promise final : public Object {
+ public:
+  std::string signature_;
+  std::int64_t promise_A_;
+  std::int64_t promise_B_;
+  std::int64_t channel_id_;
+
+  pchan_promise();
+
+  pchan_promise(std::string const &signature_, std::int64_t promise_A_, std::int64_t promise_B_, std::int64_t channel_id_);
+
+  static const std::int32_t ID = -1576102819;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_State: public Object {
+ public:
+};
+
+class pchan_stateInit final : public pchan_State {
+ public:
+  bool signed_A_;
+  bool signed_B_;
+  std::int64_t min_A_;
+  std::int64_t min_B_;
+  std::int64_t expire_at_;
+  std::int64_t A_;
+  std::int64_t B_;
+
+  pchan_stateInit();
+
+  pchan_stateInit(bool signed_A_, bool signed_B_, std::int64_t min_A_, std::int64_t min_B_, std::int64_t expire_at_, std::int64_t A_, std::int64_t B_);
+
+  static const std::int32_t ID = -1188426504;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_stateClose final : public pchan_State {
+ public:
+  bool signed_A_;
+  bool signed_B_;
+  std::int64_t min_A_;
+  std::int64_t min_B_;
+  std::int64_t expire_at_;
+  std::int64_t A_;
+  std::int64_t B_;
+
+  pchan_stateClose();
+
+  pchan_stateClose(bool signed_A_, bool signed_B_, std::int64_t min_A_, std::int64_t min_B_, std::int64_t expire_at_, std::int64_t A_, std::int64_t B_);
+
+  static const std::int32_t ID = 887226867;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_statePayout final : public pchan_State {
+ public:
+  std::int64_t A_;
+  std::int64_t B_;
+
+  pchan_statePayout();
+
+  pchan_statePayout(std::int64_t A_, std::int64_t B_);
+
+  static const std::int32_t ID = 664671303;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class query_fees final : public Object {
  public:
   object_ptr<fees> source_fees_;
@@ -1437,12 +1715,14 @@ class query_info final : public Object {
   std::int64_t id_;
   std::int64_t valid_until_;
   std::string body_hash_;
+  std::string body_;
+  std::string init_state_;
 
   query_info();
 
-  query_info(std::int64_t id_, std::int64_t valid_until_, std::string const &body_hash_);
+  query_info(std::int64_t id_, std::int64_t valid_until_, std::string const &body_hash_, std::string const &body_, std::string const &init_state_);
 
-  static const std::int32_t ID = 1588635915;
+  static const std::int32_t ID = 1451875440;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1528,6 +1808,56 @@ class raw_transactions final : public Object {
   raw_transactions(std::vector<object_ptr<raw_transaction>> &&transactions_, object_ptr<internal_transactionId> &&previous_transaction_id_);
 
   static const std::int32_t ID = -2063931155;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class rwallet_actionInit final : public Object {
+ public:
+  object_ptr<rwallet_config> config_;
+
+  rwallet_actionInit();
+
+  explicit rwallet_actionInit(object_ptr<rwallet_config> &&config_);
+
+  static const std::int32_t ID = 624147819;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class rwallet_config final : public Object {
+ public:
+  std::int64_t start_at_;
+  std::vector<object_ptr<rwallet_limit>> limits_;
+
+  rwallet_config();
+
+  rwallet_config(std::int64_t start_at_, std::vector<object_ptr<rwallet_limit>> &&limits_);
+
+  static const std::int32_t ID = -85490534;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class rwallet_limit final : public Object {
+ public:
+  std::int32_t seconds_;
+  std::int64_t value_;
+
+  rwallet_limit();
+
+  rwallet_limit(std::int32_t seconds_, std::int64_t value_);
+
+  static const std::int32_t ID = 1222571646;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1881,12 +2211,13 @@ class createQuery final : public Function {
   object_ptr<accountAddress> address_;
   std::int32_t timeout_;
   object_ptr<Action> action_;
+  object_ptr<InitialAccountState> initial_account_state_;
 
   createQuery();
 
-  createQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&address_, std::int32_t timeout_, object_ptr<Action> &&action_);
+  createQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&address_, std::int32_t timeout_, object_ptr<Action> &&action_, object_ptr<InitialAccountState> &&initial_account_state_);
 
-  static const std::int32_t ID = -1316835098;
+  static const std::int32_t ID = -242540347;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -2456,6 +2787,80 @@ class packAccountAddress final : public Function {
   }
 
   using ReturnType = object_ptr<accountAddress>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_packPromise final : public Function {
+ public:
+  object_ptr<pchan_promise> promise_;
+
+  pchan_packPromise();
+
+  explicit pchan_packPromise(object_ptr<pchan_promise> &&promise_);
+
+  static const std::int32_t ID = -851703103;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<data>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_signPromise final : public Function {
+ public:
+  object_ptr<InputKey> input_key_;
+  object_ptr<pchan_promise> promise_;
+
+  pchan_signPromise();
+
+  pchan_signPromise(object_ptr<InputKey> &&input_key_, object_ptr<pchan_promise> &&promise_);
+
+  static const std::int32_t ID = 1814322974;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<pchan_promise>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_unpackPromise final : public Function {
+ public:
+  td::SecureString data_;
+
+  pchan_unpackPromise();
+
+  explicit pchan_unpackPromise(td::SecureString &&data_);
+
+  static const std::int32_t ID = -1250106157;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<pchan_promise>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class pchan_validatePromise final : public Function {
+ public:
+  std::string public_key_;
+  object_ptr<pchan_promise> promise_;
+
+  pchan_validatePromise();
+
+  pchan_validatePromise(std::string const &public_key_, object_ptr<pchan_promise> &&promise_);
+
+  static const std::int32_t ID = 258262242;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };

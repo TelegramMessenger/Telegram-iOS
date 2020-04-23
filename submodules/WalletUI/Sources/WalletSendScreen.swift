@@ -501,7 +501,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             })
         }
         
-        let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: context.tonInstance)
+        let _ = (walletAddress(walletInfo: walletInfo, tonInstance: context.tonInstance)
         |> deliverOnMainQueue).start(next: { walletAddress in
             let presentationData = context.presentationData
             let state = stateValue.with { $0 }
@@ -572,7 +572,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         var emptyItem: ItemListControllerEmptyStateItem?
         if let walletState = walletState {
             let textLength: Int = state.comment.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && textLength <= walletTextLimit
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.effectiveAvailableBalance && textLength <= walletTextLimit
 
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
                 arguments.proceed()
@@ -583,7 +583,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         }
 
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Send_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.balance, state: state, sendEnabled: sendEnabled), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: emptyItem, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.effectiveAvailableBalance, state: state, sendEnabled: sendEnabled), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: emptyItem, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

@@ -44,12 +44,15 @@
 #include "tonlib/ExtClientLazy.h"
 
 #include "smc-envelope/ManualDns.h"
+#include "smc-envelope/PaymentChannel.h"
 
 #include "auto/tl/tonlib_api.hpp"
 
 #include <cinttypes>
 #include <iostream>
 #include <map>
+
+using tonlib_api::make_object;
 
 // GR$<amount>
 struct Grams {
@@ -139,6 +142,17 @@ class TonlibCli : public td::actor::Actor {
   };
   std::vector<KeyInfo> keys_;
 
+  struct Address {
+    tonlib_api::object_ptr<tonlib_api::accountAddress> address;
+    std::string public_key;
+    td::SecureString secret;
+    auto input_key(td::Slice password = "") const {
+      return !secret.empty() ? make_object<tonlib_api::inputKeyRegular>(
+                                   make_object<tonlib_api::key>(public_key, secret.copy()), td::SecureString(password))
+                             : nullptr;
+    }
+  };
+
   std::map<std::uint64_t, td::Promise<tonlib_api::object_ptr<tonlib_api::Object>>> query_handlers_;
 
   td::actor::ActorOwn<ton::adnl::AdnlExtClient> raw_client_;
@@ -207,7 +221,6 @@ class TonlibCli : public td::actor::Actor {
                                                   td::make_unique<Callback>(td::actor::actor_shared()));
     }
 
-    using tonlib_api::make_object;
     auto config = !options_.config.empty()
                       ? make_object<tonlib_api::config>(options_.config, options_.name,
                                                         options_.use_callbacks_for_network, options_.ignore_cache)
@@ -230,6 +243,7 @@ class TonlibCli : public td::actor::Actor {
                        wallet_id_ = static_cast<td::uint32>(r_ok.ok()->config_info_->default_wallet_id_);
                      }
                    }
+                   load_channnels();
                    td::TerminalIO::out() << "Tonlib is inited\n";
                    if (options_.one_shot) {
                      td::actor::send_closure(actor_id(this), &TonlibCli::parse_line, td::BufferSlice(options_.cmd));
@@ -260,6 +274,41 @@ class TonlibCli : public td::actor::Actor {
       LOG(ERROR) << "FAILED (not enough data)";
       std::_Exit(2);
     }
+  }
+  void dns_help() {
+    td::TerminalIO::out() << "dns help\n";
+    td::TerminalIO::out() << "dns resolve (<addr> | root) <name> <category>\n";
+    td::TerminalIO::out() << "dns cmd <key_id> <dns_cmd>\n";
+    //td::TerminalIO::out() << "dns cmdlist <key_id> {<dns_cmd>\\n} end\n";
+    td::TerminalIO::out() << "dns cmdfile <key_id> <file>\n";
+    td::TerminalIO::out() << "\t<dns_cmd> = set <name> <category> <data> | delete.name <name> | delete.all\n";
+    td::TerminalIO::out() << "\t<data> = DELETED | EMPTY | TEXT:<text> | NEXT:<smc-address> | SMC:<smc-address> | "
+                             "ADNL:<adnl-address>\n";
+  }
+
+  void pchan_help() {
+    td::TerminalIO::out() << "pchan help\n";
+    td::TerminalIO::out() << "pchan create <alice_public_key> <alice_address> <bob_public_key> <bob_address> "
+                             "<init_timeout> <close_timeout> [<channel_id>]\n";
+    td::TerminalIO::out() << "pchan list\n";
+    td::TerminalIO::out() << "pchan delete <pchan_id>\n";
+
+    td::TerminalIO::out() << "pchan getstate <pchan_id>\n";
+    td::TerminalIO::out() << "pchan promise make <pchan_id> <key_id> (A|B) <promise_A> <promise_B>\n";
+    td::TerminalIO::out() << "pchan promise check <pchan id> (A|B) <promise_A> <promise_B> <signature>\n";
+    td::TerminalIO::out() << "pchan promise pack <channel_id> <promise_A> <promise_B> <signature>\n";
+    td::TerminalIO::out() << "pchan promise unpack <packed_promise>\n";
+    td::TerminalIO::out() << "pchan cmd <pchan_id> <pchan_cmd>\n";
+    td::TerminalIO::out() << "\tfor simplicity we assume that alice_key is same as wallet key alice uses\n";
+    td::TerminalIO::out() << "\t<pchan_cmd> = init <key_id> <A> <B> <min_A> <min_B>\n";
+    td::TerminalIO::out() << "\t            | close <key_id> promise [<extra_A>]\n";
+    td::TerminalIO::out() << "\t            | timeout <key_id>\n";
+  }
+
+  void rwallet_help() {
+    td::TerminalIO::out() << "rwallet help\n";
+    td::TerminalIO::out() << "rwallet address <key_id> <public_key>\n";
+    td::TerminalIO::out() << "rwallet init <key_id> <public_key> <start_at> [<seconds>:<value> ...]\n";
   }
 
   void parse_line(td::BufferSlice line) {
@@ -313,13 +362,10 @@ class TonlibCli : public td::actor::Actor {
       td::TerminalIO::out() << "getstate <key_id>\tget state of wallet with requested key\n";
       td::TerminalIO::out() << "guessrevision <key_id>\tsearch of existing accounts corresponding to the given key\n";
       td::TerminalIO::out() << "getaddress <key_id>\tget address of wallet with requested key\n";
-      td::TerminalIO::out() << "dns resolve (<addr> | root) <name> <category>\n";
-      td::TerminalIO::out() << "dns cmd <key_id> <dns_cmd>\n";
-      //td::TerminalIO::out() << "dns cmdlist <key_id> {<dns_cmd>\\n} end\n";
-      td::TerminalIO::out() << "dns cmdfile <key_id> <file>\n";
-      td::TerminalIO::out() << "\t<dns_cmd> = set <name> <category> <data> | delete.name <name> | delete.all\n";
-      td::TerminalIO::out() << "\t<data> = DELETED | EMPTY | TEXT:<text> | NEXT:<smc-address> | SMC:<smc-address> | "
-                               "ADNL:<adnl-address>\n";
+
+      dns_help();
+      pchan_help();
+      rwallet_help();
 
       td::TerminalIO::out()
           << "blockmode auto|manual\tWith auto mode, all queries will be executed with respect to the latest block. "
@@ -419,6 +465,10 @@ class TonlibCli : public td::actor::Actor {
       import_key_raw(parser.read_word(), std::move(cmd_promise));
     } else if (cmd == "dns") {
       run_dns_cmd(parser, std::move(cmd_promise));
+    } else if (cmd == "pchan") {
+      run_pchan_cmd(parser, std::move(cmd_promise));
+    } else if (cmd == "rwallet") {
+      run_rwallet_cmd(parser, std::move(cmd_promise));
     } else if (cmd == "gethistory") {
       get_history(parser.read_word(), std::move(cmd_promise));
     } else if (cmd == "guessrevision") {
@@ -431,15 +481,434 @@ class TonlibCli : public td::actor::Actor {
     }
   }
 
+  void rwallet_address(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE(promise, address, to_account_address(parser.read_word(), false));
+    auto public_key = parser.read_word().str();
+    TRY_RESULT_PROMISE(
+        promise, addr,
+        sync_send_query(make_object<tonlib_api::getAccountAddress>(
+            make_object<tonlib_api::rwallet_initialAccountState>(address.public_key, public_key, wallet_id_), -1)));
+    td::TerminalIO::out() << addr->account_address_ << "\n";
+    promise.set_value(td::Unit());
+  }
+
+  void rwallet_init(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE(promise, address, to_account_address(parser.read_word(), false));
+    auto public_key = parser.read_word().str();
+    auto initial_state =
+        make_object<tonlib_api::rwallet_initialAccountState>(address.public_key, public_key, wallet_id_);
+    TRY_RESULT_PROMISE(
+        promise, addr,
+        sync_send_query(make_object<tonlib_api::getAccountAddress>(
+            make_object<tonlib_api::rwallet_initialAccountState>(address.public_key, public_key, wallet_id_), -1)));
+
+    TRY_RESULT_PROMISE(promise, start_at, td::to_integer_safe<td::int32>(parser.read_word()));
+    std::vector<std::pair<td::int32, td::uint64>> limits;
+    while (true) {
+      auto word = parser.read_word();
+      if (word.empty()) {
+        break;
+      }
+      auto column_at = word.find(':');
+      TRY_RESULT_PROMISE(promise, value, parse_grams(word.substr(column_at + 1)));
+      TRY_RESULT_PROMISE(promise, seconds, td::to_integer_safe<td::int32>(word.substr(0, column_at)));
+      limits.emplace_back(seconds, value.nano);
+    }
+    auto config = make_object<tonlib_api::rwallet_config>();
+    config->start_at_ = start_at;
+    for (auto limit : limits) {
+      config->limits_.push_back(make_object<tonlib_api::rwallet_limit>(limit.first, limit.second));
+    }
+    auto action =
+        make_object<tonlib_api::actionRwallet>(make_object<tonlib_api::rwallet_actionInit>(std::move(config)));
+    send_query(make_object<tonlib_api::createQuery>(address.input_key(), std::move(addr), 60, std::move(action),
+                                                    std::move(initial_state)),
+               promise.send_closure(actor_id(this), &TonlibCli::transfer2, false));
+  }
+
+  void run_rwallet_cmd(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    auto cmd = parser.read_word();
+    if (cmd == "help") {
+      rwallet_help();
+      return promise.set_value(td::Unit());
+    }
+    if (cmd == "address") {
+      return rwallet_address(parser, std::move(promise));
+    }
+    if (cmd == "init") {
+      return rwallet_init(parser, std::move(promise));
+    }
+
+    promise.set_error(td::Status::Error("Unknown command"));
+  }
+
+  void run_pchan_cmd(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    auto cmd = parser.read_word();
+    if (cmd == "help") {
+      pchan_help();
+      return promise.set_value(td::Unit());
+    }
+    if (cmd == "create") {
+      return pchan_create(parser, std::move(promise));
+    }
+    if (cmd == "list") {
+      return pchan_list(std::move(promise));
+    }
+    if (cmd == "delete") {
+      return pchan_delete(parser, std::move(promise));
+    }
+    if (cmd == "promise") {
+      return pchan_promise(parser, std::move(promise));
+    }
+    if (cmd == "getstate") {
+      return pchan_getstate(parser, std::move(promise));
+    }
+    if (cmd == "cmd") {
+      TRY_RESULT_PROMISE(promise, pchan_id, to_pchan_id(parser.read_word()));
+      auto subcmd = parser.read_word();
+      if (subcmd == "init") {
+        return pchan_init(pchan_id, parser, std::move(promise));
+      }
+      if (subcmd == "close") {
+        return pchan_close(pchan_id, parser, std::move(promise));
+      }
+      if (subcmd == "timeout") {
+        return pchan_timeout(pchan_id, parser, std::move(promise));
+      }
+    }
+
+    promise.set_error(td::Status::Error("Unknown command"));
+  }
+
+  struct Channel {
+    std::string alice_public_key;
+    std::string alice_address;
+    td::optional<int> alice_id;
+
+    std::string bob_public_key;
+    std::string bob_address;
+    td::optional<int> bob_id;
+    td::int32 init_timeout{0};
+    td::int32 close_timeout{0};
+    td::int64 channel_id;
+
+    std::string address;
+
+    td::Status parse(td::ConstParser& parser, bool gen_channel_id = false) {
+      alice_public_key = parser.read_word().str();
+      alice_address = parser.read_word().str();
+      bob_public_key = parser.read_word().str();
+      bob_address = parser.read_word().str();
+      TRY_RESULT_ASSIGN(init_timeout, td::to_integer_safe<td::int32>(parser.read_word()));
+      TRY_RESULT_ASSIGN(close_timeout, td::to_integer_safe<td::int32>(parser.read_word()));
+      if (parser.status().is_error()) {
+        return parser.status().clone();
+      }
+
+      auto channel_id_str = parser.read_word();
+      if (channel_id_str.empty()) {
+        if (gen_channel_id) {
+          channel_id = static_cast<td::int64>(td::Random::secure_uint64());
+        } else {
+          return td::Status::Error("Empty channel id");
+        }
+      } else {
+        TRY_RESULT_ASSIGN(channel_id, td::to_integer_safe<td::int64>(channel_id_str));
+      }
+      return td::Status::OK();
+    }
+    void store(td::StringBuilder& sb) {
+      sb << alice_public_key << " " << alice_address << " " << bob_public_key << " " << bob_address << " "
+         << init_timeout << " " << close_timeout << " " << channel_id;
+    }
+
+    friend td::StringBuilder& operator<<(td::StringBuilder& sb, const Channel& channel) {
+      sb << "\n\t" << td::tag("a_key", channel.alice_public_key) << td::tag("a_addr", channel.alice_address);
+      sb << "\n\t" << td::tag("b_key", channel.bob_public_key) << td::tag("b_addr", channel.bob_address);
+      if (channel.alice_id) {
+        sb << "\n\t" << td::tag("alice_id", channel.alice_id.value());
+      }
+      if (channel.bob_id) {
+        sb << "\n\t" << td::tag("b_id", channel.bob_id.value());
+      }
+      sb << "\n\t" << td::tag("init timeout", channel.init_timeout) << td::tag("close timeout", channel.close_timeout);
+      sb << "\n\t" << td::tag("channel id", channel.channel_id);
+      sb << "\n\t" << td::tag("addr", channel.address);
+      return sb;
+    }
+
+    auto to_address() {
+      return make_object<tonlib_api::accountAddress>(address);
+    }
+    auto to_init_state() {
+      return make_object<tonlib_api::pchan_initialAccountState>(make_object<tonlib_api::pchan_config>(
+          alice_public_key, make_object<tonlib_api::accountAddress>(alice_address), bob_public_key,
+          make_object<tonlib_api::accountAddress>(bob_address), init_timeout, close_timeout, channel_id));
+    }
+  };
+  void store_channels() {
+    td::SecureString buf(10000);
+    td::StringBuilder sb(buf.as_mutable_slice());
+    for (auto& it : channels_) {
+      it.second.store(sb);
+      sb << "\n";
+    }
+    LOG_IF(FATAL, sb.is_error()) << "StringBuilder overflow";
+    td::atomic_write_file(channel_db_path(), sb.as_cslice());
+  }
+
+  void load_channnels() {
+    auto r_db = td::read_file_secure(channel_db_path());
+    if (r_db.is_error()) {
+      return;
+    }
+    auto db = r_db.move_as_ok();
+    td::ConstParser parser(db.as_slice());
+    while (true) {
+      auto line = td::trim(parser.read_till_nofail('\n'));
+      parser.skip_nofail('\n');
+      if (line.empty()) {
+        break;
+      }
+      td::ConstParser line_parser(line);
+      do_pchan_create(line_parser, false).ensure();
+    }
+  }
+
+  std::map<td::int32, Channel> channels_;
+  td::int32 next_channel_id_{0};
+
+  td::Result<td::int32> to_pchan_id(td::Slice pchan_id_str) {
+    TRY_RESULT(pchan_id, td::to_integer_safe<td::int32>(pchan_id_str));
+    auto it = channels_.find(pchan_id);
+    if (it == channels_.end()) {
+      return td::Status::Error("Unknown channle id");
+    }
+    return pchan_id;
+  }
+
+  td::Status do_pchan_create(td::ConstParser& parser, bool gen_channel_id) {
+    Channel channel;
+    TRY_STATUS(channel.parse(parser, gen_channel_id));
+    TRY_RESULT(addr, sync_send_query(make_object<tonlib_api::getAccountAddress>(channel.to_init_state(), -1)));
+    channel.address = addr->account_address_;
+
+    auto find_id = [&](td::Slice public_key, td::Slice address) -> td::optional<td::int32> {
+      auto r_addr = to_account_address(public_key);
+      if (r_addr.is_error()) {
+        return {};
+      }
+      auto addr = r_addr.move_as_ok().address->account_address_;
+      if (address != addr) {
+        return {};
+      }
+      for (td::int32 i = 0; i < static_cast<td::int32>(keys_.size()); i++) {
+        if (keys_[i].public_key == public_key) {
+          return i;
+        }
+      }
+      return {};
+    };
+    channel.alice_id = find_id(channel.alice_public_key, channel.alice_address);
+    channel.bob_id = find_id(channel.bob_public_key, channel.bob_address);
+    channels_[next_channel_id_++] = std::move(channel);
+    return td::Status::OK();
+  }
+  void pchan_getstate(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, pchan_id, to_pchan_id(parser.read_word()), "pchan_id");
+    auto& chan = channels_[pchan_id];
+    get_state(chan.address, std::move(promise));
+  }
+  void pchan_promise(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    auto cmd = parser.read_word();
+    if (cmd == "make") {
+      return pchan_promise_make(parser, std::move(promise));
+    }
+    if (cmd == "check") {
+      return pchan_promise_check(parser, std::move(promise));
+    }
+    if (cmd == "pack") {
+      return pchan_promise_pack(parser, std::move(promise));
+    }
+    if (cmd == "unpack") {
+      return pchan_promise_unpack(parser, std::move(promise));
+    }
+    promise.set_error(td::Status::Error("Unknown command"));
+  }
+
+  void pchan_promise_make2(tonlib_api::object_ptr<tonlib_api::pchan_promise> ans, td::Promise<td::Unit> promise) {
+    td::TerminalIO::out() << "Signature (base64url):" << td::base64url_encode(ans->signature_) << "\n";
+    send_query(make_object<tonlib_api::pchan_packPromise>(std::move(ans)), promise.wrap([](auto&& ans) {
+      td::TerminalIO::out() << "Promise (base64url): " << td::base64url_encode(ans->bytes_) << "\n";
+      return td::Unit();
+    }));
+  }
+
+  void pchan_promise_make(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, pchan_id, to_pchan_id(parser.read_word()), "pchan_id");
+    td::Slice a_or_b = parser.read_word();
+    bool is_a;
+    if (a_or_b == "A") {
+      is_a = true;
+    } else if (a_or_b == "B") {
+      is_a = false;
+    } else {
+      TRY_STATUS_PROMISE(promise, td::Status::Error("(A|B) expected"));
+    }
+    TRY_RESULT_PROMISE_PREFIX(promise, promise_A, parse_grams(parser.read_word()), "A");
+    TRY_RESULT_PROMISE_PREFIX(promise, promise_B, parse_grams(parser.read_word()), "B");
+
+    auto& chan = channels_[pchan_id];
+    Address addr;
+    if (is_a) {
+      TRY_RESULT_PROMISE_PREFIX_ASSIGN(promise, addr, to_account_address(chan.alice_public_key, true),
+                                       "Don't have Alice's key");
+    } else {
+      TRY_RESULT_PROMISE_PREFIX_ASSIGN(promise, addr, to_account_address(chan.bob_public_key, true),
+                                       "Don't have Bob's key");
+    }
+
+    send_query(make_object<tonlib_api::pchan_signPromise>(
+                   addr.input_key(),
+                   make_object<tonlib_api::pchan_promise>("", promise_A.nano, promise_B.nano, chan.channel_id)),
+               promise.send_closure(actor_id(this), &TonlibCli::pchan_promise_make2));
+  }
+  void pchan_promise_check(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, pchan_id, to_pchan_id(parser.read_word()), "pchan_id");
+    td::Slice a_or_b = parser.read_word();
+    bool is_a;
+    if (a_or_b == "A") {
+      is_a = true;
+    } else if (a_or_b == "B") {
+      is_a = false;
+    } else {
+      TRY_STATUS_PROMISE(promise, td::Status::Error("(A|B) expected"));
+    }
+    TRY_RESULT_PROMISE_PREFIX(promise, promise_A, parse_grams(parser.read_word()), "promise_A");
+    TRY_RESULT_PROMISE_PREFIX(promise, promise_B, parse_grams(parser.read_word()), "promise_B");
+
+    auto& chan = channels_[pchan_id];
+    std::string public_key = is_a ? chan.alice_public_key : chan.bob_public_key;
+
+    TRY_RESULT_PROMISE_PREFIX(promise, signature, td::base64url_decode(parser.read_word()), "signature");
+    send_query(make_object<tonlib_api::pchan_validatePromise>(
+                   public_key, make_object<tonlib_api::pchan_promise>(std::move(signature), promise_A.nano,
+                                                                      promise_B.nano, chan.channel_id)),
+               promise.wrap([](auto&& ans) {
+                 td::TerminalIO::out() << "signature is OK\n";
+                 return td::Unit();
+               }));
+  }
+  void pchan_promise_pack(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, channel_id, td::to_integer_safe<td::int64>(parser.read_word()), "pchan_id");
+    TRY_RESULT_PROMISE_PREFIX(promise, promise_A, parse_grams(parser.read_word()), "promise_A");
+    TRY_RESULT_PROMISE_PREFIX(promise, promise_B, parse_grams(parser.read_word()), "promise_B");
+    TRY_RESULT_PROMISE_PREFIX(promise, signature, base64url_decode(parser.read_word()), "signature");
+    send_query(make_object<tonlib_api::pchan_packPromise>(make_object<tonlib_api::pchan_promise>(
+                   std::move(signature), promise_A.nano, promise_B.nano, channel_id)),
+               promise.wrap([](auto packed) {
+                 td::TerminalIO::out() << "packed promise: " << base64url_encode(packed->bytes_.as_slice()) << "\n";
+                 return td::Unit();
+               }));
+  }
+  void pchan_promise_unpack(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, packed_promise, base64url_decode(parser.read_word()), "promise");
+    send_query(make_object<tonlib_api::pchan_unpackPromise>(td::SecureString(packed_promise)),
+               promise.wrap([](auto unpacked) {
+                 td::TerminalIO::out() << "unpacked promise:\n"
+                                       << "promise_A: " << Grams{static_cast<td::uint64>(unpacked->promise_A_)} << "\n"
+                                       << "promise_B: " << Grams{static_cast<td::uint64>(unpacked->promise_B_)} << "\n"
+                                       << "channel_id: " << unpacked->channel_id_ << "\n"
+                                       << "signature: " << td::base64url_encode(unpacked->signature_) << "\n";
+                 return td::Unit();
+               }));
+  }
+
+  void pchan_create(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_STATUS_PROMISE(promise, do_pchan_create(parser, true));
+    td::TerminalIO::out() << "Channel #" << next_channel_id_ - 1 << channels_[next_channel_id_ - 1] << "\n";
+    store_channels();
+    promise.set_value(td::Unit());
+  }
+  void pchan_list(td::Promise<td::Unit> promise) {
+    for (auto& it : channels_) {
+      td::TerminalIO::out() << "Channel #" << it.first << it.second << "\n";
+    }
+    promise.set_value(td::Unit());
+  }
+  void pchan_delete(td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    promise.set_error(td::Status::Error("TODO"));
+  }
+
+  void pchan_init_2(Address addr, td::int32 pchan_id, td::int64 value,
+                    tonlib_api::object_ptr<tonlib_api::query_info> query, td::Promise<td::Unit> promise) {
+    std::vector<tonlib_api::object_ptr<tonlib_api::msg_message>> messages;
+    messages.push_back(
+        make_object<tonlib_api::msg_message>(channels_[pchan_id].to_address(), "", value,
+                                             make_object<tonlib_api::msg_dataRaw>(query->body_, query->init_state_)));
+    auto action = make_object<tonlib_api::actionMsg>(std::move(messages), true);
+    send_query(
+        make_object<tonlib_api::createQuery>(addr.input_key(), std::move(addr.address), 60, std::move(action), nullptr),
+        promise.send_closure(actor_id(this), &TonlibCli::transfer2, false));
+  }
+
+  void pchan_init(td::int32 pchan_id, td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, addr, to_account_address(parser.read_word(), true), "key_id");
+    TRY_RESULT_PROMISE_PREFIX(promise, A, parse_grams(parser.read_word()), "A");
+    TRY_RESULT_PROMISE_PREFIX(promise, B, parse_grams(parser.read_word()), "B");
+    TRY_RESULT_PROMISE_PREFIX(promise, min_A, parse_grams(parser.read_word()), "min_A");
+    TRY_RESULT_PROMISE_PREFIX(promise, min_B, parse_grams(parser.read_word()), "min_B");
+
+    auto action = make_object<tonlib_api::actionPchan>(
+        make_object<tonlib_api::pchan_actionInit>(A.nano, B.nano, min_A.nano, min_B.nano));
+
+    auto value = A.nano + B.nano;
+    send_query(make_object<tonlib_api::createQuery>(addr.input_key(), channels_[pchan_id].to_address(), 60,
+                                                    std::move(action), channels_[pchan_id].to_init_state()),
+               promise.send_closure(actor_id(this), &TonlibCli::pchan_init_2, std::move(addr), pchan_id, value));
+    return;
+  }
+
+  void pchan_close2(td::int32 pchan_id, Address addr, tonlib_api::object_ptr<tonlib_api::pchan_promise> pchan_promise,
+                    td::Promise<td::Unit> promise) {
+    auto action = make_object<tonlib_api::actionPchan>(
+        make_object<tonlib_api::pchan_actionClose>(0, 0, std::move(pchan_promise)));
+    //send_query(make_object<tonlib_api::createQuery>(addr.input_key(), channels_[pchan_id].to_address(), 60,
+    //std::move(action), channels_[pchan_id].to_init_state()),
+    //promise.send_closure(actor_id(this), &TonlibCli::pchan_init_2, std::move(addr), pchan_id, 1000000000));
+    send_query(make_object<tonlib_api::createQuery>(addr.input_key(), channels_[pchan_id].to_address(), 60,
+                                                    std::move(action), channels_[pchan_id].to_init_state()),
+               promise.send_closure(actor_id(this), &TonlibCli::transfer2, false));
+  }
+
+  void pchan_close(td::int32 pchan_id, td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, addr, to_account_address(parser.read_word(), true), "key_id");
+    TRY_RESULT_PROMISE_PREFIX(promise, packed_promise, base64url_decode(parser.read_word()), "promise");
+    send_query(make_object<tonlib_api::pchan_unpackPromise>(td::SecureString(packed_promise)),
+               promise.send_closure(actor_id(this), &TonlibCli::pchan_close2, pchan_id, std::move(addr)));
+  }
+
+  void pchan_timeout(td::int32 pchan_id, td::ConstParser& parser, td::Promise<td::Unit> promise) {
+    TRY_RESULT_PROMISE_PREFIX(promise, addr, to_account_address(parser.read_word(), true), "key_id");
+    auto action = make_object<tonlib_api::actionPchan>(make_object<tonlib_api::pchan_actionTimeout>());
+    send_query(make_object<tonlib_api::createQuery>(addr.input_key(), channels_[pchan_id].to_address(), 60,
+                                                    std::move(action), channels_[pchan_id].to_init_state()),
+               promise.send_closure(actor_id(this), &TonlibCli::pchan_init_2, std::move(addr), pchan_id, 1000000000));
+  }
+
   void run_dns_cmd(td::ConstParser& parser, td::Promise<td::Unit> promise) {
     auto cmd = parser.read_word();
+    if (cmd == "help") {
+      dns_help();
+      return promise.set_value(td::Unit());
+    }
     if (cmd == "cmd" || cmd == "cmdlist" || cmd == "cmdfile") {
       return dns_cmd(cmd, parser, std::move(promise));
     }
     if (cmd == "resolve") {
       return dns_resolve(parser, std::move(promise));
     }
-    promise.set_error(td::Status::Error("Unknown cmd"));
+    promise.set_error(td::Status::Error("Unknown command"));
   }
 
   void do_dns_resolve(std::string name, td::int16 category, td::int32 ttl,
@@ -452,7 +921,7 @@ class TonlibCli : public td::actor::Actor {
     if (resolved->entries_[0]->entry_->get_id() == tonlib_api::dns_entryDataNextResolver::ID && ttl != 0) {
       td::TerminalIO::out() << "Redirect resolver\n";
       auto entry = tonlib_api::move_object_as<tonlib_api::dns_entryDataNextResolver>(resolved->entries_[0]->entry_);
-      send_query(tonlib_api::make_object<tonlib_api::dns_resolve>(std::move(entry->resolver_), name, category, ttl),
+      send_query(make_object<tonlib_api::dns_resolve>(std::move(entry->resolver_), name, category, ttl),
                  promise.send_closure(actor_id(this), &TonlibCli::do_dns_resolve, name, category, 0));
       return;
     }
@@ -475,9 +944,9 @@ class TonlibCli : public td::actor::Actor {
     TRY_RESULT_PROMISE(promise, category, td::to_integer_safe<td::int16>(category_str));
 
     std::vector<tonlib_api::object_ptr<tonlib_api::dns_entry>> entries;
-    entries.push_back(tonlib_api::make_object<tonlib_api::dns_entry>(
-        "", -1, tonlib_api::make_object<tonlib_api::dns_entryDataNextResolver>(std::move(address.address))));
-    do_dns_resolve(name.str(), category, 10, tonlib_api::make_object<tonlib_api::dns_resolved>(std::move(entries)),
+    entries.push_back(make_object<tonlib_api::dns_entry>(
+        "", -1, make_object<tonlib_api::dns_entryDataNextResolver>(std::move(address.address))));
+    do_dns_resolve(name.str(), category, 10, make_object<tonlib_api::dns_resolved>(std::move(entries)),
                    std::move(promise));
   }
   void dns_cmd(td::Slice cmd, td::ConstParser& parser, td::Promise<td::Unit> promise) {
@@ -495,13 +964,13 @@ class TonlibCli : public td::actor::Actor {
     std::vector<tonlib_api::object_ptr<tonlib_api::dns_Action>> actions;
     for (auto& action : actions_ext) {
       if (action.name.empty()) {
-        actions.push_back(tonlib_api::make_object<tonlib_api::dns_actionDeleteAll>());
+        actions.push_back(make_object<tonlib_api::dns_actionDeleteAll>());
         td::TerminalIO::out() << "Delete all dns entries\n";
       } else if (action.category == 0) {
-        actions.push_back(tonlib_api::make_object<tonlib_api::dns_actionDelete>(action.name, 0));
+        actions.push_back(make_object<tonlib_api::dns_actionDelete>(action.name, 0));
         td::TerminalIO::out() << "Delete all dns enties with name: " << action.name << "\n";
       } else if (!action.data) {
-        actions.push_back(tonlib_api::make_object<tonlib_api::dns_actionDelete>(action.name, action.category));
+        actions.push_back(make_object<tonlib_api::dns_actionDelete>(action.name, action.category));
         td::TerminalIO::out() << "Delete all dns enties with name and category: " << action.name << ":"
                               << action.category << "\n";
       } else {
@@ -516,33 +985,33 @@ class TonlibCli : public td::actor::Actor {
         TRY_STATUS_PROMISE(promise, std::move(error));
         td::TerminalIO::out() << "Set dns entry: " << action.name << ":" << action.category << " " << sb.as_cslice()
                               << "\n";
-        actions.push_back(tonlib_api::make_object<tonlib_api::dns_actionSet>(
-            tonlib_api::make_object<tonlib_api::dns_entry>(action.name, action.category, std::move(data))));
+        actions.push_back(make_object<tonlib_api::dns_actionSet>(
+            make_object<tonlib_api::dns_entry>(action.name, action.category, std::move(data))));
       }
     }
 
-    auto action = tonlib_api::make_object<tonlib_api::actionDns>(std::move(actions));
+    auto action = make_object<tonlib_api::actionDns>(std::move(actions));
 
     td::Slice password;  // empty by default
-    using tonlib_api::make_object;
+
     auto key = !address.secret.empty() ? make_object<tonlib_api::inputKeyRegular>(
                                              make_object<tonlib_api::key>(address.public_key, address.secret.copy()),
                                              td::SecureString(password))
                                        : nullptr;
-    send_query(tonlib_api::make_object<tonlib_api::createQuery>(std::move(key), std::move(address.address), 60,
-                                                                std::move(action)),
+    send_query(make_object<tonlib_api::createQuery>(std::move(key), std::move(address.address), 60, std::move(action),
+                                                    nullptr),
                promise.send_closure(actor_id(this), &TonlibCli::transfer2, false));
   }
 
   void remote_time(td::Promise<td::Unit> promise) {
-    send_query(tonlib_api::make_object<tonlib_api::liteServer_getInfo>(), promise.wrap([](auto&& info) {
+    send_query(make_object<tonlib_api::liteServer_getInfo>(), promise.wrap([](auto&& info) {
       td::TerminalIO::out() << "Lite server time is: " << info->now_ << "\n";
       return td::Unit();
     }));
   }
 
   void remote_version(td::Promise<td::Unit> promise) {
-    send_query(tonlib_api::make_object<tonlib_api::liteServer_getInfo>(), promise.wrap([](auto&& info) {
+    send_query(make_object<tonlib_api::liteServer_getInfo>(), promise.wrap([](auto&& info) {
       td::TerminalIO::out() << "Lite server time is: " << info->now_ << "\n";
       td::TerminalIO::out() << "Lite server version is: " << info->version_ << "\n";
       td::TerminalIO::out() << "Lite server capabilities are: " << info->capabilities_ << "\n";
@@ -552,7 +1021,7 @@ class TonlibCli : public td::actor::Actor {
 
   void send_file(td::Slice name, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, data, td::read_file_str(name.str()));
-    send_query(tonlib_api::make_object<tonlib_api::raw_sendMessage>(std::move(data)), promise.wrap([](auto&& info) {
+    send_query(make_object<tonlib_api::raw_sendMessage>(std::move(data)), promise.wrap([](auto&& info) {
       td::TerminalIO::out() << "Query was sent\n";
       return td::Unit();
     }));
@@ -560,7 +1029,7 @@ class TonlibCli : public td::actor::Actor {
 
   void save_account(td::Slice cmd, td::Slice path, td::Slice address, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, addr, to_account_address(address, false));
-    send_query(tonlib_api::make_object<tonlib_api::smc_load>(std::move(addr.address)),
+    send_query(make_object<tonlib_api::smc_load>(std::move(addr.address)),
                promise.send_closure(actor_id(this), &TonlibCli::save_account_2, cmd.str(), path.str(), address.str()));
   }
 
@@ -571,14 +1040,11 @@ class TonlibCli : public td::actor::Actor {
                  promise.send_closure(actor_id(self), &TonlibCli::save_account_3, std::move(path), std::move(log)));
     };
     if (cmd == "saveaccount") {
-      with_query(tonlib_api::make_object<tonlib_api::smc_getState>(info->id_),
-                 PSTRING() << "StateInit of account " << address);
+      with_query(make_object<tonlib_api::smc_getState>(info->id_), PSTRING() << "StateInit of account " << address);
     } else if (cmd == "saveaccountcode") {
-      with_query(tonlib_api::make_object<tonlib_api::smc_getCode>(info->id_), PSTRING()
-                                                                                  << "Code of account " << address);
+      with_query(make_object<tonlib_api::smc_getCode>(info->id_), PSTRING() << "Code of account " << address);
     } else if (cmd == "saveaccountdata") {
-      with_query(tonlib_api::make_object<tonlib_api::smc_getData>(info->id_), PSTRING()
-                                                                                  << "Data of account " << address);
+      with_query(make_object<tonlib_api::smc_getData>(info->id_), PSTRING() << "Data of account " << address);
     } else {
       promise.set_error(td::Status::Error("Unknown query"));
     }
@@ -593,7 +1059,6 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void sync(td::Promise<td::Unit> promise, bool update_last) {
-    using tonlib_api::make_object;
     send_query(make_object<tonlib_api::sync>(), promise.wrap([&, update_last](auto&& block) {
       td::TerminalIO::out() << "synchronized\n";
       td::TerminalIO::out() << to_string(block) << "\n";
@@ -625,8 +1090,8 @@ class TonlibCli : public td::actor::Actor {
       if (l == 1 || str.back() != '"' || l >= 127 + 2 || !cb.store_bytes_bool(str.data() + 1, l - 2)) {
         return td::Status::Error("Failed to parse slice");
       }
-      return tonlib_api::make_object<tonlib_api::tvm_stackEntrySlice>(
-          tonlib_api::make_object<tonlib_api::tvm_slice>(vm::std_boc_serialize(cb.finalize()).ok().as_slice().str()));
+      return make_object<tonlib_api::tvm_stackEntrySlice>(
+          make_object<tonlib_api::tvm_slice>(vm::std_boc_serialize(cb.finalize()).ok().as_slice().str()));
     }
     if (l >= 3 && (str[0] == 'x' || str[0] == 'b') && str[1] == '{' && str.back() == '}') {
       unsigned char buff[128];
@@ -637,7 +1102,7 @@ class TonlibCli : public td::actor::Actor {
       if (bits < 0) {
         return td::Status::Error("Failed to parse slice");
       }
-      return tonlib_api::make_object<tonlib_api::tvm_stackEntrySlice>(tonlib_api::make_object<tonlib_api::tvm_slice>(
+      return make_object<tonlib_api::tvm_stackEntrySlice>(make_object<tonlib_api::tvm_slice>(
           vm::std_boc_serialize(vm::CellBuilder().store_bits(td::ConstBitPtr{buff}, bits).finalize())
               .ok()
               .as_slice()
@@ -657,8 +1122,7 @@ class TonlibCli : public td::actor::Actor {
     } else if (!l || x.parse_dec(str.data(), l) != l) {
       return td::Status::Error("Failed to parse a number");
     }
-    return tonlib_api::make_object<tonlib_api::tvm_stackEntryNumber>(
-        tonlib_api::make_object<tonlib_api::tvm_numberDecimal>(dec_string(num)));
+    return make_object<tonlib_api::tvm_stackEntryNumber>(make_object<tonlib_api::tvm_numberDecimal>(dec_string(num)));
   }
 
   td::Result<std::vector<tonlib_api::object_ptr<tonlib_api::tvm_StackEntry>>> parse_stack(td::ConstParser& parser,
@@ -672,12 +1136,12 @@ class TonlibCli : public td::actor::Actor {
       }
       if (word == "[") {
         TRY_RESULT(elements, parse_stack(parser, "]"));
-        stack.push_back(tonlib_api::make_object<tonlib_api::tvm_stackEntryTuple>(
-            tonlib_api::make_object<tonlib_api::tvm_tuple>(std::move(elements))));
+        stack.push_back(
+            make_object<tonlib_api::tvm_stackEntryTuple>(make_object<tonlib_api::tvm_tuple>(std::move(elements))));
       } else if (word == "(") {
         TRY_RESULT(elements, parse_stack(parser, ")"));
-        stack.push_back(tonlib_api::make_object<tonlib_api::tvm_stackEntryList>(
-            tonlib_api::make_object<tonlib_api::tvm_list>(std::move(elements))));
+        stack.push_back(
+            make_object<tonlib_api::tvm_stackEntryList>(make_object<tonlib_api::tvm_list>(std::move(elements))));
       } else {
         TRY_RESULT(stack_entry, parse_stack_entry(word));
         stack.push_back(std::move(stack_entry));
@@ -734,9 +1198,9 @@ class TonlibCli : public td::actor::Actor {
     auto method_str = parser.read_word();
     tonlib_api::object_ptr<tonlib_api::smc_MethodId> method;
     if (std::all_of(method_str.begin(), method_str.end(), [](auto c) { return c >= '0' && c <= '9'; })) {
-      method = tonlib_api::make_object<tonlib_api::smc_methodIdNumber>(td::to_integer<td::int32>(method_str.str()));
+      method = make_object<tonlib_api::smc_methodIdNumber>(td::to_integer<td::int32>(method_str.str()));
     } else {
-      method = tonlib_api::make_object<tonlib_api::smc_methodIdName>(method_str.str());
+      method = make_object<tonlib_api::smc_methodIdName>(method_str.str());
     }
     TRY_RESULT_PROMISE(promise, stack, parse_stack(parser, ""));
     td::StringBuilder sb;
@@ -747,10 +1211,9 @@ class TonlibCli : public td::actor::Actor {
 
     td::TerminalIO::out() << "Run " << to_string(method) << "With stack:\n" << sb.as_cslice();
 
-    auto to_run =
-        tonlib_api::make_object<tonlib_api::smc_runGetMethod>(0 /*fixme*/, std::move(method), std::move(stack));
+    auto to_run = make_object<tonlib_api::smc_runGetMethod>(0 /*fixme*/, std::move(method), std::move(stack));
 
-    send_query(tonlib_api::make_object<tonlib_api::smc_load>(std::move(addr.address)),
+    send_query(make_object<tonlib_api::smc_load>(std::move(addr.address)),
                promise.send_closure(actor_id(this), &TonlibCli::run_method_2, std::move(to_run)));
   }
 
@@ -775,7 +1238,6 @@ class TonlibCli : public td::actor::Actor {
   void set_validate_config(td::Slice cmd, td::Slice path, td::Slice name, bool use_callback, bool ignore_cache,
                            td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, data, td::read_file_str(path.str()));
-    using tonlib_api::make_object;
 
     auto config = make_object<tonlib_api::config>(std::move(data), name.str(), use_callback, ignore_cache);
     if (cmd == "setconfig") {
@@ -796,7 +1258,6 @@ class TonlibCli : public td::actor::Actor {
     td::TerminalIO::out() << td::tag("rcv", td::format::as_size(rcv_bytes_)) << "\n";
   }
   void on_adnl_result(td::uint64 id, td::Result<td::BufferSlice> res) {
-    using tonlib_api::make_object;
     if (res.is_ok()) {
       rcv_bytes_ += res.ok().size();
       send_query(make_object<tonlib_api::onLiteServerQueryResult>(id, res.move_as_ok().as_slice().str()),
@@ -884,10 +1345,10 @@ class TonlibCli : public td::actor::Actor {
         promise.set_error(td::Status::Error("empty current block"));
         return;
       }
-      func = tonlib_api::make_object<tonlib_api::withBlock>(
-          tonlib_api::make_object<tonlib_api::ton_blockIdExt>(current_block_->workchain_, current_block_->shard_,
-                                                              current_block_->seqno_, current_block_->root_hash_,
-                                                              current_block_->file_hash_),
+      func = make_object<tonlib_api::withBlock>(
+          make_object<tonlib_api::ton_blockIdExt>(current_block_->workchain_, current_block_->shard_,
+                                                  current_block_->seqno_, current_block_->root_hash_,
+                                                  current_block_->file_hash_),
           std::move(func));
     }
     auto query_id = next_query_id_++;
@@ -901,8 +1362,26 @@ class TonlibCli : public td::actor::Actor {
         };
   }
 
+  template <class QueryT>
+  td::Result<typename QueryT::ReturnType> sync_send_query(tonlib_api::object_ptr<QueryT> query) {
+    if (is_closing_) {
+      return td::Status::Error("Closing");
+    }
+    auto r_obj = tonlib::TonlibClient::static_request(std::move(query));
+    if (r_obj->get_id() == tonlib_api::error::ID) {
+      auto err = ton::move_tl_object_as<tonlib_api::error>(std::move(r_obj));
+      return td::Status::Error(err->code_, err->message_);
+    }
+    return ton::move_tl_object_as<typename QueryT::ReturnType::element_type>(r_obj);
+  }
+
+  td::Status validate_address(td::Slice addr) {
+    TRY_STATUS(sync_send_query(make_object<tonlib_api::unpackAccountAddress>(addr.str())));
+    return td::Status::OK();
+  }
+
   void unpack_address(td::Slice addr) {
-    send_query(tonlib_api::make_object<tonlib_api::unpackAccountAddress>(addr.str()),
+    send_query(make_object<tonlib_api::unpackAccountAddress>(addr.str()),
                [addr = addr.str()](auto r_parsed_addr) mutable {
                  if (r_parsed_addr.is_error()) {
                    LOG(ERROR) << "Failed to parse address: " << r_parsed_addr.error();
@@ -913,23 +1392,22 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void set_bounceable(td::Slice addr, bool bounceable) {
-    send_query(tonlib_api::make_object<tonlib_api::unpackAccountAddress>(addr.str()),
-               [addr = addr.str(), bounceable, this](auto r_parsed_addr) mutable {
-                 if (r_parsed_addr.is_error()) {
-                   LOG(ERROR) << "Failed to parse address: " << r_parsed_addr.error();
-                   return;
-                 }
-                 auto parsed_addr = r_parsed_addr.move_as_ok();
-                 parsed_addr->bounceable_ = bounceable;
-                 this->send_query(tonlib_api::make_object<tonlib_api::packAccountAddress>(std::move(parsed_addr)),
-                                  [](auto r_addr) mutable {
-                                    if (r_addr.is_error()) {
-                                      LOG(ERROR) << "Failed to pack address";
-                                      return;
-                                    }
-                                    td::TerminalIO::out() << r_addr.ok()->account_address_ << "\n";
-                                  });
-               });
+    send_query(make_object<tonlib_api::unpackAccountAddress>(addr.str()), [addr = addr.str(), bounceable,
+                                                                           this](auto r_parsed_addr) mutable {
+      if (r_parsed_addr.is_error()) {
+        LOG(ERROR) << "Failed to parse address: " << r_parsed_addr.error();
+        return;
+      }
+      auto parsed_addr = r_parsed_addr.move_as_ok();
+      parsed_addr->bounceable_ = bounceable;
+      this->send_query(make_object<tonlib_api::packAccountAddress>(std::move(parsed_addr)), [](auto r_addr) mutable {
+        if (r_addr.is_error()) {
+          LOG(ERROR) << "Failed to pack address";
+          return;
+        }
+        td::TerminalIO::out() << r_addr.ok()->account_address_ << "\n";
+      });
+    });
   }
 
   void generate_key(td::SecureString entropy = {}) {
@@ -951,8 +1429,8 @@ class TonlibCli : public td::actor::Actor {
 
   void generate_key(td::SecureString entropy, td::SecureString password) {
     auto password_copy = password.copy();
-    send_query(tonlib_api::make_object<tonlib_api::createNewKey>(
-                   std::move(password_copy), td::SecureString() /*mnemonic password*/, std::move(entropy)),
+    send_query(make_object<tonlib_api::createNewKey>(std::move(password_copy), td::SecureString() /*mnemonic password*/,
+                                                     std::move(entropy)),
                [this, password = std::move(password)](auto r_key) mutable {
                  if (r_key.is_error()) {
                    LOG(ERROR) << "Failed to create new key: " << r_key.error();
@@ -1037,7 +1515,7 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void do_delete_all_keys() {
-    send_query(tonlib_api::make_object<tonlib_api::deleteAllKeys>(), [](auto r_res) {
+    send_query(make_object<tonlib_api::deleteAllKeys>(), [](auto r_res) {
       if (r_res.is_error()) {
         td::TerminalIO::out() << "Something went wrong: " << r_res.error() << "\n";
         return;
@@ -1048,6 +1526,9 @@ class TonlibCli : public td::actor::Actor {
 
   std::string key_db_path() {
     return options_.key_dir + TD_DIR_SLASH + "key_db";
+  }
+  std::string channel_db_path() {
+    return options_.key_dir + TD_DIR_SLASH + "channel_db";
   }
 
   td::Result<size_t> to_key_i(td::Slice key) {
@@ -1088,15 +1569,8 @@ class TonlibCli : public td::actor::Actor {
     return res;
   }
 
-  struct Address {
-    tonlib_api::object_ptr<tonlib_api::accountAddress> address;
-    std::string public_key;
-    td::SecureString secret;
-  };
-
   template <class F>
   auto with_account_state(int version, std::string public_key, td::uint32 wallet_id, F&& f) {
-    using tonlib_api::make_object;
     if (version == 1) {
       return f(make_object<tonlib_api::testWallet_initialAccountState>(public_key));
     }
@@ -1115,6 +1589,20 @@ class TonlibCli : public td::actor::Actor {
     return f(make_object<tonlib_api::wallet_v3_initialAccountState>(public_key, wallet_id));
   }
 
+  td::Result<Address> to_account_address(td::Slice public_key) {
+    auto r_addr = [&, self = this](td::int32 version, td::int32 revision) {
+      auto do_request = [revision, self](auto x) {
+        return self->sync_send_query(make_object<tonlib_api::getAccountAddress>(std::move(x), revision));
+      };
+      return with_account_state(version, public_key.str(), wallet_id_, do_request);
+    }(options_.wallet_version, options_.wallet_revision);
+    TRY_RESULT(addr, std::move(r_addr));
+    Address res;
+    res.address = std::move(addr);
+    res.public_key = public_key.str();
+    return std::move(res);
+  }
+
   td::Result<Address> to_account_address(td::Slice key, bool need_private_key) {
     if (key.empty()) {
       return td::Status::Error("account address is empty");
@@ -1122,20 +1610,29 @@ class TonlibCli : public td::actor::Actor {
     if (key == "none" && !need_private_key) {
       return Address{};
     }
+
+    auto at_pos = key.find('@');
+    td::optional<std::string> address;
+    if (at_pos != td::Slice::npos) {
+      address = key.substr(at_pos + 1).str();
+      key.truncate(at_pos);
+    }
+
     auto r_key_i = to_key_i(key);
-    using tonlib_api::make_object;
+
     if (r_key_i.is_ok()) {
-      auto obj = [&](td::int32 version, td::int32 revision) {
-        auto do_request = [revision](auto x) {
-          return tonlib::TonlibClient::static_request(
-              make_object<tonlib_api::getAccountAddress>(std::move(x), revision));
-        };
-        return with_account_state(version, keys_[r_key_i.ok()].public_key, wallet_id_, do_request);
-      }(options_.wallet_version, options_.wallet_revision);
-      if (obj->get_id() != tonlib_api::error::ID) {
+      auto& key = keys_[r_key_i.ok()];
+      if (address) {
         Address res;
-        res.address = ton::move_tl_object_as<tonlib_api::accountAddress>(obj);
-        res.public_key = keys_[r_key_i.ok()].public_key;
+        res.public_key = key.public_key;
+        res.secret = key.secret.copy();
+        res.address = make_object<tonlib_api::accountAddress>(address.unwrap());
+        return std::move(res);
+      }
+
+      auto r_addr = to_account_address(key.public_key);
+      if (r_addr.is_ok()) {
+        Address res = r_addr.move_as_ok();
         res.secret = keys_[r_key_i.ok()].secret.copy();
         return std::move(res);
       }
@@ -1166,7 +1663,7 @@ class TonlibCli : public td::actor::Actor {
       td::TerminalIO::out() << "Unknown key id: [" << key << "]\n";
       return;
     }
-    using tonlib_api::make_object;
+
     auto key_i = r_key_i.move_as_ok();
     send_query(make_object<tonlib_api::deleteKey>(
                    make_object<tonlib_api::key>(keys_[key_i].public_key, keys_[key_i].secret.copy())),
@@ -1202,7 +1699,7 @@ class TonlibCli : public td::actor::Actor {
 
   void import_key_pem(td::Slice filename, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, data, td::read_file_secure(filename.str()));
-    using tonlib_api::make_object;
+
     send_query(make_object<tonlib_api::importPemKey>(td::SecureString(), td::SecureString("cucumber"),
                                                      make_object<tonlib_api::exportedPemKey>(std::move(data))),
                promise.wrap([&](auto&& key) {
@@ -1218,7 +1715,7 @@ class TonlibCli : public td::actor::Actor {
   }
   void import_key_raw(td::Slice filename, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, data, td::read_file_secure(filename.str()));
-    using tonlib_api::make_object;
+
     send_query(make_object<tonlib_api::importUnencryptedKey>(
                    td::SecureString(), make_object<tonlib_api::exportedUnencryptedKey>(std::move(data))),
                promise.wrap([&](auto&& key) {
@@ -1234,7 +1731,6 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void export_key(std::string cmd, std::string key, size_t key_i, td::Slice password) {
-    using tonlib_api::make_object;
     if (cmd == "exportkey") {
       send_query(make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKeyRegular>(
                      make_object<tonlib_api::key>(keys_[key_i].public_key, keys_[key_i].secret.copy()),
@@ -1287,7 +1783,6 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void import_key(std::vector<td::SecureString> words, td::Slice password) {
-    using tonlib_api::make_object;
     send_query(make_object<tonlib_api::importKey>(td::SecureString(password), td::SecureString(""),
                                                   make_object<tonlib_api::exportedKey>(std::move(words))),
                [this, password = td::SecureString(password)](auto r_res) {
@@ -1308,7 +1803,7 @@ class TonlibCli : public td::actor::Actor {
 
   void get_state(td::Slice key, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, address, to_account_address(key, false));
-    using tonlib_api::make_object;
+
     auto address_str = address.address->account_address_;
     send_query(make_object<tonlib_api::getAccountState>(
                    ton::move_tl_object_as<tonlib_api::accountAddress>(std::move(address.address))),
@@ -1334,7 +1829,7 @@ class TonlibCli : public td::actor::Actor {
 
   void get_history(td::Slice key, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, address, to_account_address(key, false));
-    using tonlib_api::make_object;
+
     send_query(make_object<tonlib_api::getAccountState>(
                    ton::move_tl_object_as<tonlib_api::accountAddress>(std::move(address.address))),
                promise.send_closure(td::actor::actor_id(this), &TonlibCli::get_history2, key.str()));
@@ -1343,7 +1838,6 @@ class TonlibCli : public td::actor::Actor {
   void guess_revision(td::Slice key, td::Promise<td::Unit> promise) {
     TRY_RESULT_PROMISE(promise, key_i, to_key_i(key));
     with_account_state(options_.wallet_version, keys_[key_i].public_key, wallet_id_, [&](auto state) {
-      using tonlib_api::make_object;
       send_query(make_object<tonlib_api::guessAccountRevision>(std::move(state)), promise.wrap([](auto revisions) {
         td::TerminalIO::out() << to_string(revisions);
         return td::Unit();
@@ -1360,14 +1854,10 @@ class TonlibCli : public td::actor::Actor {
     }
     TRY_RESULT_PROMISE(promise, address, std::move(r_address));
     td::Slice password;
-    using tonlib_api::make_object;
-    auto input_key =
-        !address.secret.empty()
-            ? make_object<tonlib_api::inputKeyRegular>(
-                  make_object<tonlib_api::key>(address.public_key, address.secret.copy()), td::SecureString(password))
-            : nullptr;
 
-    send_query(tonlib_api::make_object<tonlib_api::raw_getTransactions>(
+    auto input_key = address.input_key(password);
+
+    send_query(make_object<tonlib_api::raw_getTransactions>(
                    std::move(input_key), ton::move_tl_object_as<tonlib_api::accountAddress>(std::move(address.address)),
                    std::move(state->last_transaction_id_)),
                promise.wrap([](auto res) {
@@ -1384,7 +1874,7 @@ class TonlibCli : public td::actor::Actor {
                      sb << "-" << Grams{td::uint64(-balance)};
                    }
                    sb << " Fee: " << Grams{td::uint64(t->fee_)};
-                   if (!t->in_msg_->source_->account_address_.empty()) {
+                   if (t->in_msg_->source_->account_address_.empty()) {
                      sb << " External ";
                    } else {
                      sb << " From " << t->in_msg_->source_->account_address_;
@@ -1472,12 +1962,12 @@ class TonlibCli : public td::actor::Actor {
       tonlib_api::object_ptr<tonlib_api::msg_Data> data;
 
       if (use_encryption) {
-        data = tonlib_api::make_object<tonlib_api::msg_dataDecryptedText>(message.str());
+        data = make_object<tonlib_api::msg_dataDecryptedText>(message.str());
       } else {
-        data = tonlib_api::make_object<tonlib_api::msg_dataText>(message.str());
+        data = make_object<tonlib_api::msg_dataText>(message.str());
       }
-      messages.push_back(tonlib_api::make_object<tonlib_api::msg_message>(std::move(address.address), "", amount.nano,
-                                                                          std::move(data)));
+      messages.push_back(
+          make_object<tonlib_api::msg_message>(std::move(address.address), "", amount.nano, std::move(data)));
       return td::Status::OK();
     };
 
@@ -1502,7 +1992,7 @@ class TonlibCli : public td::actor::Actor {
     }
 
     td::Slice password;  // empty by default
-    using tonlib_api::make_object;
+
     tonlib_api::object_ptr<tonlib_api::InputKey> key =
         !from_address.secret.empty()
             ? make_object<tonlib_api::inputKeyRegular>(
@@ -1517,20 +2007,19 @@ class TonlibCli : public td::actor::Actor {
 
     send_query(make_object<tonlib_api::createQuery>(
                    std::move(key), std::move(from_address.address), 60,
-                   make_object<tonlib_api::actionMsg>(std::move(messages), allow_send_to_uninited)),
+                   make_object<tonlib_api::actionMsg>(std::move(messages), allow_send_to_uninited), nullptr),
                cmd_promise.send_closure(actor_id(this), &TonlibCli::transfer2, estimate_fees));
   }
 
   void transfer2(bool estimate_fees, td::Result<tonlib_api::object_ptr<tonlib_api::query_info>> r_info,
                  td::Promise<td::Unit> cmd_promise) {
     if (estimate_fees) {
-      send_query(tonlib_api::make_object<tonlib_api::query_estimateFees>(r_info.ok()->id_, true),
-                 cmd_promise.wrap([](auto&& info) {
-                   td::TerminalIO::out() << "Extimated fees: " << to_string(info);
-                   return td::Unit();
-                 }));
+      send_query(make_object<tonlib_api::query_estimateFees>(r_info.ok()->id_, true), cmd_promise.wrap([](auto&& info) {
+        td::TerminalIO::out() << "Extimated fees: " << to_string(info);
+        return td::Unit();
+      }));
     } else {
-      send_query(tonlib_api::make_object<tonlib_api::query_send>(r_info.ok()->id_), cmd_promise.wrap([](auto&& info) {
+      send_query(make_object<tonlib_api::query_send>(r_info.ok()->id_), cmd_promise.wrap([](auto&& info) {
         td::TerminalIO::out() << "Transfer sent: " << to_string(info);
         return td::Unit();
       }));
@@ -1538,7 +2027,6 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void get_hints(td::Slice prefix) {
-    using tonlib_api::make_object;
     auto obj = tonlib::TonlibClient::static_request(make_object<tonlib_api::getBip39Hints>(prefix.str()));
     if (obj->get_id() == tonlib_api::error::ID) {
       return;
@@ -1548,7 +2036,6 @@ class TonlibCli : public td::actor::Actor {
 };
 
 int main(int argc, char* argv[]) {
-  using tonlib_api::make_object;
   SET_VERBOSITY_LEVEL(verbosity_INFO);
   td::set_default_failure_signal_handler();
 

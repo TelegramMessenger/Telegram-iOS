@@ -43,12 +43,7 @@ td::Ref<vm::Cell> TestGiver::make_a_gift_message_static(td::uint32 seqno, td::Sp
 
   for (auto& gift : gifts) {
     td::int32 send_mode = 1;
-    auto gramms = gift.gramms;
-    vm::CellBuilder cbi;
-    GenericAccount::store_int_message(cbi, gift.destination, gramms);
-    store_gift_message(cbi, gift);
-    auto message_inner = cbi.finalize();
-    cb.store_long(send_mode, 8).store_ref(std::move(message_inner));
+    cb.store_long(send_mode, 8).store_ref(create_int_message(gift));
   }
 
   return cb.finalize();

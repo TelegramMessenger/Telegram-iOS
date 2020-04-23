@@ -29,8 +29,8 @@ def? $3 { @' $3 } { "rwallet" } cond constant file-base
 } : make-rdict
 
 // Create new restricted wallet; code taken from `auto/restricted-wallet2-code.fif`
-"auto/restricted-wallet-code.fif" include  // code
-<b 0 32 u, PubKey 256 u, amount make-rdict dict, b> // data
+"auto/restricted-wallet2-code.fif" include  // code
+<b 0 32 u, PubKey 256 u, 0 32 u, amount make-rdict dict, b> // data
 null // no libraries
 <b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
 dup ."StateInit: " <s csr. cr

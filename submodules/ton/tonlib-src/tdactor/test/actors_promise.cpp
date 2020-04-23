@@ -135,6 +135,78 @@ TEST(Actor, safe_promise) {
   ASSERT_EQ(res, 3);
 }
 
+TEST(Actor, split_promise) {
+  using td::Promise;
+  using td::Result;
+  using td::split_promise;
+  using td::SplitPromise;
+  {
+    td::optional<std::pair<int, double>> x;
+    auto pair = [&](Result<std::pair<int, double>> res) { x = res.move_as_ok(); };
+    static_assert(std::is_same<SplitPromise<decltype(pair)>::ArgT, std::pair<int, double>>::value, "A");
+    static_assert(
+        std::is_same<SplitPromise<decltype(pair)>::SplittedT, std::pair<Promise<int>, Promise<double>>>::value, "A");
+    auto splitted = split_promise(pair);
+    static_assert(std::is_same<decltype(splitted), std::pair<Promise<int>, Promise<double>>>::value, "A");
+
+    splitted.first.set_value(1);
+    splitted.second.set_value(2.0);
+    CHECK(x.unwrap() == std::make_pair(1, 2.0));
+  }  // namespace td
+  {
+    td::optional<std::tuple<int, double, std::string>> x;
+    auto triple = [&](Result<std::tuple<int, double, std::string>> res) { x = res.move_as_ok(); };
+    static_assert(std::is_same<SplitPromise<decltype(triple)>::ArgT, std::tuple<int, double, std::string>>::value, "A");
+    static_assert(std::is_same<SplitPromise<decltype(triple)>::SplittedT,
+                               std::tuple<Promise<int>, Promise<double>, Promise<std::string>>>::value,
+                  "A");
+    auto splitted = split_promise(triple);
+    static_assert(
+        std::is_same<decltype(splitted), std::tuple<Promise<int>, Promise<double>, Promise<std::string>>>::value, "A");
+    std::get<0>(splitted).set_value(1);
+    std::get<1>(splitted).set_value(2.0);
+    std::get<2>(splitted).set_value("hello");
+    CHECK(x.unwrap() == std::make_tuple(1, 2.0, "hello"));
+  }
+  {
+    int code = 0;
+    auto pair = [&](Result<std::pair<int, double>> res) {
+      res.ensure_error();
+      code = res.error().code();
+    };
+    auto splitted = split_promise(td::Promise<std::pair<int, double>>(pair));
+    splitted.second.set_error(td::Status::Error(123, "123"));
+    CHECK(code == 0);
+    splitted.first.set_value(1);
+    CHECK(code == 123);
+  }
+}
+
+TEST(Actor, promise_future) {
+  using td::make_promise_future;
+  {
+    auto pf = make_promise_future<int>();
+    td::optional<int> res;
+    pf.second.map([](int x) { return x * 2; }).map([](int x) { return x + 10; }).map([&](int x) {
+      res = x;
+      return td::Unit();
+    });
+    CHECK(!res);
+    pf.first.set_value(6);
+    ASSERT_EQ(22, res.unwrap());
+  }
+  {
+    LOG(ERROR) << "Second test";
+    td::optional<int> res;
+    td::make_future(6)
+        .map([](int x) { return x * 2; })
+        .map([](int x) { return x + 10; })
+        .fmap([&](int x) { return td::make_future(x * 2); })
+        .finish([&](int x) { res = x; });
+    ASSERT_EQ(44, res.unwrap());
+  }
+}
+
 TEST(Actor2, actor_lost_promise) {
   using namespace td::actor;
   using namespace td;
@@ -459,7 +531,7 @@ class SampleActor : public Actor {
     detail::current_actor<Printer>().print_a();
     co_await OnActor(self);
     LOG(ERROR) << "exit print_a";
-    co_return{};
+    co_return {};
   }
   task<Unit> print_b() {
     auto self = actor_id(this);
@@ -468,7 +540,7 @@ class SampleActor : public Actor {
     detail::current_actor<Printer>().print_b();
     co_await OnActor(self);
     LOG(ERROR) << "exit print_b";
-    co_return{};
+    co_return {};
   }
 
   immediate_task run_coroutine() {

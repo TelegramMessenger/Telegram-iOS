@@ -1542,6 +1542,7 @@ template <class DeserializerT>
 class BenchBocDeserializer : public td::Benchmark {
  public:
   BenchBocDeserializer(std::string name, BenchBocDeserializerConfig config) : name_(std::move(name)), config_(config) {
+    td::PerfWarningTimer perf("A", 1);
     fast_array_ = vm::FastCompactArray(array_size);
     td::Random::Xorshift128plus rnd{123};
     for (td::uint32 i = 0; i < array_size; i++) {

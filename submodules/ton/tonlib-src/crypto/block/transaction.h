@@ -151,8 +151,6 @@ struct ActionPhaseConfig {
 struct CreditPhase {
   td::RefInt256 due_fees_collected;
   block::CurrencyCollection credit;
-  // td::RefInt256 credit;
-  // Ref<vm::Cell> credit_extra;
 };
 
 struct ComputePhase {
@@ -233,8 +231,6 @@ struct Account {
   ton::UnixTime last_paid;
   vm::CellStorageStat storage_stat;
   block::CurrencyCollection balance;
-  // td::RefInt256 balance;
-  // Ref<vm::Cell> extra_balance;
   td::RefInt256 due_payment;
   Ref<vm::Cell> orig_total_state;  // ^Account
   Ref<vm::Cell> total_state;       // ^Account
@@ -325,8 +321,6 @@ struct Transaction {
   Ref<vm::Cell> root;
   Ref<vm::Cell> new_total_state;
   Ref<vm::CellSlice> new_inner_state;
-  // Ref<vm::Cell> extra_balance;
-  // Ref<vm::Cell> msg_extra;
   Ref<vm::Cell> new_code, new_data, new_library;
   Ref<vm::Cell> in_msg, in_msg_state;
   Ref<vm::CellSlice> in_msg_body;

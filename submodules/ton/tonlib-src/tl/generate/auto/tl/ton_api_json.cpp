@@ -900,6 +900,10 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"tonNode.downloadBlockProofLinks", 684796771},
     {"tonNode.downloadBlockProofs", -1515170827},
     {"tonNode.downloadBlocks", 1985594749},
+    {"tonNode.downloadKeyBlockProof", -333232070},
+    {"tonNode.downloadKeyBlockProofLink", 316943058},
+    {"tonNode.downloadKeyBlockProofLinks", 1975747920},
+    {"tonNode.downloadKeyBlockProofs", -1020797382},
     {"tonNode.downloadNextBlockFull", 1855993674},
     {"tonNode.downloadPersistentState", 2140791736},
     {"tonNode.downloadPersistentStateSlice", -169220381},
@@ -915,6 +919,8 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"tonNode.prepareBlockProof", -2024000760},
     {"tonNode.prepareBlockProofs", -310791496},
     {"tonNode.prepareBlocks", 1795140604},
+    {"tonNode.prepareKeyBlockProof", 2000047160},
+    {"tonNode.prepareKeyBlockProofs", -1939014684},
     {"tonNode.preparePersistentState", -18209122},
     {"tonNode.prepareZeroState", 1104021541},
     {"tonNode.query", 1777542355},
@@ -6349,6 +6355,42 @@ Status from_json(ton_api::tonNode_downloadBlocks &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::tonNode_downloadKeyBlockProof &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.block_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_downloadKeyBlockProofLink &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.block_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_downloadKeyBlockProofLinks &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "blocks", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.blocks_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_downloadKeyBlockProofs &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "blocks", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.blocks_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::tonNode_downloadNextBlockFull &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "prev_block", JsonValue::Type::Null, true));
@@ -6546,6 +6588,36 @@ Status from_json(ton_api::tonNode_prepareBlocks &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "blocks", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.blocks_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_prepareKeyBlockProof &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.block_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "allow_partial", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.allow_partial_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_prepareKeyBlockProofs &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "blocks", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.blocks_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "allow_partial", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.allow_partial_, value));
     }
   }
   return Status::OK();
@@ -9082,6 +9154,30 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadBlocks &object) 
   jo << ctie("@type", "tonNode.downloadBlocks");
   jo << ctie("blocks", ToJson(object.blocks_));
 }
+void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadKeyBlockProof &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.downloadKeyBlockProof");
+  if (object.block_) {
+    jo << ctie("block", ToJson(object.block_));
+  }
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadKeyBlockProofLink &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.downloadKeyBlockProofLink");
+  if (object.block_) {
+    jo << ctie("block", ToJson(object.block_));
+  }
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadKeyBlockProofLinks &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.downloadKeyBlockProofLinks");
+  jo << ctie("blocks", ToJson(object.blocks_));
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadKeyBlockProofs &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.downloadKeyBlockProofs");
+  jo << ctie("blocks", ToJson(object.blocks_));
+}
 void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadNextBlockFull &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "tonNode.downloadNextBlockFull");
@@ -9191,6 +9287,20 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareBlocks &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "tonNode.prepareBlocks");
   jo << ctie("blocks", ToJson(object.blocks_));
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareKeyBlockProof &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.prepareKeyBlockProof");
+  if (object.block_) {
+    jo << ctie("block", ToJson(object.block_));
+  }
+  jo << ctie("allow_partial", ToJson(object.allow_partial_));
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareKeyBlockProofs &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.prepareKeyBlockProofs");
+  jo << ctie("blocks", ToJson(object.blocks_));
+  jo << ctie("allow_partial", ToJson(object.allow_partial_));
 }
 void to_json(JsonValueScope &jv, const ton_api::tonNode_preparePersistentState &object) {
   auto jo = jv.enter_object();

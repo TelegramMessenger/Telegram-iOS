@@ -1,0 +1,199 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/restricted-wallet3-code.fc` 
+PROGRAM{
+  DECLPROC recv_internal
+  DECLPROC seconds_passed
+  DECLPROC recv_external
+  85143 DECLMETHOD seqno
+  80113 DECLMETHOD wallet_id
+  78748 DECLMETHOD get_public_key
+  DECLPROC compute_balance_at
+  108602 DECLMETHOD balance_at
+  104128 DECLMETHOD balance
+  recv_internal PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  seconds_passed PROCREF:<{
+    //  start_at utime
+    OVER	//  start_at utime start_at
+    IFNOT:<{	//  start_at utime
+      NIP	//  utime
+      -13 PUSHINT	//  utime _3=-13
+      CONFIGOPTPARAM	//  utime p
+      DUP	//  utime p p
+      ISNULL	//  utime p _5
+      IF:<{	//  utime p
+        DROP	//  utime
+        0 PUSHINT	//  utime _6=0
+      }>ELSE<{	//  utime p
+        CTOS	//  utime _8
+        32 PLDU	//  utime _6
+      }>	//  utime start_at
+      SWAP	//  start_at utime
+    }>	//  start_at utime
+    OVER	//  start_at utime start_at
+    IF:<{	//  start_at utime
+      SWAP	//  utime start_at
+      SUB	//  _11
+    }>ELSE<{	//  start_at utime
+      2DROP	// 
+      -1 PUSHINT	//  _11=-1
+    }>
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg _9 cs
+    32 LDU	//  signature in_msg _9 _12 cs
+    32 LDU	//  signature in_msg subwallet_id valid_until msg_seqno cs
+    s0 s2 XCHG
+    NOW	//  signature in_msg subwallet_id cs msg_seqno valid_until _19
+    LEQ	//  signature in_msg subwallet_id cs msg_seqno _20
+    35 THROWIF
+    c4 PUSH	//  signature in_msg subwallet_id cs msg_seqno _23
+    CTOS	//  signature in_msg subwallet_id cs msg_seqno ds
+    32 LDU	//  signature in_msg subwallet_id cs msg_seqno _28 ds
+    32 LDU	//  signature in_msg subwallet_id cs msg_seqno _28 _31 ds
+    256 LDU	//  signature in_msg subwallet_id cs msg_seqno stored_seqno stored_subwallet public_key ds
+    s4 s3 PUSH2	//  signature in_msg subwallet_id cs msg_seqno stored_seqno stored_subwallet public_key ds msg_seqno stored_seqno
+    EQUAL	//  signature in_msg subwallet_id cs msg_seqno stored_seqno stored_subwallet public_key ds _38
+    33 THROWIFNOT
+    s6 s2 XCPU	//  signature in_msg ds cs msg_seqno stored_seqno stored_subwallet public_key subwallet_id stored_subwallet
+    EQUAL	//  signature in_msg ds cs msg_seqno stored_seqno stored_subwallet public_key _41
+    34 THROWIFNOT
+    s0 s6 XCHG	//  signature public_key ds cs msg_seqno stored_seqno stored_subwallet in_msg
+    HASHSU	//  signature public_key ds cs msg_seqno stored_seqno stored_subwallet _44
+    s0 s7 s6 XC2PU	//  stored_subwallet public_key ds cs msg_seqno stored_seqno _44 signature public_key
+    CHKSIGNU	//  stored_subwallet public_key ds cs msg_seqno stored_seqno _45
+    36 THROWIFNOT
+    SWAP	//  stored_subwallet public_key ds cs stored_seqno msg_seqno
+    IFNOTJMP:<{	//  stored_subwallet public_key ds cs stored_seqno
+      s3 POP	//  stored_subwallet stored_seqno ds cs
+      SWAP	//  stored_subwallet stored_seqno cs ds
+      256 LDU	//  stored_subwallet stored_seqno cs public_key ds
+      ENDS
+      SWAP	//  stored_subwallet stored_seqno public_key cs
+      32 LDU	//  stored_subwallet stored_seqno public_key _55 cs
+      LDDICT	//  stored_subwallet stored_seqno public_key start_at rdict cs
+      ENDS
+      ACCEPT
+      s0 s3 XCHG	//  stored_subwallet rdict public_key start_at stored_seqno
+      INC	//  stored_subwallet rdict public_key start_at _63
+      NEWC	//  stored_subwallet rdict public_key start_at _63 _64
+      32 STU	//  stored_subwallet rdict public_key start_at _66
+      s1 s4 XCHG	//  start_at rdict public_key stored_subwallet _66
+      32 STU	//  start_at rdict public_key _68
+      256 STU	//  start_at rdict _70
+      s1 s2 XCHG	//  rdict start_at _70
+      32 STU	//  rdict _72
+      STDICT	//  _73
+      ENDC	//  _74
+      c4 POP
+    }>	//  stored_subwallet public_key ds cs stored_seqno
+    s0 s2 XCHG	//  stored_subwallet public_key stored_seqno cs ds
+    32 LDU	//  stored_subwallet public_key stored_seqno cs _78 ds
+    LDDICT	//  stored_subwallet public_key stored_seqno cs start_at rdict ds
+    ENDS
+    ACCEPT
+    OVER
+    NOW	//  stored_subwallet public_key stored_seqno cs start_at rdict start_at _86
+    seconds_passed INLINECALLDICT	//  stored_subwallet public_key stored_seqno cs start_at rdict ts
+    OVER
+    32 PUSHINT	//  stored_subwallet public_key stored_seqno cs start_at rdict ts rdict _91=32
+    DICTIGETPREVEQ
+    NULLSWAPIFNOT2	//  stored_subwallet public_key stored_seqno cs start_at rdict _148 _147 _149
+    NIP	//  stored_subwallet public_key stored_seqno cs start_at rdict value found
+    IF:<{	//  stored_subwallet public_key stored_seqno cs start_at rdict value
+      LDGRAMS	//  stored_subwallet public_key stored_seqno cs start_at rdict _151 _150
+      DROP	//  stored_subwallet public_key stored_seqno cs start_at rdict _93
+      2 PUSHINT	//  stored_subwallet public_key stored_seqno cs start_at rdict _93 _95=2
+      RAWRESERVE
+    }>ELSE<{
+      DROP	//  stored_subwallet public_key stored_seqno cs start_at rdict
+    }>
+    s0 s2 XCHG	//  stored_subwallet public_key stored_seqno rdict start_at cs
+    WHILE:<{
+      DUP	//  stored_subwallet public_key stored_seqno rdict start_at cs cs
+      SREFS	//  stored_subwallet public_key stored_seqno rdict start_at cs _99
+    }>DO<{	//  stored_subwallet public_key stored_seqno rdict start_at cs
+      8 LDU	//  stored_subwallet public_key stored_seqno rdict start_at mode cs
+      LDREF	//  stored_subwallet public_key stored_seqno rdict start_at mode msg cs
+      s0 s2 XCHG	//  stored_subwallet public_key stored_seqno rdict start_at cs msg mode
+      SENDRAWMSG
+    }>	//  stored_subwallet public_key stored_seqno rdict start_at cs
+    ENDS
+    s0 s2 XCHG	//  stored_subwallet public_key start_at rdict stored_seqno
+    INC	//  stored_subwallet public_key start_at rdict _110
+    NEWC	//  stored_subwallet public_key start_at rdict _110 _111
+    32 STU	//  stored_subwallet public_key start_at rdict _113
+    s1 s4 XCHG	//  rdict public_key start_at stored_subwallet _113
+    32 STU	//  rdict public_key start_at _115
+    s1 s2 XCHG	//  rdict start_at public_key _115
+    256 STU	//  rdict start_at _117
+    32 STU	//  rdict _119
+    STDICT	//  _120
+    ENDC	//  _121
+    c4 POP
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
+  }>
+  wallet_id PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    32 LDU	//  _9 _8
+    NIP	//  ds
+    32 PLDU	//  _7
+  }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    64 LDU	//  _11 _10
+    NIP	//  ds
+    256 PLDU	//  _9
+  }>
+  compute_balance_at PROCREF:<{
+    //  utime
+    c4 PUSH	//  utime _2
+    CTOS	//  utime _3
+    320 PUSHINT	//  utime _3 _8
+    SDSKIPFIRST	//  utime ds
+    32 LDU	//  utime _12 ds
+    LDDICT	//  utime start_at rdict ds
+    ENDS
+    s0 s2 XCHG	//  rdict start_at utime
+    seconds_passed INLINECALLDICT	//  rdict ts
+    BALANCE	//  rdict ts _21
+    FIRST	//  rdict ts balance
+    s0 s2 XCHG
+    32 PUSHINT	//  balance ts rdict _26=32
+    DICTIGETPREVEQ
+    NULLSWAPIFNOT2	//  balance _38 _37 _39
+    NIP	//  balance value found
+    IF:<{	//  balance value
+      LDGRAMS	//  balance _41 _40
+      DROP	//  balance _28
+      SUB	//  _30
+      0 PUSHINT	//  _30 _31=0
+      MAX	//  balance
+    }>ELSE<{
+      DROP	//  balance
+    }>
+  }>
+  balance_at PROC:<{
+    //  utime
+    compute_balance_at INLINECALLDICT	//  _1
+  }>
+  balance PROC:<{
+    // 
+    NOW	//  _0
+    compute_balance_at INLINECALLDICT	//  _1
+  }>
+}END>c

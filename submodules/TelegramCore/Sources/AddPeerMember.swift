@@ -10,6 +10,7 @@ public enum AddGroupMemberError {
     case generic
     case groupFull
     case privacy
+    case notMutualContact
     case tooManyChannels
 }
 
@@ -26,6 +27,8 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
                         return .privacy
                     case "USER_CHANNELS_TOO_MUCH":
                         return .tooManyChannels
+                    case "USER_NOT_MUTUAL_CONTACT":
+                        return .notMutualContact
                     default:
                         return .generic
                     }
@@ -68,6 +71,7 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
 public enum AddChannelMemberError {
     case generic
     case restricted
+    case notMutualContact
     case limitExceeded
     case tooMuchJoined
     case bot(PeerId)
@@ -98,8 +102,10 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
-                            case "USER_PRIVACY_RESTRICTED", "USER_NOT_MUTUAL_CONTACT":
+                            case "USER_PRIVACY_RESTRICTED":
                                 return .fail(.restricted)
+                            case "USER_NOT_MUTUAL_CONTACT":
+                                return .fail(.notMutualContact)
                             case "USER_BOT":
                                 return .fail(.bot(memberId))
                             case "BOT_GROUPS_BLOCKED":
@@ -194,8 +200,10 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
                 switch error.errorDescription {
                    case "CHANNELS_TOO_MUCH":
                         return .tooMuchJoined
-                    case "USER_PRIVACY_RESTRICTED", "USER_NOT_MUTUAL_CONTACT":
+                    case "USER_PRIVACY_RESTRICTED":
                         return .restricted
+                    case "USER_NOT_MUTUAL_CONTACT":
+                        return .notMutualContact
                     case "USERS_TOO_MUCH":
                         return .limitExceeded
                     default:

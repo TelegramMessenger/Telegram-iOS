@@ -36,6 +36,7 @@ library TonUtil // TON Blockchain Fift Library
 
 // ( x -- ) Displays a 64-digit hex number
 { 64 0x. } : 64x.
+{ 64 0X. } : 64X.
 // ( wc addr -- )  Show address in <workchain>:<account> form
 { swap ._ .":" 64x. } : .addr
 // ( wc addr flags -- )  Show address in base64url form

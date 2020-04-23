@@ -44,6 +44,8 @@ const auto& get_map() {
 #include "smartcont/auto/highload-wallet-code.cpp"
 #include "smartcont/auto/highload-wallet-v2-code.cpp"
 #include "smartcont/auto/dns-manual-code.cpp"
+#include "smartcont/auto/payment-channel-code.cpp"
+#include "smartcont/auto/restricted-wallet3-code.cpp"
 
     with_tvm_code("highload-wallet-r1",
                   "te6ccgEBBgEAhgABFP8A9KQT9KDyyAsBAgEgAgMCAUgEBQC88oMI1xgg0x/TH9Mf+CMTu/Jj7UTQ0x/TH9P/"
@@ -96,6 +98,13 @@ const auto& get_map() {
         "FwCEMQLTAAHAAZPUAdCY0wUBqgLXGAHiINdJwg/"
         "ypiB41yLXCwfyaHBTEddJqTYCmNMHAcAAEqEB5DDIywYBzxbJ0FADACBZ9KhvpSCUAvQEMJIybeICACg0A4AQ9FqZECOECUBE8AEBkjAx4gBmM"
         "SLAFZwy9AQQI4QJUELwAQHgIsAWmDIChAn0czAB4DAyIMAfkzD0BODAIJJtAeDyLG0B");
+    with_tvm_code(
+        "restricted-wallet3-r1",
+        "te6ccgECEgEAAUwAART/APSkE/S88sgLAQIBIAIDAgFIBAUD+PKDCNcYINMf0x/THwL4I7vyY+1E0NMf0x/T/"
+        "1NDuvKhUWK68qIG+QFUEHb5EPKkAY4fMwHT/9EB0x/0BNH4AAOkyMsfFMsfy/8Syx/0AMntVOEC0x/"
+        "0BNH4ACH4I9s8IYAg9HtvpTGW+gAwcvsCkTDiApMg10qK6NECpMgPEBEABNAwAgEgBgcCASAICQIBSAwNAgFuCgsAEbjJftRNDXCx+"
+        "AAXrc52omhpn5jrhf/AABmsePaiaEAQa5DrhY/AAQ222B8Ee2eQDgEJtQdbZ5AOAU7tRNCBAUDXIdMf9ATRAts8+CdvEAKAIPR7b6Uxl/"
+        "oAMKFwtgmRMOIPADohjhExgPP4MyBukjBwlNDXCx/iAd8hkgGhklt/4gAM0wfUAvsAAB7LHxTLHxLL/8sf9ADJ7VQ=");
     return map;
   }();
   return map;
@@ -103,7 +112,6 @@ const auto& get_map() {
 }  // namespace
 
 td::Result<td::Ref<vm::Cell>> SmartContractCode::load(td::Slice name) {
-  LOG(ERROR) << "LOAD " << name;
   auto& map = get_map();
   auto it = map.find(name);
   if (it == map.end()) {
@@ -143,6 +151,14 @@ td::Span<int> SmartContractCode::get_revisions(Type type) {
       return res;
     }
     case Type::ManualDns: {
+      static int res[] = {-1, 1};
+      return res;
+    }
+    case Type::PaymentChannel: {
+      static int res[] = {-1};
+      return res;
+    }
+    case Type::RestrictedWallet: {
       static int res[] = {-1, 1};
       return res;
     }
@@ -190,6 +206,10 @@ td::Ref<vm::Cell> SmartContractCode::get_code(Type type, int ext_revision) {
         return "multisig";
       case Type::ManualDns:
         return "dns-manual";
+      case Type::PaymentChannel:
+        return "payment-channel";
+      case Type::RestrictedWallet:
+        return "restricted-wallet3";
     }
     UNREACHABLE();
     return "";

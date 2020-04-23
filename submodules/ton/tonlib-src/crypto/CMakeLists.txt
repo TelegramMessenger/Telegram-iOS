@@ -49,6 +49,7 @@ set(TON_CRYPTO_SOURCE
   common/bigexp.h
   common/util.h
   common/linalloc.hpp
+  common/promiseop.hpp
 
   ellcurve/Ed25519.h
   ellcurve/Fp25519.h
@@ -212,6 +213,7 @@ set(SMC_ENVELOPE_SOURCE
   smc-envelope/HighloadWalletV2.cpp
   smc-envelope/ManualDns.cpp
   smc-envelope/MultisigWallet.cpp
+  smc-envelope/PaymentChannel.cpp
   smc-envelope/SmartContract.cpp
   smc-envelope/SmartContractCode.cpp
   smc-envelope/TestGiver.cpp
@@ -341,7 +343,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(multiValueArgs SOURCE)
     set(FUNC_LIB_SOURCE smartcont/stdlib.fc)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-    string(REGEX REPLACE "[^a-zA-Z_]" "_" ID ${ARG_DEST})
+    string(REGEX REPLACE "[^0-9a-zA-Z_]" "_" ID ${ARG_DEST})
     set(ARG_DEST_FIF "${ARG_DEST}.fif")
     add_custom_command(
       COMMENT "Generate ${ARG_DEST_FIF}"
@@ -374,9 +376,12 @@ if (NOT CMAKE_CROSSCOMPILING)
   GenFif(DEST smartcont/auto/multisig-code SOURCE smartcont/multisig-code.fc NAME multisig)
   GenFif(DEST smartcont/auto/restricted-wallet-code SOURCE smartcont/restricted-wallet-code.fc NAME restricted-wallet)
   GenFif(DEST smartcont/auto/restricted-wallet2-code SOURCE smartcont/restricted-wallet2-code.fc NAME restricted-wallet2)
+  GenFif(DEST smartcont/auto/restricted-wallet3-code SOURCE smartcont/restricted-wallet3-code.fc NAME restricted-wallet3)
 
   GenFif(DEST smartcont/auto/dns-manual-code SOURCE smartcont/dns-manual-code.fc NAME dns-manual)
   GenFif(DEST smartcont/auto/dns-auto-code SOURCE smartcont/dns-auto-code.fc NAME dns-auto)
+
+  GenFif(DEST smartcont/auto/payment-channel-code SOURCE smartcont/payment-channel-code.fc NAME payment-channel)
 
   GenFif(DEST smartcont/auto/simple-wallet-ext-code SOURCE smartcont/simple-wallet-ext-code.fc NAME simple-wallet-ext)
 endif()
@@ -418,6 +423,14 @@ target_include_directories(adjust-block PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT
 target_link_libraries(adjust-block PUBLIC ton_crypto fift-lib ton_block)
 if (WINGETOPT_FOUND)
   target_link_libraries_system(dump-block wingetopt)
+endif()
+
+add_executable(test-weight-distr block/test-weight-distr.cpp)
+target_include_directories(test-weight-distr PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>)
+target_link_libraries(test-weight-distr PUBLIC ton_crypto fift-lib ton_block)
+if (WINGETOPT_FOUND)
+  target_link_libraries_system(test-weight-distr wingetopt)
 endif()
 
 install(TARGETS fift func RUNTIME DESTINATION bin)

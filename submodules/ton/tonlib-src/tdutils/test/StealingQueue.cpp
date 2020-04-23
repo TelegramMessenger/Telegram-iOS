@@ -28,6 +28,7 @@
 #include "td/utils/tests.h"
 #include "td/utils/benchmark.h"
 
+#include "td/utils/AtomicRead.h"
 #include "td/utils/StealingQueue.h"
 #include "td/utils/MpmcQueue.h"
 
@@ -79,6 +80,46 @@ TEST(AtomicRead, simple) {
     thread.join();
   }
 }
+TEST(AtomicRead, simple2) {
+  td::Stage run;
+  td::Stage check;
+
+  size_t threads_n = 10;
+  std::vector<td::thread> threads;
+
+  struct Value {
+    td::uint64 value = 0;
+    char str[50] = "0 0 0 0";
+  };
+  AtomicRead<Value> value;
+
+  auto to_str = [](size_t i) { return PSTRING() << i << " " << i << " " << i << " " << i; };
+  for (size_t i = 0; i < threads_n; i++) {
+    threads.push_back(td::thread([&, id = static_cast<uint32>(i)] {
+      for (uint64 round = 1; round < 10000; round++) {
+        if (id == 0) {
+        }
+        run.wait(round * threads_n);
+        if (id == 0) {
+          auto x = value.lock();
+          x->value = round;
+          auto str = to_str(round);
+          memcpy(x->str, str.c_str(), str.size() + 1);
+        } else {
+          Value x;
+          value.read(x);
+          LOG_CHECK(x.value == round || x.value == round - 1) << x.value << " " << round;
+          CHECK(x.str == to_str(x.value));
+        }
+        check.wait(round * threads_n);
+      }
+    }));
+  }
+  for (auto &thread : threads) {
+    thread.join();
+  }
+}
+
 TEST(StealingQueue, simple) {
   uint64 sum;
   std::atomic<uint64> got_sum;

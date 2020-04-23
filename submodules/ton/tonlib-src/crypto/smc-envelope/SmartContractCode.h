@@ -16,6 +16,7 @@
 
     Copyright 2017-2020 Telegram Systems LLP
 */
+#pragma once
 #include "vm/cells.h"
 
 #include "td/utils/Span.h"
@@ -25,7 +26,18 @@ class SmartContractCode {
  public:
   static td::Result<td::Ref<vm::Cell>> load(td::Slice name);
 
-  enum Type { WalletV1 = 1, WalletV1Ext, WalletV2, WalletV3, HighloadWalletV1, HighloadWalletV2, ManualDns, Multisig };
+  enum Type {
+    WalletV1 = 1,
+    WalletV1Ext,
+    WalletV2,
+    WalletV3,
+    HighloadWalletV1,
+    HighloadWalletV2,
+    ManualDns,
+    Multisig,
+    PaymentChannel,
+    RestrictedWallet
+  };
   static td::Span<int> get_revisions(Type type);
   static td::Result<int> validate_revision(Type type, int revision);
   static td::Ref<vm::Cell> get_code(Type type, int revision = 0);

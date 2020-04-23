@@ -757,15 +757,28 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             |> deliverOnMainQueue).start(next: { records, publicKey in
                 if let record = records.first {
                     if let publicKey = publicKey {
-                        if record.info.encryptedSecret.publicKey == publicKey {
-                            if record.exportCompleted {
-                                let _ = (walletAddress(publicKey: record.info.publicKey, tonInstance: walletContext.tonInstance)
-                                |> deliverOnMainQueue).start(next: { address in
-                                    let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: record.info, address: address, enableDebugActions: false)
-                                    beginWithController(infoScreen)
-                                })
-                            } else {
-                                let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(walletInfo: record.info, words: nil), walletCreatedPreloadState: nil)
+                        let recordPublicKey: Data
+                        switch record.info {
+                        case let .ready(info, _, _):
+                            recordPublicKey = info.encryptedSecret.publicKey
+                        case let .imported(info):
+                            recordPublicKey = info.encryptedSecret.publicKey
+                        }
+                        if recordPublicKey == publicKey {
+                            switch record.info {
+                            case let .ready(info, exportCompleted, _):
+                                if exportCompleted {
+                                    let _ = (walletAddress(walletInfo: info, tonInstance: walletContext.tonInstance)
+                                    |> deliverOnMainQueue).start(next: { address in
+                                        let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: info, address: address, enableDebugActions: false)
+                                        beginWithController(infoScreen)
+                                    })
+                                } else {
+                                    let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(walletInfo: info, words: nil), walletCreatedPreloadState: nil)
+                                    beginWithController(createdScreen)
+                                }
+                            case let .imported(info):
+                                let createdScreen = WalletSplashScreen(context: walletContext, mode: .successfullyImported(importedInfo: info), walletCreatedPreloadState: nil)
                                 beginWithController(createdScreen)
                             }
                         } else {

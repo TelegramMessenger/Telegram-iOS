@@ -57,6 +57,8 @@ class SmartContract : public td::CntObject {
     td::optional<td::Ref<vm::Stack>> stack;
     td::optional<td::int32> now;
     bool ignore_chksig{false};
+    td::uint64 amount{0};
+    td::uint64 balance{0};
 
     Args() {
     }
@@ -95,6 +97,14 @@ class SmartContract : public td::CntObject {
       this->ignore_chksig = ignore_chksig;
       return std::move(*this);
     }
+    Args&& set_amount(td::uint64 amount) {
+      this->amount = amount;
+      return std::move(*this);
+    }
+    Args&& set_balance(td::uint64 balance) {
+      this->balance = balance;
+      return std::move(*this);
+    }
 
     td::Result<td::int32> get_method_id() const {
       if (!method_id) {
@@ -109,6 +119,7 @@ class SmartContract : public td::CntObject {
   Answer run_get_method(Args args = {}) const;
   Answer run_get_method(td::Slice method, Args args = {}) const;
   Answer send_external_message(td::Ref<vm::Cell> cell, Args args = {});
+  Answer send_internal_message(td::Ref<vm::Cell> cell, Args args = {});
 
   size_t code_size() const;
   size_t data_size() const;
@@ -121,6 +132,9 @@ class SmartContract : public td::CntObject {
 
   const State& get_state() const {
     return state_;
+  }
+  CntObject* make_copy() const override {
+    return new SmartContract(state_);
   }
 
  protected:

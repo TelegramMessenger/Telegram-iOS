@@ -1,0 +1,1712 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/elector-code.fc` 
+PROGRAM{
+  DECLPROC load_data
+  DECLPROC store_data
+  DECLPROC unpack_elect
+  DECLPROC pack_elect
+  DECLPROC get_validator_conf
+  DECLPROC send_message_back
+  DECLPROC return_stake
+  DECLPROC send_confirmation
+  DECLPROC send_validator_set_to_config
+  DECLPROC ~credit_to
+  DECLPROC process_new_stake
+  DECLPROC unfreeze_without_bonuses
+  DECLPROC unfreeze_with_bonuses
+  DECLPROC unfreeze_all
+  DECLPROC config_set_confirmed
+  DECLPROC process_simple_transfer
+  DECLPROC recover_stake
+  1666 DECLMETHOD after_code_upgrade
+  DECLPROC upgrade_code
+  DECLPROC recv_internal
+  DECLPROC postpone_elections
+  DECLPROC compute_total_stake
+  DECLPROC try_elect
+  DECLPROC conduct_elections
+  DECLPROC update_active_vset_id
+  DECLPROC cell_hash_eq?
+  DECLPROC validator_set_installed
+  DECLPROC check_unfreeze
+  DECLPROC announce_new_elections
+  DECLPROC run_ticktock
+  86535 DECLMETHOD active_election_id
+  87852 DECLMETHOD participates_in
+  123541 DECLMETHOD participant_list
+  130944 DECLMETHOD compute_returned_stake
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    LDDICT	//  _4 cs
+    LDDICT	//  _4 _6 cs
+    LDDICT	//  _4 _6 _8 cs
+    LDGRAMS	//  _4 _6 _8 _10 cs
+    32 LDU	//  _4 _6 _8 _10 _12 cs
+    256 LDU	//  res res res res res res cs
+    ENDS
+  }>
+  store_data PROC:<{
+    //  elect credits past_elect grams active_id active_hash
+    NEWC	//  elect credits past_elect grams active_id active_hash _6
+    s1 s6 XCHG	//  active_hash credits past_elect grams active_id elect _6
+    STDICT	//  active_hash credits past_elect grams active_id _7
+    s1 s4 XCHG	//  active_hash active_id past_elect grams credits _7
+    STDICT	//  active_hash active_id past_elect grams _8
+    s1 s2 XCHG	//  active_hash active_id grams past_elect _8
+    STDICT	//  active_hash active_id grams _9
+    SWAP	//  active_hash active_id _9 grams
+    STGRAMS	//  active_hash active_id _10
+    32 STU	//  active_hash _12
+    256 STU	//  _14
+    ENDC	//  _15
+    c4 POP
+  }>
+  unpack_elect PROC:<{
+    //  elect
+    CTOS	//  es
+    32 LDU	//  _4 es
+    32 LDU	//  _4 _7 es
+    LDGRAMS	//  _4 _7 _10 es
+    LDGRAMS	//  _4 _7 _10 _12 es
+    LDDICT	//  _4 _7 _10 _12 _14 es
+    1 LDI	//  _4 _7 _10 _12 _14 _16 es
+    1 LDI	//  res res res res res res res es
+    ENDS
+  }>
+  pack_elect PROC:<{
+    //  elect_at elect_close min_stake total_stake members failed finished
+    NEWC	//  elect_at elect_close min_stake total_stake members failed finished _7
+    s1 s7 XCHG	//  finished elect_close min_stake total_stake members failed elect_at _7
+    32 STU	//  finished elect_close min_stake total_stake members failed _9
+    s1 s5 XCHG	//  finished failed min_stake total_stake members elect_close _9
+    32 STU	//  finished failed min_stake total_stake members _11
+    s0 s3 XCHG2	//  finished failed members total_stake _11 min_stake
+    STGRAMS	//  finished failed members total_stake _12
+    SWAP	//  finished failed members _12 total_stake
+    STGRAMS	//  finished failed members _13
+    STDICT	//  finished failed _14
+    1 STI	//  finished _16
+    1 STI	//  _18
+    ENDC	//  _19
+  }>
+  get_validator_conf PROC:<{
+    // 
+    15 PUSHINT	//  _1=15
+    CONFIGOPTPARAM	//  _2
+    CTOS	//  cs
+    32 LDI	//  _4 cs
+    32 LDI	//  _4 _7 cs
+    32 LDI	//  _4 _7 _10 cs
+    32 PLDI	//  _4 _7 _10 _14
+  }>
+  send_message_back PROC:<{
+    //  addr ans_tag query_id body grams mode
+    0 PUSHINT	//  addr ans_tag query_id body grams mode _7=0
+    24 PUSHINT	//  addr ans_tag query_id body grams mode _7=0 _8=24
+    NEWC	//  addr ans_tag query_id body grams mode _7=0 _8=24 _9
+    6 STU	//  addr ans_tag query_id body grams mode _7=0 _11
+    s0 s7 XCHG2	//  _7=0 ans_tag query_id body grams mode _11 addr
+    STSLICER	//  _7=0 ans_tag query_id body grams mode _12
+    ROT	//  _7=0 ans_tag query_id body mode _12 grams
+    STGRAMS	//  _7=0 ans_tag query_id body mode _13
+    s1 s5 XCHG	//  mode ans_tag query_id body _7=0 _13
+    107 STU	//  mode ans_tag query_id body _27
+    s1 s3 XCHG	//  mode body query_id ans_tag _27
+    32 STU	//  mode body query_id _29
+    64 STU	//  mode body msg
+    OVER	//  mode body msg body
+    -1 GTINT	//  mode body msg _33
+    IF:<{	//  mode body msg
+      32 STU	//  mode msg
+    }>ELSE<{
+      NIP	//  mode msg
+    }>
+    ENDC	//  mode _37
+    SWAP	//  _37 mode
+    SENDRAWMSG
+  }>
+  return_stake PROC:<{
+    //  addr query_id reason
+    4000269644 PUSHINT	//  addr query_id reason _3=4000269644
+    0 PUSHINT	//  addr query_id reason _3=4000269644 _4=0
+    s3 s3 s0 XCHG3
+    64 PUSHINT	//  addr _3=4000269644 query_id reason _4=0 _5=64
+    send_message_back CALLDICT
+  }>
+  send_confirmation PROC:<{
+    //  addr query_id comment
+    4084484172 PUSHINT	//  addr query_id comment _3=4084484172
+    1000000000 PUSHINT	//  addr query_id comment _3=4084484172 _4=1000000000
+    s3 s3 s0 XCHG3
+    2 PUSHINT	//  addr _3=4084484172 query_id comment _4=1000000000 _5=2
+    send_message_back CALLDICT
+  }>
+  send_validator_set_to_config PROC:<{
+    //  config_addr vset query_id
+    1314280276 PUSHINT	//  config_addr vset query_id _4=1314280276
+    0 PUSHINT	//  config_addr vset query_id _4=1314280276 _5=0
+    50431 PUSHINT	//  config_addr vset query_id _4=1314280276 _5=0 _6=50431
+    NEWC	//  config_addr vset query_id _4=1314280276 _5=0 _6=50431 _7
+    17 STU	//  config_addr vset query_id _4=1314280276 _5=0 _9
+    s1 s5 XCHG	//  _5=0 vset query_id _4=1314280276 config_addr _9
+    256 STU	//  _5=0 vset query_id _4=1314280276 _11
+    30 PUSHPOW2	//  _5=0 vset query_id _4=1314280276 _11 _14
+    STGRAMS	//  _5=0 vset query_id _4=1314280276 _15
+    s1 s4 XCHG	//  _4=1314280276 vset query_id _5=0 _15
+    107 STU	//  _4=1314280276 vset query_id _29
+    s1 s3 XCHG	//  query_id vset _4=1314280276 _29
+    32 STU	//  query_id vset _31
+    s1 s2 XCHG	//  vset query_id _31
+    64 STU	//  vset _33
+    STREF	//  msg
+    ENDC	//  _35
+    1 PUSHINT	//  _35 _36=1
+    SENDRAWMSG
+  }>
+  ~credit_to PROC:<{
+    //  credits addr amount
+    s1 s2 PUSH2
+    8 PUSHPOW2	//  credits addr amount addr credits _5=256
+    DICTUGET
+    NULLSWAPIFNOT	//  credits addr amount val f
+    IF:<{	//  credits addr amount val
+      LDGRAMS	//  credits addr amount _18 _17
+      DROP	//  credits addr amount _7
+      ADD	//  credits addr amount
+    }>ELSE<{
+      DROP	//  credits addr amount
+    }>
+    NEWC	//  credits addr amount _11
+    SWAP	//  credits addr _11 amount
+    STGRAMS	//  credits addr _12
+    s0 s2 XCHG
+    8 PUSHPOW2	//  _12 addr credits _13=256
+    DICTUSETB	//  credits
+  }>
+  process_new_stake PROC:<{
+    //  s_addr msg_value cs query_id
+    s3 PUSH	//  s_addr msg_value cs query_id s_addr
+    REWRITESTDADDR	//  s_addr msg_value cs query_id src_wc src_addr
+    c4 PUSH	//  s_addr msg_value cs query_id src_wc src_addr _8
+    CTOS	//  s_addr msg_value cs query_id src_wc src_addr ds
+    LDDICT	//  s_addr msg_value cs query_id src_wc src_addr elect ds
+    OVER	//  s_addr msg_value cs query_id src_wc src_addr elect ds elect
+    ISNULL	//  s_addr msg_value cs query_id src_wc src_addr elect ds _13
+    s0 s4 XCHG	//  s_addr msg_value cs query_id _13 src_addr elect ds src_wc
+    INC	//  s_addr msg_value cs query_id _13 src_addr elect ds _15
+    s1 s4 XCHG	//  s_addr msg_value cs query_id ds src_addr elect _13 _15
+    OR	//  s_addr msg_value cs query_id ds src_addr elect _16
+    IFJMP:<{	//  s_addr msg_value cs query_id ds src_addr elect
+      s3 s5 XCHG
+      5 BLKDROP	//  s_addr query_id
+      0 PUSHINT	//  s_addr query_id _17=0
+      return_stake CALLDICT
+    }>	//  s_addr msg_value cs query_id ds src_addr elect
+    s0 s4 XCHG	//  s_addr msg_value elect query_id ds src_addr cs
+    256 LDU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey cs
+    32 LDU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at cs
+    32 LDU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor cs
+    256 LDU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr cs
+    LDREF	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr _36 cs
+    SWAP	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr cs _36
+    CTOS	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr cs _38
+    9 PUSHPOW2	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr cs _38 _39=512
+    PLDSLICEX	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr cs signature
+    SWAP	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature cs
+    ENDS
+    1699500148 PUSHINT	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _42=1699500148
+    NEWC	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _42=1699500148 _43
+    32 STU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _45
+    s4 s(-1) PUXC	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature stake_at _45
+    32 STU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _47
+    s3 s(-1) PUXC	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature max_factor _47
+    32 STU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _49
+    s6 s(-1) PUXC	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature src_addr _49
+    256 STU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _51
+    s2 s(-1) PUXC	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature adnl_addr _51
+    256 STU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _53
+    ENDC	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _54
+    CTOS	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr signature _55
+    s1 s5 XCPU	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr _55 signature validator_pubkey
+    CHKSIGNS	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr _56
+    IFNOTJMP:<{	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr
+      s6 s8 XCHG
+      8 BLKDROP	//  s_addr query_id
+      1 PUSHINT	//  s_addr query_id _57=1
+      return_stake CALLDICT
+    }>	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr
+    OVER
+    16 PUSHPOW2	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr max_factor _59=65536
+    LESS	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr _60
+    IFJMP:<{	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr
+      s6 s8 XCHG
+      8 BLKDROP	//  s_addr query_id
+      6 PUSHINT	//  s_addr query_id _61=6
+      return_stake CALLDICT
+    }>	//  s_addr msg_value elect query_id ds src_addr validator_pubkey stake_at max_factor adnl_addr
+    s0 s7 XCHG	//  s_addr msg_value adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor elect
+    unpack_elect CALLDICT	//  s_addr msg_value adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor _146 _147 _148 _149 _150 _151 _152
+    NIP	//  s_addr msg_value adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor elect_at elect_close min_stake total_stake members finished
+    s0 s5 XCHG	//  s_addr msg_value adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members elect_at
+    s0 DUMP	//  s_addr msg_value adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members elect_at
+    s0 s13 XCHG
+    1000000000 PUSHINT	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value _73=1000000000
+    SUB	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value
+    DUP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value msg_value
+    12 LSHIFT#	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value _76
+    s3 PUSH	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value _76 total_stake
+    LESS	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value _77
+    IFJMP:<{	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value
+      s11 s12 XCHG
+      12 BLKDROP
+      NIP	//  s_addr query_id
+      2 PUSHINT	//  s_addr query_id _78=2
+      return_stake CALLDICT
+    }>	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake total_stake members msg_value
+    s2 s2 XCPU	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake msg_value members total_stake msg_value
+    ADD	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey stake_at max_factor finished elect_close min_stake msg_value members total_stake
+    s7 s13 XCPU	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor finished elect_close min_stake msg_value members stake_at elect_at
+    NEQ	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor finished elect_close min_stake msg_value members _81
+    IFJMP:<{	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor finished elect_close min_stake msg_value members
+      s10 s12 XCHG
+      12 BLKDROP	//  s_addr query_id
+      3 PUSHINT	//  s_addr query_id _82=3
+      return_stake CALLDICT
+    }>	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor finished elect_close min_stake msg_value members
+    s0 s4 XCHG	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value finished
+    IFJMP:<{	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value
+      s9 s11 XCHG
+      11 BLKDROP	//  s_addr query_id
+      0 PUSHINT	//  s_addr query_id _84=0
+      return_stake CALLDICT
+    }>	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value
+    s6 s3 PUSH2
+    8 PUSHPOW2	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value validator_pubkey members _88=256
+    DICTUGET
+    NULLSWAPIFNOT	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value mem found
+    DUP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value mem found found
+    IF:<{	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value mem found
+      DROP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value mem
+      LDGRAMS	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _90 mem
+      -ROT	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake mem msg_value _90
+      ADD	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake mem msg_value
+      SWAP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value mem
+      64 LDU	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _158 _157
+      NIP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value mem
+      256 LDU	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _160 _159
+      DROP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _96
+      s8 s(-1) PUXC	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value src_addr _96
+      NEQ	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value found
+    }>ELSE<{
+      NIP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value found
+    }>
+    IFJMP:<{	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value
+      s9 s11 XCHG
+      11 BLKDROP	//  s_addr query_id
+      4 PUSHINT	//  s_addr query_id _100=4
+      return_stake CALLDICT
+    }>	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value
+    s0 s1 PUSH2	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value msg_value min_stake
+    LESS	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _102
+    IFJMP:<{	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value
+      s9 s11 XCHG
+      11 BLKDROP	//  s_addr query_id
+      5 PUSHINT	//  s_addr query_id _103=5
+      return_stake CALLDICT
+    }>	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value
+    DUP	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value msg_value
+    44 THROWIFNOT
+    ACCEPT
+    NOW	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _109
+    NEWC	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake msg_value _109 _110
+    ROT	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake _109 _110 msg_value
+    STGRAMS	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake _109 _111
+    32 STU	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake max_factor members elect_close min_stake _113
+    s1 s4 XCHG	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake min_stake members elect_close max_factor _113
+    32 STU	//  s_addr elect_at adnl_addr query_id ds src_addr validator_pubkey total_stake min_stake members elect_close _115
+    s1 s6 XCHG	//  s_addr elect_at adnl_addr query_id ds elect_close validator_pubkey total_stake min_stake members src_addr _115
+    256 STU	//  s_addr elect_at adnl_addr query_id ds elect_close validator_pubkey total_stake min_stake members _117
+    s1 s8 XCHG	//  s_addr elect_at members query_id ds elect_close validator_pubkey total_stake min_stake adnl_addr _117
+    256 STU	//  s_addr elect_at members query_id ds elect_close validator_pubkey total_stake min_stake _119
+    s0 s3 s7 XCHG3
+    8 PUSHPOW2	//  s_addr elect_at total_stake query_id ds elect_close min_stake _119 validator_pubkey members _120=256
+    DICTUSETB	//  s_addr elect_at total_stake query_id ds elect_close min_stake members
+    FALSE	//  s_addr elect_at total_stake query_id ds elect_close min_stake members _122
+    s5 s7 XCHG
+    s3 s4 XCHG
+    s2 s3 XCHG
+    s2 s6 XCHG
+    FALSE	//  s_addr query_id ds elect_at elect_close min_stake total_stake members _122 _123
+    pack_elect CALLDICT	//  s_addr query_id ds elect
+    NEWC	//  s_addr query_id ds elect _125
+    STDICT	//  s_addr query_id ds _126
+    SWAP	//  s_addr query_id _126 ds
+    STSLICER	//  s_addr query_id _127
+    ENDC	//  s_addr query_id _128
+    c4 POP
+    DUP	//  s_addr query_id query_id
+    IFJMP:<{	//  s_addr query_id
+      0 PUSHINT	//  s_addr query_id _130=0
+      send_confirmation CALLDICT
+    }>	//  s_addr query_id
+    2DROP	// 
+  }>
+  unfreeze_without_bonuses PROC:<{
+    //  credits freeze_dict tot_stakes
+    0 PUSHINT	//  credits freeze_dict tot_stakes _5=0
+    DUP	//  credits freeze_dict tot_stakes total=0 recovered=0
+    -1 PUSHINT	//  credits freeze_dict tot_stakes total=0 recovered=0 pubkey=-1
+    UNTIL:<{
+      s4 PUSH
+      8 PUSHPOW2	//  credits freeze_dict tot_stakes total recovered pubkey freeze_dict _10=256
+      DICTUGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  credits freeze_dict tot_stakes total recovered cs pubkey f
+      DUP	//  credits freeze_dict tot_stakes total recovered cs pubkey f f
+      IF:<{	//  credits freeze_dict tot_stakes total recovered cs pubkey f
+        s0 s2 XCHG	//  credits freeze_dict tot_stakes total recovered f pubkey cs
+        256 LDU	//  credits freeze_dict tot_stakes total recovered f pubkey _16 cs
+        64 LDU	//  credits freeze_dict tot_stakes total recovered f pubkey _16 _42 _41
+        NIP	//  credits freeze_dict tot_stakes total recovered f pubkey _16 cs
+        LDGRAMS	//  credits freeze_dict tot_stakes total recovered f pubkey _16 _22 cs
+        1 LDI	//  credits freeze_dict tot_stakes total recovered f pubkey addr stake banned cs
+        ENDS
+        IF:<{	//  credits freeze_dict tot_stakes total recovered f pubkey addr stake
+          NIP	//  credits freeze_dict tot_stakes total recovered f pubkey stake
+          s3 s3 XCPU	//  credits freeze_dict tot_stakes total stake f pubkey recovered stake
+          ADD	//  credits freeze_dict tot_stakes total stake f pubkey recovered
+        }>ELSE<{	//  credits freeze_dict tot_stakes total recovered f pubkey addr stake
+          s8 s8 s8 XC2PU	//  stake freeze_dict tot_stakes total recovered f pubkey credits addr stake
+          ~credit_to CALLDICT	//  stake freeze_dict tot_stakes total recovered f pubkey credits
+          s0 s7 XCHG
+          s0 s3 XCHG	//  credits freeze_dict tot_stakes total stake f pubkey recovered
+        }>
+        s4 s3 XCHG2	//  credits freeze_dict tot_stakes pubkey recovered f total stake
+        ADD	//  credits freeze_dict tot_stakes pubkey recovered f total
+      }>ELSE<{
+        s4 s2 XCHG2
+        DROP	//  credits freeze_dict tot_stakes pubkey recovered f total
+      }>
+      SWAP	//  credits freeze_dict tot_stakes pubkey recovered total f
+      NOT	//  credits freeze_dict tot_stakes pubkey recovered total _32
+      s1 s3 XCHG	//  credits freeze_dict tot_stakes total recovered pubkey _32
+    }>	//  credits freeze_dict tot_stakes total recovered pubkey
+    DROP
+    s3 POP	//  credits recovered tot_stakes total
+    SWAP	//  credits recovered total tot_stakes
+    EQUAL	//  credits recovered _34
+    59 THROWIFNOT
+  }>
+  unfreeze_with_bonuses PROC:<{
+    //  credits freeze_dict tot_stakes tot_bonuses
+    0 PUSHINT	//  credits freeze_dict tot_stakes tot_bonuses _7=0
+    s0 s0 PUSH2	//  credits freeze_dict tot_stakes tot_bonuses total=0 returned_bonuses=0 recovered=0
+    -1 PUSHINT	//  credits freeze_dict tot_stakes tot_bonuses total=0 returned_bonuses=0 recovered=0 pubkey=-1
+    UNTIL:<{
+      s6 PUSH
+      8 PUSHPOW2	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered pubkey freeze_dict _12=256
+      DICTUGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered cs pubkey f
+      DUP	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered cs pubkey f f
+      IF:<{	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered cs pubkey f
+        s0 s2 XCHG	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey cs
+        256 LDU	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 cs
+        64 LDU	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 _52 _51
+        NIP	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 cs
+        LDGRAMS	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 _24 cs
+        1 LDI	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake banned cs
+        ENDS
+        IF:<{	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake
+          NIP	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey stake
+          s3 s3 XCPU	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses stake f pubkey recovered stake
+          ADD	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses stake f pubkey recovered
+        }>ELSE<{	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake
+          s7 s0 s8 PUSH3	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake tot_bonuses stake tot_stakes
+          MULDIV	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake bonus
+          s6 s6 XCPU	//  credits freeze_dict tot_stakes tot_bonuses total bonus recovered f pubkey addr stake returned_bonuses bonus
+          ADD	//  credits freeze_dict tot_stakes tot_bonuses total bonus recovered f pubkey addr stake returned_bonuses
+          s1 s6 PUXC	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake stake bonus
+          ADD	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake _35
+          s11 s11 s0 XCHG3	//  stake freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey credits addr _35
+          ~credit_to CALLDICT	//  stake freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey credits
+          s0 s9 XCHG
+          s0 s3 XCHG	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses stake f pubkey recovered
+        }>
+        s5 s3 XCHG2	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered f total stake
+        ADD	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered f total
+      }>ELSE<{
+        s5 s2 XCHG2
+        DROP	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered f total
+      }>
+      SWAP	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered total f
+      NOT	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered total _38
+      s1 s4 XCHG	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered pubkey _38
+    }>	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered pubkey
+    DROP
+    s5 POP	//  credits recovered tot_stakes tot_bonuses total returned_bonuses
+    s0 s3 XCHG	//  credits recovered returned_bonuses tot_bonuses total tot_stakes
+    EQUAL	//  credits recovered returned_bonuses tot_bonuses _40
+    s2 s1 PUSH2	//  credits recovered returned_bonuses tot_bonuses _40 returned_bonuses tot_bonuses
+    LEQ	//  credits recovered returned_bonuses tot_bonuses _40 _41
+    AND	//  credits recovered returned_bonuses tot_bonuses _42
+    59 THROWIFNOT
+    s1 s2 XCHG	//  credits returned_bonuses recovered tot_bonuses
+    ADD	//  credits returned_bonuses _44
+    SWAP	//  credits _44 returned_bonuses
+    SUB	//  credits _45
+  }>
+  unfreeze_all PROC:<{
+    //  credits past_elections elect_id
+    SWAP
+    32 PUSHINT	//  credits elect_id past_elections _6=32
+    DICTUDELGET
+    NULLSWAPIFNOT	//  credits past_elections fs f
+    IFNOTJMP:<{	//  credits past_elections fs
+      DROP	//  credits past_elections
+      0 PUSHINT	//  credits past_elections _8=0
+    }>	//  credits past_elections fs
+    64 LDU	//  credits past_elections _44 _43
+    NIP	//  credits past_elections fs
+    256 LDU	//  credits past_elections _46 _45
+    NIP	//  credits past_elections fs
+    LDDICT	//  credits past_elections _21 fs
+    LDGRAMS	//  credits past_elections _21 _23 fs
+    LDGRAMS	//  credits past_elections _21 _23 _25 fs
+    LDDICT	//  credits past_elections _21 _23 _25 _54 _53
+    NIP	//  credits past_elections fdict tot_stakes bonuses fs
+    ENDS
+    DUP	//  credits past_elections fdict tot_stakes bonuses bonuses
+    0 GTINT	//  credits past_elections fdict tot_stakes bonuses _32
+    IF:<{	//  credits past_elections fdict tot_stakes bonuses
+      s3 s4 XCHG	//  past_elections credits fdict tot_stakes bonuses
+      unfreeze_with_bonuses CALLDICT	//  past_elections credits _33
+    }>ELSE<{	//  credits past_elections fdict tot_stakes bonuses
+      DROP	//  credits past_elections fdict tot_stakes
+      s2 s3 XCHG	//  past_elections credits fdict tot_stakes
+      unfreeze_without_bonuses CALLDICT	//  past_elections credits _33
+    }>	//  past_elections credits unused_prizes
+    s1 s2 XCHG	//  credits past_elections unused_prizes
+  }>
+  config_set_confirmed PROC:<{
+    //  s_addr cs query_id ok
+    s2 POP	//  s_addr ok query_id
+    s0 s2 XCHG	//  query_id ok s_addr
+    REWRITESTDADDR	//  query_id ok src_wc src_addr
+    0 PUSHINT	//  query_id ok src_wc src_addr _8=0
+    CONFIGOPTPARAM	//  query_id ok src_wc src_addr _9
+    CTOS	//  query_id ok src_wc src_addr _10
+    256 PLDU	//  query_id ok src_wc src_addr config_addr
+    c4 PUSH	//  query_id ok src_wc src_addr config_addr _14
+    CTOS	//  query_id ok src_wc src_addr config_addr ds
+    LDDICT	//  query_id ok src_wc src_addr config_addr elect ds
+    s0 s4 XCHG	//  query_id ok ds src_addr config_addr elect src_wc
+    INC	//  query_id ok ds src_addr config_addr elect _20
+    2SWAP	//  query_id ok ds elect _20 src_addr config_addr
+    NEQ	//  query_id ok ds elect _20 _21
+    OR	//  query_id ok ds elect _22
+    OVER	//  query_id ok ds elect _22 elect
+    ISNULL	//  query_id ok ds elect _22 _23
+    OR	//  query_id ok ds elect _24
+    IFJMP:<{	//  query_id ok ds elect
+      4 BLKDROP	// 
+    }>	//  query_id ok ds elect
+    unpack_elect CALLDICT	//  query_id ok ds _63 _64 _65 _66 _67 _68 _69
+    s0 s5 XCHG
+    5 BLKDROP	//  query_id ok ds elect_at finished
+    s1 s4 PUXC	//  finished ok ds elect_at elect_at query_id
+    NEQ	//  finished ok ds elect_at _33
+    s0 s4 XCHG	//  _33 ok ds elect_at finished
+    NOT	//  _33 ok ds elect_at _34
+    s1 s4 XCHG	//  elect_at ok ds _33 _34
+    OR	//  elect_at ok ds _35
+    IFJMP:<{	//  elect_at ok ds
+      3 BLKDROP	// 
+    }>	//  elect_at ok ds
+    ACCEPT
+    SWAP	//  elect_at ds ok
+    IFNOT:<{	//  elect_at ds
+      LDDICT	//  elect_at _40 ds
+      LDDICT	//  elect_at _40 _42 ds
+      LDGRAMS	//  elect_at credits past_elections grams ds
+      s3 s3 s4 XCHG3	//  ds grams credits past_elections elect_at
+      unfreeze_all CALLDICT	//  ds grams credits past_elections unused_prizes
+      FALSE	//  ds grams credits past_elections unused_prizes _48
+      NEWC	//  ds grams credits past_elections unused_prizes _48 _49
+      1 STI	//  ds grams credits past_elections unused_prizes _51
+      s1 s3 XCHG	//  ds grams unused_prizes past_elections credits _51
+      STDICT	//  ds grams unused_prizes past_elections _52
+      STDICT	//  ds grams unused_prizes _53
+      -ROT	//  ds _53 grams unused_prizes
+      ADD	//  ds _53 _54
+      STGRAMS	//  ds _55
+      SWAP	//  _55 ds
+      STSLICER	//  _56
+      ENDC	//  _57
+      c4 POP
+    }>ELSE<{
+      2DROP	// 
+    }>
+  }>
+  process_simple_transfer PROC:<{
+    //  s_addr msg_value
+    load_data CALLDICT	//  s_addr msg_value elect credits past_elect grams active_id active_hash
+    s0 s7 XCHG	//  active_hash msg_value elect credits past_elect grams active_id s_addr
+    REWRITESTDADDR	//  active_hash msg_value elect credits past_elect grams active_id src_wc src_addr
+    SWAP	//  active_hash msg_value elect credits past_elect grams active_id src_addr src_wc
+    INC	//  active_hash msg_value elect credits past_elect grams active_id src_addr _13
+    OR	//  active_hash msg_value elect credits past_elect grams active_id _14
+    OVER	//  active_hash msg_value elect credits past_elect grams active_id _14 active_id
+    0 EQINT	//  active_hash msg_value elect credits past_elect grams active_id _14 _16
+    OR	//  active_hash msg_value elect credits past_elect grams active_id _17
+    IFJMP:<{	//  active_hash msg_value elect credits past_elect grams active_id
+      s0 s5 XCHG	//  active_hash active_id elect credits past_elect grams msg_value
+      ADD	//  active_hash active_id elect credits past_elect grams
+      2 4 BLKSWAP
+      SWAP	//  elect credits past_elect grams active_id active_hash
+      store_data CALLDICT
+    }>	//  active_hash msg_value elect credits past_elect grams active_id
+    s0 s2 PUSH2
+    32 PUSHINT	//  active_hash msg_value elect credits past_elect grams active_id active_id past_elect _22=32
+    DICTUGET
+    NULLSWAPIFNOT	//  active_hash msg_value elect credits past_elect grams active_id fs f
+    IF:<{	//  active_hash msg_value elect credits past_elect grams active_id fs
+      64 LDU	//  active_hash msg_value elect credits past_elect grams active_id _30 fs
+      256 LDU	//  active_hash msg_value elect credits past_elect grams active_id _30 _33 fs
+      LDDICT	//  active_hash msg_value elect credits past_elect grams active_id _30 _33 _36 fs
+      LDGRAMS	//  active_hash msg_value elect credits past_elect grams active_id _30 _33 _36 _38 fs
+      LDGRAMS	//  active_hash msg_value elect credits past_elect grams active_id data hash dict total_stake bonuses fs
+      s0 s11 XCHG	//  active_hash fs elect credits past_elect grams active_id data hash dict total_stake bonuses msg_value
+      ADD	//  active_hash fs elect credits past_elect grams active_id data hash dict total_stake bonuses
+      NEWC	//  active_hash fs elect credits past_elect grams active_id data hash dict total_stake bonuses _44
+      s1 s5 XCHG	//  active_hash fs elect credits past_elect grams active_id bonuses hash dict total_stake data _44
+      64 STU	//  active_hash fs elect credits past_elect grams active_id bonuses hash dict total_stake _46
+      s1 s3 XCHG	//  active_hash fs elect credits past_elect grams active_id bonuses total_stake dict hash _46
+      256 STU	//  active_hash fs elect credits past_elect grams active_id bonuses total_stake dict _48
+      STDICT	//  active_hash fs elect credits past_elect grams active_id bonuses total_stake _49
+      SWAP	//  active_hash fs elect credits past_elect grams active_id bonuses _49 total_stake
+      STGRAMS	//  active_hash fs elect credits past_elect grams active_id bonuses _50
+      SWAP	//  active_hash fs elect credits past_elect grams active_id _50 bonuses
+      STGRAMS	//  active_hash fs elect credits past_elect grams active_id _51
+      s0 s6 XCHG2	//  active_hash active_id elect credits past_elect grams _51 fs
+      STSLICER	//  active_hash active_id elect credits past_elect grams _52
+      SWAP
+      32 PUSHINT
+      s6 s3 s3 PUXC2	//  active_hash active_id elect credits grams _52 active_id past_elect _53=32
+      DICTUSETB	//  active_hash active_id elect credits grams past_elect
+    }>ELSE<{	//  active_hash msg_value elect credits past_elect grams active_id fs
+      DROP	//  active_hash msg_value elect credits past_elect grams active_id
+      s0 s5 XCHG	//  active_hash active_id elect credits past_elect grams msg_value
+      ADD	//  active_hash active_id elect credits past_elect grams
+      SWAP	//  active_hash active_id elect credits grams past_elect
+    }>
+    s3 s5 XCHG
+    s1 s4 s3 XCHG3	//  elect credits past_elect grams active_id active_hash
+    store_data CALLDICT
+  }>
+  recover_stake PROC:<{
+    //  op s_addr cs query_id
+    NIP	//  op s_addr query_id
+    OVER	//  op s_addr query_id s_addr
+    REWRITESTDADDR	//  op s_addr query_id src_wc src_addr
+    SWAP	//  op s_addr query_id src_addr src_wc
+    INC	//  op s_addr query_id src_addr _8
+    IFJMP:<{	//  op s_addr query_id src_addr
+      DROP	//  op s_addr query_id
+      4294967294 PUSHINT	//  op s_addr query_id _9=4294967294
+      0 PUSHINT	//  op s_addr query_id _9=4294967294 _10=0
+      s3 s4 XCHG
+      s1 s3 XCHG
+      64 PUSHINT	//  s_addr _9=4294967294 query_id op _10=0 _11=64
+      send_message_back CALLDICT
+    }>	//  op s_addr query_id src_addr
+    c4 PUSH	//  op s_addr query_id src_addr _14
+    CTOS	//  op s_addr query_id src_addr ds
+    LDDICT	//  op s_addr query_id src_addr _18 ds
+    LDDICT	//  op s_addr query_id src_addr elect credits ds
+    s3 s3 XCHG2
+    8 PUSHPOW2	//  op s_addr query_id ds elect src_addr credits _25=256
+    DICTUDELGET
+    NULLSWAPIFNOT	//  op s_addr query_id ds elect credits cs f
+    IFNOTJMP:<{	//  op s_addr query_id ds elect credits cs
+      4 BLKDROP	//  op s_addr query_id
+      4294967294 PUSHINT	//  op s_addr query_id _27=4294967294
+      0 PUSHINT	//  op s_addr query_id _27=4294967294 _28=0
+      s3 s4 XCHG
+      s1 s3 XCHG
+      64 PUSHINT	//  s_addr _27=4294967294 query_id op _28=0 _29=64
+      send_message_back CALLDICT
+    }>	//  op s_addr query_id ds elect credits cs
+    s6 POP	//  cs s_addr query_id ds elect credits
+    s0 s5 XCHG	//  credits s_addr query_id ds elect cs
+    LDGRAMS	//  credits s_addr query_id ds elect amount cs
+    ENDS
+    NEWC	//  credits s_addr query_id ds elect amount _35
+    s1 s2 XCHG	//  credits s_addr query_id ds amount elect _35
+    STDICT	//  credits s_addr query_id ds amount _36
+    s1 s5 XCHG	//  amount s_addr query_id ds credits _36
+    STDICT	//  amount s_addr query_id ds _37
+    SWAP	//  amount s_addr query_id _37 ds
+    STSLICER	//  amount s_addr query_id _38
+    ENDC	//  amount s_addr query_id _39
+    c4 POP
+    4184830756 PUSHINT	//  amount s_addr query_id _41=4184830756
+    0 PUSHINT	//  amount s_addr query_id _41=4184830756 _42=0
+    24 PUSHINT	//  amount s_addr query_id _41=4184830756 _42=0 _43=24
+    NEWC	//  amount s_addr query_id _41=4184830756 _42=0 _43=24 _44
+    6 STU	//  amount s_addr query_id _41=4184830756 _42=0 _46
+    s0 s4 XCHG2	//  amount _42=0 query_id _41=4184830756 _46 s_addr
+    STSLICER	//  amount _42=0 query_id _41=4184830756 _47
+    s0 s4 XCHG2	//  _41=4184830756 _42=0 query_id _47 amount
+    STGRAMS	//  _41=4184830756 _42=0 query_id _48
+    s1 s2 XCHG	//  _41=4184830756 query_id _42=0 _48
+    107 STU	//  _41=4184830756 query_id _62
+    s1 s2 XCHG	//  query_id _41=4184830756 _62
+    32 STU	//  query_id _64
+    64 STU	//  _66
+    ENDC	//  _67
+    64 PUSHINT	//  _67 _68=64
+    SENDRAWMSG
+  }>
+  after_code_upgrade PROC:<{
+    //  s_addr cs query_id
+    NIP	//  s_addr query_id
+    1313042276 PUSHINT	//  s_addr query_id op=1313042276
+    3460525924 PUSHINT	//  s_addr query_id op=1313042276 _5=3460525924
+    0 PUSHINT	//  s_addr query_id op=1313042276 _5=3460525924 _6=0
+    s3 s3 s0 XCHG3
+    64 PUSHINT	//  s_addr _5=3460525924 query_id op=1313042276 _6=0 _7=64
+    send_message_back CALLDICT
+  }>
+  upgrade_code PROC:<{
+    //  s_addr cs query_id
+    0 PUSHINT	//  s_addr cs query_id _4=0
+    CONFIGOPTPARAM	//  s_addr cs query_id c_addr
+    DUP	//  s_addr cs query_id c_addr c_addr
+    ISNULL	//  s_addr cs query_id c_addr _6
+    IFJMP:<{	//  s_addr cs query_id c_addr
+      4 BLKDROP	// 
+      FALSE	//  _7
+    }>	//  s_addr cs query_id c_addr
+    CTOS	//  s_addr cs query_id _9
+    256 PLDU	//  s_addr cs query_id config_addr
+    s3 PUSH	//  s_addr cs query_id config_addr s_addr
+    REWRITESTDADDR	//  s_addr cs query_id config_addr src_wc src_addr
+    SWAP	//  s_addr cs query_id config_addr src_addr src_wc
+    INC	//  s_addr cs query_id config_addr src_addr _16
+    s0 s2 XCHG	//  s_addr cs query_id _16 src_addr config_addr
+    NEQ	//  s_addr cs query_id _16 _17
+    OR	//  s_addr cs query_id _18
+    IFJMP:<{	//  s_addr cs query_id
+      3 BLKDROP	// 
+      FALSE	//  _19
+    }>	//  s_addr cs query_id
+    ACCEPT
+    SWAP	//  s_addr query_id cs
+    LDREF	//  s_addr query_id code cs
+    OVER	//  s_addr query_id code cs code
+    SETCODE
+    DUP	//  s_addr query_id code cs cs
+    SEMPTY	//  s_addr query_id code cs _25
+    IFNOT:<{	//  s_addr query_id code cs
+      SWAP	//  s_addr query_id cs code
+      c3 POP
+      SWAP	//  s_addr cs query_id
+      after_code_upgrade CALLDICT
+      0 THROW
+    }>ELSE<{
+      4 BLKDROP	// 
+    }>
+    TRUE	//  _30
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_cell in_msg
+    SWAP	//  msg_value in_msg in_msg_cell
+    CTOS	//  msg_value in_msg cs
+    4 LDU	//  msg_value in_msg flags cs
+    SWAP
+    1 PUSHINT	//  msg_value in_msg cs flags _9=1
+    AND	//  msg_value in_msg cs _10
+    IFJMP:<{	//  msg_value in_msg cs
+      3 BLKDROP	// 
+    }>	//  msg_value in_msg cs
+    LDMSGADDR	//  msg_value in_msg _61 _60
+    DROP	//  msg_value in_msg s_addr
+    OVER	//  msg_value in_msg s_addr in_msg
+    SEMPTY	//  msg_value in_msg s_addr _14
+    IFJMP:<{	//  msg_value in_msg s_addr
+      NIP	//  msg_value s_addr
+      SWAP	//  s_addr msg_value
+      process_simple_transfer CALLDICT
+    }>	//  msg_value in_msg s_addr
+    SWAP	//  msg_value s_addr in_msg
+    32 LDU	//  msg_value s_addr op in_msg
+    OVER	//  msg_value s_addr op in_msg op
+    0 EQINT	//  msg_value s_addr op in_msg _21
+    IFJMP:<{	//  msg_value s_addr op in_msg
+      2DROP	//  msg_value s_addr
+      SWAP	//  s_addr msg_value
+      process_simple_transfer CALLDICT
+    }>	//  msg_value s_addr op in_msg
+    64 LDU	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    1316189259 PUSHINT	//  msg_value s_addr op query_id in_msg op _27=1316189259
+    EQUAL	//  msg_value s_addr op query_id in_msg _28
+    IFJMP:<{	//  msg_value s_addr op query_id in_msg
+      s2 POP	//  msg_value s_addr in_msg query_id
+      s2 s3 XCHG	//  s_addr msg_value in_msg query_id
+      process_new_stake CALLDICT
+    }>	//  msg_value s_addr op query_id in_msg
+    s4 POP	//  in_msg s_addr op query_id
+    OVER
+    1197831204 PUSHINT	//  in_msg s_addr op query_id op _30=1197831204
+    EQUAL	//  in_msg s_addr op query_id _31
+    IFJMP:<{	//  in_msg s_addr op query_id
+      s1 s3 XCHG	//  op s_addr in_msg query_id
+      recover_stake CALLDICT
+    }>	//  in_msg s_addr op query_id
+    OVER
+    1313042276 PUSHINT	//  in_msg s_addr op query_id op _33=1313042276
+    EQUAL	//  in_msg s_addr op query_id _34
+    IFJMP:<{	//  in_msg s_addr op query_id
+      s2 s3 s3 PUXCPU	//  query_id s_addr op s_addr in_msg query_id
+      upgrade_code CALLDICT	//  query_id s_addr op ok
+      IF:<{	//  query_id s_addr op
+        3460525924 PUSHINT	//  query_id s_addr op _37=3460525924
+      }>ELSE<{	//  query_id s_addr op
+        32 PUSHPOW2DEC	//  query_id s_addr op _37=4294967295
+      }>
+      0 PUSHINT	//  query_id s_addr op _37 _40=0
+      s3 s4 XCHG
+      s3 s3 s0 XCHG3
+      64 PUSHINT	//  s_addr _37 query_id op _40=0 _41=64
+      send_message_back CALLDICT
+    }>	//  in_msg s_addr op query_id
+    OVER
+    4000730955 PUSHINT	//  in_msg s_addr op query_id op _44=4000730955
+    EQUAL	//  in_msg s_addr op query_id cfg_ok
+    s2 PUSH
+    4000730991 PUSHINT	//  in_msg s_addr op query_id cfg_ok op _46=4000730991
+    EQUAL	//  in_msg s_addr op query_id cfg_ok _47
+    s1 s(-1) PUXC	//  in_msg s_addr op query_id cfg_ok cfg_ok _47
+    OR	//  in_msg s_addr op query_id cfg_ok _48
+    IFJMP:<{	//  in_msg s_addr op query_id cfg_ok
+      s2 POP	//  in_msg s_addr cfg_ok query_id
+      s2 s3 XCHG
+      SWAP	//  s_addr in_msg query_id cfg_ok
+      config_set_confirmed CALLDICT
+    }>	//  in_msg s_addr op query_id cfg_ok
+    DROP
+    s3 POP	//  query_id s_addr op
+    DUP
+    31 PUSHPOW2	//  query_id s_addr op op _52
+    AND	//  query_id s_addr op _53
+    IFNOTJMP:<{	//  query_id s_addr op
+      32 PUSHPOW2DEC	//  query_id s_addr op _54=4294967295
+      0 PUSHINT	//  query_id s_addr op _54=4294967295 _55=0
+      s3 s4 XCHG
+      s3 s3 s0 XCHG3
+      64 PUSHINT	//  s_addr _54=4294967295 query_id op _55=0 _56=64
+      send_message_back CALLDICT
+    }>	//  query_id s_addr op
+    3 BLKDROP	// 
+  }>
+  postpone_elections PROC:<{
+    // 
+    FALSE	//  _0
+  }>
+  compute_total_stake PROC:<{
+    //  l n m_stake
+    0 PUSHINT	//  l n m_stake tot_stake=0
+    s0 s2 XCHG	//  l tot_stake=0 m_stake n
+    REPEAT:<{	//  l tot_stake m_stake
+      s0 s2 XCHG	//  m_stake tot_stake l
+      UNCONS	//  m_stake tot_stake h l
+      OVER	//  m_stake tot_stake h l h
+      0 INDEX	//  m_stake tot_stake h l stake
+      s0 s2 XCHG	//  m_stake tot_stake stake l h
+      1 INDEX	//  m_stake tot_stake stake l max_f
+      s4 PUSH	//  m_stake tot_stake stake l max_f m_stake
+      MUL	//  m_stake tot_stake stake l _13
+      16 RSHIFT#	//  m_stake tot_stake stake l _15
+      s1 s2 XCHG	//  m_stake tot_stake l stake _15
+      MIN	//  m_stake tot_stake l stake
+      s1 s2 XCHG	//  m_stake l tot_stake stake
+      ADD	//  m_stake l tot_stake
+      ROT	//  l tot_stake m_stake
+    }>
+    DROP
+    NIP	//  tot_stake
+  }>
+  try_elect PROC:<{
+    //  credits members min_stake max_stake min_total_stake max_stake_factor
+    16 PUSHINT	//  credits members min_stake max_stake min_total_stake max_stake_factor _7=16
+    CONFIGOPTPARAM	//  credits members min_stake max_stake min_total_stake max_stake_factor _8
+    CTOS	//  credits members min_stake max_stake min_total_stake max_stake_factor cs
+    16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 cs
+    16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 _253 _252
+    NIP	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 cs
+    16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators cs
+    ENDS
+    1 PUSHINT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators _23=1
+    MAX	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators
+    0 PUSHINT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n=0
+    NEWDICT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n=0 sdict
+    -1 PUSHINT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n=0 sdict pubkey=-1
+    UNTIL:<{
+      s9 PUSH
+      8 PUSHPOW2	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict pubkey members _33=256
+      DICTUGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict cs pubkey f
+      DUP	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict cs pubkey f f
+      IF:<{	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict cs pubkey f
+        s0 s2 XCHG	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey cs
+        LDGRAMS	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey _40 cs
+        32 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey _40 _42 cs
+        32 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey _40 _42 _45 cs
+        256 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey _40 _42 _45 _48 cs
+        256 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey stake time max_factor addr adnl_addr cs
+        ENDS
+        s0 s3 XCHG	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey stake adnl_addr max_factor addr time
+        NEGATE	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey stake adnl_addr max_factor addr _56
+        NEWC	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey stake adnl_addr max_factor addr _56 _57
+        s1 s5 XCHG	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey _56 adnl_addr max_factor addr stake _57
+        128 STU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey _56 adnl_addr max_factor addr _59
+        s1 s4 XCHG	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr max_factor _56 _59
+        32 STI	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr max_factor _61
+        s4 s(-1) PUXC	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr max_factor pubkey _61
+        256 STU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr max_factor _63
+        ENDC	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr max_factor _64
+        CTOS	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr max_factor key
+        s1 s10 XCPU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr key max_factor max_stake_factor
+        MIN	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr key _67
+        NEWC	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr key _67 _68
+        32 STU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey addr adnl_addr key _70
+        s1 s3 XCHG	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey key adnl_addr addr _70
+        256 STU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey key adnl_addr _72
+        256 STU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict f pubkey key _74
+        s0 s1 s4 XCHG3
+        416 PUSHINT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n pubkey f _74 key sdict _79
+        DICTSETB	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n pubkey f sdict
+        s0 s3 XCHG	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators sdict pubkey f n
+        INC	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators sdict pubkey f n
+      }>ELSE<{
+        s3 s4 XCHG
+        2SWAP
+        DROP	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators sdict pubkey f n
+      }>
+      SWAP	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators sdict pubkey n f
+      NOT	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators sdict pubkey n _83
+      s3 s3 s0 XCHG3	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict pubkey _83
+    }>	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators n sdict pubkey
+    DROP
+    s4 POP	//  credits members min_stake max_stake min_total_stake sdict max_validators min_validators n
+    ROT	//  credits members min_stake max_stake min_total_stake sdict min_validators n max_validators
+    MIN	//  credits members min_stake max_stake min_total_stake sdict min_validators n
+    s0 s1 PUSH2	//  credits members min_stake max_stake min_total_stake sdict min_validators n n min_validators
+    LESS	//  credits members min_stake max_stake min_total_stake sdict min_validators n _85
+    IFJMP:<{	//  credits members min_stake max_stake min_total_stake sdict min_validators n
+      7 BLKDROP	//  credits
+      NEWDICT	//  credits _86
+      NEWDICT	//  credits _86 _87
+      0 PUSHINT	//  credits _86 _87 _88=0
+      DUP	//  credits _86 _87 _88=0 _89=0
+    }>	//  credits members min_stake max_stake min_total_stake sdict min_validators n
+    PUSHNULL	//  credits members min_stake max_stake min_total_stake sdict min_validators n l
+    UNTIL:<{
+      s0 s3 XCHG
+      416 PUSHINT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict _100
+      DICTREMMIN
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs key f
+      DUP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs key f f
+      IF:<{	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs key f
+        SWAP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key
+        128 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _105 key
+        s1 s9 XCPU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key _105 max_stake
+        MIN	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key _108
+        SWAP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _108 key
+        32 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _108 _279 _278
+        NIP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _108 key
+        256 PLDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f stake pubkey
+        s0 s3 XCHG	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake cs
+        32 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _117 cs
+        256 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _117 _283 _282
+        NIP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _117 cs
+        256 PLDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake max_f adnl_addr
+        s1 s3 s0 XCHG3
+        s1 s4 XCHG	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f stake max_f pubkey adnl_addr
+        4 TUPLE	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f _125
+        s0 s5 XCHG2	//  credits members min_stake max_stake min_total_stake f min_validators n sdict _125 l
+        CONS	//  credits members min_stake max_stake min_total_stake f min_validators n sdict l
+      }>ELSE<{
+        s6 s1 s6 XCHG3
+        2DROP	//  credits members min_stake max_stake min_total_stake f min_validators n sdict l
+      }>
+      s0 s4 XCHG	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f
+      NOT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict _127
+      s1 s4 XCHG	//  credits members min_stake max_stake min_total_stake sdict min_validators n l _127
+    }>	//  credits members min_stake max_stake min_total_stake sdict min_validators n l
+    s3 POP
+    s4 POP	//  credits members min_stake n min_total_stake l min_validators
+    DEC	//  credits members min_stake n min_total_stake l i
+    2DUP	//  credits members min_stake n min_total_stake l i l1 i
+    REPEAT:<{	//  credits members min_stake n min_total_stake l i l1
+      CDR	//  credits members min_stake n min_total_stake l i l1
+    }>
+    0 PUSHINT	//  credits members min_stake n min_total_stake l i l1 _135=0
+    DUP	//  credits members min_stake n min_total_stake l i l1 best_stake=0 m=0
+    UNTIL:<{
+      s0 s2 XCHG	//  credits members min_stake n min_total_stake l i m best_stake l1
+      UNCONS	//  credits members min_stake n min_total_stake l i m best_stake _138 l1
+      SWAP	//  credits members min_stake n min_total_stake l i m best_stake l1 _138
+      0 INDEX	//  credits members min_stake n min_total_stake l i m best_stake l1 stake
+      s0 s4 XCHG	//  credits members min_stake n min_total_stake l stake m best_stake l1 i
+      INC	//  credits members min_stake n min_total_stake l stake m best_stake l1 i
+      s4 s8 PUSH2	//  credits members min_stake n min_total_stake l stake m best_stake l1 i stake min_stake
+      GEQ	//  credits members min_stake n min_total_stake l stake m best_stake l1 i _144
+      IF:<{	//  credits members min_stake n min_total_stake l stake m best_stake l1 i
+        s5 s(-1) s4 PU2XC	//  credits members min_stake n min_total_stake l i m best_stake l1 l i stake
+        compute_total_stake CALLDICT	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake
+        s0 s2 PUSH2	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake tot_stake best_stake
+        GREATER	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake _147
+        IF:<{	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake
+          s2 POP
+          s2 POP	//  credits members min_stake n min_total_stake l i l1 tot_stake
+          s2 PUSH	//  credits members min_stake n min_total_stake l i l1 best_stake m
+        }>ELSE<{
+          s1 s3 XCHG
+          DROP	//  credits members min_stake n min_total_stake l i l1 best_stake m
+        }>
+      }>ELSE<{
+        s3 s4 XCHG2
+        DROP	//  credits members min_stake n min_total_stake l i l1 best_stake m
+      }>
+      s3 s6 PUSH2	//  credits members min_stake n min_total_stake l i l1 best_stake m i n
+      GEQ	//  credits members min_stake n min_total_stake l i l1 best_stake m _148
+    }>	//  credits members min_stake n min_total_stake l i l1 best_stake m
+    s2 POP
+    s2 POP
+    s4 POP
+    s4 POP	//  credits members best_stake m min_total_stake l
+    s2 PUSH	//  credits members best_stake m min_total_stake l m
+    0 EQINT	//  credits members best_stake m min_total_stake l _150
+    s4 s2 PUXC	//  credits members best_stake m _150 l best_stake min_total_stake
+    LESS	//  credits members best_stake m _150 l _151
+    s1 s2 XCHG	//  credits members best_stake m l _150 _151
+    OR	//  credits members best_stake m l _152
+    IFJMP:<{	//  credits members best_stake m l
+      4 BLKDROP	//  credits
+      NEWDICT	//  credits _153
+      NEWDICT	//  credits _153 _154
+      0 PUSHINT	//  credits _153 _154 _155=0
+      DUP	//  credits _153 _154 _155=0 _156=0
+    }>	//  credits members best_stake m l
+    DUP	//  credits members best_stake m l l1
+    s0 DUMP	//  credits members best_stake m l l1
+    s2 PUSH	//  credits members best_stake m l l1 m
+    DEC	//  credits members best_stake m l l1 _161
+    REPEAT:<{	//  credits members best_stake m l l1
+      CDR	//  credits members best_stake m l l1
+    }>
+    CAR	//  credits members best_stake m l _164
+    0 INDEX	//  credits members best_stake m l m_stake
+    0 PUSHINT	//  credits members best_stake m l m_stake i=0
+    DUP	//  credits members best_stake m l m_stake i=0 tot_stake=0
+    NEWDICT	//  credits members best_stake m l m_stake i=0 tot_stake=0 vset
+    NEWDICT	//  credits members best_stake m l m_stake i=0 tot_stake=0 vset frozen
+    UNTIL:<{
+      s0 s5 XCHG	//  credits members best_stake m frozen m_stake i tot_stake vset l
+      UNCONS	//  credits members best_stake m frozen m_stake i tot_stake vset _179 l
+      SWAP	//  credits members best_stake m frozen m_stake i tot_stake vset l _179
+      4 UNTUPLE	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr
+      s1 s12 PUSH2
+      8 PUSHPOW2	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr pubkey members _184=256
+      DICTUGET
+      NULLSWAPIFNOT	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr val f
+      61 THROWIFNOT
+      LDGRAMS	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr _295 _294
+      NIP	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr val
+      64 LDU	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr _297 _296
+      NIP	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr val
+      256 PLDU	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr
+      s8 s11 PUSH2	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr i m
+      LESS	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr _198
+      IF:<{	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr
+        s3 s9 XCPU	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr max_f m_stake
+        MUL	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr _200
+        16 RSHIFT#	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr _202
+        s4 s(-1) PUXC	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr stake _202
+        MIN	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr true_stake
+        s4 s4 XCPU	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake true_stake
+        SUB	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake
+        s4 PUSH	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake true_stake
+        60 LSHIFT#	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake _207
+        s13 PUSH	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake _207 best_stake
+        DIV	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake weight
+        s8 s5 XCPU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake true_stake
+        ADD	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake
+        2390828938 PUSHINT	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938
+        s3 PUSH	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 adnl_addr
+        IF:<{	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938
+          115 PUSHINT	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _212=115
+        }>ELSE<{	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938
+          83 PUSHINT	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _212=83
+        }>
+        NEWC	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _212 _215
+        8 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _217
+        32 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _219
+        s4 s(-1) PUXC	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake pubkey _219
+        256 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _221
+        s9 s(-1) PUXC	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake weight _221
+        64 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake vinfo
+        s3 PUSH	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake vinfo adnl_addr
+        IF:<{	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake vinfo
+          s1 s3 XCHG	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey tot_stake stake adnl_addr vinfo
+          256 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey tot_stake stake vinfo
+        }>ELSE<{
+          s0 s3 XCHG2
+          DROP	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey tot_stake stake vinfo
+        }>
+        SWAP
+        16 PUSHINT
+        s10 s8 s8 PUXC2	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vinfo i vset _228=16
+        DICTUSETB	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset
+        FALSE	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset _231
+        s4 PUSH
+        NEWC	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset _231 src_addr _232
+        256 STU	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset _231 _234
+        s1 s9 XCHG	//  credits members best_stake m frozen m_stake i _231 stake l true_stake src_addr pubkey tot_stake vset weight _234
+        64 STU	//  credits members best_stake m frozen m_stake i _231 stake l true_stake src_addr pubkey tot_stake vset _236
+        s0 s5 XCHG2	//  credits members best_stake m frozen m_stake i _231 stake l vset src_addr pubkey tot_stake _236 true_stake
+        STGRAMS	//  credits members best_stake m frozen m_stake i _231 stake l vset src_addr pubkey tot_stake _237
+        s1 s7 XCHG	//  credits members best_stake m frozen m_stake i tot_stake stake l vset src_addr pubkey _231 _237
+        1 STI	//  credits members best_stake m frozen m_stake i tot_stake stake l vset src_addr pubkey _239
+        s0 s1 s9 XCHG3
+        8 PUSHPOW2	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset _239 pubkey frozen _240=256
+        DICTUSETB	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen
+      }>ELSE<{
+        s0 s10 XCHG
+        s4 s6 XCHG
+        s0 s3 XCHG
+        3 BLKDROP	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen
+      }>
+      s3 PUSH	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen stake
+      IF:<{	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen
+        s11 s7 s3 XCHG3	//  l members best_stake m vset m_stake i tot_stake frozen credits src_addr stake
+        ~credit_to CALLDICT	//  l members best_stake m vset m_stake i tot_stake frozen credits
+      }>ELSE<{
+        s11 s7 s3 XCHG3
+        2DROP	//  l members best_stake m vset m_stake i tot_stake frozen credits
+      }>
+      s0 s3 XCHG	//  l members best_stake m vset m_stake credits tot_stake frozen i
+      INC	//  l members best_stake m vset m_stake credits tot_stake frozen i
+      s9 PUSH	//  l members best_stake m vset m_stake credits tot_stake frozen i l
+      ISNULL	//  l members best_stake m vset m_stake credits tot_stake frozen i _246
+      s4 s10 XCHG
+      s4 s6 XCHG
+      s4 s4 s0 XCHG3	//  credits members best_stake m l m_stake i tot_stake vset frozen _246
+    }>	//  credits members best_stake m l m_stake i tot_stake vset frozen
+    s3 POP
+    s3 POP
+    s3 POP
+    s5 POP	//  credits frozen best_stake m tot_stake vset
+    s1 s3 PUXC	//  credits frozen vset m tot_stake tot_stake best_stake
+    EQUAL	//  credits frozen vset m tot_stake _248
+    49 THROWIFNOT
+    s2 s3 XCHG
+    SWAP	//  credits vset frozen tot_stake m
+  }>
+  conduct_elections PROC:<{
+    //  ds elect credits
+    SWAP	//  ds credits elect
+    unpack_elect CALLDICT	//  ds credits _130 _131 _132 _133 _134 _135 _136
+    s4 POP	//  ds credits elect_at elect_close finished total_stake members failed
+    NOW	//  ds credits elect_at elect_close finished total_stake members failed _11
+    s5 PUSH	//  ds credits elect_at elect_close finished total_stake members failed _11 elect_close
+    LESS	//  ds credits elect_at elect_close finished total_stake members failed _12
+    IFJMP:<{	//  ds credits elect_at elect_close finished total_stake members failed
+      8 BLKDROP	// 
+      FALSE	//  _13
+    }>	//  ds credits elect_at elect_close finished total_stake members failed
+    0 PUSHINT	//  ds credits elect_at elect_close finished total_stake members failed _14=0
+    CONFIGOPTPARAM	//  ds credits elect_at elect_close finished total_stake members failed _15
+    ISNULL	//  ds credits elect_at elect_close finished total_stake members failed _16
+    IFJMP:<{	//  ds credits elect_at elect_close finished total_stake members failed
+      8 BLKDROP	// 
+      postpone_elections CALLDICT	//  _17
+    }>	//  ds credits elect_at elect_close finished total_stake members failed
+    17 PUSHINT	//  ds credits elect_at elect_close finished total_stake members failed _19=17
+    CONFIGOPTPARAM	//  ds credits elect_at elect_close finished total_stake members failed _20
+    CTOS	//  ds credits elect_at elect_close finished total_stake members failed cs
+    LDGRAMS	//  ds credits elect_at elect_close finished total_stake members failed min_stake cs
+    LDGRAMS	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake cs
+    LDGRAMS	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake min_total_stake cs
+    32 LDU	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake min_total_stake max_stake_factor cs
+    ENDS
+    s6 s1 PUSH2	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake min_total_stake max_stake_factor total_stake min_total_stake
+    LESS	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake min_total_stake max_stake_factor _35
+    IFJMP:<{	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake min_total_stake max_stake_factor
+      12 BLKDROP	// 
+      postpone_elections CALLDICT	//  _36
+    }>	//  ds credits elect_at elect_close finished total_stake members failed min_stake max_stake min_total_stake max_stake_factor
+    s0 s4 XCHG	//  ds credits elect_at elect_close finished total_stake members max_stake_factor min_stake max_stake min_total_stake failed
+    IFJMP:<{	//  ds credits elect_at elect_close finished total_stake members max_stake_factor min_stake max_stake min_total_stake
+      11 BLKDROP	// 
+      postpone_elections CALLDICT	//  _37
+    }>	//  ds credits elect_at elect_close finished total_stake members max_stake_factor min_stake max_stake min_total_stake
+    s0 s6 XCHG	//  ds credits elect_at elect_close min_total_stake total_stake members max_stake_factor min_stake max_stake finished
+    IFJMP:<{	//  ds credits elect_at elect_close min_total_stake total_stake members max_stake_factor min_stake max_stake
+      10 BLKDROP	// 
+      FALSE	//  _38
+    }>	//  ds credits elect_at elect_close min_total_stake total_stake members max_stake_factor min_stake max_stake
+    s3 s8 XCHG
+    s8 PUSH
+    s3 s2 XCPU
+    s7 s7 XCHG2	//  ds members elect_at elect_close min_stake total_stake credits members min_stake max_stake min_total_stake max_stake_factor
+    try_elect CALLDICT	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt
+    DUP	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt cnt
+    0 EQINT	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt failed
+    DUP	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt failed failed
+    NOT	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt failed finished
+    s10 PUSH
+    s0 s6 XCHG
+    s5 s10 XCHG
+    s4 s9 XCHG
+    s3 s8 XCHG
+    s12 s12 s12 XCHG3	//  ds vdict elect_at frozen total_stakes cnt credits elect_at elect_close min_stake total_stake members failed finished
+    pack_elect CALLDICT	//  ds vdict elect_at frozen total_stakes cnt credits elect
+    s2 PUSH	//  ds vdict elect_at frozen total_stakes cnt credits elect cnt
+    IFNOTJMP:<{	//  ds vdict elect_at frozen total_stakes cnt credits elect
+      s2 POP
+      s2 POP
+      s2 POP
+      s2 POP
+      s2 POP	//  ds elect credits
+      NEWC	//  ds elect credits _48
+      s1 s2 XCHG	//  ds credits elect _48
+      STDICT	//  ds credits _49
+      STDICT	//  ds _50
+      SWAP	//  _50 ds
+      STSLICER	//  _51
+      ENDC	//  _52
+      c4 POP
+      postpone_elections CALLDICT	//  _54
+    }>	//  ds vdict elect_at frozen total_stakes cnt credits elect
+    get_validator_conf CALLDICT	//  ds vdict elect_at frozen total_stakes cnt credits elect _150 _151 _152 _153
+    s2 POP	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held elect_end_before
+    NOW	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held elect_end_before _61
+    SWAP	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _61 elect_end_before
+    ADD	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _62
+    -60 ADDCONST	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _64
+    s8 PUSH	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _64 elect_at
+    MAX	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start
+    16 PUSHINT	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _67=16
+    CONFIGOPTPARAM	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _68
+    CTOS	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _69
+    16 PUSHINT	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _69 _70=16
+    SDSKIPFIRST	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _71
+    16 PLDU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start main_validators
+    s6 s(-1) PUXC	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start cnt main_validators
+    MIN	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75
+    s1 s3 PUSH2	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 start elect_for
+    ADD	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76
+    17 PUSHINT	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _77=17
+    NEWC	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _77=17 _78
+    8 STU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _80
+    s3 s(-1) PUXC	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 start _80
+    32 STU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _82
+    32 STU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _84
+    s1 s7 XCHG	//  ds vdict elect_at frozen total_stakes _75 credits elect elect_for stake_held start cnt _84
+    16 STU	//  ds vdict elect_at frozen total_stakes _75 credits elect elect_for stake_held start _86
+    s1 s6 XCHG	//  ds vdict elect_at frozen total_stakes start credits elect elect_for stake_held _75 _86
+    16 STU	//  ds vdict elect_at frozen total_stakes start credits elect elect_for stake_held _88
+    s0 s9 XCHG	//  ds _88 elect_at frozen total_stakes start credits elect elect_for stake_held vdict
+    CTOS	//  ds _88 elect_at frozen total_stakes start credits elect elect_for stake_held _89
+    s1 s9 XCHG	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for _88 _89
+    STSLICER	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for _90
+    ENDC	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset
+    0 PUSHINT	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset _93=0
+    CONFIGOPTPARAM	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset _94
+    CTOS	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset _95
+    256 PLDU	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset config_addr
+    s1 s8 PUSH2	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset config_addr vset elect_at
+    send_validator_set_to_config CALLDICT
+    s0 s9 XCHG	//  vset stake_held elect_at frozen total_stakes start credits elect elect_for ds
+    LDDICT	//  vset stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds
+    FALSE	//  vset stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds _103
+    s0 s11 XCHG	//  _103 stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds vset
+    HASHCU	//  _103 stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds _104
+    s6 s3 XCHG2	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect start elect_for
+    ADD	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _105
+    s9 PUSH	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _105 stake_held
+    ADD	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _106
+    NEWC	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _106 _107
+    32 STU	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _109
+    s1 s9 XCHG	//  _103 past_elect elect_at frozen total_stakes ds credits elect _104 stake_held _109
+    32 STU	//  _103 past_elect elect_at frozen total_stakes ds credits elect _104 _111
+    256 STU	//  _103 past_elect elect_at frozen total_stakes ds credits elect _113
+    s1 s5 XCHG	//  _103 past_elect elect_at elect total_stakes ds credits frozen _113
+    STDICT	//  _103 past_elect elect_at elect total_stakes ds credits _114
+    s0 s3 XCHG2	//  _103 past_elect elect_at elect credits ds _114 total_stakes
+    STGRAMS	//  _103 past_elect elect_at elect credits ds _115
+    0 PUSHINT	//  _103 past_elect elect_at elect credits ds _115 _116=0
+    STGRAMS	//  _103 past_elect elect_at elect credits ds _117
+    s1 s6 XCHG	//  ds past_elect elect_at elect credits _103 _117
+    1 STI	//  ds past_elect elect_at elect credits _119
+    s0 s3 s4 XCHG3
+    32 PUSHINT	//  ds elect credits _119 elect_at past_elect _120=32
+    DICTUSETB	//  ds elect credits past_elect
+    NEWC	//  ds elect credits past_elect _122
+    s1 s3 XCHG	//  ds past_elect credits elect _122
+    STDICT	//  ds past_elect credits _123
+    STDICT	//  ds past_elect _124
+    STDICT	//  ds _125
+    SWAP	//  _125 ds
+    STSLICER	//  _126
+    ENDC	//  _127
+    c4 POP
+    TRUE	//  _129
+  }>
+  update_active_vset_id PROC:<{
+    // 
+    load_data CALLDICT	//  elect credits past_elect grams active_id active_hash
+    34 PUSHINT	//  elect credits past_elect grams active_id active_hash _8=34
+    CONFIGOPTPARAM	//  elect credits past_elect grams active_id active_hash _9
+    HASHCU	//  elect credits past_elect grams active_id active_hash cur_hash
+    s0 s1 PUSH2	//  elect credits past_elect grams active_id active_hash cur_hash cur_hash active_hash
+    EQUAL	//  elect credits past_elect grams active_id active_hash cur_hash _11
+    IFJMP:<{	//  elect credits past_elect grams active_id active_hash cur_hash
+      7 BLKDROP	// 
+      FALSE	//  _12
+    }>	//  elect credits past_elect grams active_id active_hash cur_hash
+    s2 PUSH	//  elect credits past_elect grams active_id active_hash cur_hash active_id
+    IF:<{	//  elect credits past_elect grams active_id active_hash cur_hash
+      s2 s4 PUSH2
+      32 PUSHINT	//  elect credits past_elect grams active_id active_hash cur_hash active_id past_elect _15=32
+      DICTUGET
+      NULLSWAPIFNOT	//  elect credits past_elect grams active_id active_hash cur_hash fs f
+      IF:<{	//  elect credits past_elect grams active_id active_hash cur_hash fs
+        32 LDU	//  elect credits past_elect grams active_id active_hash cur_hash _99 _98
+        NIP	//  elect credits past_elect grams active_id active_hash cur_hash fs
+        DUP	//  elect credits past_elect grams active_id active_hash cur_hash fs0 fs
+        32 LDU	//  elect credits past_elect grams active_id active_hash cur_hash fs0 _24 fs
+        256 LDU	//  elect credits past_elect grams active_id active_hash cur_hash fs0 _24 _103 _102
+        DROP	//  elect credits past_elect grams active_id active_hash cur_hash fs0 stake_held hash
+        s0 s4 XCHG2	//  elect credits past_elect grams active_id stake_held cur_hash fs0 hash active_hash
+        EQUAL	//  elect credits past_elect grams active_id stake_held cur_hash fs0 _31
+        57 THROWIFNOT
+        NOW	//  elect credits past_elect grams active_id stake_held cur_hash fs0 _33
+        s0 s3 XCHG2	//  elect credits past_elect grams active_id fs0 cur_hash _33 stake_held
+        ADD	//  elect credits past_elect grams active_id fs0 cur_hash unfreeze_time
+        NEWC	//  elect credits past_elect grams active_id fs0 cur_hash unfreeze_time _36
+        32 STU	//  elect credits past_elect grams active_id fs0 cur_hash _38
+        ROT	//  elect credits past_elect grams active_id cur_hash _38 fs0
+        STSLICER	//  elect credits past_elect grams active_id cur_hash _39
+        s0 s0 s4 XCHG3
+        32 PUSHINT	//  elect credits cur_hash grams _39 active_id past_elect _40=32
+        DICTUSETB	//  elect credits cur_hash grams past_elect
+      }>ELSE<{
+        s1 s5 XCHG
+        s1 s3 XCHG
+        3 BLKDROP	//  elect credits cur_hash grams past_elect
+      }>
+    }>ELSE<{
+      s4 s1 s4 XCHG3
+      2DROP	//  elect credits cur_hash grams past_elect
+    }>
+    -1 PUSHINT	//  elect credits cur_hash grams past_elect id=-1
+    UNTIL:<{
+      OVER
+      32 PUSHINT	//  elect credits cur_hash grams past_elect id past_elect _46=32
+      DICTUGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  elect credits cur_hash grams past_elect fs id f
+      DUP	//  elect credits cur_hash grams past_elect fs id f f
+      IF:<{	//  elect credits cur_hash grams past_elect fs id f
+        s0 s2 XCHG	//  elect credits cur_hash grams past_elect f id fs
+        64 LDU	//  elect credits cur_hash grams past_elect f id _50 fs
+        256 LDU	//  elect credits cur_hash grams past_elect f id tm hash fs
+        s1 s7 PUSH2	//  elect credits cur_hash grams past_elect f id tm hash fs hash cur_hash
+        EQUAL	//  elect credits cur_hash grams past_elect f id tm hash fs _56
+        IF:<{	//  elect credits cur_hash grams past_elect f id tm hash fs
+          s4 POP	//  elect credits cur_hash grams past_elect fs id tm hash
+          s0 s3 XCHG	//  elect credits cur_hash grams past_elect hash id tm fs
+          LDDICT	//  elect credits cur_hash grams past_elect hash id tm _60 fs
+          LDGRAMS	//  elect credits cur_hash grams past_elect hash id tm _60 _62 fs
+          LDGRAMS	//  elect credits cur_hash grams past_elect hash id tm dict total_stake bonuses fs
+          s8 PUSH	//  elect credits cur_hash grams past_elect hash id tm dict total_stake bonuses fs grams
+          3 RSHIFT#	//  elect credits cur_hash grams past_elect hash id tm dict total_stake bonuses fs amount
+          s9 s9 XCPU	//  elect credits cur_hash amount past_elect hash id tm dict total_stake bonuses fs grams amount
+          SUB	//  elect credits cur_hash amount past_elect hash id tm dict total_stake bonuses fs grams
+          s2 s9 XCHG2	//  elect credits cur_hash grams past_elect hash id tm dict total_stake fs bonuses amount
+          ADD	//  elect credits cur_hash grams past_elect hash id tm dict total_stake fs bonuses
+          NEWC	//  elect credits cur_hash grams past_elect hash id tm dict total_stake fs bonuses _72
+          s1 s5 XCHG	//  elect credits cur_hash grams past_elect hash id bonuses dict total_stake fs tm _72
+          64 STU	//  elect credits cur_hash grams past_elect hash id bonuses dict total_stake fs _74
+          s1 s6 XCHG	//  elect credits cur_hash grams past_elect fs id bonuses dict total_stake hash _74
+          256 STU	//  elect credits cur_hash grams past_elect fs id bonuses dict total_stake _76
+          s1 s2 XCHG	//  elect credits cur_hash grams past_elect fs id bonuses total_stake dict _76
+          STDICT	//  elect credits cur_hash grams past_elect fs id bonuses total_stake _77
+          SWAP	//  elect credits cur_hash grams past_elect fs id bonuses _77 total_stake
+          STGRAMS	//  elect credits cur_hash grams past_elect fs id bonuses _78
+          SWAP	//  elect credits cur_hash grams past_elect fs id _78 bonuses
+          STGRAMS	//  elect credits cur_hash grams past_elect fs id _79
+          ROT	//  elect credits cur_hash grams past_elect id _79 fs
+          STSLICER	//  elect credits cur_hash grams past_elect id _80
+          SWAP
+          32 PUSHINT
+          s1 s3 s3 PUXC2	//  elect credits cur_hash grams id _80 id past_elect _81=32
+          DICTUSETB	//  elect credits cur_hash grams id past_elect
+          FALSE	//  elect credits cur_hash grams id past_elect f
+        }>ELSE<{
+          s3 s5 XCHG
+          s3 s4 XCHG
+          3 BLKDROP	//  elect credits cur_hash grams id past_elect f
+        }>
+      }>ELSE<{
+        s3 s0 s3 XCHG3
+        DROP	//  elect credits cur_hash grams id past_elect f
+      }>
+      NOT	//  elect credits cur_hash grams id past_elect _84
+      s1 s2 XCHG	//  elect credits cur_hash grams past_elect id _84
+    }>	//  elect credits cur_hash grams past_elect id
+    DUP	//  elect credits cur_hash grams past_elect id id
+    ISNULL	//  elect credits cur_hash grams past_elect id _85
+    IF:<{	//  elect credits cur_hash grams past_elect id
+      DROP	//  elect credits cur_hash grams past_elect
+      0 PUSHINT	//  elect credits cur_hash grams past_elect _86=0
+    }>ELSE<{	//  elect credits cur_hash grams past_elect _86
+    }>	//  elect credits active_hash grams past_elect active_id
+    s0 s3 XCHG2	//  elect credits past_elect grams active_id active_hash
+    store_data CALLDICT
+    TRUE	//  _89
+  }>
+  cell_hash_eq? PROC:<{
+    //  vset expected_vset_hash
+    OVER	//  vset expected_vset_hash vset
+    ISNULL	//  vset expected_vset_hash _2
+    IF:<{	//  vset expected_vset_hash
+      2DROP	// 
+      FALSE	//  _3
+    }>ELSE<{	//  vset expected_vset_hash
+      SWAP	//  expected_vset_hash vset
+      HASHCU	//  expected_vset_hash _5
+      SWAP	//  _5 expected_vset_hash
+      EQUAL	//  _3
+    }>
+  }>
+  validator_set_installed PROC:<{
+    //  ds elect credits
+    SWAP	//  ds credits elect
+    unpack_elect CALLDICT	//  ds credits _44 _45 _46 _47 _48 _49 _50
+    s0 s5 XCHG
+    5 BLKDROP	//  ds credits elect_at finished
+    IFNOTJMP:<{	//  ds credits elect_at
+      3 BLKDROP	// 
+      FALSE	//  _11
+    }>	//  ds credits elect_at
+    s0 s2 XCHG	//  elect_at credits ds
+    LDDICT	//  elect_at credits past_elections ds
+    s3 s1 XCPU
+    32 PUSHINT	//  ds credits past_elections elect_at past_elections _17=32
+    DICTUGET
+    NULLSWAPIFNOT	//  ds credits past_elections fs f
+    IFNOTJMP:<{	//  ds credits past_elections fs
+      4 BLKDROP	// 
+      FALSE	//  _19
+    }>	//  ds credits past_elections fs
+    64 PUSHINT	//  ds credits past_elections fs _21=64
+    SDSKIPFIRST	//  ds credits past_elections _22
+    256 PLDU	//  ds credits past_elections vset_hash
+    34 PUSHINT	//  ds credits past_elections vset_hash _25=34
+    CONFIGOPTPARAM	//  ds credits past_elections vset_hash _26
+    OVER	//  ds credits past_elections vset_hash _26 vset_hash
+    cell_hash_eq? CALLDICT	//  ds credits past_elections vset_hash _27
+    36 PUSHINT	//  ds credits past_elections vset_hash _27 _28=36
+    CONFIGOPTPARAM	//  ds credits past_elections vset_hash _27 _29
+    ROT	//  ds credits past_elections _27 _29 vset_hash
+    cell_hash_eq? CALLDICT	//  ds credits past_elections _27 _30
+    OR	//  ds credits past_elections _31
+    IFJMP:<{	//  ds credits past_elections
+      FALSE	//  ds credits past_elections _32
+      NEWC	//  ds credits past_elections _32 _33
+      1 STI	//  ds credits past_elections _35
+      s1 s2 XCHG	//  ds past_elections credits _35
+      STDICT	//  ds past_elections _36
+      STDICT	//  ds _37
+      SWAP	//  _37 ds
+      STSLICER	//  _38
+      ENDC	//  _39
+      c4 POP
+      update_active_vset_id CALLDICT	//  _41
+      DROP	// 
+      TRUE	//  _42
+    }>	//  ds credits past_elections
+    3 BLKDROP	// 
+    FALSE	//  _43
+  }>
+  check_unfreeze PROC:<{
+    // 
+    load_data CALLDICT	//  elect credits past_elect grams active_id active_hash
+    -1 PUSHINT	//  elect credits past_elect grams active_id active_hash id=-1
+    UNTIL:<{
+      s4 PUSH
+      32 PUSHINT	//  elect credits past_elect grams active_id active_hash id past_elect _11=32
+      DICTUGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  elect credits past_elect grams active_id active_hash fs id f
+      DUP	//  elect credits past_elect grams active_id active_hash fs id f f
+      IF:<{	//  elect credits past_elect grams active_id active_hash fs id f
+        s0 s2 XCHG	//  elect credits past_elect grams active_id active_hash f id fs
+        32 LDU	//  elect credits past_elect grams active_id active_hash f id _39 _38
+        DROP	//  elect credits past_elect grams active_id active_hash f id unfreeze_at
+        NOW	//  elect credits past_elect grams active_id active_hash f id unfreeze_at _17
+        LEQ	//  elect credits past_elect grams active_id active_hash f id _18
+        s1 s4 PUSH2	//  elect credits past_elect grams active_id active_hash f id _18 id active_id
+        NEQ	//  elect credits past_elect grams active_id active_hash f id _18 _19
+        AND	//  elect credits past_elect grams active_id active_hash f id _20
+        IF:<{	//  elect credits past_elect grams active_id active_hash f id
+          NIP	//  elect credits past_elect grams active_id active_hash id
+          s5 s4 s4 XC2PU	//  elect active_hash id grams active_id credits past_elect id
+          unfreeze_all CALLDICT	//  elect active_hash id grams active_id credits past_elect unused_prizes
+          s1 s4 XCHG	//  elect active_hash id past_elect active_id credits grams unused_prizes
+          ADD	//  elect active_hash id past_elect active_id credits grams
+          s6 s1 s3 PUSH3
+          s3 s5 s8 PUSH3	//  elect active_hash id past_elect active_id credits grams elect credits past_elect grams active_id active_hash
+          store_data CALLDICT
+          FALSE	//  elect active_hash id past_elect active_id credits grams f
+        }>ELSE<{
+          s6 s1 s5 XCHG3
+          s4 s4 XCHG2	//  elect active_hash id past_elect active_id credits grams f
+        }>
+      }>ELSE<{
+        s3 s7 XCHG
+        s1 s6 XCHG
+        s5 s0 s5 XCHG3
+        DROP	//  elect active_hash id past_elect active_id credits grams f
+      }>
+      NOT	//  elect active_hash id past_elect active_id credits grams _26
+      s2 s6 XCHG
+      s4 s5 XCHG
+      s1 s4 XCHG	//  elect credits past_elect grams active_id active_hash id _26
+    }>	//  elect credits past_elect grams active_id active_hash id
+    s0 s6 XCHG
+    6 BLKDROP	//  id
+    ISNULL	//  _27
+    NOT	//  _28
+  }>
+  announce_new_elections PROC:<{
+    //  ds elect credits
+    NIP	//  ds credits
+    36 PUSHINT	//  ds credits _4=36
+    CONFIGOPTPARAM	//  ds credits next_vset
+    ISNULL	//  ds credits _6
+    IFNOTJMP:<{	//  ds credits
+      2DROP	// 
+      FALSE	//  _7
+    }>	//  ds credits
+    1 PUSHINT	//  ds credits _9=1
+    CONFIGOPTPARAM	//  ds credits _10
+    CTOS	//  ds credits _11
+    256 PLDU	//  ds credits elector_addr
+    MYADDR	//  ds credits elector_addr _16
+    REWRITESTDADDR	//  ds credits elector_addr my_wc my_addr
+    SWAP	//  ds credits elector_addr my_addr my_wc
+    INC	//  ds credits elector_addr my_addr _19
+    s0 s2 XCHG	//  ds credits _19 my_addr elector_addr
+    NEQ	//  ds credits _19 _20
+    OR	//  ds credits _21
+    IFJMP:<{	//  ds credits
+      2DROP	// 
+      FALSE	//  _22
+    }>	//  ds credits
+    34 PUSHINT	//  ds credits _24=34
+    CONFIGOPTPARAM	//  ds credits cur_vset
+    DUP	//  ds credits cur_vset cur_vset
+    ISNULL	//  ds credits cur_vset _26
+    IFJMP:<{	//  ds credits cur_vset
+      3 BLKDROP	// 
+      FALSE	//  _27
+    }>	//  ds credits cur_vset
+    get_validator_conf CALLDICT	//  ds credits cur_vset _76 _77 _78 _79
+    DROP
+    s2 POP	//  ds credits cur_vset elect_end_before elect_begin_before
+    s0 s2 XCHG	//  ds credits elect_begin_before elect_end_before cur_vset
+    CTOS	//  ds credits elect_begin_before elect_end_before _34
+    40 PUSHINT	//  ds credits elect_begin_before elect_end_before _34 _37
+    SDSKIPFIRST	//  ds credits elect_begin_before elect_end_before _38
+    32 PLDU	//  ds credits elect_begin_before elect_end_before cur_valid_until
+    NOW	//  ds credits elect_begin_before elect_end_before cur_valid_until t
+    s1 s3 XCPU	//  ds credits elect_begin_before elect_end_before t cur_valid_until elect_begin_before
+    SUB	//  ds credits elect_begin_before elect_end_before t t0
+    2DUP	//  ds credits elect_begin_before elect_end_before t t0 t t0
+    LESS	//  ds credits elect_begin_before elect_end_before t t0 _45
+    IFJMP:<{	//  ds credits elect_begin_before elect_end_before t t0
+      6 BLKDROP	// 
+      FALSE	//  _46
+    }>	//  ds credits elect_begin_before elect_end_before t t0
+    2DUP	//  ds credits elect_begin_before elect_end_before t t0 t t0
+    SUB	//  ds credits elect_begin_before elect_end_before t t0 _47
+    60 LESSINT	//  ds credits elect_begin_before elect_end_before t t0 _49
+    IF:<{	//  ds credits elect_begin_before elect_end_before t t0
+      NIP	//  ds credits elect_begin_before elect_end_before t
+    }>ELSE<{
+      DROP	//  ds credits elect_begin_before elect_end_before t
+    }>
+    17 PUSHINT	//  ds credits elect_begin_before elect_end_before t _52=17
+    CONFIGOPTPARAM	//  ds credits elect_begin_before elect_end_before t _53
+    CTOS	//  ds credits elect_begin_before elect_end_before t _54
+    LDGRAMS	//  ds credits elect_begin_before elect_end_before t _81 _80
+    DROP	//  ds credits elect_begin_before elect_end_before t min_stake
+    s0 s3 XCHG	//  ds credits min_stake elect_end_before t elect_begin_before
+    ADD	//  ds credits min_stake elect_end_before elect_at
+    s0 DUMP	//  ds credits min_stake elect_end_before elect_at
+    s0 s1 PUXC	//  ds credits min_stake elect_at elect_at elect_end_before
+    SUB	//  ds credits min_stake elect_at elect_close
+    0 PUSHINT	//  ds credits min_stake elect_at elect_close _62=0
+    NEWDICT	//  ds credits min_stake elect_at elect_close _62=0 _63
+    FALSE	//  ds credits min_stake elect_at elect_close _62=0 _63 _64
+    s4 s5 XCHG
+    s3 s4 XCHG
+    FALSE	//  ds credits elect_at elect_close min_stake _62=0 _63 _64 _65
+    pack_elect CALLDICT	//  ds credits elect
+    NEWC	//  ds credits elect _67
+    STDICT	//  ds credits _68
+    STDICT	//  ds _69
+    SWAP	//  _69 ds
+    STSLICER	//  _70
+    ENDC	//  _71
+    c4 POP
+    TRUE	//  _73
+  }>
+  run_ticktock PROC:<{
+    //  is_tock
+    DROP	// 
+    c4 PUSH	//  _2
+    CTOS	//  ds
+    LDDICT	//  _6 ds
+    LDDICT	//  elect credits ds
+    s2 PUSH	//  elect credits ds elect
+    ISNULL	//  elect credits ds _10
+    IF:<{	//  elect credits ds
+      -ROT	//  ds elect credits
+      announce_new_elections CALLDICT	//  _18
+      0 THROWIF
+    }>ELSE<{	//  elect credits ds
+      s0 s2 s1 PUSH3	//  elect credits ds ds elect credits
+      conduct_elections CALLDICT	//  elect credits ds _12
+      0 THROWIF
+      -ROT	//  ds elect credits
+      validator_set_installed CALLDICT	//  _15
+      0 THROWIF
+    }>
+    update_active_vset_id CALLDICT	//  _21
+    0 THROWIF
+    check_unfreeze CALLDICT	//  _23
+    DROP	// 
+  }>
+  active_election_id PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  _2
+    PLDDICT	//  elect
+    DUP	//  elect elect
+    ISNULL	//  elect _4
+    IF:<{	//  elect
+      DROP	// 
+      0 PUSHINT	//  _5=0
+    }>ELSE<{	//  elect
+      CTOS	//  _7
+      32 PLDU	//  _5
+    }>
+  }>
+  participates_in PROC:<{
+    //  validator_pubkey
+    c4 PUSH	//  validator_pubkey _2
+    CTOS	//  validator_pubkey _3
+    PLDDICT	//  validator_pubkey elect
+    DUP	//  validator_pubkey elect elect
+    ISNULL	//  validator_pubkey elect _5
+    IFJMP:<{	//  validator_pubkey elect
+      2DROP	// 
+      0 PUSHINT	//  _6=0
+    }>	//  validator_pubkey elect
+    unpack_elect CALLDICT	//  validator_pubkey _23 _24 _25 _26 _27 _28 _29
+    s2 s6 XCHG
+    6 BLKDROP	//  validator_pubkey members
+    8 PUSHPOW2	//  validator_pubkey members _17=256
+    DICTUGET
+    NULLSWAPIFNOT	//  mem found
+    IF:<{	//  mem
+      LDGRAMS	//  _33 _32
+      DROP	//  _19
+    }>ELSE<{	//  mem
+      DROP	// 
+      0 PUSHINT	//  _19=0
+    }>
+  }>
+  participant_list PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  _2
+    PLDDICT	//  elect
+    DUP	//  elect elect
+    ISNULL	//  elect _4
+    IFJMP:<{	//  elect
+      DROP	// 
+      PUSHNULL	//  _5
+    }>	//  elect
+    unpack_elect CALLDICT	//  _35 _36 _37 _38 _39 _40 _41
+    s2 s6 XCHG
+    6 BLKDROP	//  members
+    PUSHNULL	//  members l
+    256 PUSHPOW2DEC	//  members l id
+    UNTIL:<{
+      s2 PUSH
+      8 PUSHPOW2	//  members l id members _28=256
+      DICTUGETPREV
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  members l fs id f
+      DUP	//  members l fs id f f
+      IF:<{	//  members l fs id f
+        s0 s2 XCHG	//  members l f id fs
+        LDGRAMS	//  members l f id _46 _45
+        DROP	//  members l f id _30
+        s1 s(-1) PUXC	//  members l f id id _30
+        PAIR	//  members l f id _32
+        s0 s3 XCHG2	//  members id f _32 l
+        CONS	//  members id f l
+      }>ELSE<{
+        2SWAP
+        DROP	//  members id f l
+      }>
+      SWAP	//  members id l f
+      NOT	//  members id l _34
+      s1 s2 XCHG	//  members l id _34
+    }>	//  members l id
+    DROP
+    NIP	//  l
+  }>
+  compute_returned_stake PROC:<{
+    //  wallet_addr
+    c4 PUSH	//  wallet_addr _2
+    CTOS	//  wallet_addr cs
+    LDDICT	//  wallet_addr _19 _18
+    NIP	//  wallet_addr cs
+    LDDICT	//  wallet_addr _21 _20
+    DROP	//  wallet_addr credits
+    8 PUSHPOW2	//  wallet_addr credits _12=256
+    DICTUGET
+    NULLSWAPIFNOT	//  val f
+    IF:<{	//  val
+      LDGRAMS	//  _25 _24
+      DROP	//  _14
+    }>ELSE<{	//  val
+      DROP	// 
+      0 PUSHINT	//  _14=0
+    }>
+  }>
+}END>c

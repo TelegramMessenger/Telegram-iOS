@@ -148,6 +148,11 @@ class MerkleProofCombineFast {
   MerkleProofCombineFast(Ref<Cell> a, Ref<Cell> b) : a_(std::move(a)), b_(std::move(b)) {
   }
   td::Result<Ref<Cell>> run() {
+    if (a_.is_null()) {
+      return b_;
+    } else if (b_.is_null()) {
+      return a_;
+    }
     TRY_RESULT_ASSIGN(a_, unpack_proof(a_));
     TRY_RESULT_ASSIGN(b_, unpack_proof(b_));
     TRY_RESULT(res, run_raw());
@@ -204,6 +209,11 @@ class MerkleProofCombine {
   MerkleProofCombine(Ref<Cell> a, Ref<Cell> b) : a_(std::move(a)), b_(std::move(b)) {
   }
   td::Result<Ref<Cell>> run() {
+    if (a_.is_null()) {
+      return b_;
+    } else if (b_.is_null()) {
+      return a_;
+    }
     TRY_RESULT_ASSIGN(a_, unpack_proof(a_));
     TRY_RESULT_ASSIGN(b_, unpack_proof(b_));
     TRY_RESULT(res, run_raw());
@@ -323,12 +333,20 @@ Ref<Cell> MerkleProof::combine(Ref<Cell> a, Ref<Cell> b) {
   return res.move_as_ok();
 }
 
+td::Result<Ref<Cell>> MerkleProof::combine_status(Ref<Cell> a, Ref<Cell> b) {
+  return MerkleProofCombine(std::move(a), std::move(b)).run();
+}
+
 Ref<Cell> MerkleProof::combine_fast(Ref<Cell> a, Ref<Cell> b) {
   auto res = MerkleProofCombineFast(std::move(a), std::move(b)).run();
   if (res.is_error()) {
     return {};
   }
   return res.move_as_ok();
+}
+
+td::Result<Ref<Cell>> MerkleProof::combine_fast_status(Ref<Cell> a, Ref<Cell> b) {
+  return MerkleProofCombineFast(std::move(a), std::move(b)).run();
 }
 
 Ref<Cell> MerkleProof::combine_raw(Ref<Cell> a, Ref<Cell> b) {

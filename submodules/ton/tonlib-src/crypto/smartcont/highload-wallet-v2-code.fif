@@ -1,0 +1,134 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/highload-wallet-v2-code.fc` 
+PROGRAM{
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  117746 DECLMETHOD processed?
+  recv_internal PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg _8 cs
+    64 LDU	//  signature in_msg subwallet_id query_id cs
+    NOW	//  signature in_msg subwallet_id query_id cs _15
+    32 LSHIFT#	//  signature in_msg subwallet_id query_id cs bound
+    s2 s0 PUSH2	//  signature in_msg subwallet_id query_id cs bound query_id bound
+    LESS	//  signature in_msg subwallet_id query_id cs bound _19
+    35 THROWIF
+    c4 PUSH	//  signature in_msg subwallet_id query_id cs bound _22
+    CTOS	//  signature in_msg subwallet_id query_id cs bound ds
+    32 LDU	//  signature in_msg subwallet_id query_id cs bound _28 ds
+    64 LDU	//  signature in_msg subwallet_id query_id cs bound _28 _31 ds
+    256 LDU	//  signature in_msg subwallet_id query_id cs bound _28 _31 _34 ds
+    LDDICT	//  signature in_msg subwallet_id query_id cs bound stored_subwallet last_cleaned public_key old_queries ds
+    ENDS
+    s6 s0 PUSH2
+    64 PUSHINT	//  signature in_msg subwallet_id query_id cs bound stored_subwallet last_cleaned public_key old_queries query_id old_queries _42=64
+    DICTUGET
+    NULLSWAPIFNOT	//  signature in_msg subwallet_id query_id cs bound stored_subwallet last_cleaned public_key old_queries _115 _116
+    NIP	//  signature in_msg subwallet_id query_id cs bound stored_subwallet last_cleaned public_key old_queries found?
+    32 THROWIF
+    s7 s3 XCPU	//  signature in_msg old_queries query_id cs bound stored_subwallet last_cleaned public_key subwallet_id stored_subwallet
+    EQUAL	//  signature in_msg old_queries query_id cs bound stored_subwallet last_cleaned public_key _47
+    34 THROWIFNOT
+    s0 s7 XCHG	//  signature public_key old_queries query_id cs bound stored_subwallet last_cleaned in_msg
+    HASHSU	//  signature public_key old_queries query_id cs bound stored_subwallet last_cleaned _50
+    s0 s8 s7 XC2PU	//  last_cleaned public_key old_queries query_id cs bound stored_subwallet _50 signature public_key
+    CHKSIGNU	//  last_cleaned public_key old_queries query_id cs bound stored_subwallet _51
+    35 THROWIFNOT
+    s0 s2 XCHG	//  last_cleaned public_key old_queries query_id stored_subwallet bound cs
+    LDDICT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs
+    ENDS
+    ACCEPT
+    -1 PUSHINT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict i=-1
+    UNTIL:<{
+      OVER
+      16 PUSHINT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict i dict _62=16
+      DICTIGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f
+      DUP	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f f
+      IF:<{	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict cs i f
+        s0 s2 XCHG	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i cs
+        8 LDU	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i mode cs
+        LDREF	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i mode _125 _124
+        DROP	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i mode _68
+        SWAP	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i _68 mode
+        SENDRAWMSG
+      }>ELSE<{
+        s2 POP	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict f i
+      }>
+      SWAP	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict i f
+      NOT	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict i _71
+    }>	//  last_cleaned public_key old_queries query_id stored_subwallet bound dict i
+    2DROP	//  last_cleaned public_key old_queries query_id stored_subwallet bound
+    38 PUSHPOW2	//  last_cleaned public_key old_queries query_id stored_subwallet bound _74
+    SUB	//  last_cleaned public_key old_queries query_id stored_subwallet bound
+    NEWC	//  last_cleaned public_key old_queries query_id stored_subwallet bound _77
+    s0 s3 s4 XCHG3
+    64 PUSHINT	//  last_cleaned public_key stored_subwallet bound _77 query_id old_queries _78=64
+    DICTUSETB	//  last_cleaned public_key stored_subwallet bound old_queries
+    UNTIL:<{
+      DUP
+      64 PUSHINT	//  last_cleaned public_key stored_subwallet bound old_queries old_queries _85=64
+      DICTUREMMIN
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  last_cleaned public_key stored_subwallet bound old_queries _126 _128 _127 _129
+      s2 POP	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' f i
+      s1 s0 XCPU	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f f
+      IF:<{	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
+        DROP	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i
+        s0 s3 PUSH2	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i i bound
+        LESS	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
+      }>	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
+      DUP	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f f
+      IF:<{	//  last_cleaned public_key stored_subwallet bound old_queries old_queries' i f
+        s3 POP
+        s6 POP	//  last_cleaned public_key stored_subwallet bound f old_queries
+      }>ELSE<{
+        s3 s1 s3 XCHG3
+        2DROP	//  last_cleaned public_key stored_subwallet bound f old_queries
+      }>
+      SWAP	//  last_cleaned public_key stored_subwallet bound old_queries f
+      NOT	//  last_cleaned public_key stored_subwallet bound old_queries _90
+    }>	//  last_cleaned public_key stored_subwallet bound old_queries
+    NIP	//  last_cleaned public_key stored_subwallet old_queries
+    NEWC	//  last_cleaned public_key stored_subwallet old_queries _91
+    s1 s2 XCHG	//  last_cleaned public_key old_queries stored_subwallet _91
+    32 STU	//  last_cleaned public_key old_queries _93
+    s1 s3 XCHG	//  old_queries public_key last_cleaned _93
+    64 STU	//  old_queries public_key _95
+    256 STU	//  old_queries _97
+    STDICT	//  _98
+    ENDC	//  _99
+    c4 POP
+  }>
+  processed? PROC:<{
+    //  query_id
+    c4 PUSH	//  query_id _2
+    CTOS	//  query_id ds
+    32 LDU	//  query_id _29 _28
+    NIP	//  query_id ds
+    64 LDU	//  query_id _11 ds
+    256 LDU	//  query_id _11 _33 _32
+    NIP	//  query_id _11 ds
+    LDDICT	//  query_id last_cleaned old_queries ds
+    ENDS
+    s2 s(-1) PUXC
+    64 PUSHINT	//  query_id last_cleaned query_id old_queries _22=64
+    DICTUGET
+    NULLSWAPIFNOT	//  query_id last_cleaned _36 _37
+    NIP	//  query_id last_cleaned found
+    IF:<{	//  query_id last_cleaned
+      2DROP	// 
+      TRUE	//  _24
+    }>ELSE<{	//  query_id last_cleaned
+      LEQ	//  _26
+      NEGATE	//  _24
+    }>
+  }>
+}END>c

@@ -98,11 +98,13 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONAccountState
 
-- (instancetype)initWithIsInitialized:(bool)isInitialized balance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId syncUtime:(int64_t)syncUtime {
+- (instancetype)initWithIsInitialized:(bool)isInitialized isRWallet:(bool)isRWallet balance:(int64_t)balance unlockedBalance:(int64_t)unlockedBalance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId syncUtime:(int64_t)syncUtime {
     self = [super init];
     if (self != nil) {
         _isInitialized = isInitialized;
+        _isRWallet = isRWallet;
         _balance = balance;
+        _unlockedBalance = unlockedBalance;
         _seqno = seqno;
         _lastTransactionId = lastTransactionId;
         _syncUtime = syncUtime;
@@ -632,12 +634,21 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId {
+- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId rwalletInitialPublicKey:(NSString * _Nullable)rwalletInitialPublicKey {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getWalletAccountAddressWithPublicKey"]];
             return [[SBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
+        NSData *rwalletInitialPublicKeyData = nil;
+        if (rwalletInitialPublicKey != nil) {
+            rwalletInitialPublicKeyData = [rwalletInitialPublicKey dataUsingEncoding:NSUTF8StringEncoding];
+            if (rwalletInitialPublicKeyData == nil) {
+                [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string for rwalletInitialPublicKey in getWalletAccountAddressWithPublicKey"]];
+                return [[SBlockDisposable alloc] initWithBlock:^{}];
+            }
         }
         
         uint64_t requestId = _nextRequestId;
@@ -656,14 +667,27 @@ typedef enum {
             }
         }];
         
-        auto initialAccountState = make_object<tonlib_api::wallet_v3_initialAccountState>(
-            makeString(publicKeyData),
-            initialWalletId
-        );
+        tonlib_api::object_ptr<tonlib_api::InitialAccountState> initialAccountState;
+        
+        std::int32_t revision;
+        if (rwalletInitialPublicKey != nil) {
+            initialAccountState = make_object<tonlib_api::rwallet_initialAccountState>(
+                makeString(rwalletInitialPublicKeyData),
+                makeString(publicKeyData),
+                initialWalletId
+            );
+            revision = -1;
+        } else {
+            initialAccountState = tonlib_api::move_object_as<tonlib_api::InitialAccountState>(make_object<tonlib_api::wallet_v3_initialAccountState>(
+                makeString(publicKeyData),
+                initialWalletId
+            ));
+            revision = 1;
+        }
         
         auto query = make_object<tonlib_api::getAccountAddress>(
             tonlib_api::move_object_as<tonlib_api::InitialAccountState>(initialAccountState),
-            1
+            revision
         );
         _client->send({ requestId, std::move(query) });
         
@@ -684,12 +708,21 @@ typedef enum {
             } else if (object->get_id() == tonlib_api::fullAccountState::ID) {
                 auto fullAccountState = tonlib_api::move_object_as<tonlib_api::fullAccountState>(object);
                 int32_t seqNo = -1;
+                
+                bool isRWallet = false;
+                int64_t unlockedBalance = INT64_MAX;
+                
                 if (fullAccountState->account_state_->get_id() == tonlib_api::uninited_accountState::ID) {
                     seqNo = -1;
                 } else if (fullAccountState->account_state_->get_id() == tonlib_api::wallet_v3_accountState::ID) {
                     auto v3AccountState = tonlib_api::move_object_as<tonlib_api::wallet_v3_accountState>(fullAccountState->account_state_);
                     seqNo = v3AccountState->seqno_;
-                } else {
+                 } else if (fullAccountState->account_state_->get_id() == tonlib_api::rwallet_accountState::ID) {
+                     auto rwalletAccountState = tonlib_api::move_object_as<tonlib_api::rwallet_accountState>(fullAccountState->account_state_);
+                     isRWallet = true;
+                     unlockedBalance = rwalletAccountState->unlocked_balance_;
+                     seqNo = rwalletAccountState->seqno_;
+                 }else {
                     [subscriber putError:[[TONError alloc] initWithText:@"Unknown type"]];
                     return;
                 }
@@ -698,7 +731,7 @@ typedef enum {
                 if (fullAccountState->last_transaction_id_ != nullptr) {
                     lastTransactionId = [[TONTransactionId alloc] initWithLt:fullAccountState->last_transaction_id_->lt_ transactionHash:makeData(fullAccountState->last_transaction_id_->hash_)];
                 }
-                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:false balance:fullAccountState->balance_ seqno:-1 lastTransactionId:lastTransactionId syncUtime:fullAccountState->sync_utime_]];
+                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:false isRWallet:isRWallet balance:fullAccountState->balance_ unlockedBalance:unlockedBalance seqno:-1 lastTransactionId:lastTransactionId syncUtime:fullAccountState->sync_utime_]];
                 [subscriber putCompletion];
             } else {
                 assert(false);
@@ -785,7 +818,8 @@ typedef enum {
             ),
             make_object<tonlib_api::accountAddress>(fromAddress.UTF8String),
             timeout,
-            tonlib_api::move_object_as<tonlib_api::Action>(inputAction)
+            tonlib_api::move_object_as<tonlib_api::Action>(inputAction),
+            nil
         );
         _client->send({ requestId, std::move(query) });
         
@@ -840,7 +874,8 @@ typedef enum {
             make_object<tonlib_api::inputKeyFake>(),
             make_object<tonlib_api::accountAddress>(fromAddress.UTF8String),
             timeout,
-            tonlib_api::move_object_as<tonlib_api::Action>(inputAction)
+            tonlib_api::move_object_as<tonlib_api::Action>(inputAction),
+            nil
        );
         _client->send({ requestId, std::move(query) });
         

@@ -63,6 +63,36 @@ class ActorSignals {
 using core::Actor;
 using core::SchedulerContext;
 using core::SchedulerId;
+using core::set_debug;
+
+struct Debug {
+ public:
+  Debug() = default;
+  Debug(std::shared_ptr<core::SchedulerGroupInfo> group_info) : group_info_(std::move(group_info)) {
+  }
+  template <class F>
+  void for_each(F &&f) {
+    for (auto &scheduler : group_info_->schedulers) {
+      f(scheduler.io_worker->debug);
+      for (auto &cpu : scheduler.cpu_workers) {
+        f(cpu->debug);
+      }
+    }
+  }
+
+  void dump() {
+    for_each([](core::Debug &debug) {
+      core::DebugInfo info;
+      debug.read(info);
+      if (info.is_active) {
+        LOG(ERROR) << info.name << " " << td::format::as_time(Time::now() - info.start_at);
+      }
+    });
+  }
+
+ private:
+  std::shared_ptr<core::SchedulerGroupInfo> group_info_;
+};
 
 class Scheduler {
  public:
@@ -108,6 +138,10 @@ class Scheduler {
         thread.detach();
       }
     }
+  }
+
+  Debug get_debug() {
+    return Debug{group_info_};
   }
 
   bool run() {

@@ -1004,6 +1004,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         if let peer = adminView.peers[adminView.peerId] {
                                             text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0
                                         }
+                                    case .notMutualContact:
+                                        text = presentationData.strings.GroupInfo_AddUserLeftError
                                     default:
                                         break
                                     }

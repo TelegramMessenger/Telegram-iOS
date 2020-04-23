@@ -44,6 +44,12 @@ bool downcast_call(Object &obj, const T &func) {
     case dns_accountState::ID:
       func(static_cast<dns_accountState &>(obj));
       return true;
+    case rwallet_accountState::ID:
+      func(static_cast<rwallet_accountState &>(obj));
+      return true;
+    case pchan_accountState::ID:
+      func(static_cast<pchan_accountState &>(obj));
+      return true;
     case uninited_accountState::ID:
       func(static_cast<uninited_accountState &>(obj));
       return true;
@@ -55,6 +61,12 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case actionDns::ID:
       func(static_cast<actionDns &>(obj));
+      return true;
+    case actionPchan::ID:
+      func(static_cast<actionPchan &>(obj));
+      return true;
+    case actionRwallet::ID:
+      func(static_cast<actionRwallet &>(obj));
       return true;
     case adnlAddress::ID:
       func(static_cast<adnlAddress &>(obj));
@@ -110,8 +122,14 @@ bool downcast_call(Object &obj, const T &func) {
     case wallet_highload_v2_initialAccountState::ID:
       func(static_cast<wallet_highload_v2_initialAccountState &>(obj));
       return true;
+    case rwallet_initialAccountState::ID:
+      func(static_cast<rwallet_initialAccountState &>(obj));
+      return true;
     case dns_initialAccountState::ID:
       func(static_cast<dns_initialAccountState &>(obj));
+      return true;
+    case pchan_initialAccountState::ID:
+      func(static_cast<pchan_initialAccountState &>(obj));
       return true;
     case inputKeyRegular::ID:
       func(static_cast<inputKeyRegular &>(obj));
@@ -236,6 +254,30 @@ bool downcast_call(Object &obj, const T &func) {
     case options_info::ID:
       func(static_cast<options_info &>(obj));
       return true;
+    case pchan_actionInit::ID:
+      func(static_cast<pchan_actionInit &>(obj));
+      return true;
+    case pchan_actionClose::ID:
+      func(static_cast<pchan_actionClose &>(obj));
+      return true;
+    case pchan_actionTimeout::ID:
+      func(static_cast<pchan_actionTimeout &>(obj));
+      return true;
+    case pchan_config::ID:
+      func(static_cast<pchan_config &>(obj));
+      return true;
+    case pchan_promise::ID:
+      func(static_cast<pchan_promise &>(obj));
+      return true;
+    case pchan_stateInit::ID:
+      func(static_cast<pchan_stateInit &>(obj));
+      return true;
+    case pchan_stateClose::ID:
+      func(static_cast<pchan_stateClose &>(obj));
+      return true;
+    case pchan_statePayout::ID:
+      func(static_cast<pchan_statePayout &>(obj));
+      return true;
     case query_fees::ID:
       func(static_cast<query_fees &>(obj));
       return true;
@@ -253,6 +295,15 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case raw_transactions::ID:
       func(static_cast<raw_transactions &>(obj));
+      return true;
+    case rwallet_actionInit::ID:
+      func(static_cast<rwallet_actionInit &>(obj));
+      return true;
+    case rwallet_config::ID:
+      func(static_cast<rwallet_config &>(obj));
+      return true;
+    case rwallet_limit::ID:
+      func(static_cast<rwallet_limit &>(obj));
       return true;
     case smc_info::ID:
       func(static_cast<smc_info &>(obj));
@@ -424,6 +475,18 @@ bool downcast_call(Function &obj, const T &func) {
     case packAccountAddress::ID:
       func(static_cast<packAccountAddress &>(obj));
       return true;
+    case pchan_packPromise::ID:
+      func(static_cast<pchan_packPromise &>(obj));
+      return true;
+    case pchan_signPromise::ID:
+      func(static_cast<pchan_signPromise &>(obj));
+      return true;
+    case pchan_unpackPromise::ID:
+      func(static_cast<pchan_unpackPromise &>(obj));
+      return true;
+    case pchan_validatePromise::ID:
+      func(static_cast<pchan_validatePromise &>(obj));
+      return true;
     case query_estimateFees::ID:
       func(static_cast<query_estimateFees &>(obj));
       return true;
@@ -525,6 +588,12 @@ bool downcast_call(AccountState &obj, const T &func) {
     case dns_accountState::ID:
       func(static_cast<dns_accountState &>(obj));
       return true;
+    case rwallet_accountState::ID:
+      func(static_cast<rwallet_accountState &>(obj));
+      return true;
+    case pchan_accountState::ID:
+      func(static_cast<pchan_accountState &>(obj));
+      return true;
     case uninited_accountState::ID:
       func(static_cast<uninited_accountState &>(obj));
       return true;
@@ -550,6 +619,12 @@ bool downcast_call(Action &obj, const T &func) {
       return true;
     case actionDns::ID:
       func(static_cast<actionDns &>(obj));
+      return true;
+    case actionPchan::ID:
+      func(static_cast<actionPchan &>(obj));
+      return true;
+    case actionRwallet::ID:
+      func(static_cast<actionRwallet &>(obj));
       return true;
     default:
       return false;
@@ -586,8 +661,14 @@ bool downcast_call(InitialAccountState &obj, const T &func) {
     case wallet_highload_v2_initialAccountState::ID:
       func(static_cast<wallet_highload_v2_initialAccountState &>(obj));
       return true;
+    case rwallet_initialAccountState::ID:
+      func(static_cast<rwallet_initialAccountState &>(obj));
+      return true;
     case dns_initialAccountState::ID:
       func(static_cast<dns_initialAccountState &>(obj));
+      return true;
+    case pchan_initialAccountState::ID:
+      func(static_cast<pchan_initialAccountState &>(obj));
       return true;
     default:
       return false;
@@ -769,6 +850,52 @@ bool downcast_call(msg_Data &obj, const T &func) {
       return true;
     case msg_dataEncryptedText::ID:
       func(static_cast<msg_dataEncryptedText &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(pchan_Action &obj, const T &func) {
+  switch (obj.get_id()) {
+    case pchan_actionInit::ID:
+      func(static_cast<pchan_actionInit &>(obj));
+      return true;
+    case pchan_actionClose::ID:
+      func(static_cast<pchan_actionClose &>(obj));
+      return true;
+    case pchan_actionTimeout::ID:
+      func(static_cast<pchan_actionTimeout &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(pchan_State &obj, const T &func) {
+  switch (obj.get_id()) {
+    case pchan_stateInit::ID:
+      func(static_cast<pchan_stateInit &>(obj));
+      return true;
+    case pchan_stateClose::ID:
+      func(static_cast<pchan_stateClose &>(obj));
+      return true;
+    case pchan_statePayout::ID:
+      func(static_cast<pchan_statePayout &>(obj));
       return true;
     default:
       return false;

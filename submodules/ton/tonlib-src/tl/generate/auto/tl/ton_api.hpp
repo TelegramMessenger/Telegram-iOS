@@ -1057,6 +1057,18 @@ bool downcast_call(Function &obj, const T &func) {
     case tonNode_downloadBlocks::ID:
       func(static_cast<tonNode_downloadBlocks &>(obj));
       return true;
+    case tonNode_downloadKeyBlockProof::ID:
+      func(static_cast<tonNode_downloadKeyBlockProof &>(obj));
+      return true;
+    case tonNode_downloadKeyBlockProofLink::ID:
+      func(static_cast<tonNode_downloadKeyBlockProofLink &>(obj));
+      return true;
+    case tonNode_downloadKeyBlockProofLinks::ID:
+      func(static_cast<tonNode_downloadKeyBlockProofLinks &>(obj));
+      return true;
+    case tonNode_downloadKeyBlockProofs::ID:
+      func(static_cast<tonNode_downloadKeyBlockProofs &>(obj));
+      return true;
     case tonNode_downloadNextBlockFull::ID:
       func(static_cast<tonNode_downloadNextBlockFull &>(obj));
       return true;
@@ -1101,6 +1113,12 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case tonNode_prepareBlocks::ID:
       func(static_cast<tonNode_prepareBlocks &>(obj));
+      return true;
+    case tonNode_prepareKeyBlockProof::ID:
+      func(static_cast<tonNode_prepareKeyBlockProof &>(obj));
+      return true;
+    case tonNode_prepareKeyBlockProofs::ID:
+      func(static_cast<tonNode_prepareKeyBlockProofs &>(obj));
       return true;
     case tonNode_preparePersistentState::ID:
       func(static_cast<tonNode_preparePersistentState &>(obj));

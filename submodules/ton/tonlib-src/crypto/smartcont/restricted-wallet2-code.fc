@@ -1,13 +1,16 @@
 ;; Restricted wallet (a variant of wallet-code.fc)
-;; until configuration parameter -13 is set, accepts messages only to elector smc
+;; restricts access to parts of balance until certain dates
 
 () recv_internal(slice in_msg) impure {
   ;; do nothing for internal messages
 }
 
-_ days_passed() inline {
-  var p = config_param(-13);
-  return null?(p) ? -1 : (now() - begin_parse(p).preload_uint(32)) / 86400;
+_ seconds_passed(int start_at, int utime) inline_ref {
+  ifnot (start_at) {
+    var p = config_param(-13);
+    start_at = null?(p) ? 0 : begin_parse(p).preload_uint(32);
+  }
+  return start_at ? utime - start_at : -1;
 }
 
 () recv_external(slice in_msg) impure {
@@ -16,7 +19,7 @@ _ days_passed() inline {
   var (msg_seqno, valid_until) = (cs~load_uint(32), cs~load_uint(32));
   throw_if(35, valid_until <= now());
   var ds = get_data().begin_parse();
-  var (stored_seqno, public_key, rdict) = (ds~load_uint(32), ds~load_uint(256), ds~load_dict());
+  var (stored_seqno, public_key, start_at, rdict) = (ds~load_uint(32), ds~load_uint(256), ds~load_uint(32), ds~load_dict());
   ds.end_parse();
   throw_unless(33, msg_seqno == stored_seqno);
   ifnot (msg_seqno) {
@@ -24,14 +27,15 @@ _ days_passed() inline {
     set_data(begin_cell()
       .store_uint(stored_seqno + 1, 32)
       .store_uint(public_key, 256)
+      .store_uint(start_at, 32)
       .store_dict(rdict)
       .end_cell());
     return ();
   }
   throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
   accept_message();
-  var ts = days_passed();
-  var (_, value, found) = rdict.idict_get_preveq?(16, ts);
+  var ts = seconds_passed(start_at, now());
+  var (_, value, found) = rdict.idict_get_preveq?(32, ts);
   if (found) {
     raw_reserve(value~load_grams(), 2);
   }
@@ -45,6 +49,7 @@ _ days_passed() inline {
   set_data(begin_cell()
     .store_uint(stored_seqno + 1, 32)
     .store_uint(public_key, 256)
+    .store_uint(start_at, 32)
     .store_dict(rdict)
   .end_cell());
 }
@@ -61,15 +66,23 @@ int get_public_key() method_id {
   return cs.preload_uint(256);
 }
 
-int balance() method_id {
+int compute_balance_at(int utime) inline_ref {
   var ds = get_data().begin_parse().skip_bits(32 + 256);
-  var rdict = ds~load_dict();
+  var (start_at, rdict) = (ds~load_uint(32), ds~load_dict());
   ds.end_parse();
-  var ts = days_passed();
+  var ts = seconds_passed(start_at, utime);
   var balance = get_balance().pair_first();
-  var (_, value, found) = rdict.idict_get_preveq?(16, ts);
+  var (_, value, found) = rdict.idict_get_preveq?(32, ts);
   if (found) {
     balance = max(balance - value~load_grams(), 0);
   }
   return balance;
+}
+
+int balance_at(int utime) method_id {
+  return compute_balance_at(utime);
+}
+
+int balance() method_id {
+  return compute_balance_at(now());
 }

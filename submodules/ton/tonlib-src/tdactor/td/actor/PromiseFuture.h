@@ -44,8 +44,24 @@ class GetArg<R (C::*)(Arg) const> {
   using type = Arg;
 };
 
+template <typename T>
+struct GetRet : public GetRet<decltype(&T::operator())> {};
+
+template <class C, class R, class... Arg>
+class GetRet<R (C::*)(Arg...)> {
+ public:
+  using type = R;
+};
+template <class C, class R, class... Arg>
+class GetRet<R (C::*)(Arg...) const> {
+ public:
+  using type = R;
+};
+
 template <class T>
 using get_arg_t = std::decay_t<typename GetArg<T>::type>;
+template <class T>
+using get_ret_t = std::decay_t<typename GetRet<T>::type>;
 
 template <class T>
 struct DropResult {
@@ -131,6 +147,7 @@ constexpr bool is_promise_interface_ptr() {
 template <class ValueT, class FunctionT>
 class LambdaPromise : public PromiseInterface<ValueT> {
  public:
+  using ArgT = ValueT;
   void set_value(ValueT &&value) override {
     CHECK(has_lambda_.get());
     do_ok(std::move(value));
@@ -288,12 +305,6 @@ class Promise {
   std::unique_ptr<PromiseInterface<T>> promise_;
 };
 
-template <class F>
-auto make_promise(F &&f) {
-  using ValueT = detail::drop_result_t<detail::get_arg_t<F>>;
-  return Promise<ValueT>(promise_interface_ptr(std::forward<F>(f)));
-}
-
 namespace detail {
 template <class... ArgsT>
 class JoinPromise : public PromiseInterface<Unit> {
@@ -331,6 +342,16 @@ class PromiseCreator {
   }
 };
 
+template <class F>
+auto make_promise(F &&f) {
+  using ValueT = typename decltype(PromiseCreator::lambda(std::move(f)))::ArgT;
+  return Promise<ValueT>(PromiseCreator::lambda(std::move(f)));
+}
+template <class T>
+auto make_promise(Promise<T> &&f) {
+  return std::move(f);
+}
+
 template <class T = Unit>
 class SafePromise {
  public:
@@ -356,4 +377,145 @@ class SafePromise {
   Promise<T> promise_;
   Result<T> result_;
 };
+
+template <class PromiseT, typename... ArgsT>
+class PromiseMerger;
+
+template <class F>
+struct SplitPromise {
+  using PromiseT = decltype(make_promise(std::declval<F>()));
+  using ArgT = typename PromiseT::ArgT;
+
+  template <class S, class T>
+  static std::pair<Promise<S>, Promise<T>> split(std::pair<S, T>);
+  template <class... ArgsT>
+  static std::tuple<Promise<ArgsT>...> split(std::tuple<ArgsT...>);
+  using SplittedT = decltype(split(std::declval<ArgT>()));
+
+  template <class S, class T>
+  static PromiseMerger<PromiseT, S, T> merger(std::pair<S, T>);
+  template <class... ArgsT>
+  static PromiseMerger<PromiseT, ArgsT...> merger(std::tuple<ArgsT...>);
+  using MergerT = decltype(merger(std::declval<ArgT>()));
+};
+
+template <class PromiseT, typename... ArgsT>
+class PromiseMerger : public std::enable_shared_from_this<PromiseMerger<PromiseT, ArgsT...>> {
+ public:
+  std::tuple<Result<ArgsT>...> args_;
+  PromiseT promise_;
+
+  PromiseMerger(PromiseT promise) : promise_(std::move(promise)) {
+  }
+  ~PromiseMerger() {
+    td::Status status;
+    tuple_for_each(args_, [&status](auto &&arg) {
+      if (status.is_error()) {
+        return;
+      }
+      if (arg.is_error()) {
+        status = arg.move_as_error();
+      }
+    });
+    if (status.is_error()) {
+      promise_.set_error(std::move(status));
+      return;
+    }
+    call_tuple([this](auto &&... args) { promise_.set_value({args.move_as_ok()...}); }, std::move(args_));
+  }
+
+  template <class T>
+  Promise<typename T::ValueT> make_promise(T &arg) {
+    return [&arg, self = this->shared_from_this()](auto res) { arg = std::move(res); };
+  }
+
+  template <class R>
+  auto split() {
+    return call_tuple([this](auto &&... arg) { return R{this->make_promise(arg)...}; }, std::move(args_));
+  }
+};
+
+template <class F>
+auto split_promise(F &&f) {
+  auto merger = std::make_shared<typename SplitPromise<F>::MergerT>(std::move(f));
+  return merger->template split<typename SplitPromise<F>::SplittedT>();
+}
+
+template <class T>
+struct PromiseFuture {
+  Result<Promise<T>> promise_;
+  Result<T> result_;
+  ~PromiseFuture() {
+    if (promise_.is_ok()) {
+      promise_.move_as_ok().set_result(std::move(result_));
+    } else {
+      LOG(ERROR) << "Lost PromiseFuture";
+    }
+  }
+};
+template <class T>
+struct Future;
+
+template <class T>
+std::pair<Promise<T>, Future<T>> make_promise_future();
+
+template <class T>
+struct Future {
+  Promise<Promise<T>> promise_;
+  Future(Promise<Promise<T>> promise) : promise_(std::move(promise)) {
+  }
+
+  void finish(Promise<T> promise) {
+    promise_.set_value(std::move(promise));
+  }
+
+  template <class F>
+  auto map(F &&f) {
+    using R = detail::drop_result_t<decltype(f(std::declval<T>()))>;
+    auto pf = make_promise_future<R>();
+    promise_.set_value([p = std::move(pf.first), f = std::move(f)](Result<T> res) mutable {
+      TRY_RESULT_PROMISE(p, x, std::move(res));
+      p.set_result(f(std::move(x)));
+    });
+
+    return std::move(pf.second);
+  }
+
+  template <class F>
+  auto fmap(F &&f) {
+    return flatten(map(std::move(f)));
+  }
+
+  template <class X>
+  static Future<X> flatten(Future<Future<X>> ff) {
+    auto pf = make_promise_future<X>();
+    ff.promise_.set_value([p = std::move(pf.first)](Result<Future<X>> r_f) mutable {
+      TRY_RESULT_PROMISE(p, f, std::move(r_f));
+      // Promise<X> p
+      // Future<X> f
+      f.promise_.set_value(std::move(p));
+    });
+    return std::move(pf.second);
+  }
+};
+
+template <class T>
+Future<T> make_future(T &&value) {
+  return Future<T>([value = std::move(value)](Result<Promise<T>> r_promise) mutable {
+    if (r_promise.is_ok()) {
+      r_promise.move_as_ok().set_value(std::move(value));
+    } else {
+      LOG(ERROR) << "Lost future";
+    }
+  });
+}
+
+template <class T>
+std::pair<Promise<T>, Future<T>> make_promise_future() {
+  auto pf = std::make_shared<PromiseFuture<T>>();
+  Future<T> future([pf](Result<Promise<T>> res) mutable { pf->promise_ = std::move(res); });
+  Promise<T> promise = [pf = std::move(pf)](Result<T> res) mutable { pf->result_ = std::move(res); };
+  return std::make_pair(std::move(promise), std::move(future));
+}
+
 }  // namespace td

@@ -77,6 +77,13 @@ class VmError {
   long long get_arg() const {
     return arg;
   }
+  td::Status as_status() const {
+    return td::Status::Error(td::Slice{get_msg()});
+  }
+  template <typename T>
+  td::Status as_status(T pfx) const {
+    return td::Status::Error(PSLICE() << pfx << get_msg());
+  }
 };
 
 struct VmNoGas {
@@ -89,6 +96,13 @@ struct VmNoGas {
   }
   operator VmError() const {
     return VmError{Excno::out_of_gas, "out of gas"};
+  }
+  td::Status as_status() const {
+    return td::Status::Error(td::Slice{get_msg()});
+  }
+  template <typename T>
+  td::Status as_status(T pfx) const {
+    return td::Status::Error(PSLICE() << pfx << get_msg());
   }
 };
 
@@ -106,6 +120,13 @@ struct VmVirtError {
   operator VmError() const {
     return VmError{Excno::virt_err, "prunned branch", virtualization};
   }
+  td::Status as_status() const {
+    return td::Status::Error(td::Slice{get_msg()});
+  }
+  template <typename T>
+  td::Status as_status(T pfx) const {
+    return td::Status::Error(PSLICE() << pfx << get_msg());
+  }
 };
 
 struct VmFatal {};
@@ -114,12 +135,12 @@ template <class F>
 auto try_f(F&& f) noexcept -> decltype(f()) {
   try {
     return f();
-  } catch (vm::VmError error) {
-    return td::Status::Error(PSLICE() << "Got a vm exception: " << error.get_msg());
-  } catch (vm::VmVirtError error) {
-    return td::Status::Error(PSLICE() << "Got a vm virtualization exception: " << error.get_msg());
-  } catch (vm::VmNoGas error) {
-    return td::Status::Error(PSLICE() << "Got a vm no gas exception: " << error.get_msg());
+  } catch (vm::VmError& error) {
+    return error.as_status("Got a vm exception: ");
+  } catch (vm::VmVirtError& error) {
+    return error.as_status("Got a vm virtualization exception: ");
+  } catch (vm::VmNoGas& error) {
+    return error.as_status("Got a vm no gas exception: ");
   }
 }
 

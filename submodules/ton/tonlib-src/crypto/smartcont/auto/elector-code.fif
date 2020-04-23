@@ -52,6 +52,7 @@ PROGRAM{
   130944 DECLMETHOD compute_returned_stake
   104565 DECLMETHOD past_election_ids
   81558 DECLMETHOD past_elections
+  74376 DECLMETHOD past_elections_list
   DECLPROC complete_unpack_complaint
   DECLPROC get_past_complaints
   77853 DECLMETHOD show_complaint
@@ -2263,7 +2264,7 @@ PROGRAM{
   }>
   past_elections PROC:<{
     // 
-    load_data INLINECALLDICT	//  _23 _24 _25 _26 _27 _28
+    load_data INLINECALLDICT	//  _21 _22 _23 _24 _25 _26
     s3 s5 XCHG
     5 BLKDROP	//  past_elections
     32 PUSHPOW2	//  past_elections id
@@ -2276,19 +2277,51 @@ PROGRAM{
       DUP	//  past_elections list fs id found found
       IF:<{	//  past_elections list fs id found
         s0 s2 XCHG	//  past_elections list found id fs
-        unpack_past_election INLINECALLDICT	//  past_elections list found id _32 _33 _34 _35 _36 _37 _38
-        7 TUPLE	//  past_elections list found id info
-        s1 s(-1) PUXC	//  past_elections list found id id info
-        PAIR	//  past_elections list found id _20
-        s0 s3 XCHG2	//  past_elections id found _20 list
+        unpack_past_election INLINECALLDICT	//  past_elections list found id _30 _31 _32 _33 _34 _35 _36
+        s7 PUSH
+        7 -ROLL	//  past_elections list found id id _30 _31 _32 _33 _34 _35 _36
+        8 TUPLE	//  past_elections list found id _17
+        s0 s3 XCHG2	//  past_elections id found _17 list
         CONS	//  past_elections id found list
         s0 s2 XCHG	//  past_elections list found id
       }>ELSE<{
         s2 POP	//  past_elections list found id
       }>
       SWAP	//  past_elections list id found
-      NOT	//  past_elections list id _22
-      s1 s2 XCHG	//  past_elections id list _22
+      NOT	//  past_elections list id _20
+      s1 s2 XCHG	//  past_elections id list _20
+    }>	//  past_elections id list
+    2 1 BLKDROP2	//  list
+  }>
+  past_elections_list PROC:<{
+    // 
+    load_data INLINECALLDICT	//  _28 _29 _30 _31 _32 _33
+    s3 s5 XCHG
+    5 BLKDROP	//  past_elections
+    32 PUSHPOW2	//  past_elections id
+    PUSHNULL	//  past_elections id list
+    UNTIL:<{
+      s1 s2 XCPU
+      32 PUSHINT	//  past_elections list id past_elections _15=32
+      DICTUGETPREV
+      NULLSWAPIFNOT2	//  past_elections list fs id found
+      DUP	//  past_elections list fs id found found
+      IF:<{	//  past_elections list fs id found
+        s0 s2 XCHG	//  past_elections list found id fs
+        unpack_past_election INLINECALLDICT	//  past_elections list found id _37 _38 _39 _40 _41 _42 _43
+        4 BLKDROP	//  past_elections list found id unfreeze_at stake_held vset_hash
+        s3 PUSH
+        s3 s1 s3 XCHG3	//  past_elections list found id id unfreeze_at vset_hash stake_held
+        4 TUPLE	//  past_elections list found id _25
+        s0 s3 XCHG2	//  past_elections id found _25 list
+        CONS	//  past_elections id found list
+        s0 s2 XCHG	//  past_elections list found id
+      }>ELSE<{
+        s2 POP	//  past_elections list found id
+      }>
+      SWAP	//  past_elections list id found
+      NOT	//  past_elections list id _27
+      s1 s2 XCHG	//  past_elections id list _27
     }>	//  past_elections id list
     2 1 BLKDROP2	//  list
   }>
