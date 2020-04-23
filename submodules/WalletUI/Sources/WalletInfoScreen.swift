@@ -1026,14 +1026,19 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             if let unlockedBalance = combinedState.walletState.unlockedBalance {
                 let lockedBalance = combinedState.walletState.totalBalance - unlockedBalance
                 
-                let balanceText = formatBalanceText(max(0, lockedBalance), decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)
-                
-                let string = NSMutableAttributedString()
-                string.append(NSAttributedString(string: "\(balanceText)", font: Font.semibold(13), textColor: .white))
-                string.append(NSAttributedString(string: " locked", font: Font.regular(13), textColor: .white))
-                
-                self.headerNode.balanceSubtitleNode.attributedText = string
-                self.headerNode.balanceSubtitleIconNode.isHidden = false
+                if lockedBalance <= 0 {
+                    self.headerNode.balanceSubtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Info_YourBalance, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
+                    self.headerNode.balanceSubtitleIconNode.isHidden = true
+                } else {
+                    let balanceText = formatBalanceText(max(0, lockedBalance), decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)
+                    
+                    let string = NSMutableAttributedString()
+                    string.append(NSAttributedString(string: "\(balanceText)", font: Font.semibold(13), textColor: .white))
+                    string.append(NSAttributedString(string: " locked", font: Font.regular(13), textColor: .white))
+                    
+                    self.headerNode.balanceSubtitleNode.attributedText = string
+                    self.headerNode.balanceSubtitleIconNode.isHidden = false
+                }
             } else {
                 self.headerNode.balanceSubtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Info_YourBalance, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
                 self.headerNode.balanceSubtitleIconNode.isHidden = true
