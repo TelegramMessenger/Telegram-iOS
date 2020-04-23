@@ -425,6 +425,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openPollCreation: { _ in
         }, displayPollSolution: { _, _ in
         }, displayDiceTooltip: { _ in
+        }, animateDiceSuccess: {  
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

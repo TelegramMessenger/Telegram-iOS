@@ -68,20 +68,61 @@ private func rollingAnimationItem(account: Account, emojis: Signal<[TelegramMedi
     }
 }
 
+private struct InteractiveEmojiSuccessParameters {
+    let value: Int
+    let frame: Int
+}
+
+public struct InteractiveEmojiConfiguration {
+    static var defaultValue: InteractiveEmojiConfiguration {
+        return InteractiveEmojiConfiguration(emojis: [], successParameters: [:])
+    }
+    
+    public let emojis: [String]
+    fileprivate let successParameters: [String: InteractiveEmojiSuccessParameters]
+    
+    fileprivate init(emojis: [String], successParameters: [String: InteractiveEmojiSuccessParameters]) {
+        self.emojis = emojis
+        self.successParameters = successParameters
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> InteractiveEmojiConfiguration {
+        if let data = appConfiguration.data, let emojis = data["emojies_send_dice"] as? [String] {
+            var successParameters: [String: InteractiveEmojiSuccessParameters] = [:]
+            if let success = data["emojies_send_dice_success"] as? [String: [String: Double]] {
+                for (key, dict) in success {
+                    if let successValue = dict[""], let successFrame = dict[""] {
+                        successParameters[key] = InteractiveEmojiSuccessParameters(value: Int(successValue), frame: Int(successFrame))
+                    }
+                }
+            }
+            return InteractiveEmojiConfiguration(emojis: emojis, successParameters: successParameters)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStickerNode {
     private let context: AccountContext
-    private let dice: TelegramMediaDice
+    private let emoji: String
     
     private var diceState: ManagedDiceAnimationState? = nil
     private let disposable = MetaDisposable()
     
     private let emojis = Promise<[TelegramMediaFile]>()
     
-    init(context: AccountContext, dice: TelegramMediaDice) {
+    init(context: AccountContext, emoji: String) {
         self.context = context
-        self.dice = dice
+        self.emoji = emoji
         
-        self.emojis.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice(dice.emoji), forceActualized: false)
+        self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { preferencesView -> InteractiveEmojiConfiguration in
+            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
+        }
+                        
+        self.emojis.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice(emoji), forceActualized: false)
         |> mapToSignal { stickerPack -> Signal<[TelegramMediaFile], NoError> in
             switch stickerPack {
                 case let .result(_, items, _):
@@ -114,14 +155,14 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case .rolling:
                     switch diceState {
                         case let .value(value, _):
-                            item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji, value: value)
+                            item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji, value: value)
                         case .rolling:
                             break
                     }
                 case .value:
                     switch diceState {
                         case .rolling:
-                            item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji)
+                            item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji)
                         case .value:
                             break
                     }
@@ -129,9 +170,9 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         } else {
             switch diceState {
                 case let .value(value, immediate):
-                    item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji, value: value, immediate: immediate, roll: true)
+                    item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji, value: value, immediate: immediate, roll: true)
                 case .rolling:
-                    item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.dice.emoji)
+                    item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji)
             }
         }
         

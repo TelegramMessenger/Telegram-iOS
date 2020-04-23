@@ -1137,6 +1137,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, openPollCreation: { _ in
             }, displayPollSolution: { _, _ in
             }, displayDiceTooltip: { _ in
+            }, animateDiceSuccess: {
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

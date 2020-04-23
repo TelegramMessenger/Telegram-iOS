@@ -209,7 +209,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let telegramDice = self.telegramDice {
-            let animationNode = ManagedDiceAnimationNode(context: item.context, dice: telegramDice)
+            let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji)
             self.animationNode = animationNode
         } else {
             let animationNode = AnimatedStickerNode()

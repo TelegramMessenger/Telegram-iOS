@@ -5474,18 +5474,9 @@ Any member of this group will be able to see messages in the channel.";
 
 "MuteFor.Forever" = "Mute Forever";
 
-"Conversation.Dice" = "Send a 🎲 emoji to any chat to get a random number from Telegram.";
-
-"Conversation.Dice.🎲" = "Send a dice emoji to any chat to roll a die.";
-"Conversation.Dice.🎯" = "Send a dart emoji to try your luck.";
+"Conversation.Dice.u1F3B2" = "Send a dice emoji to any chat to roll a die.";
+"Conversation.Dice.u1F3AF" = "Send a dart emoji to try your luck.";
 "Conversation.SendDice" = "Send";
-
-"ForwardedDices_1" = "Forwarded dice";
-"ForwardedDices_2" = "2 forwarded dices";
-"ForwardedDices_3_10" = "%@ forwarded dices";
-"ForwardedDices_any" = "%@ forwarded dices";
-"ForwardedDices_many" = "%@ forwarded dices";
-"ForwardedDices_0" = "%@ forwarded dices";
 
 "Conversation.ContextMenuDiscuss" = "Discuss";
 

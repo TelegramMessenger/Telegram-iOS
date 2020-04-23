@@ -1971,6 +1971,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.displayPollSolution(solution: solution, sourceNode: sourceNode, isAutomatic: false)
         }, displayDiceTooltip: { [weak self] dice in
             self?.displayDiceTooltip(dice: dice)
+        }, animateDiceSuccess: { [weak self] in
+            self?.chatDisplayNode.animateQuizCorrectOptionSelected()
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -6552,20 +6554,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controller.dismissWithCommitAction()
             }
         })
+        
         let value: String?
-        if dice.emoji == "🎲" {
-            value = self.presentationData.strings.Conversation_Dice_🎲
-        } else if dice.emoji == "🎯" {
-            value = self.presentationData.strings.Conversation_Dice_🎯
-        } else {
-            let key = "Conversation.Dice.\(dice.emoji)"
-            if let string = self.presentationData.strings.primaryComponent.dict[key] {
-                value = string
-            } else if let string = self.presentationData.strings.secondaryComponent?.dict[key] {
-                value = string
-            } else {
-                value = nil
-            }
+        switch dice.emoji {
+            case "🎲":
+                value = self.presentationData.strings.Conversation_Dice_u1F3B2
+            case "🎯":
+                value = self.presentationData.strings.Conversation_Dice_u1F3AF
+            default:
+                let emojiHex = dice.emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()
+                let key = "Conversation.Dice.u\(emojiHex)"
+                if let string = self.presentationData.strings.primaryComponent.dict[key] {
+                    value = string
+                } else if let string = self.presentationData.strings.secondaryComponent?.dict[key] {
+                    value = string
+                } else {
+                    value = nil
+                }
         }
         if let value = value {
             self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: self.presentationData.strings.Conversation_SendDice), elevatedLayout: true, action: { [weak self] action in
