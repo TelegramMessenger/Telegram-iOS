@@ -40,8 +40,9 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
     let installed: Bool
     let unread: Bool
     let topSeparator: Bool
+    let regularInsets: Bool
     
-    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
+    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool, regularInsets: Bool = false) {
         self.index = index
         self.info = info
         self.theme = theme
@@ -50,6 +51,7 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
         self.installed = installed
         self.unread = unread
         self.topSeparator = topSeparator
+        self.regularInsets = regularInsets
     }
     
     var stableId: ItemCollectionId {
@@ -81,6 +83,9 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
         if lhs.topSeparator != rhs.topSeparator {
             return false
         }
+        if lhs.regularInsets != rhs.regularInsets {
+            return false
+        }
         return true
     }
     
@@ -88,46 +93,36 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interaction: FeaturedInteraction, grid: Bool) -> GridItem {
+    func item(account: Account, interaction: FeaturedInteraction, isOther: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, grid: grid, topSeparator: self.topSeparator, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, grid: false, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info, !self.installed)
         }, getItemIsPreviewed: { item in
             return interaction.getItemIsPreviewed(item)
-        }, itemContext: interaction.itemContext)
+        }, itemContext: interaction.itemContext, sectionTitle: isOther ? self.strings.FeaturedStickers_OtherSection : nil)
     }
 }
 
 private enum FeaturedEntryId: Hashable {
-    case search
     case pack(ItemCollectionId)
 }
 
 private enum FeaturedEntry: Identifiable, Comparable {
-    case search(theme: PresentationTheme, strings: PresentationStrings)
-    case pack(FeaturedPackEntry)
+    case pack(FeaturedPackEntry, Bool)
     
     var stableId: FeaturedEntryId {
         switch self {
-        case .search:
-            return .search
-        case let .pack(pack):
+        case let .pack(pack, _):
             return .pack(pack.stableId)
         }
     }
     
     static func ==(lhs: FeaturedEntry, rhs: FeaturedEntry) -> Bool {
         switch lhs {
-        case let .search(lhsTheme, lhsStrings):
-            if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
-                return true
-            } else {
-                return false
-            }
-        case let .pack(pack):
-            if case .pack(pack) = rhs {
+        case let .pack(pack, isOther):
+            if case .pack(pack, isOther) = rhs {
                 return true
             } else {
                 return false
@@ -137,26 +132,18 @@ private enum FeaturedEntry: Identifiable, Comparable {
     
     static func <(lhs: FeaturedEntry, rhs: FeaturedEntry) -> Bool {
         switch lhs {
-        case .search:
-            return false
-        case let .pack(lhsPack):
+        case let .pack(lhsPack, _):
             switch rhs {
-            case .search:
-                return false
-            case let .pack(rhsPack):
+            case let .pack(rhsPack, _):
                 return lhsPack < rhsPack
             }
         }
     }
     
-    func item(account: Account, interaction: FeaturedInteraction, grid: Bool) -> GridItem {
+    func item(account: Account, interaction: FeaturedInteraction) -> GridItem {
         switch self {
-        case let .search(theme, strings):
-            return PaneSearchBarPlaceholderItem(theme: theme, strings: strings, type: .stickers, activate: {
-                interaction.openSearch()
-            })
-        case let .pack(pack):
-            return pack.item(account: account, interaction: interaction, grid: grid)
+        case let .pack(pack, isOther):
+            return pack.item(account: account, interaction: interaction, isOther: isOther)
         }
     }
 }
@@ -172,8 +159,8 @@ private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries:
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, grid: false), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, grid: false)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
     return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
@@ -185,14 +172,14 @@ private func featuredScreenEntries(featuredEntries: [FeaturedStickerPackItem], i
     for item in featuredEntries {
         if !existingIds.contains(item.info.id) {
             existingIds.insert(item.info.id)
-            result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0)))
+            result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0, regularInsets: true), false))
             index += 1
         }
     }
     for item in additionalPacks {
         if !existingIds.contains(item.info.id) {
             existingIds.insert(item.info.id)
-            result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0)))
+            result.append(.pack(FeaturedPackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread || fixedUnread.contains(item.info.id), topSeparator: index != 0, regularInsets: true), true))
             index += 1
         }
     }
@@ -238,6 +225,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         self.sendSticker = sendSticker
         
         self.gridNode = GridNode()
+        self.gridNode.floatingSections = true
         
         super.init()
         
@@ -1040,7 +1028,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)

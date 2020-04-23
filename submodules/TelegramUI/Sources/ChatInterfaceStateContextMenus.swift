@@ -49,13 +49,26 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
         }
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
-    } else if let author = message.author, author.id == accountPeerId {
+    } else if let author = message.author, author.id == accountPeerId, let peer = message.peers[message.id.peerId] {
         hasEditRights = true
+        if let peer = peer as? TelegramChannel {
+            switch peer.info {
+            case .broadcast:
+                if peer.hasPermission(.editAllMessages) || !message.flags.contains(.Incoming) {
+                    unlimitedInterval = true
+                }
+            case .group:
+                if peer.hasPermission(.pinMessages) {
+                    unlimitedInterval = true
+                }
+            }
+        }
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
             switch peer.info {
             case .broadcast:
                 if peer.hasPermission(.editAllMessages) || !message.flags.contains(.Incoming) {
+                    unlimitedInterval = true
                     hasEditRights = true
                 }
             case .group:

@@ -162,6 +162,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var message: Message?
     
     private let imageNode: TransformImageNode
+    private var tilingNode: TilingNode?
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>(nil)
@@ -173,6 +174,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
+    private let dataDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
@@ -208,6 +210,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     deinit {
         //self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
+        self.dataDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -247,6 +250,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     return generate
                 }
                 self.imageNode.setSignal(signal)
+                
                 self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
                 
                 self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: imageReference.resourceReference(largestSize.resource)).start())
@@ -260,6 +264,38 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
         self.contextAndMedia = (self.context, imageReference.abstract)
+    }
+    
+    private func updateImageFromFile(path: String) {
+        if let _ = self.tilingNode {
+            self.tilingNode = nil
+        }
+        
+        guard let dataProvider = CGDataProvider(url: URL(fileURLWithPath: path) as CFURL) else {
+            self._ready.set(.single(Void()))
+            return
+        }
+        
+        var maybeImage: CGImage?
+        
+        if let image = CGImage(jpegDataProviderSource: dataProvider, decode: nil, shouldInterpolate: true, intent: .defaultIntent) {
+            maybeImage = image
+        } else if let image = CGImage(pngDataProviderSource: dataProvider, decode: nil, shouldInterpolate: true, intent: .defaultIntent) {
+            maybeImage = image
+        }
+        
+        guard let image = maybeImage else {
+            self._ready.set(.single(Void()))
+            return
+        }
+        
+        let tilingNode = TilingNode(image: image, path: path)
+        self.tilingNode = tilingNode
+        
+        let size = CGSize(width: image.width, height: image.height)
+        self.zoomableContent = (size, tilingNode)
+        
+        self._ready.set(.single(Void()))
     }
     
     @objc func openStickersButtonPressed() {
@@ -314,7 +350,22 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
+                
+                if largestSize.width > 2600 || largestSize.height > 2600 {
+                    self.dataDisposable.set((self.context.account.postbox.mediaBox.resourceData(fileReference.media.resource)
+                    |> deliverOnMainQueue).start(next: { [weak self] data in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if !data.complete {
+                            return
+                        }
+                        strongSelf.updateImageFromFile(path: data.path)
+                    }))
+                } else {
+                    self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
+                }
+                
                 self.zoomableContent = (largestSize.cgSize, self.imageNode)
                 self.setupStatus(resource: fileReference.media.resource)
             } else {
@@ -370,16 +421,18 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        let contentNode = self.tilingNode ?? self.imageNode
+        
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         
-        /*let projectedScale = CGPoint(x: self.imageNode.view.bounds.width / node.1.width, y: self.imageNode.view.bounds.height / node.1.height)
+        /*let projectedScale = CGPoint(x: contentNode.view.bounds.width / node.1.width, y: contentNode.view.bounds.height / node.1.height)
         let scaledLocalImageViewBounds = CGRect(x: -node.1.minX * projectedScale.x, y: -node.1.minY * projectedScale.y, width: node.0.bounds.width * projectedScale.x, height: node.0.bounds.height * projectedScale.y)*/
         
-        let scaledLocalImageViewBounds = self.imageNode.view.bounds
+        let scaledLocalImageViewBounds = contentNode.view.bounds
         
-        let transformedCopyViewFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: self.view)
+        let transformedCopyViewFinalFrame = contentNode.view.convert(scaledLocalImageViewBounds, to: self.view)
         
         let (maybeSurfaceCopyView, _) = node.2()
         let (maybeCopyView, copyViewBackgrond) = node.2()
@@ -393,7 +446,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceFinalFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
+            transformedSurfaceFinalFrame = contentNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
         }
         
         if let transformedSurfaceFrame = transformedSurfaceFrame {
@@ -423,11 +476,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         }
         
-        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring)
-        self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        contentNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: contentNode.layer.position, duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring)
+        contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
         
         transformedFrame.origin = CGPoint()
-        self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        contentNode.layer.animateBounds(from: transformedFrame, to: contentNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         
         self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring)
         self.statusNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
@@ -437,10 +490,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         self.fetchDisposable.set(nil)
         
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        let contentNode = self.tilingNode ?? self.imageNode
+        
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
-        let transformedCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
+        let transformedCopyViewInitialFrame = contentNode.view.convert(contentNode.view.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
@@ -458,7 +513,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceCopyViewInitialFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
+            transformedSurfaceCopyViewInitialFrame = contentNode.view.convert(contentNode.view.bounds, to: contentSurface)
         }
         
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
@@ -488,15 +543,15 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         }
         
-        self.imageNode.layer.animatePosition(from: self.imageNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        contentNode.layer.animatePosition(from: contentNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             positionCompleted = true
             intermediateCompletion()
         })
         
-        self.imageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, removeOnCompletion: false)
+        contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, removeOnCompletion: false)
         
         transformedFrame.origin = CGPoint()
-        self.imageNode.layer.animateBounds(from: self.imageNode.layer.bounds, to: transformedFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        contentNode.layer.animateBounds(from: contentNode.layer.bounds, to: transformedFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
             intermediateCompletion()
         })
@@ -549,6 +604,235 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         break
                 }
             }
+        }
+    }
+}
+
+/*private func tileRectForImage(_ mappedImage: CGImage, rect: CGRect) -> CGRect {
+    let scaleX = CGFloat(mappedImage.width) / lowResolutionImage.size.width
+    let scaleY = CGFloat(mappedImage.height) / lowResolutionImage.size.height
+    
+    let mappedX = rect.minX * scaleX
+    let mappedY = rect.minY * scaleY
+    let mappedWidth = rect.width * scaleX
+    let mappedHeight = rect.height * scaleY
+    
+    return CGRect(x: mappedX, y: mappedY, width: mappedWidth, height: mappedHeight)
+}*/
+
+private func zoomScale(for zoomLevel: CGFloat) -> CGFloat {
+    return pow(2.0, zoomLevel - 1.0)
+}
+
+private func zoomLevel(for zoomScale: CGFloat) -> CGFloat {
+    return log2(zoomScale) + 1.0
+}
+
+private final class TilingLayer: CATiledLayer {
+    override var contentsScale: CGFloat {
+        get {
+            return super.contentsScale
+        } set(value) {
+            super.contentsScale = value
+        }
+    }
+}
+
+class TilingView: UIView {
+    let image: CGImage
+    let path: String
+    var cachedScaledImage: UIImage?
+    
+    let imageSize: CGSize
+    let tileSize: CGSize
+    var normalizedSize: CGSize?
+    
+    override static var layerClass: AnyClass {
+        return TilingLayer.self
+    }
+    
+    private var tiledLayer: TilingLayer {
+        return self.layer as! TilingLayer
+    }
+    
+    init(image: CGImage, path: String) {
+        self.image = image
+        self.path = path
+        
+        self.tileSize = CGSize(width: 256.0, height: 256.0)
+        self.imageSize = CGSize(width: image.width, height: image.height)
+        
+        super.init(frame: CGRect())
+        
+        self.tiledLayer.contentsScale = UIScreenScale
+        let scale = self.tiledLayer.contentsScale
+        self.tiledLayer.tileSize = CGSize(width: self.tileSize.width * scale, height: self.tileSize.height * scale)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override var intrinsicContentSize: CGSize {
+        return self.imageSize
+    }
+    
+    func setMaximumZoomScale(_ value: CGFloat, normalizedSize: CGSize) {
+        if self.normalizedSize != normalizedSize {
+            self.normalizedSize = normalizedSize
+            
+            /*let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: false,
+                kCGImageSourceThumbnailMaxPixelSize: Int(max(self.imageSize.width / 4.0, self.imageSize.height / 4.0))
+            ]
+
+            let startTime = CACurrentMediaTime()
+            if let imageSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: self.path) as CFURL, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
+                self.cachedScaledImage = UIImage(cgImage: image)
+            }
+            print("create thumbnail: \((CACurrentMediaTime() - startTime) * 1000.0) ms")*/
+        }
+        
+        let levels = max(1, Int(zoomLevel(for: value)))
+        self.tiledLayer.levelsOfDetail = levels
+        self.tiledLayer.levelsOfDetailBias = levels - 1
+    }
+    
+    override func draw(_ rect: CGRect) {
+        guard let normalizedSize = self.normalizedSize else {
+            return
+        }
+        guard let context = UIGraphicsGetCurrentContext() else {
+            return
+        }
+        let image = self.image
+        let cachedScaledImage = self.cachedScaledImage
+        let imageSize = self.imageSize
+        context.setBlendMode(.copy)
+        
+        let contentScale = context.ctm.a
+        let normalizedContentScale = contentScale / UIScreenScale
+        
+        let normalizedRect = rect
+        
+        let normalizationScale = imageSize.width / normalizedSize.width
+        
+        let normalizedCroppingRect = CGRect(origin: CGPoint(x: normalizedRect.minX * normalizationScale, y: normalizedRect.minY * normalizationScale), size: CGSize(width: normalizedRect.width * normalizationScale, height: normalizedRect.height * normalizationScale))
+        
+        let tileSizes: [CGFloat] = [
+            //8192.0,
+            //4096.0,
+            2048.0,
+            1024.0,
+            512.0,
+            256.0
+        ]
+        
+        var maximumTileSize: CGFloat = tileSizes[0]
+        for i in (0 ..< tileSizes.count).reversed() {
+            if tileSizes[i] > normalizedCroppingRect.width {
+                break
+            }
+            maximumTileSize = tileSizes[i]
+        }
+        
+        let xMinTile = Int(floor(normalizedCroppingRect.minX / maximumTileSize))
+        let xMaxTile = Int(ceil(normalizedCroppingRect.maxX / maximumTileSize))
+        let yMinTile = Int(floor(normalizedCroppingRect.minY / maximumTileSize))
+        let yMaxTile = Int(ceil(normalizedCroppingRect.maxY / maximumTileSize))
+        
+        for y in yMinTile ... yMaxTile {
+            let imageMinY = floor(CGFloat(y) * maximumTileSize)
+            var imageMaxY = ceil(CGFloat(y + 1) * maximumTileSize)
+            imageMaxY = min(imageMaxY, imageSize.height)
+            if imageMaxY <= imageMinY {
+                continue
+            }
+            
+            for x in xMinTile ... xMaxTile {
+                let imageMinX = floor(CGFloat(x) * maximumTileSize)
+                var imageMaxX = ceil(CGFloat(x + 1) * maximumTileSize)
+                imageMaxX = min(imageMaxX, imageSize.width)
+                if imageMaxX <= imageMinX {
+                    continue
+                }
+                
+                let imageRect = CGRect(origin: CGPoint(x: imageMinX, y: imageMinY), size: CGSize(width: imageMaxX - imageMinX, height: imageMaxY - imageMinY))
+                
+                let drawingRect = CGRect(origin: CGPoint(x: imageRect.minX / normalizationScale, y: imageRect.minY / normalizationScale), size: CGSize(width: imageRect.width / normalizationScale, height: imageRect.height / normalizationScale))
+                
+                var tileImage: CGImage?
+                if normalizedContentScale < 1.1, let cachedScaledImage = cachedScaledImage {
+                    let cachedScale = cachedScaledImage.size.width / self.imageSize.width
+                    let scaledImageRect = CGRect(origin: CGPoint(x: imageRect.minX * cachedScale, y: imageRect.minY * cachedScale), size: CGSize(width: imageRect.width * cachedScale, height: imageRect.height * cachedScale))
+                    tileImage = cachedScaledImage.cgImage!.cropping(to: scaledImageRect)
+                } else {
+                    tileImage = image.cropping(to: imageRect)
+                }
+                
+                if let tileImage = tileImage {
+                    var scaledSide = max(imageRect.width, imageRect.height)
+                    let targetSide = max(drawingRect.width, drawingRect.height)
+                    while true {
+                        let maybeSide = round(scaledSide * 0.5)
+                        if maybeSide < targetSide {
+                            break
+                        } else {
+                            scaledSide = maybeSide
+                        }
+                    }
+                    
+                    /*let scaledSize = imageRect.size.fitted(CGSize(width: scaledSide, height: scaledSide))
+                    let scaledImage = generateImage(scaledSize, contextGenerator: { size, scaledContext in
+                        scaledContext.setBlendMode(.copy)
+                        let startTime = CACurrentMediaTime()
+                        scaledContext.draw(tileImage, in: CGRect(origin: CGPoint(), size: size))
+                        print("draw scaled: \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                    }, opaque: true, scale: UIScreenScale)
+                    
+                    if let scaledImage = scaledImage {
+                        scaledImage.draw(in: drawingRect.insetBy(dx: -0.5, dy: -0.5), blendMode: .copy, alpha: 1.0)
+                    }*/
+                    
+                    let startTime = CACurrentMediaTime()
+                    context.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                    context.draw(tileImage, in: drawingRect.insetBy(dx: -0.5, dy: -0.5))
+                    context.translateBy(x: drawingRect.midX, y: drawingRect.midY)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
+                    print("draw direct: \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                }
+            }
+        }
+    }
+    
+    private func annotate(rect: CGRect, col: Int, row: Int, zoomLevel: CGFloat, scale: CGFloat, context: CGContext) {
+        let lineWidth = 2.0 / scale
+        let halfLineWidth = lineWidth / 2.0
+        //let fontSize = 12.0 / scale
+        
+        //NSString *pointString = [NSString stringWithFormat:@"%@x(%@, %@) @%@x", @(zoomLevel), @(col), @(row), @([UIScreen mainScreen].scale)];
+        //CGPoint textOrigin = CGPointMake(CGRectGetMinX(rect) + lineWidth, CGRectGetMinY(rect) + lineWidth);
+        /*[pointString drawAtPoint:textOrigin withAttributes:@{
+                                                             NSFontAttributeName: [UIFont boldSystemFontOfSize:fontSize],
+                                                             NSForegroundColorAttributeName: [UIColor darkGrayColor]
+                                                             }];*/
+        context.setFillColor(UIColor.red.cgColor)
+        context.setLineWidth(lineWidth)
+        context.stroke(rect.insetBy(dx: halfLineWidth, dy: halfLineWidth))
+    }
+}
+
+private final class TilingNode: ASDisplayNode {
+    init(image: CGImage, path: String) {
+        super.init()
+        
+        self.setViewBlock {
+            return TilingView(image: image, path: path)
         }
     }
 }

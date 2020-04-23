@@ -1019,6 +1019,7 @@ public class Account {
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
         let pendingMessageManager = self.pendingMessageManager
+        Logger.shared.log("Account", "Begin watching unsent message ids")
         self.managedOperationsDisposable.add(postbox.unsentMessageIdsView().start(next: { [weak pendingMessageManager] view in
             pendingMessageManager?.updatePendingMessageIds(view.ids)
         }))

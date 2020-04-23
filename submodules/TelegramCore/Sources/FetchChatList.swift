@@ -19,7 +19,7 @@ struct ParsedDialogs {
     let notificationSettings: [PeerId: PeerNotificationSettings]
     let readStates: [PeerId: [MessageId.Namespace: PeerReadState]]
     let mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
-    let chatStates: [PeerId: PeerChatState]
+    let channelStates: [PeerId: Int32]
     let topMessageIds: [PeerId: MessageId]
     let storeMessages: [StoreMessage]
     
@@ -50,7 +50,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
     var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
-    var chatStates: [PeerId: PeerChatState] = [:]
+    var channelStates: [PeerId: Int32] = [:]
     var topMessageIds: [PeerId: MessageId] = [:]
     
     var storeMessages: [StoreMessage] = []
@@ -131,7 +131,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 }
                 
                 if let apiChannelPts = apiChannelPts {
-                    chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
+                    channelStates[peerId] = apiChannelPts
                 }
                 
                 notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
@@ -149,9 +149,9 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         if let storeMessage = StoreMessage(apiMessage: message) {
             var updatedStoreMessage = storeMessage
             if case let .Id(id) = storeMessage.id {
-                if let channelState = chatStates[id.peerId] as? ChannelState {
+                if let channelPts = channelStates[id.peerId] {
                     var updatedAttributes = storeMessage.attributes
-                    updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                    updatedAttributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
                     updatedStoreMessage = updatedStoreMessage.withUpdatedAttributes(updatedAttributes)
                 }
                 
@@ -174,7 +174,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         notificationSettings: notificationSettings,
         readStates: readStates,
         mentionTagSummaries: mentionTagSummaries,
-        chatStates: chatStates,
+        channelStates: channelStates,
         topMessageIds: topMessageIds,
         storeMessages: storeMessages,
     
@@ -190,7 +190,7 @@ struct FetchedChatList {
     let notificationSettings: [PeerId: PeerNotificationSettings]
     let readStates: [PeerId: [MessageId.Namespace: PeerReadState]]
     let mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
-    let chatStates: [PeerId: PeerChatState]
+    let channelStates: [PeerId: Int32]
     let storeMessages: [StoreMessage]
     let topMessageIds: [PeerId: MessageId]
     
@@ -295,7 +295,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
                     var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
                     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
-                    var chatStates: [PeerId: PeerChatState] = [:]
+                    var channelStates: [PeerId: Int32] = [:]
                     var storeMessages: [StoreMessage] = []
                     var topMessageIds: [PeerId: MessageId] = [:]
                     
@@ -304,7 +304,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     notificationSettings.merge(parsedRemoteChats.notificationSettings, uniquingKeysWith: { _, updated in updated })
                     readStates.merge(parsedRemoteChats.readStates, uniquingKeysWith: { _, updated in updated })
                     mentionTagSummaries.merge(parsedRemoteChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
-                    chatStates.merge(parsedRemoteChats.chatStates, uniquingKeysWith: { _, updated in updated })
+                    channelStates.merge(parsedRemoteChats.channelStates, uniquingKeysWith: { _, updated in updated })
                     storeMessages.append(contentsOf: parsedRemoteChats.storeMessages)
                     topMessageIds.merge(parsedRemoteChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
                     
@@ -314,7 +314,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         notificationSettings.merge(parsedPinnedChats.notificationSettings, uniquingKeysWith: { _, updated in updated })
                         readStates.merge(parsedPinnedChats.readStates, uniquingKeysWith: { _, updated in updated })
                         mentionTagSummaries.merge(parsedPinnedChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
-                        chatStates.merge(parsedPinnedChats.chatStates, uniquingKeysWith: { _, updated in updated })
+                        channelStates.merge(parsedPinnedChats.channelStates, uniquingKeysWith: { _, updated in updated })
                         storeMessages.append(contentsOf: parsedPinnedChats.storeMessages)
                         topMessageIds.merge(parsedPinnedChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
                     }
@@ -336,7 +336,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         notificationSettings.merge(folderChats.notificationSettings, uniquingKeysWith: { _, updated in updated })
                         readStates.merge(folderChats.readStates, uniquingKeysWith: { _, updated in updated })
                         mentionTagSummaries.merge(folderChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
-                        chatStates.merge(folderChats.chatStates, uniquingKeysWith: { _, updated in updated })
+                        channelStates.merge(folderChats.channelStates, uniquingKeysWith: { _, updated in updated })
                         storeMessages.append(contentsOf: folderChats.storeMessages)
                     }
                     
@@ -369,7 +369,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         notificationSettings: notificationSettings,
                         readStates: readStates,
                         mentionTagSummaries: mentionTagSummaries,
-                        chatStates: chatStates,
+                        channelStates: channelStates,
                         storeMessages: storeMessages,
                         topMessageIds: topMessageIds,
                     

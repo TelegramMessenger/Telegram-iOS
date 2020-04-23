@@ -8,27 +8,65 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import StickerPackPreviewUI
+import ListSectionHeaderNode
 
 final class StickerPaneSearchGlobalSection: GridSection {
-    let height: CGFloat = 0.0
+    let title: String?
+    let theme: PresentationTheme
     
-    var hashValue: Int {
-        return 0
+    var height: CGFloat {
+        if let _ = self.title {
+            return 28.0
+        } else {
+            return 0.0
+        }
     }
     
-    init() {
+    var hashValue: Int {
+        if let _ = self.title {
+            return 1
+        } else {
+            return 0
+        }
+    }
+    
+    init(title: String?, theme: PresentationTheme) {
+        self.title = title
+        self.theme = theme
     }
     
     func isEqual(to: GridSection) -> Bool {
-        if to is StickerPaneSearchGlobalSection {
-            return true
+        if let to = to as? StickerPaneSearchGlobalSection {
+            return to.hashValue == self.hashValue
         } else {
             return false
         }
     }
     
     func node() -> ASDisplayNode {
-        return ASDisplayNode()
+        return StickerPaneSearchGlobalSectionNode(theme: self.theme, title: self.title ?? "")
+    }
+}
+
+private final class StickerPaneSearchGlobalSectionNode: ASDisplayNode {
+    private let node: ListSectionHeaderNode
+    
+    init(theme: PresentationTheme, title: String) {
+        self.node = ListSectionHeaderNode(theme: theme)
+        
+        super.init()
+        
+        if !title.isEmpty {
+            self.node.title = title
+            self.addSubnode(self.node)
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.node.frame = self.bounds
+        self.node.updateLayout(size: self.bounds.size, leftInset: 0.0, rightInset: 0.0)
     }
 }
 
@@ -45,6 +83,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let topItems: [StickerPackItem]
     let grid: Bool
     let topSeparator: Bool
+    let regularInsets: Bool
     let installed: Bool
     let installing: Bool
     let unread: Bool
@@ -53,12 +92,22 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     let itemContext: StickerPaneSearchGlobalItemContext
     
-    let section: GridSection? = StickerPaneSearchGlobalSection()
+    let section: GridSection?
     var fillsRowWithHeight: CGFloat? {
-        return self.grid ? nil : (128.0 + (self.topSeparator ? 12.0 : 0.0))
+        var additionalHeight: CGFloat = 0.0
+        if self.regularInsets {
+            additionalHeight = 12.0 + 12.0
+        } else {
+            additionalHeight += 12.0
+            if self.topSeparator {
+                additionalHeight += 12.0
+            }
+        }
+        
+        return self.grid ? nil : (128.0 + additionalHeight)
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -67,6 +116,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.topItems = topItems
         self.grid = grid
         self.topSeparator = topSeparator
+        self.regularInsets = regularInsets
         self.installed = installed
         self.installing = installing
         self.unread = unread
@@ -74,6 +124,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.install = install
         self.getItemIsPreviewed = getItemIsPreviewed
         self.itemContext = itemContext
+        self.section = StickerPaneSearchGlobalSection(title: sectionTitle, theme: theme)
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
@@ -279,13 +330,21 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         
         let params = ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: size.height)
         
-        var topOffset: CGFloat = 12.0
-        if item.topSeparator {
+        let topSeparatorOffset: CGFloat
+        var topOffset: CGFloat = 0.0
+        if item.regularInsets {
+            topOffset = 12.0
+            topSeparatorOffset = -UIScreenPixel
+        } else {
+            topSeparatorOffset = 16.0
             topOffset += 12.0
+            if item.topSeparator {
+                topOffset += 12.0
+            }
         }
         
         self.topSeparatorNode.isHidden = !item.topSeparator
-        self.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: CGSize(width: params.width - 16.0 * 2.0, height: UIScreenPixel))
+        self.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 16.0, y: topSeparatorOffset), size: CGSize(width: params.width - 16.0 * 2.0, height: UIScreenPixel))
         if item.listAppearance {
             self.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
         } else {

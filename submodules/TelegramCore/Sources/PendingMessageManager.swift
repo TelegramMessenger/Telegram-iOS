@@ -160,6 +160,7 @@ public final class PendingMessageManager {
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
     init(network: Network, postbox: Postbox, accountPeerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager, localInputActivityManager: PeerInputActivityManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext) {
+        Logger.shared.log("PendingMessageManager", "create instance")
         self.network = network
         self.postbox = postbox
         self.accountPeerId = accountPeerId
@@ -176,9 +177,15 @@ public final class PendingMessageManager {
     
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
         self.queue.async {
+            Logger.shared.log("PendingMessageManager", "update: \(messageIds)")
+            
             let addedMessageIds = messageIds.subtracting(self.pendingMessageIds)
             let removedMessageIds = self.pendingMessageIds.subtracting(messageIds)
             let removedSecretMessageIds = Set(removedMessageIds.filter({ $0.peerId.namespace == Namespaces.Peer.SecretChat }))
+            
+            if !removedMessageIds.isEmpty {
+                Logger.shared.log("PendingMessageManager", "removed messages: \(removedMessageIds)")
+            }
             
             var updateUploadingPeerIds = Set<PeerId>()
             var updateUploadingGroupIds = Set<Int64>()
@@ -207,6 +214,7 @@ public final class PendingMessageManager {
             }
             
             if !addedMessageIds.isEmpty {
+                Logger.shared.log("PendingMessageManager", "added messages: \(addedMessageIds)")
                 self.beginSendingMessages(Array(addedMessageIds).sorted())
             }
             
@@ -250,6 +258,8 @@ public final class PendingMessageManager {
             for id in self.pendingMessageIds {
                 peersWithPendingMessages.insert(id.peerId)
             }
+            
+            Logger.shared.log("PendingMessageManager", "pending messages: \(self.pendingMessageIds)")
             
             self._hasPendingMessages.set(peersWithPendingMessages)
         }
@@ -333,6 +343,8 @@ public final class PendingMessageManager {
             }
         }
         
+        Logger.shared.log("PendingMessageManager", "begin sending: \(ids)")
+        
         let disposable = MetaDisposable()
         let messages = self.postbox.messagesAtIds(ids)
         |> deliverOn(self.queue)
@@ -345,6 +357,8 @@ public final class PendingMessageManager {
         disposable.set(messages.start(next: { [weak self] messages in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
+                
+                Logger.shared.log("PendingMessageManager", "begin sending, continued: \(ids)")
                 
                 for message in messages.filter({ !$0.flags.contains(.Sending) }).sorted(by: { $0.id < $1.id }) {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {

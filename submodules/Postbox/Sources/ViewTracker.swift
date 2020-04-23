@@ -546,6 +546,7 @@ final class ViewTracker {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
+                postboxLog("unsentMessageIdsViewSignal started with \(self.unsentMessageView.ids)")
                 subscriber.putNext(UnsentMessageIdsView(self.unsentMessageView.ids))
                 
                 let pipe = ValuePipe<UnsentMessageIdsView>()

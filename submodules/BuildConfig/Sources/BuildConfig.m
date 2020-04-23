@@ -146,6 +146,8 @@ API_AVAILABLE(ios(10))
         dataDict[@"device_token"] = [appToken base64EncodedStringWithOptions:0];
         dataDict[@"device_token_type"] = @"voip";
     }
+    float tzOffset = ([[NSTimeZone systemTimeZone] secondsFromGMT] / 3600.0);
+    dataDict[@"tz_offset"] = @((int)tzOffset);
     if (signatureDict != nil) {
         for (id<NSCopying> key in signatureDict.allKeys) {
             dataDict[key] = signatureDict[key];

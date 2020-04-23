@@ -2877,6 +2877,7 @@ public final class Postbox {
             let disposable = MetaDisposable()
             self.queue.async {
                 disposable.set(self.viewTracker.unsentMessageIdsViewSignal().start(next: { view in
+                    postboxLog("unsentMessageIdsView contents: \(view.ids)")
                     subscriber.putNext(view)
                 }))
             }

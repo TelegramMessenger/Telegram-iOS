@@ -9,6 +9,7 @@ final class UnsentMessageHistoryView {
     
     func refreshDueToExternalTransaction(fetchUnsentMessageIds: () -> [MessageId]) -> Bool {
         let ids = Set(fetchUnsentMessageIds())
+        postboxLog("UnsentMessageHistoryView: refreshDueToExternalTransaction: \(ids)")
         if ids != self.ids {
             self.ids = ids
             return true
@@ -20,6 +21,7 @@ final class UnsentMessageHistoryView {
     func replay(_ operations: [IntermediateMessageHistoryUnsentOperation]) -> Bool {
         var updated = false
         for operation in operations {
+            postboxLog("UnsentMessageHistoryView: operation: \(operation)")
             switch operation {
                 case let .Insert(id):
                     if !self.ids.contains(id) {

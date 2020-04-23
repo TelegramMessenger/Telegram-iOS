@@ -300,9 +300,7 @@
         [buffer appendInt32:(int32_t)0xda9b0d0d];
         [buffer appendInt32:(int32_t)[_serialization currentLayer]];
         
-        //initConnection#785188b8 {X:Type} flags:# api_id:int device_model:string system_version:string app_version:string system_lang_code:string lang_pack:string lang_code:string proxy:flags.0?InputClientProxy query:!X = X;
-        
-        //inputClientProxy address:string port:int = InputClientProxy;
+        //initConnection#c1cd5ea9 {X:Type} flags:# api_id:int device_model:string system_version:string app_version:string system_lang_code:string lang_pack:string lang_code:string proxy:flags.0?InputClientProxy query:!X = X;
 
         int32_t flags = 0;
         if (_apiEnvironment.socksProxySettings.secret != nil) {
@@ -312,7 +310,7 @@
             flags |= (1 << 1);
         }
         
-        [buffer appendInt32:(int32_t)0x785188b8];
+        [buffer appendInt32:(int32_t)0xc1cd5ea9];
         [buffer appendInt32:flags];
         [buffer appendInt32:(int32_t)_apiEnvironment.apiId];
         [buffer appendTLString:_apiEnvironment.deviceModel];
