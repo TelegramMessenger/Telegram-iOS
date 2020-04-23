@@ -176,6 +176,8 @@ public final class PendingMessageManager {
     }
     
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
+        Logger.shared.log("PendingMessageManager", "update on postboxQueue: \(messageIds)")
+
         self.queue.async {
             Logger.shared.log("PendingMessageManager", "update: \(messageIds)")
             
