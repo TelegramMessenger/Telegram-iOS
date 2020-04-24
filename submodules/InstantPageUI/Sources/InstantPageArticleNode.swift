@@ -23,18 +23,16 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     let url: String
     let webpageId: MediaId
     let cover: TelegramMediaImage?
-    let rtl: Bool
     
     private let openUrl: (InstantPageUrlItem) -> Void
     
     private var fetchedDisposable = MetaDisposable()
     
-    init(context: AccountContext, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.item = item
         self.url = url
         self.webpageId = webpageId
         self.cover = cover
-        self.rtl = rtl
         self.openUrl = openUrl
         
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -111,7 +109,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
         }
         
         if let imageNode = self.imageNode {
-            if self.rtl {
+            if item.hasRTL {
                 imageNode.frame = CGRect(origin: CGPoint(x: inset, y: 11.0), size: imageSize)
             } else {
                 imageNode.frame = CGRect(origin: CGPoint(x: size.width - inset - imageSize.width, y: 11.0), size: imageSize)
