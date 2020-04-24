@@ -196,7 +196,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private let updateIsActive: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     private weak var rootNode: ASDisplayNode?
-    private let performAction: (String, TextSelectionAction) -> Void
+    private let performAction: (NSAttributedString, TextSelectionAction) -> Void
     private var highlightOverlay: LinkHighlightingNode?
     private let leftKnob: ASImageNode
     private let rightKnob: ASImageNode
@@ -209,7 +209,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private var recognizer: TextSelectionGetureRecognizer?
     private var displayLinkAnimator: DisplayLinkAnimator?
     
-    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (String, TextSelectionAction) -> Void) {
+    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
         self.theme = theme
         self.strings = strings
         self.textNode = textNode
@@ -377,7 +377,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func pretendExtendSelection(to index: Int) {
-        guard let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString, let endRangeRect = cachedLayout.rangeRects(in: NSRange(location: index, length: 1))?.rects.first else {
+        guard let cachedLayout = self.textNode.cachedLayout, let _ = cachedLayout.attributedString, let endRangeRect = cachedLayout.rangeRects(in: NSRange(location: index, length: 1))?.rects.first else {
             return
         }
         let startPoint = self.rightKnob.frame.center
@@ -492,19 +492,19 @@ public final class TextSelectionNode: ASDisplayNode {
         }
         completeRect = completeRect.insetBy(dx: 0.0, dy: -12.0)
         
-        let text = (attributedString.string as NSString).substring(with: range)
+        let attributedText = attributedString.attributedSubstring(from: range)
         
         var actions: [ContextMenuAction] = []
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
-            self?.performAction(text, .copy)
+            self?.performAction(attributedText, .copy)
             self?.dismissSelection()
         }))
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuLookUp, accessibilityLabel: self.strings.Conversation_ContextMenuLookUp), action: { [weak self] in
-            self?.performAction(text, .lookup)
+            self?.performAction(attributedText, .lookup)
             self?.dismissSelection()
         }))
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
-            self?.performAction(text, .share)
+            self?.performAction(attributedText, .share)
             self?.dismissSelection()
         }))
         self.present(ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in

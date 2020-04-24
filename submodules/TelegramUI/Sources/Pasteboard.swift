@@ -26,26 +26,29 @@ private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageText
 
 func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.DocumentType) -> NSAttributedString? {
     if let attributedString = try? NSAttributedString(data: data, options: [NSAttributedString.DocumentReadingOptionKey.documentType: type], documentAttributes: nil) {
-        
-        let string = NSMutableAttributedString(string: attributedString.string)
-        attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
-            if let value = attributes[.link], let url = (value as? URL)?.absoluteString {
-                string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
-            }
-            else if let value = attributes[.font], let font = value as? UIFont {
-                let fontName = font.fontName.lowercased()
-                if fontName.contains("bold") {
-                    string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
-                } else if fontName.contains("italic") {
-                    string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
-                } else if fontName.contains("menlo") || fontName.contains("courier") || fontName.contains("sfmono") {
-                    string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
-                }
-            }
-        })
-        return string
+        return chatInputStateString(attributedString: attributedString)
     }
     return nil
+}
+
+private func chatInputStateString(attributedString: NSAttributedString) -> NSAttributedString? {
+    let string = NSMutableAttributedString(string: attributedString.string)
+    attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
+        if let value = attributes[.link], let url = (value as? URL)?.absoluteString {
+            string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
+        }
+        else if let value = attributes[.font], let font = value as? UIFont {
+            let fontName = font.fontName.lowercased()
+            if fontName.contains("bold") {
+                string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+            } else if fontName.contains("italic") {
+                string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+            } else if fontName.contains("menlo") || fontName.contains("courier") || fontName.contains("sfmono") {
+                string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+            }
+        }
+    })
+    return string
 }
 
 func storeMessageTextInPasteboard(_ text: String, entities: [MessageTextEntity]?) {
@@ -56,6 +59,13 @@ func storeMessageTextInPasteboard(_ text: String, entities: [MessageTextEntity]?
         items[kUTTypeRTF as String] = rtfStringWithAppliedEntities(text, entities: entities)
     }
     UIPasteboard.general.items = [items]
+}
+
+func storeAttributedTextInPasteboard(_ text: NSAttributedString) {
+    if let inputText = chatInputStateString(attributedString: text) {
+        let entities = generateChatInputTextEntities(inputText)
+        storeMessageTextInPasteboard(inputText.string, entities: entities)
+    }
 }
 
 func storeInputTextInPasteboard(_ text: NSAttributedString) {

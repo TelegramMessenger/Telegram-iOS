@@ -1874,13 +1874,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             switch action {
             case .copy:
-                UIPasteboard.general.string = text
+                storeAttributedTextInPasteboard(text)
             case .share:
                 let f = {
                     guard let strongSelf = self else {
                         return
                     }
-                    let shareController = ShareController(context: strongSelf.context, subject: .text(text), externalShare: true, immediateExternalShare: false)
+                    let shareController = ShareController(context: strongSelf.context, subject: .text(text.string), externalShare: true, immediateExternalShare: false)
                     strongSelf.chatDisplayNode.dismissInput()
                     strongSelf.present(shareController, in: .window(.root))
                 }
@@ -1892,7 +1892,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     f()
                 }
             case .lookup:
-                let controller = UIReferenceLibraryViewController(term: text)
+                let controller = UIReferenceLibraryViewController(term: text.string)
                 if let window = strongSelf.effectiveNavigationController?.view.window {
                     controller.popoverPresentationController?.sourceView = window
                     controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
