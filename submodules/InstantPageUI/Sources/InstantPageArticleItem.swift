@@ -21,8 +21,9 @@ final class InstantPageArticleItem: InstantPageItem {
     let url: String
     let webpageId: MediaId
     let rtl: Bool
+    let hasRTL: Bool
     
-    init(frame: CGRect, webPage: TelegramMediaWebpage, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, hasRTL: Bool) {
         self.frame = frame
         self.webPage = webPage
         self.contentItems = contentItems
@@ -31,10 +32,11 @@ final class InstantPageArticleItem: InstantPageItem {
         self.url = url
         self.webpageId = webpageId
         self.rtl = rtl
+        self.hasRTL = hasRTL
     }
 
     func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourcePeerType: MediaAutoDownloadPeerType, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageArticleNode(context: context, item: self, webPage: self.webPage, strings: strings, theme: theme, contentItems: self.contentItems, contentSize: self.contentSize, cover: self.cover, url: self.url, webpageId: self.webpageId, rtl: self.rtl, openUrl: openUrl)
+        return InstantPageArticleNode(context: context, item: self, webPage: self.webPage, strings: strings, theme: theme, contentItems: self.contentItems, contentSize: self.contentSize, cover: self.cover, url: self.url, webpageId: self.webpageId, openUrl: openUrl)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -114,5 +116,5 @@ func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, t
     }
     
     let contentSize = CGSize(width: boundingWidth, height: contentHeight)
-    return InstantPageArticleItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: contentSize.height)), webPage: webPage, contentItems: contentItems, contentSize: contentSize, cover: cover, url: url, webpageId: webpageId, rtl: rtl || hasRTL)
+    return InstantPageArticleItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: contentSize.height)), webPage: webPage, contentItems: contentItems, contentSize: contentSize, cover: cover, url: url, webpageId: webpageId, rtl: rtl || hasRTL, hasRTL: hasRTL)
 }
