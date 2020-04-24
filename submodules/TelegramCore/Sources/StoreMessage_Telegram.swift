@@ -430,7 +430,7 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, fromName, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId):
+                        case let .messageFwdHeader(_, fromId, fromName, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -462,11 +462,11 @@ extension StoreMessage {
                             }
                         
                             if let authorId = authorId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
+                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
                             } else if let sourceId = sourceId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
                             } else if let postAuthor = postAuthor ?? fromName {
-                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
+                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType)
                             }
                     }
                 }

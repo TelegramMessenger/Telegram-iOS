@@ -4827,20 +4827,6 @@ public extension Api {
                     })
                 }
             
-                public static func getProxyData() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.ProxyData>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1031231713)
-                    
-                    return (FunctionDescription(name: "help.getProxyData", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.ProxyData? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.help.ProxyData?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.ProxyData
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getTermsOfServiceUpdate() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.TermsOfServiceUpdate>) {
                     let buffer = Buffer()
                     buffer.appendInt32(749019089)
@@ -4972,6 +4958,34 @@ public extension Api {
                         var result: Api.help.UserInfo?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.help.UserInfo
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getPromoData() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PromoData>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1063816159)
+                    
+                    return (FunctionDescription(name: "help.getPromoData", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.PromoData? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.PromoData?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.PromoData
+                        }
+                        return result
+                    })
+                }
+            
+                public static func hidePromoData(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(505748629)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "help.hidePromoData", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

@@ -1700,86 +1700,6 @@ public struct help {
         }
     
     }
-    public enum ProxyData: TypeConstructorDescription {
-        case proxyDataEmpty(expires: Int32)
-        case proxyDataPromo(expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .proxyDataEmpty(let expires):
-                    if boxed {
-                        buffer.appendInt32(-526508104)
-                    }
-                    serializeInt32(expires, buffer: buffer, boxed: false)
-                    break
-                case .proxyDataPromo(let expires, let peer, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(737668643)
-                    }
-                    serializeInt32(expires, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .proxyDataEmpty(let expires):
-                return ("proxyDataEmpty", [("expires", expires)])
-                case .proxyDataPromo(let expires, let peer, let chats, let users):
-                return ("proxyDataPromo", [("expires", expires), ("peer", peer), ("chats", chats), ("users", users)])
-    }
-    }
-    
-        public static func parse_proxyDataEmpty(_ reader: BufferReader) -> ProxyData? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.help.ProxyData.proxyDataEmpty(expires: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_proxyDataPromo(_ reader: BufferReader) -> ProxyData? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _3: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _4: [Api.User]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.help.ProxyData.proxyDataPromo(expires: _1!, peer: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum DeepLinkInfo: TypeConstructorDescription {
         case deepLinkInfoEmpty
         case deepLinkInfo(flags: Int32, message: String, entities: [Api.MessageEntity]?)
@@ -1891,6 +1811,98 @@ public struct help {
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.help.TermsOfService.termsOfService(flags: _1!, id: _2!, text: _3!, entities: _4!, minAgeConfirm: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum PromoData: TypeConstructorDescription {
+        case promoDataEmpty(expires: Int32)
+        case promoData(flags: Int32, expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User], psaType: String?, psaMessage: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .promoDataEmpty(let expires):
+                    if boxed {
+                        buffer.appendInt32(-1728664459)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
+                case .promoData(let flags, let expires, let peer, let chats, let users, let psaType, let psaMessage):
+                    if boxed {
+                        buffer.appendInt32(-1942390465)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(psaType!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(psaMessage!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .promoDataEmpty(let expires):
+                return ("promoDataEmpty", [("expires", expires)])
+                case .promoData(let flags, let expires, let peer, let chats, let users, let psaType, let psaMessage):
+                return ("promoData", [("flags", flags), ("expires", expires), ("peer", peer), ("chats", chats), ("users", users), ("psaType", psaType), ("psaMessage", psaMessage)])
+    }
+    }
+    
+        public static func parse_promoDataEmpty(_ reader: BufferReader) -> PromoData? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.help.PromoData.promoDataEmpty(expires: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_promoData(_ reader: BufferReader) -> PromoData? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.Peer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = parseString(reader) }
+            var _7: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_7 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.help.PromoData.promoData(flags: _1!, expires: _2!, peer: _3!, chats: _4!, users: _5!, psaType: _6, psaMessage: _7)
             }
             else {
                 return nil

@@ -586,7 +586,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                         } else {
                                             var storeForwardInfo: StoreMessageForwardInfo?
                                             if let forwardInfo = currentMessage.forwardInfo {
-                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                                             }
                                             var attributes = currentMessage.attributes
                                             if let channelPts = channelPts {
@@ -621,7 +621,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                         updatedTags.remove(tag)
                                         var storeForwardInfo: StoreMessageForwardInfo?
                                         if let forwardInfo = currentMessage.forwardInfo {
-                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                                         }
                                         var attributes = currentMessage.attributes
                                         for i in (0 ..< attributes.count).reversed() {
@@ -654,7 +654,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                         updatedTags.remove(tag)
                                         var storeForwardInfo: StoreMessageForwardInfo?
                                         if let forwardInfo = currentMessage.forwardInfo {
-                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                                         }
                                         var attributes = currentMessage.attributes
                                         for i in (0 ..< attributes.count).reversed() {
@@ -689,7 +689,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                         transaction.updateMessage(id, update: { currentMessage in
                             var storeForwardInfo: StoreMessageForwardInfo?
                             if let forwardInfo = currentMessage.forwardInfo {
-                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                             }
                             var attributes = currentMessage.attributes
                             for i in (0 ..< attributes.count).reversed() {

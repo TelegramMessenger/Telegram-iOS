@@ -1,15 +1,15 @@
 import Foundation
 
 final class MutableAdditionalChatListItemsView: MutablePostboxView {
-    fileprivate var items: Set<PeerId>
+    fileprivate var items: [AdditionalChatListItem]
     
     init(postbox: Postbox) {
-        self.items = Set(postbox.additionalChatListItemsTable.get())
+        self.items = postbox.additionalChatListItemsTable.get()
     }
     
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         if let items = transaction.replacedAdditionalChatListItems {
-            self.items = Set(items)
+            self.items = items
             return true
         }
         return false
@@ -21,7 +21,7 @@ final class MutableAdditionalChatListItemsView: MutablePostboxView {
 }
 
 public final class AdditionalChatListItemsView: PostboxView {
-    public let items: Set<PeerId>
+    public let items: [AdditionalChatListItem]
     
     init(_ view: MutableAdditionalChatListItemsView) {
         self.items = view.items

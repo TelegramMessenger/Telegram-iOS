@@ -413,9 +413,14 @@ public final class Transaction {
         self.postbox?.replaceContactPeerIds(peerIds)
     }
     
-    public func replaceAdditionalChatListItems(_ peerIds: [PeerId]) {
+    public func replaceAdditionalChatListItems(_ items: [AdditionalChatListItem]) {
         assert(!self.disposed)
-        self.postbox?.replaceAdditionalChatListItems(peerIds)
+        self.postbox?.replaceAdditionalChatListItems(items)
+    }
+    
+    public func getAdditionalChatListItems() -> [AdditionalChatListItem] {
+        assert(!self.disposed)
+        return self.postbox?.additionalChatListItemsTable.get() ?? []
     }
     
     public func replaceRecentPeerIds(_ peerIds: [PeerId]) {
@@ -1163,7 +1168,7 @@ public final class Postbox {
     private var currentReplacedContactPeerIds: Set<PeerId>?
     private var currentUpdatedMasterClientId: Int64?
     
-    private var currentReplacedAdditionalChatListItems: [PeerId]?
+    private var currentReplacedAdditionalChatListItems: [AdditionalChatListItem]?
     private var currentUpdatedNoticeEntryKeys = Set<NoticeEntryKey>()
     private var currentUpdatedCacheEntryKeys = Set<ItemCacheEntryId>()
     
@@ -1456,7 +1461,7 @@ public final class Postbox {
                         flags.insert(.Failed)
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = message.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                         }
                         return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
                     } else {
@@ -2042,10 +2047,9 @@ public final class Postbox {
         self.currentReplacedContactPeerIds = peerIds
     }
     
-    fileprivate func replaceAdditionalChatListItems(_ peerIds: [PeerId]) {
-        assert(peerIds.count == Set(peerIds).count)
-        if self.additionalChatListItemsTable.set(peerIds) {
-            self.currentReplacedAdditionalChatListItems = peerIds
+    fileprivate func replaceAdditionalChatListItems(_ items: [AdditionalChatListItem]) {
+        if self.additionalChatListItemsTable.set(items) {
+            self.currentReplacedAdditionalChatListItems = items
         }
     }
     

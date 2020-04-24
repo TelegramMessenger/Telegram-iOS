@@ -424,6 +424,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessagePollResults: { _, _ in
         }, openPollCreation: { _ in
         }, displayPollSolution: { _, _ in
+        }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: {  
         }, requestMessageUpdate: { _ in

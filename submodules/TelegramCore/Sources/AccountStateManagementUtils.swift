@@ -2178,7 +2178,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             var topId: Int32?
             if namespace == Namespaces.Message.Cloud, let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
                 if let synchronizedUntilMessageId = channelState.synchronizedUntilMessageId {
-                    topId = synchronizedUntilMessageId + 1
+                    topId = synchronizedUntilMessageId
                 }
             }
             if topId == nil {
@@ -2433,7 +2433,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                     }
                     var attributes = currentMessage.attributes
                     var found = false
@@ -2739,7 +2739,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 transaction.updateMessage(id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
                     }
                     var attributes = currentMessage.attributes
                     loop: for j in 0 ..< attributes.count {

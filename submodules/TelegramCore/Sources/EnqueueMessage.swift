@@ -473,7 +473,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             
                             if let sourceForwardInfo = sourceMessage.forwardInfo {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature, psaType: nil)
                             } else {
                                 if sourceMessage.id.peerId != account.peerId {
                                     var hasHiddenForwardMedia = false
@@ -501,7 +501,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                             }
                                         }
                                         
-                                        forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature)
+                                        let psaType: String? = nil
+                                        
+                                        forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature, psaType: psaType)
                                     }
                                 } else {
                                     forwardInfo = nil

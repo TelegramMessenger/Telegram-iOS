@@ -962,11 +962,18 @@ public enum GetWalletInfoError {
 }
 
 public func getWalletInfo(importedInfo: ImportedWalletInfo, tonInstance: TonInstance) -> Signal<WalletInfo, GetWalletInfoError> {
-    let rwalletInitialPublicKey = WalletInitialPublicKey(rawValue: "Pua8zmvG8934jf2mAysxTMUJUaxoXQskZKfqsAoGUjS2Kj4J")
+    let rwalletInitialPublicKey = WalletInitialPublicKey(rawValue: "PuZNuu3s-F49M-m9L68XQE9LIPPM5-6S23-q0_KVFjr0Evnn")
     return tonInstance.walletAddress(publicKey: importedInfo.publicKey, rwalletInitialPublicKey: rwalletInitialPublicKey)
     |> castError(GetWalletInfoError.self)
     |> mapToSignal { address -> Signal<WalletInfo, GetWalletInfoError> in
         return tonInstance.getWalletState(address: address)
+        |> retryTonRequest(isNetworkError: { error in
+            if case .network = error {
+                return true
+            } else {
+                return false
+            }
+        })
         |> mapError { error -> GetWalletInfoError in
             switch error {
             case .generic:

@@ -560,6 +560,7 @@
 "Message.StickerText" = "Sticker %@";
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
+"Message.GenericForwardedPsa" = "Public Service Announcement\nFrom: %@";
 "Message.Animation" = "GIF";
 "Message.Game" = "Game";
 
@@ -3172,6 +3173,8 @@ Unused sets are archived when you add more.";
 "DialogList.AdLabel" = "Proxy Sponsor";
 "DialogList.AdNoticeAlert" = "The proxy you are using displays a sponsored channel in your chat list.";
 "SocksProxySetup.AdNoticeHelp" = "This proxy may display a sponsored channel in your chat list. This doesn't reveal your Telegram traffic.";
+
+"DialogList.PsaLabel" = "PSA";
 
 "SocksProxySetup.ShareProxyList" = "Share Proxy List";
 

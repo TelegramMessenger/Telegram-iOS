@@ -562,6 +562,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.toggleArchivedFolderHiddenByDefault()
         }
         
+        self.chatListDisplayNode.containerNode.hidePsa = { [weak self] messageId in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.hidePsa(messageId)
+        }
+        
         self.chatListDisplayNode.containerNode.deletePeerChat = { [weak self] peerId in
             guard let strongSelf = self else {
                 return
@@ -569,10 +576,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.deletePeerChat(peerId: peerId)
         }
         
-        self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, animated, isAd in
+        self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, animated, promoInfo in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    if isAd {
+                    if let promoInfo = promoInfo, case .proxy = promoInfo {
                         let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
                         |> deliverOnMainQueue).start(next: { value in
                             guard let strongSelf = self else {
@@ -1979,6 +1986,32 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false
                 }), in: .current)
             }
+        })
+    }
+    
+    func hidePsa(_ id: MessageId) {
+        let _ = (self.context.account.postbox.transaction { transaction -> PeerId? in
+            var peerId: PeerId?
+            for item in transaction.getAdditionalChatListItems() {
+                if let item = item as? PromoChatListItem {
+                    peerId = item.peerId
+                }
+            }
+            
+            return peerId
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.containerNode.updateState { state in
+                var state = state
+                state.hiddenPsaPeerId = id.peerId
+                state.peerIdWithRevealedOptions = nil
+                return state
+            }
+            
+            let _ = hideAccountPromoInfoChat(account: strongSelf.context.account, peerId: id.peerId).start()
         })
     }
     

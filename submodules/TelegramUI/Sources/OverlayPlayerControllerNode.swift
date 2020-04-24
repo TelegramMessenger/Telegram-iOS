@@ -123,6 +123,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openMessagePollResults: { _, _ in
         }, openPollCreation: { _ in
         }, displayPollSolution: { _, _ in
+        }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: {  
         }, requestMessageUpdate: { _ in
