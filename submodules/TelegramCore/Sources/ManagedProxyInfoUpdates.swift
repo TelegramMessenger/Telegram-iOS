@@ -169,6 +169,11 @@ public func hideAccountPromoInfoChat(account: Account, peerId: PeerId) -> Signal
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
-        |> ignoreValues
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            return account.postbox.transaction { transaction -> Void in
+                transaction.replaceAdditionalChatListItems([])
+            }
+            |> ignoreValues
+        }
     }
 }
