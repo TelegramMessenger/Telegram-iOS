@@ -396,6 +396,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Channel_ErrorAddBlocked
+                    case .notMutualContact:
+                        text = presentationData.strings.GroupInfo_AddUserLeftError
                     case let .bot(memberId):
                         let _ = (context.account.postbox.transaction { transaction in
                             return transaction.getPeer(peerId)

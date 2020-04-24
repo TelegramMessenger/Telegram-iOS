@@ -230,21 +230,24 @@ variable special-dict
 } : create-wallet1
 
 // D x t -- D'
-{ <b rot Gram, swap rot 16 b>idict! not abort"cannot add value"
+{ <b rot Gram, swap rot 32 b>idict! not abort"cannot add value"
 } : rdict-entry
+{ 86400 * } : days*
 // balance -- dict
 { dictnew
-  over -32768 rdict-entry
-  over 3/4 */ 92 rdict-entry
-  over 1/2 */ 183 rdict-entry
-  swap 1/4 */ 366 rdict-entry
-  0 548 rdict-entry
+  over 31 -1<< rdict-entry
+  over 3/4 */ 91 days* rdict-entry
+  over 1/2 */ 183 days* rdict-entry
+  swap 1/4 */ 365 days* rdict-entry
+  0 548 days* rdict-entry
 } : make-rdict
 
+variable wallet2-start-at  wallet2-start-at 0!
+now 86400 / 1+ 86400 * wallet2-start-at !
 // pubkey amount --
 { over ."Key " pubkey>$ type ." -> "
   RWCode2  // code
-  <b 1 32 u, 3 pick 256 u, 3 roll make-rdict dict, b>  // data
+  <b 1 32 u, 3 pick 256 u, 3 roll wallet2-start-at @ 32 u, make-rdict dict, b>  // data
   empty_cell  // libs
   3 roll  // balance
   0 // split_depth

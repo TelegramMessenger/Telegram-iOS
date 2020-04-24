@@ -1785,6 +1785,22 @@ std::vector<ton::ValidatorDescr> ValidatorSet::export_validator_set() const {
   return l;
 }
 
+std::map<ton::Bits256, int> ValidatorSet::compute_validator_map() const {
+  std::map<ton::Bits256, int> res;
+  for (int i = 0; i < (int)list.size(); i++) {
+    res.emplace(list[i].pubkey.as_bits256(), i);
+  }
+  return res;
+}
+
+std::vector<double> ValidatorSet::export_scaled_validator_weights() const {
+  std::vector<double> res;
+  for (const auto& node : list) {
+    res.push_back((double)node.weight / (double)total_weight);
+  }
+  return res;
+}
+
 std::vector<ton::ValidatorDescr> Config::do_compute_validator_set(const block::CatchainValidatorsConfig& ccv_conf,
                                                                   ton::ShardIdFull shard,
                                                                   const block::ValidatorSet& vset, ton::UnixTime time,

@@ -272,6 +272,7 @@ transaction$0111 account_addr:bits256 lt:uint64
   old:^X new:^X = MERKLE_UPDATE X;
 update_hashes#72 {X:Type} old_hash:bits256 new_hash:bits256
   = HASH_UPDATE X;
+!merkle_proof#03 {X:Type} virtual_hash:bits256 depth:uint16 virtual_root:^X = MERKLE_PROOF X;
 
 acc_trans#5 account_addr:bits256
             transactions:(HashmapAug 64 ^Transaction CurrencyCollection)
@@ -731,7 +732,10 @@ top_block_descr_set#4ac789f3 collection:(HashmapE 96 ^TopBlockDescr) = TopBlockD
 //
 //  VALIDATOR MISBEHAVIOR COMPLAINTS
 //
-no_blk_gen mc_blk_ref:ExtBlkRef from_utime:uint32 to_utime:uint32 state_proof:^Cell prod_proof:^Cell = ComplaintDescr;
+prod_info#34 utime:uint32 mc_blk_ref:ExtBlkRef state_proof:^(MERKLE_PROOF Block)
+  prod_proof:^(MERKLE_PROOF ShardState) = ProducerInfo;
+no_blk_gen from_utime:uint32 prod_info:^ProducerInfo = ComplaintDescr;
+no_blk_gen_diff prod_info_old:^ProducerInfo prod_info_new:^ProducerInfo = ComplaintDescr;
 validator_complaint#bc validator_pubkey:uint256 description:^ComplaintDescr created_at:uint32 severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams suggested_fine_part:uint32 = ValidatorComplaint;
 complaint_status#2d complaint:^ValidatorComplaint voters:(HashmapE 16 True) vset_id:uint256 weight_remaining:int64 = ValidatorComplaintStatus;
 
@@ -807,4 +811,26 @@ cap_method_seqno#5371 = SmcCapability;
 cap_method_pubkey#71f4 = SmcCapability;
 cap_is_wallet#2177 = SmcCapability;
 cap_name#ff name:Text = SmcCapability;
+
+//
+// PAYMENT CHANNELS
+//
+
+chan_config$_  init_timeout:uint32 close_timeout:uint32 a_key:bits256 b_key:bits256 
+  a_addr:^MsgAddressInt b_addr:^MsgAddressInt channel_id:uint64 = ChanConfig;
+
+chan_state_init$000  signed_A:Bool signed_B:Bool min_A:Grams min_B:Grams expire_at:uint32 A:Grams B:Grams = ChanState;
+chan_state_close$001 signed_A:Bool signed_B:Bool promise_A:Grams promise_B:Grams expire_at:uint32 A:Grams B:Grams = ChanState;
+chan_state_payout$010 A:Grams B:Grams = ChanState;
+
+chan_promise$_ channel_id:uint64 promise_A:Grams promise_B:Grams = ChanPromise;
+chan_signed_promise#_ sig:(Maybe ^bits512) promise:ChanPromise = ChanSignedPromise;
+
+chan_msg_init#27317822 inc_A:Grams inc_B:Grams min_A:Grams min_B:Grams channel_id:uint64 = ChanMsg;
+chan_msg_close#f28ae183 extra_A:Grams extra_B:Grams promise:ChanSignedPromise  = ChanMsg;
+chan_msg_timeout#43278a28 = ChanMsg;
+
+chan_signed_msg$_ sig_A:(Maybe ^bits512) sig_B:(Maybe ^bits512) msg:ChanMsg = ChanSignedMsg;
+
+chan_data$_ config:^ChanConfig state:^ChanState = ChanData;
 

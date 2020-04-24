@@ -25,6 +25,15 @@ namespace td {
 namespace actor {
 namespace core {
 
+std::atomic<bool> debug;
+void set_debug(bool flag) {
+  debug = flag;
+}
+
+bool need_debug() {
+  return debug.load(std::memory_order_relaxed);
+}
+
 Scheduler::Scheduler(std::shared_ptr<SchedulerGroupInfo> scheduler_group_info, SchedulerId id, size_t cpu_threads_count)
     : scheduler_group_info_(std::move(scheduler_group_info)), cpu_threads_(cpu_threads_count) {
   scheduler_group_info_->active_scheduler_count++;
@@ -128,13 +137,14 @@ void Scheduler::do_stop() {
 }
 
 Scheduler::ContextImpl::ContextImpl(ActorInfoCreator *creator, SchedulerId scheduler_id, CpuWorkerId cpu_worker_id,
-                                    SchedulerGroupInfo *scheduler_group, Poll *poll, KHeap<double> *heap)
+                                    SchedulerGroupInfo *scheduler_group, Poll *poll, KHeap<double> *heap, Debug *debug)
     : creator_(creator)
     , scheduler_id_(scheduler_id)
     , cpu_worker_id_(cpu_worker_id)
     , scheduler_group_(scheduler_group)
     , poll_(poll)
-    , heap_(heap) {
+    , heap_(heap)
+    , debug_(debug) {
 }
 
 SchedulerId Scheduler::ContextImpl::get_scheduler_id() const {
@@ -183,6 +193,9 @@ bool Scheduler::ContextImpl::has_heap() {
 KHeap<double> &Scheduler::ContextImpl::get_heap() {
   CHECK(has_heap());
   return *heap_;
+}
+Debug &Scheduler::ContextImpl::get_debug() {
+  return *debug_;
 }
 
 void Scheduler::ContextImpl::set_alarm_timestamp(const ActorInfoPtr &actor_info_ptr) {

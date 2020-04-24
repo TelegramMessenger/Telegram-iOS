@@ -55,6 +55,8 @@ raw.message source:accountAddress destination:accountAddress value:int64 fwd_fee
 raw.transaction utime:int53 data:bytes transaction_id:internal.transactionId fee:int64 storage_fee:int64 other_fee:int64 in_msg:raw.message out_msgs:vector<raw.message> = raw.Transaction;
 raw.transactions transactions:vector<raw.transaction> previous_transaction_id:internal.transactionId = raw.Transactions;
 
+pchan.config alice_public_key:string alice_address:accountAddress bob_public_key:string bob_address:accountAddress init_timeout:int32 close_timeout:int32 channel_id:int64 = pchan.Config;
+
 raw.initialAccountState code:bytes data:bytes = InitialAccountState;
 testGiver.initialAccountState = InitialAccountState;
 testWallet.initialAccountState public_key:string = InitialAccountState;
@@ -62,7 +64,13 @@ wallet.initialAccountState public_key:string = InitialAccountState;
 wallet.v3.initialAccountState public_key:string wallet_id:int64 = InitialAccountState;
 wallet.highload.v1.initialAccountState public_key:string wallet_id:int64 = InitialAccountState;
 wallet.highload.v2.initialAccountState public_key:string wallet_id:int64 = InitialAccountState;
+
+rwallet.limit seconds:int32 value:int64 = rwallet.Limit;
+rwallet.config start_at:int53 limits:vector<rwallet.limit> = rwallet.Config;
+rwallet.initialAccountState init_public_key:string public_key:string wallet_id:int64 = InitialAccountState;
+
 dns.initialAccountState public_key:string wallet_id:int64 = InitialAccountState;
+pchan.initialAccountState config:pchan.config = InitialAccountState;
 
 raw.accountState code:bytes data:bytes frozen_hash:bytes = AccountState;
 testWallet.accountState seqno:int32 = AccountState;
@@ -72,6 +80,13 @@ wallet.highload.v1.accountState wallet_id:int64 seqno:int32 = AccountState;
 wallet.highload.v2.accountState wallet_id:int64 = AccountState;
 testGiver.accountState seqno:int32 = AccountState;
 dns.accountState wallet_id:int64 = AccountState;
+rwallet.accountState wallet_id:int64 seqno:int32 unlocked_balance:int64 config:rwallet.config = AccountState;
+
+pchan.stateInit signed_A:Bool signed_B:Bool min_A:int64 min_B:int64 expire_at:int53 A:int64 B:int64 = pchan.State;
+pchan.stateClose signed_A:Bool signed_B:Bool min_A:int64 min_B:int64 expire_at:int53 A:int64 B:int64 = pchan.State;
+pchan.statePayout A:int64 B:int64 = pchan.State;
+
+pchan.accountState config:pchan.config state:pchan.State description:string = AccountState;
 uninited.accountState frozen_hash:bytes = AccountState;
 
 fullAccountState balance:int64 last_transaction_id:internal.transactionId block_id:ton.blockIdExt sync_utime:int53 account_state:AccountState = FullAccountState;
@@ -83,7 +98,7 @@ syncStateInProgress from_seqno:int32 to_seqno:int32 current_seqno:int32 = SyncSt
 // MSG
 //
 
-msg.dataRaw body:bytes = msg.Data;
+msg.dataRaw body:bytes init_state:bytes = msg.Data;
 msg.dataText text:bytes = msg.Data;
 msg.dataDecryptedText text:bytes = msg.Data;
 msg.dataEncryptedText text:bytes = msg.Data;
@@ -115,6 +130,21 @@ dns.actionSet entry:dns.entry = dns.Action;
 
 dns.resolved entries:vector<dns.entry> = dns.Resolved;
 
+
+//
+// Payment channel
+//
+pchan.promise signature:bytes promise_A:int64 promise_B:int64 channel_id:int64 = pchan.Promise;
+
+pchan.actionInit inc_A:int64 inc_B:int64 min_A:int64 min_B:int64 = pchan.Action;
+pchan.actionClose extra_A:int64 extra_B:int64 promise:pchan.promise = pchan.Action;
+pchan.actionTimeout = pchan.Action;
+
+//
+// Restricted wallet initialization
+//
+rwallet.actionInit config:rwallet.config = rwallet.Action;
+
 //
 // Actions
 //
@@ -122,12 +152,14 @@ dns.resolved entries:vector<dns.entry> = dns.Resolved;
 actionNoop  = Action;
 actionMsg messages:vector<msg.message> allow_send_to_uninited:Bool = Action;
 actionDns actions:vector<dns.Action> = Action;
+actionPchan action:pchan.Action = Action;
+actionRwallet action:rwallet.actionInit = Action;
 //actionMultisig actions:vector<multisig.order> = Action;
 
 fees in_fwd_fee:int53 storage_fee:int53 gas_fee:int53 fwd_fee:int53 = Fees;
 query.fees source_fees:fees destination_fees:vector<fees> = query.Fees;
 // query.emulationResult exit_code:int32 fees:fees = query.EmulationResult;
-query.info id:int53 valid_until:int53 body_hash:bytes  = query.Info;
+query.info id:int53 valid_until:int53 body_hash:bytes body:bytes init_state:bytes = query.Info;
 
 tvm.slice bytes:bytes = tvm.Slice;
 tvm.cell bytes:bytes = tvm.Cell;
@@ -218,7 +250,7 @@ sync = ton.BlockIdExt;
 getAccountAddress initial_account_state:InitialAccountState revision:int32 = AccountAddress;
 guessAccountRevision initial_account_state:InitialAccountState = AccountRevisionList;
 getAccountState account_address:accountAddress = FullAccountState;
-createQuery private_key:InputKey address:accountAddress timeout:int32 action:Action = query.Info;
+createQuery private_key:InputKey address:accountAddress timeout:int32 action:Action initial_account_state:InitialAccountState = query.Info;
 
 msg.decrypt input_key:InputKey data:msg.dataEncryptedArray = msg.DataDecryptedArray;
 msg.decryptWithProof proof:bytes data:msg.dataEncrypted = msg.Data;
@@ -237,6 +269,12 @@ smc.getState id:int53 = tvm.Cell;
 smc.runGetMethod id:int53 method:smc.MethodId stack:vector<tvm.StackEntry> = smc.RunResult;
 
 dns.resolve account_address:accountAddress name:string category:int32 ttl:int32 = dns.Resolved;
+
+pchan.signPromise input_key:InputKey promise:pchan.promise = pchan.Promise;
+pchan.validatePromise public_key:bytes promise:pchan.promise = Ok;
+
+pchan.packPromise promise:pchan.promise = Data;
+pchan.unpackPromise data:secureBytes = pchan.Promise;
 
 onLiteServerQueryResult id:int64 bytes:bytes = Ok;
 onLiteServerQueryError id:int64 error:error = Ok;

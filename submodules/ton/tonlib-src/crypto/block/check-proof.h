@@ -25,7 +25,7 @@ namespace block {
 using td::Ref;
 
 td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blkid,
-                                    ton::Bits256* store_shard_hash_to = nullptr, bool check_state_hash = false,
+                                    ton::Bits256* store_state_hash_to = nullptr, bool check_state_hash = false,
                                     td::uint32* save_utime = nullptr, ton::LogicalTime* save_lt = nullptr);
 td::Status check_shard_proof(ton::BlockIdExt blk, ton::BlockIdExt shard_blk, td::Slice shard_proof);
 td::Status check_account_proof(td::Slice proof, ton::BlockIdExt shard_blk, const block::StdAddress& addr,

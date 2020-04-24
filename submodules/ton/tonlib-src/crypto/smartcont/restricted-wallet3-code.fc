@@ -1,0 +1,103 @@
+;; Restricted wallet initialized by a third party (a variant of restricted-wallet2-code.fc)
+;; restricts access to parts of balance until certain dates
+
+() recv_internal(slice in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+_ seconds_passed(int start_at, int utime) inline_ref {
+  ifnot (start_at) {
+    var p = config_param(-13);
+    start_at = null?(p) ? 0 : begin_parse(p).preload_uint(32);
+  }
+  return start_at ? utime - start_at : -1;
+}
+
+() recv_external(slice in_msg) impure {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  var (subwallet_id, valid_until, msg_seqno) = (cs~load_uint(32), cs~load_uint(32), cs~load_uint(32));
+  throw_if(35, valid_until <= now());
+  var ds = get_data().begin_parse();
+  var (stored_seqno, stored_subwallet, public_key) = (ds~load_uint(32), ds~load_uint(32), ds~load_uint(256));
+  throw_unless(33, msg_seqno == stored_seqno);
+  throw_unless(34, subwallet_id == stored_subwallet);
+  throw_unless(36, check_signature(slice_hash(in_msg), signature, public_key));
+  ifnot (msg_seqno) {
+    public_key = ds~load_uint(256);  ;; load "final" public key
+    ds.end_parse();
+    cs~touch();
+    var (start_at, rdict) = (cs~load_uint(32), cs~load_dict());
+    cs.end_parse();
+    accept_message();
+    set_data(begin_cell()
+              .store_uint(stored_seqno + 1, 32)
+              .store_uint(stored_subwallet, 32)
+              .store_uint(public_key, 256)
+              .store_uint(start_at, 32)
+              .store_dict(rdict)
+            .end_cell());
+    return ();
+  }
+  var (start_at, rdict) = (ds~load_uint(32), ds~load_dict());
+  ds.end_parse();
+  accept_message();
+  var ts = seconds_passed(start_at, now());
+  var (_, value, found) = rdict.idict_get_preveq?(32, ts);
+  if (found) {
+    raw_reserve(value~load_grams(), 2);
+  }
+  cs~touch();
+  while (cs.slice_refs()) {
+    var mode = cs~load_uint(8);
+    var msg = cs~load_ref();
+    send_raw_message(msg, mode);
+  }
+  cs.end_parse();
+  set_data(begin_cell()
+            .store_uint(stored_seqno + 1, 32)
+            .store_uint(stored_subwallet, 32)
+            .store_uint(public_key, 256)
+            .store_uint(start_at, 32)
+            .store_dict(rdict)
+          .end_cell());
+}
+
+;; Get methods
+
+int seqno() method_id {
+  return get_data().begin_parse().preload_uint(32);
+}
+
+int wallet_id() method_id {
+  var ds = get_data().begin_parse();
+  ds~load_uint(32);
+  return ds.preload_uint(32);
+}
+
+int get_public_key() method_id {
+  var ds = get_data().begin_parse();
+  ds~load_uint(32 + 32);
+  return ds.preload_uint(256);
+}
+
+int compute_balance_at(int utime) inline_ref {
+  var ds = get_data().begin_parse().skip_bits(32 + 32 + 256);
+  var (start_at, rdict) = (ds~load_uint(32), ds~load_dict());
+  ds.end_parse();
+  var ts = seconds_passed(start_at, utime);
+  var balance = get_balance().pair_first();
+  var (_, value, found) = rdict.idict_get_preveq?(32, ts);
+  if (found) {
+    balance = max(balance - value~load_grams(), 0);
+  }
+  return balance;
+}
+
+int balance_at(int utime) method_id {
+  return compute_balance_at(utime);
+}
+
+int balance() method_id {
+  return compute_balance_at(now());
+}

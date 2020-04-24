@@ -24,9 +24,9 @@ public final class WalletWordDisplayScreen: ViewController {
     private let startTime: Double
     private let idleTimerExtensionDisposable: Disposable
     
-    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
+    private let walletCreatedPreloadState: Promise<WalletCreatedPreloadState?>?
     
-    public init(context: WalletContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
+    public init(context: WalletContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<WalletCreatedPreloadState?>?) {
         self.context = context
         self.walletInfo = walletInfo
         self.wordList = wordList

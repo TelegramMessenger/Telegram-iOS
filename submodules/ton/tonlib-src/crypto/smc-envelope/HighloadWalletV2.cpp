@@ -73,18 +73,11 @@ td::Ref<vm::Cell> HighloadWalletV2::make_a_gift_message(const td::Ed25519::Priva
   for (size_t i = 0; i < gifts.size(); i++) {
     auto& gift = gifts[i];
     td::int32 send_mode = 3;
-    auto gramms = gift.gramms;
-    if (gramms == -1) {
-      gramms = 0;
+    if (gift.gramms == -1) {
       send_mode += 128;
     }
     vm::CellBuilder cb;
-    GenericAccount::store_int_message(cb, gift.destination, gramms);
-    cb.store_bytes("\0\0\0\0", 4);
-    vm::CellString::store(cb, gift.message, 35 * 8).ensure();
-    auto message_inner = cb.finalize();
-    cb = {};
-    cb.store_long(send_mode, 8).store_ref(message_inner);
+    cb.store_long(send_mode, 8).store_ref(create_int_message(gift));
     auto key = messages.integer_key(td::make_refint(i), 16, false);
     messages.set_builder(key.bits(), 16, cb);
   }

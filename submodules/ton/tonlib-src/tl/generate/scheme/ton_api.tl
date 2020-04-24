@@ -401,7 +401,9 @@ tonNode.getNextBlockDescription prev_block:tonNode.blockIdExt = tonNode.BlockDes
 tonNode.getNextBlocksDescription prev_block:tonNode.blockIdExt limit:int = tonNode.BlocksDescription;
 tonNode.getPrevBlocksDescription next_block:tonNode.blockIdExt limit:int cutoff_seqno:int = tonNode.BlocksDescription;
 tonNode.prepareBlockProof block:tonNode.blockIdExt allow_partial:Bool = tonNode.PreparedProof;
+tonNode.prepareKeyBlockProof block:tonNode.blockIdExt allow_partial:Bool = tonNode.PreparedProof;
 tonNode.prepareBlockProofs blocks:(vector tonNode.blockIdExt) allow_partial:Bool = tonNode.PreparedProof;
+tonNode.prepareKeyBlockProofs blocks:(vector tonNode.blockIdExt) allow_partial:Bool = tonNode.PreparedProof;
 tonNode.prepareBlock block:tonNode.blockIdExt = tonNode.Prepared;
 tonNode.prepareBlocks blocks:(vector tonNode.blockIdExt) = tonNode.Prepared;
 tonNode.preparePersistentState block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt = tonNode.PreparedState;
@@ -415,9 +417,13 @@ tonNode.downloadPersistentState block:tonNode.blockIdExt masterchain_block:tonNo
 tonNode.downloadPersistentStateSlice block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt offset:long max_size:long = tonNode.Data;
 tonNode.downloadZeroState block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProof block:tonNode.blockIdExt = tonNode.Data;
+tonNode.downloadKeyBlockProof block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProofs blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
+tonNode.downloadKeyBlockProofs blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
 tonNode.downloadBlockProofLink block:tonNode.blockIdExt = tonNode.Data;
+tonNode.downloadKeyBlockProofLink block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProofLinks blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
+tonNode.downloadKeyBlockProofLinks blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
 tonNode.getArchiveInfo masterchain_seqno:int = tonNode.ArchiveInfo;
 tonNode.getArchiveSlice archive_id:long offset:long max_size:int = tonNode.Data;
 

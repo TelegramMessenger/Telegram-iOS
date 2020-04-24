@@ -19,6 +19,7 @@
 #include "vm/cells/CellSlice.h"
 #include "vm/excno.hpp"
 #include "td/utils/bits.h"
+#include "td/utils/misc.h"
 
 namespace vm {
 
@@ -719,6 +720,10 @@ bool CellSlice::prefetch_bytes(unsigned char* buffer, unsigned bytes) const {
   }
 }
 
+bool CellSlice::fetch_bytes(td::MutableSlice slice) {
+  return fetch_bytes(slice.ubegin(), td::narrow_cast<unsigned>(slice.size()));
+}
+
 bool CellSlice::fetch_bytes(unsigned char* buffer, unsigned bytes) {
   if (prefetch_bytes(buffer, bytes)) {
     advance(bytes * 8);
@@ -726,6 +731,10 @@ bool CellSlice::fetch_bytes(unsigned char* buffer, unsigned bytes) {
   } else {
     return false;
   }
+}
+
+bool CellSlice::prefetch_bytes(td::MutableSlice slice) const {
+  return prefetch_bytes(slice.ubegin(), td::narrow_cast<unsigned>(slice.size()));
 }
 
 Ref<Cell> CellSlice::prefetch_ref(unsigned offset) const {

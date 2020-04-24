@@ -61,6 +61,15 @@ std::unique_ptr<KeyValueReader> MemoryKeyValue::snapshot() {
 std::string MemoryKeyValue::stats() const {
   return PSTRING() << "MemoryKeyValueStats{" << tag("get_count", get_count_) << "}";
 }
+Status MemoryKeyValue::begin_write_batch() {
+  UNREACHABLE();
+}
+Status MemoryKeyValue::commit_write_batch() {
+  UNREACHABLE();
+}
+Status MemoryKeyValue::abort_write_batch() {
+  UNREACHABLE();
+}
 
 Status MemoryKeyValue::begin_transaction() {
   UNREACHABLE();

@@ -135,8 +135,36 @@ void TestNode::run() {
       ton::adnl::AdnlExtClient::create(ton::adnl::AdnlNodeIdFull{remote_public_key_}, remote_addr_, make_callback());
 }
 
-void TestNode::got_result() {
+void TestNode::got_result(td::Result<td::BufferSlice> R, td::Promise<td::BufferSlice> promise) {
+  if (R.is_error()) {
+    auto err = R.move_as_error();
+    LOG(ERROR) << "failed query: " << err;
+    promise.set_error(std::move(err));
+    td::actor::send_closure_later(actor_id(this), &TestNode::after_got_result, false);
+    return;
+  }
+  auto data = R.move_as_ok();
+  auto F = ton::fetch_tl_object<ton::lite_api::liteServer_error>(data.clone(), true);
+  if (F.is_ok()) {
+    auto f = F.move_as_ok();
+    auto err = td::Status::Error(f->code_, f->message_);
+    LOG(ERROR) << "liteserver error: " << err;
+    promise.set_error(std::move(err));
+    td::actor::send_closure_later(actor_id(this), &TestNode::after_got_result, false);
+    return;
+  }
+  promise.set_result(std::move(data));
+  td::actor::send_closure_later(actor_id(this), &TestNode::after_got_result, true);
+}
+
+void TestNode::after_got_result(bool ok) {
   running_queries_--;
+  if (ex_mode_ && !ok) {
+    LOG(ERROR) << "fatal error executing command-line queries, skipping the rest";
+    std::cout.flush();
+    std::cerr.flush();
+    std::_Exit(1);
+  }
   if (!running_queries_ && ex_queries_.size() > 0) {
     auto data = std::move(ex_queries_[0]);
     ex_queries_.erase(ex_queries_.begin());
@@ -152,28 +180,12 @@ void TestNode::got_result() {
 bool TestNode::envelope_send_query(td::BufferSlice query, td::Promise<td::BufferSlice> promise) {
   running_queries_++;
   if (!ready_ || client_.empty()) {
-    LOG(ERROR) << "failed to send query to server: not ready";
+    got_result(td::Status::Error("failed to send query to server: not ready"), std::move(promise));
     return false;
   }
   auto P = td::PromiseCreator::lambda(
       [SelfId = actor_id(this), promise = std::move(promise)](td::Result<td::BufferSlice> R) mutable {
-        if (R.is_error()) {
-          auto err = R.move_as_error();
-          LOG(ERROR) << "failed query: " << err;
-          promise.set_error(std::move(err));
-          return;
-        }
-        auto data = R.move_as_ok();
-        auto F = ton::fetch_tl_object<ton::lite_api::liteServer_error>(data.clone(), true);
-        if (F.is_ok()) {
-          auto f = F.move_as_ok();
-          auto err = td::Status::Error(f->code_, f->message_);
-          LOG(ERROR) << "received error: " << err;
-          promise.set_error(std::move(err));
-          return;
-        }
-        promise.set_result(std::move(data));
-        td::actor::send_closure(SelfId, &TestNode::got_result);
+        td::actor::send_closure(SelfId, &TestNode::got_result, std::move(R), std::move(promise));
       });
   td::BufferSlice b =
       ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_query>(std::move(query)), true);
@@ -306,7 +318,7 @@ bool TestNode::get_server_time() {
         LOG(ERROR) << "cannot parse answer to liteServer.getTime";
       } else {
         server_time_ = F.move_as_ok()->now_;
-        server_time_got_at_ = static_cast<td::uint32>(td::Clocks::system());
+        server_time_got_at_ = now();
         LOG(INFO) << "server time is " << server_time_ << " (delta " << server_time_ - server_time_got_at_ << ")";
       }
     }
@@ -355,7 +367,7 @@ void TestNode::set_server_version(td::int32 version, td::int64 capabilities) {
 
 void TestNode::set_server_time(int server_utime) {
   server_time_ = server_utime;
-  server_time_got_at_ = static_cast<td::uint32>(td::Clocks::system());
+  server_time_got_at_ = now();
   LOG(INFO) << "server time is " << server_time_ << " (delta " << server_time_ - server_time_got_at_ << ")";
 }
 
@@ -425,8 +437,7 @@ void TestNode::got_server_mc_block_id(ton::BlockIdExt blkid, ton::ZeroStateIdExt
   }
   td::TerminalIO::out() << "latest masterchain block known to server is " << blkid.to_str();
   if (created > 0) {
-    td::TerminalIO::out() << " created at " << created << " (" << static_cast<td::int32>(td::Clocks::system()) - created
-                          << " seconds ago)\n";
+    td::TerminalIO::out() << " created at " << created << " (" << now() - created << " seconds ago)\n";
   } else {
     td::TerminalIO::out() << "\n";
   }
@@ -898,6 +909,8 @@ bool TestNode::show_help(std::string command) {
          "getconfig [<param>...]\tShows specified or all configuration parameters from the latest masterchain state\n"
          "getconfigfrom <block-id-ext> [<param>...]\tShows specified or all configuration parameters from the "
          "masterchain state of <block-id-ext>\n"
+         "getkeyconfig <block-id-ext> [<param>...]\tShows specified or all configuration parameters from the "
+         "previous key block with respect to <block-id-ext>\n"
          "saveconfig <filename> [<block-id-ext>]\tSaves all configuration parameters into specified file\n"
          "gethead <block-id-ext>\tShows block header for <block-id-ext>\n"
          "getblock <block-id-ext>\tDownloads block\n"
@@ -924,6 +937,10 @@ bool TestNode::show_help(std::string command) {
          "recentcreatorstats <block-id-ext> <start-utime> [<count> [<start-pubkey>]]\tLists block creator statistics "
          "updated after <start-utime> by validator public "
          "key\n"
+         "checkload[all|severe] <start-utime> <end-utime> [<savefile-prefix>]\tChecks whether all validators worked "
+         "properly during specified time "
+         "interval, and optionally saves proofs into <savefile-prefix>-<n>.boc\n"
+         "loadproofcheck <filename>\tChecks a validator misbehavior proof previously created by checkload\n"
          "known\tShows the list of all known block ids\n"
          "knowncells\tShows the list of hashes of all known (cached) cells\n"
          "dumpcell <hex-hash-pfx>\nDumps a cached cell by a prefix of its hash\n"
@@ -989,10 +1006,12 @@ bool TestNode::do_parse_line() {
     blkid = mc_last_id_;
     std::string filename;
     return get_word_to(filename) && (seekeoln() || parse_block_id_ext(blkid)) && seekeoln() &&
-           get_config_params(blkid, trivial_promise(), -1, filename);
+           parse_get_config_params(blkid, -1, filename);
   } else if (word == "getconfig" || word == "getconfigfrom") {
     blkid = mc_last_id_;
-    return (word == "getconfig" || parse_block_id_ext(blkid)) && get_config_params(blkid, trivial_promise(), 0);
+    return (word == "getconfig" || parse_block_id_ext(blkid)) && parse_get_config_params(blkid, 0);
+  } else if (word == "getkeyconfig") {
+    return parse_block_id_ext(blkid) && parse_get_config_params(blkid, 0x8000);
   } else if (word == "getblock") {
     return parse_block_id_ext(blkid) && seekeoln() && get_block(blkid, false);
   } else if (word == "dumpblock") {
@@ -1002,7 +1021,7 @@ bool TestNode::do_parse_line() {
   } else if (word == "dumpstate") {
     return parse_block_id_ext(blkid) && seekeoln() && get_state(blkid, true);
   } else if (word == "gethead") {
-    return parse_block_id_ext(blkid) && seekeoln() && get_block_header(blkid, 0xffff);
+    return parse_block_id_ext(blkid) && seekeoln() && get_show_block_header(blkid, 0xffff);
   } else if (word == "dumptrans") {
     return parse_block_id_ext(blkid) && parse_account_addr(workchain, addr) && parse_lt(lt) && seekeoln() &&
            get_one_transaction(blkid, workchain, addr, lt, true);
@@ -1022,17 +1041,25 @@ bool TestNode::do_parse_line() {
     return parse_block_id_ext(blkid) && (seekeoln() || parse_block_id_ext(blkid2)) && seekeoln() &&
            get_block_proof(blkid, blkid2, blkid2.is_valid() + (word == "blkproofchain") * 0x1000);
   } else if (word == "byseqno") {
-    return parse_shard_id(shard) && parse_uint32(seqno) && seekeoln() && lookup_block(shard, 1, seqno);
+    return parse_shard_id(shard) && parse_uint32(seqno) && seekeoln() && lookup_show_block(shard, 1, seqno);
   } else if (word == "byutime") {
-    return parse_shard_id(shard) && parse_uint32(utime) && seekeoln() && lookup_block(shard, 4, utime);
+    return parse_shard_id(shard) && parse_uint32(utime) && seekeoln() && lookup_show_block(shard, 4, utime);
   } else if (word == "bylt") {
-    return parse_shard_id(shard) && parse_lt(lt) && seekeoln() && lookup_block(shard, 2, lt);
+    return parse_shard_id(shard) && parse_lt(lt) && seekeoln() && lookup_show_block(shard, 2, lt);
   } else if (word == "creatorstats" || word == "recentcreatorstats") {
     count = 1000;
     int mode = (word == "recentcreatorstats" ? 4 : 0);
-    return parse_block_id_ext(blkid) && (!mode || parse_uint32(utime)) && (seekeoln() || parse_uint32(count)) &&
-           (seekeoln() || (parse_hash(hash) && (mode |= 1))) && seekeoln() &&
-           get_creator_stats(blkid, mode, count, hash, utime);
+    return parse_block_id_ext(blkid) && (!mode || parse_uint32(utime)) &&
+           (seekeoln() ? (mode |= 0x100) : parse_uint32(count)) && (seekeoln() || (parse_hash(hash) && (mode |= 1))) &&
+           seekeoln() && get_creator_stats(blkid, mode, count, hash, utime);
+  } else if (word == "checkload" || word == "checkloadall" || word == "checkloadsevere") {
+    int time1, time2, mode = (word == "checkloadsevere");
+    std::string file_pfx;
+    return parse_int32(time1) && parse_int32(time2) && (seekeoln() || ((mode |= 2) && get_word_to(file_pfx))) &&
+           seekeoln() && check_validator_load(time1, time2, mode, file_pfx);
+  } else if (word == "loadproofcheck") {
+    std::string filename;
+    return get_word_to(filename) && seekeoln() && set_error(check_validator_load_proof(filename));
   } else if (word == "known") {
     return eoln() && show_new_blkids(true);
   } else if (word == "knowncells") {
@@ -1293,16 +1320,17 @@ bool TestNode::dns_resolve_start(ton::WorkchainId workchain, ton::StdSmcAddress 
       workchain = ton::masterchainId;
       addr = dns_root_;
     } else {
-      auto P = td::PromiseCreator::lambda([this, blkid, domain, cat, mode](td::Result<td::Unit> R) {
-        if (R.is_error()) {
-          LOG(ERROR) << "cannot obtain root dns address from configuration: " << R.move_as_error();
-        } else if (dns_root_queried_) {
-          dns_resolve_start(ton::masterchainId, dns_root_, blkid, domain, cat, mode);
-        } else {
-          LOG(ERROR) << "cannot obtain root dns address from configuration parameter #4";
-        }
-      });
-      return get_config_params(mc_last_id_, std::move(P), 0x5000, "", {4});
+      auto P =
+          td::PromiseCreator::lambda([this, blkid, domain, cat, mode](td::Result<std::unique_ptr<block::Config>> R) {
+            if (R.is_error()) {
+              LOG(ERROR) << "cannot obtain root dns address from configuration: " << R.move_as_error();
+            } else if (dns_root_queried_) {
+              dns_resolve_start(ton::masterchainId, dns_root_, blkid, domain, cat, mode);
+            } else {
+              LOG(ERROR) << "cannot obtain root dns address from configuration parameter #4";
+            }
+          });
+      return get_config_params(mc_last_id_, std::move(P), 0x3000, "", {4});
     }
   }
   return dns_resolve_send(workchain, addr, blkid, domain, qdomain, cat, mode);
@@ -2185,107 +2213,138 @@ void TestNode::got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::Bu
   show_new_blkids();
 }
 
-bool TestNode::get_config_params(ton::BlockIdExt blkid, td::Promise<td::Unit> do_after, int mode, std::string filename,
-                                 std::vector<int> params) {
+bool TestNode::parse_get_config_params(ton::BlockIdExt blkid, int mode, std::string filename, std::vector<int> params) {
   if (mode < 0) {
-    mode = 0x8000;
+    mode = 0x80000;
   }
-  if (!(mode & 0x9000) && !seekeoln()) {
+  if (!(mode & 0x81000) && !seekeoln()) {
     mode |= 0x1000;
     while (!seekeoln()) {
       int x;
       if (!convert_int32(get_word(), x)) {
-        do_after.set_error(td::Status::Error("integer configuration parameter id expected"));
         return set_error("integer configuration parameter id expected");
       }
       params.push_back(x);
     }
   }
   if (!(ready_ && !client_.empty())) {
-    do_after.set_error(td::Status::Error("integer configuration parameter id expected"));
     return set_error("server connection not ready");
   }
   if (!blkid.is_masterchain_ext()) {
-    do_after.set_error(td::Status::Error("integer configuration parameter id expected"));
     return set_error("only masterchain blocks contain configuration");
   }
   if (blkid == mc_last_id_) {
     mode |= 0x2000;
   }
+  return get_config_params(blkid, trivial_promise_of<std::unique_ptr<block::Config>>(), mode, filename,
+                           std::move(params));
+}
+
+bool TestNode::get_config_params(ton::BlockIdExt blkid, td::Promise<std::unique_ptr<block::Config>> promise, int mode,
+                                 std::string filename, std::vector<int> params) {
+  return get_config_params_ext(blkid, promise.wrap([](ConfigInfo&& info) { return std::move(info.config); }),
+                               mode | 0x10000, filename, params);
+}
+
+bool TestNode::get_config_params_ext(ton::BlockIdExt blkid, td::Promise<ConfigInfo> promise, int mode,
+                                     std::string filename, std::vector<int> params) {
+  if (!(ready_ && !client_.empty())) {
+    promise.set_error(td::Status::Error("server connection not ready"));
+    return false;
+  }
+  if (!blkid.is_masterchain_ext()) {
+    promise.set_error(td::Status::Error("masterchain reference block expected"));
+    return false;
+  }
+  if (blkid == mc_last_id_) {
+    mode |= 0x2000;
+  }
   auto params_copy = params;
-  auto b = (mode & 0x1000)
-               ? ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getConfigParams>(
-                                              0, ton::create_tl_lite_block_id(blkid), std::move(params_copy)),
-                                          true)
-               : ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getConfigAll>(
-                                              0, ton::create_tl_lite_block_id(blkid)),
-                                          true);
+  auto b = (mode & 0x1000) ? ton::serialize_tl_object(
+                                 ton::create_tl_object<ton::lite_api::liteServer_getConfigParams>(
+                                     mode & 0x8fff, ton::create_tl_lite_block_id(blkid), std::move(params_copy)),
+                                 true)
+                           : ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getConfigAll>(
+                                                          mode & 0x8fff, ton::create_tl_lite_block_id(blkid)),
+                                                      true);
   LOG(INFO) << "requesting " << params.size() << " configuration parameters with respect to masterchain block "
             << blkid.to_str();
   return envelope_send_query(std::move(b), [Self = actor_id(this), mode, filename, blkid, params = std::move(params),
-                                            do_after = std::move(do_after)](td::Result<td::BufferSlice> R) mutable {
-    if (R.is_error()) {
-      do_after.set_error(R.move_as_error());
-      return;
-    }
-    auto F = ton::fetch_tl_object<ton::lite_api::liteServer_configInfo>(R.move_as_ok(), true);
-    if (F.is_error()) {
-      LOG(ERROR) << "cannot parse answer to liteServer.getConfigParams";
-    } else {
-      auto f = F.move_as_ok();
-      td::actor::send_closure_later(Self, &TestNode::got_config_params, blkid, ton::create_block_id(f->id_),
-                                    std::move(f->state_proof_), std::move(f->config_proof_), mode, filename,
-                                    std::move(params), std::move(do_after));
-    }
+                                            promise = std::move(promise)](td::Result<td::BufferSlice> R) mutable {
+    td::actor::send_closure_later(Self, &TestNode::got_config_params, blkid, mode, filename, std::move(params),
+                                  std::move(R), std::move(promise));
   });
 }
 
-void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, td::BufferSlice state_proof,
-                                 td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params,
-                                 td::Promise<td::Unit> do_after) {
+void TestNode::got_config_params(ton::BlockIdExt req_blkid, int mode, std::string filename, std::vector<int> params,
+                                 td::Result<td::BufferSlice> R, td::Promise<ConfigInfo> promise) {
+  TRY_RESULT_PROMISE(promise, res, std::move(R));
+  TRY_RESULT_PROMISE_PREFIX(promise, f,
+                            ton::fetch_tl_object<ton::lite_api::liteServer_configInfo>(std::move(res), true),
+                            "cannot parse answer to liteServer.getConfigParams");
+  auto blkid = ton::create_block_id(f->id_);
   LOG(INFO) << "got configuration parameters";
   if (!blkid.is_masterchain_ext()) {
-    LOG(ERROR) << "reference block " << blkid.to_str() << " for the configuration is not a valid masterchain block";
+    promise.set_error(td::Status::Error("reference block "s + blkid.to_str() +
+                                        " for the configuration is not a valid masterchain block"));
     return;
   }
-  if (blkid != req_blkid) {
-    LOG(ERROR) << "got configuration parameters with respect to block " << blkid.to_str() << " instead of "
-               << req_blkid.to_str();
-    return;
-  }
-  auto R = block::check_extract_state_proof(blkid, state_proof.as_slice(), cfg_proof.as_slice());
-  if (R.is_error()) {
-    LOG(ERROR) << "masterchain state proof for " << blkid.to_str() << " is invalid : " << R.move_as_error().to_string();
+  bool from_key = (mode & 0x8000);
+  if (blkid.seqno() > req_blkid.seqno() || (!from_key && blkid != req_blkid)) {
+    promise.set_error(td::Status::Error("got configuration parameters with respect to block "s + blkid.to_str() +
+                                        " instead of " + req_blkid.to_str()));
     return;
   }
   try {
-    auto res = block::Config::extract_from_state(R.move_as_ok(), mode >= 0 ? mode & 0xfff : 0);
-    if (res.is_error()) {
-      LOG(ERROR) << "cannot unpack configuration: " << res.move_as_error().to_string();
-      return;
+    Ref<vm::Cell> state, block, state_proof, config_proof;
+    if (!(mode & 0x10000) && !from_key) {
+      TRY_RESULT_PROMISE_PREFIX_ASSIGN(promise, state_proof, vm::std_boc_deserialize(f->state_proof_.as_slice()),
+                                       "cannot deserialize state proof :");
     }
-    auto config = res.move_as_ok();
-    if (mode & 0x8000) {
-      auto F = vm::std_boc_serialize(config->get_root_cell(), 2);
-      if (F.is_error()) {
-        LOG(ERROR) << "cannot serialize configuration: " << F.move_as_error().to_string();
+    if (!(mode & 0x10000) || from_key) {
+      TRY_RESULT_PROMISE_PREFIX_ASSIGN(promise, config_proof, vm::std_boc_deserialize(f->config_proof_.as_slice()),
+                                       "cannot deserialize config proof :");
+    }
+    if (!from_key) {
+      TRY_RESULT_PROMISE_PREFIX_ASSIGN(
+          promise, state,
+          block::check_extract_state_proof(blkid, f->state_proof_.as_slice(), f->config_proof_.as_slice()),
+          PSLICE() << "masterchain state proof for " << blkid.to_str() << " is invalid :");
+    } else {
+      block = vm::MerkleProof::virtualize(config_proof, 1);
+      if (block.is_null()) {
+        promise.set_error(
+            td::Status::Error("cannot virtualize configuration proof constructed from key block "s + blkid.to_str()));
         return;
       }
-      auto size = F.ok().size();
-      auto W = td::write_file(filename, F.move_as_ok());
-      if (W.is_error()) {
-        LOG(ERROR) << "cannot save file `" << filename << "` : " << W.move_as_error().to_string();
-        return;
-      }
+      TRY_STATUS_PROMISE_PREFIX(promise, block::check_block_header_proof(config_proof, blkid),
+                                PSLICE() << "incorrect header for key block " << blkid.to_str());
+    }
+    TRY_RESULT_PROMISE_PREFIX(promise, config,
+                              from_key ? block::Config::extract_from_key_block(block, mode & 0xfff)
+                                       : block::Config::extract_from_state(state, mode & 0xfff),
+                              "cannot unpack configuration:");
+    ConfigInfo cinfo{std::move(config), std::move(state_proof), std::move(config_proof)};
+    if (mode & 0x80000) {
+      TRY_RESULT_PROMISE_PREFIX(promise, boc, vm::std_boc_serialize(cinfo.config->get_root_cell(), 2),
+                                "cannot serialize configuration:");
+      auto size = boc.size();
+      TRY_STATUS_PROMISE_PREFIX(promise, td::write_file(filename, std::move(boc)),
+                                PSLICE() << "cannot save file `" << filename << "` :");
       td::TerminalIO::out() << "saved configuration dictionary into file `" << filename << "` (" << size
                             << " bytes written)" << std::endl;
+      promise.set_result(std::move(cinfo));
+      return;
+    }
+    if (mode & 0x4000) {
+      promise.set_result(std::move(cinfo));
       return;
     }
     auto out = td::TerminalIO::out();
     if (mode & 0x1000) {
       for (int i : params) {
         out << "ConfigParam(" << i << ") = ";
-        auto value = config->get_config_param(i);
+        auto value = cinfo.config->get_config_param(i);
         if (value.is_null()) {
           out << "(null)\n";
         } else {
@@ -2302,7 +2361,7 @@ void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blki
         }
       }
     } else {
-      config->foreach_config_param([this, &out, mode](int i, Ref<vm::Cell> value) {
+      cinfo.config->foreach_config_param([this, &out, mode](int i, Ref<vm::Cell> value) {
         out << "ConfigParam(" << i << ") = ";
         if (value.is_null()) {
           out << "(null)\n";
@@ -2321,12 +2380,14 @@ void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blki
         return true;
       });
     }
+    promise.set_result(std::move(cinfo));
   } catch (vm::VmError& err) {
-    LOG(ERROR) << "error while traversing configuration: " << err.get_msg();
+    promise.set_error(err.as_status("error while traversing configuration: "));
+    return;
   } catch (vm::VmVirtError& err) {
-    LOG(ERROR) << "virtualization error while traversing configuration: " << err.get_msg();
+    promise.set_error(err.as_status("virtualization error while traversing configuration: "));
+    return;
   }
-  do_after.set_result(td::Unit());
 }
 
 bool TestNode::register_config_param4(Ref<vm::Cell> value) {
@@ -2517,59 +2578,95 @@ void TestNode::got_state(ton::BlockIdExt blkid, ton::RootHash root_hash, ton::Fi
   show_new_blkids();
 }
 
-bool TestNode::get_block_header(ton::BlockIdExt blkid, int mode) {
+bool TestNode::get_show_block_header(ton::BlockIdExt blkid, int mode) {
+  return get_block_header(blkid, mode, [this, blkid](td::Result<BlockHdrInfo> R) {
+    if (R.is_error()) {
+      LOG(ERROR) << "unable to fetch block header: " << R.move_as_error();
+    } else {
+      auto res = R.move_as_ok();
+      show_block_header(res.blk_id, res.virt_blk_root, res.mode);
+      show_new_blkids();
+    }
+  });
+}
+
+bool TestNode::get_block_header(ton::BlockIdExt blkid, int mode, td::Promise<TestNode::BlockHdrInfo> promise) {
   LOG(INFO) << "got block header request for " << blkid.to_str() << " with mode " << mode;
   auto b = ton::serialize_tl_object(
       ton::create_tl_object<ton::lite_api::liteServer_getBlockHeader>(ton::create_tl_lite_block_id(blkid), mode), true);
-  return envelope_send_query(std::move(b), [Self = actor_id(this), blkid](td::Result<td::BufferSlice> res) -> void {
-    if (res.is_error()) {
-      LOG(ERROR) << "cannot obtain block header for " << blkid.to_str()
-                 << " from server : " << res.move_as_error().to_string();
-      return;
-    } else {
-      auto F = ton::fetch_tl_object<ton::lite_api::liteServer_blockHeader>(res.move_as_ok(), true);
-      if (F.is_error()) {
-        LOG(ERROR) << "cannot parse answer to liteServer.getBlockHeader : " << res.move_as_error().to_string();
-      } else {
-        auto f = F.move_as_ok();
-        auto blk_id = ton::create_block_id(f->id_);
-        LOG(INFO) << "obtained block header for " << blk_id.to_str() << " from server";
-        if (blk_id != blkid) {
-          LOG(ERROR) << "block id mismatch: expected data for block " << blkid.to_str() << ", obtained for "
-                     << blk_id.to_str();
-        }
-        td::actor::send_closure_later(Self, &TestNode::got_block_header, blk_id, std::move(f->header_proof_), f->mode_);
-      }
-    }
-  });
-  return false;
+  return envelope_send_query(
+      std::move(b), [this, blkid, promise = std::move(promise)](td::Result<td::BufferSlice> R) mutable -> void {
+        TRY_RESULT_PROMISE_PREFIX(promise, res, std::move(R),
+                                  PSLICE() << "cannot obtain block header for " << blkid.to_str() << " from server :");
+        got_block_header_raw(std::move(res), std::move(promise), blkid);
+      });
 }
 
-bool TestNode::lookup_block(ton::ShardIdFull shard, int mode, td::uint64 arg) {
+bool TestNode::lookup_show_block(ton::ShardIdFull shard, int mode, td::uint64 arg) {
+  return lookup_block(shard, mode, arg, [this](td::Result<BlockHdrInfo> R) {
+    if (R.is_error()) {
+      LOG(ERROR) << "unable to look up block: " << R.move_as_error();
+    } else {
+      auto res = R.move_as_ok();
+      show_block_header(res.blk_id, res.virt_blk_root, res.mode);
+      show_new_blkids();
+    }
+  });
+}
+
+bool TestNode::lookup_block(ton::ShardIdFull shard, int mode, td::uint64 arg,
+                            td::Promise<TestNode::BlockHdrInfo> promise) {
   ton::BlockId id{shard, mode & 1 ? (td::uint32)arg : 0};
   LOG(INFO) << "got block lookup request for " << id.to_str() << " with mode " << mode << " and argument " << arg;
   auto b = ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_lookupBlock>(
                                         mode, ton::create_tl_lite_block_id_simple(id), arg, (td::uint32)arg),
                                     true);
   return envelope_send_query(
-      std::move(b), [Self = actor_id(this), id, mode, arg](td::Result<td::BufferSlice> res) -> void {
-        if (res.is_error()) {
-          LOG(ERROR) << "cannot look up block header for " << id.to_str() << " with mode " << mode << " and argument "
-                     << arg << " from server : " << res.move_as_error().to_string();
-          return;
-        } else {
-          auto F = ton::fetch_tl_object<ton::lite_api::liteServer_blockHeader>(res.move_as_ok(), true);
-          if (F.is_error()) {
-            LOG(ERROR) << "cannot parse answer to liteServer.lookupBlock : " << res.move_as_error().to_string();
-          } else {
-            auto f = F.move_as_ok();
-            auto blk_id = ton::create_block_id(f->id_);
-            LOG(INFO) << "obtained block header for " << blk_id.to_str() << " from server";
-            td::actor::send_closure_later(Self, &TestNode::got_block_header, blk_id, std::move(f->header_proof_),
-                                          f->mode_);
-          }
-        }
+      std::move(b), [this, id, mode, arg, promise = std::move(promise)](td::Result<td::BufferSlice> R) mutable -> void {
+        TRY_RESULT_PROMISE_PREFIX(promise, res, std::move(R),
+                                  PSLICE() << "cannot look up block header for " << id.to_str() << " with mode " << mode
+                                           << " and argument " << arg << " from server :");
+        got_block_header_raw(std::move(res), std::move(promise));
       });
+}
+
+void TestNode::got_block_header_raw(td::BufferSlice res, td::Promise<TestNode::BlockHdrInfo> promise,
+                                    ton::BlockIdExt req_blkid) {
+  TRY_RESULT_PROMISE_PREFIX(promise, f,
+                            ton::fetch_tl_object<ton::lite_api::liteServer_blockHeader>(std::move(res), true),
+                            "cannot parse answer to liteServer.lookupBlock :");
+  auto blk_id = ton::create_block_id(f->id_);
+  LOG(INFO) << "obtained block header for " << blk_id.to_str() << " from server (" << f->header_proof_.size()
+            << " data bytes)";
+  if (req_blkid.is_valid() && blk_id != req_blkid) {
+    promise.set_error(td::Status::Error(PSLICE() << "block id mismatch: expected data for block " << req_blkid.to_str()
+                                                 << ", obtained for " << blk_id.to_str()));
+    return;
+  }
+  TRY_RESULT_PROMISE_PREFIX(promise, root, vm::std_boc_deserialize(std::move(f->header_proof_)),
+                            "cannot deserialize block header data :");
+  bool ok = false;
+  td::Status E;
+  try {
+    auto virt_root = vm::MerkleProof::virtualize(root, 1);
+    if (virt_root.is_null()) {
+      promise.set_error(td::Status::Error(PSLICE() << "block header proof for block " << blk_id.to_str()
+                                                   << " is not a valid Merkle proof"));
+      return;
+    }
+    ok = true;
+    promise.set_result(BlockHdrInfo{blk_id, std::move(root), std::move(virt_root), f->mode_});
+    return;
+  } catch (vm::VmError& err) {
+    E = err.as_status(PSLICE() << "error processing header for " << blk_id.to_str() << " :");
+  } catch (vm::VmVirtError& err) {
+    E = err.as_status(PSLICE() << "error processing header for " << blk_id.to_str() << " :");
+  }
+  if (ok) {
+    LOG(ERROR) << std::move(E);
+  } else {
+    promise.set_error(std::move(E));
+  }
 }
 
 bool TestNode::show_block_header(ton::BlockIdExt blkid, Ref<vm::Cell> root, int mode) {
@@ -2721,10 +2818,10 @@ void TestNode::got_block_proof(ton::BlockIdExt from, ton::BlockIdExt to, int mod
     register_blkid(chain->key_blkid);
   }
   register_blkid(chain->to);
-  auto now = static_cast<td::uint32>(td::Clocks::system());
-  if (!(mode & 1) || (chain->last_utime > now - 3600)) {
+  auto time = now();
+  if (!(mode & 1) || (chain->last_utime > time - 3600)) {
     td::TerminalIO::out() << "last block in chain was generated at " << chain->last_utime << " ("
-                          << now - chain->last_utime << " seconds ago)\n";
+                          << time - chain->last_utime << " seconds ago)\n";
   }
   show_new_blkids();
 }
@@ -2740,93 +2837,710 @@ bool TestNode::get_creator_stats(ton::BlockIdExt blkid, int mode, unsigned req_c
   if (!(mode & 1)) {
     start_after.set_zero();
   }
-  auto b = ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_getValidatorStats>(
-                                        mode, ton::create_tl_lite_block_id(blkid), req_count, start_after, min_utime),
-                                    true);
-  LOG(INFO) << "requesting up to " << req_count << " block creator stats records with respect to masterchain block "
-            << blkid.to_str() << " starting from validator public key " << start_after.to_hex() << " created after "
-            << min_utime << " (mode=" << mode << ")";
-  return envelope_send_query(std::move(b), [Self = actor_id(this), mode, blkid, req_count, start_after,
-                                            min_utime](td::Result<td::BufferSlice> R) {
-    if (R.is_error()) {
-      return;
-    }
-    auto F = ton::fetch_tl_object<ton::lite_api::liteServer_validatorStats>(R.move_as_ok(), true);
-    if (F.is_error()) {
-      LOG(ERROR) << "cannot parse answer to liteServer.getValidatorStats";
-    } else {
-      auto f = F.move_as_ok();
-      td::actor::send_closure_later(Self, &TestNode::got_creator_stats, blkid, ton::create_block_id(f->id_), mode,
-                                    f->mode_, start_after, min_utime, std::move(f->state_proof_),
-                                    std::move(f->data_proof_), f->count_, req_count, f->complete_);
-    }
-  });
+  auto osp = std::make_unique<std::ostringstream>();
+  auto& os = *osp;
+  return get_creator_stats(
+      blkid, mode, req_count, start_after, min_utime,
+      [min_utime, &os](const td::Bits256& key, const block::DiscountedCounter& mc_cnt,
+                       const block::DiscountedCounter& shard_cnt) -> bool {
+        os << key.to_hex() << " mc_cnt:" << mc_cnt << " shard_cnt:" << shard_cnt << std::endl;
+        return true;
+      },
+      td::PromiseCreator::lambda([os = std::move(osp)](td::Result<td::Bits256> res) {
+        if (res.is_error()) {
+          LOG(ERROR) << "error obtaining creator stats: " << res.move_as_error();
+        } else {
+          if (res.ok().is_zero()) {
+            *os << "(complete)" << std::endl;
+          } else {
+            *os << "(incomplete, repeat query from " << res.move_as_ok().to_hex() << " )" << std::endl;
+          }
+          td::TerminalIO::out() << os->str();
+        }
+      }));
 }
 
-void TestNode::got_creator_stats(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, int req_mode, int mode,
-                                 td::Bits256 start_after, ton::UnixTime min_utime, td::BufferSlice state_proof,
-                                 td::BufferSlice data_proof, int count, int req_count, bool complete) {
+bool TestNode::get_creator_stats(ton::BlockIdExt blkid, int mode, unsigned req_count, ton::Bits256 start_after,
+                                 ton::UnixTime min_utime, TestNode::creator_stats_func_t func,
+                                 td::Promise<td::Bits256> promise) {
+  return get_creator_stats(blkid, req_count, min_utime, std::move(func),
+                           std::make_unique<CreatorStatsRes>(mode | 0x10000, start_after),
+                           promise.wrap([](auto&& p) { return p->last_key; }));
+}
+
+bool TestNode::get_creator_stats(ton::BlockIdExt blkid, unsigned req_count, ton::UnixTime min_utime,
+                                 TestNode::creator_stats_func_t func, std::unique_ptr<TestNode::CreatorStatsRes> state,
+                                 td::Promise<std::unique_ptr<TestNode::CreatorStatsRes>> promise) {
+  if (!(ready_ && !client_.empty())) {
+    promise.set_error(td::Status::Error("server connection not ready"));
+    return false;
+  }
+  if (!state) {
+    promise.set_error(td::Status::Error("null CreatorStatsRes"));
+    return false;
+  }
+  if (!blkid.is_masterchain_ext()) {
+    promise.set_error(td::Status::Error("only masterchain blocks contain block creator statistics"));
+    return false;
+  }
+  if (!(state->mode & 1)) {
+    state->last_key.set_zero();
+  }
+  auto b = ton::serialize_tl_object(
+      ton::create_tl_object<ton::lite_api::liteServer_getValidatorStats>(
+          state->mode & 0xff, ton::create_tl_lite_block_id(blkid), req_count, state->last_key, min_utime),
+      true);
+  LOG(INFO) << "requesting up to " << req_count << " block creator stats records with respect to masterchain block "
+            << blkid.to_str() << " starting from validator public key " << state->last_key.to_hex() << " created after "
+            << min_utime << " (mode=" << state->mode << ")";
+  return envelope_send_query(
+      std::move(b), [this, blkid, req_count, state = std::move(state), min_utime, func = std::move(func),
+                     promise = std::move(promise)](td::Result<td::BufferSlice> R) mutable {
+        TRY_RESULT_PROMISE(promise, res, std::move(R));
+        TRY_RESULT_PROMISE_PREFIX(promise, f,
+                                  ton::fetch_tl_object<ton::lite_api::liteServer_validatorStats>(std::move(res), true),
+                                  "cannot parse answer to liteServer.getValidatorStats");
+        got_creator_stats(blkid, ton::create_block_id(f->id_), f->mode_, min_utime, std::move(f->state_proof_),
+                          std::move(f->data_proof_), f->count_, req_count, f->complete_, std::move(func),
+                          std::move(state), std::move(promise));
+      });
+}
+
+void TestNode::got_creator_stats(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, int mode, ton::UnixTime min_utime,
+                                 td::BufferSlice state_proof, td::BufferSlice data_proof, int count, int req_count,
+                                 bool complete, TestNode::creator_stats_func_t func,
+                                 std::unique_ptr<TestNode::CreatorStatsRes> status,
+                                 td::Promise<std::unique_ptr<TestNode::CreatorStatsRes>> promise) {
   LOG(INFO) << "got answer to getValidatorStats query: " << count << " records out of " << req_count << ", "
             << (complete ? "complete" : "incomplete");
   if (!blkid.is_masterchain_ext()) {
-    LOG(ERROR) << "reference block " << blkid.to_str()
-               << " for block creator statistics is not a valid masterchain block";
+    promise.set_error(td::Status::Error(PSLICE() << "reference block " << blkid.to_str()
+                                                 << " for block creator statistics is not a valid masterchain block"));
     return;
   }
   if (count > req_count) {
-    LOG(ERROR) << "obtained " << count << " answers to getValidatorStats query, but only " << req_count
-               << " were requested";
+    promise.set_error(td::Status::Error(PSLICE()
+                                        << "obtained " << count << " answers to getValidatorStats query, but only "
+                                        << req_count << " were requested"));
     return;
   }
   if (blkid != req_blkid) {
-    LOG(ERROR) << "answer to getValidatorStats refers to masterchain block " << blkid.to_str()
-               << " different from requested " << req_blkid.to_str();
+    promise.set_error(td::Status::Error(PSLICE()
+                                        << "answer to getValidatorStats refers to masterchain block " << blkid.to_str()
+                                        << " different from requested " << req_blkid.to_str()));
     return;
   }
-  auto R = block::check_extract_state_proof(blkid, state_proof.as_slice(), data_proof.as_slice());
-  if (R.is_error()) {
-    LOG(ERROR) << "masterchain state proof for " << blkid.to_str() << " is invalid : " << R.move_as_error().to_string();
-    return;
+  TRY_RESULT_PROMISE_PREFIX(promise, state,
+                            block::check_extract_state_proof(blkid, state_proof.as_slice(), data_proof.as_slice()),
+                            PSLICE() << "masterchain state proof for " << blkid.to_str() << " is invalid :");
+  if (!(mode & 0x10000)) {
+    if (status->state_proof.is_null()) {
+      TRY_RESULT_PROMISE_PREFIX(
+          promise, state_root, vm::std_boc_deserialize(state_proof.as_slice()),
+          PSLICE() << "cannot deserialize masterchain state proof for " << blkid.to_str() << ": ");
+      status->state_proof = std::move(state_root);
+    }
+    TRY_RESULT_PROMISE_PREFIX(
+        promise, data_root, vm::std_boc_deserialize(data_proof.as_slice()),
+        PSLICE() << "cannot deserialize masterchain creators data proof for " << blkid.to_str() << ": ");
+    if (status->data_proof.is_null()) {
+      status->data_proof = std::move(data_root);
+    } else {
+      TRY_RESULT_PROMISE_PREFIX(promise, data_proof2,
+                                vm::MerkleProof::combine_fast_status(status->data_proof, std::move(data_root)),
+                                "cannot combine Merkle proofs for creator data");
+      status->data_proof = std::move(data_proof2);
+    }
   }
   bool allow_eq = (mode & 3) != 1;
-  ton::Bits256 key{start_after};
+  ton::Bits256 key{status->last_key};
   std::ostringstream os;
   try {
-    auto dict = block::get_block_create_stats_dict(R.move_as_ok());
+    auto dict = block::get_block_create_stats_dict(std::move(state));
     if (!dict) {
-      LOG(ERROR) << "cannot extract BlockCreateStats from mc state";
+      promise.set_error(td::Status::Error("cannot extract BlockCreateStats from mc state"));
       return;
     }
     for (int i = 0; i < count + (int)complete; i++) {
       auto v = dict->lookup_nearest_key(key, true, allow_eq);
       if (v.is_null()) {
         if (i != count) {
-          LOG(ERROR) << "could fetch only " << i << " CreatorStats entries out of " << count
-                     << " declared in answer to getValidatorStats";
+          promise.set_error(td::Status::Error(PSLICE() << "could fetch only " << i << " CreatorStats entries out of "
+                                                       << count << " declared in answer to getValidatorStats"));
           return;
         }
         break;
       }
       block::DiscountedCounter mc_cnt, shard_cnt;
       if (!block::unpack_CreatorStats(std::move(v), mc_cnt, shard_cnt)) {
-        LOG(ERROR) << "invalid CreatorStats record with key " << key.to_hex();
+        promise.set_error(td::Status::Error(PSLICE() << "invalid CreatorStats record with key " << key.to_hex()));
         return;
       }
       if (mc_cnt.modified_since(min_utime) || shard_cnt.modified_since(min_utime)) {
-        os << key.to_hex() << " mc_cnt:" << mc_cnt << " shard_cnt:" << shard_cnt << std::endl;
+        func(key, mc_cnt, shard_cnt);
       }
       allow_eq = false;
     }
     if (complete) {
-      os << "(complete)" << std::endl;
+      status->last_key.set_zero();
+      status->complete = true;
+      promise.set_result(std::move(status));
+    } else if (!(status->mode & 0x100)) {
+      status->last_key = key;
+      promise.set_result(std::move(status));
     } else {
-      os << "(incomplete, repeat query from " << key.to_hex() << " )" << std::endl;
+      // incomplete, send new query to fetch next entries
+      status->last_key = key;
+      status->mode |= 1;
+      get_creator_stats(blkid, req_count, min_utime, std::move(func), std::move(status), std::move(promise));
     }
-    td::TerminalIO::out() << os.str();
   } catch (vm::VmError& err) {
-    LOG(ERROR) << "error while traversing block creator stats: " << err.get_msg();
+    promise.set_error(err.as_status("error while traversing block creator stats:"));
   } catch (vm::VmVirtError& err) {
-    LOG(ERROR) << "virtualization error while traversing block creator stats: " << err.get_msg();
+    promise.set_error(err.as_status("virtualization error while traversing block creator stats:"));
+  }
+}
+
+bool TestNode::check_validator_load(int start_time, int end_time, int mode, std::string file_pfx) {
+  int time = now();
+  if (start_time <= 0) {
+    start_time += time;
+  }
+  if (end_time <= 0) {
+    end_time += time;
+  }
+  if (start_time >= end_time) {
+    return set_error("end time must be later than start time");
+  }
+  LOG(INFO) << "requesting masterchain blocks corresponding to unixtime " << start_time << " and " << end_time;
+  auto P = td::split_promise([this, mode, file_pfx](td::Result<std::pair<BlockHdrInfo, BlockHdrInfo>> R) {
+    if (R.is_error()) {
+      LOG(ERROR) << "cannot obtain block info: " << R.move_as_error();
+      return;
+    }
+    auto res = R.move_as_ok();
+    continue_check_validator_load(res.first.blk_id, res.first.proof, res.second.blk_id, res.second.proof, mode,
+                                  file_pfx);
+  });
+  lookup_block(ton::ShardIdFull(ton::masterchainId), 4, start_time, std::move(P.first));
+  return lookup_block(ton::ShardIdFull(ton::masterchainId), 4, end_time, std::move(P.second));
+}
+
+void TestNode::continue_check_validator_load(ton::BlockIdExt blkid1, Ref<vm::Cell> root1, ton::BlockIdExt blkid2,
+                                             Ref<vm::Cell> root2, int mode, std::string file_pfx) {
+  LOG(INFO) << "continue_check_validator_load for blocks " << blkid1.to_str() << " and " << blkid2.to_str()
+            << " : requesting configuration parameter #34";
+  auto P = td::split_promise(
+      [this, blkid1, root1, blkid2, root2, mode, file_pfx](td::Result<std::pair<ConfigInfo, ConfigInfo>> R) mutable {
+        if (R.is_error()) {
+          LOG(ERROR) << "cannot obtain configuration parameter #34 : " << R.move_as_error();
+          return;
+        }
+        auto res = R.move_as_ok();
+        root1 = vm::MerkleProof::combine_fast(std::move(root1), std::move(res.first.state_proof));
+        root2 = vm::MerkleProof::combine_fast(std::move(root2), std::move(res.second.state_proof));
+        if (root1.is_null() || root2.is_null()) {
+          LOG(ERROR) << "cannot merge block header proof with block state proof";
+          return;
+        }
+        auto info1 = std::make_unique<ValidatorLoadInfo>(blkid1, std::move(root1), std::move(res.first.config_proof),
+                                                         std::move(res.first.config));
+        auto info2 = std::make_unique<ValidatorLoadInfo>(blkid2, std::move(root2), std::move(res.second.config_proof),
+                                                         std::move(res.second.config));
+        continue_check_validator_load2(std::move(info1), std::move(info2), mode, file_pfx);
+      });
+  get_config_params_ext(blkid1, std::move(P.first), 0x4000, "", {28, 34});
+  get_config_params_ext(blkid2, std::move(P.second), 0x4000, "", {28, 34});
+}
+
+bool TestNode::ValidatorLoadInfo::unpack_vset() {
+  if (!config) {
+    return false;
+  }
+  auto vset_root = config->get_config_param(34);
+  if (vset_root.is_null()) {
+    LOG(ERROR) << "no configuration parameter 34 for block " << blk_id.to_str();
+    return false;
+  }
+  auto R = block::Config::unpack_validator_set(std::move(vset_root));
+  if (R.is_error()) {
+    LOG(ERROR) << "cannot unpack validator set from configuration parameter 34 of block " << blk_id.to_str() << " : "
+               << R.move_as_error();
+    return false;
+  }
+  vset = R.move_as_ok();
+  valid_since = vset->utime_since;
+  vset_map = vset->compute_validator_map();
+  return true;
+}
+
+bool TestNode::ValidatorLoadInfo::store_record(const td::Bits256& key, const block::DiscountedCounter& mc_cnt,
+                                               const block::DiscountedCounter& shard_cnt) {
+  if (!(mc_cnt.is_valid() && shard_cnt.is_valid())) {
+    return false;
+  }
+  if (mc_cnt.total >= (1ULL << 60) || shard_cnt.total >= (1ULL << 60)) {
+    return false;
+  }
+  if (key.is_zero()) {
+    created_total.first = (td::int64)mc_cnt.total;
+    created_total.second = (td::int64)shard_cnt.total;
+    return true;
+  }
+  auto it = vset_map.find(key);
+  if (it == vset_map.end()) {
+    return false;
+  }
+  created.at(it->second) = std::make_pair<td::int64, td::int64>(mc_cnt.total, shard_cnt.total);
+  return true;
+}
+
+bool TestNode::load_creator_stats(std::unique_ptr<TestNode::ValidatorLoadInfo> load_to,
+                                  td::Promise<std::unique_ptr<TestNode::ValidatorLoadInfo>> promise, bool need_proofs) {
+  if (!load_to) {
+    promise.set_error(td::Status::Error("no ValidatorLoadInfo"));
+    return false;
+  }
+  auto& info = *load_to;
+  info.created_total.first = info.created_total.second = 0;
+  info.created.resize(0);
+  info.created.resize(info.vset->total, std::make_pair<td::uint64, td::uint64>(0, 0));
+  ton::UnixTime min_utime = info.valid_since - 1000;
+  return get_creator_stats(
+      info.blk_id, 1000, min_utime,
+      [min_utime, &info](const td::Bits256& key, const block::DiscountedCounter& mc_cnt,
+                         const block::DiscountedCounter& shard_cnt) -> bool {
+        info.store_record(key, mc_cnt, shard_cnt);
+        return true;
+      },
+      std::make_unique<CreatorStatsRes>(need_proofs ? 0x100 : 0x10100),
+      td::PromiseCreator::lambda([load_to = std::move(load_to), promise = std::move(promise)](
+                                     td::Result<std::unique_ptr<CreatorStatsRes>> R) mutable {
+        TRY_RESULT_PROMISE_PREFIX(promise, res, std::move(R), "error obtaining creator stats:");
+        if (!res->complete) {
+          promise.set_error(td::Status::Error("incomplete creator stats"));
+          return;
+        }
+        // merge
+        load_to->state_proof =
+            vm::MerkleProof::combine_fast(std::move(load_to->state_proof), std::move(res->state_proof));
+        load_to->data_proof = vm::MerkleProof::combine_fast(std::move(load_to->data_proof), std::move(res->data_proof));
+        promise.set_result(std::move(load_to));
+      }));
+}
+
+void TestNode::continue_check_validator_load2(std::unique_ptr<TestNode::ValidatorLoadInfo> info1,
+                                              std::unique_ptr<TestNode::ValidatorLoadInfo> info2, int mode,
+                                              std::string file_pfx) {
+  LOG(INFO) << "continue_check_validator_load2 for blocks " << info1->blk_id.to_str() << " and "
+            << info1->blk_id.to_str() << " : requesting block creators data";
+  if (!(info1->unpack_vset() && info2->unpack_vset())) {
+    return;
+  }
+  if (info1->valid_since != info2->valid_since) {
+    LOG(ERROR) << "blocks appear to have different validator sets";
+    return;
+  }
+  LOG(INFO) << "validator sets valid since " << info1->valid_since;
+  auto P = td::split_promise(
+      [this, mode,
+       file_pfx](td::Result<std::pair<std::unique_ptr<ValidatorLoadInfo>, std::unique_ptr<ValidatorLoadInfo>>> R) {
+        if (R.is_error()) {
+          LOG(ERROR) << "cannot load block creation statistics : " << R.move_as_error();
+          return;
+        }
+        auto res = R.move_as_ok();
+        continue_check_validator_load3(std::move(res.first), std::move(res.second), mode, file_pfx);
+      });
+  load_creator_stats(std::move(info1), std::move(P.first), true);
+  load_creator_stats(std::move(info2), std::move(P.second), true);
+}
+
+// computes the probability of creating <= x masterchain blocks if the expected value is y
+static double create_prob(int x, double y) {
+  if (x < 0 || y < 0) {
+    return .5;
+  }
+  if (x >= y) {
+    return .5;
+  }
+  if (x <= 20) {
+    // Poisson
+    double t = exp(-y), s = t;
+    for (int n = 1; n <= x; n++) {
+      s += t = (t * y) / n;
+    }
+    return s;
+  }
+  // normal approximation
+  double z = (x - y) / sqrt(2. * y);
+  return (1. + erf(z)) / 2;
+}
+
+static double shard_create_prob(int x, double y, double chunk_size) {
+  if (x < 0 || y < 0) {
+    return .5;
+  }
+  if (x >= y) {
+    return .5;
+  }
+  double y0 = y / chunk_size;  // expected chunks
+  if (!x) {
+    return y0 > 100 ? 0 : exp(-y0);  // Poisson approximation for having participated in zero chunks
+  }
+  // at least ten chunks, normal approximation
+  double z = (x - y) / sqrt(2. * y * chunk_size);
+  return (1. + erf(z)) / 2;
+}
+
+void TestNode::continue_check_validator_load3(std::unique_ptr<TestNode::ValidatorLoadInfo> info1,
+                                              std::unique_ptr<TestNode::ValidatorLoadInfo> info2, int mode,
+                                              std::string file_pfx) {
+  LOG(INFO) << "continue_check_validator_load3 for blocks " << info1->blk_id.to_str() << " and "
+            << info1->blk_id.to_str() << " with mode=" << mode << " and file prefix `" << file_pfx
+            << "`: comparing block creators data";
+  if (info1->created_total.first <= 0 || info2->created_total.first <= 0) {
+    LOG(ERROR) << "no total created blocks statistics";
+    return;
+  }
+  td::TerminalIO::out() << "total: (" << info1->created_total.first << "," << info1->created_total.second << ") -> ("
+                        << info2->created_total.first << "," << info2->created_total.second << ")\n";
+  auto x = info2->created_total.first - info1->created_total.first;
+  auto y = info2->created_total.second - info1->created_total.second;
+  td::int64 xs = 0, ys = 0;
+  if (x <= 0 || y < 0 || (x | y) >= (1u << 31)) {
+    LOG(ERROR) << "impossible situation: zero or no blocks created: " << x << " masterchain blocks, " << y
+               << " shardchain blocks";
+    return;
+  }
+  std::pair<int, int> created_total{(int)x, (int)y};
+  int count = info1->vset->total;
+  CHECK(info2->vset->total == count);
+  CHECK((int)info1->created.size() == count);
+  CHECK((int)info2->created.size() == count);
+  std::vector<std::pair<int, int>> d;
+  d.reserve(count);
+  for (int i = 0; i < count; i++) {
+    auto x1 = info2->created[i].first - info1->created[i].first;
+    auto y1 = info2->created[i].second - info1->created[i].second;
+    if (x1 < 0 || y1 < 0 || (x1 | y1) >= (1u << 31)) {
+      LOG(ERROR) << "impossible situation: validator #i created a negative amount of blocks: " << x1
+                 << " masterchain blocks, " << y1 << " shardchain blocks";
+      return;
+    }
+    xs += x1;
+    ys += y1;
+    d.emplace_back((int)x1, (int)y1);
+    td::TerminalIO::out() << "val #" << i << ": created (" << x1 << "," << y1 << ") ; was (" << info1->created[i].first
+                          << "," << info1->created[i].second << ")\n";
+  }
+  if (xs != x || ys != y) {
+    LOG(ERROR) << "cannot account for all blocks created: total is (" << x << "," << y
+               << "), but the sum for all validators is (" << xs << "," << ys << ")";
+    return;
+  }
+  td::TerminalIO::out() << "total: (" << x << "," << y << ")\n";
+  auto ccfg = block::Config::unpack_catchain_validators_config(info2->config->get_config_param(28));
+  auto ccfg_old = block::Config::unpack_catchain_validators_config(info1->config->get_config_param(28));
+  if (ccfg.shard_val_num != ccfg_old.shard_val_num || ccfg.shard_val_num <= 0) {
+    LOG(ERROR) << "shard validator group size changed from " << ccfg_old.shard_val_num << " to " << ccfg.shard_val_num
+               << ", or is not positive";
+    return;
+  }
+  int shard_count = ccfg.shard_val_num, main_count = info2->vset->main;
+  if (info1->vset->main != main_count || main_count <= 0) {
+    LOG(ERROR) << "masterchain validator group size changed from " << info1->vset->main << " to " << main_count
+               << ", or is not positive";
+    return;
+  }
+  int cnt = 0, cnt_ok = 0;
+  double chunk_size = ccfg.shard_val_lifetime / 3. / shard_count;
+  block::MtCarloComputeShare shard_share(shard_count, info2->vset->export_scaled_validator_weights());
+  for (int i = 0; i < count; i++) {
+    int x1 = d[i].first, y1 = d[i].second;
+    double xe = (i < main_count ? (double)xs / main_count : 0);
+    double ye = shard_share[i] * (double)ys / shard_count;
+    td::Bits256 pk = info2->vset->list[i].pubkey.as_bits256();
+    double p1 = create_prob(x1, .9 * xe), p2 = shard_create_prob(y1, .9 * ye, chunk_size);
+    td::TerminalIO::out() << "val #" << i << ": pubkey " << pk.to_hex() << ", blocks created (" << x1 << "," << y1
+                          << "), expected (" << xe << "," << ye << "), probabilities " << p1 << " and " << p2 << "\n";
+    if (std::min(p1, p2) < .00001) {
+      LOG(ERROR) << "validator #" << i << " with pubkey " << pk.to_hex()
+                 << " : serious misbehavior detected: created less than 90% of the expected amount of blocks with "
+                    "probability 99.999% : created ("
+                 << x1 << "," << y1 << "), expected (" << xe << "," << ye << ") masterchain/shardchain blocks\n";
+      if (mode & 2) {
+        auto st = write_val_create_proof(*info1, *info2, i, true, file_pfx, ++cnt);
+        if (st.is_error()) {
+          LOG(ERROR) << "cannot create proof: " << st.move_as_error();
+        } else {
+          cnt_ok++;
+        }
+      }
+    } else if (std::min(p1, p2) < .001) {
+      LOG(ERROR) << "validator #" << i << " with pubkey " << pk.to_hex()
+                 << " : moderate misbehavior detected: created less than 90% of the expected amount of blocks with "
+                    "probability 99.9% : created ("
+                 << x1 << "," << y1 << "), expected (" << xe << "," << ye << ") masterchain/shardchain blocks\n";
+      if ((mode & 3) == 2) {
+        auto st = write_val_create_proof(*info1, *info2, i, false, file_pfx, ++cnt);
+        if (st.is_error()) {
+          LOG(ERROR) << "cannot create proof: " << st.move_as_error();
+        } else {
+          cnt_ok++;
+        }
+      }
+    }
+  }
+  if (cnt > 0) {
+    LOG(INFO) << cnt_ok << " out of " << cnt << " proofs written to " << file_pfx << "-*.boc";
+  }
+}
+
+td::Status TestNode::write_val_create_proof(TestNode::ValidatorLoadInfo& info1, TestNode::ValidatorLoadInfo& info2,
+                                            int idx, bool severe, std::string file_pfx, int cnt) {
+  std::string filename = PSTRING() << file_pfx << '-' << cnt << ".boc";
+  if (!info1.has_data()) {
+    return td::Status::Error("first block information is incomplete");
+  }
+  if (!info2.has_data()) {
+    return td::Status::Error("second block information is incomplete");
+  }
+  LOG(INFO) << "creating proof file " << filename;
+  TRY_STATUS(info1.check_header_proof(&info1.block_created_at, &info1.end_lt));
+  TRY_STATUS(info2.check_header_proof(&info2.block_created_at, &info2.end_lt));
+  td::Bits256 val_pk1, val_pk2;
+  TRY_RESULT(prod1, info1.build_producer_info(idx, &val_pk1));
+  TRY_RESULT(prod2, info2.build_producer_info(idx, &val_pk2));
+  if (val_pk1 != val_pk2) {
+    return td::Status::Error("validator public key mismatch");
+  }
+  int severity = (severe ? 2 : 1);
+  td::RefInt256 fine = td::make_refint(1000000000);
+  unsigned fine_part = 0xffffffff / 16;  // 1/16
+  Ref<vm::Cell> cpl_descr, complaint;
+  vm::CellBuilder cb;
+  // no_blk_gen_diff prod_info_old:^ProducerInfo prod_info_new:^ProducerInfo = ComplaintDescr
+  if (!(block::gen::t_ComplaintDescr.cell_pack_no_blk_gen_diff(cpl_descr, prod1, prod2) &&
+        cb.store_long_bool(0xbc, 8)                                    // validator_complaint#bc
+        && cb.store_bits_bool(val_pk1)                                 // validator_pubkey:uint256
+        && cb.store_ref_bool(cpl_descr)                                // description:^ComplaintDescr
+        && cb.store_long_bool(now(), 32)                               // created_at:uint32
+        && cb.store_long_bool(severity, 8)                             // severity:uint8
+        && cb.store_zeroes_bool(256)                                   // reward_addr:uint256
+        && cb.store_zeroes_bool(4)                                     // paid:Grams
+        && block::tlb::t_Grams.store_integer_ref(cb, std::move(fine))  // suggested_fine:Grams
+        && cb.store_long_bool(fine_part, 32)                           // suggested_fine_part:uint32
+        && cb.finalize_to(complaint))) {
+    return td::Status::Error("cannot serialize ValidatorComplaint");
+  }
+  if (verbosity >= 5) {
+    std::ostringstream os;
+    os << "complaint: ";
+    block::gen::t_ValidatorComplaint.print_ref(print_limit_, os, complaint);
+    td::TerminalIO::out() << os.str() << std::endl;
+  }
+  if (!block::gen::t_ComplaintDescr.validate_ref(cpl_descr)) {
+    return td::Status::Error("created an invalid ComplaintDescr");
+  }
+  if (!block::gen::t_ValidatorComplaint.validate_ref(complaint)) {
+    return td::Status::Error("created an invalid ValidatorComplaint");
+  }
+  TRY_RESULT_PREFIX(boc, vm::std_boc_serialize(complaint, 2), "cannot create boc:");
+  auto size = boc.size();
+  TRY_STATUS_PREFIX(td::write_file(filename, std::move(boc)), PSLICE() << "cannot save file `" << filename << "` :");
+  td::TerminalIO::out() << "saved validator misbehavior proof into file `" << filename << "` (" << size
+                        << " bytes written)" << std::endl;
+
+  return td::Status::OK();
+}
+
+td::Status TestNode::ValidatorLoadInfo::check_header_proof(ton::UnixTime* save_utime, ton::LogicalTime* save_lt) const {
+  auto state_virt_root = vm::MerkleProof::virtualize(std::move(data_proof), 1);
+  if (state_virt_root.is_null()) {
+    return td::Status::Error("account state proof is invalid");
+  }
+  td::Bits256 state_hash = state_virt_root->get_hash().bits();
+  TRY_STATUS(block::check_block_header_proof(vm::MerkleProof::virtualize(state_proof, 1), blk_id, &state_hash, true,
+                                             save_utime, save_lt));
+  return td::Status::OK();
+}
+
+static bool visit(Ref<vm::Cell> cell);
+
+static bool visit(const vm::CellSlice& cs) {
+  auto cnt = cs.size_refs();
+  bool res = true;
+  for (unsigned i = 0; i < cnt; i++) {
+    res &= visit(cs.prefetch_ref(i));
+  }
+  return res;
+}
+
+static bool visit(Ref<vm::Cell> cell) {
+  if (cell.is_null()) {
+    return true;
+  }
+  vm::CellSlice cs{vm::NoVm{}, std::move(cell)};
+  return visit(cs);
+}
+
+static bool visit(Ref<vm::CellSlice> cs_ref) {
+  return cs_ref.is_null() || visit(*cs_ref);
+}
+
+td::Result<Ref<vm::Cell>> TestNode::ValidatorLoadInfo::build_proof(int idx, td::Bits256* save_pubkey) const {
+  try {
+    auto state_virt_root = vm::MerkleProof::virtualize(std::move(data_proof), 1);
+    if (state_virt_root.is_null()) {
+      return td::Status::Error("account state proof is invalid");
+    }
+    vm::MerkleProofBuilder pb{std::move(state_virt_root)};
+    TRY_RESULT(cfg, block::Config::extract_from_state(pb.root()));
+    visit(cfg->get_config_param(28));
+    block::gen::ValidatorSet::Record_validators_ext rec;
+    if (!tlb::unpack_cell(cfg->get_config_param(34), rec)) {
+      return td::Status::Error("cannot unpack ValidatorSet");
+    }
+    vm::Dictionary vdict{rec.list, 16};
+    auto entry = vdict.lookup(td::BitArray<16>(idx));
+    if (entry.is_null()) {
+      return td::Status::Error("validator entry not found");
+    }
+    Ref<vm::CellSlice> pk;
+    block::gen::ValidatorDescr::Record_validator rec1;
+    block::gen::ValidatorDescr::Record_validator_addr rec2;
+    if (tlb::csr_unpack(entry, rec1)) {
+      pk = std::move(rec1.public_key);
+    } else if (tlb::csr_unpack(std::move(entry), rec2)) {
+      pk = std::move(rec2.public_key);
+    } else {
+      return td::Status::Error("cannot unpack ValidatorDescr");
+    }
+    block::gen::SigPubKey::Record rec3;
+    if (!tlb::csr_unpack(std::move(pk), rec3)) {
+      return td::Status::Error("cannot unpack ed25519_pubkey");
+    }
+    if (save_pubkey) {
+      *save_pubkey = rec3.pubkey;
+    }
+    visit(std::move(entry));
+    auto dict = block::get_block_create_stats_dict(pb.root());
+    if (!dict) {
+      return td::Status::Error("cannot extract BlockCreateStats from mc state");
+    }
+    visit(dict->lookup(rec3.pubkey));
+    visit(dict->lookup(td::Bits256::zero()));
+    return pb.extract_proof();
+  } catch (vm::VmError& err) {
+    return err.as_status("cannot build proof: ");
+  } catch (vm::VmVirtError& err) {
+    return err.as_status("cannot build proof: ");
+  }
+}
+
+td::Result<Ref<vm::Cell>> TestNode::ValidatorLoadInfo::build_producer_info(int idx, td::Bits256* save_pubkey) const {
+  TRY_RESULT(proof, build_proof(idx, save_pubkey));
+  vm::CellBuilder cb;
+  Ref<vm::Cell> res;
+  if (!(cb.store_long_bool(0x34, 8)                           // prod_info#34
+        && cb.store_long_bool(block_created_at, 32)           // utime:uint32
+        && block::tlb::t_ExtBlkRef.store(cb, blk_id, end_lt)  // mc_blk_ref:ExtBlkRef
+        && cb.store_ref_bool(state_proof)                     // state_proof:^Cell
+        && cb.store_ref_bool(proof)                           // prod_proof:^Cell = ProducerInfo
+        && cb.finalize_to(res))) {
+    return td::Status::Error("cannot construct ProducerInfo");
+  }
+  if (!block::gen::t_ProducerInfo.validate_ref(res)) {
+    return td::Status::Error("constructed ProducerInfo failed to pass automated validity checks");
+  }
+  return std::move(res);
+}
+
+td::Status TestNode::check_validator_load_proof(std::string filename) {
+  TRY_RESULT_PREFIX(data, td::read_file(filename), "cannot read proof file:");
+  TRY_RESULT_PREFIX(root, vm::std_boc_deserialize(std::move(data)),
+                    PSTRING() << "cannot deserialize boc from file `" << filename << "`:");
+  if (verbosity >= 5) {
+    std::ostringstream os;
+    os << "complaint: ";
+    block::gen::t_ValidatorComplaint.print_ref(print_limit_, os, root);
+    td::TerminalIO::out() << os.str() << std::endl;
+  }
+  if (!block::gen::t_ValidatorComplaint.validate_ref(root)) {
+    return td::Status::Error("proof file does not contain a valid ValidatorComplaint");
+  }
+  block::gen::ValidatorComplaint::Record rec;
+  if (!tlb::unpack_cell(root, rec)) {
+    return td::Status::Error("cannot unpack ValidatorComplaint");
+  }
+  auto cs = vm::load_cell_slice(rec.description);
+  int tag = block::gen::t_ComplaintDescr.get_tag(cs);
+  if (tag < 0) {
+    return td::Status::Error("ComplaintDescr has an unknown tag");
+  }
+  if (tag != block::gen::ComplaintDescr::no_blk_gen_diff) {
+    return td::Status::Error("can check only ComplaintDescr of type no_blk_gen_diff");
+  }
+  block::gen::ComplaintDescr::Record_no_blk_gen_diff crec;
+  if (!tlb::unpack_exact(cs, crec)) {
+    return td::Status::Error("cannot unpack ComplaintDescr");
+  }
+  TRY_RESULT_PREFIX(info1, ValidatorLoadInfo::preinit_from_producer_info(crec.prod_info_old),
+                    "cannot unpack ProducerInfo in prod_info_old:")
+  TRY_RESULT_PREFIX(info2, ValidatorLoadInfo::preinit_from_producer_info(crec.prod_info_new),
+                    "cannot unpack ProducerInfo in prod_info_new:")
+  // ???
+  return td::Status::OK();
+}
+
+td::Result<std::unique_ptr<TestNode::ValidatorLoadInfo>> TestNode::ValidatorLoadInfo::preinit_from_producer_info(
+    Ref<vm::Cell> prod_info) {
+  if (prod_info.is_null()) {
+    return td::Status::Error("ProducerInfo cell is null");
+  }
+  if (!block::gen::t_ProducerInfo.validate_ref(prod_info)) {
+    return td::Status::Error("invalid ProducerInfo");
+  }
+  block::gen::ProducerInfo::Record rec;
+  ton::BlockIdExt blk_id;
+  ton::LogicalTime end_lt;
+  if (!(tlb::unpack_cell(prod_info, rec) &&
+        block::tlb::t_ExtBlkRef.unpack(std::move(rec.mc_blk_ref), blk_id, &end_lt))) {
+    return td::Status::Error("cannot unpack ProducerInfo");
+  }
+  auto info = std::make_unique<ValidatorLoadInfo>(blk_id, std::move(rec.state_proof), std::move(rec.prod_proof));
+  CHECK(info);
+  info->end_lt = end_lt;
+  info->block_created_at = rec.utime;
+  TRY_STATUS_PREFIX(info->init_check_proofs(), "error checking block/state proofs:");
+  return std::move(info);
+}
+
+td::Status TestNode::ValidatorLoadInfo::init_check_proofs() {
+  try {
+    ton::UnixTime utime;
+    ton::LogicalTime lt;
+    TRY_STATUS(check_header_proof(&utime, &lt));
+    if (utime != block_created_at) {
+      return td::Status::Error(PSLICE() << "incorrect block creation time: declared " << block_created_at << ", actual "
+                                        << utime);
+    }
+    if (lt != end_lt) {
+      return td::Status::Error(PSLICE() << "incorrect block logical time: declared " << end_lt << ", actual " << lt);
+    }
+    auto vstate = vm::MerkleProof::virtualize(data_proof, 1);
+    if (vstate.is_null()) {
+      return td::Status::Error(PSLICE() << "cannot virtualize state of block " << blk_id.to_str());
+    }
+    TRY_RESULT_PREFIX_ASSIGN(config, block::Config::extract_from_state(vstate, 0), "cannot unpack configuration:");
+
+    // ... ??? ...
+    return td::Status::OK();
+  } catch (vm::VmError& err) {
+    return err.as_status("vm error:");
+  } catch (vm::VmVirtError& err) {
+    return err.as_status("virtualization error:");
   }
 }
 

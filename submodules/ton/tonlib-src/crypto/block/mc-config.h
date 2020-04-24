@@ -71,6 +71,8 @@ struct ValidatorSet {
   }
   const ValidatorDescr& at_weight(td::uint64 weight_pos) const;
   std::vector<ton::ValidatorDescr> export_validator_set() const;
+  std::map<ton::Bits256, int> compute_validator_map() const;
+  std::vector<double> export_scaled_validator_weights() const;
 };
 
 #pragma pack(push, 1)

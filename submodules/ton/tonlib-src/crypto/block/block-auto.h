@@ -28,6 +28,7 @@
 // uses built-in type `uint256`
 // uses built-in type `int257`
 // uses built-in type `bits256`
+// uses built-in type `bits512`
 
 namespace block {
 
@@ -3282,6 +3283,54 @@ struct HASH_UPDATE final : TLB_Complex {
   int get_tag(const vm::CellSlice& cs) const override {
     return 0;
   }
+};
+
+//
+// headers for type `MERKLE_PROOF`
+//
+
+struct MERKLE_PROOF final : TLB_Complex {
+  enum { _merkle_proof };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 3 };
+  const TLB &X_;
+  MERKLE_PROOF(const TLB& X) : X_(X) {}
+  struct Record;
+  bool always_special() const override {
+    return true;
+  }
+  int get_size(const vm::CellSlice& cs) const override {
+    return 0x10118;
+  }
+  bool skip(vm::CellSlice& cs) const override {
+    return cs.advance_ext(0x10118);
+  }
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack__merkle_proof(vm::CellSlice& cs, td::BitArray<256>& virtual_hash, int& depth, Ref<Cell>& virtual_root) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack__merkle_proof(Ref<vm::Cell> cell_ref, td::BitArray<256>& virtual_hash, int& depth, Ref<Cell>& virtual_root) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack__merkle_proof(vm::CellBuilder& cb, td::BitArray<256> virtual_hash, int depth, Ref<Cell> virtual_root) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack__merkle_proof(Ref<vm::Cell>& cell_ref, td::BitArray<256> virtual_hash, int depth, Ref<Cell> virtual_root) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "(MERKLE_PROOF " << X_ << ")";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct MERKLE_PROOF::Record {
+  typedef MERKLE_PROOF type_class;
+  td::BitArray<256> virtual_hash;  	// virtual_hash : bits256
+  int depth;  	// depth : uint16
+  Ref<Cell> virtual_root;  	// virtual_root : ^X
+  Record() = default;
+  Record(const td::BitArray<256>& _virtual_hash, int _depth, Ref<Cell> _virtual_root) : virtual_hash(_virtual_hash), depth(_depth), virtual_root(std::move(_virtual_root)) {}
 };
 
 //
@@ -7727,19 +7776,19 @@ struct TopBlockDescrSet final : TLB_Complex {
 extern const TopBlockDescrSet t_TopBlockDescrSet;
 
 //
-// headers for type `ComplaintDescr`
+// headers for type `ProducerInfo`
 //
 
-struct ComplaintDescr final : TLB_Complex {
-  enum { no_blk_gen };
-  static constexpr int cons_len_exact = 32;
-  static constexpr unsigned cons_tag[1] = { 0x7e545dda };
+struct ProducerInfo final : TLB_Complex {
+  enum { prod_info };
+  static constexpr int cons_len_exact = 8;
+  static constexpr unsigned char cons_tag[1] = { 0x34 };
   struct Record;
   int get_size(const vm::CellSlice& cs) const override {
-    return 0x202c0;
+    return 0x20288;
   }
   bool skip(vm::CellSlice& cs) const override {
-    return cs.advance_ext(0x202c0);
+    return cs.advance_ext(0x20288);
   }
   bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
   bool unpack(vm::CellSlice& cs, Record& data) const;
@@ -7748,7 +7797,7 @@ struct ComplaintDescr final : TLB_Complex {
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
   bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
   std::ostream& print_type(std::ostream& os) const override {
-    return os << "ComplaintDescr";
+    return os << "ProducerInfo";
   }
   int check_tag(const vm::CellSlice& cs) const override;
   int get_tag(const vm::CellSlice& cs) const override {
@@ -7756,15 +7805,66 @@ struct ComplaintDescr final : TLB_Complex {
   }
 };
 
-struct ComplaintDescr::Record {
-  typedef ComplaintDescr type_class;
+struct ProducerInfo::Record {
+  typedef ProducerInfo type_class;
+  unsigned utime;  	// utime : uint32
   Ref<CellSlice> mc_blk_ref;  	// mc_blk_ref : ExtBlkRef
-  unsigned from_utime;  	// from_utime : uint32
-  unsigned to_utime;  	// to_utime : uint32
-  Ref<Cell> state_proof;  	// state_proof : ^Cell
-  Ref<Cell> prod_proof;  	// prod_proof : ^Cell
+  Ref<Cell> state_proof;  	// state_proof : ^(MERKLE_PROOF Block)
+  Ref<Cell> prod_proof;  	// prod_proof : ^(MERKLE_PROOF ShardState)
   Record() = default;
-  Record(Ref<CellSlice> _mc_blk_ref, unsigned _from_utime, unsigned _to_utime, Ref<Cell> _state_proof, Ref<Cell> _prod_proof) : mc_blk_ref(std::move(_mc_blk_ref)), from_utime(_from_utime), to_utime(_to_utime), state_proof(std::move(_state_proof)), prod_proof(std::move(_prod_proof)) {}
+  Record(unsigned _utime, Ref<CellSlice> _mc_blk_ref, Ref<Cell> _state_proof, Ref<Cell> _prod_proof) : utime(_utime), mc_blk_ref(std::move(_mc_blk_ref)), state_proof(std::move(_state_proof)), prod_proof(std::move(_prod_proof)) {}
+};
+
+extern const ProducerInfo t_ProducerInfo;
+
+//
+// headers for type `ComplaintDescr`
+//
+
+struct ComplaintDescr final : TLB_Complex {
+  enum { no_blk_gen, no_blk_gen_diff };
+  static constexpr int cons_len_exact = 32;
+  static constexpr unsigned cons_tag[2] = { 0x450e8bd9, 0xc737b0caU };
+  struct Record_no_blk_gen {
+    typedef ComplaintDescr type_class;
+    unsigned from_utime;  	// from_utime : uint32
+    Ref<Cell> prod_info;  	// prod_info : ^ProducerInfo
+    Record_no_blk_gen() = default;
+    Record_no_blk_gen(unsigned _from_utime, Ref<Cell> _prod_info) : from_utime(_from_utime), prod_info(std::move(_prod_info)) {}
+  };
+  struct Record_no_blk_gen_diff {
+    typedef ComplaintDescr type_class;
+    Ref<Cell> prod_info_old;  	// prod_info_old : ^ProducerInfo
+    Ref<Cell> prod_info_new;  	// prod_info_new : ^ProducerInfo
+    Record_no_blk_gen_diff() = default;
+    Record_no_blk_gen_diff(Ref<Cell> _prod_info_old, Ref<Cell> _prod_info_new) : prod_info_old(std::move(_prod_info_old)), prod_info_new(std::move(_prod_info_new)) {}
+  };
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record_no_blk_gen& data) const;
+  bool unpack_no_blk_gen(vm::CellSlice& cs, unsigned& from_utime, Ref<Cell>& prod_info) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_no_blk_gen& data) const;
+  bool cell_unpack_no_blk_gen(Ref<vm::Cell> cell_ref, unsigned& from_utime, Ref<Cell>& prod_info) const;
+  bool pack(vm::CellBuilder& cb, const Record_no_blk_gen& data) const;
+  bool pack_no_blk_gen(vm::CellBuilder& cb, unsigned from_utime, Ref<Cell> prod_info) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_no_blk_gen& data) const;
+  bool cell_pack_no_blk_gen(Ref<vm::Cell>& cell_ref, unsigned from_utime, Ref<Cell> prod_info) const;
+  bool unpack(vm::CellSlice& cs, Record_no_blk_gen_diff& data) const;
+  bool unpack_no_blk_gen_diff(vm::CellSlice& cs, Ref<Cell>& prod_info_old, Ref<Cell>& prod_info_new) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_no_blk_gen_diff& data) const;
+  bool cell_unpack_no_blk_gen_diff(Ref<vm::Cell> cell_ref, Ref<Cell>& prod_info_old, Ref<Cell>& prod_info_new) const;
+  bool pack(vm::CellBuilder& cb, const Record_no_blk_gen_diff& data) const;
+  bool pack_no_blk_gen_diff(vm::CellBuilder& cb, Ref<Cell> prod_info_old, Ref<Cell> prod_info_new) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_no_blk_gen_diff& data) const;
+  bool cell_pack_no_blk_gen_diff(Ref<vm::Cell>& cell_ref, Ref<Cell> prod_info_old, Ref<Cell> prod_info_new) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ComplaintDescr";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return (int)cs.prefetch_ulong(1);
+  }
 };
 
 extern const ComplaintDescr t_ComplaintDescr;
@@ -9035,6 +9135,344 @@ struct SmcCapability final : TLB_Complex {
 
 extern const SmcCapability t_SmcCapability;
 
+//
+// headers for type `ChanConfig`
+//
+
+struct ChanConfig final : TLB_Complex {
+  enum { chan_config };
+  static constexpr int cons_len_exact = 0;
+  struct Record;
+  int get_size(const vm::CellSlice& cs) const override {
+    return 0x20280;
+  }
+  bool skip(vm::CellSlice& cs) const override {
+    return cs.advance_ext(0x20280);
+  }
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanConfig";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ChanConfig::Record {
+  typedef ChanConfig type_class;
+  unsigned init_timeout;  	// init_timeout : uint32
+  unsigned close_timeout;  	// close_timeout : uint32
+  td::BitArray<256> a_key;  	// a_key : bits256
+  td::BitArray<256> b_key;  	// b_key : bits256
+  Ref<Cell> a_addr;  	// a_addr : ^MsgAddressInt
+  Ref<Cell> b_addr;  	// b_addr : ^MsgAddressInt
+  unsigned long long channel_id;  	// channel_id : uint64
+  Record() = default;
+  Record(unsigned _init_timeout, unsigned _close_timeout, const td::BitArray<256>& _a_key, const td::BitArray<256>& _b_key, Ref<Cell> _a_addr, Ref<Cell> _b_addr, unsigned long long _channel_id) : init_timeout(_init_timeout), close_timeout(_close_timeout), a_key(_a_key), b_key(_b_key), a_addr(std::move(_a_addr)), b_addr(std::move(_b_addr)), channel_id(_channel_id) {}
+};
+
+extern const ChanConfig t_ChanConfig;
+
+//
+// headers for type `ChanState`
+//
+
+struct ChanState final : TLB_Complex {
+  enum { chan_state_init, chan_state_close, chan_state_payout };
+  static constexpr int cons_len_exact = 3;
+  struct Record_chan_state_init;
+  struct Record_chan_state_close;
+  struct Record_chan_state_payout {
+    typedef ChanState type_class;
+    Ref<CellSlice> A;  	// A : Grams
+    Ref<CellSlice> B;  	// B : Grams
+    Record_chan_state_payout() = default;
+    Record_chan_state_payout(Ref<CellSlice> _A, Ref<CellSlice> _B) : A(std::move(_A)), B(std::move(_B)) {}
+  };
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record_chan_state_init& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_chan_state_init& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_chan_state_init& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_chan_state_init& data) const;
+  bool unpack(vm::CellSlice& cs, Record_chan_state_close& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_chan_state_close& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_chan_state_close& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_chan_state_close& data) const;
+  bool unpack(vm::CellSlice& cs, Record_chan_state_payout& data) const;
+  bool unpack_chan_state_payout(vm::CellSlice& cs, Ref<CellSlice>& A, Ref<CellSlice>& B) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_chan_state_payout& data) const;
+  bool cell_unpack_chan_state_payout(Ref<vm::Cell> cell_ref, Ref<CellSlice>& A, Ref<CellSlice>& B) const;
+  bool pack(vm::CellBuilder& cb, const Record_chan_state_payout& data) const;
+  bool pack_chan_state_payout(vm::CellBuilder& cb, Ref<CellSlice> A, Ref<CellSlice> B) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_chan_state_payout& data) const;
+  bool cell_pack_chan_state_payout(Ref<vm::Cell>& cell_ref, Ref<CellSlice> A, Ref<CellSlice> B) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanState";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return cs.bselect(3, 7);
+  }
+};
+
+struct ChanState::Record_chan_state_init {
+  typedef ChanState type_class;
+  bool signed_A;  	// signed_A : Bool
+  bool signed_B;  	// signed_B : Bool
+  Ref<CellSlice> min_A;  	// min_A : Grams
+  Ref<CellSlice> min_B;  	// min_B : Grams
+  unsigned expire_at;  	// expire_at : uint32
+  Ref<CellSlice> A;  	// A : Grams
+  Ref<CellSlice> B;  	// B : Grams
+  Record_chan_state_init() = default;
+  Record_chan_state_init(bool _signed_A, bool _signed_B, Ref<CellSlice> _min_A, Ref<CellSlice> _min_B, unsigned _expire_at, Ref<CellSlice> _A, Ref<CellSlice> _B) : signed_A(_signed_A), signed_B(_signed_B), min_A(std::move(_min_A)), min_B(std::move(_min_B)), expire_at(_expire_at), A(std::move(_A)), B(std::move(_B)) {}
+};
+
+struct ChanState::Record_chan_state_close {
+  typedef ChanState type_class;
+  bool signed_A;  	// signed_A : Bool
+  bool signed_B;  	// signed_B : Bool
+  Ref<CellSlice> promise_A;  	// promise_A : Grams
+  Ref<CellSlice> promise_B;  	// promise_B : Grams
+  unsigned expire_at;  	// expire_at : uint32
+  Ref<CellSlice> A;  	// A : Grams
+  Ref<CellSlice> B;  	// B : Grams
+  Record_chan_state_close() = default;
+  Record_chan_state_close(bool _signed_A, bool _signed_B, Ref<CellSlice> _promise_A, Ref<CellSlice> _promise_B, unsigned _expire_at, Ref<CellSlice> _A, Ref<CellSlice> _B) : signed_A(_signed_A), signed_B(_signed_B), promise_A(std::move(_promise_A)), promise_B(std::move(_promise_B)), expire_at(_expire_at), A(std::move(_A)), B(std::move(_B)) {}
+};
+
+extern const ChanState t_ChanState;
+
+//
+// headers for type `ChanPromise`
+//
+
+struct ChanPromise final : TLB_Complex {
+  enum { chan_promise };
+  static constexpr int cons_len_exact = 0;
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_chan_promise(vm::CellSlice& cs, unsigned long long& channel_id, Ref<CellSlice>& promise_A, Ref<CellSlice>& promise_B) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_chan_promise(Ref<vm::Cell> cell_ref, unsigned long long& channel_id, Ref<CellSlice>& promise_A, Ref<CellSlice>& promise_B) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_chan_promise(vm::CellBuilder& cb, unsigned long long channel_id, Ref<CellSlice> promise_A, Ref<CellSlice> promise_B) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_chan_promise(Ref<vm::Cell>& cell_ref, unsigned long long channel_id, Ref<CellSlice> promise_A, Ref<CellSlice> promise_B) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanPromise";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ChanPromise::Record {
+  typedef ChanPromise type_class;
+  unsigned long long channel_id;  	// channel_id : uint64
+  Ref<CellSlice> promise_A;  	// promise_A : Grams
+  Ref<CellSlice> promise_B;  	// promise_B : Grams
+  Record() = default;
+  Record(unsigned long long _channel_id, Ref<CellSlice> _promise_A, Ref<CellSlice> _promise_B) : channel_id(_channel_id), promise_A(std::move(_promise_A)), promise_B(std::move(_promise_B)) {}
+};
+
+extern const ChanPromise t_ChanPromise;
+
+//
+// headers for type `ChanSignedPromise`
+//
+
+struct ChanSignedPromise final : TLB_Complex {
+  enum { chan_signed_promise };
+  static constexpr int cons_len_exact = 0;
+  struct Record {
+    typedef ChanSignedPromise type_class;
+    Ref<CellSlice> sig;  	// sig : Maybe ^bits512
+    Ref<CellSlice> promise;  	// promise : ChanPromise
+    Record() = default;
+    Record(Ref<CellSlice> _sig, Ref<CellSlice> _promise) : sig(std::move(_sig)), promise(std::move(_promise)) {}
+  };
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_chan_signed_promise(vm::CellSlice& cs, Ref<CellSlice>& sig, Ref<CellSlice>& promise) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_chan_signed_promise(Ref<vm::Cell> cell_ref, Ref<CellSlice>& sig, Ref<CellSlice>& promise) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_chan_signed_promise(vm::CellBuilder& cb, Ref<CellSlice> sig, Ref<CellSlice> promise) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_chan_signed_promise(Ref<vm::Cell>& cell_ref, Ref<CellSlice> sig, Ref<CellSlice> promise) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanSignedPromise";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+extern const ChanSignedPromise t_ChanSignedPromise;
+
+//
+// headers for type `ChanMsg`
+//
+
+struct ChanMsg final : TLB_Complex {
+  enum { chan_msg_init, chan_msg_timeout, chan_msg_close };
+  static constexpr int cons_len_exact = 32;
+  static constexpr unsigned cons_tag[3] = { 0x27317822, 0x43278a28, 0xf28ae183U };
+  struct Record_chan_msg_init;
+  struct Record_chan_msg_close;
+  struct Record_chan_msg_timeout {
+    typedef ChanMsg type_class;
+  };
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record_chan_msg_init& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_chan_msg_init& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_chan_msg_init& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_chan_msg_init& data) const;
+  bool unpack(vm::CellSlice& cs, Record_chan_msg_close& data) const;
+  bool unpack_chan_msg_close(vm::CellSlice& cs, Ref<CellSlice>& extra_A, Ref<CellSlice>& extra_B, Ref<CellSlice>& promise) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_chan_msg_close& data) const;
+  bool cell_unpack_chan_msg_close(Ref<vm::Cell> cell_ref, Ref<CellSlice>& extra_A, Ref<CellSlice>& extra_B, Ref<CellSlice>& promise) const;
+  bool pack(vm::CellBuilder& cb, const Record_chan_msg_close& data) const;
+  bool pack_chan_msg_close(vm::CellBuilder& cb, Ref<CellSlice> extra_A, Ref<CellSlice> extra_B, Ref<CellSlice> promise) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_chan_msg_close& data) const;
+  bool cell_pack_chan_msg_close(Ref<vm::Cell>& cell_ref, Ref<CellSlice> extra_A, Ref<CellSlice> extra_B, Ref<CellSlice> promise) const;
+  bool unpack(vm::CellSlice& cs, Record_chan_msg_timeout& data) const;
+  bool unpack_chan_msg_timeout(vm::CellSlice& cs) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_chan_msg_timeout& data) const;
+  bool cell_unpack_chan_msg_timeout(Ref<vm::Cell> cell_ref) const;
+  bool pack(vm::CellBuilder& cb, const Record_chan_msg_timeout& data) const;
+  bool pack_chan_msg_timeout(vm::CellBuilder& cb) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_chan_msg_timeout& data) const;
+  bool cell_pack_chan_msg_timeout(Ref<vm::Cell>& cell_ref) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanMsg";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return cs.bselect(2, 11);
+  }
+};
+
+struct ChanMsg::Record_chan_msg_init {
+  typedef ChanMsg type_class;
+  Ref<CellSlice> inc_A;  	// inc_A : Grams
+  Ref<CellSlice> inc_B;  	// inc_B : Grams
+  Ref<CellSlice> min_A;  	// min_A : Grams
+  Ref<CellSlice> min_B;  	// min_B : Grams
+  unsigned long long channel_id;  	// channel_id : uint64
+  Record_chan_msg_init() = default;
+  Record_chan_msg_init(Ref<CellSlice> _inc_A, Ref<CellSlice> _inc_B, Ref<CellSlice> _min_A, Ref<CellSlice> _min_B, unsigned long long _channel_id) : inc_A(std::move(_inc_A)), inc_B(std::move(_inc_B)), min_A(std::move(_min_A)), min_B(std::move(_min_B)), channel_id(_channel_id) {}
+};
+
+struct ChanMsg::Record_chan_msg_close {
+  typedef ChanMsg type_class;
+  Ref<CellSlice> extra_A;  	// extra_A : Grams
+  Ref<CellSlice> extra_B;  	// extra_B : Grams
+  Ref<CellSlice> promise;  	// promise : ChanSignedPromise
+  Record_chan_msg_close() = default;
+  Record_chan_msg_close(Ref<CellSlice> _extra_A, Ref<CellSlice> _extra_B, Ref<CellSlice> _promise) : extra_A(std::move(_extra_A)), extra_B(std::move(_extra_B)), promise(std::move(_promise)) {}
+};
+
+extern const ChanMsg t_ChanMsg;
+
+//
+// headers for type `ChanSignedMsg`
+//
+
+struct ChanSignedMsg final : TLB_Complex {
+  enum { chan_signed_msg };
+  static constexpr int cons_len_exact = 0;
+  struct Record;
+  bool skip(vm::CellSlice& cs) const override;
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_chan_signed_msg(vm::CellSlice& cs, Ref<CellSlice>& sig_A, Ref<CellSlice>& sig_B, Ref<CellSlice>& msg) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_chan_signed_msg(Ref<vm::Cell> cell_ref, Ref<CellSlice>& sig_A, Ref<CellSlice>& sig_B, Ref<CellSlice>& msg) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_chan_signed_msg(vm::CellBuilder& cb, Ref<CellSlice> sig_A, Ref<CellSlice> sig_B, Ref<CellSlice> msg) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_chan_signed_msg(Ref<vm::Cell>& cell_ref, Ref<CellSlice> sig_A, Ref<CellSlice> sig_B, Ref<CellSlice> msg) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanSignedMsg";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+struct ChanSignedMsg::Record {
+  typedef ChanSignedMsg type_class;
+  Ref<CellSlice> sig_A;  	// sig_A : Maybe ^bits512
+  Ref<CellSlice> sig_B;  	// sig_B : Maybe ^bits512
+  Ref<CellSlice> msg;  	// msg : ChanMsg
+  Record() = default;
+  Record(Ref<CellSlice> _sig_A, Ref<CellSlice> _sig_B, Ref<CellSlice> _msg) : sig_A(std::move(_sig_A)), sig_B(std::move(_sig_B)), msg(std::move(_msg)) {}
+};
+
+extern const ChanSignedMsg t_ChanSignedMsg;
+
+//
+// headers for type `ChanData`
+//
+
+struct ChanData final : TLB_Complex {
+  enum { chan_data };
+  static constexpr int cons_len_exact = 0;
+  struct Record {
+    typedef ChanData type_class;
+    Ref<Cell> config;  	// config : ^ChanConfig
+    Ref<Cell> state;  	// state : ^ChanState
+    Record() = default;
+    Record(Ref<Cell> _config, Ref<Cell> _state) : config(std::move(_config)), state(std::move(_state)) {}
+  };
+  int get_size(const vm::CellSlice& cs) const override {
+    return 0x20000;
+  }
+  bool skip(vm::CellSlice& cs) const override {
+    return cs.advance_ext(0x20000);
+  }
+  bool validate_skip(int* ops, vm::CellSlice& cs, bool weak = false) const override;
+  bool unpack(vm::CellSlice& cs, Record& data) const;
+  bool unpack_chan_data(vm::CellSlice& cs, Ref<Cell>& config, Ref<Cell>& state) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
+  bool cell_unpack_chan_data(Ref<vm::Cell> cell_ref, Ref<Cell>& config, Ref<Cell>& state) const;
+  bool pack(vm::CellBuilder& cb, const Record& data) const;
+  bool pack_chan_data(vm::CellBuilder& cb, Ref<Cell> config, Ref<Cell> state) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool cell_pack_chan_data(Ref<vm::Cell>& cell_ref, Ref<Cell> config, Ref<Cell> state) const;
+  bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
+  std::ostream& print_type(std::ostream& os) const override {
+    return os << "ChanData";
+  }
+  int check_tag(const vm::CellSlice& cs) const override;
+  int get_tag(const vm::CellSlice& cs) const override {
+    return 0;
+  }
+};
+
+extern const ChanData t_ChanData;
+
 // declarations of constant types used
 
 // ## 1
@@ -9123,6 +9561,8 @@ extern const HASH_UPDATE t_HASH_UPDATE_Account;
 extern const RefT t_Ref_HASH_UPDATE_Account;
 // ^TransactionDescr
 extern const RefT t_Ref_TransactionDescr;
+// uint16
+extern const UInt t_uint16;
 // HashmapAug 64 ^Transaction CurrencyCollection
 extern const HashmapAug t_HashmapAug_64_Ref_Transaction_CurrencyCollection;
 // HashmapAugE 256 AccountBlock CurrencyCollection
@@ -9134,9 +9574,7 @@ extern const Maybe t_Maybe_VarUInteger_3;
 // Maybe int32
 extern const Maybe t_Maybe_int32;
 // ^[$_ gas_used:(VarUInteger 7) gas_limit:(VarUInteger 7) gas_credit:(Maybe (VarUInteger 3)) mode:int8 exit_code:int32 exit_arg:(Maybe int32) vm_steps:uint32 vm_init_state_hash:bits256 vm_final_state_hash:bits256 ]
-extern const RefT t_Ref_TYPE_1625;
-// uint16
-extern const UInt t_uint16;
+extern const RefT t_Ref_TYPE_1626;
 // Maybe TrStoragePhase
 extern const Maybe t_Maybe_TrStoragePhase;
 // Maybe TrCreditPhase
@@ -9168,7 +9606,7 @@ extern const HashmapE t_HashmapE_256_LibDescr;
 // Maybe BlkMasterInfo
 extern const Maybe t_Maybe_BlkMasterInfo;
 // ^[$_ overload_history:uint64 underload_history:uint64 total_balance:CurrencyCollection total_validator_fees:CurrencyCollection libraries:(HashmapE 256 LibDescr) master_ref:(Maybe BlkMasterInfo) ]
-extern const RefT t_Ref_TYPE_1639;
+extern const RefT t_Ref_TYPE_1640;
 // ^McStateExtra
 extern const RefT t_Ref_McStateExtra;
 // Maybe ^McStateExtra
@@ -9206,13 +9644,13 @@ extern const RefT t_Ref_McBlockExtra;
 // Maybe ^McBlockExtra
 extern const Maybe t_Maybe_Ref_McBlockExtra;
 // ^[$_ from_prev_blk:CurrencyCollection to_next_blk:CurrencyCollection imported:CurrencyCollection exported:CurrencyCollection ]
-extern const RefT t_Ref_TYPE_1650;
-// ^[$_ fees_imported:CurrencyCollection recovered:CurrencyCollection created:CurrencyCollection minted:CurrencyCollection ]
 extern const RefT t_Ref_TYPE_1651;
+// ^[$_ fees_imported:CurrencyCollection recovered:CurrencyCollection created:CurrencyCollection minted:CurrencyCollection ]
+extern const RefT t_Ref_TYPE_1652;
 // ## 3
 extern const NatWidth t_natwidth_3;
 // ^[$_ fees_collected:CurrencyCollection funds_created:CurrencyCollection ]
-extern const RefT t_Ref_TYPE_1655;
+extern const RefT t_Ref_TYPE_1656;
 // BinTree ShardDescr
 extern const BinTree t_BinTree_ShardDescr;
 // ^(BinTree ShardDescr)
@@ -9236,7 +9674,7 @@ extern const NatWidth t_natwidth_16;
 // Maybe ExtBlkRef
 extern const Maybe t_Maybe_ExtBlkRef;
 // ^[$_ flags:(## 16) {<= flags 1} validator_info:ValidatorInfo prev_blocks:OldMcBlocksInfo after_key_block:Bool last_key_block:(Maybe ExtBlkRef) block_create_stats:flags.0?BlockCreateStats ]
-extern const RefT t_Ref_TYPE_1669;
+extern const RefT t_Ref_TYPE_1670;
 // ^SignedCertificate
 extern const RefT t_Ref_SignedCertificate;
 // HashmapE 16 CryptoSignaturePair
@@ -9244,7 +9682,7 @@ extern const HashmapE t_HashmapE_16_CryptoSignaturePair;
 // Maybe ^InMsg
 extern const Maybe t_Maybe_Ref_InMsg;
 // ^[$_ prev_blk_signatures:(HashmapE 16 CryptoSignaturePair) recover_create_msg:(Maybe ^InMsg) mint_msg:(Maybe ^InMsg) ]
-extern const RefT t_Ref_TYPE_1677;
+extern const RefT t_Ref_TYPE_1678;
 // Hashmap 16 ValidatorDescr
 extern const Hashmap t_Hashmap_16_ValidatorDescr;
 // HashmapE 16 ValidatorDescr
@@ -9289,6 +9727,16 @@ extern const Maybe t_Maybe_Ref_BlockSignatures;
 extern const RefT t_Ref_TopBlockDescr;
 // HashmapE 96 ^TopBlockDescr
 extern const HashmapE t_HashmapE_96_Ref_TopBlockDescr;
+// MERKLE_PROOF Block
+extern const MERKLE_PROOF t_MERKLE_PROOF_Block;
+// ^(MERKLE_PROOF Block)
+extern const RefT t_Ref_MERKLE_PROOF_Block;
+// MERKLE_PROOF ShardState
+extern const MERKLE_PROOF t_MERKLE_PROOF_ShardState;
+// ^(MERKLE_PROOF ShardState)
+extern const RefT t_Ref_MERKLE_PROOF_ShardState;
+// ^ProducerInfo
+extern const RefT t_Ref_ProducerInfo;
 // ^ComplaintDescr
 extern const RefT t_Ref_ComplaintDescr;
 // ^ValidatorComplaint
@@ -9306,7 +9754,7 @@ extern const NatWidth t_natwidth_24;
 // HashmapE 4 VmStackValue
 extern const HashmapE t_HashmapE_4_VmStackValue;
 // ^[$_ max_limit:int64 cur_limit:int64 credit:int64 ]
-extern const RefT t_Ref_TYPE_1715;
+extern const RefT t_Ref_TYPE_1717;
 // HashmapE 256 ^Cell
 extern const HashmapE t_HashmapE_256_Ref_Cell;
 // uint13
@@ -9325,6 +9773,18 @@ extern const RefT t_Ref_VmCont;
 extern const RefT t_Ref_DNSRecord;
 // HashmapE 16 ^DNSRecord
 extern const HashmapE t_HashmapE_16_Ref_DNSRecord;
+// ^MsgAddressInt
+extern const RefT t_Ref_MsgAddressInt;
+// bits512
+extern const Bits t_bits512;
+// ^bits512
+extern const RefT t_Ref_bits512;
+// Maybe ^bits512
+extern const Maybe t_Maybe_Ref_bits512;
+// ^ChanConfig
+extern const RefT t_Ref_ChanConfig;
+// ^ChanState
+extern const RefT t_Ref_ChanState;
 
 // declaration of type name registration function
 extern bool register_simple_types(std::function<bool(const char*, const TLB*)> func);

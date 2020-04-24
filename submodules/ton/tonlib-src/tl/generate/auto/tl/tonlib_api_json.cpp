@@ -24,6 +24,8 @@ Result<int32> tl_constructor_from_string(tonlib_api::AccountState *object, const
     {"wallet.highload.v2.accountState", -1803723441},
     {"testGiver.accountState", -696813142},
     {"dns.accountState", 1727715434},
+    {"rwallet.accountState", -739540008},
+    {"pchan.accountState", 1612869496},
     {"uninited.accountState", 1522374408}
   };
   auto it = m.find(str);
@@ -36,7 +38,9 @@ Result<int32> tl_constructor_from_string(tonlib_api::Action *object, const std::
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"actionNoop", 1135848603},
     {"actionMsg", 246839120},
-    {"actionDns", 1193750561}
+    {"actionDns", 1193750561},
+    {"actionPchan", -1490172447},
+    {"actionRwallet", -117295163}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -53,7 +57,9 @@ Result<int32> tl_constructor_from_string(tonlib_api::InitialAccountState *object
     {"wallet.v3.initialAccountState", -118074048},
     {"wallet.highload.v1.initialAccountState", -327901626},
     {"wallet.highload.v2.initialAccountState", 1966373161},
-    {"dns.initialAccountState", 1842062527}
+    {"rwallet.initialAccountState", 1169755156},
+    {"dns.initialAccountState", 1842062527},
+    {"pchan.initialAccountState", -1304552124}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -145,10 +151,34 @@ Result<int32> tl_constructor_from_string(tonlib_api::dns_EntryData *object, cons
 }
 Result<int32> tl_constructor_from_string(tonlib_api::msg_Data *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
-    {"msg.dataRaw", 38878511},
+    {"msg.dataRaw", -1928962698},
     {"msg.dataText", -341560688},
     {"msg.dataDecryptedText", -1289133895},
     {"msg.dataEncryptedText", -296612902}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(tonlib_api::pchan_Action *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"pchan.actionInit", 439088778},
+    {"pchan.actionClose", 1671187222},
+    {"pchan.actionTimeout", 1998487795}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(tonlib_api::pchan_State *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"pchan.stateInit", -1188426504},
+    {"pchan.stateClose", 887226867},
+    {"pchan.statePayout", 664671303}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -194,10 +224,14 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"wallet.highload.v2.accountState", -1803723441},
     {"testGiver.accountState", -696813142},
     {"dns.accountState", 1727715434},
+    {"rwallet.accountState", -739540008},
+    {"pchan.accountState", 1612869496},
     {"uninited.accountState", 1522374408},
     {"actionNoop", 1135848603},
     {"actionMsg", 246839120},
     {"actionDns", 1193750561},
+    {"actionPchan", -1490172447},
+    {"actionRwallet", -117295163},
     {"adnlAddress", 70358284},
     {"bip39Hints", 1012243456},
     {"config", -1538391496},
@@ -216,7 +250,9 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"wallet.v3.initialAccountState", -118074048},
     {"wallet.highload.v1.initialAccountState", -327901626},
     {"wallet.highload.v2.initialAccountState", 1966373161},
+    {"rwallet.initialAccountState", 1169755156},
     {"dns.initialAccountState", 1842062527},
+    {"pchan.initialAccountState", -1304552124},
     {"inputKeyRegular", -555399522},
     {"inputKeyFake", -1074054722},
     {"key", -1978362923},
@@ -247,7 +283,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"ton.blockId", -1185382494},
     {"internal.transactionId", -989527262},
     {"liteServer.info", -1250165133},
-    {"msg.dataRaw", 38878511},
+    {"msg.dataRaw", -1928962698},
     {"msg.dataText", -341560688},
     {"msg.dataDecryptedText", -1289133895},
     {"msg.dataEncryptedText", -296612902},
@@ -258,12 +294,23 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"msg.message", -2110533580},
     {"options.configInfo", 451217371},
     {"options.info", -64676736},
+    {"pchan.actionInit", 439088778},
+    {"pchan.actionClose", 1671187222},
+    {"pchan.actionTimeout", 1998487795},
+    {"pchan.config", -2071530442},
+    {"pchan.promise", -1576102819},
+    {"pchan.stateInit", -1188426504},
+    {"pchan.stateClose", 887226867},
+    {"pchan.statePayout", 664671303},
     {"query.fees", 1614616510},
-    {"query.info", 1588635915},
+    {"query.info", 1451875440},
     {"raw.fullAccountState", -1465398385},
     {"raw.message", 1368093263},
     {"raw.transaction", 1887601793},
     {"raw.transactions", -2063931155},
+    {"rwallet.actionInit", 624147819},
+    {"rwallet.config", -85490534},
+    {"rwallet.limit", 1222571646},
     {"smc.info", 1134270012},
     {"smc.methodIdNumber", -1541162500},
     {"smc.methodIdName", -249036908},
@@ -293,7 +340,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"changeLocalPassword", -401590337},
     {"close", -1187782273},
     {"createNewKey", -1861385712},
-    {"createQuery", -1316835098},
+    {"createQuery", -242540347},
     {"decrypt", 357991854},
     {"deleteAllKeys", 1608776483},
     {"deleteKey", -1579595571},
@@ -325,6 +372,10 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"options.setConfig", 1870064579},
     {"options.validateConfig", -346965447},
     {"packAccountAddress", -1388561940},
+    {"pchan.packPromise", -851703103},
+    {"pchan.signPromise", 1814322974},
+    {"pchan.unpackPromise", -1250106157},
+    {"pchan.validatePromise", 258262242},
     {"query.estimateFees", -957002175},
     {"query.forget", -1211985313},
     {"query.getInfo", -799333669},
@@ -467,6 +518,54 @@ Status from_json(tonlib_api::dns_accountState &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::rwallet_accountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "wallet_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.wallet_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "unlocked_balance", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.unlocked_balance_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_accountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.state_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "description", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.description_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::uninited_accountState &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "frozen_hash", JsonValue::Type::Null, true));
@@ -499,6 +598,24 @@ Status from_json(tonlib_api::actionDns &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "actions", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.actions_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::actionPchan &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "action", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.action_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::actionRwallet &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "action", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.action_, value));
     }
   }
   return Status::OK();
@@ -749,6 +866,27 @@ Status from_json(tonlib_api::wallet_highload_v2_initialAccountState &to, JsonObj
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::rwallet_initialAccountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "init_public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.init_public_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.public_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "wallet_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.wallet_id_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::dns_initialAccountState &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
@@ -760,6 +898,15 @@ Status from_json(tonlib_api::dns_initialAccountState &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "wallet_id", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.wallet_id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_initialAccountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_, value));
     }
   }
   return Status::OK();
@@ -1107,6 +1254,12 @@ Status from_json(tonlib_api::msg_dataRaw &to, JsonObject &from) {
       TRY_STATUS(from_json_bytes(to.body_, value));
     }
   }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "init_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.init_state_, value));
+    }
+  }
   return Status::OK();
 }
 Status from_json(tonlib_api::msg_dataText &to, JsonObject &from) {
@@ -1229,6 +1382,234 @@ Status from_json(tonlib_api::options_info &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::pchan_actionInit &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "inc_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.inc_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "inc_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.inc_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "min_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.min_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "min_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.min_B_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_actionClose &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "extra_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.extra_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "extra_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.extra_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "promise", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.promise_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_actionTimeout &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_config &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "alice_public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.alice_public_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "alice_address", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.alice_address_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "bob_public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.bob_public_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "bob_address", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.bob_address_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "init_timeout", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.init_timeout_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "close_timeout", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.close_timeout_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "channel_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.channel_id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_promise &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "signature", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.signature_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "promise_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.promise_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "promise_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.promise_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "channel_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.channel_id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_stateInit &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "signed_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.signed_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "signed_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.signed_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "min_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.min_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "min_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.min_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "expire_at", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.expire_at_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.B_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_stateClose &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "signed_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.signed_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "signed_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.signed_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "min_A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.min_A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "min_B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.min_B_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "expire_at", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.expire_at_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.B_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_statePayout &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "A", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.A_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "B", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.B_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::query_fees &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "source_fees", JsonValue::Type::Null, true));
@@ -1261,6 +1642,18 @@ Status from_json(tonlib_api::query_info &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "body_hash", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json_bytes(to.body_hash_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "body", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.body_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "init_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.init_state_, value));
     }
   }
   return Status::OK();
@@ -1423,6 +1816,45 @@ Status from_json(tonlib_api::raw_transactions &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "previous_transaction_id", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.previous_transaction_id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::rwallet_actionInit &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::rwallet_config &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "start_at", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.start_at_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "limits", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.limits_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::rwallet_limit &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seconds", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seconds_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "value", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.value_, value));
     }
   }
   return Status::OK();
@@ -1678,6 +2110,12 @@ Status from_json(tonlib_api::createQuery &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "action", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.action_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "initial_account_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.initial_account_state_, value));
     }
   }
   return Status::OK();
@@ -2057,6 +2495,54 @@ Status from_json(tonlib_api::packAccountAddress &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::pchan_packPromise &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "promise", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.promise_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_signPromise &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "input_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.input_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "promise", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.promise_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_unpackPromise &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.data_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::pchan_validatePromise &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.public_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "promise", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.promise_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::query_estimateFees &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
@@ -2369,6 +2855,27 @@ void to_json(JsonValueScope &jv, const tonlib_api::dns_accountState &object) {
   jo << ctie("@type", "dns.accountState");
   jo << ctie("wallet_id", ToJson(JsonInt64{object.wallet_id_}));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::rwallet_accountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "rwallet.accountState");
+  jo << ctie("wallet_id", ToJson(JsonInt64{object.wallet_id_}));
+  jo << ctie("seqno", ToJson(object.seqno_));
+  jo << ctie("unlocked_balance", ToJson(JsonInt64{object.unlocked_balance_}));
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_accountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.accountState");
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
+  if (object.state_) {
+    jo << ctie("state", ToJson(object.state_));
+  }
+  jo << ctie("description", ToJson(object.description_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::uninited_accountState &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "uninited.accountState");
@@ -2391,6 +2898,20 @@ void to_json(JsonValueScope &jv, const tonlib_api::actionDns &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "actionDns");
   jo << ctie("actions", ToJson(object.actions_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::actionPchan &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "actionPchan");
+  if (object.action_) {
+    jo << ctie("action", ToJson(object.action_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::actionRwallet &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "actionRwallet");
+  if (object.action_) {
+    jo << ctie("action", ToJson(object.action_));
+  }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::adnlAddress &object) {
   auto jo = jv.enter_object();
@@ -2505,11 +3026,25 @@ void to_json(JsonValueScope &jv, const tonlib_api::wallet_highload_v2_initialAcc
   jo << ctie("public_key", ToJson(object.public_key_));
   jo << ctie("wallet_id", ToJson(JsonInt64{object.wallet_id_}));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::rwallet_initialAccountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "rwallet.initialAccountState");
+  jo << ctie("init_public_key", ToJson(object.init_public_key_));
+  jo << ctie("public_key", ToJson(object.public_key_));
+  jo << ctie("wallet_id", ToJson(JsonInt64{object.wallet_id_}));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::dns_initialAccountState &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "dns.initialAccountState");
   jo << ctie("public_key", ToJson(object.public_key_));
   jo << ctie("wallet_id", ToJson(JsonInt64{object.wallet_id_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_initialAccountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.initialAccountState");
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::InputKey &object) {
   tonlib_api::downcast_call(const_cast<tonlib_api::InputKey &>(object), [&jv](const auto &object) { to_json(jv, object); });
@@ -2718,6 +3253,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::msg_dataRaw &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "msg.dataRaw");
   jo << ctie("body", ToJson(JsonBytes{object.body_}));
+  jo << ctie("init_state", ToJson(JsonBytes{object.init_state_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::msg_dataText &object) {
   auto jo = jv.enter_object();
@@ -2786,6 +3322,84 @@ void to_json(JsonValueScope &jv, const tonlib_api::options_info &object) {
     jo << ctie("config_info", ToJson(object.config_info_));
   }
 }
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_Action &object) {
+  tonlib_api::downcast_call(const_cast<tonlib_api::pchan_Action &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_actionInit &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.actionInit");
+  jo << ctie("inc_A", ToJson(JsonInt64{object.inc_A_}));
+  jo << ctie("inc_B", ToJson(JsonInt64{object.inc_B_}));
+  jo << ctie("min_A", ToJson(JsonInt64{object.min_A_}));
+  jo << ctie("min_B", ToJson(JsonInt64{object.min_B_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_actionClose &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.actionClose");
+  jo << ctie("extra_A", ToJson(JsonInt64{object.extra_A_}));
+  jo << ctie("extra_B", ToJson(JsonInt64{object.extra_B_}));
+  if (object.promise_) {
+    jo << ctie("promise", ToJson(object.promise_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_actionTimeout &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.actionTimeout");
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_config &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.config");
+  jo << ctie("alice_public_key", ToJson(object.alice_public_key_));
+  if (object.alice_address_) {
+    jo << ctie("alice_address", ToJson(object.alice_address_));
+  }
+  jo << ctie("bob_public_key", ToJson(object.bob_public_key_));
+  if (object.bob_address_) {
+    jo << ctie("bob_address", ToJson(object.bob_address_));
+  }
+  jo << ctie("init_timeout", ToJson(object.init_timeout_));
+  jo << ctie("close_timeout", ToJson(object.close_timeout_));
+  jo << ctie("channel_id", ToJson(JsonInt64{object.channel_id_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_promise &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.promise");
+  jo << ctie("signature", ToJson(JsonBytes{object.signature_}));
+  jo << ctie("promise_A", ToJson(JsonInt64{object.promise_A_}));
+  jo << ctie("promise_B", ToJson(JsonInt64{object.promise_B_}));
+  jo << ctie("channel_id", ToJson(JsonInt64{object.channel_id_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_State &object) {
+  tonlib_api::downcast_call(const_cast<tonlib_api::pchan_State &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_stateInit &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.stateInit");
+  jo << ctie("signed_A", ToJson(object.signed_A_));
+  jo << ctie("signed_B", ToJson(object.signed_B_));
+  jo << ctie("min_A", ToJson(JsonInt64{object.min_A_}));
+  jo << ctie("min_B", ToJson(JsonInt64{object.min_B_}));
+  jo << ctie("expire_at", ToJson(object.expire_at_));
+  jo << ctie("A", ToJson(JsonInt64{object.A_}));
+  jo << ctie("B", ToJson(JsonInt64{object.B_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_stateClose &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.stateClose");
+  jo << ctie("signed_A", ToJson(object.signed_A_));
+  jo << ctie("signed_B", ToJson(object.signed_B_));
+  jo << ctie("min_A", ToJson(JsonInt64{object.min_A_}));
+  jo << ctie("min_B", ToJson(JsonInt64{object.min_B_}));
+  jo << ctie("expire_at", ToJson(object.expire_at_));
+  jo << ctie("A", ToJson(JsonInt64{object.A_}));
+  jo << ctie("B", ToJson(JsonInt64{object.B_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_statePayout &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.statePayout");
+  jo << ctie("A", ToJson(JsonInt64{object.A_}));
+  jo << ctie("B", ToJson(JsonInt64{object.B_}));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::query_fees &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "query.fees");
@@ -2800,6 +3414,8 @@ void to_json(JsonValueScope &jv, const tonlib_api::query_info &object) {
   jo << ctie("id", ToJson(object.id_));
   jo << ctie("valid_until", ToJson(object.valid_until_));
   jo << ctie("body_hash", ToJson(JsonBytes{object.body_hash_}));
+  jo << ctie("body", ToJson(JsonBytes{object.body_}));
+  jo << ctie("init_state", ToJson(JsonBytes{object.init_state_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::raw_fullAccountState &object) {
   auto jo = jv.enter_object();
@@ -2857,6 +3473,25 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_transactions &object) {
   if (object.previous_transaction_id_) {
     jo << ctie("previous_transaction_id", ToJson(object.previous_transaction_id_));
   }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::rwallet_actionInit &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "rwallet.actionInit");
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::rwallet_config &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "rwallet.config");
+  jo << ctie("start_at", ToJson(object.start_at_));
+  jo << ctie("limits", ToJson(object.limits_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::rwallet_limit &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "rwallet.limit");
+  jo << ctie("seconds", ToJson(object.seconds_));
+  jo << ctie("value", ToJson(JsonInt64{object.value_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::smc_info &object) {
   auto jo = jv.enter_object();
@@ -2996,6 +3631,9 @@ void to_json(JsonValueScope &jv, const tonlib_api::createQuery &object) {
   jo << ctie("timeout", ToJson(object.timeout_));
   if (object.action_) {
     jo << ctie("action", ToJson(object.action_));
+  }
+  if (object.initial_account_state_) {
+    jo << ctie("initial_account_state", ToJson(object.initial_account_state_));
   }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::decrypt &object) {
@@ -3209,6 +3847,36 @@ void to_json(JsonValueScope &jv, const tonlib_api::packAccountAddress &object) {
   jo << ctie("@type", "packAccountAddress");
   if (object.account_address_) {
     jo << ctie("account_address", ToJson(object.account_address_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_packPromise &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.packPromise");
+  if (object.promise_) {
+    jo << ctie("promise", ToJson(object.promise_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_signPromise &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.signPromise");
+  if (object.input_key_) {
+    jo << ctie("input_key", ToJson(object.input_key_));
+  }
+  if (object.promise_) {
+    jo << ctie("promise", ToJson(object.promise_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_unpackPromise &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.unpackPromise");
+  jo << ctie("data", ToJson(JsonBytes{object.data_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::pchan_validatePromise &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "pchan.validatePromise");
+  jo << ctie("public_key", ToJson(JsonBytes{object.public_key_}));
+  if (object.promise_) {
+    jo << ctie("promise", ToJson(object.promise_));
   }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::query_estimateFees &object) {

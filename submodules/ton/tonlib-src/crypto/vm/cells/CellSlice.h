@@ -218,7 +218,9 @@ class CellSlice : public td::CntObject {
     return prefetch_bits_to(buffer.bits(), n);
   }
   bool fetch_bytes(unsigned char* buffer, unsigned bytes);
+  bool fetch_bytes(td::MutableSlice slice);
   bool prefetch_bytes(unsigned char* buffer, unsigned bytes) const;
+  bool prefetch_bytes(td::MutableSlice slice) const;
   td::BitSlice as_bitslice() const {
     return prefetch_bits(size());
   }

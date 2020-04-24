@@ -27,6 +27,7 @@
 // uses built-in type `uint256`
 // uses built-in type `int257`
 // uses built-in type `bits256`
+// uses built-in type `bits512`
 
 namespace block {
 
@@ -7720,6 +7721,82 @@ bool HASH_UPDATE::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
       && pp.open("update_hashes")
       && pp.fetch_bits_field(cs, 256, "old_hash")
       && pp.fetch_bits_field(cs, 256, "new_hash")
+      && pp.close();
+}
+
+
+//
+// code for type `MERKLE_PROOF`
+//
+constexpr unsigned char MERKLE_PROOF::cons_tag[1];
+
+int MERKLE_PROOF::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 3 ? _merkle_proof : -1;
+}
+
+bool MERKLE_PROOF::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 3
+      && cs.advance(272)
+      && X_.validate_skip_ref(ops, cs, weak);
+}
+
+bool MERKLE_PROOF::unpack(vm::CellSlice& cs, MERKLE_PROOF::Record& data) const {
+  return cs.fetch_ulong(8) == 3
+      && cs.fetch_bits_to(data.virtual_hash.bits(), 256)
+      && cs.fetch_uint_to(16, data.depth)
+      && cs.fetch_ref_to(data.virtual_root);
+}
+
+bool MERKLE_PROOF::unpack__merkle_proof(vm::CellSlice& cs, td::BitArray<256>& virtual_hash, int& depth, Ref<Cell>& virtual_root) const {
+  return cs.fetch_ulong(8) == 3
+      && cs.fetch_bits_to(virtual_hash.bits(), 256)
+      && cs.fetch_uint_to(16, depth)
+      && cs.fetch_ref_to(virtual_root);
+}
+
+bool MERKLE_PROOF::cell_unpack(Ref<vm::Cell> cell_ref, MERKLE_PROOF::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool MERKLE_PROOF::cell_unpack__merkle_proof(Ref<vm::Cell> cell_ref, td::BitArray<256>& virtual_hash, int& depth, Ref<Cell>& virtual_root) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack__merkle_proof(cs, virtual_hash, depth, virtual_root) && cs.empty_ext();
+}
+
+bool MERKLE_PROOF::pack(vm::CellBuilder& cb, const MERKLE_PROOF::Record& data) const {
+  return cb.store_long_bool(3, 8)
+      && cb.store_bits_bool(data.virtual_hash.cbits(), 256)
+      && cb.store_ulong_rchk_bool(data.depth, 16)
+      && cb.store_ref_bool(data.virtual_root);
+}
+
+bool MERKLE_PROOF::pack__merkle_proof(vm::CellBuilder& cb, td::BitArray<256> virtual_hash, int depth, Ref<Cell> virtual_root) const {
+  return cb.store_long_bool(3, 8)
+      && cb.store_bits_bool(virtual_hash.cbits(), 256)
+      && cb.store_ulong_rchk_bool(depth, 16)
+      && cb.store_ref_bool(virtual_root);
+}
+
+bool MERKLE_PROOF::cell_pack(Ref<vm::Cell>& cell_ref, const MERKLE_PROOF::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool MERKLE_PROOF::cell_pack__merkle_proof(Ref<vm::Cell>& cell_ref, td::BitArray<256> virtual_hash, int depth, Ref<Cell> virtual_root) const {
+  vm::CellBuilder cb;
+  return pack__merkle_proof(cb, virtual_hash, depth, std::move(virtual_root)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool MERKLE_PROOF::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 3
+      && pp.open("!merkle_proof")
+      && pp.fetch_bits_field(cs, 256, "virtual_hash")
+      && pp.fetch_uint_field(cs, 16, "depth")
+      && pp.field("virtual_root")
+      && X_.print_ref(pp, cs.fetch_ref())
       && pp.close();
 }
 
@@ -18691,60 +18768,213 @@ bool TopBlockDescrSet::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 const TopBlockDescrSet t_TopBlockDescrSet;
 
 //
-// code for type `ComplaintDescr`
+// code for type `ProducerInfo`
 //
-constexpr unsigned ComplaintDescr::cons_tag[1];
+constexpr unsigned char ProducerInfo::cons_tag[1];
 
-int ComplaintDescr::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(32) == 0x7e545dda ? no_blk_gen : -1;
+int ProducerInfo::check_tag(const vm::CellSlice& cs) const {
+  return cs.prefetch_ulong(8) == 0x34 ? prod_info : -1;
 }
 
-bool ComplaintDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
-  return cs.fetch_ulong(32) == 0x7e545dda
-      && cs.advance_ext(0x202a0);
+bool ProducerInfo::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.fetch_ulong(8) == 0x34
+      && cs.advance(640)
+      && t_MERKLE_PROOF_Block.validate_skip_ref(ops, cs, weak)
+      && t_MERKLE_PROOF_ShardState.validate_skip_ref(ops, cs, weak);
 }
 
-bool ComplaintDescr::unpack(vm::CellSlice& cs, ComplaintDescr::Record& data) const {
-  return cs.fetch_ulong(32) == 0x7e545dda
+bool ProducerInfo::unpack(vm::CellSlice& cs, ProducerInfo::Record& data) const {
+  return cs.fetch_ulong(8) == 0x34
+      && cs.fetch_uint_to(32, data.utime)
       && cs.fetch_subslice_to(608, data.mc_blk_ref)
-      && cs.fetch_uint_to(32, data.from_utime)
-      && cs.fetch_uint_to(32, data.to_utime)
       && cs.fetch_ref_to(data.state_proof)
       && cs.fetch_ref_to(data.prod_proof);
 }
 
-bool ComplaintDescr::cell_unpack(Ref<vm::Cell> cell_ref, ComplaintDescr::Record& data) const {
+bool ProducerInfo::cell_unpack(Ref<vm::Cell> cell_ref, ProducerInfo::Record& data) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack(cs, data) && cs.empty_ext();
 }
 
-bool ComplaintDescr::pack(vm::CellBuilder& cb, const ComplaintDescr::Record& data) const {
-  return cb.store_long_bool(0x7e545dda, 32)
+bool ProducerInfo::pack(vm::CellBuilder& cb, const ProducerInfo::Record& data) const {
+  return cb.store_long_bool(0x34, 8)
+      && cb.store_ulong_rchk_bool(data.utime, 32)
       && cb.append_cellslice_chk(data.mc_blk_ref, 608)
-      && cb.store_ulong_rchk_bool(data.from_utime, 32)
-      && cb.store_ulong_rchk_bool(data.to_utime, 32)
       && cb.store_ref_bool(data.state_proof)
       && cb.store_ref_bool(data.prod_proof);
 }
 
-bool ComplaintDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ComplaintDescr::Record& data) const {
+bool ProducerInfo::cell_pack(Ref<vm::Cell>& cell_ref, const ProducerInfo::Record& data) const {
   vm::CellBuilder cb;
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
-bool ComplaintDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  return cs.fetch_ulong(32) == 0x7e545dda
-      && pp.open("no_blk_gen")
+bool ProducerInfo::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return cs.fetch_ulong(8) == 0x34
+      && pp.open("prod_info")
+      && pp.fetch_uint_field(cs, 32, "utime")
       && pp.field("mc_blk_ref")
       && t_ExtBlkRef.print_skip(pp, cs)
-      && pp.fetch_uint_field(cs, 32, "from_utime")
-      && pp.fetch_uint_field(cs, 32, "to_utime")
       && pp.field("state_proof")
-      && t_Anything.print_ref(pp, cs.fetch_ref())
+      && t_MERKLE_PROOF_Block.print_ref(pp, cs.fetch_ref())
       && pp.field("prod_proof")
-      && t_Anything.print_ref(pp, cs.fetch_ref())
+      && t_MERKLE_PROOF_ShardState.print_ref(pp, cs.fetch_ref())
       && pp.close();
+}
+
+const ProducerInfo t_ProducerInfo;
+
+//
+// code for type `ComplaintDescr`
+//
+constexpr unsigned ComplaintDescr::cons_tag[2];
+
+int ComplaintDescr::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case no_blk_gen:
+    return cs.prefetch_ulong(32) == 0x450e8bd9 ? no_blk_gen : -1;
+  case no_blk_gen_diff:
+    return cs.prefetch_ulong(32) == 0xc737b0caU ? no_blk_gen_diff : -1;
+  }
+  return -1;
+}
+
+bool ComplaintDescr::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case no_blk_gen:
+    return cs.advance_ext(0x10040);
+  case no_blk_gen_diff:
+    return cs.advance_ext(0x20020);
+  }
+  return false;
+}
+
+bool ComplaintDescr::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case no_blk_gen:
+    return cs.fetch_ulong(32) == 0x450e8bd9
+        && cs.advance(32)
+        && t_ProducerInfo.validate_skip_ref(ops, cs, weak);
+  case no_blk_gen_diff:
+    return cs.fetch_ulong(32) == 0xc737b0caU
+        && t_ProducerInfo.validate_skip_ref(ops, cs, weak)
+        && t_ProducerInfo.validate_skip_ref(ops, cs, weak);
+  }
+  return false;
+}
+
+bool ComplaintDescr::unpack(vm::CellSlice& cs, ComplaintDescr::Record_no_blk_gen& data) const {
+  return cs.fetch_ulong(32) == 0x450e8bd9
+      && cs.fetch_uint_to(32, data.from_utime)
+      && cs.fetch_ref_to(data.prod_info);
+}
+
+bool ComplaintDescr::unpack_no_blk_gen(vm::CellSlice& cs, unsigned& from_utime, Ref<Cell>& prod_info) const {
+  return cs.fetch_ulong(32) == 0x450e8bd9
+      && cs.fetch_uint_to(32, from_utime)
+      && cs.fetch_ref_to(prod_info);
+}
+
+bool ComplaintDescr::cell_unpack(Ref<vm::Cell> cell_ref, ComplaintDescr::Record_no_blk_gen& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ComplaintDescr::cell_unpack_no_blk_gen(Ref<vm::Cell> cell_ref, unsigned& from_utime, Ref<Cell>& prod_info) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_no_blk_gen(cs, from_utime, prod_info) && cs.empty_ext();
+}
+
+bool ComplaintDescr::unpack(vm::CellSlice& cs, ComplaintDescr::Record_no_blk_gen_diff& data) const {
+  return cs.fetch_ulong(32) == 0xc737b0caU
+      && cs.fetch_ref_to(data.prod_info_old)
+      && cs.fetch_ref_to(data.prod_info_new);
+}
+
+bool ComplaintDescr::unpack_no_blk_gen_diff(vm::CellSlice& cs, Ref<Cell>& prod_info_old, Ref<Cell>& prod_info_new) const {
+  return cs.fetch_ulong(32) == 0xc737b0caU
+      && cs.fetch_ref_to(prod_info_old)
+      && cs.fetch_ref_to(prod_info_new);
+}
+
+bool ComplaintDescr::cell_unpack(Ref<vm::Cell> cell_ref, ComplaintDescr::Record_no_blk_gen_diff& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ComplaintDescr::cell_unpack_no_blk_gen_diff(Ref<vm::Cell> cell_ref, Ref<Cell>& prod_info_old, Ref<Cell>& prod_info_new) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_no_blk_gen_diff(cs, prod_info_old, prod_info_new) && cs.empty_ext();
+}
+
+bool ComplaintDescr::pack(vm::CellBuilder& cb, const ComplaintDescr::Record_no_blk_gen& data) const {
+  return cb.store_long_bool(0x450e8bd9, 32)
+      && cb.store_ulong_rchk_bool(data.from_utime, 32)
+      && cb.store_ref_bool(data.prod_info);
+}
+
+bool ComplaintDescr::pack_no_blk_gen(vm::CellBuilder& cb, unsigned from_utime, Ref<Cell> prod_info) const {
+  return cb.store_long_bool(0x450e8bd9, 32)
+      && cb.store_ulong_rchk_bool(from_utime, 32)
+      && cb.store_ref_bool(prod_info);
+}
+
+bool ComplaintDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ComplaintDescr::Record_no_blk_gen& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintDescr::cell_pack_no_blk_gen(Ref<vm::Cell>& cell_ref, unsigned from_utime, Ref<Cell> prod_info) const {
+  vm::CellBuilder cb;
+  return pack_no_blk_gen(cb, from_utime, std::move(prod_info)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintDescr::pack(vm::CellBuilder& cb, const ComplaintDescr::Record_no_blk_gen_diff& data) const {
+  return cb.store_long_bool(0xc737b0caU, 32)
+      && cb.store_ref_bool(data.prod_info_old)
+      && cb.store_ref_bool(data.prod_info_new);
+}
+
+bool ComplaintDescr::pack_no_blk_gen_diff(vm::CellBuilder& cb, Ref<Cell> prod_info_old, Ref<Cell> prod_info_new) const {
+  return cb.store_long_bool(0xc737b0caU, 32)
+      && cb.store_ref_bool(prod_info_old)
+      && cb.store_ref_bool(prod_info_new);
+}
+
+bool ComplaintDescr::cell_pack(Ref<vm::Cell>& cell_ref, const ComplaintDescr::Record_no_blk_gen_diff& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintDescr::cell_pack_no_blk_gen_diff(Ref<vm::Cell>& cell_ref, Ref<Cell> prod_info_old, Ref<Cell> prod_info_new) const {
+  vm::CellBuilder cb;
+  return pack_no_blk_gen_diff(cb, std::move(prod_info_old), std::move(prod_info_new)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ComplaintDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case no_blk_gen:
+    return cs.fetch_ulong(32) == 0x450e8bd9
+        && pp.open("no_blk_gen")
+        && pp.fetch_uint_field(cs, 32, "from_utime")
+        && pp.field("prod_info")
+        && t_ProducerInfo.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  case no_blk_gen_diff:
+    return cs.fetch_ulong(32) == 0xc737b0caU
+        && pp.open("no_blk_gen_diff")
+        && pp.field("prod_info_old")
+        && t_ProducerInfo.print_ref(pp, cs.fetch_ref())
+        && pp.field("prod_info_new")
+        && t_ProducerInfo.print_ref(pp, cs.fetch_ref())
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for ComplaintDescr");
 }
 
 const ComplaintDescr t_ComplaintDescr;
@@ -22336,6 +22566,792 @@ bool SmcCapability::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
 
 const SmcCapability t_SmcCapability;
 
+//
+// code for type `ChanConfig`
+//
+
+int ChanConfig::check_tag(const vm::CellSlice& cs) const {
+  return chan_config;
+}
+
+bool ChanConfig::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.advance(576)
+      && t_MsgAddressInt.validate_skip_ref(ops, cs, weak)
+      && t_MsgAddressInt.validate_skip_ref(ops, cs, weak)
+      && cs.advance(64);
+}
+
+bool ChanConfig::unpack(vm::CellSlice& cs, ChanConfig::Record& data) const {
+  return cs.fetch_uint_to(32, data.init_timeout)
+      && cs.fetch_uint_to(32, data.close_timeout)
+      && cs.fetch_bits_to(data.a_key.bits(), 256)
+      && cs.fetch_bits_to(data.b_key.bits(), 256)
+      && cs.fetch_ref_to(data.a_addr)
+      && cs.fetch_ref_to(data.b_addr)
+      && cs.fetch_uint_to(64, data.channel_id);
+}
+
+bool ChanConfig::cell_unpack(Ref<vm::Cell> cell_ref, ChanConfig::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanConfig::pack(vm::CellBuilder& cb, const ChanConfig::Record& data) const {
+  return cb.store_ulong_rchk_bool(data.init_timeout, 32)
+      && cb.store_ulong_rchk_bool(data.close_timeout, 32)
+      && cb.store_bits_bool(data.a_key.cbits(), 256)
+      && cb.store_bits_bool(data.b_key.cbits(), 256)
+      && cb.store_ref_bool(data.a_addr)
+      && cb.store_ref_bool(data.b_addr)
+      && cb.store_ulong_rchk_bool(data.channel_id, 64);
+}
+
+bool ChanConfig::cell_pack(Ref<vm::Cell>& cell_ref, const ChanConfig::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanConfig::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("chan_config")
+      && pp.fetch_uint_field(cs, 32, "init_timeout")
+      && pp.fetch_uint_field(cs, 32, "close_timeout")
+      && pp.fetch_bits_field(cs, 256, "a_key")
+      && pp.fetch_bits_field(cs, 256, "b_key")
+      && pp.field("a_addr")
+      && t_MsgAddressInt.print_ref(pp, cs.fetch_ref())
+      && pp.field("b_addr")
+      && t_MsgAddressInt.print_ref(pp, cs.fetch_ref())
+      && pp.fetch_uint_field(cs, 64, "channel_id")
+      && pp.close();
+}
+
+const ChanConfig t_ChanConfig;
+
+//
+// code for type `ChanState`
+//
+
+int ChanState::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chan_state_init:
+    return cs.have(3) ? chan_state_init : -1;
+  case chan_state_close:
+    return cs.have(3) ? chan_state_close : -1;
+  case chan_state_payout:
+    return cs.prefetch_ulong(3) == 2 ? chan_state_payout : -1;
+  }
+  return -1;
+}
+
+bool ChanState::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chan_state_init:
+    return cs.advance(5)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs)
+        && cs.advance(32)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs);
+  case chan_state_close:
+    return cs.advance(5)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs)
+        && cs.advance(32)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs);
+  case chan_state_payout:
+    return cs.advance(3)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs);
+  }
+  return false;
+}
+
+bool ChanState::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case chan_state_init:
+    return cs.advance(5)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && cs.advance(32)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
+  case chan_state_close:
+    return cs.advance(5)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && cs.advance(32)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
+  case chan_state_payout:
+    return cs.fetch_ulong(3) == 2
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak);
+  }
+  return false;
+}
+
+bool ChanState::unpack(vm::CellSlice& cs, ChanState::Record_chan_state_init& data) const {
+  return cs.fetch_ulong(3) == 0
+      && cs.fetch_bool_to(data.signed_A)
+      && cs.fetch_bool_to(data.signed_B)
+      && t_Grams.fetch_to(cs, data.min_A)
+      && t_Grams.fetch_to(cs, data.min_B)
+      && cs.fetch_uint_to(32, data.expire_at)
+      && t_Grams.fetch_to(cs, data.A)
+      && t_Grams.fetch_to(cs, data.B);
+}
+
+bool ChanState::cell_unpack(Ref<vm::Cell> cell_ref, ChanState::Record_chan_state_init& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanState::unpack(vm::CellSlice& cs, ChanState::Record_chan_state_close& data) const {
+  return cs.fetch_ulong(3) == 1
+      && cs.fetch_bool_to(data.signed_A)
+      && cs.fetch_bool_to(data.signed_B)
+      && t_Grams.fetch_to(cs, data.promise_A)
+      && t_Grams.fetch_to(cs, data.promise_B)
+      && cs.fetch_uint_to(32, data.expire_at)
+      && t_Grams.fetch_to(cs, data.A)
+      && t_Grams.fetch_to(cs, data.B);
+}
+
+bool ChanState::cell_unpack(Ref<vm::Cell> cell_ref, ChanState::Record_chan_state_close& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanState::unpack(vm::CellSlice& cs, ChanState::Record_chan_state_payout& data) const {
+  return cs.fetch_ulong(3) == 2
+      && t_Grams.fetch_to(cs, data.A)
+      && t_Grams.fetch_to(cs, data.B);
+}
+
+bool ChanState::unpack_chan_state_payout(vm::CellSlice& cs, Ref<CellSlice>& A, Ref<CellSlice>& B) const {
+  return cs.fetch_ulong(3) == 2
+      && t_Grams.fetch_to(cs, A)
+      && t_Grams.fetch_to(cs, B);
+}
+
+bool ChanState::cell_unpack(Ref<vm::Cell> cell_ref, ChanState::Record_chan_state_payout& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanState::cell_unpack_chan_state_payout(Ref<vm::Cell> cell_ref, Ref<CellSlice>& A, Ref<CellSlice>& B) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_state_payout(cs, A, B) && cs.empty_ext();
+}
+
+bool ChanState::pack(vm::CellBuilder& cb, const ChanState::Record_chan_state_init& data) const {
+  return cb.store_long_bool(0, 3)
+      && cb.store_ulong_rchk_bool(data.signed_A, 1)
+      && cb.store_ulong_rchk_bool(data.signed_B, 1)
+      && t_Grams.store_from(cb, data.min_A)
+      && t_Grams.store_from(cb, data.min_B)
+      && cb.store_ulong_rchk_bool(data.expire_at, 32)
+      && t_Grams.store_from(cb, data.A)
+      && t_Grams.store_from(cb, data.B);
+}
+
+bool ChanState::cell_pack(Ref<vm::Cell>& cell_ref, const ChanState::Record_chan_state_init& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanState::pack(vm::CellBuilder& cb, const ChanState::Record_chan_state_close& data) const {
+  return cb.store_long_bool(1, 3)
+      && cb.store_ulong_rchk_bool(data.signed_A, 1)
+      && cb.store_ulong_rchk_bool(data.signed_B, 1)
+      && t_Grams.store_from(cb, data.promise_A)
+      && t_Grams.store_from(cb, data.promise_B)
+      && cb.store_ulong_rchk_bool(data.expire_at, 32)
+      && t_Grams.store_from(cb, data.A)
+      && t_Grams.store_from(cb, data.B);
+}
+
+bool ChanState::cell_pack(Ref<vm::Cell>& cell_ref, const ChanState::Record_chan_state_close& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanState::pack(vm::CellBuilder& cb, const ChanState::Record_chan_state_payout& data) const {
+  return cb.store_long_bool(2, 3)
+      && t_Grams.store_from(cb, data.A)
+      && t_Grams.store_from(cb, data.B);
+}
+
+bool ChanState::pack_chan_state_payout(vm::CellBuilder& cb, Ref<CellSlice> A, Ref<CellSlice> B) const {
+  return cb.store_long_bool(2, 3)
+      && t_Grams.store_from(cb, A)
+      && t_Grams.store_from(cb, B);
+}
+
+bool ChanState::cell_pack(Ref<vm::Cell>& cell_ref, const ChanState::Record_chan_state_payout& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanState::cell_pack_chan_state_payout(Ref<vm::Cell>& cell_ref, Ref<CellSlice> A, Ref<CellSlice> B) const {
+  vm::CellBuilder cb;
+  return pack_chan_state_payout(cb, std::move(A), std::move(B)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanState::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chan_state_init:
+    return cs.advance(3)
+        && pp.open("chan_state_init")
+        && pp.fetch_uint_field(cs, 1, "signed_A")
+        && pp.fetch_uint_field(cs, 1, "signed_B")
+        && pp.field("min_A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("min_B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.fetch_uint_field(cs, 32, "expire_at")
+        && pp.field("A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.close();
+  case chan_state_close:
+    return cs.advance(3)
+        && pp.open("chan_state_close")
+        && pp.fetch_uint_field(cs, 1, "signed_A")
+        && pp.fetch_uint_field(cs, 1, "signed_B")
+        && pp.field("promise_A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("promise_B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.fetch_uint_field(cs, 32, "expire_at")
+        && pp.field("A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.close();
+  case chan_state_payout:
+    return cs.fetch_ulong(3) == 2
+        && pp.open("chan_state_payout")
+        && pp.field("A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.close();
+  }
+  return pp.fail("unknown constructor for ChanState");
+}
+
+const ChanState t_ChanState;
+
+//
+// code for type `ChanPromise`
+//
+
+int ChanPromise::check_tag(const vm::CellSlice& cs) const {
+  return chan_promise;
+}
+
+bool ChanPromise::skip(vm::CellSlice& cs) const {
+  return cs.advance(64)
+      && t_Grams.skip(cs)
+      && t_Grams.skip(cs);
+}
+
+bool ChanPromise::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return cs.advance(64)
+      && t_Grams.validate_skip(ops, cs, weak)
+      && t_Grams.validate_skip(ops, cs, weak);
+}
+
+bool ChanPromise::unpack(vm::CellSlice& cs, ChanPromise::Record& data) const {
+  return cs.fetch_uint_to(64, data.channel_id)
+      && t_Grams.fetch_to(cs, data.promise_A)
+      && t_Grams.fetch_to(cs, data.promise_B);
+}
+
+bool ChanPromise::unpack_chan_promise(vm::CellSlice& cs, unsigned long long& channel_id, Ref<CellSlice>& promise_A, Ref<CellSlice>& promise_B) const {
+  return cs.fetch_uint_to(64, channel_id)
+      && t_Grams.fetch_to(cs, promise_A)
+      && t_Grams.fetch_to(cs, promise_B);
+}
+
+bool ChanPromise::cell_unpack(Ref<vm::Cell> cell_ref, ChanPromise::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanPromise::cell_unpack_chan_promise(Ref<vm::Cell> cell_ref, unsigned long long& channel_id, Ref<CellSlice>& promise_A, Ref<CellSlice>& promise_B) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_promise(cs, channel_id, promise_A, promise_B) && cs.empty_ext();
+}
+
+bool ChanPromise::pack(vm::CellBuilder& cb, const ChanPromise::Record& data) const {
+  return cb.store_ulong_rchk_bool(data.channel_id, 64)
+      && t_Grams.store_from(cb, data.promise_A)
+      && t_Grams.store_from(cb, data.promise_B);
+}
+
+bool ChanPromise::pack_chan_promise(vm::CellBuilder& cb, unsigned long long channel_id, Ref<CellSlice> promise_A, Ref<CellSlice> promise_B) const {
+  return cb.store_ulong_rchk_bool(channel_id, 64)
+      && t_Grams.store_from(cb, promise_A)
+      && t_Grams.store_from(cb, promise_B);
+}
+
+bool ChanPromise::cell_pack(Ref<vm::Cell>& cell_ref, const ChanPromise::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanPromise::cell_pack_chan_promise(Ref<vm::Cell>& cell_ref, unsigned long long channel_id, Ref<CellSlice> promise_A, Ref<CellSlice> promise_B) const {
+  vm::CellBuilder cb;
+  return pack_chan_promise(cb, channel_id, std::move(promise_A), std::move(promise_B)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanPromise::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("chan_promise")
+      && pp.fetch_uint_field(cs, 64, "channel_id")
+      && pp.field("promise_A")
+      && t_Grams.print_skip(pp, cs)
+      && pp.field("promise_B")
+      && t_Grams.print_skip(pp, cs)
+      && pp.close();
+}
+
+const ChanPromise t_ChanPromise;
+
+//
+// code for type `ChanSignedPromise`
+//
+
+int ChanSignedPromise::check_tag(const vm::CellSlice& cs) const {
+  return chan_signed_promise;
+}
+
+bool ChanSignedPromise::skip(vm::CellSlice& cs) const {
+  return t_Maybe_Ref_bits512.skip(cs)
+      && t_ChanPromise.skip(cs);
+}
+
+bool ChanSignedPromise::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Maybe_Ref_bits512.validate_skip(ops, cs, weak)
+      && t_ChanPromise.validate_skip(ops, cs, weak);
+}
+
+bool ChanSignedPromise::unpack(vm::CellSlice& cs, ChanSignedPromise::Record& data) const {
+  return t_Maybe_Ref_bits512.fetch_to(cs, data.sig)
+      && t_ChanPromise.fetch_to(cs, data.promise);
+}
+
+bool ChanSignedPromise::unpack_chan_signed_promise(vm::CellSlice& cs, Ref<CellSlice>& sig, Ref<CellSlice>& promise) const {
+  return t_Maybe_Ref_bits512.fetch_to(cs, sig)
+      && t_ChanPromise.fetch_to(cs, promise);
+}
+
+bool ChanSignedPromise::cell_unpack(Ref<vm::Cell> cell_ref, ChanSignedPromise::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanSignedPromise::cell_unpack_chan_signed_promise(Ref<vm::Cell> cell_ref, Ref<CellSlice>& sig, Ref<CellSlice>& promise) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_signed_promise(cs, sig, promise) && cs.empty_ext();
+}
+
+bool ChanSignedPromise::pack(vm::CellBuilder& cb, const ChanSignedPromise::Record& data) const {
+  return t_Maybe_Ref_bits512.store_from(cb, data.sig)
+      && t_ChanPromise.store_from(cb, data.promise);
+}
+
+bool ChanSignedPromise::pack_chan_signed_promise(vm::CellBuilder& cb, Ref<CellSlice> sig, Ref<CellSlice> promise) const {
+  return t_Maybe_Ref_bits512.store_from(cb, sig)
+      && t_ChanPromise.store_from(cb, promise);
+}
+
+bool ChanSignedPromise::cell_pack(Ref<vm::Cell>& cell_ref, const ChanSignedPromise::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanSignedPromise::cell_pack_chan_signed_promise(Ref<vm::Cell>& cell_ref, Ref<CellSlice> sig, Ref<CellSlice> promise) const {
+  vm::CellBuilder cb;
+  return pack_chan_signed_promise(cb, std::move(sig), std::move(promise)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanSignedPromise::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("chan_signed_promise")
+      && pp.field("sig")
+      && t_Maybe_Ref_bits512.print_skip(pp, cs)
+      && pp.field("promise")
+      && t_ChanPromise.print_skip(pp, cs)
+      && pp.close();
+}
+
+const ChanSignedPromise t_ChanSignedPromise;
+
+//
+// code for type `ChanMsg`
+//
+constexpr unsigned ChanMsg::cons_tag[3];
+
+int ChanMsg::check_tag(const vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chan_msg_init:
+    return cs.prefetch_ulong(32) == 0x27317822 ? chan_msg_init : -1;
+  case chan_msg_close:
+    return cs.prefetch_ulong(32) == 0xf28ae183U ? chan_msg_close : -1;
+  case chan_msg_timeout:
+    return cs.prefetch_ulong(32) == 0x43278a28 ? chan_msg_timeout : -1;
+  }
+  return -1;
+}
+
+bool ChanMsg::skip(vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chan_msg_init:
+    return cs.advance(32)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs)
+        && cs.advance(64);
+  case chan_msg_close:
+    return cs.advance(32)
+        && t_Grams.skip(cs)
+        && t_Grams.skip(cs)
+        && t_ChanSignedPromise.skip(cs);
+  case chan_msg_timeout:
+    return cs.advance(32);
+  }
+  return false;
+}
+
+bool ChanMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  switch (get_tag(cs)) {
+  case chan_msg_init:
+    return cs.fetch_ulong(32) == 0x27317822
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && cs.advance(64);
+  case chan_msg_close:
+    return cs.fetch_ulong(32) == 0xf28ae183U
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_Grams.validate_skip(ops, cs, weak)
+        && t_ChanSignedPromise.validate_skip(ops, cs, weak);
+  case chan_msg_timeout:
+    return cs.fetch_ulong(32) == 0x43278a28;
+  }
+  return false;
+}
+
+bool ChanMsg::unpack(vm::CellSlice& cs, ChanMsg::Record_chan_msg_init& data) const {
+  return cs.fetch_ulong(32) == 0x27317822
+      && t_Grams.fetch_to(cs, data.inc_A)
+      && t_Grams.fetch_to(cs, data.inc_B)
+      && t_Grams.fetch_to(cs, data.min_A)
+      && t_Grams.fetch_to(cs, data.min_B)
+      && cs.fetch_uint_to(64, data.channel_id);
+}
+
+bool ChanMsg::cell_unpack(Ref<vm::Cell> cell_ref, ChanMsg::Record_chan_msg_init& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanMsg::unpack(vm::CellSlice& cs, ChanMsg::Record_chan_msg_close& data) const {
+  return cs.fetch_ulong(32) == 0xf28ae183U
+      && t_Grams.fetch_to(cs, data.extra_A)
+      && t_Grams.fetch_to(cs, data.extra_B)
+      && t_ChanSignedPromise.fetch_to(cs, data.promise);
+}
+
+bool ChanMsg::unpack_chan_msg_close(vm::CellSlice& cs, Ref<CellSlice>& extra_A, Ref<CellSlice>& extra_B, Ref<CellSlice>& promise) const {
+  return cs.fetch_ulong(32) == 0xf28ae183U
+      && t_Grams.fetch_to(cs, extra_A)
+      && t_Grams.fetch_to(cs, extra_B)
+      && t_ChanSignedPromise.fetch_to(cs, promise);
+}
+
+bool ChanMsg::cell_unpack(Ref<vm::Cell> cell_ref, ChanMsg::Record_chan_msg_close& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanMsg::cell_unpack_chan_msg_close(Ref<vm::Cell> cell_ref, Ref<CellSlice>& extra_A, Ref<CellSlice>& extra_B, Ref<CellSlice>& promise) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_msg_close(cs, extra_A, extra_B, promise) && cs.empty_ext();
+}
+
+bool ChanMsg::unpack(vm::CellSlice& cs, ChanMsg::Record_chan_msg_timeout& data) const {
+  return cs.fetch_ulong(32) == 0x43278a28;
+}
+
+bool ChanMsg::unpack_chan_msg_timeout(vm::CellSlice& cs) const {
+  return cs.fetch_ulong(32) == 0x43278a28;
+}
+
+bool ChanMsg::cell_unpack(Ref<vm::Cell> cell_ref, ChanMsg::Record_chan_msg_timeout& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanMsg::cell_unpack_chan_msg_timeout(Ref<vm::Cell> cell_ref) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_msg_timeout(cs) && cs.empty_ext();
+}
+
+bool ChanMsg::pack(vm::CellBuilder& cb, const ChanMsg::Record_chan_msg_init& data) const {
+  return cb.store_long_bool(0x27317822, 32)
+      && t_Grams.store_from(cb, data.inc_A)
+      && t_Grams.store_from(cb, data.inc_B)
+      && t_Grams.store_from(cb, data.min_A)
+      && t_Grams.store_from(cb, data.min_B)
+      && cb.store_ulong_rchk_bool(data.channel_id, 64);
+}
+
+bool ChanMsg::cell_pack(Ref<vm::Cell>& cell_ref, const ChanMsg::Record_chan_msg_init& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanMsg::pack(vm::CellBuilder& cb, const ChanMsg::Record_chan_msg_close& data) const {
+  return cb.store_long_bool(0xf28ae183U, 32)
+      && t_Grams.store_from(cb, data.extra_A)
+      && t_Grams.store_from(cb, data.extra_B)
+      && t_ChanSignedPromise.store_from(cb, data.promise);
+}
+
+bool ChanMsg::pack_chan_msg_close(vm::CellBuilder& cb, Ref<CellSlice> extra_A, Ref<CellSlice> extra_B, Ref<CellSlice> promise) const {
+  return cb.store_long_bool(0xf28ae183U, 32)
+      && t_Grams.store_from(cb, extra_A)
+      && t_Grams.store_from(cb, extra_B)
+      && t_ChanSignedPromise.store_from(cb, promise);
+}
+
+bool ChanMsg::cell_pack(Ref<vm::Cell>& cell_ref, const ChanMsg::Record_chan_msg_close& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanMsg::cell_pack_chan_msg_close(Ref<vm::Cell>& cell_ref, Ref<CellSlice> extra_A, Ref<CellSlice> extra_B, Ref<CellSlice> promise) const {
+  vm::CellBuilder cb;
+  return pack_chan_msg_close(cb, std::move(extra_A), std::move(extra_B), std::move(promise)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanMsg::pack(vm::CellBuilder& cb, const ChanMsg::Record_chan_msg_timeout& data) const {
+  return cb.store_long_bool(0x43278a28, 32);
+}
+
+bool ChanMsg::pack_chan_msg_timeout(vm::CellBuilder& cb) const {
+  return cb.store_long_bool(0x43278a28, 32);
+}
+
+bool ChanMsg::cell_pack(Ref<vm::Cell>& cell_ref, const ChanMsg::Record_chan_msg_timeout& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanMsg::cell_pack_chan_msg_timeout(Ref<vm::Cell>& cell_ref) const {
+  vm::CellBuilder cb;
+  return pack_chan_msg_timeout(cb) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanMsg::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  switch (get_tag(cs)) {
+  case chan_msg_init:
+    return cs.fetch_ulong(32) == 0x27317822
+        && pp.open("chan_msg_init")
+        && pp.field("inc_A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("inc_B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("min_A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("min_B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.fetch_uint_field(cs, 64, "channel_id")
+        && pp.close();
+  case chan_msg_close:
+    return cs.fetch_ulong(32) == 0xf28ae183U
+        && pp.open("chan_msg_close")
+        && pp.field("extra_A")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("extra_B")
+        && t_Grams.print_skip(pp, cs)
+        && pp.field("promise")
+        && t_ChanSignedPromise.print_skip(pp, cs)
+        && pp.close();
+  case chan_msg_timeout:
+    return cs.fetch_ulong(32) == 0x43278a28
+        && pp.cons("chan_msg_timeout");
+  }
+  return pp.fail("unknown constructor for ChanMsg");
+}
+
+const ChanMsg t_ChanMsg;
+
+//
+// code for type `ChanSignedMsg`
+//
+
+int ChanSignedMsg::check_tag(const vm::CellSlice& cs) const {
+  return chan_signed_msg;
+}
+
+bool ChanSignedMsg::skip(vm::CellSlice& cs) const {
+  return t_Maybe_Ref_bits512.skip(cs)
+      && t_Maybe_Ref_bits512.skip(cs)
+      && t_ChanMsg.skip(cs);
+}
+
+bool ChanSignedMsg::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_Maybe_Ref_bits512.validate_skip(ops, cs, weak)
+      && t_Maybe_Ref_bits512.validate_skip(ops, cs, weak)
+      && t_ChanMsg.validate_skip(ops, cs, weak);
+}
+
+bool ChanSignedMsg::unpack(vm::CellSlice& cs, ChanSignedMsg::Record& data) const {
+  return t_Maybe_Ref_bits512.fetch_to(cs, data.sig_A)
+      && t_Maybe_Ref_bits512.fetch_to(cs, data.sig_B)
+      && t_ChanMsg.fetch_to(cs, data.msg);
+}
+
+bool ChanSignedMsg::unpack_chan_signed_msg(vm::CellSlice& cs, Ref<CellSlice>& sig_A, Ref<CellSlice>& sig_B, Ref<CellSlice>& msg) const {
+  return t_Maybe_Ref_bits512.fetch_to(cs, sig_A)
+      && t_Maybe_Ref_bits512.fetch_to(cs, sig_B)
+      && t_ChanMsg.fetch_to(cs, msg);
+}
+
+bool ChanSignedMsg::cell_unpack(Ref<vm::Cell> cell_ref, ChanSignedMsg::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanSignedMsg::cell_unpack_chan_signed_msg(Ref<vm::Cell> cell_ref, Ref<CellSlice>& sig_A, Ref<CellSlice>& sig_B, Ref<CellSlice>& msg) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_signed_msg(cs, sig_A, sig_B, msg) && cs.empty_ext();
+}
+
+bool ChanSignedMsg::pack(vm::CellBuilder& cb, const ChanSignedMsg::Record& data) const {
+  return t_Maybe_Ref_bits512.store_from(cb, data.sig_A)
+      && t_Maybe_Ref_bits512.store_from(cb, data.sig_B)
+      && t_ChanMsg.store_from(cb, data.msg);
+}
+
+bool ChanSignedMsg::pack_chan_signed_msg(vm::CellBuilder& cb, Ref<CellSlice> sig_A, Ref<CellSlice> sig_B, Ref<CellSlice> msg) const {
+  return t_Maybe_Ref_bits512.store_from(cb, sig_A)
+      && t_Maybe_Ref_bits512.store_from(cb, sig_B)
+      && t_ChanMsg.store_from(cb, msg);
+}
+
+bool ChanSignedMsg::cell_pack(Ref<vm::Cell>& cell_ref, const ChanSignedMsg::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanSignedMsg::cell_pack_chan_signed_msg(Ref<vm::Cell>& cell_ref, Ref<CellSlice> sig_A, Ref<CellSlice> sig_B, Ref<CellSlice> msg) const {
+  vm::CellBuilder cb;
+  return pack_chan_signed_msg(cb, std::move(sig_A), std::move(sig_B), std::move(msg)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanSignedMsg::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("chan_signed_msg")
+      && pp.field("sig_A")
+      && t_Maybe_Ref_bits512.print_skip(pp, cs)
+      && pp.field("sig_B")
+      && t_Maybe_Ref_bits512.print_skip(pp, cs)
+      && pp.field("msg")
+      && t_ChanMsg.print_skip(pp, cs)
+      && pp.close();
+}
+
+const ChanSignedMsg t_ChanSignedMsg;
+
+//
+// code for type `ChanData`
+//
+
+int ChanData::check_tag(const vm::CellSlice& cs) const {
+  return chan_data;
+}
+
+bool ChanData::validate_skip(int* ops, vm::CellSlice& cs, bool weak) const {
+  return t_ChanConfig.validate_skip_ref(ops, cs, weak)
+      && t_ChanState.validate_skip_ref(ops, cs, weak);
+}
+
+bool ChanData::unpack(vm::CellSlice& cs, ChanData::Record& data) const {
+  return cs.fetch_ref_to(data.config)
+      && cs.fetch_ref_to(data.state);
+}
+
+bool ChanData::unpack_chan_data(vm::CellSlice& cs, Ref<Cell>& config, Ref<Cell>& state) const {
+  return cs.fetch_ref_to(config)
+      && cs.fetch_ref_to(state);
+}
+
+bool ChanData::cell_unpack(Ref<vm::Cell> cell_ref, ChanData::Record& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ChanData::cell_unpack_chan_data(Ref<vm::Cell> cell_ref, Ref<Cell>& config, Ref<Cell>& state) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_chan_data(cs, config, state) && cs.empty_ext();
+}
+
+bool ChanData::pack(vm::CellBuilder& cb, const ChanData::Record& data) const {
+  return cb.store_ref_bool(data.config)
+      && cb.store_ref_bool(data.state);
+}
+
+bool ChanData::pack_chan_data(vm::CellBuilder& cb, Ref<Cell> config, Ref<Cell> state) const {
+  return cb.store_ref_bool(config)
+      && cb.store_ref_bool(state);
+}
+
+bool ChanData::cell_pack(Ref<vm::Cell>& cell_ref, const ChanData::Record& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanData::cell_pack_chan_data(Ref<vm::Cell>& cell_ref, Ref<Cell> config, Ref<Cell> state) const {
+  vm::CellBuilder cb;
+  return pack_chan_data(cb, std::move(config), std::move(state)) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ChanData::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
+  return pp.open("chan_data")
+      && pp.field("config")
+      && t_ChanConfig.print_ref(pp, cs.fetch_ref())
+      && pp.field("state")
+      && t_ChanState.print_ref(pp, cs.fetch_ref())
+      && pp.close();
+}
+
+const ChanData t_ChanData;
+
 // definitions of constant types used
 
 const NatWidth t_natwidth_1{1};
@@ -22381,13 +23397,13 @@ const RefT t_Ref_TYPE_1614{t_Transaction_aux};
 const HASH_UPDATE t_HASH_UPDATE_Account{t_Account};
 const RefT t_Ref_HASH_UPDATE_Account{t_HASH_UPDATE_Account};
 const RefT t_Ref_TransactionDescr{t_TransactionDescr};
+const UInt t_uint16{16};
 const HashmapAug t_HashmapAug_64_Ref_Transaction_CurrencyCollection{64, t_Ref_Transaction, t_CurrencyCollection};
 const HashmapAugE t_HashmapAugE_256_AccountBlock_CurrencyCollection{256, t_AccountBlock, t_CurrencyCollection};
 const VarUInteger t_VarUInteger_3{3};
 const Maybe t_Maybe_VarUInteger_3{t_VarUInteger_3};
 const Maybe t_Maybe_int32{t_int32};
-const RefT t_Ref_TYPE_1625{t_TrComputePhase_aux};
-const UInt t_uint16{16};
+const RefT t_Ref_TYPE_1626{t_TrComputePhase_aux};
 const Maybe t_Maybe_TrStoragePhase{t_TrStoragePhase};
 const Maybe t_Maybe_TrCreditPhase{t_TrCreditPhase};
 const RefT t_Ref_TrActionPhase{t_TrActionPhase};
@@ -22403,7 +23419,7 @@ const RefT t_Ref_OutMsgQueueInfo{t_OutMsgQueueInfo};
 const RefT t_Ref_ShardAccounts{t_ShardAccounts};
 const HashmapE t_HashmapE_256_LibDescr{256, t_LibDescr};
 const Maybe t_Maybe_BlkMasterInfo{t_BlkMasterInfo};
-const RefT t_Ref_TYPE_1639{t_ShardStateUnsplit_aux};
+const RefT t_Ref_TYPE_1640{t_ShardStateUnsplit_aux};
 const RefT t_Ref_McStateExtra{t_McStateExtra};
 const Maybe t_Maybe_Ref_McStateExtra{t_Ref_McStateExtra};
 const RefT t_Ref_ShardStateUnsplit{t_ShardStateUnsplit};
@@ -22422,10 +23438,10 @@ const RefT t_Ref_OutMsgDescr{t_OutMsgDescr};
 const RefT t_Ref_ShardAccountBlocks{t_ShardAccountBlocks};
 const RefT t_Ref_McBlockExtra{t_McBlockExtra};
 const Maybe t_Maybe_Ref_McBlockExtra{t_Ref_McBlockExtra};
-const RefT t_Ref_TYPE_1650{t_ValueFlow_aux};
-const RefT t_Ref_TYPE_1651{t_ValueFlow_aux1};
+const RefT t_Ref_TYPE_1651{t_ValueFlow_aux};
+const RefT t_Ref_TYPE_1652{t_ValueFlow_aux1};
 const NatWidth t_natwidth_3{3};
-const RefT t_Ref_TYPE_1655{t_ShardDescr_aux};
+const RefT t_Ref_TYPE_1656{t_ShardDescr_aux};
 const BinTree t_BinTree_ShardDescr{t_ShardDescr};
 const RefT t_Ref_BinTree_ShardDescr{t_BinTree_ShardDescr};
 const HashmapE t_HashmapE_32_Ref_BinTree_ShardDescr{32, t_Ref_BinTree_ShardDescr};
@@ -22437,11 +23453,11 @@ const HashmapE t_HashmapE_256_CreatorStats{256, t_CreatorStats};
 const HashmapAugE t_HashmapAugE_256_CreatorStats_uint32{256, t_CreatorStats, t_uint32};
 const NatWidth t_natwidth_16{16};
 const Maybe t_Maybe_ExtBlkRef{t_ExtBlkRef};
-const RefT t_Ref_TYPE_1669{t_McStateExtra_aux};
+const RefT t_Ref_TYPE_1670{t_McStateExtra_aux};
 const RefT t_Ref_SignedCertificate{t_SignedCertificate};
 const HashmapE t_HashmapE_16_CryptoSignaturePair{16, t_CryptoSignaturePair};
 const Maybe t_Maybe_Ref_InMsg{t_Ref_InMsg};
-const RefT t_Ref_TYPE_1677{t_McBlockExtra_aux};
+const RefT t_Ref_TYPE_1678{t_McBlockExtra_aux};
 const Hashmap t_Hashmap_16_ValidatorDescr{16, t_ValidatorDescr};
 const HashmapE t_HashmapE_16_ValidatorDescr{16, t_ValidatorDescr};
 const Hashmap t_Hashmap_32_True{32, t_True};
@@ -22464,6 +23480,11 @@ const RefT t_Ref_BlockSignatures{t_BlockSignatures};
 const Maybe t_Maybe_Ref_BlockSignatures{t_Ref_BlockSignatures};
 const RefT t_Ref_TopBlockDescr{t_TopBlockDescr};
 const HashmapE t_HashmapE_96_Ref_TopBlockDescr{96, t_Ref_TopBlockDescr};
+const MERKLE_PROOF t_MERKLE_PROOF_Block{t_Block};
+const RefT t_Ref_MERKLE_PROOF_Block{t_MERKLE_PROOF_Block};
+const MERKLE_PROOF t_MERKLE_PROOF_ShardState{t_ShardState};
+const RefT t_Ref_MERKLE_PROOF_ShardState{t_MERKLE_PROOF_ShardState};
+const RefT t_Ref_ProducerInfo{t_ProducerInfo};
 const RefT t_Ref_ComplaintDescr{t_ComplaintDescr};
 const RefT t_Ref_ValidatorComplaint{t_ValidatorComplaint};
 const Int t_int257{257};
@@ -22472,7 +23493,7 @@ const NatLeq t_natleq_4{4};
 const RefT t_Ref_VmStackValue{t_VmStackValue};
 const NatWidth t_natwidth_24{24};
 const HashmapE t_HashmapE_4_VmStackValue{4, t_VmStackValue};
-const RefT t_Ref_TYPE_1715{t_VmGasLimits_aux};
+const RefT t_Ref_TYPE_1717{t_VmGasLimits_aux};
 const HashmapE t_HashmapE_256_Ref_Cell{256, t_RefCell};
 const UInt t_uint13{13};
 const Maybe t_Maybe_uint13{t_uint13};
@@ -22482,6 +23503,12 @@ const Maybe t_Maybe_int16{t_int16};
 const RefT t_Ref_VmCont{t_VmCont};
 const RefT t_Ref_DNSRecord{t_DNSRecord};
 const HashmapE t_HashmapE_16_Ref_DNSRecord{16, t_Ref_DNSRecord};
+const RefT t_Ref_MsgAddressInt{t_MsgAddressInt};
+const Bits t_bits512{512};
+const RefT t_Ref_bits512{t_bits512};
+const Maybe t_Maybe_Ref_bits512{t_Ref_bits512};
+const RefT t_Ref_ChanConfig{t_ChanConfig};
+const RefT t_Ref_ChanState{t_ChanState};
 
 // definition of type name registration function
 bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
@@ -22603,6 +23630,7 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("BlockProof", &t_BlockProof)
       && func("TopBlockDescr", &t_TopBlockDescr)
       && func("TopBlockDescrSet", &t_TopBlockDescrSet)
+      && func("ProducerInfo", &t_ProducerInfo)
       && func("ComplaintDescr", &t_ComplaintDescr)
       && func("ValidatorComplaint", &t_ValidatorComplaint)
       && func("ValidatorComplaintStatus", &t_ValidatorComplaintStatus)
@@ -22620,7 +23648,14 @@ bool register_simple_types(std::function<bool(const char*, const TLB*)> func) {
       && func("ProtoList", &t_ProtoList)
       && func("Protocol", &t_Protocol)
       && func("SmcCapList", &t_SmcCapList)
-      && func("SmcCapability", &t_SmcCapability);
+      && func("SmcCapability", &t_SmcCapability)
+      && func("ChanConfig", &t_ChanConfig)
+      && func("ChanState", &t_ChanState)
+      && func("ChanPromise", &t_ChanPromise)
+      && func("ChanSignedPromise", &t_ChanSignedPromise)
+      && func("ChanMsg", &t_ChanMsg)
+      && func("ChanSignedMsg", &t_ChanSignedMsg)
+      && func("ChanData", &t_ChanData);
 }
 
 

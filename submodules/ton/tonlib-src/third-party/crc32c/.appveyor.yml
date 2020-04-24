@@ -20,6 +20,9 @@ configuration:
   - RelWithDebInfo
   - Debug
 
+build:
+  verbosity: minimal
+
 build_script:
   - git submodule update --init --recursive
   - mkdir build

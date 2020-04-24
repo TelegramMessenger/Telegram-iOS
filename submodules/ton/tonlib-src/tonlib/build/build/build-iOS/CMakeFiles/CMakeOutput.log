@@ -1,0 +1,439 @@
+The target system is: Darwin - 1 - 
+The host system is: Darwin - 18.7.0 - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /usr/bin/gcc 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is AppleClang, found in "/Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/3.15.1/CompilerIdC/a.out"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: /usr/bin/g++ 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+
+The CXX compiler identification is AppleClang, found in "/Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/3.15.1/CompilerIdCXX/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_1f109/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_1f109.dir/build.make CMakeFiles/cmTC_1f109.dir/build
+Building C object CMakeFiles/cmTC_1f109.dir/testCCompiler.c.o
+/usr/bin/gcc   -fembed-bitcode  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -o CMakeFiles/cmTC_1f109.dir/testCCompiler.c.o   -c /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_1f109
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1f109.dir/link.txt --verbose=1
+/usr/bin/gcc -fembed-bitcode  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_1f109.dir/testCCompiler.c.o  -o cmTC_1f109 
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_98c36/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_98c36.dir/build.make CMakeFiles/cmTC_98c36.dir/build
+Building C object CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o
+/usr/bin/gcc   -fembed-bitcode  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -v -Wl,-v -o CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o   -c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCCompilerABI.c
+Apple LLVM version 10.0.1 (clang-1001.0.46.4)
+Target: aarch64-apple-darwin18.7.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -faligned-alloc-unavailable -target-sdk-version=12.4 -target-cpu generic -target-feature +soft-float-abi -target-abi apcs-gnu -mfloat-abi soft -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-10.99.99 -fsjlj-exceptions -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-b9fadf.bc -x c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCCompilerABI.c
+clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"
+#include "..." search starts here:
+#include <...> search starts here:
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)
+End of search list.
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi apcs-gnu -mfloat-abi soft -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5f1d4e.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-b9fadf.bc
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -munwind-tables -target-sdk-version=12.4 -target-cpu cyclone -target-feature +fp-armv8 -target-feature +neon -target-feature +crypto -target-feature +zcm -target-feature +zcz -target-abi darwinpcs -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-12.4.0 -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5bd9a8.bc -x c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCCompilerABI.c
+clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"
+#include "..." search starts here:
+#include <...> search starts here:
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)
+End of search list.
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi darwinpcs -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-e69450.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5bd9a8.bc
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo" -create -output CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5f1d4e.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-e69450.o
+Linking C executable cmTC_98c36
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_98c36.dir/link.txt --verbose=1
+/usr/bin/gcc -fembed-bitcode  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o  -o cmTC_98c36 
+Apple LLVM version 10.0.1 (clang-1001.0.46.4)
+Target: aarch64-apple-darwin18.7.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch armv7 -iphoneos_version_min 10.99.99 -bitcode_bundle -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-65f24e.out -headerpad_max_install_names -v CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o -arch_multiple -final_output cmTC_98c36 -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a
+@(#)PROGRAM:ld  PROJECT:ld64-450.3
+BUILD 18:16:53 Apr  5 2019
+configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+Library search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib
+Framework search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -no_deduplicate -dynamic -arch arm64 -iphoneos_version_min 12.4.0 -bitcode_bundle -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-6a108d.out -headerpad_max_install_names -v CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o -arch_multiple -final_output cmTC_98c36 -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a
+@(#)PROGRAM:ld  PROJECT:ld64-450.3
+BUILD 18:16:53 Apr  5 2019
+configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+Library search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib
+Framework search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo" -create -output cmTC_98c36 /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-65f24e.out /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-6a108d.out
+
+
+
+Parsed C implicit include dir info from above output: rv=done
+  found start of include info
+  found start of implicit include info
+    add: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+    add: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+    add: [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  end of search list found
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  implicit include dirs: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include;/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include;/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(CMAKE_LINKER-NOTFOUND|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_98c36/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_98c36.dir/build.make CMakeFiles/cmTC_98c36.dir/build]
+  ignore line: [Building C object CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/usr/bin/gcc   -fembed-bitcode  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -v -Wl,-v -o CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o   -c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCCompilerABI.c]
+  ignore line: [Apple LLVM version 10.0.1 (clang-1001.0.46.4)]
+  ignore line: [Target: aarch64-apple-darwin18.7.0]
+  ignore line: [Thread model: posix]
+  ignore line: [InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin]
+  ignore line: [clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -faligned-alloc-unavailable -target-sdk-version=12.4 -target-cpu generic -target-feature +soft-float-abi -target-abi apcs-gnu -mfloat-abi soft -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-10.99.99 -fsjlj-exceptions -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-b9fadf.bc -x c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCCompilerABI.c]
+  ignore line: [clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)]
+  ignore line: [End of search list.]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi apcs-gnu -mfloat-abi soft -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5f1d4e.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-b9fadf.bc]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -munwind-tables -target-sdk-version=12.4 -target-cpu cyclone -target-feature +fp-armv8 -target-feature +neon -target-feature +crypto -target-feature +zcm -target-feature +zcz -target-abi darwinpcs -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-12.4.0 -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5bd9a8.bc -x c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCCompilerABI.c]
+  ignore line: [clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)]
+  ignore line: [End of search list.]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi darwinpcs -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-e69450.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5bd9a8.bc]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo" -create -output CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-5f1d4e.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCCompilerABI-e69450.o]
+  ignore line: [Linking C executable cmTC_98c36]
+  ignore line: [/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_98c36.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/gcc -fembed-bitcode  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o  -o cmTC_98c36 ]
+  ignore line: [Apple LLVM version 10.0.1 (clang-1001.0.46.4)]
+  ignore line: [Target: aarch64-apple-darwin18.7.0]
+  ignore line: [Thread model: posix]
+  ignore line: [InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin]
+  link line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch armv7 -iphoneos_version_min 10.99.99 -bitcode_bundle -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-65f24e.out -headerpad_max_install_names -v CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o -arch_multiple -final_output cmTC_98c36 -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld] ==> ignore
+    arg [-demangle] ==> ignore
+    arg [-lto_library] ==> ignore, skip following value
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib] ==> skip value of -lto_library
+    arg [-dynamic] ==> ignore
+    arg [-arch] ==> ignore
+    arg [armv7] ==> ignore
+    arg [-iphoneos_version_min] ==> ignore
+    arg [10.99.99] ==> ignore
+    arg [-bitcode_bundle] ==> ignore
+    arg [-syslibroot] ==> ignore
+    arg [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk] ==> ignore
+    arg [-o] ==> ignore
+    arg [/var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-65f24e.out] ==> ignore
+    arg [-headerpad_max_install_names] ==> ignore
+    arg [-v] ==> ignore
+    arg [CMakeFiles/cmTC_98c36.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-arch_multiple] ==> ignore
+    arg [-final_output] ==> ignore
+    arg [cmTC_98c36] ==> ignore
+    arg [-lSystem] ==> lib [System]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a] ==> lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a]
+  Library search paths: [;/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib]
+  Framework search paths: [;/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/]
+  remove lib [System]
+  remove lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a]
+  collapse library dir [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib]
+  collapse framework dir [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks]
+  implicit libs: []
+  implicit dirs: [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib]
+  implicit fwks: [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks]
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_feed8/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_feed8.dir/build.make CMakeFiles/cmTC_feed8.dir/build
+Building CXX object CMakeFiles/cmTC_feed8.dir/testCXXCompiler.cxx.o
+/usr/bin/g++    -fembed-bitcode -fvisibility-inlines-hidden  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -o CMakeFiles/cmTC_feed8.dir/testCXXCompiler.cxx.o -c /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
+Linking CXX executable cmTC_feed8
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_feed8.dir/link.txt --verbose=1
+/usr/bin/g++  -fembed-bitcode -fvisibility-inlines-hidden  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_feed8.dir/testCXXCompiler.cxx.o  -o cmTC_feed8 
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_9c08f/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_9c08f.dir/build.make CMakeFiles/cmTC_9c08f.dir/build
+Building CXX object CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o
+/usr/bin/g++    -fembed-bitcode -fvisibility-inlines-hidden  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -v -Wl,-v -o CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o -c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+Apple LLVM version 10.0.1 (clang-1001.0.46.4)
+Target: aarch64-apple-darwin18.7.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -faligned-alloc-unavailable -target-sdk-version=12.4 -target-cpu generic -target-feature +soft-float-abi -target-abi apcs-gnu -mfloat-abi soft -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -stdlib=libc++ -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdeprecated-macro -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -fvisibility-inlines-hidden -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-10.99.99 -fcxx-exceptions -fexceptions -fsjlj-exceptions -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-bca139.bc -x c++ /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include/c++/v1"
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"
+#include "..." search starts here:
+#include <...> search starts here:
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)
+End of search list.
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi apcs-gnu -mfloat-abi soft -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-c0bc7e.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-bca139.bc
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -munwind-tables -target-sdk-version=12.4 -target-cpu cyclone -target-feature +fp-armv8 -target-feature +neon -target-feature +crypto -target-feature +zcm -target-feature +zcz -target-abi darwinpcs -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -stdlib=libc++ -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdeprecated-macro -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -fvisibility-inlines-hidden -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-12.4.0 -fcxx-exceptions -fexceptions -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-9fb0bd.bc -x c++ /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include/c++/v1"
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"
+ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"
+#include "..." search starts here:
+#include <...> search starts here:
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include
+ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include
+ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)
+End of search list.
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi darwinpcs -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-0c9d5d.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-9fb0bd.bc
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo" -create -output CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-c0bc7e.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-0c9d5d.o
+Linking CXX executable cmTC_9c08f
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9c08f.dir/link.txt --verbose=1
+/usr/bin/g++  -fembed-bitcode -fvisibility-inlines-hidden  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_9c08f 
+Apple LLVM version 10.0.1 (clang-1001.0.46.4)
+Target: aarch64-apple-darwin18.7.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch armv7 -iphoneos_version_min 10.99.99 -bitcode_bundle -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-b203f2.out -headerpad_max_install_names -v CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o -arch_multiple -final_output cmTC_9c08f -lc++ -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a
+@(#)PROGRAM:ld  PROJECT:ld64-450.3
+BUILD 18:16:53 Apr  5 2019
+configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+Library search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib
+Framework search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -no_deduplicate -dynamic -arch arm64 -iphoneos_version_min 12.4.0 -bitcode_bundle -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-7576c4.out -headerpad_max_install_names -v CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o -arch_multiple -final_output cmTC_9c08f -lc++ -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a
+@(#)PROGRAM:ld  PROJECT:ld64-450.3
+BUILD 18:16:53 Apr  5 2019
+configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+Library search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib
+Framework search paths:
+	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo" -create -output cmTC_9c08f /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-b203f2.out /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-7576c4.out
+
+
+
+Parsed CXX implicit include dir info from above output: rv=done
+  found start of include info
+  found start of implicit include info
+    add: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1]
+    add: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+    add: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+    add: [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  end of search list found
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1]
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include] ==> [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+  collapse include dir [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  implicit include dirs: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1;/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include;/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include;/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+
+
+Parsed CXX implicit link information from above output:
+  link line regex: [^( *|.*[/\])(CMAKE_LINKER-NOTFOUND|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_9c08f/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_9c08f.dir/build.make CMakeFiles/cmTC_9c08f.dir/build]
+  ignore line: [Building CXX object CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o]
+  ignore line: [/usr/bin/g++    -fembed-bitcode -fvisibility-inlines-hidden  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -v -Wl,-v -o CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o -c /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [Apple LLVM version 10.0.1 (clang-1001.0.46.4)]
+  ignore line: [Target: aarch64-apple-darwin18.7.0]
+  ignore line: [Thread model: posix]
+  ignore line: [InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin]
+  ignore line: [clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -faligned-alloc-unavailable -target-sdk-version=12.4 -target-cpu generic -target-feature +soft-float-abi -target-abi apcs-gnu -mfloat-abi soft -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -stdlib=libc++ -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdeprecated-macro -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -fvisibility-inlines-hidden -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-10.99.99 -fcxx-exceptions -fexceptions -fsjlj-exceptions -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-bca139.bc -x c++ /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include/c++/v1"]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)]
+  ignore line: [End of search list.]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple thumbv7-apple-ios10.99.99 -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi apcs-gnu -mfloat-abi soft -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-c0bc7e.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-bca139.bc]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-llvm-bc -disable-free -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -munwind-tables -target-sdk-version=12.4 -target-cpu cyclone -target-feature +fp-armv8 -target-feature +neon -target-feature +crypto -target-feature +zcm -target-feature +zcz -target-abi darwinpcs -fallow-half-arguments-and-returns -dwarf-column-info -debugger-tuning=lldb -target-linker-version 450.3 -v -coverage-notes-file /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.gcno -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -stdlib=libc++ -Wno-atomic-implicit-seq-cst -Wno-framework-include-private-from-public -Wno-atimport-in-framework-header -Wno-quoted-include-in-framework-header -fdeprecated-macro -fdebug-compilation-dir /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp -ferror-limit 19 -fmessage-length 0 -fvisibility-inlines-hidden -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fobjc-runtime=ios-12.4.0 -fcxx-exceptions -fexceptions -fmax-type-align=16 -fdiagnostics-show-option -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-9fb0bd.bc -x c++ /usr/local/Cellar/cmake/3.15.1/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [clang -cc1 version 10.0.1 (clang-1001.0.46.4) default target x86_64-apple-darwin18.7.0]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include/c++/v1"]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/local/include"]
+  ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/Library/Frameworks"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/include]
+  ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks (framework directory)]
+  ignore line: [End of search list.]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios12.4.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -fembed-bitcode=all -disable-llvm-passes -target-abi darwinpcs -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-0c9d5d.o -x ir /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-9fb0bd.bc]
+  ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo" -create -output CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-c0bc7e.o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/CMakeCXXCompilerABI-0c9d5d.o]
+  ignore line: [Linking CXX executable cmTC_9c08f]
+  ignore line: [/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9c08f.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/g++  -fembed-bitcode -fvisibility-inlines-hidden  -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_9c08f ]
+  ignore line: [Apple LLVM version 10.0.1 (clang-1001.0.46.4)]
+  ignore line: [Target: aarch64-apple-darwin18.7.0]
+  ignore line: [Thread model: posix]
+  ignore line: [InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin]
+  link line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch armv7 -iphoneos_version_min 10.99.99 -bitcode_bundle -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -o /var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-b203f2.out -headerpad_max_install_names -v CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o -arch_multiple -final_output cmTC_9c08f -lc++ -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld] ==> ignore
+    arg [-demangle] ==> ignore
+    arg [-lto_library] ==> ignore, skip following value
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib] ==> skip value of -lto_library
+    arg [-dynamic] ==> ignore
+    arg [-arch] ==> ignore
+    arg [armv7] ==> ignore
+    arg [-iphoneos_version_min] ==> ignore
+    arg [10.99.99] ==> ignore
+    arg [-bitcode_bundle] ==> ignore
+    arg [-syslibroot] ==> ignore
+    arg [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk] ==> ignore
+    arg [-o] ==> ignore
+    arg [/var/folders/mv/bk1z8tdn6wjd3prvt052q9br0000gn/T/-b203f2.out] ==> ignore
+    arg [-headerpad_max_install_names] ==> ignore
+    arg [-v] ==> ignore
+    arg [CMakeFiles/cmTC_9c08f.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+    arg [-arch_multiple] ==> ignore
+    arg [-final_output] ==> ignore
+    arg [cmTC_9c08f] ==> ignore
+    arg [-lc++] ==> lib [c++]
+    arg [-lSystem] ==> lib [System]
+    arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a] ==> lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a]
+  Library search paths: [;/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib]
+  Framework search paths: [;/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/]
+  remove lib [System]
+  remove lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.1/lib/darwin/libclang_rt.ios.a]
+  collapse library dir [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib]
+  collapse framework dir [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks/] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks]
+  implicit libs: [c++]
+  implicit dirs: [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/usr/lib]
+  implicit fwks: [/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk/System/Library/Frameworks]
+
+
+Performing C++ SOURCE FILE Test COMPILER_HAS_HIDDEN_VISIBILITY succeeded with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_3c977/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_3c977.dir/build.make CMakeFiles/cmTC_3c977.dir/build
+Building CXX object CMakeFiles/cmTC_3c977.dir/src.cxx.o
+/usr/bin/g++    -fembed-bitcode -fvisibility-inlines-hidden -DCOMPILER_HAS_HIDDEN_VISIBILITY -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -fvisibility=hidden -o CMakeFiles/cmTC_3c977.dir/src.cxx.o -c /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx
+Linking CXX executable cmTC_3c977
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3c977.dir/link.txt --verbose=1
+/usr/bin/g++  -fembed-bitcode -fvisibility-inlines-hidden -DCOMPILER_HAS_HIDDEN_VISIBILITY -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_3c977.dir/src.cxx.o  -o cmTC_3c977 
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_HAS_HIDDEN_INLINE_VISIBILITY succeeded with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_dd3ea/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_dd3ea.dir/build.make CMakeFiles/cmTC_dd3ea.dir/build
+Building CXX object CMakeFiles/cmTC_dd3ea.dir/src.cxx.o
+/usr/bin/g++    -fembed-bitcode -fvisibility-inlines-hidden -DCOMPILER_HAS_HIDDEN_INLINE_VISIBILITY -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -fvisibility-inlines-hidden -o CMakeFiles/cmTC_dd3ea.dir/src.cxx.o -c /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx
+Linking CXX executable cmTC_dd3ea
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_dd3ea.dir/link.txt --verbose=1
+/usr/bin/g++  -fembed-bitcode -fvisibility-inlines-hidden -DCOMPILER_HAS_HIDDEN_INLINE_VISIBILITY -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_dd3ea.dir/src.cxx.o  -o cmTC_dd3ea 
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+
+
+Source file was:
+int main() { return 0; }
+Performing C++ SOURCE FILE Test COMPILER_HAS_DEPRECATED_ATTR succeeded with the following output:
+Change Dir: /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/Applications/Xcode.app/Contents/Developer/usr/bin/make cmTC_f54d2/fast && /Applications/Xcode.app/Contents/Developer/usr/bin/make -f CMakeFiles/cmTC_f54d2.dir/build.make CMakeFiles/cmTC_f54d2.dir/build
+Building CXX object CMakeFiles/cmTC_f54d2.dir/src.cxx.o
+/usr/bin/g++    -fembed-bitcode -fvisibility-inlines-hidden -DCOMPILER_HAS_DEPRECATED_ATTR -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk   -o CMakeFiles/cmTC_f54d2.dir/src.cxx.o -c /Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx
+/Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx:2:25: warning: 'somefunc' is deprecated [-Wdeprecated-declarations]
+    int main() { return somefunc();}
+                        ^
+/Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx:1:16: note: 'somefunc' has been explicitly marked deprecated here
+__attribute__((__deprecated__)) int somefunc() { return 0; }
+               ^
+1 warning generated.
+/Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx:2:25: warning: 'somefunc' is deprecated [-Wdeprecated-declarations]
+    int main() { return somefunc();}
+                        ^
+/Users/arseny30/code/ton/tonlib/build/build/build-iOS/CMakeFiles/CMakeTmp/src.cxx:1:16: note: 'somefunc' has been explicitly marked deprecated here
+__attribute__((__deprecated__)) int somefunc() { return 0; }
+               ^
+1 warning generated.
+Linking CXX executable cmTC_f54d2
+/usr/local/Cellar/cmake/3.15.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f54d2.dir/link.txt --verbose=1
+/usr/bin/g++  -fembed-bitcode -fvisibility-inlines-hidden -DCOMPILER_HAS_DEPRECATED_ATTR -arch armv7 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.4.sdk -Wl,-headerpad_max_install_names   CMakeFiles/cmTC_f54d2.dir/src.cxx.o  -o cmTC_f54d2 
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+ld: warning: -headerpad_max_install_names is ignored when used with -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES)
+
+
+Source file was:
+__attribute__((__deprecated__)) int somefunc() { return 0; }
+    int main() { return somefunc();}

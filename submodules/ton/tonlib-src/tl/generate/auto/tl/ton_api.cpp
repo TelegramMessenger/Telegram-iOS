@@ -720,6 +720,14 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return tonNode_downloadBlockProofs::fetch(p);
     case tonNode_downloadBlocks::ID:
       return tonNode_downloadBlocks::fetch(p);
+    case tonNode_downloadKeyBlockProof::ID:
+      return tonNode_downloadKeyBlockProof::fetch(p);
+    case tonNode_downloadKeyBlockProofLink::ID:
+      return tonNode_downloadKeyBlockProofLink::fetch(p);
+    case tonNode_downloadKeyBlockProofLinks::ID:
+      return tonNode_downloadKeyBlockProofLinks::fetch(p);
+    case tonNode_downloadKeyBlockProofs::ID:
+      return tonNode_downloadKeyBlockProofs::fetch(p);
     case tonNode_downloadNextBlockFull::ID:
       return tonNode_downloadNextBlockFull::fetch(p);
     case tonNode_downloadPersistentState::ID:
@@ -750,6 +758,10 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return tonNode_prepareBlockProofs::fetch(p);
     case tonNode_prepareBlocks::ID:
       return tonNode_prepareBlocks::fetch(p);
+    case tonNode_prepareKeyBlockProof::ID:
+      return tonNode_prepareKeyBlockProof::fetch(p);
+    case tonNode_prepareKeyBlockProofs::ID:
+      return tonNode_prepareKeyBlockProofs::fetch(p);
     case tonNode_preparePersistentState::ID:
       return tonNode_preparePersistentState::fetch(p);
     case tonNode_prepareZeroState::ID:
@@ -17294,6 +17306,190 @@ tonNode_downloadBlocks::ReturnType tonNode_downloadBlocks::fetch_result(td::TlPa
 #undef FAIL
 }
 
+tonNode_downloadKeyBlockProof::tonNode_downloadKeyBlockProof()
+  : block_()
+{}
+
+tonNode_downloadKeyBlockProof::tonNode_downloadKeyBlockProof(object_ptr<tonNode_blockIdExt> &&block_)
+  : block_(std::move(block_))
+{}
+
+const std::int32_t tonNode_downloadKeyBlockProof::ID;
+
+object_ptr<tonNode_downloadKeyBlockProof> tonNode_downloadKeyBlockProof::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadKeyBlockProof>(p);
+}
+
+tonNode_downloadKeyBlockProof::tonNode_downloadKeyBlockProof(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadKeyBlockProof::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-333232070);
+  TlStoreObject::store(block_, s);
+}
+
+void tonNode_downloadKeyBlockProof::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-333232070);
+  TlStoreObject::store(block_, s);
+}
+
+void tonNode_downloadKeyBlockProof::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadKeyBlockProof");
+    if (block_ == nullptr) { s.store_field("block", "null"); } else { block_->store(s, "block"); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadKeyBlockProof::ReturnType tonNode_downloadKeyBlockProof::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_data>, 1443505284>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadKeyBlockProofLink::tonNode_downloadKeyBlockProofLink()
+  : block_()
+{}
+
+tonNode_downloadKeyBlockProofLink::tonNode_downloadKeyBlockProofLink(object_ptr<tonNode_blockIdExt> &&block_)
+  : block_(std::move(block_))
+{}
+
+const std::int32_t tonNode_downloadKeyBlockProofLink::ID;
+
+object_ptr<tonNode_downloadKeyBlockProofLink> tonNode_downloadKeyBlockProofLink::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadKeyBlockProofLink>(p);
+}
+
+tonNode_downloadKeyBlockProofLink::tonNode_downloadKeyBlockProofLink(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadKeyBlockProofLink::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(316943058);
+  TlStoreObject::store(block_, s);
+}
+
+void tonNode_downloadKeyBlockProofLink::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(316943058);
+  TlStoreObject::store(block_, s);
+}
+
+void tonNode_downloadKeyBlockProofLink::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadKeyBlockProofLink");
+    if (block_ == nullptr) { s.store_field("block", "null"); } else { block_->store(s, "block"); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadKeyBlockProofLink::ReturnType tonNode_downloadKeyBlockProofLink::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_data>, 1443505284>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadKeyBlockProofLinks::tonNode_downloadKeyBlockProofLinks()
+  : blocks_()
+{}
+
+tonNode_downloadKeyBlockProofLinks::tonNode_downloadKeyBlockProofLinks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t tonNode_downloadKeyBlockProofLinks::ID;
+
+object_ptr<tonNode_downloadKeyBlockProofLinks> tonNode_downloadKeyBlockProofLinks::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadKeyBlockProofLinks>(p);
+}
+
+tonNode_downloadKeyBlockProofLinks::tonNode_downloadKeyBlockProofLinks(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadKeyBlockProofLinks::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1975747920);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadKeyBlockProofLinks::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1975747920);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadKeyBlockProofLinks::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadKeyBlockProofLinks");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadKeyBlockProofLinks::ReturnType tonNode_downloadKeyBlockProofLinks::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_dataList>, 351548179>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadKeyBlockProofs::tonNode_downloadKeyBlockProofs()
+  : blocks_()
+{}
+
+tonNode_downloadKeyBlockProofs::tonNode_downloadKeyBlockProofs(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t tonNode_downloadKeyBlockProofs::ID;
+
+object_ptr<tonNode_downloadKeyBlockProofs> tonNode_downloadKeyBlockProofs::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadKeyBlockProofs>(p);
+}
+
+tonNode_downloadKeyBlockProofs::tonNode_downloadKeyBlockProofs(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadKeyBlockProofs::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1020797382);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadKeyBlockProofs::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1020797382);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadKeyBlockProofs::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadKeyBlockProofs");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadKeyBlockProofs::ReturnType tonNode_downloadKeyBlockProofs::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_dataList>, 351548179>::parse(p);
+#undef FAIL
+}
+
 tonNode_downloadNextBlockFull::tonNode_downloadNextBlockFull()
   : prev_block_()
 {}
@@ -18046,6 +18242,110 @@ void tonNode_prepareBlocks::store(td::TlStorerToString &s, const char *field_nam
 tonNode_prepareBlocks::ReturnType tonNode_prepareBlocks::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchObject<tonNode_Prepared>::parse(p);
+#undef FAIL
+}
+
+tonNode_prepareKeyBlockProof::tonNode_prepareKeyBlockProof()
+  : block_()
+  , allow_partial_()
+{}
+
+tonNode_prepareKeyBlockProof::tonNode_prepareKeyBlockProof(object_ptr<tonNode_blockIdExt> &&block_, bool allow_partial_)
+  : block_(std::move(block_))
+  , allow_partial_(allow_partial_)
+{}
+
+const std::int32_t tonNode_prepareKeyBlockProof::ID;
+
+object_ptr<tonNode_prepareKeyBlockProof> tonNode_prepareKeyBlockProof::fetch(td::TlParser &p) {
+  return make_object<tonNode_prepareKeyBlockProof>(p);
+}
+
+tonNode_prepareKeyBlockProof::tonNode_prepareKeyBlockProof(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , allow_partial_(TlFetchBool::parse(p))
+#undef FAIL
+{}
+
+void tonNode_prepareKeyBlockProof::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(2000047160);
+  TlStoreObject::store(block_, s);
+  TlStoreBool::store(allow_partial_, s);
+}
+
+void tonNode_prepareKeyBlockProof::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(2000047160);
+  TlStoreObject::store(block_, s);
+  TlStoreBool::store(allow_partial_, s);
+}
+
+void tonNode_prepareKeyBlockProof::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_prepareKeyBlockProof");
+    if (block_ == nullptr) { s.store_field("block", "null"); } else { block_->store(s, "block"); }
+    s.store_field("allow_partial", allow_partial_);
+    s.store_class_end();
+  }
+}
+
+tonNode_prepareKeyBlockProof::ReturnType tonNode_prepareKeyBlockProof::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchObject<tonNode_PreparedProof>::parse(p);
+#undef FAIL
+}
+
+tonNode_prepareKeyBlockProofs::tonNode_prepareKeyBlockProofs()
+  : blocks_()
+  , allow_partial_()
+{}
+
+tonNode_prepareKeyBlockProofs::tonNode_prepareKeyBlockProofs(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_, bool allow_partial_)
+  : blocks_(std::move(blocks_))
+  , allow_partial_(allow_partial_)
+{}
+
+const std::int32_t tonNode_prepareKeyBlockProofs::ID;
+
+object_ptr<tonNode_prepareKeyBlockProofs> tonNode_prepareKeyBlockProofs::fetch(td::TlParser &p) {
+  return make_object<tonNode_prepareKeyBlockProofs>(p);
+}
+
+tonNode_prepareKeyBlockProofs::tonNode_prepareKeyBlockProofs(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+  , allow_partial_(TlFetchBool::parse(p))
+#undef FAIL
+{}
+
+void tonNode_prepareKeyBlockProofs::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1939014684);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+  TlStoreBool::store(allow_partial_, s);
+}
+
+void tonNode_prepareKeyBlockProofs::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1939014684);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+  TlStoreBool::store(allow_partial_, s);
+}
+
+void tonNode_prepareKeyBlockProofs::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_prepareKeyBlockProofs");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_field("allow_partial", allow_partial_);
+    s.store_class_end();
+  }
+}
+
+tonNode_prepareKeyBlockProofs::ReturnType tonNode_prepareKeyBlockProofs::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchObject<tonNode_PreparedProof>::parse(p);
 #undef FAIL
 }
 

@@ -176,6 +176,8 @@ public final class PendingMessageManager {
     }
     
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
+        Logger.shared.log("PendingMessageManager", "update on postboxQueue: \(messageIds)")
+
         self.queue.async {
             Logger.shared.log("PendingMessageManager", "update: \(messageIds)")
             
@@ -360,6 +362,9 @@ public final class PendingMessageManager {
                 
                 Logger.shared.log("PendingMessageManager", "begin sending, continued: \(ids)")
                 
+                Logger.shared.log("PendingMessageManager", "beginSendingMessages messages.count: \(messages.count)")
+
+                
                 for message in messages.filter({ !$0.flags.contains(.Sending) }).sorted(by: { $0.id < $1.id }) {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
@@ -371,6 +376,10 @@ public final class PendingMessageManager {
                 
                 var messagesToUpload: [(PendingMessageContext, Message, PendingMessageUploadedContentType, Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)] = []
                 var messagesToForward: [PeerIdAndNamespace: [(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = [:]
+                
+                Logger.shared.log("PendingMessageManager", "beginSendingMessages messageContexts.count: \(strongSelf.messageContexts.count)")
+
+                
                 for (messageContext, _) in strongSelf.messageContexts.values.compactMap({ messageContext -> (PendingMessageContext, Message)? in
                     if case let .collectingInfo(message) = messageContext.state {
                         return (messageContext, message)
@@ -411,6 +420,9 @@ public final class PendingMessageManager {
                     }
                 }
                 
+                Logger.shared.log("PendingMessageManager", "beginSendingMessages messagesToUpload.count: \(messagesToUpload.count)")
+
+                
                 for (messageContext, message, type, contentUploadSignal) in messagesToUpload {
                     if strongSelf.canBeginUploadingMessage(id: message.id, type: type) {
                         strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
@@ -418,6 +430,9 @@ public final class PendingMessageManager {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
                     }
                 }
+                
+                Logger.shared.log("PendingMessageManager", "beginSendingMessages messagesToForward.count: \(messagesToForward.count)")
+
                 
                 for (_, messages) in messagesToForward {
                     for (context, _, _) in messages {

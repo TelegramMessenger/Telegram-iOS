@@ -21,7 +21,9 @@
 
 #include "Ed25519.h"
 
+#include "block/block-auto.h"
 #include "block/block.h"
+#include "block/block-parse.h"
 
 #include "fift/Fift.h"
 #include "fift/words.h"
@@ -38,6 +40,7 @@
 #include "smc-envelope/WalletV3.h"
 #include "smc-envelope/HighloadWallet.h"
 #include "smc-envelope/HighloadWalletV2.h"
+#include "smc-envelope/PaymentChannel.h"
 
 #include "td/utils/base64.h"
 #include "td/utils/crypto.h"
@@ -487,6 +490,99 @@ TEST(Tonlib, TestGiver) {
                                                      ton::TestGiver().make_a_gift_message(key, 0, {gift}).move_as_ok());
   vm::CellSlice(vm::NoVm(), res).print_rec(std::cerr);
   CHECK(vm::std_boc_deserialize(wallet_query).move_as_ok()->get_hash() == res->get_hash());
+}
+
+TEST(Tonlib, RestrictedWallet) {
+  //auto source_lookup = fift::create_mem_source_lookup(load_source("smartcont/new-restricted-wallet2.fif")).move_as_ok();
+  //source_lookup
+  //.write_file("/auto/restricted-wallet2-code.fif", load_source("smartcont/auto/restricted-wallet2-code.fif"))
+  //.ensure();
+  //class ZeroOsTime : public fift::OsTime {
+  //public:
+  //td::uint32 now() override {
+  //return 0;
+  //}
+  //};
+  //source_lookup.set_os_time(std::make_unique<ZeroOsTime>());
+  //auto priv_key = td::Ed25519::generate_private_key().move_as_ok();
+  //auto pub_key = priv_key.get_public_key().move_as_ok();
+  //auto pub_key_serialized = block::PublicKey::from_bytes(pub_key.as_octet_string()).move_as_ok().serialize(true);
+
+  //std::vector<std::string> args = {"path", pub_key_serialized, std::string("100")};
+  //auto fift_output = fift::mem_run_fift(std::move(source_lookup), args).move_as_ok();
+
+  //ton::RestrictedWallet::InitData init_data;
+  //td::uint64 x = 100 * 1000000000ull;
+  //init_data.key = &pub_key;
+  //init_data.start_at = 0;
+  //init_data.limits = {{-32768, x}, {92, x * 3 / 4}, {183, x * 1 / 2}, {366, x * 1 / 4}, {548, 0}};
+  //auto wallet = ton::RestrictedWallet::create(init_data, -1);
+
+  //ASSERT_EQ(0u, wallet->get_seqno().move_as_ok());
+  //CHECK(pub_key.as_octet_string() == wallet->get_public_key().move_as_ok().as_octet_string());
+  ////LOG(ERROR) << wallet->get_balance(x, 60 * 60 * 24 * 400).move_as_ok();
+
+  //auto new_wallet_query = fift_output.source_lookup.read_file("rwallet-query.boc").move_as_ok().data;
+  //auto new_wallet_addr = fift_output.source_lookup.read_file("rwallet.addr").move_as_ok().data;
+
+  //auto address = wallet->get_address(-1);
+  ////CHECK(address.addr.as_slice() == td::Slice(new_wallet_addr).substr(0, 32));
+  //address.bounceable = false;
+  //auto res = ton::GenericAccount::create_ext_message(address, wallet->get_init_state(),
+  //wallet->get_init_message(priv_key).move_as_ok());
+  //LOG(ERROR) << "-------";
+  //vm::load_cell_slice(res).print_rec(std::cerr);
+  //LOG(ERROR) << "-------";
+  //vm::load_cell_slice(vm::std_boc_deserialize(new_wallet_query).move_as_ok()).print_rec(std::cerr);
+  //CHECK(vm::std_boc_deserialize(new_wallet_query).move_as_ok()->get_hash() == res->get_hash());
+
+  //auto dest = block::StdAddress::parse("Ef9Tj6fMJP+OqhAdhKXxq36DL+HYSzCc3+9O6UNzqsgPfYFX").move_as_ok();
+  //fift_output.source_lookup.write_file("/main.fif", load_source("smartcont/wallet-v2.fif")).ensure();
+  //fift_output.source_lookup.write_file("rwallet.pk", priv_key.as_octet_string().as_slice()).ensure();
+  //fift_output = fift::mem_run_fift(
+  //std::move(fift_output.source_lookup),
+  //{"aba", "rwallet", "-C", "TESTv2", "Ef9Tj6fMJP+OqhAdhKXxq36DL+HYSzCc3+9O6UNzqsgPfYFX", "0", "321"})
+  //.move_as_ok();
+  //auto wallet_query = fift_output.source_lookup.read_file("wallet-query.boc").move_as_ok().data;
+  //ton::TestWallet::Gift gift;
+  //gift.destination = dest;
+  //gift.message = "TESTv2";
+  //gift.gramms = 321000000000ll;
+  ////CHECK(priv_key.get_public_key().ok().as_octet_string() == wallet->get_public_key().ok().as_octet_string());
+  //auto gift_message = ton::GenericAccount::create_ext_message(
+  //address, {}, wallet->make_a_gift_message(priv_key, 60, {gift}).move_as_ok());
+  //LOG(ERROR) << "-------";
+  //vm::load_cell_slice(gift_message).print_rec(std::cerr);
+  //LOG(ERROR) << "-------";
+  //vm::load_cell_slice(vm::std_boc_deserialize(wallet_query).move_as_ok()).print_rec(std::cerr);
+  //CHECK(vm::std_boc_deserialize(wallet_query).move_as_ok()->get_hash() == gift_message->get_hash());
+}
+TEST(Tonlib, RestrictedWallet3) {
+  auto init_priv_key = td::Ed25519::generate_private_key().move_as_ok();
+  auto init_pub_key = init_priv_key.get_public_key().move_as_ok();
+  auto priv_key = td::Ed25519::generate_private_key().move_as_ok();
+  auto pub_key = priv_key.get_public_key().move_as_ok();
+
+  ton::RestrictedWallet::InitData init_data;
+  init_data.init_key = init_pub_key.as_octet_string();
+  init_data.main_key = pub_key.as_octet_string();
+  init_data.wallet_id = 123;
+  auto wallet = ton::RestrictedWallet::create(init_data, -1);
+
+  auto address = wallet->get_address();
+
+  td::uint64 x = 100 * 1000000000ull;
+  ton::RestrictedWallet::Config config;
+  config.start_at = 1;
+  config.limits = {{-32768, x}, {92, x * 3 / 4}, {183, x * 1 / 2}, {366, x * 1 / 4}, {548, 0}};
+  CHECK(wallet.write().send_external_message(wallet->get_init_message(init_priv_key, 10, config).move_as_ok()).success);
+  CHECK(wallet->get_seqno().move_as_ok() == 1);
+
+  ton::WalletInterface::Gift gift;
+  gift.destination = address;
+  gift.message = "hello";
+  CHECK(wallet.write().send_external_message(wallet->make_a_gift_message(priv_key, 10, {gift}).move_as_ok()).success);
+  CHECK(wallet->get_seqno().move_as_ok() == 2);
 }
 
 class SimpleWallet : public ton::SmartContract {
@@ -1285,4 +1381,398 @@ TEST(Smartcont, DnsManual) {
 
   // TODO: rethink semantic of creating an empty dictionary
   do_dns_test(CheckedDns(true, true));
+}
+
+using namespace ton::pchan;
+
+template <class T>
+struct ValidateState {
+  T& self() {
+    return static_cast<T&>(*this);
+  }
+
+  void init(td::Ref<vm::Cell> state) {
+    state_ = state;
+    block::gen::ChanData::Record data_rec;
+    if (!tlb::unpack_cell(state, data_rec)) {
+      on_fatal_error(td::Status::Error("Expected Data"));
+      return;
+    }
+    if (!tlb::unpack_cell(data_rec.state, self().rec)) {
+      on_fatal_error(td::Status::Error("Expected StatePayout"));
+      return;
+    }
+    CHECK(self().rec.A.not_null());
+  }
+
+  T& expect_grams(td::Ref<vm::CellSlice> cs, td::uint64 expected, td::Slice name) {
+    if (has_fatal_error_) {
+      return self();
+    }
+    td::RefInt256 got;
+    CHECK(cs.not_null());
+    CHECK(block::tlb::t_Grams.as_integer_to(cs, got));
+    if (got->cmp(expected) != 0) {
+      on_error(td::Status::Error(PSLICE() << name << ": expected " << expected << ", got " << got->to_dec_string()));
+    }
+    return self();
+  }
+  template <class S>
+  T& expect_eq(S a, S expected, td::Slice name) {
+    if (has_fatal_error_) {
+      return self();
+    }
+    if (!(a == expected)) {
+      on_error(td::Status::Error(PSLICE() << name << ": expected " << expected << ", got " << a));
+    }
+    return self();
+  }
+
+  td::Status finish() {
+    if (errors_.empty()) {
+      return td::Status::OK();
+    }
+    std::stringstream ss;
+    block::gen::t_ChanData.print_ref(ss, state_);
+    td::StringBuilder sb;
+    for (auto& error : errors_) {
+      sb << error << "\n";
+    }
+    sb << ss.str();
+    return td::Status::Error(sb.as_cslice());
+  }
+
+  void on_fatal_error(td::Status error) {
+    CHECK(!has_fatal_error_);
+    has_fatal_error_ = true;
+    on_error(std::move(error));
+  }
+  void on_error(td::Status error) {
+    CHECK(error.is_error());
+    errors_.push_back(std::move(error));
+  }
+
+ public:
+  td::Ref<vm::Cell> state_;
+  bool has_fatal_error_{false};
+  std::vector<td::Status> errors_;
+};
+
+struct ValidateStatePayout : public ValidateState<ValidateStatePayout> {
+  ValidateStatePayout& expect_A(td::uint64 a) {
+    expect_grams(rec.A, a, "A");
+    return *this;
+  }
+  ValidateStatePayout& expect_B(td::uint64 b) {
+    expect_grams(rec.B, b, "B");
+    return *this;
+  }
+
+  ValidateStatePayout(td::Ref<vm::Cell> state) {
+    init(std::move(state));
+  }
+
+  block::gen::ChanState::Record_chan_state_payout rec;
+};
+
+struct ValidateStateInit : public ValidateState<ValidateStateInit> {
+  ValidateStateInit& expect_A(td::uint64 a) {
+    expect_grams(rec.A, a, "A");
+    return *this;
+  }
+  ValidateStateInit& expect_B(td::uint64 b) {
+    expect_grams(rec.B, b, "B");
+    return *this;
+  }
+  ValidateStateInit& expect_min_A(td::uint64 a) {
+    expect_grams(rec.min_A, a, "min_A");
+    return *this;
+  }
+  ValidateStateInit& expect_min_B(td::uint64 b) {
+    expect_grams(rec.min_B, b, "min_B");
+    return *this;
+  }
+  ValidateStateInit& expect_expire_at(td::uint32 b) {
+    expect_eq(rec.expire_at, b, "expire_at");
+    return *this;
+  }
+  ValidateStateInit& expect_signed_A(bool x) {
+    expect_eq(rec.signed_A, x, "signed_A");
+    return *this;
+  }
+  ValidateStateInit& expect_signed_B(bool x) {
+    expect_eq(rec.signed_B, x, "signed_B");
+    return *this;
+  }
+
+  ValidateStateInit(td::Ref<vm::Cell> state) {
+    init(std::move(state));
+  }
+
+  block::gen::ChanState::Record_chan_state_init rec;
+};
+
+struct ValidateStateClose : public ValidateState<ValidateStateClose> {
+  ValidateStateClose& expect_A(td::uint64 a) {
+    expect_grams(rec.A, a, "A");
+    return *this;
+  }
+  ValidateStateClose& expect_B(td::uint64 b) {
+    expect_grams(rec.B, b, "B");
+    return *this;
+  }
+  ValidateStateClose& expect_promise_A(td::uint64 a) {
+    expect_grams(rec.promise_A, a, "promise_A");
+    return *this;
+  }
+  ValidateStateClose& expect_promise_B(td::uint64 b) {
+    expect_grams(rec.promise_B, b, "promise_B");
+    return *this;
+  }
+  ValidateStateClose& expect_expire_at(td::uint32 b) {
+    expect_eq(rec.expire_at, b, "expire_at");
+    return *this;
+  }
+  ValidateStateClose& expect_signed_A(bool x) {
+    expect_eq(rec.signed_A, x, "signed_A");
+    return *this;
+  }
+  ValidateStateClose& expect_signed_B(bool x) {
+    expect_eq(rec.signed_B, x, "signed_B");
+    return *this;
+  }
+
+  ValidateStateClose(td::Ref<vm::Cell> state) {
+    init(std::move(state));
+  }
+
+  block::gen::ChanState::Record_chan_state_close rec;
+};
+
+// config$_ initTimeout:int exitTimeout:int a_key:int256 b_key:int256 a_addr b_addr channel_id:int256 = Config;
+TEST(Smarcont, Channel) {
+  auto code = ton::SmartContractCode::get_code(ton::SmartContractCode::PaymentChannel);
+  Config config;
+  auto a_pkey = td::Ed25519::generate_private_key().move_as_ok();
+  auto b_pkey = td::Ed25519::generate_private_key().move_as_ok();
+  config.init_timeout = 20;
+  config.close_timeout = 40;
+  auto dest = block::StdAddress::parse("Ef9Tj6fMJP+OqhAdhKXxq36DL+HYSzCc3+9O6UNzqsgPfYFX").move_as_ok();
+  config.a_addr = dest;
+  config.b_addr = dest;
+  config.a_key = a_pkey.get_public_key().ok().as_octet_string();
+  config.b_key = b_pkey.get_public_key().ok().as_octet_string();
+  config.channel_id = 123;
+
+  Data data;
+  data.config = config.serialize();
+  data.state = data.init_state();
+  auto data_cell = data.serialize();
+
+  auto channel = ton::SmartContract::create(ton::SmartContract::State{code, data_cell});
+  ValidateStateInit(channel->get_state().data)
+      .expect_A(0)
+      .expect_B(0)
+      .expect_min_A(0)
+      .expect_min_B(0)
+      .expect_signed_A(false)
+      .expect_signed_B(false)
+      .expect_expire_at(0)
+      .finish()
+      .ensure();
+
+  enum err {
+    ok = 0,
+    wrong_a_signature = 31,
+    wrong_b_signature,
+    msg_value_too_small,
+    replay_protection,
+    no_timeout,
+    expected_init,
+    expected_close,
+    no_promise_signature,
+    wrong_channel_id
+  };
+
+#define expect_code(description, expected_code, e)                                                            \
+  {                                                                                                           \
+    auto res = e;                                                                                             \
+    LOG_IF(FATAL, expected_code != res.code) << " res.code=" << res.code << " " << description << "\n" << #e; \
+  }
+#define expect_ok(description, e) expect_code(description, 0, e)
+
+  expect_code("Trying to invoke a timeout while channel is empty", no_timeout,
+              channel.write().send_external_message(MsgTimeoutBuilder().finalize(),
+                                                    ton::SmartContract::Args().set_now(1000000)));
+
+  expect_code("External init message with no signatures", replay_protection,
+              channel.write().send_external_message(MsgInitBuilder().channel_id(config.channel_id).finalize()));
+  expect_code("Internal init message with not enough value", msg_value_too_small,
+              channel.write().send_internal_message(
+                  MsgInitBuilder().channel_id(config.channel_id).inc_A(1000).min_B(2000).with_a_key(&a_pkey).finalize(),
+                  ton::SmartContract::Args().set_amount(100)));
+  expect_code(
+      "Internal init message with wrong channel_id", wrong_channel_id,
+      channel.write().send_internal_message(MsgInitBuilder().inc_A(1000).min_B(2000).with_a_key(&a_pkey).finalize(),
+                                            ton::SmartContract::Args().set_amount(1000)));
+  expect_ok("A init with (inc_A = 1000, min_A = 1, min_B = 2000)",
+            channel.write().send_internal_message(MsgInitBuilder()
+                                                      .channel_id(config.channel_id)
+                                                      .inc_A(1000)
+                                                      .min_A(1)
+                                                      .min_B(2000)
+                                                      .with_a_key(&a_pkey)
+                                                      .finalize(),
+                                                  ton::SmartContract::Args().set_amount(1000)));
+  ValidateStateInit(channel->get_state().data)
+      .expect_A(1000)
+      .expect_B(0)
+      .expect_min_A(1)
+      .expect_min_B(2000)
+      .expect_signed_A(true)
+      .expect_signed_B(false)
+      .expect_expire_at(config.init_timeout)
+      .finish()
+      .ensure();
+
+  expect_code("Repeated init of A init with (inc_A = 100, min_B = 5000). Must be ignored", replay_protection,
+              channel.write().send_internal_message(
+                  MsgInitBuilder().channel_id(config.channel_id).inc_A(100).min_B(5000).with_a_key(&a_pkey).finalize(),
+                  ton::SmartContract::Args().set_amount(1000)));
+  expect_code(
+      "Trying to invoke a timeout too early", no_timeout,
+      channel.write().send_external_message(MsgTimeoutBuilder().finalize(), ton::SmartContract::Args().set_now(0)));
+
+  {
+    auto channel_copy = channel;
+    expect_ok("Invoke a timeout", channel_copy.write().send_external_message(MsgTimeoutBuilder().finalize(),
+                                                                             ton::SmartContract::Args().set_now(21)));
+    ValidateStatePayout(channel_copy->get_state().data).expect_A(1000).expect_B(0).finish().ensure();
+  }
+  {
+    auto channel_copy = channel;
+    expect_ok("B init with inc_B < min_B. Leads to immediate payout",
+              channel_copy.write().send_internal_message(
+                  MsgInitBuilder().channel_id(config.channel_id).inc_B(1500).with_b_key(&b_pkey).finalize(),
+                  ton::SmartContract::Args().set_amount(1500)));
+    ValidateStatePayout(channel_copy->get_state().data).expect_A(1000).expect_B(1500).finish().ensure();
+  }
+
+  expect_ok("B init with (inc_B = 2000, min_A = 1, min_A = 1000)",
+            channel.write().send_internal_message(
+                MsgInitBuilder().channel_id(config.channel_id).inc_B(2000).min_A(1000).with_b_key(&b_pkey).finalize(),
+                ton::SmartContract::Args().set_amount(2000)));
+  ValidateStateClose(channel->get_state().data)
+      .expect_A(1000)
+      .expect_B(2000)
+      .expect_promise_A(0)
+      .expect_promise_B(0)
+      .expect_signed_A(false)
+      .expect_signed_B(false)
+      .expect_expire_at(0)
+      .finish()
+      .ensure();
+
+  {
+    auto channel_copy = channel;
+    expect_ok("A&B send Promise(1000000, 1000000 + 10) signed by nobody",
+              channel_copy.write().send_external_message(MsgCloseBuilder()
+                                                             .signed_promise(SignedPromiseBuilder()
+                                                                                 .promise_A(1000000)
+                                                                                 .promise_B(1000000 + 10)
+                                                                                 .channel_id(config.channel_id)
+                                                                                 .finalize())
+                                                             .with_a_key(&a_pkey)
+                                                             .with_b_key(&b_pkey)
+                                                             .finalize(),
+                                                         ton::SmartContract::Args().set_now(21)));
+    ValidateStatePayout(channel_copy->get_state().data).expect_A(1000 + 10).expect_B(2000 - 10).finish().ensure();
+  }
+  {
+    auto channel_copy = channel;
+    expect_ok("A&B send Promise(1000000, 1000000 + 10) signed by A",
+              channel_copy.write().send_external_message(MsgCloseBuilder()
+                                                             .signed_promise(SignedPromiseBuilder()
+                                                                                 .promise_A(1000000)
+                                                                                 .promise_B(1000000 + 10)
+                                                                                 .with_key(&a_pkey)
+                                                                                 .channel_id(config.channel_id)
+                                                                                 .finalize())
+                                                             .with_a_key(&a_pkey)
+                                                             .with_b_key(&b_pkey)
+                                                             .finalize(),
+                                                         ton::SmartContract::Args().set_now(21)));
+    ValidateStatePayout(channel_copy->get_state().data).expect_A(1000 + 10).expect_B(2000 - 10).finish().ensure();
+  }
+
+  expect_code(
+      "A sends Promise(1000000, 0) signed by A", wrong_b_signature,
+      channel.write().send_external_message(
+          MsgCloseBuilder()
+              .signed_promise(
+                  SignedPromiseBuilder().promise_A(1000000).with_key(&a_pkey).channel_id(config.channel_id).finalize())
+              .with_a_key(&a_pkey)
+              .finalize(),
+          ton::SmartContract::Args().set_now(21)));
+  expect_code(
+      "B sends Promise(1000000, 0) signed by B", wrong_a_signature,
+      channel.write().send_external_message(
+          MsgCloseBuilder()
+              .signed_promise(
+                  SignedPromiseBuilder().promise_A(1000000).with_key(&b_pkey).channel_id(config.channel_id).finalize())
+              .with_b_key(&b_pkey)
+              .finalize(),
+          ton::SmartContract::Args().set_now(21)));
+  expect_code("B sends Promise(1000000, 0) signed by A with wrong channel_id", wrong_channel_id,
+              channel.write().send_external_message(MsgCloseBuilder()
+                                                        .signed_promise(SignedPromiseBuilder()
+                                                                            .promise_A(1000000)
+                                                                            .with_key(&a_pkey)
+                                                                            .channel_id(config.channel_id + 1)
+                                                                            .finalize())
+                                                        .with_b_key(&b_pkey)
+                                                        .finalize(),
+                                                    ton::SmartContract::Args().set_now(21)));
+  expect_code(
+      "B sends unsigned Promise(1000000, 0)", no_promise_signature,
+      channel.write().send_external_message(
+          MsgCloseBuilder()
+              .signed_promise(SignedPromiseBuilder().promise_A(1000000).channel_id(config.channel_id).finalize())
+              .with_b_key(&b_pkey)
+              .finalize(),
+          ton::SmartContract::Args().set_now(21)));
+
+  expect_ok(
+      "B sends Promise(1000000, 0) signed by A",
+      channel.write().send_external_message(
+          MsgCloseBuilder()
+              .signed_promise(
+                  SignedPromiseBuilder().promise_A(1000000).with_key(&a_pkey).channel_id(config.channel_id).finalize())
+              .with_b_key(&b_pkey)
+              .finalize(),
+          ton::SmartContract::Args().set_now(21)));
+  ValidateStateClose(channel->get_state().data)
+      .expect_A(1000)
+      .expect_B(2000)
+      .expect_promise_A(1000000)
+      .expect_promise_B(0)
+      .expect_signed_A(false)
+      .expect_signed_B(true)
+      .expect_expire_at(21 + config.close_timeout)
+      .finish()
+      .ensure();
+
+  expect_ok("B sends Promise(0, 1000000 + 10) signed by A",
+            channel.write().send_external_message(MsgCloseBuilder()
+                                                      .signed_promise(SignedPromiseBuilder()
+                                                                          .promise_B(1000000 + 10)
+                                                                          .with_key(&b_pkey)
+                                                                          .channel_id(config.channel_id)
+                                                                          .finalize())
+                                                      .with_a_key(&a_pkey)
+                                                      .finalize(),
+                                                  ton::SmartContract::Args().set_now(21)));
+  ValidateStatePayout(channel->get_state().data).expect_A(1000 + 10).expect_B(2000 - 10).finish().ensure();
+#undef expect_ok
+#undef expect_code
 }

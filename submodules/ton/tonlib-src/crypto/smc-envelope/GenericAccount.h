@@ -23,6 +23,10 @@
 #include "SmartContract.h"
 
 namespace ton {
+namespace smc {
+td::Ref<vm::CellSlice> pack_grams(td::uint64 amount);
+bool unpack_grams(td::Ref<vm::CellSlice> cs, td::uint64& amount);
+}  // namespace smc
 class GenericAccount {
  public:
   static td::Ref<vm::Cell> get_init_state(td::Ref<vm::Cell> code, td::Ref<vm::Cell> data) noexcept;

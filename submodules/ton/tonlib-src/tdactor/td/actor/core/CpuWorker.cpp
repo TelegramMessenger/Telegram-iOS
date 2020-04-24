@@ -32,6 +32,7 @@ void CpuWorker::run() {
 
   MpmcWaiter::Slot slot;
   waiter_.init_slot(slot, thread_id);
+  auto &debug = dispatcher.get_debug();
   while (true) {
     SchedulerMessage message;
     if (try_pop(message, thread_id)) {
@@ -39,6 +40,7 @@ void CpuWorker::run() {
       if (!message) {
         return;
       }
+      auto lock = debug.start(message->get_name());
       ActorExecutor executor(*message, dispatcher, ActorExecutor::Options().with_from_queue());
     } else {
       waiter_.wait(slot);

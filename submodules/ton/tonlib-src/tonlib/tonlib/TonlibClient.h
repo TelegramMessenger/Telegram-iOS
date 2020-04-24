@@ -307,6 +307,15 @@ class TonlibClient : public td::actor::Actor {
 
   td::Status do_request(const tonlib_api::dns_resolve& request,
                         td::Promise<object_ptr<tonlib_api::dns_resolved>>&& promise);
+
+  td::Status do_request(tonlib_api::pchan_signPromise& request,
+                        td::Promise<object_ptr<tonlib_api::pchan_promise>>&& promise);
+  td::Status do_request(tonlib_api::pchan_validatePromise& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+
+  td::Status do_request(tonlib_api::pchan_packPromise& request, td::Promise<object_ptr<tonlib_api::data>>&& promise);
+  td::Status do_request(tonlib_api::pchan_unpackPromise& request,
+                        td::Promise<object_ptr<tonlib_api::pchan_promise>>&& promise);
+
   void do_dns_request(std::string name, td::int32 category, td::int32 ttl, td::optional<ton::BlockIdExt> block_id,
                       block::StdAddress address, td::Promise<object_ptr<tonlib_api::dns_resolved>>&& promise);
   struct DnsFinishData {

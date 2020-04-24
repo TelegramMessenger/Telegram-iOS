@@ -1097,8 +1097,21 @@ tuple past_elections() method_id {
   do {
     (id, var fs, var found) = past_elections.udict_get_prev?(32, id);
     if (found) {
-      var info = [unpack_past_election(fs)];
-      list = cons(pair(id, info), list);
+      list = cons([id, unpack_past_election(fs)], list);
+    }
+  } until (~ found);
+  return list;
+}
+
+tuple past_elections_list() method_id {
+  var (elect, credits, past_elections, grams, active_id, active_hash) = load_data();
+  var id = (1 << 32);
+  var list = null();
+  do {
+    (id, var fs, var found) = past_elections.udict_get_prev?(32, id);
+    if (found) {
+      var (unfreeze_at, stake_held, vset_hash, frozen_dict, total_stake, bonuses, complaints) = unpack_past_election(fs);
+      list = cons([id, unfreeze_at, vset_hash, stake_held], list);
     }
   } until (~ found);
   return list;

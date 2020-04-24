@@ -1750,7 +1750,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                         return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
                                     }
                                     return .complete()
-                                case .privacy:
+                                case .privacy, .notMutualContact:
                                     let _ = (context.account.postbox.loadedPeerWithId(memberId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)

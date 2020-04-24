@@ -31,6 +31,7 @@
 #include "td/actor/core/SchedulerId.h"
 #include "td/actor/core/SchedulerMessage.h"
 
+#include "td/utils/AtomicRead.h"
 #include "td/utils/Closure.h"
 #include "td/utils/common.h"
 #include "td/utils/format.h"
@@ -65,6 +66,54 @@ namespace actor {
 namespace core {
 class IoWorker;
 
+struct DebugInfo {
+  bool is_active{false};
+  double start_at{0};
+  static constexpr size_t name_size{32};
+  char name[name_size] = {};
+  void set_name(td::Slice from) {
+    from.truncate(name_size - 1);
+    std::memcpy(name, from.data(), from.size());
+    name[from.size()] = 0;
+  }
+};
+
+void set_debug(bool flag);
+bool need_debug();
+
+struct Debug {
+ public:
+  bool is_on() const {
+    return need_debug();
+  }
+  struct Destructor {
+    void operator()(Debug *info) {
+      info->info_.lock().value().is_active = false;
+    }
+  };
+
+  void read(DebugInfo &info) {
+    info_.read(info);
+  }
+
+  std::unique_ptr<Debug, Destructor> start(td::Slice name) {
+    if (!is_on()) {
+      return {};
+    }
+    {
+      auto lock = info_.lock();
+      auto &value = lock.value();
+      value.is_active = true;
+      value.start_at = Time::now();
+      value.set_name(name);
+    }
+    return std::unique_ptr<Debug, Destructor>(this);
+  }
+
+ private:
+  AtomicRead<DebugInfo> info_;
+};
+
 struct WorkerInfo {
   enum class Type { Io, Cpu } type{Type::Io};
   WorkerInfo() = default;
@@ -73,6 +122,7 @@ struct WorkerInfo {
   }
   ActorInfoCreator actor_info_creator;
   CpuWorkerId cpu_worker_id;
+  Debug debug;
 };
 
 template <class T>
@@ -195,7 +245,7 @@ class Scheduler {
   class ContextImpl : public SchedulerContext {
    public:
     ContextImpl(ActorInfoCreator *creator, SchedulerId scheduler_id, CpuWorkerId cpu_worker_id,
-                SchedulerGroupInfo *scheduler_group, Poll *poll, KHeap<double> *heap);
+                SchedulerGroupInfo *scheduler_group, Poll *poll, KHeap<double> *heap, Debug *debug);
 
     SchedulerId get_scheduler_id() const override;
     void add_to_queue(ActorInfoPtr actor_info_ptr, SchedulerId scheduler_id, bool need_poll) override;
@@ -207,6 +257,8 @@ class Scheduler {
 
     bool has_heap() override;
     KHeap<double> &get_heap() override;
+
+    Debug &get_debug() override;
 
     void set_alarm_timestamp(const ActorInfoPtr &actor_info_ptr) override;
 
@@ -225,6 +277,8 @@ class Scheduler {
     Poll *poll_;
 
     KHeap<double> *heap_;
+
+    Debug *debug_;
   };
 
   template <class F>
@@ -234,7 +288,8 @@ class Scheduler {
 #endif
     bool is_io_worker = worker_info.type == WorkerInfo::Type::Io;
     ContextImpl context(&worker_info.actor_info_creator, info_->id, worker_info.cpu_worker_id,
-                        scheduler_group_info_.get(), is_io_worker ? &poll_ : nullptr, is_io_worker ? &heap_ : nullptr);
+                        scheduler_group_info_.get(), is_io_worker ? &poll_ : nullptr, is_io_worker ? &heap_ : nullptr,
+                        &worker_info.debug);
     SchedulerContext::Guard guard(&context);
     f();
   }

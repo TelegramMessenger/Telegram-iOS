@@ -29,6 +29,10 @@ class MemoryKeyValue : public KeyValue {
   Status erase(Slice key) override;
   Result<size_t> count(Slice prefix) override;
 
+  Status begin_write_batch() override;
+  Status commit_write_batch() override;
+  Status abort_write_batch() override;
+
   Status begin_transaction() override;
   Status commit_transaction() override;
   Status abort_transaction() override;

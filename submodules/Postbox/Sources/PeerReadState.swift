@@ -78,7 +78,7 @@ public enum PeerReadState: Equatable, CustomStringConvertible {
 }
 
 public struct CombinedPeerReadState: Equatable {
-    let states: [(MessageId.Namespace, PeerReadState)]
+    public let states: [(MessageId.Namespace, PeerReadState)]
     
     public init(states: [(MessageId.Namespace, PeerReadState)]) {
         self.states = states

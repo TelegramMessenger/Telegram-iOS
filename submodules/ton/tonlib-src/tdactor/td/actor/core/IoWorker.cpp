@@ -19,6 +19,7 @@
 #include "td/actor/core/IoWorker.h"
 
 #include "td/actor/core/ActorExecutor.h"
+#include "td/actor/core/Scheduler.h"
 
 namespace td {
 namespace actor {
@@ -42,6 +43,7 @@ bool IoWorker::run_once(double timeout) {
   auto &poll = SchedulerContext::get()->get_poll();
 #endif
   auto &heap = SchedulerContext::get()->get_heap();
+  auto &debug = SchedulerContext::get()->get_debug();
 
   auto now = Time::now();  // update Time::now_cached()
   while (!heap.empty() && heap.top_key() <= now) {
@@ -49,6 +51,7 @@ bool IoWorker::run_once(double timeout) {
     auto *actor_info = ActorInfo::from_heap_node(heap_node);
 
     auto id = actor_info->unpin();
+    auto lock = debug.start(actor_info->get_name());
     ActorExecutor executor(*actor_info, dispatcher, ActorExecutor::Options().with_has_poll(true));
     if (executor.can_send_immediate()) {
       executor.send_immediate(ActorSignals::one(ActorSignals::Alarm));
@@ -68,6 +71,7 @@ bool IoWorker::run_once(double timeout) {
       dispatcher.set_alarm_timestamp(message);
       continue;
     }
+    auto lock = debug.start(message->get_name());
     ActorExecutor executor(*message, dispatcher, ActorExecutor::Options().with_from_queue().with_has_poll(true));
   }
   queue_.reader_flush();

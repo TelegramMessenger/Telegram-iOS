@@ -211,6 +211,57 @@ void dns_accountState::store(td::TlStorerToString &s, const char *field_name) co
   }
 }
 
+rwallet_accountState::rwallet_accountState()
+  : wallet_id_()
+  , seqno_()
+  , unlocked_balance_()
+  , config_()
+{}
+
+rwallet_accountState::rwallet_accountState(std::int64_t wallet_id_, std::int32_t seqno_, std::int64_t unlocked_balance_, object_ptr<rwallet_config> &&config_)
+  : wallet_id_(wallet_id_)
+  , seqno_(seqno_)
+  , unlocked_balance_(unlocked_balance_)
+  , config_(std::move(config_))
+{}
+
+const std::int32_t rwallet_accountState::ID;
+
+void rwallet_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "rwallet_accountState");
+    s.store_field("wallet_id", wallet_id_);
+    s.store_field("seqno", seqno_);
+    s.store_field("unlocked_balance", unlocked_balance_);
+    if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
+    s.store_class_end();
+  }
+}
+
+pchan_accountState::pchan_accountState()
+  : config_()
+  , state_()
+  , description_()
+{}
+
+pchan_accountState::pchan_accountState(object_ptr<pchan_config> &&config_, object_ptr<pchan_State> &&state_, std::string const &description_)
+  : config_(std::move(config_))
+  , state_(std::move(state_))
+  , description_(std::move(description_))
+{}
+
+const std::int32_t pchan_accountState::ID;
+
+void pchan_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_accountState");
+    if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
+    if (state_ == nullptr) { s.store_field("state", "null"); } else { state_->store(s, "state"); }
+    s.store_field("description", description_);
+    s.store_class_end();
+  }
+}
+
 uninited_accountState::uninited_accountState()
   : frozen_hash_()
 {}
@@ -276,6 +327,42 @@ void actionDns::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "actionDns");
     { const std::vector<object_ptr<dns_Action>> &v = actions_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("actions", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+actionPchan::actionPchan()
+  : action_()
+{}
+
+actionPchan::actionPchan(object_ptr<pchan_Action> &&action_)
+  : action_(std::move(action_))
+{}
+
+const std::int32_t actionPchan::ID;
+
+void actionPchan::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "actionPchan");
+    if (action_ == nullptr) { s.store_field("action", "null"); } else { action_->store(s, "action"); }
+    s.store_class_end();
+  }
+}
+
+actionRwallet::actionRwallet()
+  : action_()
+{}
+
+actionRwallet::actionRwallet(object_ptr<rwallet_actionInit> &&action_)
+  : action_(std::move(action_))
+{}
+
+const std::int32_t actionRwallet::ID;
+
+void actionRwallet::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "actionRwallet");
+    if (action_ == nullptr) { s.store_field("action", "null"); } else { action_->store(s, "action"); }
     s.store_class_end();
   }
 }
@@ -643,6 +730,30 @@ void wallet_highload_v2_initialAccountState::store(td::TlStorerToString &s, cons
   }
 }
 
+rwallet_initialAccountState::rwallet_initialAccountState()
+  : init_public_key_()
+  , public_key_()
+  , wallet_id_()
+{}
+
+rwallet_initialAccountState::rwallet_initialAccountState(std::string const &init_public_key_, std::string const &public_key_, std::int64_t wallet_id_)
+  : init_public_key_(std::move(init_public_key_))
+  , public_key_(std::move(public_key_))
+  , wallet_id_(wallet_id_)
+{}
+
+const std::int32_t rwallet_initialAccountState::ID;
+
+void rwallet_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "rwallet_initialAccountState");
+    s.store_field("init_public_key", init_public_key_);
+    s.store_field("public_key", public_key_);
+    s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
 dns_initialAccountState::dns_initialAccountState()
   : public_key_()
   , wallet_id_()
@@ -660,6 +771,24 @@ void dns_initialAccountState::store(td::TlStorerToString &s, const char *field_n
     s.store_class_begin(field_name, "dns_initialAccountState");
     s.store_field("public_key", public_key_);
     s.store_field("wallet_id", wallet_id_);
+    s.store_class_end();
+  }
+}
+
+pchan_initialAccountState::pchan_initialAccountState()
+  : config_()
+{}
+
+pchan_initialAccountState::pchan_initialAccountState(object_ptr<pchan_config> &&config_)
+  : config_(std::move(config_))
+{}
+
+const std::int32_t pchan_initialAccountState::ID;
+
+void pchan_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_initialAccountState");
+    if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
     s.store_class_end();
   }
 }
@@ -1218,10 +1347,12 @@ void liteServer_info::store(td::TlStorerToString &s, const char *field_name) con
 
 msg_dataRaw::msg_dataRaw()
   : body_()
+  , init_state_()
 {}
 
-msg_dataRaw::msg_dataRaw(std::string const &body_)
+msg_dataRaw::msg_dataRaw(std::string const &body_, std::string const &init_state_)
   : body_(std::move(body_))
+  , init_state_(std::move(init_state_))
 {}
 
 const std::int32_t msg_dataRaw::ID;
@@ -1230,6 +1361,7 @@ void msg_dataRaw::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "msg_dataRaw");
     s.store_bytes_field("body", body_);
+    s.store_bytes_field("init_state", init_state_);
     s.store_class_end();
   }
 }
@@ -1429,6 +1561,225 @@ void options_info::store(td::TlStorerToString &s, const char *field_name) const 
   }
 }
 
+pchan_actionInit::pchan_actionInit()
+  : inc_A_()
+  , inc_B_()
+  , min_A_()
+  , min_B_()
+{}
+
+pchan_actionInit::pchan_actionInit(std::int64_t inc_A_, std::int64_t inc_B_, std::int64_t min_A_, std::int64_t min_B_)
+  : inc_A_(inc_A_)
+  , inc_B_(inc_B_)
+  , min_A_(min_A_)
+  , min_B_(min_B_)
+{}
+
+const std::int32_t pchan_actionInit::ID;
+
+void pchan_actionInit::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_actionInit");
+    s.store_field("inc_A", inc_A_);
+    s.store_field("inc_B", inc_B_);
+    s.store_field("min_A", min_A_);
+    s.store_field("min_B", min_B_);
+    s.store_class_end();
+  }
+}
+
+pchan_actionClose::pchan_actionClose()
+  : extra_A_()
+  , extra_B_()
+  , promise_()
+{}
+
+pchan_actionClose::pchan_actionClose(std::int64_t extra_A_, std::int64_t extra_B_, object_ptr<pchan_promise> &&promise_)
+  : extra_A_(extra_A_)
+  , extra_B_(extra_B_)
+  , promise_(std::move(promise_))
+{}
+
+const std::int32_t pchan_actionClose::ID;
+
+void pchan_actionClose::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_actionClose");
+    s.store_field("extra_A", extra_A_);
+    s.store_field("extra_B", extra_B_);
+    if (promise_ == nullptr) { s.store_field("promise", "null"); } else { promise_->store(s, "promise"); }
+    s.store_class_end();
+  }
+}
+
+pchan_actionTimeout::pchan_actionTimeout() {
+}
+
+const std::int32_t pchan_actionTimeout::ID;
+
+void pchan_actionTimeout::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_actionTimeout");
+    s.store_class_end();
+  }
+}
+
+pchan_config::pchan_config()
+  : alice_public_key_()
+  , alice_address_()
+  , bob_public_key_()
+  , bob_address_()
+  , init_timeout_()
+  , close_timeout_()
+  , channel_id_()
+{}
+
+pchan_config::pchan_config(std::string const &alice_public_key_, object_ptr<accountAddress> &&alice_address_, std::string const &bob_public_key_, object_ptr<accountAddress> &&bob_address_, std::int32_t init_timeout_, std::int32_t close_timeout_, std::int64_t channel_id_)
+  : alice_public_key_(std::move(alice_public_key_))
+  , alice_address_(std::move(alice_address_))
+  , bob_public_key_(std::move(bob_public_key_))
+  , bob_address_(std::move(bob_address_))
+  , init_timeout_(init_timeout_)
+  , close_timeout_(close_timeout_)
+  , channel_id_(channel_id_)
+{}
+
+const std::int32_t pchan_config::ID;
+
+void pchan_config::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_config");
+    s.store_field("alice_public_key", alice_public_key_);
+    if (alice_address_ == nullptr) { s.store_field("alice_address", "null"); } else { alice_address_->store(s, "alice_address"); }
+    s.store_field("bob_public_key", bob_public_key_);
+    if (bob_address_ == nullptr) { s.store_field("bob_address", "null"); } else { bob_address_->store(s, "bob_address"); }
+    s.store_field("init_timeout", init_timeout_);
+    s.store_field("close_timeout", close_timeout_);
+    s.store_field("channel_id", channel_id_);
+    s.store_class_end();
+  }
+}
+
+pchan_promise::pchan_promise()
+  : signature_()
+  , promise_A_()
+  , promise_B_()
+  , channel_id_()
+{}
+
+pchan_promise::pchan_promise(std::string const &signature_, std::int64_t promise_A_, std::int64_t promise_B_, std::int64_t channel_id_)
+  : signature_(std::move(signature_))
+  , promise_A_(promise_A_)
+  , promise_B_(promise_B_)
+  , channel_id_(channel_id_)
+{}
+
+const std::int32_t pchan_promise::ID;
+
+void pchan_promise::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_promise");
+    s.store_bytes_field("signature", signature_);
+    s.store_field("promise_A", promise_A_);
+    s.store_field("promise_B", promise_B_);
+    s.store_field("channel_id", channel_id_);
+    s.store_class_end();
+  }
+}
+
+pchan_stateInit::pchan_stateInit()
+  : signed_A_()
+  , signed_B_()
+  , min_A_()
+  , min_B_()
+  , expire_at_()
+  , A_()
+  , B_()
+{}
+
+pchan_stateInit::pchan_stateInit(bool signed_A_, bool signed_B_, std::int64_t min_A_, std::int64_t min_B_, std::int64_t expire_at_, std::int64_t A_, std::int64_t B_)
+  : signed_A_(signed_A_)
+  , signed_B_(signed_B_)
+  , min_A_(min_A_)
+  , min_B_(min_B_)
+  , expire_at_(expire_at_)
+  , A_(A_)
+  , B_(B_)
+{}
+
+const std::int32_t pchan_stateInit::ID;
+
+void pchan_stateInit::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_stateInit");
+    s.store_field("signed_A", signed_A_);
+    s.store_field("signed_B", signed_B_);
+    s.store_field("min_A", min_A_);
+    s.store_field("min_B", min_B_);
+    s.store_field("expire_at", expire_at_);
+    s.store_field("A", A_);
+    s.store_field("B", B_);
+    s.store_class_end();
+  }
+}
+
+pchan_stateClose::pchan_stateClose()
+  : signed_A_()
+  , signed_B_()
+  , min_A_()
+  , min_B_()
+  , expire_at_()
+  , A_()
+  , B_()
+{}
+
+pchan_stateClose::pchan_stateClose(bool signed_A_, bool signed_B_, std::int64_t min_A_, std::int64_t min_B_, std::int64_t expire_at_, std::int64_t A_, std::int64_t B_)
+  : signed_A_(signed_A_)
+  , signed_B_(signed_B_)
+  , min_A_(min_A_)
+  , min_B_(min_B_)
+  , expire_at_(expire_at_)
+  , A_(A_)
+  , B_(B_)
+{}
+
+const std::int32_t pchan_stateClose::ID;
+
+void pchan_stateClose::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_stateClose");
+    s.store_field("signed_A", signed_A_);
+    s.store_field("signed_B", signed_B_);
+    s.store_field("min_A", min_A_);
+    s.store_field("min_B", min_B_);
+    s.store_field("expire_at", expire_at_);
+    s.store_field("A", A_);
+    s.store_field("B", B_);
+    s.store_class_end();
+  }
+}
+
+pchan_statePayout::pchan_statePayout()
+  : A_()
+  , B_()
+{}
+
+pchan_statePayout::pchan_statePayout(std::int64_t A_, std::int64_t B_)
+  : A_(A_)
+  , B_(B_)
+{}
+
+const std::int32_t pchan_statePayout::ID;
+
+void pchan_statePayout::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_statePayout");
+    s.store_field("A", A_);
+    s.store_field("B", B_);
+    s.store_class_end();
+  }
+}
+
 query_fees::query_fees()
   : source_fees_()
   , destination_fees_()
@@ -1454,12 +1805,16 @@ query_info::query_info()
   : id_()
   , valid_until_()
   , body_hash_()
+  , body_()
+  , init_state_()
 {}
 
-query_info::query_info(std::int64_t id_, std::int64_t valid_until_, std::string const &body_hash_)
+query_info::query_info(std::int64_t id_, std::int64_t valid_until_, std::string const &body_hash_, std::string const &body_, std::string const &init_state_)
   : id_(id_)
   , valid_until_(valid_until_)
   , body_hash_(std::move(body_hash_))
+  , body_(std::move(body_))
+  , init_state_(std::move(init_state_))
 {}
 
 const std::int32_t query_info::ID;
@@ -1470,6 +1825,8 @@ void query_info::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_field("id", id_);
     s.store_field("valid_until", valid_until_);
     s.store_bytes_field("body_hash", body_hash_);
+    s.store_bytes_field("body", body_);
+    s.store_bytes_field("init_state", init_state_);
     s.store_class_end();
   }
 }
@@ -1605,6 +1962,66 @@ void raw_transactions::store(td::TlStorerToString &s, const char *field_name) co
     s.store_class_begin(field_name, "raw_transactions");
     { const std::vector<object_ptr<raw_transaction>> &v = transactions_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("transactions", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     if (previous_transaction_id_ == nullptr) { s.store_field("previous_transaction_id", "null"); } else { previous_transaction_id_->store(s, "previous_transaction_id"); }
+    s.store_class_end();
+  }
+}
+
+rwallet_actionInit::rwallet_actionInit()
+  : config_()
+{}
+
+rwallet_actionInit::rwallet_actionInit(object_ptr<rwallet_config> &&config_)
+  : config_(std::move(config_))
+{}
+
+const std::int32_t rwallet_actionInit::ID;
+
+void rwallet_actionInit::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "rwallet_actionInit");
+    if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
+    s.store_class_end();
+  }
+}
+
+rwallet_config::rwallet_config()
+  : start_at_()
+  , limits_()
+{}
+
+rwallet_config::rwallet_config(std::int64_t start_at_, std::vector<object_ptr<rwallet_limit>> &&limits_)
+  : start_at_(start_at_)
+  , limits_(std::move(limits_))
+{}
+
+const std::int32_t rwallet_config::ID;
+
+void rwallet_config::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "rwallet_config");
+    s.store_field("start_at", start_at_);
+    { const std::vector<object_ptr<rwallet_limit>> &v = limits_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("limits", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+rwallet_limit::rwallet_limit()
+  : seconds_()
+  , value_()
+{}
+
+rwallet_limit::rwallet_limit(std::int32_t seconds_, std::int64_t value_)
+  : seconds_(seconds_)
+  , value_(value_)
+{}
+
+const std::int32_t rwallet_limit::ID;
+
+void rwallet_limit::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "rwallet_limit");
+    s.store_field("seconds", seconds_);
+    s.store_field("value", value_);
     s.store_class_end();
   }
 }
@@ -1992,13 +2409,15 @@ createQuery::createQuery()
   , address_()
   , timeout_()
   , action_()
+  , initial_account_state_()
 {}
 
-createQuery::createQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&address_, std::int32_t timeout_, object_ptr<Action> &&action_)
+createQuery::createQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&address_, std::int32_t timeout_, object_ptr<Action> &&action_, object_ptr<InitialAccountState> &&initial_account_state_)
   : private_key_(std::move(private_key_))
   , address_(std::move(address_))
   , timeout_(timeout_)
   , action_(std::move(action_))
+  , initial_account_state_(std::move(initial_account_state_))
 {}
 
 const std::int32_t createQuery::ID;
@@ -2010,6 +2429,7 @@ void createQuery::store(td::TlStorerToString &s, const char *field_name) const {
     if (address_ == nullptr) { s.store_field("address", "null"); } else { address_->store(s, "address"); }
     s.store_field("timeout", timeout_);
     if (action_ == nullptr) { s.store_field("action", "null"); } else { action_->store(s, "action"); }
+    if (initial_account_state_ == nullptr) { s.store_field("initial_account_state", "null"); } else { initial_account_state_->store(s, "initial_account_state"); }
     s.store_class_end();
   }
 }
@@ -2601,6 +3021,84 @@ void packAccountAddress::store(td::TlStorerToString &s, const char *field_name) 
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "packAccountAddress");
     if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
+    s.store_class_end();
+  }
+}
+
+pchan_packPromise::pchan_packPromise()
+  : promise_()
+{}
+
+pchan_packPromise::pchan_packPromise(object_ptr<pchan_promise> &&promise_)
+  : promise_(std::move(promise_))
+{}
+
+const std::int32_t pchan_packPromise::ID;
+
+void pchan_packPromise::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_packPromise");
+    if (promise_ == nullptr) { s.store_field("promise", "null"); } else { promise_->store(s, "promise"); }
+    s.store_class_end();
+  }
+}
+
+pchan_signPromise::pchan_signPromise()
+  : input_key_()
+  , promise_()
+{}
+
+pchan_signPromise::pchan_signPromise(object_ptr<InputKey> &&input_key_, object_ptr<pchan_promise> &&promise_)
+  : input_key_(std::move(input_key_))
+  , promise_(std::move(promise_))
+{}
+
+const std::int32_t pchan_signPromise::ID;
+
+void pchan_signPromise::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_signPromise");
+    if (input_key_ == nullptr) { s.store_field("input_key", "null"); } else { input_key_->store(s, "input_key"); }
+    if (promise_ == nullptr) { s.store_field("promise", "null"); } else { promise_->store(s, "promise"); }
+    s.store_class_end();
+  }
+}
+
+pchan_unpackPromise::pchan_unpackPromise()
+  : data_()
+{}
+
+pchan_unpackPromise::pchan_unpackPromise(td::SecureString &&data_)
+  : data_(std::move(data_))
+{}
+
+const std::int32_t pchan_unpackPromise::ID;
+
+void pchan_unpackPromise::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_unpackPromise");
+    s.store_bytes_field("data", data_);
+    s.store_class_end();
+  }
+}
+
+pchan_validatePromise::pchan_validatePromise()
+  : public_key_()
+  , promise_()
+{}
+
+pchan_validatePromise::pchan_validatePromise(std::string const &public_key_, object_ptr<pchan_promise> &&promise_)
+  : public_key_(std::move(public_key_))
+  , promise_(std::move(promise_))
+{}
+
+const std::int32_t pchan_validatePromise::ID;
+
+void pchan_validatePromise::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "pchan_validatePromise");
+    s.store_bytes_field("public_key", public_key_);
+    if (promise_ == nullptr) { s.store_field("promise", "null"); } else { promise_->store(s, "promise"); }
     s.store_class_end();
   }
 }

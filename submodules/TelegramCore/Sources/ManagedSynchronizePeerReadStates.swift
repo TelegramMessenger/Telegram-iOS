@@ -61,24 +61,30 @@ private final class SynchronizePeerReadStatesContextImpl {
             var maybeOperation: PeerReadStateSynchronizationOperation?
             if let operation = self.currentState[peerId] {
                 maybeOperation = operation
+                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): take new operation \(operation)")
             } else if let operation = self.pendingOperations[peerId] {
                 maybeOperation = operation
                 self.pendingOperations.removeValue(forKey: peerId)
+                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): retrieve pending operation \(operation)")
             }
             
             if let operation = maybeOperation {
                 if let current = self.activeOperations[peerId] {
                     if current.operation != operation {
+                        Logger.shared.log("SynchronizePeerReadStates", "\(peerId): store pending operation \(operation) (active is \(current.operation))")
                         self.pendingOperations[peerId] = operation
+                    } else {
+                        Logger.shared.log("SynchronizePeerReadStates", "\(peerId): do nothing, no change in \(operation)")
                     }
                 } else {
+                    Logger.shared.log("SynchronizePeerReadStates", "\(peerId): begin operation \(operation)")
                     let operationDisposable = MetaDisposable()
                     let activeOperation = Operation(
                         operation: operation,
                         disposable: operationDisposable
                     )
                     self.activeOperations[peerId] = activeOperation
-                    let signal: Signal<Never, NoError>
+                    let signal: Signal<Never, PeerReadStateValidationError>
                     switch operation {
                     case .Validate:
                         signal = synchronizePeerReadState(network: self.network, postbox: self.postbox, stateManager: self.stateManager, peerId: peerId, push: false, validate: true)
@@ -88,12 +94,24 @@ private final class SynchronizePeerReadStatesContextImpl {
                         |> ignoreValues
                     }
                     operationDisposable.set((signal
-                    |> deliverOn(self.queue)).start(completed: { [weak self, weak activeOperation] in
+                    |> deliverOn(self.queue)).start(error: { [weak self, weak activeOperation] _ in
                         guard let strongSelf = self else {
                             return
                         }
                         if let activeOperation = activeOperation {
                             if let current = strongSelf.activeOperations[peerId], current === activeOperation {
+                                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation retry \(operation)")
+                                strongSelf.activeOperations.removeValue(forKey: peerId)
+                                strongSelf.update()
+                            }
+                        }
+                    }, completed: { [weak self, weak activeOperation] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let activeOperation = activeOperation {
+                            if let current = strongSelf.activeOperations[peerId], current === activeOperation {
+                                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation completed \(operation)")
                                 strongSelf.activeOperations.removeValue(forKey: peerId)
                                 strongSelf.update()
                             }

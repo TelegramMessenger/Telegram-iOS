@@ -32,19 +32,19 @@
 namespace ton {
 namespace {
 
-td::Ref<vm::Stack> prepare_vm_stack(td::Ref<vm::CellSlice> body) {
+td::Ref<vm::Stack> prepare_vm_stack(td::RefInt256 amount, td::Ref<vm::CellSlice> body) {
   td::Ref<vm::Stack> stack_ref{true};
   td::RefInt256 acc_addr{true};
   //CHECK(acc_addr.write().import_bits(account.addr.cbits(), 256));
   vm::Stack& stack = stack_ref.write();
   stack.push_int(td::make_refint(10000000000));
-  stack.push_int(td::make_refint(10000000000));
+  stack.push_int(std::move(amount));
   stack.push_cell(vm::CellBuilder().finalize());
   stack.push_cellslice(std::move(body));
   return stack_ref;
 }
 
-td::Ref<vm::Tuple> prepare_vm_c7(td::uint32 now) {
+td::Ref<vm::Tuple> prepare_vm_c7(td::uint32 now, td::uint64 balance) {
   // TODO: fix initialization of c7
   td::BitArray<256> rand_seed;
   rand_seed.as_slice().fill(0);
@@ -58,12 +58,21 @@ td::Ref<vm::Tuple> prepare_vm_c7(td::uint32 now) {
       td::make_refint(0),                                    //   block_lt:Integer
       td::make_refint(0),                                    //   trans_lt:Integer
       std::move(rand_seed_int),                              //   rand_seed:Integer
-      block::CurrencyCollection(1000000000).as_vm_tuple(),   //   balance_remaining:[Integer (Maybe Cell)]
+      block::CurrencyCollection(balance).as_vm_tuple(),      //   balance_remaining:[Integer (Maybe Cell)]
       vm::load_cell_slice_ref(vm::CellBuilder().finalize())  //  myself:MsgAddressInt
                                                              //vm::StackEntry::maybe(td::Ref<vm::Cell>())
   );                                                         //  global_config:(Maybe Cell) ] = SmartContractInfo;
   //LOG(DEBUG) << "SmartContractInfo initialized with " << vm::StackEntry(tuple).to_string();
   return vm::make_tuple_ref(std::move(tuple));
+}
+
+static int output_actions_count(td::Ref<vm::Cell> list) {
+  int i = -1;
+  do {
+    ++i;
+    list = load_cell_slice(std::move(list)).prefetch_ref();
+  } while (list.not_null());
+  return i;
 }
 
 SmartContract::Answer run_smartcont(SmartContract::State state, td::Ref<vm::Stack> stack, td::Ref<vm::Tuple> c7,
@@ -123,6 +132,8 @@ SmartContract::Answer run_smartcont(SmartContract::State state, td::Ref<vm::Stac
   if (res.success) {
     res.new_state.data = vm.get_c4();
     res.actions = vm.get_d(5);
+    LOG(DEBUG) << "output actions:\n"
+               << block::gen::OutList{output_actions_count(res.actions)}.as_string_ref(res.actions);
   }
   LOG_IF(ERROR, gas_credit != 0 && (res.accepted && !res.success))
       << "Accepted but failed with code " << res.code << "\n"
@@ -171,10 +182,13 @@ SmartContract::Answer SmartContract::run_method(Args args) {
     now = args.now.unwrap();
   }
   if (!args.c7) {
-    args.c7 = prepare_vm_c7(now);
+    args.c7 = prepare_vm_c7(now, args.balance);
   }
   if (!args.limits) {
-    args.limits = vm::GasLimits{(long long)0, (long long)1000000, (long long)10000};
+    bool is_internal = args.get_method_id().ok() == 0;
+
+    args.limits = vm::GasLimits{is_internal ? (long long)args.amount * 1000 : (long long)0, (long long)1000000,
+                                is_internal ? 0 : (long long)10000};
   }
   CHECK(args.stack);
   CHECK(args.method_id);
@@ -191,7 +205,7 @@ SmartContract::Answer SmartContract::run_get_method(Args args) const {
     now = args.now.unwrap();
   }
   if (!args.c7) {
-    args.c7 = prepare_vm_c7(now);
+    args.c7 = prepare_vm_c7(now, args.balance);
   }
   if (!args.limits) {
     args.limits = vm::GasLimits{1000000};
@@ -209,6 +223,11 @@ SmartContract::Answer SmartContract::run_get_method(td::Slice method, Args args)
 }
 
 SmartContract::Answer SmartContract::send_external_message(td::Ref<vm::Cell> cell, Args args) {
-  return run_method(args.set_stack(prepare_vm_stack(vm::load_cell_slice_ref(cell))).set_method_id(-1));
+  return run_method(
+      args.set_stack(prepare_vm_stack(td::make_refint(0), vm::load_cell_slice_ref(cell))).set_method_id(-1));
+}
+SmartContract::Answer SmartContract::send_internal_message(td::Ref<vm::Cell> cell, Args args) {
+  return run_method(
+      args.set_stack(prepare_vm_stack(td::make_refint(args.amount), vm::load_cell_slice_ref(cell))).set_method_id(0));
 }
 }  // namespace ton

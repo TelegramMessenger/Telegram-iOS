@@ -62,16 +62,10 @@ td::Ref<vm::Cell> WalletV3::make_a_gift_message(const td::Ed25519::PrivateKey& p
 
   for (auto& gift : gifts) {
     td::int32 send_mode = 3;
-    auto gramms = gift.gramms;
-    if (gramms == -1) {
-      gramms = 0;
+    if (gift.gramms == -1) {
       send_mode += 128;
     }
-    vm::CellBuilder cbi;
-    GenericAccount::store_int_message(cbi, gift.destination, gramms);
-    store_gift_message(cbi, gift);
-    auto message_inner = cbi.finalize();
-    cb.store_long(send_mode, 8).store_ref(std::move(message_inner));
+    cb.store_long(send_mode, 8).store_ref(create_int_message(gift));
   }
 
   auto message_outer = cb.finalize();

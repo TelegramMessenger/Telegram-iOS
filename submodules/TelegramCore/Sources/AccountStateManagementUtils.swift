@@ -2476,7 +2476,33 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         }
                     }
                 }
-                transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnreadValue)]])
+                
+                var ignore = false
+                if let currentReadState = transaction.getCombinedPeerReadState(peerId) {
+                    loop: for (currentNamespace, currentState) in currentReadState.states {
+                        if namespace == currentNamespace {
+                            switch currentState {
+                            case let .idBased(localMaxIncomingReadId, _, _, localCount, localMarkedUnread):
+                                if count != 0 || markedUnreadValue {
+                                    if localMaxIncomingReadId > maxIncomingReadId {
+                                        transaction.setNeedsIncomingReadStateSynchronization(peerId)
+                                        
+                                        transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: localMaxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: localCount, markedUnread: localMarkedUnread)]])
+                                        
+                                        Logger.shared.log("State", "not applying incoming read state for \(peerId): \(localMaxIncomingReadId) > \(maxIncomingReadId)")
+                                        ignore = true
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                            break loop
+                        }
+                    }
+                }
+                if !ignore {
+                    transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnreadValue)]])
+                }
             case let .ResetIncomingReadState(groupId, peerId, namespace, maxIncomingReadId, count, pts):
                 var ptsMatchesState = false
                 if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {

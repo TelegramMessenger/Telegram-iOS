@@ -1,0 +1,315 @@
+;; WARINIG: NOT READY FOR A PRODUCTION!
+
+int err:wrong_a_signature() asm "31 PUSHINT";
+int err:wrong_b_signature() asm "32 PUSHINT";
+int err:msg_value_too_small() asm "33 PUSHINT";
+int err:replay_protection() asm "34 PUSHINT";
+int err:no_timeout() asm "35 PUSHINT";
+int err:expected_init() asm "36 PUSHINT";
+int err:expected_close() asm "37 PUSHINT";
+int err:no_promise_signature() asm "38 PUSHINT";
+int err:wrong_channel_id() asm "39 PUSHINT";
+
+int msg:init() asm "0x27317822 PUSHINT";
+int msg:close() asm "0xf28ae183 PUSHINT";
+int msg:timeout() asm "0x43278a28 PUSHINT";
+int msg:payout() asm "0x37fe7810 PUSHINT";
+
+int state:init() asm "0 PUSHINT";
+int state:close() asm "1 PUSHINT";
+int state:payout() asm "2 PUSHINT";
+
+
+;; A -  initial balance of Alice, 
+;; B - initial balance of B
+;;
+;; To determine balance we track nondecreasing list of promises
+;; promise_A ;; promised by Alice to Bob
+;; promise_B ;; promised by Bob to Alice
+;;
+;; diff - balance between Alice and Bob. 0 in the beginning
+;; diff = promise_B - promise_A;
+;; diff = clamp(diff, -A, +B);
+;; 
+;; final_A = A + diff;
+;; final_B = B + diff;
+
+;; Data pack/unpack
+;;
+_ unpack_data() inline_ref {
+  var cs = get_data().begin_parse();
+  var res = (cs~load_ref(), cs~load_ref());
+  cs.end_parse();
+  return res;
+}
+
+_ pack_data(cell config, cell state) impure inline_ref {
+  set_data(begin_cell().store_ref(config).store_ref(state).end_cell());
+}
+
+;; Config pack/unpack
+;;
+;; config$_ initTimeout:int exitTimeout:int a_key:int256 b_key:int256 a_addr b_addr channel_id:uint64 = Config;
+;;
+_ unpack_config(cell config) {
+  var cs = config.begin_parse();
+  var res = (
+    cs~load_uint(32), 
+    cs~load_uint(32), 
+    cs~load_uint(256), 
+    cs~load_uint(256), 
+    cs~load_ref().begin_parse(), 
+    cs~load_ref().begin_parse(),
+    cs~load_uint(64));
+  cs.end_parse();
+  return res;
+}
+
+;; takes
+;; signedMesage$_ a_sig:Maybe<int256> b_sig:Maybe<int256> msg:Message = SignedMessage;
+;; checks signatures and unwap message.
+(slice, (int, int)) unwrap_signatures(slice cs, int a_key, int b_key) {
+  int a? = cs~load_int(1);
+  slice a_sig = cs;
+  if (a?) {
+    a_sig = cs~load_ref().begin_parse().preload_bits(512);
+  }
+  var b? = cs~load_int(1);
+  slice b_sig = cs;
+  if (b?) {
+    b_sig = cs~load_ref().begin_parse().preload_bits(512);
+  }
+  int hash = cs.slice_hash();
+  if (a?) {
+    throw_unless(err:wrong_a_signature(), check_signature(hash, a_sig, a_key));
+  }
+  if (b?) {
+    throw_unless(err:wrong_b_signature(), check_signature(hash, b_sig, b_key));
+  }
+  return (cs, (a?, b?));
+}
+
+;; process message, give state is stateInit
+;;
+;; stateInit signed_A?:Bool signed_B?:Bool min_A:Grams min_B:Grams expire_at:uint32 A:Grams B:Grams = State;
+_ unpack_state_init(slice state) {
+  return (
+    state~load_int(1), 
+    state~load_int(1), 
+    state~load_grams(), 
+    state~load_grams(), 
+    state~load_uint(32), 
+    state~load_grams(), 
+    state~load_grams()); 
+
+}
+_ pack_state_init(int signed_A?, int signed_B?, int min_A, int min_B, int expire_at, int A, int B) {
+  return begin_cell()
+    .store_int(state:init(), 3)
+    .store_int(signed_A?, 1)
+    .store_int(signed_B?, 1)
+    .store_grams(min_A)
+    .store_grams(min_B)
+    .store_uint(expire_at, 32)
+    .store_grams(A)
+    .store_grams(B).end_cell();
+}
+
+;; stateClosing$10 signed_A?:bool signed_B?:Bool promise_A:Grams promise_B:Grams exipire_at:uint32 A:Grams B:Grams = State;
+_ unpack_state_close(slice state) {
+  return (
+    state~load_int(1), 
+    state~load_int(1), 
+    state~load_grams(), 
+    state~load_grams(), 
+    state~load_uint(32), 
+    state~load_grams(), 
+    state~load_grams()); 
+}
+
+_ pack_state_close(int signed_A?, int signed_B?, int promise_A, int promise_B, int expire_at, int A, int B) {
+  return begin_cell()
+    .store_int(state:close(), 3)
+    .store_int(signed_A?, 1)
+    .store_int(signed_B?, 1)
+    .store_grams(promise_A)
+    .store_grams(promise_B)
+    .store_uint(expire_at, 32)
+    .store_grams(A)
+    .store_grams(B).end_cell();
+}
+
+_ send_payout(slice s_addr, int amount, int channel_id, int flags) impure {
+  send_raw_message(begin_cell()
+    .store_uint(0x10, 6)
+    .store_slice(s_addr)
+    .store_grams(amount)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(msg:payout(), 32)
+    .store_uint(channel_id, 64)
+  .end_cell(), flags);
+}
+
+
+cell do_payout(int promise_A, int promise_B, int A, int B, slice a_addr, slice b_addr, int channel_id) impure {
+  accept_message();
+
+  int diff = promise_B - promise_A;
+  if (diff < - A) {
+    diff = - A;
+  }
+  if (diff > B) {
+    diff = B;
+  }
+  A += diff;
+  B -= diff;
+
+  send_payout(a_addr, A, channel_id, 3);
+  send_payout(b_addr, B, channel_id, 3);
+
+  return begin_cell()
+    .store_int(state:payout(), 3)
+    .store_grams(A)
+    .store_grams(B)
+  .end_cell();
+}
+
+
+;;
+;; init$000 inc_A:Grams inc_B:Grams min_A:Grams min_B:Grams = Message;
+;;
+cell with_init(slice state, int msg_value, slice msg, int msg_signed_A?, int msg_signed_B?, 
+               slice a_addr, slice b_addr, int init_timeout, int channel_id) {
+  ;; parse state
+  (int signed_A?, int signed_B?, int min_A, int min_B, int expire_at, int A, int B) = unpack_state_init(state);
+
+  if (expire_at == 0) {
+    expire_at = now() + init_timeout;
+  }
+
+  int op = msg~load_uint(32);
+  if (op == msg:timeout()) {
+    throw_unless(err:no_timeout(), expire_at < now());
+    return do_payout(0, 0, A, B, a_addr, b_addr, channel_id);
+  }
+  throw_unless(err:expected_init(), op == msg:init());
+
+  ;; unpack init message
+  (int inc_A, int inc_B, int upd_min_A, int upd_min_B, int got_channel_id) = 
+    (msg~load_grams(), msg~load_grams(), msg~load_grams(), msg~load_grams(), msg~load_uint(64));
+  throw_unless(err:wrong_channel_id(), got_channel_id == channel_id);
+
+  ;; TODO: we should reserve some part of the value for comission
+  throw_if(err:msg_value_too_small(), msg_value < inc_A + inc_B);
+  throw_unless(err:replay_protection(), (msg_signed_A? < signed_A?) | (msg_signed_B? < signed_B?));
+  
+  A += inc_A;
+  B += inc_B;
+
+  signed_A? |= msg_signed_A?;
+  if (min_A < upd_min_A) {
+    min_A = upd_min_A;
+  }
+
+  signed_B? |= msg_signed_B?;
+  if (min_B < upd_min_B) {
+    min_B = upd_min_B;
+  }
+  
+  if (signed_A? & signed_B?) {
+    if ((min_A > A) | (min_B > B)) {
+      return do_payout(0, 0, A, B, a_addr, b_addr, channel_id);
+    }
+
+    return pack_state_close(0, 0, 0, 0, 0, A, B); 
+  }
+
+  return pack_state_init(signed_A?, signed_B?, min_A, min_B, expire_at, A, B);
+}
+
+;; close$001 extra_A:Grams extra_B:Grams sig:Maybe<int256> promise_A:Grams promise_B:Grams = Message;
+
+cell with_close(slice cs, slice msg, int msg_signed_A?, int msg_signed_B?, int a_key, int b_key, 
+                slice a_addr, slice b_addr, int expire_timeout, int channel_id) {
+  ;; parse state
+  (int signed_A?, int signed_B?, int promise_A, int promise_B, int expire_at, int A, int B) = unpack_state_close(cs);
+
+  if (expire_at == 0) {
+    expire_at = now() + expire_timeout;
+  }
+
+  int op = msg~load_uint(32);
+  if (op == msg:timeout()) {
+    throw_unless(err:no_timeout(), expire_at < now());
+    return do_payout(promise_A, promise_B, A, B, a_addr, b_addr, channel_id);
+  }
+  throw_unless(err:expected_close(), op == msg:close());
+
+  ;; also ensures that (msg_signed_A? | msg_signed_B?) is true
+  throw_unless(err:replay_protection(), (msg_signed_A? < signed_A?) | (msg_signed_B? < signed_B?));
+  signed_A? |= msg_signed_A?;
+  signed_B? |= msg_signed_B?;
+
+  ;; unpack close message
+  (int extra_A, int extra_B) = (msg~load_grams(), msg~load_grams());
+  int has_sig = msg~load_int(1);
+  if (has_sig) {
+    slice sig = msg~load_ref().begin_parse().preload_bits(512);
+    int hash = msg.slice_hash();
+    ifnot (msg_signed_A?) {
+      throw_unless(err:wrong_a_signature(), check_signature(hash, sig, a_key));
+      extra_A = 0;
+    }
+    ifnot (msg_signed_B?) {
+      throw_unless(err:wrong_b_signature(), check_signature(hash, sig, b_key));
+      extra_B = 0;
+    }
+  } else {
+    throw_unless(err:no_promise_signature(), msg_signed_A? & msg_signed_B?);
+    extra_A = 0;
+    extra_B = 0; 
+  }
+  (int got_channel_id, int update_promise_A, int update_promise_B) = (msg~load_uint(64), msg~load_grams(), msg~load_grams());
+  throw_unless(err:wrong_channel_id(), got_channel_id == channel_id);
+  
+
+  accept_message();
+  update_promise_A += extra_A;
+  if (promise_A < update_promise_A) { 
+    promise_A = update_promise_A;
+  }
+  update_promise_B += extra_B;
+  if (promise_B < update_promise_B) { 
+    promise_B = update_promise_B;
+  }
+
+  if (signed_A? & signed_B?) {
+    return do_payout(promise_A, promise_B, A, B, a_addr, b_addr, channel_id);
+  }
+  return pack_state_close(signed_A?, signed_B?, promise_A, promise_B, expire_at, A, B);
+}
+
+() recv_any(int msg_value, slice msg) impure {
+  (cell config, cell state) = unpack_data();
+  (int init_timeout, int close_timeout, int a_key, int b_key, slice a_addr, slice b_addr, int channel_id) = config.unpack_config();
+  (int msg_signed_A?, int msg_signed_B?) = msg~unwrap_signatures(a_key, b_key);
+
+  slice cs = state.begin_parse();
+  int state_type = cs~load_uint(3);
+
+  if (state_type == state:init()) { ;; init
+    state = with_init(cs, msg_value, msg, msg_signed_A?, msg_signed_B?, a_addr, b_addr, init_timeout, channel_id); 
+  } if (state_type == state:close()) {
+    state = with_close(cs, msg, msg_signed_A?, msg_signed_B?, a_key, b_key, a_addr, b_addr, close_timeout, channel_id);
+  }
+
+  pack_data(config, state);
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+  recv_any(msg_value, in_msg);
+}
+
+() recv_external(slice in_msg) impure {
+  recv_any(0, in_msg);
+}

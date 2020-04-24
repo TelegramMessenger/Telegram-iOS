@@ -30,12 +30,15 @@ NS_ASSUME_NONNULL_BEGIN
 @interface TONAccountState : NSObject
 
 @property (nonatomic, readonly) bool isInitialized;
+@property (nonatomic, readonly) bool isRWallet;
 @property (nonatomic, readonly) int64_t balance;
+@property (nonatomic, readonly) int64_t unlockedBalance;
+
 @property (nonatomic, readonly) int32_t seqno;
 @property (nonatomic, strong, readonly) TONTransactionId * _Nullable lastTransactionId;
 @property (nonatomic, readonly) int64_t syncUtime;
 
-- (instancetype)initWithIsInitialized:(bool)isInitialized balance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId syncUtime:(int64_t)syncUtime;
+- (instancetype)initWithIsInitialized:(bool)isInitialized isRWallet:(bool)isRWallet balance:(int64_t)balance unlockedBalance:(int64_t)unlockedBalance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId syncUtime:(int64_t)syncUtime;
 
 @end
 
@@ -166,7 +169,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (SSignal *)validateConfig:(NSString *)config blockchainName:(NSString *)blockchainName;
 
 - (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
-- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId;
+- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId rwalletInitialPublicKey:(NSString * _Nullable)rwalletInitialPublicKey;
 - (SSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
 - (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount comment:(NSData *)comment encryptComment:(bool)encryptComment forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
 - (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount comment:(NSData *)comment encryptComment:(bool)encryptComment forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout;
