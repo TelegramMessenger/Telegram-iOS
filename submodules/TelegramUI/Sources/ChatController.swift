@@ -6401,10 +6401,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             switch item {
-            case let .url(url):
+            case let .url(url, concealed):
                 switch action {
                 case .tap:
-                    strongSelf.openUrl(url, concealed: false)
+                    strongSelf.openUrl(url, concealed: concealed)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.url(url), nil)
                 }
@@ -6489,7 +6489,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             switch item {
-            case let .url(url):
+            case let .url(url, concealed):
                 switch action {
                 case .tap:
                     strongSelf.openUrl(url, concealed: false)
@@ -6575,14 +6575,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(text: psaText, textEntities: psaEntities, icon: .info, location: .top, shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
                 return
             }
             switch item {
-            case let .url(url):
+            case let .url(url, concealed):
                 switch action {
                 case .tap:
                     strongSelf.openUrl(url, concealed: false)

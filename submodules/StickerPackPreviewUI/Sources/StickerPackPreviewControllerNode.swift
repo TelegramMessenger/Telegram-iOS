@@ -182,7 +182,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             }
         }
         
-        self.contentTitleNode.tapAttributeAction = { attributes in
+        self.contentTitleNode.tapAttributeAction = { attributes, _ in
             if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String, mention.count > 1 {
                 openMention(String(mention[mention.index(after:  mention.startIndex)...]))
             }

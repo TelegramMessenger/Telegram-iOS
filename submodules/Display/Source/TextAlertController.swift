@@ -147,7 +147,7 @@ public final class TextAlertContentNode: AlertContentNode {
                         return nil
                     }
                 }
-                self.textNode.tapAttributeAction = { attributes in
+                self.textNode.tapAttributeAction = { attributes, _ in
                     if let value = attributes[attribute] {
                         textAttributeAction(value)
                     }

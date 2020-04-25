@@ -801,10 +801,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
-            case let .peer(peer):
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _):
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
@@ -817,7 +817,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             
             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, source: .search(source), chatListController: strongSelf), reactionItems: [], gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, promoInfo: nil, source: .search(source), chatListController: strongSelf), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }
         

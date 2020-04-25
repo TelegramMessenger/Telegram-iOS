@@ -152,7 +152,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             strongSelf.present(actionSheet, nil)
         }
         
-        self.contentTextNode.tapAttributeAction = { [weak self] attributes in
+        self.contentTextNode.tapAttributeAction = { [weak self] attributes, _ in
             guard let strongSelf = self else {
                 return
             }
@@ -164,7 +164,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 showMentionActionSheet(mention)
             }
         }
-        self.contentTextNode.longTapAttributeAction = { [weak self] attributes in
+        self.contentTextNode.longTapAttributeAction = { [weak self] attributes, _ in
             guard let strongSelf = self else {
                 return
             }

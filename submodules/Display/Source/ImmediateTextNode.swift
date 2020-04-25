@@ -60,8 +60,8 @@ public class ImmediateTextNode: TextNode {
         }
     }
     
-    public var tapAttributeAction: (([NSAttributedString.Key: Any]) -> Void)?
-    public var longTapAttributeAction: (([NSAttributedString.Key: Any]) -> Void)?
+    public var tapAttributeAction: (([NSAttributedString.Key: Any], Int) -> Void)?
+    public var longTapAttributeAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     
     public func makeCopy() -> TextNode {
         let node = TextNode()
@@ -179,12 +179,12 @@ public class ImmediateTextNode: TextNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            if let (_, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
-                                self.tapAttributeAction?(attributes)
+                            if let (index, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
+                                self.tapAttributeAction?(attributes, index)
                             }
                         case .longTap:
-                            if let (_, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
-                                self.longTapAttributeAction?(attributes)
+                            if let (index, attributes) = self.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
+                                self.longTapAttributeAction?(attributes, index)
                             }
                         default:
                             break
