@@ -61,6 +61,9 @@ final class AdditionalChatListItemsTable: Table {
         var items: [AdditionalChatListItem] = []
         self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), values: { key, value in
             assert(key.getInt32(0) == Int32(items.count))
+            if value.length <= 8 {
+                return true
+            }
             if let decoded = PostboxDecoder(buffer: value).decodeRootObject() as? AdditionalChatListItem {
                 items.append(decoded)
             }
