@@ -49,7 +49,7 @@ final class ChatListHighlightedLocation {
 
 public final class ChatListNodeInteraction {
     let activateSearch: () -> Void
-    let peerSelected: (Peer) -> Void
+    let peerSelected: (Peer, ChatListNodeEntryPromoInfo?) -> Void
     let disabledPeerSelected: (Peer) -> Void
     let togglePeerSelected: (PeerId) -> Void
     let additionalCategorySelected: (Int) -> Void
@@ -63,14 +63,14 @@ public final class ChatListNodeInteraction {
     let updatePeerGrouping: (PeerId, Bool) -> Void
     let togglePeerMarkedUnread: (PeerId, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
-    let hidePsa: (MessageId) -> Void
+    let hidePsa: (PeerId) -> Void
     let activateChatPreview: (ChatListItem, ASDisplayNode, ContextGesture?) -> Void
     let present: (ViewController) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (MessageId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -266,7 +266,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
 
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                             if let chatPeer = chatPeer {
-                                nodeInteraction.peerSelected(chatPeer)
+                                nodeInteraction.peerSelected(chatPeer, nil)
                             }
                         }, disabledAction: { _ in
                             if let chatPeer = chatPeer {
@@ -333,7 +333,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                             if let chatPeer = chatPeer {
-                                nodeInteraction.peerSelected(chatPeer)
+                                nodeInteraction.peerSelected(chatPeer, nil)
                             }
                         }, disabledAction: { _ in
                             if let chatPeer = chatPeer {
@@ -429,7 +429,7 @@ public final class ChatListNode: ListView {
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
-    public var hidePsa: ((MessageId) -> Void)?
+    public var hidePsa: ((PeerId) -> Void)?
     public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
     
     private var theme: PresentationTheme
@@ -534,9 +534,9 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }
-        }, peerSelected: { [weak self] peer in
+        }, peerSelected: { [weak self] peer, promoInfo in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(peer, true, nil)
+                peerSelected(peer, true, promoInfo)
             }
         }, disabledPeerSelected: { [weak self] peer in
             if let strongSelf = self, let disabledPeerSelected = strongSelf.disabledPeerSelected {

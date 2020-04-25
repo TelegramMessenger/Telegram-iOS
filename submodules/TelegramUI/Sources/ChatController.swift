@@ -6463,6 +6463,80 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(tooltipScreen, in: .current)
     }
     
+    public func displayPromoAnnouncement(text: String) {
+        let psaText: String = text
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        
+        var found = false
+        self.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                if controller.text == psaText {
+                    found = true
+                    controller.dismiss()
+                    return false
+                }
+            }
+            return true
+        })
+        if found {
+            return
+        }
+        
+        let tooltipScreen = TooltipScreen(text: psaText, textEntities: psaEntities, icon: .info, location: .top, shouldDismissOnTouch: { point in
+            return .ignore
+        }, openActiveTextItem: { [weak self] item, action in
+            guard let strongSelf = self else {
+                return
+            }
+            switch item {
+            case let .url(url):
+                switch action {
+                case .tap:
+                    strongSelf.openUrl(url, concealed: false)
+                case .longTap:
+                    strongSelf.controllerInteraction?.longTap(.url(url), nil)
+                }
+            case let .mention(peerId, mention):
+                switch action {
+                case .tap:
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                case .longTap:
+                    strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
+                }
+            case let .textMention(mention):
+                switch action {
+                case .tap:
+                    strongSelf.controllerInteraction?.openPeerMention(mention)
+                case .longTap:
+                    strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
+                }
+            case let .botCommand(command):
+                switch action {
+                case .tap:
+                    strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                case .longTap:
+                    strongSelf.controllerInteraction?.longTap(.command(command), nil)
+                }
+            case let .hashtag(hashtag):
+                switch action {
+                case .tap:
+                    strongSelf.controllerInteraction?.openHashtag(nil, hashtag)
+                case .longTap:
+                    strongSelf.controllerInteraction?.longTap(.hashtag(hashtag), nil)
+                }
+            }
+        })
+        
+        self.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            return true
+        })
+        
+        self.present(tooltipScreen, in: .current)
+    }
+    
     private func displayPsa(type: String, sourceNode: ASDisplayNode, isAutomatic: Bool) {
         var maybeFoundItemNode: ChatMessageItemView?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
@@ -6476,7 +6550,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let psaText: String = "This message provides you with a public service announcement in relation to the undergoing pandemics. Learn more about this initiative at https://telegram.org/blog/coronavirus"
+        var psaText = self.presentationData.strings.Chat_GenericPsaTooltip
+        let key = "Chat.PsaTooltip.\(type)"
+        if let string = self.presentationData.strings.primaryComponent.dict[key] {
+            psaText = string
+        } else if let string = self.presentationData.strings.secondaryComponent?.dict[key] {
+            psaText = string
+        }
+        
         let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
         
         var found = false

@@ -562,11 +562,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.toggleArchivedFolderHiddenByDefault()
         }
         
-        self.chatListDisplayNode.containerNode.hidePsa = { [weak self] messageId in
+        self.chatListDisplayNode.containerNode.hidePsa = { [weak self] peerId in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.hidePsa(messageId)
+            strongSelf.hidePsa(peerId)
         }
         
         self.chatListDisplayNode.containerNode.deletePeerChat = { [weak self] peerId in
@@ -579,29 +579,47 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, animated, promoInfo in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    if let promoInfo = promoInfo, case .proxy = promoInfo {
-                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
-                        |> deliverOnMainQueue).start(next: { value in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            if !value {
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                    if let strongSelf = self {
-                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                                    }
-                                })]), in: .window(.root))
-                            }
-                        })
-                    }
-                    
                     var scrollToEndIfExists = false
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
                     
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
+                        if let promoInfo = promoInfo {
+                            switch promoInfo {
+                            case .proxy:
+                                let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    if !value {
+                                        controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
+                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                    }
+                                })
+                            case let .psa(type, _):
+                                let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    if !value {
+                                        var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
+                                        let key = "ChatList.PsaAlert.\(type)"
+                                        if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
+                                            text = string
+                                        } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
+                                            text = string
+                                        }
+                                        
+                                        controller.displayPromoAnnouncement(text: text)
+                                        let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                                    }
+                                })
+                            }
+                        }
                     }))
                 }
             }
@@ -1989,30 +2007,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         })
     }
     
-    func hidePsa(_ id: MessageId) {
-        let _ = (self.context.account.postbox.transaction { transaction -> PeerId? in
-            var peerId: PeerId?
-            for item in transaction.getAdditionalChatListItems() {
-                if let item = item as? PromoChatListItem {
-                    peerId = item.peerId
-                }
-            }
-            
-            return peerId
+    func hidePsa(_ id: PeerId) {
+        self.chatListDisplayNode.containerNode.updateState { state in
+            var state = state
+            state.hiddenPsaPeerId = id
+            state.peerIdWithRevealedOptions = nil
+            return state
         }
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.chatListDisplayNode.containerNode.updateState { state in
-                var state = state
-                state.hiddenPsaPeerId = id.peerId
-                state.peerIdWithRevealedOptions = nil
-                return state
-            }
-            
-            let _ = hideAccountPromoInfoChat(account: strongSelf.context.account, peerId: id.peerId).start()
-        })
+        
+        let _ = hideAccountPromoInfoChat(account: self.context.account, peerId: id).start()
     }
     
     func deletePeerChat(peerId: PeerId) {

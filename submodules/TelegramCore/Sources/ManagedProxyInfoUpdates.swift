@@ -15,6 +15,15 @@ public final class PromoChatListItem: AdditionalChatListItem {
     public let peerId: PeerId
     public let kind: Kind
     
+    public var includeIfNoHistory: Bool {
+        switch self.kind {
+        case .proxy:
+            return false
+        case let .psa(_, message):
+            return message != nil
+        }
+    }
+    
     public init(peerId: PeerId, kind: Kind) {
         self.peerId = peerId
         self.kind = kind
@@ -108,8 +117,8 @@ func managedPromoInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
                         }
                         
                         var additionalChatListItems: [AdditionalChatListItem] = []
-                        if let channel = transaction.getPeer(peer.peerId) as? TelegramChannel {
-                            additionalChatListItems.append(PromoChatListItem(peerId: channel.id, kind: kind))
+                        if let parsedPeer = transaction.getPeer(peer.peerId) {
+                            additionalChatListItems.append(PromoChatListItem(peerId: parsedPeer.id, kind: kind))
                         }
                         
                         transaction.replaceAdditionalChatListItems(additionalChatListItems)
@@ -139,7 +148,9 @@ func managedPromoInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
             return Signal { subscriber in
                 let disposables = DisposableSet()
                 for item in items {
-                    disposables.add(viewTracker.polledChannel(peerId: item).start())
+                    if item.namespace == Namespaces.Peer.CloudChannel {
+                        disposables.add(viewTracker.polledChannel(peerId: item).start())
+                    }
                 }
                 
                 return ActionDisposable {

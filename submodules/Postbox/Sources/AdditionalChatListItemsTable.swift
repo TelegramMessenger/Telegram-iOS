@@ -2,6 +2,7 @@ import Foundation
 
 public protocol AdditionalChatListItem: PostboxCoding {
     var peerId: PeerId { get }
+    var includeIfNoHistory: Bool { get }
     
     func isEqual(to other: AdditionalChatListItem) -> Bool
 }

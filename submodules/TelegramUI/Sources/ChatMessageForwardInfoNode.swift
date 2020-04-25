@@ -123,9 +123,30 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             
             switch type {
                 case let .bubble(incoming):
-                    if let _ = psaType {
+                    if let psaType = psaType {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.barPositive : presentationData.theme.theme.chat.message.outgoing.polls.barPositive
-                        completeSourceString = strings.Message_GenericForwardedPsa(peerString)
+                        
+                        var customFormat: String?
+                        let key = "Message.ForwardedPsa.\(psaType)"
+                        if let string = presentationData.strings.primaryComponent.dict[key] {
+                            customFormat = string
+                        } else if let string = presentationData.strings.secondaryComponent?.dict[key] {
+                            customFormat = string
+                        }
+                        
+                        if let customFormat = customFormat {
+                            if let range = customFormat.range(of: "%@") {
+                                let leftPart = String(customFormat[customFormat.startIndex ..< range.lowerBound])
+                                let rightPart = String(customFormat[range.upperBound...])
+                                
+                                let formattedText = leftPart + peerString + rightPart
+                                completeSourceString = (formattedText, [(0, NSRange(location: leftPart.count, length: peerString.count))])
+                            } else {
+                                completeSourceString = (customFormat, [])
+                            }
+                        } else {
+                            completeSourceString = strings.Message_GenericForwardedPsa(peerString)
+                        }
                     } else {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         completeSourceString = strings.Message_ForwardedMessage(peerString)
@@ -174,7 +195,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             
             var infoWidth: CGFloat = 0.0
             if hasPsaInfo {
-                infoWidth += 44.0
+                infoWidth += 32.0
             }
             
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

@@ -415,7 +415,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.peerSelected(peer)
+                    interaction.peerSelected(peer, nil)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
                         if let chatPeer = chatPeer, chatPeer.id.namespace != Namespaces.Peer.SecretChat {
@@ -478,7 +478,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.peerSelected(peer.peer)
+                    interaction.peerSelected(peer.peer, nil)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
                         peerContextAction(peer.peer, .search, node, gesture)
@@ -997,7 +997,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         
         let interaction = ChatListNodeInteraction(activateSearch: {
-        }, peerSelected: { [weak self] peer in
+        }, peerSelected: { [weak self] peer, _ in
             self?.view.endEditing(true)
             openPeer(peer, false)
             let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()

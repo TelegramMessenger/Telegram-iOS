@@ -128,9 +128,9 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 if let message = message, let peer = peer.peer {
                     self.interaction.messageSelected(peer, message, promoInfo)
                 } else if let peer = peer.peer {
-                    self.interaction.peerSelected(peer)
+                    self.interaction.peerSelected(peer, promoInfo)
                 } else if let peer = peer.peers[peer.peerId] {
-                    self.interaction.peerSelected(peer)
+                    self.interaction.peerSelected(peer, promoInfo)
                 }
             case let .groupReference(groupId, _, _, _, _):
                 self.interaction.groupSelected(groupId)
@@ -1006,8 +1006,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 switch promoInfo {
                 case .proxy:
                     dateAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_AdLabel, font: dateFont, textColor: theme.dateTextColor)
-                case .psa:
-                    dateAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_PsaLabel, font: dateFont, textColor: theme.dateTextColor)
+                case let .psa(type, _):
+                    var text = item.presentationData.strings.ChatList_GenericPsaLabel
+                    let key = "ChatList.PsaLabel.\(type)"
+                    if let string = item.presentationData.strings.primaryComponent.dict[key] {
+                        text = string
+                    } else if let string = item.presentationData.strings.secondaryComponent?.dict[key] {
+                        text = string
+                    }
+                    dateAttributedString = NSAttributedString(string: text, font: dateFont, textColor: theme.dateTextColor)
                 }
             } else {
                 dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
@@ -1862,10 +1869,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     item.interaction.toggleArchivedFolderHiddenByDefault()
                     close = false
                 case RevealOptionKey.hidePsa.rawValue:
-                    if let item = self.item, case let .peer(message, _, _, _, _, _, _, _, _, _, _, _) = item.content {
-                        if let message = message {
-                            item.interaction.hidePsa(message.id)
-                        }
+                    if let item = self.item, case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _) = item.content {
+                        item.interaction.hidePsa(peer.peerId)
                     }
                     close = false
                     self.skipFadeout = true

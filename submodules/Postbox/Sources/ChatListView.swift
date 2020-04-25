@@ -363,7 +363,7 @@ final class MutableChatListView {
             self.additionalItems = items
             self.additionalItemIds = Set(items.map { $0.peerId })
             for item in items {
-                if let entry = postbox.chatListTable.getStandalone(peerId: item.peerId, messageHistoryTable: postbox.messageHistoryTable) {
+                if let entry = postbox.chatListTable.getStandalone(peerId: item.peerId, messageHistoryTable: postbox.messageHistoryTable, includeIfNoHistory: item.includeIfNoHistory) {
                     self.additionalItemEntries.append(MutableChatListAdditionalItemEntry(
                         entry: MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable),
                         info: item
@@ -534,7 +534,7 @@ final class MutableChatListView {
         if updateAdditionalItems {
             self.additionalItemEntries.removeAll()
             for item in self.additionalItems {
-                if let entry = postbox.chatListTable.getStandalone(peerId: item.peerId, messageHistoryTable: postbox.messageHistoryTable) {
+                if let entry = postbox.chatListTable.getStandalone(peerId: item.peerId, messageHistoryTable: postbox.messageHistoryTable, includeIfNoHistory: item.includeIfNoHistory) {
                     self.additionalItemEntries.append(MutableChatListAdditionalItemEntry(
                         entry: MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable),
                         info: item

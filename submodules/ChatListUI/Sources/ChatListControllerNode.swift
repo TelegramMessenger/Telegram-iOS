@@ -194,7 +194,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             let timestamp1: Int32 = 100000
             let peers = SimpleDictionary<PeerId, Peer>()
-            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, additionalCategorySelected: { _ in
+            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
                 gesture?.cancel()
             }, present: { _ in })
@@ -475,8 +475,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
             self?.toggleArchivedFolderHiddenByDefault?()
         }
-        itemNode.listNode.hidePsa = { [weak self] messageId in
-            self?.hidePsa?(messageId)
+        itemNode.listNode.hidePsa = { [weak self] peerId in
+            self?.hidePsa?(peerId)
         }
         itemNode.listNode.deletePeerChat = { [weak self] peerId in
             self?.deletePeerChat?(peerId)
@@ -526,7 +526,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var presentAlert: ((String) -> Void)?
     var present: ((ViewController) -> Void)?
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
-    var hidePsa: ((MessageId) -> Void)?
+    var hidePsa: ((PeerId) -> Void)?
     var deletePeerChat: ((PeerId) -> Void)?
     var peerSelected: ((Peer, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
     var groupSelected: ((PeerGroupId) -> Void)?

@@ -664,7 +664,7 @@ final class ChatListTable: Table {
         return result
     }
     
-    func getStandalone(peerId: PeerId, messageHistoryTable: MessageHistoryTable) -> ChatListIntermediateEntry? {
+    func getStandalone(peerId: PeerId, messageHistoryTable: MessageHistoryTable, includeIfNoHistory: Bool) -> ChatListIntermediateEntry? {
         let index = self.indexTable.get(peerId: peerId)
         switch index.inclusion {
             case .ifHasMessagesOrOneOf:
@@ -674,8 +674,11 @@ final class ChatListTable: Table {
         }
         if let topMessageIndex = index.topMessageIndex {
             return ChatListIntermediateEntry.message(ChatListIndex(pinningIndex: nil, messageIndex: topMessageIndex), topMessageIndex)
+        } else if includeIfNoHistory {
+            return ChatListIntermediateEntry.message(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 1), timestamp: 1)), nil)
+        } else {
+            return nil
         }
-        return nil
     }
     
     func getEntry(groupId: PeerGroupId, peerId: PeerId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> ChatListIntermediateEntry? {

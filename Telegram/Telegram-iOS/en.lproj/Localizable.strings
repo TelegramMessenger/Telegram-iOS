@@ -560,7 +560,6 @@
 "Message.StickerText" = "Sticker %@";
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
-"Message.GenericForwardedPsa" = "Public Service Announcement\nFrom: %@";
 "Message.Animation" = "GIF";
 "Message.Game" = "Game";
 
@@ -3174,8 +3173,6 @@ Unused sets are archived when you add more.";
 "DialogList.AdNoticeAlert" = "The proxy you are using displays a sponsored channel in your chat list.";
 "SocksProxySetup.AdNoticeHelp" = "This proxy may display a sponsored channel in your chat list. This doesn't reveal your Telegram traffic.";
 
-"DialogList.PsaLabel" = "PSA";
-
 "SocksProxySetup.ShareProxyList" = "Share Proxy List";
 
 "Privacy.SecretChatsTitle" = "SECRET CHATS";
@@ -5488,3 +5485,13 @@ Any member of this group will be able to see messages in the channel.";
 "CreatePoll.ExplanationInfo" = "Users will see this comment after choosing a wrong answer, good for educational purposes.";
 
 "FeaturedStickers.OtherSection" = "OTHER STICKERS";
+
+"ChatList.GenericPsaAlert" = "This provides public service announcements in your chat list.";
+"ChatList.PsaAlert.covid" = "This message provides you with a public service announcement in relation to the undergoing pandemics. Learn more about this initiative at https://telegram.org/blog/coronavirus";
+"ChatList.GenericPsaLabel" = "PSA";
+"ChatList.PsaLabel.covid" = "Covid-19";
+"Chat.GenericPsaTooltip" = "This is a public service announcement";
+"Chat.PsaTooltip.covid" = "This message provides you with a public service announcement in relation to the undergoing pandemics. Learn more about this initiative at https://telegram.org/blog/coronavirus";
+
+"Message.GenericForwardedPsa" = "Public Service Announcement\nFrom: %@";
+"Message.ForwardedPsa.covid" = "Covid-19 Notification\nFrom: %@";
