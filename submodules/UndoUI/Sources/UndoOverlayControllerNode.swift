@@ -290,15 +290,19 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
-                displayUndo = true
-                undoText = action
+                if let action = action {
+                    displayUndo = true
+                    undoText = action
+                } else {
+                    displayUndo = false
+                }
                 self.originalRemainingSeconds = 5
                 
                 self.stickerImageSize = CGSize(width: 42.0, height: 42.0)
                 
                 switch dice.emoji {
                     case "🎲":
-                        self.stickerOffset = CGPoint(x: 0.0, y: -8.0)
+                        self.stickerOffset = CGPoint(x: 0.0, y: -7.0)
                     default:
                         break
                 }

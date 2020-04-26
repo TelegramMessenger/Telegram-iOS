@@ -6573,8 +6573,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
         }
         if let value = value {
-            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: self.presentationData.strings.Conversation_SendDice), elevatedLayout: true, action: { [weak self] action in
-                if let strongSelf = self, action == .undo {
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: true, action: { [weak self] action in
+                if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState), action == .undo {
                     strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), replyToMessageId: nil, localGroupingKey: nil)])
                 }
                 return false

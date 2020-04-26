@@ -14,19 +14,25 @@ enum ManagedDiceAnimationState: Equatable {
     case value(Int32, Bool)
 }
 
-private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile], NoError>, emoji: String, value: Int32?, immediate: Bool = false, roll: Bool = false, loop: Bool = false) -> Signal<ManagedAnimationItem?, NoError> {
-    return emojis
-    |> mapToSignal { diceEmojis -> Signal<ManagedAnimationItem?, NoError> in
+private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile], NoError>, configuration: Signal<InteractiveEmojiConfiguration?, NoError> = .single(nil), emoji: String, value: Int32?, immediate: Bool = false, roll: Bool = false, loop: Bool = false, successCallback: (() -> Void)? = nil) -> Signal<ManagedAnimationItem?, NoError> {
+    return combineLatest(emojis, configuration)
+    |> mapToSignal { diceEmojis, configuration -> Signal<ManagedAnimationItem?, NoError> in
         if let value = value, value >= diceEmojis.count {
             return .complete()
         }
         let file = diceEmojis[Int(value ?? 0)]
         
+        var callbacks: [(Int, () -> Void)] = []
+        
+        if !loop, let successCallback = successCallback, let value = value, let configuration = configuration, let success = configuration.successParameters[emoji], value == success.value {
+            callbacks.append((success.frame, successCallback))
+        }
+        
         if let _ = account.postbox.mediaBox.completedResourcePath(file.resource) {
             if immediate {
                 return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), frames: .still(.end), duration: 0))
             } else {
-                return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop))
+                return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop, callbacks: callbacks))
             }
         } else {
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -39,7 +45,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
                 |> filter { data in
                     return data.complete
                 }).start(next: { next in
-                    subscriber.putNext(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop))
+                    subscriber.putNext(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop, callbacks: callbacks))
                 })
 
                 return ActionDisposable {
@@ -91,7 +97,7 @@ public struct InteractiveEmojiConfiguration {
             var successParameters: [String: InteractiveEmojiSuccessParameters] = [:]
             if let success = data["emojies_send_dice_success"] as? [String: [String: Double]] {
                 for (key, dict) in success {
-                    if let successValue = dict[""], let successFrame = dict[""] {
+                    if let successValue = dict["value"], let successFrame = dict["frame_start"] {
                         successParameters[key] = InteractiveEmojiSuccessParameters(value: Int(successValue), frame: Int(successFrame))
                     }
                 }
@@ -110,18 +116,20 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
     private var diceState: ManagedDiceAnimationState? = nil
     private let disposable = MetaDisposable()
     
+    private let configuration = Promise<InteractiveEmojiConfiguration?>()
     private let emojis = Promise<[TelegramMediaFile]>()
+    
+    var success: (() -> Void)?
     
     init(context: AccountContext, emoji: String) {
         self.context = context
         self.emoji = emoji
         
-        self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        |> map { preferencesView -> InteractiveEmojiConfiguration in
+        self.configuration.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { preferencesView -> InteractiveEmojiConfiguration? in
             let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
             return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
-        }
-                        
+        })
         self.emojis.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .dice(emoji), forceActualized: false)
         |> mapToSignal { stickerPack -> Signal<[TelegramMediaFile], NoError> in
             switch stickerPack {
@@ -155,7 +163,9 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
                 case .rolling:
                     switch diceState {
                         case let .value(value, _):
-                            item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji, value: value)
+                            item = animationItem(account: context.account, emojis: self.emojis.get(), configuration: self.configuration.get(), emoji: self.emoji, value: value, successCallback: { [weak self] in
+                                self?.success?()
+                            })
                         case .rolling:
                             break
                     }
@@ -170,7 +180,9 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         } else {
             switch diceState {
                 case let .value(value, immediate):
-                    item = animationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji, value: value, immediate: immediate, roll: true)
+                    item = animationItem(account: context.account, emojis: self.emojis.get(), configuration: self.configuration.get(), emoji: self.emoji, value: value, immediate: immediate, roll: true, successCallback: { [weak self] in
+                        self?.success?()
+                    })
                 case .rolling:
                     item = rollingAnimationItem(account: context.account, emojis: self.emojis.get(), emoji: self.emoji)
             }
