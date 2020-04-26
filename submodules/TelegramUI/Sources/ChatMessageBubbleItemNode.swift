@@ -784,7 +784,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         var effectiveAuthor: Peer?
         var ignoreForward = false
-        let displayAuthorInfo: Bool
+        var displayAuthorInfo: Bool
         
         let avatarInset: CGFloat
         var hasAvatar = false
@@ -810,6 +810,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 } else {
                     effectiveAuthor = firstMessage.author
                     displayAuthorInfo = !mergedTop.merged && incoming && peerId.isGroupOrChannel &&  effectiveAuthor != nil
+                    if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
+                        displayAuthorInfo = false
+                    }
                 }
             
                 if peerId != item.context.account.peerId {
@@ -1889,7 +1892,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
             let previousForwardInfoNodeFrame = forwardInfoNode.frame
-            forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: forwardInfoSizeApply.0)
+            forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
             if case let .System(duration) = animation {
                 if animateFrame {
                     forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
