@@ -861,7 +861,7 @@ private final class ChatListViewSpaceState {
                 
                 let loadedEntries = postbox.chatListTable.entries(groupId: .root, from: (allEntries[0].index.predecessor, true), to: (allEntries[allEntries.count - 1].index.successor, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1000, predicate: nil).map(mapEntry)
                 
-                //assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
+                assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
             }
         }
         #endif
@@ -870,8 +870,8 @@ private final class ChatListViewSpaceState {
     private func checkReplayEntries(postbox: Postbox) {
         #if DEBUG
         let cleanState = ChatListViewSpaceState(postbox: postbox, space: self.space, anchorIndex: self.anchorIndex, summaryComponents: self.summaryComponents, halfLimit: self.halfLimit)
-        //assert(self.orderedEntries.lowerOrAtAnchor.map { $0.index } == cleanState.orderedEntries.lowerOrAtAnchor.map { $0.index })
-        //assert(self.orderedEntries.higherThanAnchor.map { $0.index } == cleanState.orderedEntries.higherThanAnchor.map { $0.index })
+        assert(self.orderedEntries.lowerOrAtAnchor.map { $0.index } == cleanState.orderedEntries.lowerOrAtAnchor.map { $0.index })
+        assert(self.orderedEntries.higherThanAnchor.map { $0.index } == cleanState.orderedEntries.higherThanAnchor.map { $0.index })
         #endif
     }
     

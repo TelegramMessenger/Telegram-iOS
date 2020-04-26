@@ -156,7 +156,11 @@ public struct MessageIndex: Comparable, Hashable {
             return lhs.id.namespace < rhs.id.namespace
         }
         
-        return lhs.id.id < rhs.id.id
+        if lhs.id.id != rhs.id.id {
+            return lhs.id.id < rhs.id.id
+        }
+        
+        return lhs.id.peerId.toInt64() < rhs.id.peerId.toInt64()
     }
 }
 

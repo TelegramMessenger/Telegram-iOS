@@ -122,6 +122,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             if let strongSelf = self {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
+                } else if let forwardInfoNode = strongSelf.forwardInfoNode, forwardInfoNode.frame.contains(point) {
+                    if forwardInfoNode.hasAction(at: strongSelf.view.convert(point, to: forwardInfoNode.view)) {
+                        return .fail
+                    }
                 }
             }
             return .waitForSingleTap
@@ -572,6 +576,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         if strongSelf.forwardInfoNode == nil {
                             strongSelf.forwardInfoNode = forwardInfoNode
                             strongSelf.addSubnode(forwardInfoNode)
+                            forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
+                                guard let strongSelf = strongSelf, let item = strongSelf.item else {
+                                    return
+                                }
+                                item.controllerInteraction.displayPsa(type, sourceNode)
+                            }
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
                         forwardInfoNode.frame = forwardInfoFrame
@@ -696,26 +706,28 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
                 if let item = self.item, let forwardInfo = item.message.forwardInfo {
-                    if let sourceMessageId = forwardInfo.sourceMessageId {
-                        if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
-                            if case .member = channel.participationStatus {
-                            } else {
-                                return .optionalAction({
+                    let performAction: () -> Void = {
+                        if let sourceMessageId = forwardInfo.sourceMessageId {
+                            if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                } else if case .member = channel.participationStatus {
+                                } else {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
-                                })
+                                    return
+                                }
                             }
-                        }
-                        return .optionalAction({
                             item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                        })
-                    } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                        return .optionalAction({
-                            item.controllerInteraction.openPeer(id, .chat(textInputState: nil, subject: nil), nil)
-                        })
-                    } else if let _ = forwardInfo.authorSignature {
-                        return .optionalAction({
+                        } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
+                            item.controllerInteraction.openPeer(id, .info, nil)
+                        } else if let _ = forwardInfo.authorSignature {
                             item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
-                        })
+                        }
+                    }
+                    
+                    if forwardInfoNode.hasAction(at: self.view.convert(location, to: forwardInfoNode.view)) {
+                        return .action({})
+                    } else {
+                        return .optionalAction(performAction)
                     }
                 }
             }

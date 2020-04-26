@@ -1877,16 +1877,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         if let forwardInfoNode = forwardInfoSizeApply.1(bubbleContentWidth) {
             strongSelf.forwardInfoNode = forwardInfoNode
-            forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
-                guard let strongSelf = strongSelf, let item = strongSelf.item else {
-                    return
-                }
-                item.controllerInteraction.displayPsa(type, sourceNode)
-            }
             var animateFrame = true
             if forwardInfoNode.supernode == nil {
                 strongSelf.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
                 animateFrame = false
+                forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
+                    guard let strongSelf = strongSelf, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.displayPsa(type, sourceNode)
+                }
             }
             let previousForwardInfoNodeFrame = forwardInfoNode.frame
             forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: forwardInfoSizeApply.0)
