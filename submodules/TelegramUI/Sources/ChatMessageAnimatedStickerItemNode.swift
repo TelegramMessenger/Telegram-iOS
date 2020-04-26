@@ -210,6 +210,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramDice = self.telegramDice {
             let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji)
+            if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                animationNode.success = { [weak self] in
+                    if let strongSelf = self, let item = strongSelf.item {
+                        item.controllerInteraction.animateDiceSuccess()
+                    }
+                }
+            }
             self.animationNode = animationNode
         } else {
             let animationNode = AnimatedStickerNode()

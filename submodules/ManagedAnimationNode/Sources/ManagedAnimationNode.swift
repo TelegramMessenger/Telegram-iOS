@@ -10,7 +10,6 @@ import SwiftSignalKit
 
 public final class ManagedAnimationState {
     public let item: ManagedAnimationItem
-    
     private let instance: LottieInstance
     
     let frameCount: Int
@@ -18,6 +17,8 @@ public final class ManagedAnimationState {
     
     var relativeTime: Double = 0.0
     public var frameIndex: Int?
+    
+    public var executedCallbacks = Set<Int>()
     
     private let renderContext: DrawingContext
     
@@ -109,17 +110,19 @@ public enum ManagedAnimationSource: Equatable {
     }
 }
 
-public struct ManagedAnimationItem: Equatable {
+public struct ManagedAnimationItem {
     public let source: ManagedAnimationSource
     var frames: ManagedAnimationFrameRange?
     var duration: Double?
     var loop: Bool
+    var callbacks: [(Int, () -> Void)]
     
-    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false) {
+    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false, callbacks: [(Int, () -> Void)] = []) {
         self.source = source
         self.frames = frames
         self.duration = duration
         self.loop = loop
+        self.callbacks = callbacks
     }
 }
 
@@ -239,6 +242,13 @@ open class ManagedAnimationNode: ASDisplayNode {
             state.frameIndex = frameIndex
             if let image = state.draw() {
                 self.imageNode.image = image
+            }
+            
+            for (callbackFrame, callback) in state.item.callbacks {
+                if !state.executedCallbacks.contains(callbackFrame) && frameIndex >= callbackFrame {
+                    state.executedCallbacks.insert(callbackFrame)
+                    callback()
+                }
             }
         }
         

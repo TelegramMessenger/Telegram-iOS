@@ -1874,13 +1874,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             switch action {
             case .copy:
-                UIPasteboard.general.string = text
+                storeAttributedTextInPasteboard(text)
             case .share:
                 let f = {
                     guard let strongSelf = self else {
                         return
                     }
-                    let shareController = ShareController(context: strongSelf.context, subject: .text(text), externalShare: true, immediateExternalShare: false)
+                    let shareController = ShareController(context: strongSelf.context, subject: .text(text.string), externalShare: true, immediateExternalShare: false)
                     strongSelf.chatDisplayNode.dismissInput()
                     strongSelf.present(shareController, in: .window(.root))
                 }
@@ -1892,7 +1892,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     f()
                 }
             case .lookup:
-                let controller = UIReferenceLibraryViewController(term: text)
+                let controller = UIReferenceLibraryViewController(term: text.string)
                 if let window = strongSelf.effectiveNavigationController?.view.window {
                     controller.popoverPresentationController?.sourceView = window
                     controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
@@ -6700,8 +6700,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
         }
         if let value = value {
-            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: self.presentationData.strings.Conversation_SendDice), elevatedLayout: true, action: { [weak self] action in
-                if let strongSelf = self, action == .undo {
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: true, action: { [weak self] action in
+                if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState), action == .undo {
                     strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), replyToMessageId: nil, localGroupingKey: nil)])
                 }
                 return false
