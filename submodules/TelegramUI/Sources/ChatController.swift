@@ -6565,13 +6565,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let controller = controller as? TooltipScreen {
                 if controller.text == psaText {
                     found = true
-                    controller.dismiss()
+                    controller.resetDismissTimeout()
                     return false
                 }
             }
             return true
         })
         if found {
+            let messageId = item.message.id
+            self.controllerInteraction?.currentPsaMessageWithTooltip = messageId
+            self.updatePollTooltipMessageState(animated: !isAutomatic)
+            
             return
         }
         
@@ -6585,7 +6589,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .url(url, concealed):
                 switch action {
                 case .tap:
-                    strongSelf.openUrl(url, concealed: false)
+                    strongSelf.openUrl(url, concealed: concealed)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.url(url), nil)
                 }

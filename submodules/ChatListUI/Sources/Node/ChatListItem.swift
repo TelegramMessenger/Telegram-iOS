@@ -1216,7 +1216,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if item.enableContextActions {
                         if case .psa = promoInfo {
                             peerRevealOptions = [
-                                ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: hideIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
+                                ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
                             ]
                             peerLeftRevealOptions = []
                         } else if promoInfo == nil {
