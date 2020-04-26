@@ -44,9 +44,13 @@ enum ChatContextMenuSource {
     case search(ChatListSearchContextActionSource)
 }
 
-func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatContextMenuSource, chatListController: ChatListControllerImpl?) -> Signal<[ContextMenuItem], NoError> {
+func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: ChatListNodeEntryPromoInfo?, source: ChatContextMenuSource, chatListController: ChatListControllerImpl?) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
     return context.account.postbox.transaction { [weak chatListController] transaction -> [ContextMenuItem] in
+        if promoInfo != nil {
+            return []
+        }
+        
         var items: [ContextMenuItem] = []
         
         if case let .search(search) = source {

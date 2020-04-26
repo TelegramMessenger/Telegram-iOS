@@ -400,17 +400,19 @@ public struct StoreMessageForwardInfo {
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
+    public let psaType: String?
     
-    public init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
+    public init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId
         self.date = date
         self.authorSignature = authorSignature
+        self.psaType = psaType
     }
     
     public init(_ info: MessageForwardInfo) {
-        self.init(authorId: info.author?.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature)
+        self.init(authorId: info.author?.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature, psaType: info.psaType)
     }
 }
 
@@ -420,13 +422,15 @@ public struct MessageForwardInfo: Equatable {
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
+    public let psaType: String?
     
-    public init(author: Peer?, source: Peer?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
+    public init(author: Peer?, source: Peer?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?, psaType: String?) {
         self.author = author
         self.source = source
         self.sourceMessageId = sourceMessageId
         self.date = date
         self.authorSignature = authorSignature
+        self.psaType = psaType
     }
 
     public static func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
@@ -447,6 +451,9 @@ public struct MessageForwardInfo: Equatable {
             return false
         }
         if lhs.authorSignature != rhs.authorSignature {
+            return false
+        }
+        if lhs.psaType != rhs.psaType {
             return false
         }
         

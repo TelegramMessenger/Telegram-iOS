@@ -226,7 +226,7 @@ public class ContactsController: ViewController {
                                     self?.deactivateSearch(animated: false)
                                     self?.switchToChatsController?()
                                 }
-                                }, scrollToEndIfExists: scrollToEndIfExists, options: [.removeOnMasterDetails], completion: { [weak self] in
+                                }, scrollToEndIfExists: scrollToEndIfExists, options: [.removeOnMasterDetails], completion: { [weak self] _ in
                                 if let strongSelf = self {
                                     strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                                 }

@@ -33,14 +33,14 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 } else if params.scrollToEndIfExists && isFirst {
                     controller.scrollToEndOfHistory()
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    params.completion()
+                    params.completion(controller)
                 } else if params.activateMessageSearch {
                     controller.activateSearch()
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    params.completion()
+                    params.completion(controller)
                 } else {
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    params.completion()
+                    params.completion(controller)
                 }
                 controller.purposefulAction = params.purposefulAction
                 if params.activateInput {
@@ -83,7 +83,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 resolvedKeepStack = false
         }
         if resolvedKeepStack {
-            params.navigationController.pushViewController(controller, animated: params.animated, completion: params.completion)
+            params.navigationController.pushViewController(controller, animated: params.animated, completion: {
+                params.completion(controller)
+            })
         } else {
             let viewControllers = params.navigationController.viewControllers.filter({ controller in
                 if controller is ChatListController {
@@ -99,9 +101,13 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 }
             })
             if viewControllers.isEmpty {
-                params.navigationController.replaceAllButRootController(controller, animated: params.animated, animationOptions: params.options, completion: params.completion)
+                params.navigationController.replaceAllButRootController(controller, animated: params.animated, animationOptions: params.options, completion: {
+                    params.completion(controller)
+                })
             } else {
-                params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: params.completion)
+                params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
+                    params.completion(controller)
+                })
             }
         }
         if params.activateInput {

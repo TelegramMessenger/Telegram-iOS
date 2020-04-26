@@ -51,7 +51,7 @@ public final class ChannelState: PeerChatState, Equatable, CustomStringConvertib
     }
     
     public var description: String {
-        return "(pts: \(self.pts))"
+        return "(pts: \(self.pts), invalidatedPts: \(String(describing: self.invalidatedPts)), synchronizedUntilMessageId: \(String(describing: self.synchronizedUntilMessageId))"
     }
 
     public static func ==(lhs: ChannelState, rhs: ChannelState) -> Bool {

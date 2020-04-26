@@ -562,6 +562,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.toggleArchivedFolderHiddenByDefault()
         }
         
+        self.chatListDisplayNode.containerNode.hidePsa = { [weak self] peerId in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.hidePsa(peerId)
+        }
+        
         self.chatListDisplayNode.containerNode.deletePeerChat = { [weak self] peerId in
             guard let strongSelf = self else {
                 return
@@ -569,32 +576,50 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.deletePeerChat(peerId: peerId)
         }
         
-        self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, animated, isAd in
+        self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, animated, promoInfo in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    if isAd {
-                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
-                        |> deliverOnMainQueue).start(next: { value in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            if !value {
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                    if let strongSelf = self {
-                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                                    }
-                                })]), in: .window(.root))
-                            }
-                        })
-                    }
-                    
                     var scrollToEndIfExists = false
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
                     
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
+                        if let promoInfo = promoInfo {
+                            switch promoInfo {
+                            case .proxy:
+                                let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    if !value {
+                                        controller.displayPromoAnnouncement(text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert)
+                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                    }
+                                })
+                            case let .psa(type, _):
+                                let _ = (ApplicationSpecificNotice.getPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    if !value {
+                                        var text = strongSelf.presentationData.strings.ChatList_GenericPsaAlert
+                                        let key = "ChatList.PsaAlert.\(type)"
+                                        if let string = strongSelf.presentationData.strings.primaryComponent.dict[key] {
+                                            text = string
+                                        } else if let string = strongSelf.presentationData.strings.secondaryComponent?.dict[key] {
+                                            text = string
+                                        }
+                                        
+                                        controller.displayPromoAnnouncement(text: text)
+                                        let _ = ApplicationSpecificNotice.setPsaAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                                    }
+                                })
+                            }
+                        }
                     }))
                 }
             }
@@ -776,10 +801,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
-            case let .peer(peer):
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _):
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
@@ -792,7 +817,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             
             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, source: .search(source), chatListController: strongSelf), reactionItems: [], gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, promoInfo: nil, source: .search(source), chatListController: strongSelf), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }
         
@@ -1980,6 +2005,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }), in: .current)
             }
         })
+    }
+    
+    func hidePsa(_ id: PeerId) {
+        self.chatListDisplayNode.containerNode.updateState { state in
+            var state = state
+            state.hiddenPsaPeerId = id
+            state.peerIdWithRevealedOptions = nil
+            return state
+        }
+        
+        let _ = hideAccountPromoInfoChat(account: self.context.account, peerId: id).start()
     }
     
     func deletePeerChat(peerId: PeerId) {

@@ -159,7 +159,7 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
     
     var forwardInfo: MessageForwardInfo?
     if let info = message.forwardInfo {
-        forwardInfo = MessageForwardInfo(author: info.authorId.flatMap({ peers[$0] }), source: info.sourceId.flatMap({ peers[$0] }), sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature)
+        forwardInfo = MessageForwardInfo(author: info.authorId.flatMap({ peers[$0] }), source: info.sourceId.flatMap({ peers[$0] }), sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature, psaType: info.psaType)
         if let author = forwardInfo?.author {
             messagePeers[author.id] = author
         }

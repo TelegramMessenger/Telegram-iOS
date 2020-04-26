@@ -371,6 +371,7 @@ public protocol ChatController: ViewController {
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
+    func displayPromoAnnouncement(text: String)
 }
 
 public protocol ChatMessagePrevewItemNode: class {

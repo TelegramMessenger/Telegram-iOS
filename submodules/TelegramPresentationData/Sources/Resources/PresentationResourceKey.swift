@@ -239,4 +239,5 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatPrincipalThemeAdditionalGraphics(isCustomWallpaper: Bool, bubbleCorners: PresentationChatBubbleCorners)
     
     case chatBubbleLamp(incoming: Bool)
+    case chatPsaInfo(color: UInt32)
 }

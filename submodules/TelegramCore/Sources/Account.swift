@@ -1103,7 +1103,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAppUpdateInfo(network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAppChangelog(postbox: self.postbox, network: self.network, stateManager: self.stateManager, appVersion: self.networkArguments.appVersion).start())
-        self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
+        self.managedOperationsDisposable.add(managedPromoInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())

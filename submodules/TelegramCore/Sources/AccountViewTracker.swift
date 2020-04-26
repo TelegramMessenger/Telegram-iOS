@@ -362,10 +362,7 @@ public final class AccountViewTracker {
                                 return account.postbox.transaction { transaction -> Void in
                                     if let webpage = webpage {
                                         transaction.updateMessage(messageId, update: { currentMessage in
-                                            var storeForwardInfo: StoreMessageForwardInfo?
-                                            if let forwardInfo = currentMessage.forwardInfo {
-                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                            }
+                                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                                             var media = currentMessage.media
                                             for i in 0 ..< media.count {
                                                 if let _ = media[i] as? TelegramMediaWebpage {
@@ -452,7 +449,7 @@ public final class AccountViewTracker {
                         if let message = messages[messageId] {
                             for media in message.media {
                                 if let poll = media as? TelegramMediaPoll {
-                                    if let deadlineTimeout = poll.deadlineTimeout, message.id.namespace == Namespaces.Message.Cloud {
+                                    if let _ = poll.deadlineTimeout, message.id.namespace == Namespaces.Message.Cloud {
                                         let startDate: Int32
                                         if let forwardInfo = message.forwardInfo {
                                             startDate = forwardInfo.date
@@ -598,10 +595,7 @@ public final class AccountViewTracker {
                                                 for i in 0 ..< messageIds.count {
                                                     if i < viewCounts.count {
                                                         transaction.updateMessage(messageIds[i], update: { currentMessage in
-                                                            var storeForwardInfo: StoreMessageForwardInfo?
-                                                            if let forwardInfo = currentMessage.forwardInfo {
-                                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                                            }
+                                                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                                                             var attributes = currentMessage.attributes
                                                             loop: for j in 0 ..< attributes.count {
                                                                 if let attribute = attributes[j] as? ViewCountMessageAttribute {

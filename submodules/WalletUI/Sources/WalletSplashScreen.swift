@@ -953,7 +953,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                 return nil
             }
         }
-        self.termsNode.tapAttributeAction = { attributes in
+        self.termsNode.tapAttributeAction = { attributes, _ in
             if let _ = attributes[NSAttributedString.Key.underlineStyle] {
                 openTerms()
             }

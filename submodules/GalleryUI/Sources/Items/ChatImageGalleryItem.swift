@@ -351,7 +351,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 
-                if largestSize.width > 2600 || largestSize.height > 2600 {
+                /*if largestSize.width > 2600 || largestSize.height > 2600 {
                     self.dataDisposable.set((self.context.account.postbox.mediaBox.resourceData(fileReference.media.resource)
                     |> deliverOnMainQueue).start(next: { [weak self] data in
                         guard let strongSelf = self else {
@@ -362,9 +362,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                         strongSelf.updateImageFromFile(path: data.path)
                     }))
-                } else {
+                } else {*/
                     self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
-                }
+                //}
                 
                 self.zoomableContent = (largestSize.cgSize, self.imageNode)
                 self.setupStatus(resource: fileReference.media.resource)

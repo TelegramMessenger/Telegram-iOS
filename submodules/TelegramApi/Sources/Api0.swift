@@ -411,8 +411,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1569748965] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeLinkedChat($0) }
     dict[241923758] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeLocation($0) }
     dict[1401984889] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleSlowMode($0) }
-    dict[-526508104] = { return Api.help.ProxyData.parse_proxyDataEmpty($0) }
-    dict[737668643] = { return Api.help.ProxyData.parse_proxyDataPromo($0) }
     dict[-543777747] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[2103482845] = { return Api.SecurePlainData.parse_securePlainPhone($0) }
     dict[569137759] = { return Api.SecurePlainData.parse_securePlainEmail($0) }
@@ -455,6 +453,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2036501105] = { return Api.SecureValueError.parse_secureValueError($0) }
     dict[-1592506512] = { return Api.SecureValueError.parse_secureValueErrorTranslationFile($0) }
     dict[878931416] = { return Api.SecureValueError.parse_secureValueErrorTranslationFiles($0) }
+    dict[-1728664459] = { return Api.help.PromoData.parse_promoDataEmpty($0) }
+    dict[-1942390465] = { return Api.help.PromoData.parse_promoData($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
     dict[-1073230141] = { return Api.NotifyPeer.parse_notifyChats($0) }
@@ -645,7 +645,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
     dict[1430205163] = { return Api.InputWebFileLocation.parse_inputWebFileGeoMessageLocation($0) }
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
-    dict[-332168592] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
+    dict[893020267] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[-1012849566] = { return Api.BaseTheme.parse_baseThemeClassic($0) }
     dict[-69724536] = { return Api.BaseTheme.parse_baseThemeDay($0) }
     dict[-1212997976] = { return Api.BaseTheme.parse_baseThemeNight($0) }
@@ -1095,8 +1095,6 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelAdminLogEventAction:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.help.ProxyData:
-                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.ExportedAuthorization:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecurePlainData:
@@ -1140,6 +1138,8 @@ public struct Api {
             case let _1 as Api.CodeSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueError:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.PromoData:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.NotifyPeer:
                 _1.serialize(buffer, boxed)

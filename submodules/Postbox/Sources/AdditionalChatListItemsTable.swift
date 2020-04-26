@@ -1,11 +1,18 @@
 import Foundation
 
+public protocol AdditionalChatListItem: PostboxCoding {
+    var peerId: PeerId { get }
+    var includeIfNoHistory: Bool { get }
+    
+    func isEqual(to other: AdditionalChatListItem) -> Bool
+}
+
 final class AdditionalChatListItemsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
-    private var cachedItems: [PeerId]?
+    private var cachedItems: [AdditionalChatListItem]?
     private var updatedItems = false
     
     private func key(_ index: Int32) -> ValueBoxKey {
@@ -26,8 +33,20 @@ final class AdditionalChatListItemsTable: Table {
         return key
     }
     
-    func set(_ items: [PeerId]) -> Bool {
-        if self.get() == items {
+    func set(_ items: [AdditionalChatListItem]) -> Bool {
+        let current = self.get()
+        var updated = false
+        if current.count != items.count {
+            updated = true
+        } else {
+            for i in 0 ..< current.count {
+                if !current[i].isEqual(to: items[i]) {
+                    updated = true
+                    break
+                }
+            }
+        }
+        if !updated {
             return false
         }
         self.cachedItems = items
@@ -36,16 +55,19 @@ final class AdditionalChatListItemsTable: Table {
         return true
     }
     
-    func get() -> [PeerId] {
+    func get() -> [AdditionalChatListItem] {
         if let cachedItems = self.cachedItems {
             return cachedItems
         }
-        var items: [PeerId] = []
+        var items: [AdditionalChatListItem] = []
         self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), values: { key, value in
             assert(key.getInt32(0) == Int32(items.count))
-            var peerIdValue: Int64 = 0
-            value.read(&peerIdValue, offset: 0, length: 8)
-            items.append(PeerId(peerIdValue))
+            if value.length <= 8 {
+                return true
+            }
+            if let decoded = PostboxDecoder(buffer: value).decodeRootObject() as? AdditionalChatListItem {
+                items.append(decoded)
+            }
             return true
         }, limit: 0)
         self.cachedItems = items
@@ -71,8 +93,9 @@ final class AdditionalChatListItemsTable: Table {
             if let items = self.cachedItems {
                 var index: Int32 = 0
                 for item in items {
-                    var peerIdValue = item.toInt64()
-                    self.valueBox.set(self.table, key: self.key(index), value: MemoryBuffer(memory: &peerIdValue, capacity: 8, length: 8, freeWhenDone: false))
+                    let encoder = PostboxEncoder()
+                    encoder.encodeRootObject(item)
+                    self.valueBox.set(self.table, key: self.key(index), value: encoder.memoryBuffer())
                     index += 1
                 }
             } else {

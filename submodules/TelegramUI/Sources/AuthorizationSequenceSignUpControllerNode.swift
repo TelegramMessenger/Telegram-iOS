@@ -169,7 +169,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
                 return nil
             }
         }
-        self.termsNode.tapAttributeAction = { [weak self] attributes in
+        self.termsNode.tapAttributeAction = { [weak self] attributes, _ in
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 self?.openTermsOfService?()
             }

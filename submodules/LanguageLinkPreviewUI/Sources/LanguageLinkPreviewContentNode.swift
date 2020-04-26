@@ -58,7 +58,7 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
                 return nil
             }
         }
-        self.textNode.tapAttributeAction = { attributes in
+        self.textNode.tapAttributeAction = { attributes, _ in
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 let url: String
                 if localizationInfo.platformUrl.isEmpty {

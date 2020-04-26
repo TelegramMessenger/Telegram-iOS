@@ -55,12 +55,12 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
                 return nil
             }
         }
-        self.textNode.tapAttributeAction = { [weak self] attributes in
+        self.textNode.tapAttributeAction = { [weak self] attributes, _ in
             if let strongSelf = self, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 strongSelf.openUrl?(url)
             }
         }
-        self.textNode.longTapAttributeAction = { [weak self] attributes in
+        self.textNode.longTapAttributeAction = { [weak self] attributes, _ in
             if let strongSelf = self, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 strongSelf.openUrlOptions?(url)
             }

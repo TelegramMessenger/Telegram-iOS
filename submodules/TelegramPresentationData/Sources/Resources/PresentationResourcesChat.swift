@@ -967,4 +967,10 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/Lamp"), color: incoming ? theme.chat.message.incoming.accentControlColor : theme.chat.message.outgoing.accentControlColor)
         })
     }
+    
+    public static func chatPsaInfo(_ theme: PresentationTheme, color: UInt32) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatPsaInfo(color: color), { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/Question"), color: UIColor(rgb: color))
+        })
+    }
 }

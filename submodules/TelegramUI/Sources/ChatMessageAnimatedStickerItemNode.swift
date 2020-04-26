@@ -652,12 +652,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var forwardSource: Peer?
             var forwardAuthorSignature: String?
+            var forwardPsaType: String?
             
-            var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode)?
+            var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
             var updatedForwardBackgroundNode: ASImageNode?
             var forwardBackgroundImage: UIImage?
             
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
+                forwardPsaType = forwardInfo.psaType
+                
                 if let source = forwardInfo.source {
                     forwardSource = source
                     if let authorSignature = forwardInfo.authorSignature {
@@ -677,7 +680,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 let availableWidth = max(60.0, availableContentWidth + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
                     updatedForwardBackgroundNode = currentForwardBackgroundNode
@@ -858,7 +861,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let (forwardInfoSize, forwardInfoApply) = forwardInfoSizeApply {
-                        let forwardInfoNode = forwardInfoApply()
+                        let forwardInfoNode = forwardInfoApply(forwardInfoSize.width)
                         if strongSelf.forwardInfoNode == nil {
                             strongSelf.forwardInfoNode = forwardInfoNode
                             strongSelf.addSubnode(forwardInfoNode)

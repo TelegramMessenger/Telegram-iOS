@@ -15,6 +15,7 @@ swift_library(
         "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/UrlEscaping:UrlEscaping",
     ],
     visibility = [
         "//visibility:public",

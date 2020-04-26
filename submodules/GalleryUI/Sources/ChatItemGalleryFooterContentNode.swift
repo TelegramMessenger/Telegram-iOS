@@ -314,12 +314,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             return nil
         }
-        self.textNode.tapAttributeAction = { [weak self] attributes in
+        self.textNode.tapAttributeAction = { [weak self] attributes, _ in
             if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
                 strongSelf.performAction?(action)
             }
         }
-        self.textNode.longTapAttributeAction = { [weak self] attributes in
+        self.textNode.longTapAttributeAction = { [weak self] attributes, _ in
             if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
                 strongSelf.openActionOptions?(action)
             }

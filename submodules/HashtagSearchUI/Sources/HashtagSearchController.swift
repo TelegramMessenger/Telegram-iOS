@@ -48,7 +48,7 @@ public final class HashtagSearchController: TelegramBaseController {
             return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData) })
         }
         let interaction = ChatListNodeInteraction(activateSearch: {
-        }, peerSelected: { peer in
+        }, peerSelected: { _, _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
         }, additionalCategorySelected: { _ in
@@ -70,6 +70,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, updatePeerGrouping: { _, _ in
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {
+        }, hidePsa: { _ in
         }, activateChatPreview: { _, _, gesture in
             gesture?.cancel()
         }, present: { _ in

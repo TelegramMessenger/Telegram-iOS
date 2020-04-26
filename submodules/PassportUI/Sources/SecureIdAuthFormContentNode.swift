@@ -80,7 +80,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
                 return nil
             }
         }
-        self.textNode.tapAttributeAction = { attributes in
+        self.textNode.tapAttributeAction = { attributes, _ in
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 openURL(url)
             } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {

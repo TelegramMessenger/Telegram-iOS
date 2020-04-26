@@ -371,11 +371,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var forwardSource: Peer?
             var forwardAuthorSignature: String?
             
-            var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode)?
+            var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
             var updatedForwardBackgroundNode: ASImageNode?
             var forwardBackgroundImage: UIImage?
             
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
+                let forwardPsaType = forwardInfo.psaType
+                
                 if let source = forwardInfo.source {
                     forwardSource = source
                     if let authorSignature = forwardInfo.authorSignature {
@@ -395,7 +397,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                 }
                 let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
                     updatedForwardBackgroundNode = currentForwardBackgroundNode
@@ -566,7 +568,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                     
                     if let (forwardInfoSize, forwardInfoApply) = forwardInfoSizeApply {
-                        let forwardInfoNode = forwardInfoApply()
+                        let forwardInfoNode = forwardInfoApply(forwardInfoSize.width)
                         if strongSelf.forwardInfoNode == nil {
                             strongSelf.forwardInfoNode = forwardInfoNode
                             strongSelf.addSubnode(forwardInfoNode)

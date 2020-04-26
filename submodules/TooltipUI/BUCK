@@ -14,6 +14,7 @@ static_library(
         "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/UrlEscaping:UrlEscaping",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
