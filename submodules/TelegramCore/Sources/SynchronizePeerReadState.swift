@@ -60,40 +60,6 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
     }
 }
 
-func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId, inputPeer: Api.InputPeer) -> Signal<PeerReadState?, NoError> {
-    return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
-    |> map { result -> PeerReadState? in
-        switch result {
-            case let .peerDialogs(dialogs, _, _, _, _):
-                if let dialog = dialogs.filter({ $0.peerId == peerId }).first {
-                    let apiTopMessage: Int32
-                    let apiReadInboxMaxId: Int32
-                    let apiReadOutboxMaxId: Int32
-                    let apiUnreadCount: Int32
-                    let apiMarkedUnread: Bool
-                    switch dialog {
-                        case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, _, _):
-                            apiTopMessage = topMessage
-                            apiReadInboxMaxId = readInboxMaxId
-                            apiReadOutboxMaxId = readOutboxMaxId
-                            apiUnreadCount = unreadCount
-                            apiMarkedUnread = (flags & (1 << 3)) != 0
-                        case .dialogFolder:
-                            assertionFailure()
-                            return nil
-                    }
-                    
-                    return .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
-                } else {
-                    return nil
-                }
-        }
-    }
-    |> `catch` { _ -> Signal<PeerReadState?, NoError> in
-        return .single(nil)
-    }
-}
-
 private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<(PeerReadState, PeerReadStateMarker), PeerReadStateValidationError> {
     return dialogTopMessage(network: network, postbox: postbox, peerId: peerId)
     |> mapToSignal { topMessage -> Signal<(PeerReadState, PeerReadStateMarker), PeerReadStateValidationError> in

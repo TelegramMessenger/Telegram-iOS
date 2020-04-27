@@ -154,7 +154,32 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
-                    completeSourceString = strings.Message_ForwardedMessageShort(peerString)
+                    
+                    if let psaType = psaType {
+                        var customFormat: String?
+                        let key = "Message.ForwardedPsa.\(psaType)"
+                        if let string = presentationData.strings.primaryComponent.dict[key] {
+                            customFormat = string
+                        } else if let string = presentationData.strings.secondaryComponent?.dict[key] {
+                            customFormat = string
+                        }
+                        
+                        if let customFormat = customFormat {
+                            if let range = customFormat.range(of: "%@") {
+                                let leftPart = String(customFormat[customFormat.startIndex ..< range.lowerBound])
+                                let rightPart = String(customFormat[range.upperBound...])
+                                
+                                let formattedText = leftPart + peerString + rightPart
+                                completeSourceString = (formattedText, [(0, NSRange(location: leftPart.count, length: peerString.count))])
+                            } else {
+                                completeSourceString = (customFormat, [])
+                            }
+                        } else {
+                            completeSourceString = strings.Message_GenericForwardedPsa(peerString)
+                        }
+                    } else {
+                        completeSourceString = strings.Message_ForwardedMessageShort(peerString)
+                    }
             }
             
             var currentCredibilityIconImage: UIImage?

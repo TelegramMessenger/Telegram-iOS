@@ -1879,13 +1879,16 @@ final class MessageHistoryTable: Table {
         if let forwardInfo = message.forwardInfo {
             var forwardInfoFlags: Int8 = 1
             if forwardInfo.sourceId != nil {
-                forwardInfoFlags |= 2
+                forwardInfoFlags |= 1 << 1
             }
             if forwardInfo.sourceMessageId != nil {
-                forwardInfoFlags |= 4
+                forwardInfoFlags |= 1 << 2
             }
             if forwardInfo.authorSignature != nil {
-                forwardInfoFlags |= 8
+                forwardInfoFlags |= 1 << 3
+            }
+            if forwardInfo.psaType != nil {
+                forwardInfoFlags |= 1 << 4
             }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
             var forwardAuthorId: Int64 = forwardInfo.authorId?.toInt64() ?? 0
@@ -1909,6 +1912,17 @@ final class MessageHistoryTable: Table {
             
             if let authorSignature = forwardInfo.authorSignature {
                 if let data = authorSignature.data(using: .utf8, allowLossyConversion: true) {
+                    var length: Int32 = Int32(data.count)
+                    sharedBuffer.write(&length, offset: 0, length: 4)
+                    sharedBuffer.write(data)
+                } else {
+                    var length: Int32 = 0
+                    sharedBuffer.write(&length, offset: 0, length: 4)
+                }
+            }
+            
+            if let psaType = forwardInfo.psaType {
+                if let data = psaType.data(using: .utf8, allowLossyConversion: true) {
                     var length: Int32 = Int32(data.count)
                     sharedBuffer.write(&length, offset: 0, length: 4)
                     sharedBuffer.write(data)

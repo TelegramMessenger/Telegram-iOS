@@ -784,7 +784,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         var effectiveAuthor: Peer?
         var ignoreForward = false
-        let displayAuthorInfo: Bool
+        var displayAuthorInfo: Bool
         
         let avatarInset: CGFloat
         var hasAvatar = false
@@ -809,7 +809,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
                 } else {
                     effectiveAuthor = firstMessage.author
-                    displayAuthorInfo = !mergedTop.merged && incoming && peerId.isGroupOrChannel &&  effectiveAuthor != nil
+                    displayAuthorInfo = !mergedTop.merged && incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
+                    if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
+                        displayAuthorInfo = false
+                    }
                 }
             
                 if peerId != item.context.account.peerId {
@@ -827,10 +830,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 } else if incoming {
                     hasAvatar = true
                 }
-            /*case .group:
-                allowFullWidth = true
-                hasAvatar = true
-                displayAuthorInfo = true*/
         }
         
         if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author?.id.namespace == Namespaces.Peer.CloudUser {
@@ -985,6 +984,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                 replyMarkup = attribute
             }
+        }
+        
+        if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
+            inlineBotNameString = nil
         }
         
         var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)))] = []
@@ -1877,19 +1880,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         if let forwardInfoNode = forwardInfoSizeApply.1(bubbleContentWidth) {
             strongSelf.forwardInfoNode = forwardInfoNode
-            forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
-                guard let strongSelf = strongSelf, let item = strongSelf.item else {
-                    return
-                }
-                item.controllerInteraction.displayPsa(type, sourceNode)
-            }
             var animateFrame = true
             if forwardInfoNode.supernode == nil {
                 strongSelf.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
                 animateFrame = false
+                forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
+                    guard let strongSelf = strongSelf, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.displayPsa(type, sourceNode)
+                }
             }
             let previousForwardInfoNodeFrame = forwardInfoNode.frame
-            forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: forwardInfoSizeApply.0)
+            forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
             if case let .System(duration) = animation {
                 if animateFrame {
                     forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)

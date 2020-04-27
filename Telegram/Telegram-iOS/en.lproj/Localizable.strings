@@ -1521,7 +1521,6 @@
 
 "Channel.UpdatePhotoItem" = "Set Channel Photo";
 
-"Channel.AboutItem" = "about";
 "Channel.LinkItem" = "share link";
 "Channel.Edit.AboutItem" = "Description";
 "Channel.Edit.LinkItem" = "Link";
@@ -5495,3 +5494,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Message.GenericForwardedPsa" = "Public Service Announcement\nFrom: %@";
 "Message.ForwardedPsa.covid" = "Covid-19 Notification\nFrom: %@";
+
+"Channel.AboutItem" = "about";
+"PeerInfo.GroupAboutItem" = "about";

@@ -6482,7 +6482,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(text: psaText, textEntities: psaEntities, icon: .info, location: .top, shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
@@ -6492,7 +6492,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .url(url, concealed):
                 switch action {
                 case .tap:
-                    strongSelf.openUrl(url, concealed: false)
+                    strongSelf.openUrl(url, concealed: concealed)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.url(url), nil)
                 }
@@ -6560,18 +6560,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
         
+        let messageId = item.message.id
+        
         var found = false
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
                 if controller.text == psaText {
                     found = true
-                    controller.dismiss()
+                    controller.resetDismissTimeout()
+                    
+                    controller.willBecomeDismissed = { [weak self] tooltipScreen in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.controllerInteraction?.currentPsaMessageWithTooltip == messageId {
+                            strongSelf.controllerInteraction?.currentPsaMessageWithTooltip = nil
+                            strongSelf.updatePollTooltipMessageState(animated: true)
+                        }
+                    }
+                    
                     return false
                 }
             }
             return true
         })
         if found {
+            self.controllerInteraction?.currentPsaMessageWithTooltip = messageId
+            self.updatePollTooltipMessageState(animated: !isAutomatic)
+            
             return
         }
         
@@ -6585,7 +6601,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .url(url, concealed):
                 switch action {
                 case .tap:
-                    strongSelf.openUrl(url, concealed: false)
+                    strongSelf.openUrl(url, concealed: concealed)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.url(url), nil)
                 }
@@ -6620,7 +6636,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        let messageId = item.message.id
         self.controllerInteraction?.currentPsaMessageWithTooltip = messageId
         self.updatePollTooltipMessageState(animated: !isAutomatic)
         

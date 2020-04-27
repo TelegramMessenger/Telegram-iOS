@@ -391,6 +391,8 @@ public final class TooltipScreen: ViewController {
     public var willBecomeDismissed: ((TooltipScreen) -> Void)?
     public var becameDismissed: ((TooltipScreen) -> Void)?
     
+    private var dismissTimer: Foundation.Timer?
+    
     public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
         self.text = text
         self.textEntities = textEntities
@@ -409,22 +411,47 @@ public final class TooltipScreen: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.dismissTimer?.invalidate()
+    }
+    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.controllerNode.animateIn()
+        self.resetDismissTimeout(duration: self.displayDuration)
+    }
+    
+    public func resetDismissTimeout(duration: TooltipScreen.DisplayDuration? = nil) {
+        self.dismissTimer?.invalidate()
         
         let timeout: Double
-        switch self.displayDuration {
+        switch duration ?? self.displayDuration {
         case .default:
             timeout = 5.0
         case let .custom(value):
             timeout = value
         }
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + timeout, execute: { [weak self] in
-            self?.dismiss()
-        })
+        final class TimerTarget: NSObject {
+            private let f: () -> Void
+            
+            init(_ f: @escaping () -> Void) {
+                self.f = f
+            }
+            
+            @objc func timerEvent() {
+                self.f()
+            }
+        }
+        let dismissTimer = Foundation.Timer(timeInterval: timeout, target: TimerTarget { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.dismiss()
+        }, selector: #selector(TimerTarget.timerEvent), userInfo: nil, repeats: false)
+        self.dismissTimer = dismissTimer
+        RunLoop.main.add(dismissTimer, forMode: .common)
     }
     
     override public func loadDisplayNode() {
