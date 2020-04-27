@@ -45,6 +45,18 @@ struct InstantPageTextAnchorItem {
     let empty: Bool
 }
 
+public struct InstantPageTextRangeRectEdge: Equatable {
+    public var x: CGFloat
+    public var y: CGFloat
+    public var height: CGFloat
+    
+    public init(x: CGFloat, y: CGFloat, height: CGFloat) {
+        self.x = x
+        self.y = y
+        self.height = height
+    }
+}
+
 final class InstantPageTextLine {
     let line: CTLine
     let range: NSRange
@@ -180,7 +192,7 @@ final class InstantPageTextItem: InstantPageItem {
         context.restoreGState()
     }
     
-    private func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
+    func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
         let transformedPoint = CGPoint(x: point.x, y: point.y)
         let boundsWidth = self.frame.width
         for i in 0 ..< self.lines.count {
@@ -261,6 +273,88 @@ final class InstantPageTextItem: InstantPageItem {
             if let url = dict[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 return url
             }
+        }
+        return nil
+    }
+    
+    func rangeRects(in range: NSRange) -> (rects: [CGRect], start: InstantPageTextRangeRectEdge?, end: InstantPageTextRangeRectEdge?)? {
+        guard range.length != 0 else {
+            return nil
+        }
+        
+        let boundsWidth = self.frame.width
+        
+        var rects: [(CGRect, CGRect)] = []
+        var startEdge: InstantPageTextRangeRectEdge?
+        var endEdge: InstantPageTextRangeRectEdge?
+        for i in 0 ..< self.lines.count {
+            let line = self.lines[i]
+            let lineRange = NSIntersectionRange(range, line.range)
+            if lineRange.length != 0 {
+                var leftOffset: CGFloat = 0.0
+                if lineRange.location != line.range.location || line.isRTL {
+                    leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                }
+                var rightOffset: CGFloat = line.frame.width
+                if lineRange.location + lineRange.length != line.range.upperBound || line.isRTL {
+                    var secondaryOffset: CGFloat = 0.0
+                    let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                    rightOffset = ceil(rawOffset)
+                    if !rawOffset.isEqual(to: secondaryOffset) {
+                        rightOffset = ceil(secondaryOffset)
+                    }
+                }
+                
+                var lineFrame = line.frame
+                for imageItem in line.imageItems {
+                    if imageItem.frame.minY < lineFrame.minY {
+                        let delta = lineFrame.minY - imageItem.frame.minY - 2.0
+                        lineFrame = CGRect(x: lineFrame.minX, y: lineFrame.minY - delta, width: lineFrame.width, height: lineFrame.height + delta)
+                    }
+                    if imageItem.frame.maxY > lineFrame.maxY {
+                        let delta = imageItem.frame.maxY - lineFrame.maxY - 2.0
+                        lineFrame = CGRect(x: lineFrame.minX, y: lineFrame.minY, width: lineFrame.width, height: lineFrame.height + delta)
+                    }
+                }
+                lineFrame = lineFrame.insetBy(dx: 0.0, dy: -4.0)
+                if self.alignment == .center {
+                    lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
+                } else if self.alignment == .right {
+                    lineFrame.origin.x = boundsWidth - lineFrame.size.width
+                } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
+                    lineFrame.origin.x = boundsWidth - lineFrame.size.width
+                }
+                
+                let width = max(0.0, abs(rightOffset - leftOffset))
+                
+                if line.range.contains(range.lowerBound) {
+                    let offsetX = floor(CTLineGetOffsetForStringIndex(line.line, range.lowerBound, nil))
+                    startEdge = InstantPageTextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
+                }
+                if line.range.contains(range.upperBound - 1) {
+                    let offsetX: CGFloat
+                    if line.range.upperBound == range.upperBound {
+                        offsetX = lineFrame.maxX
+                    } else {
+                        var secondaryOffset: CGFloat = 0.0
+                        let primaryOffset = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound - 1, &secondaryOffset))
+                        secondaryOffset = floor(secondaryOffset)
+                        let nextOffet = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound, &secondaryOffset))
+                        
+                        if primaryOffset != secondaryOffset {
+                            offsetX = secondaryOffset
+                        } else {
+                            offsetX = nextOffet
+                        }
+                    }
+                    endEdge = InstantPageTextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
+                }
+                
+                rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset), y: lineFrame.minY), size: CGSize(width: width, height: lineFrame.size.height))))
+            }
+        }
+        if !rects.isEmpty, let startEdge = startEdge, let endEdge = endEdge {
+            return (rects.map { $1 }, startEdge, endEdge)
         }
         return nil
     }
