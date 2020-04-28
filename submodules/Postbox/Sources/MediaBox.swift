@@ -535,6 +535,11 @@ public final class MediaBox {
                     return
                 }
                 
+                var range = range
+                if let parameters = parameters, !parameters.isRandomAccessAllowed {
+                    range = 0 ..< range.upperBound
+                }
+                
                 let fetchResource = self.wrappedFetchResource.get()
                 let fetchedDisposable = fileContext.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), priority: priority, fetch: { intervals in
                     return fetchResource

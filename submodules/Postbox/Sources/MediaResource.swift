@@ -64,9 +64,11 @@ public protocol MediaResourceFetchInfo {
 public struct MediaResourceFetchParameters {
     public let tag: MediaResourceFetchTag?
     public let info: MediaResourceFetchInfo?
+    public let isRandomAccessAllowed: Bool
     
-    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?) {
+    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, isRandomAccessAllowed: Bool) {
         self.tag = tag
         self.info = info
+        self.isRandomAccessAllowed = isRandomAccessAllowed
     }
 }

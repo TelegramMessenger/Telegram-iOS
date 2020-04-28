@@ -31,16 +31,28 @@ public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceRef
 }
 
 public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceReference, ranges: [(Range<Int>, MediaBoxFetchPriority)]?, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
+    var isRandomAccessAllowed = true
+    switch reference {
+    case let .media(media, _):
+        if let file = media.media as? TelegramMediaFile {
+            if file.fileId.namespace == Namespaces.Media.CloudSecretFile {
+                isRandomAccessAllowed = false
+            }
+        }
+    default:
+        break
+    }
+    
     if let ranges = ranges {
         let signals = ranges.map { (range, priority) -> Signal<Void, FetchResourceError> in
-            return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)))
+            return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground), isRandomAccessAllowed: isRandomAccessAllowed))
         }
         return combineLatest(signals)
         |> ignoreValues
         |> map { _ -> FetchResourceSourceType in .local }
         |> then(.single(.local))
     } else {
-        return mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)), implNext: reportResultStatus)
+        return mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground), isRandomAccessAllowed: isRandomAccessAllowed), implNext: reportResultStatus)
     }
 }
 
