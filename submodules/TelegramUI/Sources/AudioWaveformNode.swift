@@ -6,10 +6,12 @@ import AsyncDisplayKit
 private final class AudioWaveformNodeParameters: NSObject {
     let waveform: AudioWaveform?
     let color: UIColor?
+    let progress: CGFloat?
     
-    init(waveform: AudioWaveform?, color: UIColor?) {
+    init(waveform: AudioWaveform?, color: UIColor?, progress: CGFloat?) {
         self.waveform = waveform
         self.color = color
+        self.progress = progress
         
         super.init()
     }
@@ -18,6 +20,12 @@ private final class AudioWaveformNodeParameters: NSObject {
 final class AudioWaveformNode: ASDisplayNode {
     private var waveform: AudioWaveform?
     private var color: UIColor?
+    
+    var progress: CGFloat? {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
     
     override init() {
         super.init()
@@ -47,11 +55,10 @@ final class AudioWaveformNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return AudioWaveformNodeParameters(waveform: self.waveform, color: self.color)
+        return AudioWaveformNodeParameters(waveform: self.waveform, color: self.color, progress: self.progress)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -111,7 +118,15 @@ final class AudioWaveformNode: ASDisplayNode {
                             sampleHeight = peakHeight
                         }
                         
-                        let adjustedSampleHeight = sampleHeight - sampleWidth
+                        let diff: CGFloat
+                        let samplePosition = CGFloat(i) / CGFloat(numSamples)
+                        if let position = parameters.progress, abs(position - samplePosition) < 0.01  {
+                            diff = sampleWidth * 0.5
+                        } else {
+                            diff = sampleWidth * 1.5
+                        }
+                        
+                        let adjustedSampleHeight = sampleHeight - diff
                         if adjustedSampleHeight.isLessThanOrEqualTo(sampleWidth) {
                             context.fillEllipse(in: CGRect(x: offset, y: size.height - sampleWidth, width: sampleWidth, height: sampleWidth))
                             context.fill(CGRect(x: offset, y: size.height - halfSampleWidth, width: sampleWidth, height: halfSampleWidth))

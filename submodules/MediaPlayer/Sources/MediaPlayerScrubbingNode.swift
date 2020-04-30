@@ -870,12 +870,14 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 }
                 
                 if let (timestamp, duration) = timestampAndDuration {
-                    if let scrubbingTimestampValue = scrubbingTimestampValue {
+                    if let scrubbingTimestampValue = self.scrubbingTimestampValue {
                         var progress = CGFloat(scrubbingTimestampValue / duration)
                         if progress.isNaN || !progress.isFinite {
                             progress = 0.0
                         }
                         progress = max(0.0, min(1.0, progress))
+                        node.backgroundNode.progress = nil
+                        node.foregroundContentNode.progress = nil
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
                     } else if let statusValue = self.statusValue {
                         let actualTimestamp: Double
@@ -890,6 +892,8 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             progress = 0.0
                         }
                         progress = max(0.0, min(1.0, progress))
+                        node.backgroundNode.progress = progress
+                        node.foregroundContentNode.progress = progress
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
                     } else {
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))

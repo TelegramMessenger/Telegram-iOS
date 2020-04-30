@@ -151,6 +151,10 @@ private enum FileIconImage: Equatable {
     }
 }
 
+extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
+    
+}
+
 final class ListMessageFileItemNode: ListMessageNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
