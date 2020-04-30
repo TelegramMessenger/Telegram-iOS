@@ -41,6 +41,12 @@ private let validTimecodeSet: CharacterSet = {
     set.insert(":")
     return set
 }()
+private let validTimecodePreviousSet: CharacterSet = {
+    var set = CharacterSet.whitespacesAndNewlines
+    set.insert("(")
+    set.insert("[")
+    return set
+}()
 
 public struct ApplicationSpecificEntityType {
     public static let Timecode: Int32 = 1
@@ -320,7 +326,7 @@ public func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEnt
                         notFound = false
                         if let (type, range) = currentEntity, type == .timecode {
                             currentEntity = (.timecode, range.lowerBound ..< utf16.index(after: index))
-                        } else if previousScalar == nil || CharacterSet.whitespacesAndNewlines.contains(previousScalar!) {
+                        } else if previousScalar == nil || validTimecodePreviousSet.contains(previousScalar!) {
                             currentEntity = (.timecode, index ..< index)
                         }
                     }

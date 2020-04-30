@@ -249,7 +249,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContext, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void = { _, _ in }) {
         self.context = context
         self.presentationData = presentationData
         self.theme = presentationData.theme
@@ -367,7 +367,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: accentColor.withAlphaComponent(0.2), knob: accentColor), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
 //            self?.updateIsTextSelectionActive?(value)
         }, present: { [weak self] c, a in
-//            self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
+            present(c, a)
         }, rootNode: self, performAction: { [weak self] text, action in
 //            guard let strongSelf = self, let item = strongSelf.item else {
 //                return
