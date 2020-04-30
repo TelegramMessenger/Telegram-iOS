@@ -139,7 +139,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                 if let strongSelf = self, status.duration > 0.0 {
                     var text: String = ""
                     
-                    for chapter in self.chapters {
+                    for chapter in strongSelf.chapters {
                         if chapter.start > status.timestamp {
                             break
                         } else {
