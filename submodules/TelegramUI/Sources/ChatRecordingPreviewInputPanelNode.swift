@@ -19,6 +19,10 @@ private func generatePlayIcon(_ theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPlay"), color: theme.chat.inputPanel.actionControlForegroundColor)
 }
 
+extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
+    
+}
+
 final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
     let sendButton: HighlightTrackingButtonNode

@@ -1205,59 +1205,131 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self?.openPeer(peerId: id, navigation: navigation)
             }
         }, openPeerMention: { _ in
-        }, openMessageContextMenu: { [weak self] message, _, _, _, _ in
-            guard let strongSelf = self else {
+        }, openMessageContextMenu: { [weak self] message, _, node, frame, anyRecognizer in
+            guard let strongSelf = self, let node = node as? ContextExtractedContentContainingNode else {
                 return
             }
             let _ = storedMessageFromSearch(account: strongSelf.context.account, message: message).start()
             
+            var linkForCopying: String?
+            var currentSupernode: ASDisplayNode? = node
+            while true {
+                if currentSupernode == nil {
+                    break
+                } else if let currentSupernode = currentSupernode as? ListMessageSnippetItemNode {
+                    linkForCopying = currentSupernode.currentPrimaryUrl
+                    break
+                } else {
+                    currentSupernode = currentSupernode?.supernode
+                }
+            }
+            
+            let gesture: ContextGesture? = anyRecognizer as? ContextGesture
             let _ = (chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
             |> deliverOnMainQueue).start(next: { actions in
+                guard let strongSelf = self else {
+                    return
+                }
                 
-                var messageIds = Set<MessageId>()
-                messageIds.insert(message.id)
+                var items: [ContextMenuItem] = []
                 
-                if let strongSelf = self {
-                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                    var items: [ActionSheetButtonItem] = []
-                    
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                if let linkForCopying = linkForCopying {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c.dismiss(completion: {})
+                        UIPasteboard.general.string = linkForCopying
+                    })))
+                }
+                
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss(completion: {
+                        if let strongSelf = self {
+                            strongSelf.forwardMessages(messageIds: Set([message.id]))
+                        }
+                    })
+                })))
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss(completion: {
                         if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
                         }
-                    }))
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.forwardMessages(messageIds: messageIds)
-                        }
-                    }))
-                    if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
-                        items.append( ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.deleteMessages(messageIds: Set(messageIds))
+                    })
+                })))
+                if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
+                    let context = strongSelf.context
+                    let presentationData = strongSelf.presentationData
+                    let peerId = strongSelf.peerId
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, _ in
+                        c.setItems(context.account.postbox.transaction { transaction -> [ContextMenuItem] in
+                            var items: [ContextMenuItem] = []
+                            let messageIds = [message.id]
+                            
+                            if let peer = transaction.getPeer(message.id.peerId) {
+                                var personalPeerName: String?
+                                var isChannel = false
+                                if let user = peer as? TelegramUser {
+                                    personalPeerName = user.compactDisplayTitle
+                                } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                    isChannel = true
+                                }
+                                
+                                if actions.options.contains(.deleteGlobally) {
+                                    let globalTitle: String
+                                    if isChannel {
+                                        globalTitle = presentationData.strings.Conversation_DeleteMessagesForMe
+                                    } else if let personalPeerName = personalPeerName {
+                                        globalTitle = presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
+                                    } else {
+                                        globalTitle = presentationData.strings.Conversation_DeleteMessagesForEveryone
+                                    }
+                                    items.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { c, f in
+                                        c.dismiss(completion: {
+                                            if let strongSelf = self {
+                                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
+                                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                                            }
+                                        })
+                                    })))
+                                }
+                                
+                                if actions.options.contains(.deleteLocally) {
+                                    var localOptionText = presentationData.strings.Conversation_DeleteMessagesForMe
+                                    if context.account.peerId == peerId {
+                                        if messageIds.count == 1 {
+                                            localOptionText = presentationData.strings.Conversation_Moderate_Delete
+                                        } else {
+                                            localOptionText = presentationData.strings.Conversation_DeleteManyMessages
+                                        }
+                                    }
+                                    items.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { c, f in
+                                        c.dismiss(completion: {
+                                            if let strongSelf = self {
+                                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
+                                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                            }
+                                        })
+                                    })))
+                                }
                             }
-                        }))
-                    }
-                    if strongSelf.searchDisplayController == nil {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuMore, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                            
+                            return items
+                        })
+                    })))
+                }
+                if strongSelf.searchDisplayController == nil {
+                    items.append(.separator)
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuMore, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c.dismiss(completion: {
                             if let strongSelf = self {
                                 strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
                                 strongSelf.expandTabs()
                             }
-                        }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
                         })
-                    ])])
-                    strongSelf.view.endEditing(true)
-                    strongSelf.controller?.present(actionSheet, in: .window(.root))
+                    })))
                 }
+                
+                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node)), items: .single(items), reactionItems: [], recognizer: nil, gesture: gesture)
+                strongSelf.controller?.window?.presentInGlobalOverlay(controller)
             })
         }, openMessageContextActions: { [weak self] message, node, rect, gesture in
             guard let strongSelf = self else {
@@ -1446,9 +1518,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, updateInputState: { _ in
         }, updateInputMode: { _ in
         }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in
-        }, navigationController: {
-            return nil
+        }, presentController: { [weak self] c, a in
+            self?.controller?.present(c, in: .window(.root), with: a)
+        }, navigationController: { [weak self] in
+            return self?.controller?.navigationController as? NavigationController
         }, chatControllerNode: {
             return nil
         }, reactionContainerNode: {
@@ -4535,5 +4608,24 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     
     func animatedIn() {
         self.controller.didAppearInContextPreview()
+    }
+}
+
+private final class MessageContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = true
+    
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(sourceNode: ContextExtractedContentContainingNode) {
+        self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

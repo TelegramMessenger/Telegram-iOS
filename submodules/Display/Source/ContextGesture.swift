@@ -228,6 +228,8 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
             self.delayTimer?.invalidate()
             self.animator?.invalidate()
             self.state = .failed
+        } else {
+            self.state = .failed
         }
     }
     
