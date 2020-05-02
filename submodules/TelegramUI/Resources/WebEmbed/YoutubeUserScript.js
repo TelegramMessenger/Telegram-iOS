@@ -49,6 +49,12 @@ function tick() {
         paid.style.opacity = "0";
     }
     
+    var gradient = document.getElementsByClassName("ytp-gradient-top")[0];
+    if (gradient != null) {
+        gradient.style.display = "none";
+        gradient.style.opacity = "0";
+    }
+    
     var end = document.getElementsByClassName("html5-endscreen")[0];
     if (end != null) {
         end.style.display = "none";

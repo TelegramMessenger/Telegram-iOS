@@ -251,7 +251,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
     
     private var videoNode: UniversalVideoNode?
-    private var videoFramePreview: MediaPlayerFramePreview?
+    private var videoFramePreview: FramePreview?
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
@@ -280,7 +280,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var fetchStatus: MediaResourceStatus?
     private var fetchControls: FetchControls?
     
-    private var scrubbingFrame = Promise<MediaPlayerFramePreviewResult?>(nil)
+    private var scrubbingFrame = Promise<FramePreviewResult?>(nil)
     private var scrubbingFrames = false
     private var scrubbingFrameDisposable: Disposable?
     
@@ -459,6 +459,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch type {
                     case .youtube:
                         disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
+                        self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
                     case .iframe:
                         disablePlayerControls = true
                     default:
@@ -841,7 +842,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
-                        seek = .timecode(time)
+//                        seek = .timecode(time)
                     }
                 }
             }

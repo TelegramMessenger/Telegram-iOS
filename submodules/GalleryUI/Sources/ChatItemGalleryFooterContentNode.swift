@@ -1106,7 +1106,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 }
                 let textSize = videoFrameTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
                 videoFrameTextNode.frame = CGRect(origin: CGPoint(), size: textSize)
-                videoFramePreviewNode.addSubnode(videoFrameTextNode)
+//                videoFramePreviewNode.addSubnode(videoFrameTextNode)
                 
                 self.videoFramePreviewNode = (videoFramePreviewNode, videoFrameTextNode)
                 self.addSubnode(videoFramePreviewNode)

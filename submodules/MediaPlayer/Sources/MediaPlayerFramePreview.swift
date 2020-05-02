@@ -5,6 +5,18 @@ import TelegramCore
 import SyncCore
 import FFMpegBinding
 
+public enum FramePreviewResult {
+    case image(UIImage)
+    case waitingForData
+}
+
+public protocol FramePreview {
+    var generatedFrames: Signal<FramePreviewResult, NoError> { get }
+
+    func generateFrame(at timestamp: Double)
+    func cancelPendingFrames()
+}
+
 private final class FramePreviewContext {
     let source: UniversalSoftwareVideoSource
     
@@ -29,18 +41,13 @@ private func initializedPreviewContext(queue: Queue, postbox: Postbox, fileRefer
     }
 }
 
-public enum MediaPlayerFramePreviewResult {
-    case image(UIImage)
-    case waitingForData
-}
-
 private final class MediaPlayerFramePreviewImpl {
     private let queue: Queue
     private let context: Promise<QueueLocalObject<FramePreviewContext>>
     private let currentFrameDisposable = MetaDisposable()
     private var currentFrameTimestamp: Double?
     private var nextFrameTimestamp: Double?
-    fileprivate let framePipe = ValuePipe<MediaPlayerFramePreviewResult>()
+    fileprivate let framePipe = ValuePipe<FramePreviewResult>()
     
     init(queue: Queue, postbox: Postbox, fileReference: FileMediaReference) {
         self.queue = queue
@@ -108,11 +115,11 @@ private final class MediaPlayerFramePreviewImpl {
     }
 }
 
-public final class MediaPlayerFramePreview {
+public final class MediaPlayerFramePreview: FramePreview {
     private let queue: Queue
     private let impl: QueueLocalObject<MediaPlayerFramePreviewImpl>
     
-    public var generatedFrames: Signal<MediaPlayerFramePreviewResult, NoError> {
+    public var generatedFrames: Signal<FramePreviewResult, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in

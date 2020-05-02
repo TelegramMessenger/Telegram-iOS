@@ -136,7 +136,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         if let mappedStatus = mappedStatus {
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self, status.duration > 0.0 {
+                if let strongSelf = self, status.duration > 1.0 {
                     var text: String = ""
                     
                     for chapter in strongSelf.chapters {

@@ -5,7 +5,7 @@ import UniversalMediaPlayer
 import AppBundle
 
 final class GenericEmbedImplementation: WebEmbedImplementation {
-    private var evalImpl: ((String) -> Void)?
+    private var evalImpl: ((String, ((Any?) -> Void)?) -> Void)?
     private var updateStatus: ((MediaPlayerStatus) -> Void)?
     private var onPlaybackStarted: (() -> Void)?
     private var status : MediaPlayerStatus
@@ -17,7 +17,7 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
         self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
     }
     
-    func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
+    func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String, ((Any?) -> Void)?) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
         let bundle = getAppBundle()
         guard let userScriptPath = bundle.path(forResource: "GenericUserScript", ofType: "js") else {
             return

@@ -18,6 +18,7 @@ import TelegramAnimatedStickerNode
 import WallpaperResources
 import Svg
 import GZip
+import TelegramUniversalVideoContent
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -133,6 +134,8 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
         }
     } else if let resource = resource as? MapSnapshotMediaResource, let _ = representation as? MapSnapshotMediaResourceRepresentation {
         return fetchMapSnapshotResource(resource: resource)
+    } else if let resource = resource as? YoutubeEmbedStoryboardMediaResource, let _ = representation as? YoutubeEmbedStoryboardMediaResourceRepresentation {
+        return fetchYoutubeEmbedStoryboardResource(resource: resource)
     }
     return .never()
 }

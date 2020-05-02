@@ -29,6 +29,7 @@
         var availableQualities = "";
         var failed = false;
         var autostarted = false;
+        var storyboardSpec = ""
 
         YT.ready(function() {
             player = new YT.Player("player", %@);
@@ -36,7 +37,8 @@
                  
             function getCurrentTime() {
                  downloadProgress = player.getVideoLoadedFraction();
-                 position = player.getCurrentTime()
+                 position = player.getCurrentTime();
+                 storyboardSpec = player.getStoryboardFormat();
                  
                  updateState();
                  invoke("tick");
@@ -59,7 +61,7 @@
         }
         
         function updateState() {
-            window.location.href = "embed://onState?failed=" + failed + "&playback=" + playbackState + "&position=" + position + "&duration=" + duration + "&download=" + downloadProgress + '&quality=' + quality + '&availableQualities=' + availableQualities;
+            window.location.href = "embed://onState?failed=" + failed + "&playback=" + playbackState + "&position=" + position + "&duration=" + duration + "&download=" + downloadProgress + '&quality=' + quality + '&availableQualities=' + availableQualities + '&storyboard=' + storyboardSpec;
         }
 
         function onReady(event) {

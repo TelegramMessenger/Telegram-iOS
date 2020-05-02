@@ -9,7 +9,7 @@ func isTwitchVideoUrl(_ url: String) -> Bool {
 }
 
 final class TwitchEmbedImplementation: WebEmbedImplementation {
-    private var evalImpl: ((String) -> Void)?
+    private var evalImpl: ((String, ((Any?) -> Void)?) -> Void)?
     private var updateStatus: ((MediaPlayerStatus) -> Void)?
     private var onPlaybackStarted: (() -> Void)?
     
@@ -23,7 +23,7 @@ final class TwitchEmbedImplementation: WebEmbedImplementation {
         self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
     }
     
-    func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
+    func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String, ((Any?) -> Void)?) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
         let bundle = getAppBundle()
         guard let userScriptPath = bundle.path(forResource: "TwitchUserScript", ofType: "js") else {
             return
@@ -57,7 +57,7 @@ final class TwitchEmbedImplementation: WebEmbedImplementation {
     
     func play() {
         if let eval = self.evalImpl {
-            eval("playPause()")
+            eval("playPause()", nil)
         }
         
         self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: self.status.timestamp, baseRate: 1.0, seekId: self.status.seekId, status: .playing, soundEnabled: self.status.soundEnabled)
@@ -68,7 +68,7 @@ final class TwitchEmbedImplementation: WebEmbedImplementation {
     
     func pause() {
         if let eval = self.evalImpl {
-            eval("playPause()")
+            eval("playPause()", nil)
         }
         
         self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: self.status.timestamp, baseRate: 1.0, seekId: self.status.seekId, status: .paused, soundEnabled: self.status.soundEnabled)
