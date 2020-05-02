@@ -6,17 +6,17 @@ import TelegramCore
 import SyncCore
 import AccountContext
 
-final class MediaNavigationAccessoryPanel: ASDisplayNode {
-    let containerNode: MediaNavigationAccessoryContainerNode
+public final class MediaNavigationAccessoryPanel: ASDisplayNode {
+    public let containerNode: MediaNavigationAccessoryContainerNode
     
-    var close: (() -> Void)?
-    var toggleRate: (() -> Void)?
-    var togglePlayPause: (() -> Void)?
-    var tapAction: (() -> Void)?
-    var playPrevious: (() -> Void)?
-    var playNext: (() -> Void)?
+    public var close: (() -> Void)?
+    public var toggleRate: (() -> Void)?
+    public var togglePlayPause: (() -> Void)?
+    public var tapAction: (() -> Void)?
+    public var playPrevious: (() -> Void)?
+    public var playNext: (() -> Void)?
     
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.containerNode = MediaNavigationAccessoryContainerNode(context: context)
         
         super.init()
@@ -53,12 +53,12 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         self.containerNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
-    func animateIn(transition: ContainedViewLayoutTransition) {
+    public func animateIn(transition: ContainedViewLayoutTransition) {
         self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
         transition.animatePosition(node: self.containerNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), completion: { [weak self] _ in
@@ -66,7 +66,7 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
         })
     }
     
-    func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    public func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
         transition.animatePosition(node: self.containerNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { [weak self] _ in
@@ -75,7 +75,7 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
         })
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return self.containerNode.hitTest(point, with: event)
     }
 }

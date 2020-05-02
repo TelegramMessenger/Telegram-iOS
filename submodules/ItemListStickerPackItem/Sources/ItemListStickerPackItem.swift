@@ -264,7 +264,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
-        var previousThumbnailItem = self.currentThumbnailItem
+        let previousThumbnailItem = self.currentThumbnailItem
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         let currentItem = self.layoutParams?.0

@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
+import ListSectionHeaderNode
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -16,7 +17,7 @@ private let timezoneOffset: Int32 = {
 }()
 
 func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
-    var unclippedValue: Int64 = min(Int64(Int32.max), Int64(timestamp) + Int64(timezoneOffset))
+    let unclippedValue: Int64 = min(Int64(Int32.max), Int64(timestamp) + Int64(timezoneOffset))
     
     var time: time_t = time_t(Int32(clamping: unclippedValue))
     var timeinfo: tm = tm()
@@ -65,7 +66,7 @@ final class ListMessageDateHeader: ListViewItemHeader {
     
     let stickDirection: ListViewItemHeaderStickDirection = .top
     
-    let height: CGFloat = 36.0
+    let height: CGFloat = 28.0
     
     func node() -> ListViewItemHeaderNode {
         return ListMessageDateHeaderNode(theme: self.theme, strings: self.strings, fontSize: self.fontSize, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
@@ -78,51 +79,39 @@ final class ListMessageDateHeader: ListViewItemHeader {
 final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
-    var fontSize: PresentationFontSize
-    let titleNode: ASTextNode
-    let backgroundNode: ASDisplayNode
+    let headerNode: ListSectionHeaderNode
+    
+    let month: Int32
+    let year: Int32
     
     init(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, roundedTimestamp: Int32, month: Int32, year: Int32) {
         self.theme = theme
         self.strings = strings
-        self.fontSize = fontSize
+        self.month = month
+        self.year = year
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.9)
-        
-        self.titleNode = ASTextNode()
-        self.titleNode.isUserInteractionEnabled = false
+        self.headerNode = ListSectionHeaderNode(theme: theme)
         
         super.init()
         
-        let dateText = stringForMonth(strings: strings, month: month, ofYear: year)
+        self.addSubnode(self.headerNode)
         
-        let sectionTitleFont = Font.regular(floor(fontSize.baseDisplaySize * 14.0 / 17.0))
-        
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: dateText, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
-        self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.truncationMode = .byTruncatingTail
+        self.headerNode.title = stringForMonth(strings: strings, month: month, ofYear: year).uppercased()
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
-        if let attributedString = self.titleNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
-            attributedString.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.list.itemPrimaryTextColor, range: NSMakeRange(0, attributedString.length))
-            self.titleNode.attributedText = attributedString
-        }
+        self.headerNode.updateTheme(theme: theme)
         
         self.strings = strings
+        self.headerNode.title = stringForMonth(strings: strings, month: self.month, ofYear: self.year).uppercased()
         
-        self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.9)
         self.setNeedsLayout()
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 12.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: size.height + UIScreenPixel))
+        self.headerNode.frame = headerFrame
+            self.headerNode.updateLayout(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)
     }
 }

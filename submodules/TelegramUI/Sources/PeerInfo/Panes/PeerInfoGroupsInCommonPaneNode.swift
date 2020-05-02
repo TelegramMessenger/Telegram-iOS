@@ -77,6 +77,8 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return self.ready.get()
     }
     
+    let shouldReceiveExpandProgressUpdates: Bool = false
+    
     private var disposable: Disposable?
     
     init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, groupsInCommonContext: GroupsInCommonContext) {
@@ -127,7 +129,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
         
