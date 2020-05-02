@@ -131,6 +131,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+        self.messagesContainerNode.isUserInteractionEnabled = false
         
         self.blurButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
         self.blurButtonNode.setEnabled(false)
