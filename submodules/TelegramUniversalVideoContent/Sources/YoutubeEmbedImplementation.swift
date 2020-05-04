@@ -549,7 +549,7 @@ public final class YoutubeEmbedFramePreview: FramePreview {
         }
     }
     
-    private func urlForStoryboard(spec: StoryboardSpec, sizeIndex: Int, num: Int32) -> String {
+    private func storyboardUrl(spec: StoryboardSpec, sizeIndex: Int, num: Int32) -> String {
         let size = spec.sizes[sizeIndex]
         
         var url = spec.baseUrl
@@ -599,13 +599,11 @@ public final class YoutubeEmbedFramePreview: FramePreview {
             }
             
             var duration: Double = Double(bestSize.1.duration) / 1000.0
-            var totalStoryboards: Int32 = 1
             var totalFrames: Int32 = 1
             let framesOnStoryboard: Int32 = bestSize.1.cols * bestSize.1.rows
             
             if duration > 0.0 {
                 totalFrames = Int32(ceil(youtubeImpl.duration / duration))
-                totalStoryboards = Int32(ceil(Double(totalFrames) / Double(framesOnStoryboard)))
             } else {
                 duration = youtubeImpl.duration / Double(framesOnStoryboard)
             }
@@ -614,7 +612,7 @@ public final class YoutubeEmbedFramePreview: FramePreview {
             let frame: Int32 = globalFrame % framesOnStoryboard
 
             let num: Int32 = Int32(floor(Double(globalFrame) / Double(framesOnStoryboard)))
-            let url = urlForStoryboard(spec: storyboardSpec, sizeIndex: bestSize.0, num: num)
+            let url = storyboardUrl(spec: storyboardSpec, sizeIndex: bestSize.0, num: num)
             
             strongSelf.framePipe.putNext(.waitingForData)
             strongSelf.currentFrameDisposable.set(youtubeEmbedStoryboardImage(account: strongSelf.context.account, resource: YoutubeEmbedStoryboardMediaResource(videoId: youtubeImpl.videoId, storyboardId: num, url: url), frame: frame, size: bestSize.1).start(next: { [weak self] image in
