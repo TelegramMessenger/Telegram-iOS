@@ -681,7 +681,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.beganInteractiveDragging()
         
         for itemNode in self.itemNodes {
-            cancelContextGestures(view: itemNode.view)
+            if !itemNode.isLayerBacked {
+                cancelContextGestures(view: itemNode.view)
+            }
         }
     }
     
