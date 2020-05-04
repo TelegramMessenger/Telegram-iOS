@@ -4,9 +4,6 @@ build --action_env=ZERO_AR_DATE=1
 build --strategy=Genrule=local
 build --apple_platform_type=ios
 build --cxxopt='-std=c++14'
-build --copt='-w'
-build --swiftcopt='-Xcc'
-build --swiftcopt='-w'
 build --spawn_strategy=local
 build --strategy=SwiftCompile=local
 build --features=debug_prefix_map_pwd_is_dot
