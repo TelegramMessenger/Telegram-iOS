@@ -14,7 +14,6 @@ genrule(
     bash =
 """
     set -x
-    echo "SRCDIR=$SRCDIR"
 
     OUT_DIR="ios"
 
@@ -25,7 +24,7 @@ genrule(
     mkdir -p "$BUILD_DIR"
 
     mkdir -p "$BUILD_DIR/webrtc-ios"
-    cp -R "$SRCDIR/webrtc-ios/.git" "$BUILD_DIR/webrtc-ios/.git"
+    cp -R "../../../../../third-party/webrtc/webrtc-ios/.git" "$BUILD_DIR/webrtc-ios/.git"
     cp -R "$SRCDIR/webrtc-ios/src" "$BUILD_DIR/webrtc-ios/src"
 
     DEPOT_TOOLS_PATH="$(location //third-party:depot_tools_sources)"
