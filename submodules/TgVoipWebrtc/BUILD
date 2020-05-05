@@ -20,8 +20,8 @@ objc_library(
     ]),
     copts = [
         "-I{}/Impl".format(package_name()),
-        "-Ithird-party/webrtc/webrtc-ios/src".format(package_name()),
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp".format(package_name()),
+        "-Ithird-party/webrtc/webrtc-ios/src",
+        "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
