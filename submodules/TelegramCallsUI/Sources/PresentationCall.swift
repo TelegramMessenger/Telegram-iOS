@@ -435,7 +435,7 @@ public final class PresentationCallImpl: PresentationCall {
                 presentationState = .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating))
             case let .requesting(ringing):
                 presentationState = .requesting(ringing)
-            case let .active(_, _, keyVisualHash, _, _, _):
+            case let .active(_, _, keyVisualHash, _, _, _, _):
                 self.callWasActive = true
                 if let callContextState = callContextState {
                     switch callContextState {
@@ -473,12 +473,12 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl {
                     self.audioSessionShouldBeActive.set(true)
                 }
-            case let .active(id, key, _, connections, maxLayer, allowsP2P):
+            case let .active(id, key, _, connections, maxLayer, version, allowsP2P):
                 self.audioSessionShouldBeActive.set(true)
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
                     self.ongoingContext = ongoingContext
                     
                     self.debugInfoValue.set(ongoingContext.debugInfo())

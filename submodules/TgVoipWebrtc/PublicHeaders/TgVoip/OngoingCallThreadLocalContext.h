@@ -3,7 +3,7 @@
 
 #import <Foundation/Foundation.h>
 
-@interface OngoingCallConnectionDescription : NSObject
+@interface OngoingCallConnectionDescriptionWebrtc : NSObject
 
 @property (nonatomic, readonly) int64_t connectionId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull ip;
@@ -15,14 +15,14 @@
 
 @end
 
-typedef NS_ENUM(int32_t, OngoingCallState) {
+typedef NS_ENUM(int32_t, OngoingCallStateWebrtc) {
     OngoingCallStateInitializing,
     OngoingCallStateConnected,
     OngoingCallStateFailed,
     OngoingCallStateReconnecting
 };
 
-typedef NS_ENUM(int32_t, OngoingCallNetworkType) {
+typedef NS_ENUM(int32_t, OngoingCallNetworkTypeWebrtc) {
     OngoingCallNetworkTypeWifi,
     OngoingCallNetworkTypeCellularGprs,
     OngoingCallNetworkTypeCellularEdge,
@@ -30,20 +30,20 @@ typedef NS_ENUM(int32_t, OngoingCallNetworkType) {
     OngoingCallNetworkTypeCellularLte
 };
 
-typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
+typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
     OngoingCallDataSavingNever,
     OngoingCallDataSavingCellular,
     OngoingCallDataSavingAlways
 };
 
-@protocol OngoingCallThreadLocalContextQueue <NSObject>
+@protocol OngoingCallThreadLocalContextQueueWebrtc <NSObject>
 
 - (void)dispatch:(void (^ _Nonnull)())f;
 - (bool)isCurrent;
 
 @end
 
-@interface VoipProxyServer : NSObject
+@interface VoipProxyServerWebrtc : NSObject
 
 @property (nonatomic, strong, readonly) NSString * _Nonnull host;
 @property (nonatomic, readonly) int32_t port;
@@ -54,18 +54,18 @@ typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
 
 @end
 
-@interface OngoingCallThreadLocalContext : NSObject
+@interface OngoingCallThreadLocalContextWebrtc : NSObject
 
 + (void)setupLoggingFunction:(void (* _Nullable)(NSString * _Nullable))loggingFunction;
 + (void)applyServerConfig:(NSString * _Nullable)data;
 + (int32_t)maxLayer;
 + (NSString * _Nonnull)version;
 
-@property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallState);
+@property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath;
-- (void)stop:(void (^_Nonnull)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile))completion;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath;
+- (void)stop:(void (^_Nullable)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile))completion;
 
 - (bool)needRate;
     
@@ -74,7 +74,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
 - (NSData * _Nonnull)getDerivedState;
 
 - (void)setIsMuted:(bool)isMuted;
-- (void)setNetworkType:(OngoingCallNetworkType)networkType;
+- (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
 
 @end
 
