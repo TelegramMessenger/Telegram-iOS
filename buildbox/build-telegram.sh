@@ -128,7 +128,8 @@ fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
 rm -f "$BUILDBOX_DIR/transient-data/source.tar"
-tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude ".git" --exclude "buck-out" --exclude ".buckd" --exclude "build" "."
+#temporarily include .git (reverse later with --exclude ".git")
+tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude "buck-out" --exclude ".buckd" --exclude "build" "."
 
 PROCESS_ID="$$"
 
