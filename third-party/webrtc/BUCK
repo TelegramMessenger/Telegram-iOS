@@ -25,7 +25,6 @@ genrule(
 
     mkdir -p "$BUILD_DIR/webrtc-ios"
     cp -R "$SRCDIR/webrtc-ios/src" "$BUILD_DIR/webrtc-ios/src"
-    cp -R "../../../../../third-party/webrtc/webrtc-ios/.git" "$BUILD_DIR/webrtc-ios/.git"
 
     DEPOT_TOOLS_PATH="$(location //third-party:depot_tools_sources)"
 
