@@ -12,6 +12,7 @@ static_library(
         "//submodules/Postbox:Postbox#shared",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TgVoip:TgVoip",
+        "//submodules/TgVoipWebrtc:TgVoipWebrtc",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

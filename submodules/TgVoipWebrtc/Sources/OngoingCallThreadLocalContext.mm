@@ -1,44 +1,10 @@
-#import "OngoingCallThreadLocalContext.h"
+#import <TgVoip/OngoingCallThreadLocalContext.h>
 
 #import "TgVoip.h"
 
-#import <MtProtoKit/MtProtoKit.h>
-#include <memory>
+using namespace TGVOIP_NAMESPACE;
 
-static void TGCallAesIgeEncrypt(uint8_t *inBytes, uint8_t *outBytes, size_t length, uint8_t *key, uint8_t *iv) {
-    MTAesEncryptRaw(inBytes, outBytes, length, key, iv);
-}
-
-static void TGCallAesIgeDecrypt(uint8_t *inBytes, uint8_t *outBytes, size_t length, uint8_t *key, uint8_t *iv) {
-    MTAesDecryptRaw(inBytes, outBytes, length, key, iv);
-}
-
-static void TGCallSha1(uint8_t *msg, size_t length, uint8_t *output) {
-    MTRawSha1(msg, length, output);
-}
-
-static void TGCallSha256(uint8_t *msg, size_t length, uint8_t *output) {
-    MTRawSha256(msg, length, output);
-}
-
-static void TGCallAesCtrEncrypt(uint8_t *inOut, size_t length, uint8_t *key, uint8_t *iv, uint8_t *ecount, uint32_t *num) {
-    uint8_t *outData = (uint8_t *)malloc(length);
-    MTAesCtr *aesCtr = [[MTAesCtr alloc] initWithKey:key keyLength:32 iv:iv ecount:ecount num:*num];
-    [aesCtr encryptIn:inOut out:outData len:length];
-    memcpy(inOut, outData, length);
-    free(outData);
-    
-    [aesCtr getIv:iv];
-    
-    memcpy(ecount, [aesCtr ecount], 16);
-    *num = [aesCtr num];
-}
-
-static void TGCallRandomBytes(uint8_t *buffer, size_t length) {
-    arc4random_buf(buffer, length);
-}
-
-@implementation OngoingCallConnectionDescription
+@implementation OngoingCallConnectionDescriptionWebrtc
 
 - (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId ip:(NSString * _Nonnull)ip ipv6:(NSString * _Nonnull)ipv6 port:(int32_t)port peerTag:(NSData * _Nonnull)peerTag {
     self = [super init];
@@ -54,74 +20,11 @@ static void TGCallRandomBytes(uint8_t *buffer, size_t length) {
 
 @end
 
-static MTAtomic *callContexts() {
-    static MTAtomic *instance = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        instance = [[MTAtomic alloc] initWithValue:[[NSMutableDictionary alloc] init]];
-    });
-    return instance;
-}
-
-@interface OngoingCallThreadLocalContextReference : NSObject
-
-@property (nonatomic, weak) OngoingCallThreadLocalContext *context;
-@property (nonatomic, strong, readonly) id<OngoingCallThreadLocalContextQueue> queue;
-
-@end
-
-@implementation OngoingCallThreadLocalContextReference
-
-- (instancetype)initWithContext:(OngoingCallThreadLocalContext *)context queue:(id<OngoingCallThreadLocalContextQueue>)queue {
-    self = [super init];
-    if (self != nil) {
-        self.context = context;
-        _queue = queue;
-    }
-    return self;
-}
-
-@end
-
-static int32_t nextId = 1;
-
-static int32_t addContext(OngoingCallThreadLocalContext *context, id<OngoingCallThreadLocalContextQueue> queue) {
-    int32_t contextId = OSAtomicIncrement32(&nextId);
-    [callContexts() with:^id(NSMutableDictionary *dict) {
-        dict[@(contextId)] = [[OngoingCallThreadLocalContextReference alloc] initWithContext:context queue:queue];
-        return nil;
-    }];
-    return contextId;
-}
-
-static void removeContext(int32_t contextId) {
-    [callContexts() with:^id(NSMutableDictionary *dict) {
-        [dict removeObjectForKey:@(contextId)];
-        return nil;
-    }];
-}
-
-static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalContext *)) {
-    __block OngoingCallThreadLocalContextReference *reference = nil;
-    [callContexts() with:^id(NSMutableDictionary *dict) {
-        reference = dict[@(contextId)];
-        return nil;
-    }];
-    if (reference != nil) {
-        [reference.queue dispatch:^{
-            __strong OngoingCallThreadLocalContext *context = reference.context;
-            if (context != nil) {
-                f(context);
-            }
-        }];
-    }
-}
-
-@interface OngoingCallThreadLocalContext () {
-    id<OngoingCallThreadLocalContextQueue> _queue;
+@interface OngoingCallThreadLocalContextWebrtc () {
+    id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
     int32_t _contextId;
 
-    OngoingCallNetworkType _networkType;
+    OngoingCallNetworkTypeWebrtc _networkType;
     NSTimeInterval _callReceiveTimeout;
     NSTimeInterval _callRingTimeout;
     NSTimeInterval _callConnectTimeout;
@@ -129,7 +32,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     
     TgVoip *_tgVoip;
     
-    OngoingCallState _state;
+    OngoingCallStateWebrtc _state;
     int32_t _signalBars;
     NSData *_lastDerivedState;
 }
@@ -139,7 +42,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
 
 @end
 
-@implementation VoipProxyServer
+@implementation VoipProxyServerWebrtc
 
 - (instancetype _Nonnull)initWithHost:(NSString * _Nonnull)host port:(int32_t)port username:(NSString * _Nullable)username password:(NSString * _Nullable)password {
     self = [super init];
@@ -154,7 +57,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
 
 @end
 
-static TgVoipNetworkType callControllerNetworkTypeForType(OngoingCallNetworkType type) {
+static TgVoipNetworkType callControllerNetworkTypeForType(OngoingCallNetworkTypeWebrtc type) {
     switch (type) {
     case OngoingCallNetworkTypeWifi:
         return TgVoipNetworkType::WiFi;
@@ -169,7 +72,7 @@ static TgVoipNetworkType callControllerNetworkTypeForType(OngoingCallNetworkType
     }
 }
 
-static TgVoipDataSaving callControllerDataSavingForType(OngoingCallDataSaving type) {
+static TgVoipDataSaving callControllerDataSavingForType(OngoingCallDataSavingWebrtc type) {
     switch (type) {
     case OngoingCallDataSavingNever:
         return TgVoipDataSaving::Never;
@@ -182,7 +85,7 @@ static TgVoipDataSaving callControllerDataSavingForType(OngoingCallDataSaving ty
     }
 }
 
-@implementation OngoingCallThreadLocalContext
+@implementation OngoingCallThreadLocalContextWebrtc
 
 static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
@@ -206,15 +109,14 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 + (NSString *)version {
-    return [NSString stringWithUTF8String:TgVoip::getVersion().c_str()];
+    return @"2.7.7";
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath {
     self = [super init];
     if (self != nil) {
         _queue = queue;
         assert([queue isCurrent]);
-        _contextId = addContext(self, queue);
         
         _callReceiveTimeout = 20.0;
         _callRingTimeout = 90.0;
@@ -236,17 +138,17 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             proxyValue = std::unique_ptr<TgVoipProxy>(proxyObject);
         }
         
-        TgVoipCrypto crypto;
+        /*TgVoipCrypto crypto;
         crypto.sha1 = &TGCallSha1;
         crypto.sha256 = &TGCallSha256;
         crypto.rand_bytes = &TGCallRandomBytes;
         crypto.aes_ige_encrypt = &TGCallAesIgeEncrypt;
         crypto.aes_ige_decrypt = &TGCallAesIgeDecrypt;
-        crypto.aes_ctr_encrypt = &TGCallAesCtrEncrypt;
+        crypto.aes_ctr_encrypt = &TGCallAesCtrEncrypt;*/
         
         std::vector<TgVoipEndpoint> endpoints;
-        NSArray<OngoingCallConnectionDescription *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
-        for (OngoingCallConnectionDescription *connection in connections) {
+        NSArray<OngoingCallConnectionDescriptionWebrtc *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
+        for (OngoingCallConnectionDescriptionWebrtc *connection in connections) {
             unsigned char peerTag[16];
             [connection.peerTag getBytes:peerTag length:16];
             
@@ -272,7 +174,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableAGC = true,
             .enableCallUpgrade = false,
             .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
-            .maxApiLayer = [OngoingCallThreadLocalContext maxLayer]
+            .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer]
         };
         
         std::vector<uint8_t> encryptionKeyValue;
@@ -284,40 +186,27 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .isOutgoing = isOutgoing,
         };
         
-        /*
-         TgVoipConfig const &config,
-             TgVoipPersistentState const &persistentState,
-             std::vector<TgVoipEndpoint> const &endpoints,
-             std::unique_ptr<TgVoipProxy> const &proxy,
-             TgVoipNetworkType initialNetworkType,
-             TgVoipEncryptionKey const &encryptionKey
-         #ifdef TGVOIP_USE_CUSTOM_CRYPTO
-             ,
-             TgVoipCrypto const &crypto
-         */
-        
         _tgVoip = TgVoip::makeInstance(
             config,
             { derivedStateValue },
             endpoints,
             proxyValue,
             callControllerNetworkTypeForType(networkType),
-            encryptionKey,
-            crypto
+            encryptionKey
         );
         
         _state = OngoingCallStateInitializing;
         _signalBars = -1;
         
-        __weak OngoingCallThreadLocalContext *weakSelf = self;
+        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         _tgVoip->setOnStateUpdated([weakSelf](TgVoipState state) {
-            __strong OngoingCallThreadLocalContext *strongSelf = weakSelf;
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
             if (strongSelf) {
                 [strongSelf controllerStateChanged:state];
             }
         });
         _tgVoip->setOnSignalBarsUpdated([weakSelf](int signalBars) {
-            __strong OngoingCallThreadLocalContext *strongSelf = weakSelf;
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
             if (strongSelf) {
                 [strongSelf signalBarsChanged:signalBars];
             }
@@ -328,10 +217,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 - (void)dealloc {
     assert([_queue isCurrent]);
-    removeContext(_contextId);
     if (_tgVoip != NULL) {
         [self stop:nil];
     }
+}
+
+- (bool)needRate {
+    return false;
 }
 
 - (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
@@ -352,8 +244,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 - (NSString *)debugInfo {
     if (_tgVoip != nil) {
-        auto rawDebugString = _tgVoip->getDebugInfo();
-        return [NSString stringWithUTF8String:rawDebugString.c_str()];
+        NSString *version = [self version];
+        return [NSString stringWithFormat:@"WebRTC, Version: %@", version];
+        //auto rawDebugString = _tgVoip->getDebugInfo();
+        //return [NSString stringWithUTF8String:rawDebugString.c_str()];
     } else {
         return nil;
     }
@@ -361,7 +255,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 - (NSString *)version {
     if (_tgVoip != nil) {
-        return [NSString stringWithUTF8String:_tgVoip->getVersion().c_str()];
+        return @"2.7.7";//[NSString stringWithUTF8String:_tgVoip->getVersion().c_str()];
     } else {
         return nil;
     }
@@ -379,7 +273,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 - (void)controllerStateChanged:(TgVoipState)state {
-    OngoingCallState callState = OngoingCallStateInitializing;
+    OngoingCallStateWebrtc callState = OngoingCallStateInitializing;
     switch (state) {
         case TgVoipState::Estabilished:
             callState = OngoingCallStateConnected;
@@ -419,7 +313,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)setNetworkType:(OngoingCallNetworkType)networkType {
+- (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType {
     if (_networkType != networkType) {
         _networkType = networkType;
         if (_tgVoip) {
@@ -429,3 +323,4 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 @end
+

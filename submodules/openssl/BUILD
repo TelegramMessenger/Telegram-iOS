@@ -107,6 +107,7 @@ openssl_headers = [
 
 openssl_libs = [
     "libcrypto.a",
+    "libssl.a",
 ]
 
 genrule(
@@ -119,6 +120,7 @@ genrule(
     ],
     cmd_bash =
         """
+
         if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
             BUILD_ARCH="armv7"
         elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then

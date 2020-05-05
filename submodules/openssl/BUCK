@@ -132,12 +132,27 @@ genrule(
     srcs = [
         "pack-openssl.sh",
     ],
-    bash = "sh $SRCDIR/pack-openssl.sh $OUT $(location :openssl_build_arm64)/out/include " + " ".join(["$(location :openssl_build_" + arch + ")/out/lib/libcrypto.a" for arch in archs]),
+    bash = "sh $SRCDIR/pack-openssl.sh $OUT $(location :openssl_build_arm64)/out/include " +
+    " ".join(["$(location :openssl_build_" + arch + ")/out/lib/libcrypto.a" for arch in archs]),
     out = "openssl",
     visibility = [
         "PUBLIC",
     ]
 )
+
+genrule(
+    name = "openssl_libssl_merged",
+    srcs = [
+        "pack-libssl.sh",
+    ],
+    bash = "sh $SRCDIR/pack-libssl.sh $OUT $(location :openssl_build_arm64)/out/include " +
+    " ".join(["$(location :openssl_build_" + arch + ")/out/lib/libssl.a" for arch in archs]),
+    out = "libssl",
+    visibility = [
+        "PUBLIC",
+    ]
+)
+
 
 openssl_header_targets = gen_header_targets(openssl_header_paths, "openssl_header_", "", "openssl_build_arm64", "out/include")
 
@@ -150,11 +165,15 @@ apple_library(
     exported_headers = openssl_header_targets,
     linker_flags = [
         "-L$(location :openssl_build_merged)/lib",
+        "-L$(location :openssl_libssl_merged)/lib",
         "-lcrypto",
+        "-lssl",
     ],
     exported_linker_flags = [
         "-L$(location :openssl_build_merged)/lib",
+        "-L$(location :openssl_libssl_merged)/lib",
         "-lcrypto",
+        "-lssl",
     ],
     deps = [":openssl_build_" + arch for arch in ["arm64"]],
 )

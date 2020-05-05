@@ -39,8 +39,6 @@ swift_library(
         "//submodules/UrlEscaping:UrlEscaping",
         "//submodules/LocalAuth:LocalAuth",
         "//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
-        "//submodules/WalletUrl:WalletUrl",
-        "//submodules/WalletCore:WalletCore",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
         "//submodules/Markdown:Markdown",
