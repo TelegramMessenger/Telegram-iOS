@@ -5,10 +5,11 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="11.2"
+XCODE_VERSION="11.3.1"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
+echo "Base VM: \"$VM_BASE_NAME\""
 
 case "$(uname -s)" in
     Linux*)     BUILD_MACHINE=linux;;
@@ -128,8 +129,9 @@ fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
 rm -f "$BUILDBOX_DIR/transient-data/source.tar"
+set -x
 #temporarily include .git (reverse later with --exclude ".git")
-tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude "buck-out" --exclude ".buckd" --exclude "build" "."
+find . -type f -a -not -regex "\\." -a -not -regex "\\./bazel-bin" -a -not -regex "\\./bazel-bin/.*" -a -not -regex "\\./bazel-out" -a -not -regex "\\./bazel-out/.*" -a -not -regex "\\./bazel-testlogs" -a -not -regex "\\./bazel-testlogs/.*" -a -not -regex "\\./bazel-telegram-ios" -a -not -regex "\\./bazel-telegram-ios/.*" -a -not -regex "\\./buildbox" -a -not -regex "\\./buildbox/.*" -a -not -regex "\\./buck-out" -a -not -regex "\\./buck-out/.*" -a -not -regex "\\./\\.buckd" -a -not -regex "\\./\\.buckd/.*" -a -not -regex "\\./build" -a -not -regex "\\./build/.*" -print0 | tar cf "$BUILDBOX_DIR/transient-data/source.tar" --null -T -
 
 PROCESS_ID="$$"
 
