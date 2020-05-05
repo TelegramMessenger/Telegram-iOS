@@ -18,6 +18,16 @@ private func generateHandleBackground(color: UIColor) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 2)
 }
 
+public struct MediaPlayerScrubbingChapter {
+    public let title: String
+    public let start: Double
+    
+    public init(title: String, start: Double) {
+        self.title = title
+        self.start = start
+    }
+}
+
 private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureRecognizerDelegate {
     var beginScrubbing: (() -> Void)?
     var endScrubbing: ((Bool) -> Void)?
@@ -144,8 +154,8 @@ public enum MediaPlayerScrubbingNodeHandle {
 }
 
 public enum MediaPlayerScrubbingNodeContent {
-    case standard(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, scrubberHandle: MediaPlayerScrubbingNodeHandle, backgroundColor: UIColor, foregroundColor: UIColor, bufferingColor: UIColor)
-    case custom(backgroundNode: ASDisplayNode, foregroundContentNode: ASDisplayNode)
+    case standard(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, scrubberHandle: MediaPlayerScrubbingNodeHandle, backgroundColor: UIColor, foregroundColor: UIColor, bufferingColor: UIColor, chapters: [MediaPlayerScrubbingChapter])
+    case custom(backgroundNode: CustomMediaPlayerScrubbingForegroundNode, foregroundContentNode: CustomMediaPlayerScrubbingForegroundNode)
 }
 
 private final class StandardMediaPlayerScrubbingNodeContentNode {
@@ -155,18 +165,22 @@ private final class StandardMediaPlayerScrubbingNodeContentNode {
     let bufferingNode: MediaPlayerScrubbingBufferingNode
     let foregroundContentNode: ASImageNode
     let foregroundNode: MediaPlayerScrubbingForegroundNode
+    let chapterNodesContainer: ASDisplayNode?
+    let chapterNodes: [(MediaPlayerScrubbingChapter, ASDisplayNode)]
     let handle: MediaPlayerScrubbingNodeHandle
     let handleNode: ASDisplayNode?
     let highlightedHandleNode: ASDisplayNode?
     let handleNodeContainer: MediaPlayerScrubbingNodeButton?
     
-    init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, backgroundNode: ASImageNode, bufferingNode: MediaPlayerScrubbingBufferingNode, foregroundContentNode: ASImageNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handle: MediaPlayerScrubbingNodeHandle, handleNode: ASDisplayNode?, highlightedHandleNode: ASDisplayNode?, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
+    init(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, backgroundNode: ASImageNode, bufferingNode: MediaPlayerScrubbingBufferingNode, foregroundContentNode: ASImageNode, foregroundNode: MediaPlayerScrubbingForegroundNode, chapterNodesContainer: ASDisplayNode?, chapterNodes: [(MediaPlayerScrubbingChapter, ASDisplayNode)], handle: MediaPlayerScrubbingNodeHandle, handleNode: ASDisplayNode?, highlightedHandleNode: ASDisplayNode?, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
         self.lineHeight = lineHeight
         self.lineCap = lineCap
         self.backgroundNode = backgroundNode
         self.bufferingNode = bufferingNode
         self.foregroundContentNode = foregroundContentNode
         self.foregroundNode = foregroundNode
+        self.chapterNodesContainer = chapterNodesContainer
+        self.chapterNodes = chapterNodes
         self.handle = handle
         self.handleNode = handleNode
         self.highlightedHandleNode = highlightedHandleNode
@@ -174,13 +188,17 @@ private final class StandardMediaPlayerScrubbingNodeContentNode {
     }
 }
 
+public protocol CustomMediaPlayerScrubbingForegroundNode: ASDisplayNode {
+    var progress: CGFloat? { get set }
+}
+
 private final class CustomMediaPlayerScrubbingNodeContentNode {
-    let backgroundNode: ASDisplayNode
-    let foregroundContentNode: ASDisplayNode
+    let backgroundNode: CustomMediaPlayerScrubbingForegroundNode
+    let foregroundContentNode: CustomMediaPlayerScrubbingForegroundNode
     let foregroundNode: MediaPlayerScrubbingForegroundNode
     let handleNodeContainer: MediaPlayerScrubbingNodeButton?
     
-    init(backgroundNode: ASDisplayNode, foregroundContentNode: ASDisplayNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
+    init(backgroundNode: CustomMediaPlayerScrubbingForegroundNode, foregroundContentNode: CustomMediaPlayerScrubbingForegroundNode, foregroundNode: MediaPlayerScrubbingForegroundNode, handleNodeContainer: MediaPlayerScrubbingNodeButton?) {
         self.backgroundNode = backgroundNode
         self.foregroundContentNode = foregroundContentNode
         self.foregroundNode = foregroundNode
@@ -344,7 +362,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     
     private static func contentNodesFromContent(_ content: MediaPlayerScrubbingNodeContent, enableScrubbing: Bool) -> MediaPlayerScrubbingNodeContentNodes {
         switch content {
-            case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor, bufferingColor):
+            case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor, bufferingColor, chapters):
                 let backgroundNode = ASImageNode()
                 backgroundNode.isLayerBacked = true
                 backgroundNode.displaysAsynchronously = false
@@ -408,7 +426,27 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 
                 handleNodeContainerImpl?.isUserInteractionEnabled = enableScrubbing
                 
-                return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handle: scrubberHandle, handleNode: handleNodeImpl, highlightedHandleNode: highlightedHandleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
+                var chapterNodesContainerImpl: ASDisplayNode?
+                var chapterNodes: [(MediaPlayerScrubbingChapter, ASDisplayNode)] = []
+                
+                if !chapters.isEmpty {
+                    let chapterNodesContainer = ASDisplayNode()
+                    chapterNodesContainer.isUserInteractionEnabled = false
+                    chapterNodesContainerImpl = chapterNodesContainer
+                    
+                    for i in 0 ..< chapters.count {
+                        let chapterNode = ASDisplayNode()
+                        chapterNode.backgroundColor = .black
+                        
+                        if i > 0 {
+                            chapterNodesContainer.addSubnode(chapterNode)
+                        }
+                        chapterNodes.append((chapters[i], chapterNode))
+                    }
+                }
+                
+                
+                return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, chapterNodesContainer: chapterNodesContainerImpl, chapterNodes: chapterNodes, handle: scrubberHandle, handleNode: handleNodeImpl, highlightedHandleNode: highlightedHandleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
             case let .custom(backgroundNode, foregroundContentNode):
                 let foregroundNode = MediaPlayerScrubbingForegroundNode()
                 foregroundNode.isLayerBacked = true
@@ -463,6 +501,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 self.addSubnode(node.bufferingNode)
                 node.foregroundNode.addSubnode(node.foregroundContentNode)
                 self.addSubnode(node.foregroundNode)
+                
+                if let chapterNodesContainer = node.chapterNodesContainer {
+                    self.addSubnode(chapterNodesContainer)
+                }
                 
                 if let handleNodeContainer = node.handleNodeContainer {
                     self.addSubnode(handleNodeContainer)
@@ -581,7 +623,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                     }
                     handleNodeContainer.updateMultiplier = { [weak self] multiplier in
                         if let strongSelf = self {
-                            if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                            if let statusValue = strongSelf.statusValue, let _ = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
                                 strongSelf.scrubbingBeginTimestamp = strongSelf.scrubbingTimestampValue
                             }
                         }
@@ -735,6 +777,20 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 node.bufferingNode.frame = backgroundFrame
                 node.bufferingNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
                 
+                if let chapterNodesContainer = node.chapterNodesContainer, let duration = timestampAndDuration?.duration, duration > 0.0, backgroundFrame.width > 0.0 {
+                    chapterNodesContainer.frame = backgroundFrame
+                    
+                    for i in 0 ..< node.chapterNodes.count {
+                        let (chapter, chapterNode) = node.chapterNodes[i]
+                        if i == 0 || chapter.start > duration {
+                            continue
+                        }
+                        let chapterPosition: CGFloat = floor(backgroundFrame.width * CGFloat(chapter.start / duration))
+                        let chapterLineWidth: CGFloat = 1.5
+                        chapterNode.frame = CGRect(x: chapterPosition - chapterLineWidth / 2.0, y: 0.0, width: chapterLineWidth, height: backgroundFrame.size.height)
+                    }
+                }
+                
                 if let handleNode = node.handleNode {
                     var handleSize: CGSize = CGSize(width: 2.0, height: bounds.size.height)
                     var handleOffset: CGFloat = 0.0
@@ -814,12 +870,14 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 }
                 
                 if let (timestamp, duration) = timestampAndDuration {
-                    if let scrubbingTimestampValue = scrubbingTimestampValue {
+                    if let scrubbingTimestampValue = self.scrubbingTimestampValue {
                         var progress = CGFloat(scrubbingTimestampValue / duration)
                         if progress.isNaN || !progress.isFinite {
                             progress = 0.0
                         }
                         progress = max(0.0, min(1.0, progress))
+                        node.backgroundNode.progress = nil
+                        node.foregroundContentNode.progress = nil
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
                     } else if let statusValue = self.statusValue {
                         let actualTimestamp: Double
@@ -834,6 +892,8 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             progress = 0.0
                         }
                         progress = max(0.0, min(1.0, progress))
+                        node.backgroundNode.progress = progress
+                        node.foregroundContentNode.progress = progress
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
                     } else {
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))

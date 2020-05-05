@@ -81,7 +81,7 @@ public final class MapSnapshotMediaResourceRepresentation: CachedMediaResourceRe
     }
     
     public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
-        if let to = to as? MapSnapshotMediaResourceRepresentation {
+        if to is MapSnapshotMediaResourceRepresentation {
             return true
         } else {
             return false

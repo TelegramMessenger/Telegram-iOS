@@ -11,21 +11,28 @@ import TelegramPresentationData
 
 private let textFont = Font.regular(13.0)
 
+private let scrubberBackgroundColor = UIColor(white: 1.0, alpha: 0.42)
+private let scrubberForegroundColor = UIColor.white
+private let scrubberBufferingColor = UIColor(rgb: 0xffffff, alpha: 0.5)
+
 final class ChatVideoGalleryItemScrubberView: UIView {
     private var containerLayout: (CGSize, CGFloat, CGFloat)?
     
     private let leftTimestampNode: MediaPlayerTimeTextNode
     private let rightTimestampNode: MediaPlayerTimeTextNode
-    private let fileSizeNode: ASTextNode
+    private let infoNode: ASTextNode
     private let scrubberNode: MediaPlayerScrubbingNode
     
     private var playbackStatus: MediaPlayerStatus?
+    private var chapters: [MediaPlayerScrubbingChapter] = []
     
     private var fetchStatusDisposable = MetaDisposable()
     private var scrubbingDisposable = MetaDisposable()
+    private var chapterDisposable = MetaDisposable()
     
     private var leftTimestampNodePushed = false
     private var rightTimestampNodePushed = false
+    private var infoNodePushed = false
     
     var hideWhenDurationIsUnknown = false {
         didSet {
@@ -53,17 +60,17 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     var seek: (Double) -> Void = { _ in }
     
     override init(frame: CGRect) {
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white, bufferingColor: UIColor(rgb: 0xffffff, alpha: 0.5)))
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: scrubberBackgroundColor, foregroundColor: scrubberForegroundColor, bufferingColor: scrubberBufferingColor, chapters: self.chapters))
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode.alignment = .right
         self.rightTimestampNode.mode = .reversed
         
-        self.fileSizeNode = ASTextNode()
-        self.fileSizeNode.maximumNumberOfLines = 1
-        self.fileSizeNode.isUserInteractionEnabled = false
-        self.fileSizeNode.displaysAsynchronously = false
+        self.infoNode = ASTextNode()
+        self.infoNode.maximumNumberOfLines = 1
+        self.infoNode.isUserInteractionEnabled = false
+        self.infoNode.displaysAsynchronously = false
         
         super.init(frame: frame)
         
@@ -97,11 +104,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                 }
             }
         }
-        
+                
         self.addSubnode(self.scrubberNode)
         self.addSubnode(self.leftTimestampNode)
         self.addSubnode(self.rightTimestampNode)
-        self.addSubnode(self.fileSizeNode)
+        self.addSubnode(self.infoNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -126,6 +133,29 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.leftTimestampNode.status = mappedStatus
         self.rightTimestampNode.status = mappedStatus
         
+        if let mappedStatus = mappedStatus {
+            self.chapterDisposable.set((mappedStatus
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self, status.duration > 1.0 {
+                    var text: String = ""
+                    
+                    for chapter in strongSelf.chapters {
+                        if chapter.start > status.timestamp {
+                            break
+                        } else {
+                            text = chapter.title
+                        }
+                    }
+                    
+                    strongSelf.infoNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
+                    
+                    if let (size, leftInset, rightInset) = strongSelf.containerLayout {
+                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                    }
+                }
+            }))
+        }
+        
         self.scrubbingDisposable.set((self.scrubberNode.scrubbingPosition
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
@@ -133,16 +163,20 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             }
             let leftTimestampNodePushed: Bool
             let rightTimestampNodePushed: Bool
+            let infoNodePushed: Bool
             if let value = value {
                 leftTimestampNodePushed = value < 0.16
                 rightTimestampNodePushed = value > 0.84
+                infoNodePushed = value >= 0.16 && value <= 0.84
             } else {
                 leftTimestampNodePushed = false
                 rightTimestampNodePushed = false
+                infoNodePushed = false
             }
-            if leftTimestampNodePushed != strongSelf.leftTimestampNodePushed || rightTimestampNodePushed != strongSelf.rightTimestampNodePushed {
+            if leftTimestampNodePushed != strongSelf.leftTimestampNodePushed || rightTimestampNodePushed != strongSelf.rightTimestampNodePushed || infoNodePushed != strongSelf.infoNodePushed {
                 strongSelf.leftTimestampNodePushed = leftTimestampNodePushed
                 strongSelf.rightTimestampNodePushed = rightTimestampNodePushed
+                strongSelf.infoNodePushed = infoNodePushed
                 
                 if let layout = strongSelf.containerLayout {
                     strongSelf.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .animated(duration: 0.35, curve: .spring))
@@ -170,7 +204,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                             default:
                                 text = ""
                         }
-                        strongSelf.fileSizeNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
+                        strongSelf.infoNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
                         
                         if let (size, leftInset, rightInset) = strongSelf.containerLayout {
                             strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
@@ -178,10 +212,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                     }
                 }))
             } else {
-                self.fileSizeNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator), font: textFont, textColor: .white)
+                self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator), font: textFont, textColor: .white)
             }
         } else {
-            self.fileSizeNode.attributedText = nil
+            self.infoNode.attributedText = nil
         }
     }
     
@@ -192,22 +226,29 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         let scrubberInset: CGFloat
         let leftTimestampOffset: CGFloat
         let rightTimestampOffset: CGFloat
+        let infoOffset: CGFloat
         if size.width > size.height {
             scrubberInset = 58.0
             leftTimestampOffset = 4.0
             rightTimestampOffset = 4.0
+            infoOffset = 0.0
         } else {
             scrubberInset = 13.0
             leftTimestampOffset = 22.0 + (self.leftTimestampNodePushed ? 8.0 : 0.0)
             rightTimestampOffset = 22.0 + (self.rightTimestampNodePushed ? 8.0 : 0.0)
+            infoOffset = 22.0 + (self.infoNodePushed ? 8.0 : 0.0)
         }
         
         transition.updateFrame(node: self.leftTimestampNode, frame: CGRect(origin: CGPoint(x: 12.0, y: leftTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
         transition.updateFrame(node: self.rightTimestampNode, frame: CGRect(origin: CGPoint(x: size.width - leftInset - rightInset - 60.0 - 12.0, y: rightTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
         
-        let fileSize = self.fileSizeNode.measure(size)
-        self.fileSizeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - fileSize.width) / 2.0), y: 22.0), size: fileSize)
-        self.fileSizeNode.alpha = size.width < size.height ? 1.0 : 0.0
+        var infoConstrainedSize = size
+        infoConstrainedSize.width = size.width - scrubberInset * 2.0 - 100.0
+        
+        let infoSize = self.infoNode.measure(infoConstrainedSize)
+        self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
+        transition.updatePosition(node: self.infoNode, position: CGPoint(x: size.width / 2.0, y: infoOffset + infoSize.height / 2.0))
+        self.infoNode.alpha = size.width < size.height ? 1.0 : 0.0
         
         self.scrubberNode.frame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
     }

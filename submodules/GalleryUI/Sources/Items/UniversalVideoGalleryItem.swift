@@ -40,8 +40,9 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     let storeMediaPlaybackState: (MessageId, Double?) -> Void
+    let present: (ViewController, Any?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -59,10 +60,11 @@ public class UniversalVideoGalleryItem: GalleryItem {
         self.performAction = performAction
         self.openActionOptions = openActionOptions
         self.storeMediaPlaybackState = storeMediaPlaybackState
+        self.present = present
     }
     
     public func node() -> GalleryItemNode {
-        let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
+        let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
         if let indexData = self.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
@@ -249,7 +251,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
     
     private var videoNode: UniversalVideoNode?
-    private var videoFramePreview: MediaPlayerFramePreview?
+    private var videoFramePreview: FramePreview?
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
@@ -278,18 +280,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var fetchStatus: MediaResourceStatus?
     private var fetchControls: FetchControls?
     
-    private var scrubbingFrame = Promise<MediaPlayerFramePreviewResult?>(nil)
+    private var scrubbingFrame = Promise<FramePreviewResult?>(nil)
     private var scrubbingFrames = false
     private var scrubbingFrameDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
-        self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData, present: present)
         self.footerContentNode.scrubberView = self.scrubberView
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
@@ -457,6 +459,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch type {
                     case .youtube:
                         disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
+                        self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
                     case .iframe:
                         disablePlayerControls = true
                     default:
@@ -839,7 +842,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
-                        seek = .timecode(time)
+//                        seek = .timecode(time)
                     }
                 }
             }

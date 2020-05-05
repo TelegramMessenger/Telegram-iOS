@@ -440,18 +440,23 @@ private final class SemanticStatusNodeTransitionContext {
 public final class SemanticStatusNode: ASControlNode {
     public var backgroundNodeColor: UIColor {
         didSet {
-            self.setNeedsDisplay()
+            if !self.backgroundNodeColor.isEqual(oldValue) {
+                self.setNeedsDisplay()
+            }
         }
     }
     
     public var foregroundNodeColor: UIColor {
         didSet {
-            self.setNeedsDisplay()
+            if !self.foregroundNodeColor.isEqual(oldValue) {
+                self.setNeedsDisplay()
+            }
         }
     }
     
     private var animator: ConstantDisplayLinkAnimator?
     
+    private var hasState: Bool = false
     public private(set) var state: SemanticStatusNodeState
     private var transtionContext: SemanticStatusNodeTransitionContext?
     private var stateContext: SemanticStatusNodeStateContext
@@ -505,8 +510,11 @@ public final class SemanticStatusNode: ASControlNode {
     
     public func transitionToState(_ state: SemanticStatusNodeState, animated: Bool = true, synchronous: Bool = false, completion: @escaping () -> Void = {}) {
         var animated = animated
+        if !self.hasState {
+            self.hasState = true
+            animated = false
+        }
         if self.state != state {
-            let fromState = self.state
             self.state = state
             let previousStateContext = self.stateContext
             self.stateContext = self.state.context(current: self.stateContext)

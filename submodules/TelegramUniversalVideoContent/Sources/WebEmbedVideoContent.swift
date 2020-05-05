@@ -36,8 +36,8 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
         return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp)
     }
 }
-
-private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
+ 
+final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     private let webpageContent: TelegramMediaWebpageLoadedContent
     private let intrinsicDimensions: CGSize
     
@@ -64,6 +64,10 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     private let imageNode: TransformImageNode
     private let playerNode: WebEmbedPlayerNode
     
+    var impl: WebEmbedImplementation {
+        return playerNode.impl
+    }
+        
     private var readyDisposable = MetaDisposable()
     
     init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) {

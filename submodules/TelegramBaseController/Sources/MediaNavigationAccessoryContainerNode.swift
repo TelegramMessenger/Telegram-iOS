@@ -7,9 +7,9 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 
-final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
-    let backgroundNode: ASDisplayNode
-    let headerNode: MediaNavigationAccessoryHeaderNode
+public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+    public let backgroundNode: ASDisplayNode
+    public let headerNode: MediaNavigationAccessoryHeaderNode
     
     private let currentHeaderHeight: CGFloat = MediaNavigationAccessoryHeaderNode.minimizedHeight
     
@@ -44,7 +44,7 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
         self.headerNode.updateLayout(size: CGSize(width: size.width, height: headerHeight), leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.headerNode.frame.contains(point) {
             return nil
         }

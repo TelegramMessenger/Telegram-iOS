@@ -1,4 +1,9 @@
 import Foundation
+import Display
+import Postbox
+import SyncCore
+import TelegramCore
+import AccountContext
 import WebKit
 import SwiftSignalKit
 import UniversalMediaPlayer
@@ -84,11 +89,16 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
 }
 
 final class YoutubeEmbedImplementation: WebEmbedImplementation {
-    private var evalImpl: ((String) -> Void)?
+    private var evalImpl: ((String, ((Any?) -> Void)?) -> Void)?
     private var updateStatus: ((MediaPlayerStatus) -> Void)?
     private var onPlaybackStarted: (() -> Void)?
     
-    private let videoId: String
+    fileprivate let videoId: String
+    fileprivate var storyboardSpec: String?
+    fileprivate var duration: Double {
+        return self.status.duration
+    }
+    
     private var timestamp: Int
     private var ignoreEarlierTimestamps = false
     private var status : MediaPlayerStatus
@@ -107,8 +117,8 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     
     init(videoId: String, timestamp: Int = 0) {
         self.videoId = videoId
-        self.timestamp = timestamp
-        if timestamp > 0 {
+        self.timestamp = 0
+        if self.timestamp > 0 {
             self.ignoreEarlierTimestamps = true
         }
         self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
@@ -116,7 +126,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
         self.benchmarkStartTime = CFAbsoluteTimeGetCurrent()
     }
     
-    func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
+    func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String, ((Any?) -> Void)?) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
         let bundle = getAppBundle()
         guard let userScriptPath = bundle.path(forResource: "YoutubeUserScript", ofType: "js") else {
             return
@@ -177,7 +187,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
         }
         
         if let eval = self.evalImpl {
-            eval("play();")
+            eval("play();", nil)
         }
         
         self.ignorePosition = 2
@@ -185,7 +195,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     
     func pause() {
         if let eval = self.evalImpl {
-            eval("pause();")
+            eval("pause();", nil)
         }
     }
     
@@ -203,8 +213,8 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
             self.ignoreEarlierTimestamps = true
         }
         
-        if let eval = evalImpl {
-            eval("seek(\(timestamp));")
+        if let eval = self.evalImpl {
+            eval("seek(\(timestamp));", nil)
         }
         
         self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: 1.0, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: true)
@@ -241,6 +251,11 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                                     download = Float(value)
                                 } else if queryItem.name == "failed" {
                                     failed = Bool(value)
+                                } else if queryItem.name == "storyboard" {
+                                    let urlString = url.absoluteString
+                                    if value.count > 10, let range = urlString.range(of: "storyboard=") {
+                                        self.storyboardSpec = String(urlString[range.upperBound..<urlString.endIndex]).removingPercentEncoding
+                                    }
                                 }
                             }
                         }
@@ -328,5 +343,298 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
             default:
                 break
         }
+    }
+}
+
+public struct YoutubeEmbedStoryboardMediaResourceId: MediaResourceId {
+    public let videoId: String
+    public let storyboardId: Int32
+
+    public var uniqueId: String {
+        return "youtube-storyboard-\(self.videoId)-\(self.storyboardId)"
+    }
+    
+    public var hashValue: Int {
+        return self.uniqueId.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? YoutubeEmbedStoryboardMediaResourceId {
+            return self.videoId == to.videoId && self.storyboardId == to.storyboardId
+        } else {
+            return false
+        }
+    }
+}
+
+public class YoutubeEmbedStoryboardMediaResource: TelegramMediaResource {
+    public let videoId: String
+    public let storyboardId: Int32
+    public let url: String
+    
+    public init(videoId: String, storyboardId: Int32, url: String) {
+        self.videoId = videoId
+        self.storyboardId = storyboardId
+        self.url = url
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.videoId = decoder.decodeStringForKey("v", orElse: "")
+        self.storyboardId = decoder.decodeInt32ForKey("i", orElse: 0)
+        self.url = decoder.decodeStringForKey("u", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.videoId, forKey: "v")
+        encoder.encodeInt32(self.storyboardId, forKey: "i")
+        encoder.encodeString(self.url, forKey: "u")
+    }
+    
+    public var id: MediaResourceId {
+        return YoutubeEmbedStoryboardMediaResourceId(videoId: self.videoId, storyboardId: self.storyboardId)
+    }
+    
+    public func isEqual(to: MediaResource) -> Bool {
+        if let to = to as? YoutubeEmbedStoryboardMediaResource {
+            return self.videoId == to.videoId && self.storyboardId == to.storyboardId && self.url == to.url
+        } else {
+            return false
+        }
+    }
+}
+
+public final class YoutubeEmbedStoryboardMediaResourceRepresentation: CachedMediaResourceRepresentation {
+    public let keepDuration: CachedMediaRepresentationKeepDuration = .shortLived
+    
+    public var uniqueId: String {
+        return "cached"
+    }
+    
+    public init() {
+    }
+    
+    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if to is YoutubeEmbedStoryboardMediaResourceRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+public func fetchYoutubeEmbedStoryboardResource(resource: YoutubeEmbedStoryboardMediaResource) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal { subscriber in
+        subscriber.putNext(.reset)
+                
+        let disposable = MetaDisposable()
+        disposable.set(fetchHttpResource(url: resource.url).start(next: { next in
+            if case let .dataPart(_, data, _, complete) = next, complete {
+                let tempFile = TempBox.shared.tempFile(fileName: "image.jpg")
+                if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) {
+                    subscriber.putNext(.tempFile(tempFile))
+                    subscriber.putCompletion()
+                }
+            }
+        }))
+        
+        return ActionDisposable {
+            disposable.dispose()
+        }
+    }
+}
+
+private func youtubeEmbedStoryboardData(account: Account, resource: YoutubeEmbedStoryboardMediaResource) -> Signal<Data?, NoError> {
+    return Signal<Data?, NoError> { subscriber in
+        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: YoutubeEmbedStoryboardMediaResourceRepresentation(), complete: true).start(next: { next in
+            if next.size != 0 {
+                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+            }
+        }, error: subscriber.putError, completed: subscriber.putCompletion)
+        
+        return ActionDisposable {
+            dataDisposable.dispose()
+        }
+    }
+}
+
+private func youtubeEmbedStoryboardImage(account: Account, resource: YoutubeEmbedStoryboardMediaResource, frame: Int32, size: YoutubeEmbedFramePreview.StoryboardSpec.StoryboardSize) -> Signal<UIImage?, NoError> {
+    let signal = youtubeEmbedStoryboardData(account: account, resource: resource)
+    
+    return signal |> map { fullSizeData in
+        let drawingSize = CGSize(width: CGFloat(size.width), height: CGFloat(size.height))
+        let context = DrawingContext(size: drawingSize, clear: true)
+        
+        var fullSizeImage: CGImage?
+        if let fullSizeData = fullSizeData {
+            let options = NSMutableDictionary()
+            options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+            if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                fullSizeImage = image
+            }
+            
+            if let fullSizeImage = fullSizeImage {
+                let rect: CGRect
+                let imageSize = CGSize(width: CGFloat(fullSizeImage.width), height: CGFloat(fullSizeImage.height))
+                
+                let row = floor(CGFloat(frame) / CGFloat(size.cols))
+                let col = CGFloat(frame % size.cols)
+                
+                rect = CGRect(origin: CGPoint(x: -drawingSize.width * col, y: -drawingSize.height * row), size: imageSize)
+                
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    c.interpolationQuality = .medium
+                    c.draw(fullSizeImage, in: rect)
+                }
+                return context.generateImage()
+            }
+        }
+        return nil
+    }
+}
+
+public final class YoutubeEmbedFramePreview: FramePreview {
+    fileprivate struct StoryboardSpec {
+        struct StoryboardSize {
+            let width: Int32
+            let height: Int32
+            let quality: Int32
+            let cols: Int32
+            let rows: Int32
+            let duration: Int32
+            let imageName: String
+            let sigh: String
+        }
+        
+        let baseUrl: String
+        let sizes: [StoryboardSize]
+        
+        init?(specString: String) {
+            let sections = specString.components(separatedBy: "|")
+            if sections.count < 2 {
+                return nil
+            }
+            guard let baseUrl = sections.first else {
+                return nil
+            }
+            self.baseUrl = baseUrl
+            
+            var sizes: [StoryboardSize] = []
+            for i in 1 ..< sections.count - 1 {
+                let section = sections[i]
+                let data = section.components(separatedBy: "#")
+                
+                if data.count >= 8, let width = Int32(data[0]), let height = Int32(data[1]), let quality = Int32(data[2]), let cols = Int32(data[3]), let rows = Int32(data[4]), let duration = Int32(data[5]) {
+                    let size = StoryboardSize(width: width, height: height, quality: quality, cols: cols, rows: rows, duration: duration, imageName: data[6], sigh: data[7])
+                    sizes.append(size)
+                }
+            }
+            
+            self.sizes = sizes
+        }
+        
+        var bestSize: (Int, StoryboardSize)? {
+            var best: (Int, StoryboardSize)?
+            for i in 0 ..< self.sizes.count {
+                let size = self.sizes[i]
+                if let (_, currentBest) = best {
+                    if currentBest.width < size.width || (currentBest.width == size.width && currentBest.cols < size.cols) {
+                        best = (i, size)
+                    }
+                } else {
+                    best = (i, size)
+                }
+            }
+            return best
+        }
+    }
+    
+    private func urlForStoryboard(spec: StoryboardSpec, sizeIndex: Int, num: Int32) -> String {
+        let size = spec.sizes[sizeIndex]
+        
+        var url = spec.baseUrl
+        url = url.replacingOccurrences(of: "$L", with: "\(sizeIndex)")
+        url = url.replacingOccurrences(of: "$N", with: size.imageName)
+        url = url.replacingOccurrences(of: "$M", with: "\(num)")
+        url += "&sigh=\(size.sigh)"
+        
+        return url
+    }
+    
+    private let context: AccountContext
+    private weak var content: WebEmbedVideoContent?
+    
+    private let currentFrameDisposable = MetaDisposable()
+    private var currentFrameTimestamp: Double?
+    private var nextFrameTimestamp: Double?
+    fileprivate let framePipe = ValuePipe<FramePreviewResult>()
+    
+    public init(context: AccountContext, content: WebEmbedVideoContent) {
+        self.context = context
+        self.content = content
+    }
+    
+    deinit {
+        self.currentFrameDisposable.dispose()
+    }
+    
+    public var generatedFrames: Signal<FramePreviewResult, NoError> {
+        return self.framePipe.signal()
+    }
+    
+    public func generateFrame(at timestamp: Double) {
+        guard let content = self.content else {
+            return
+        }
+        
+        if self.currentFrameTimestamp != nil {
+            self.nextFrameTimestamp = timestamp
+            return
+        }
+        self.currentFrameTimestamp = timestamp
+        
+        self.context.sharedContext.mediaManager.universalVideoManager.withUniversalVideoContent(id: content.id) { [weak self] node in
+            guard let strongSelf = self, let node = node as? WebEmbedVideoContentNode, let youtubeImpl = node.impl as? YoutubeEmbedImplementation, youtubeImpl.duration > 0.0, let specString = youtubeImpl.storyboardSpec, let storyboardSpec = StoryboardSpec(specString: specString), let bestSize = storyboardSpec.bestSize else {
+                return
+            }
+            
+            var duration: Double = Double(bestSize.1.duration) / 1000.0
+            var totalStoryboards: Int32 = 1
+            var totalFrames: Int32 = 1
+            let framesOnStoryboard: Int32 = bestSize.1.cols * bestSize.1.rows
+            
+            if duration > 0.0 {
+                totalFrames = Int32(ceil(youtubeImpl.duration / duration))
+                totalStoryboards = Int32(ceil(Double(totalFrames) / Double(framesOnStoryboard)))
+            } else {
+                duration = youtubeImpl.duration / Double(framesOnStoryboard)
+            }
+            
+            let globalFrame = Int32(floor(timestamp / youtubeImpl.duration * Double(totalFrames)))
+            let frame: Int32 = globalFrame % framesOnStoryboard
+
+            let num: Int32 = Int32(floor(Double(globalFrame) / Double(framesOnStoryboard)))
+            let url = urlForStoryboard(spec: storyboardSpec, sizeIndex: bestSize.0, num: num)
+            
+            strongSelf.framePipe.putNext(.waitingForData)
+            strongSelf.currentFrameDisposable.set(youtubeEmbedStoryboardImage(account: strongSelf.context.account, resource: YoutubeEmbedStoryboardMediaResource(videoId: youtubeImpl.videoId, storyboardId: num, url: url), frame: frame, size: bestSize.1).start(next: { [weak self] image in
+                if let strongSelf = self {
+                    if let image = image {
+                        strongSelf.framePipe.putNext(.image(image))
+                    }
+                    strongSelf.currentFrameTimestamp = nil
+                    if let nextFrameTimestamp = strongSelf.nextFrameTimestamp {
+                        strongSelf.nextFrameTimestamp = nil
+                        strongSelf.generateFrame(at: nextFrameTimestamp)
+                    }
+                }
+            }))
+        }
+    }
+    
+    public func cancelPendingFrames() {
+        self.nextFrameTimestamp = nil
+        self.currentFrameTimestamp = nil
+        self.currentFrameDisposable.set(nil)
     }
 }

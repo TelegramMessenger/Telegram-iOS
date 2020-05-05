@@ -170,7 +170,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.shareNode = HighlightableButtonNode()
         self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: presentationData.theme.list.itemAccentColor), for: [])
         
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemAccentColor, bufferingColor: presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4)))
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemAccentColor, bufferingColor: presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), chapters: []))
         self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: presentationData.theme.list.itemSecondaryTextColor)
         self.leftDurationLabel.displaysAsynchronously = false
         self.leftDurationLabel.keepPreviousValueOnEmptyState = true

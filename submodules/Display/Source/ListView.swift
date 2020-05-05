@@ -131,6 +131,19 @@ public enum GeneralScrollDirection {
     case down
 }
 
+private func cancelContextGestures(view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for gesture in gestureRecognizers {
+            if let gesture = gesture as? ContextGesture {
+                gesture.cancel()
+            }
+        }
+    }
+    for subview in view.subviews {
+        cancelContextGestures(view: subview)
+    }
+}
+
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
     public final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
@@ -666,6 +679,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.scrolledToItem = nil
         
         self.beganInteractiveDragging()
+        
+        for itemNode in self.itemNodes {
+            if !itemNode.isLayerBacked {
+                cancelContextGestures(view: itemNode.view)
+            }
+        }
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -739,8 +758,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.decelerationAnimator?.isPaused = false
     }
     
+    public var defaultToSynchronousTransactionWhileScrolling: Bool = false
+    
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateScrollViewDidScroll(scrollView, synchronous: false)
+        self.updateScrollViewDidScroll(scrollView, synchronous: self.defaultToSynchronousTransactionWhileScrolling)
     }
     
     private var generalAccumulatedDeltaY: CGFloat = 0.0
@@ -3606,8 +3627,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 var updatedState = state
                 var updatedOperations = operations
                 updatedState.removeInvisibleNodes(&updatedOperations)
-                self.dispatchOnVSync {
+                if synchronous {
                     self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, synchronous: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
+                } else {
+                    self.dispatchOnVSync {
+                        self.replayOperations(animated: false, animateAlpha: false, animateCrossfade: false, synchronous: false, animateTopItemVerticalOrigin: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
+                    }
                 }
             }
         }

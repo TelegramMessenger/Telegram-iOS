@@ -12,8 +12,9 @@ import ContextUI
 
 protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
+    var shouldReceiveExpandProgressUpdates: Bool { get }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
+    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func transferVelocity(_ velocity: CGFloat)
     func cancelPreviewGestures()
@@ -28,21 +29,21 @@ final class PeerInfoPaneWrapper {
     let key: PeerInfoPaneKey
     let node: PeerInfoPaneNode
     var isAnimatingOut: Bool = false
-    private var appliedParams: (CGSize, CGFloat, CGFloat, CGFloat, Bool, PresentationData)?
+    private var appliedParams: (CGSize, CGFloat, CGFloat, CGFloat, Bool, CGFloat, PresentationData)?
     
     init(key: PeerInfoPaneKey, node: PeerInfoPaneNode) {
         self.key = key
         self.node = node
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        if let (currentSize, currentSideInset, currentBottomInset, visibleHeight, currentIsScrollingLockedAtTop, currentPresentationData) = self.appliedParams {
-            if currentSize == size && currentSideInset == sideInset && currentBottomInset == bottomInset, currentIsScrollingLockedAtTop == isScrollingLockedAtTop && currentPresentationData === presentationData {
+    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        if let (currentSize, currentSideInset, currentBottomInset, visibleHeight, currentIsScrollingLockedAtTop, currentExpandProgress, currentPresentationData) = self.appliedParams {
+            if currentSize == size && currentSideInset == sideInset && currentBottomInset == bottomInset, currentIsScrollingLockedAtTop == isScrollingLockedAtTop && currentExpandProgress == expandProgress && currentPresentationData === presentationData {
                 return
             }
         }
-        self.appliedParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, presentationData)
-        self.node.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, presentationData: presentationData, synchronous: synchronous, transition: transition)
+        self.appliedParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
+        self.node.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: synchronous, transition: transition)
     }
 }
 
@@ -734,14 +735,14 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 )
                 self.pendingPanes[key] = pane
                 pane.pane.node.frame = paneFrame
-                pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: .immediate)
+                pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, expandProgress: expansionFraction, presentationData: presentationData, synchronous: true, transition: .immediate)
                 leftScope = true
             }
         }
         
         for (key, pane) in self.pendingPanes {
             pane.pane.node.frame = paneFrame
-            pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: self.currentPaneKey == nil, transition: .immediate)
+            pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, expandProgress: expansionFraction, presentationData: presentationData, synchronous: self.currentPaneKey == nil, transition: .immediate)
             
             if pane.isReady {
                 self.pendingPanes.removeValue(forKey: key)
@@ -819,7 +820,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         paneCompletion()
                     })
                 }
-                pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+                pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, expandProgress: expansionFraction, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
             }
         }
         
@@ -836,7 +837,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             case .links:
                 title = presentationData.strings.PeerInfo_PaneLinks
             case .voice:
-                title = presentationData.strings.PeerInfo_PaneVoice
+                title = presentationData.strings.PeerInfo_PaneVoiceAndVideo
             case .music:
                 title = presentationData.strings.PeerInfo_PaneAudio
             case .groupsInCommon:
@@ -850,7 +851,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         for (_, pane) in self.pendingPanes {
             let paneTransition: ContainedViewLayoutTransition = .immediate
             paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
-            pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: paneTransition)
+            pane.pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, expandProgress: expansionFraction, presentationData: presentationData, synchronous: true, transition: paneTransition)
         }
         if !self.didSetIsReady && data != nil {
             if let currentPaneKey = self.currentPaneKey, let currentPane = self.currentPanes[currentPaneKey] {

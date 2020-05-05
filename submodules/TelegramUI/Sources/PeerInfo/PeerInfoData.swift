@@ -113,7 +113,7 @@ private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId
         (.photoOrVideo, .media),
         (.file, .files),
         (.music, .music),
-        //(.voiceOrInstantVideo, .voice),
+        (.voiceOrInstantVideo, .voice),
         (.webPage, .links)
     ]
     enum PaneState {

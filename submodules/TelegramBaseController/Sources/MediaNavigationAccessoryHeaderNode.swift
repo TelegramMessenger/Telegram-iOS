@@ -127,8 +127,8 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
     })
 }
 
-final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDelegate {
-    static let minimizedHeight: CGFloat = 37.0
+public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDelegate {
+    public static let minimizedHeight: CGFloat = 37.0
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -156,7 +156,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    var displayScrubber: Bool = true {
+    public var displayScrubber: Bool = true {
         didSet {
             self.scrubbingNode.isHidden = !self.displayScrubber
         }
@@ -166,14 +166,14 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
     
     private var tapRecognizer: UITapGestureRecognizer?
     
-    var tapAction: (() -> Void)?
-    var close: (() -> Void)?
-    var toggleRate: (() -> Void)?
-    var togglePlayPause: (() -> Void)?
-    var playPrevious: (() -> Void)?
-    var playNext: (() -> Void)?
+    public var tapAction: (() -> Void)?
+    public var close: (() -> Void)?
+    public var toggleRate: (() -> Void)?
+    public var togglePlayPause: (() -> Void)?
+    public var playPrevious: (() -> Void)?
+    public var playNext: (() -> Void)?
     
-    var playbackBaseRate: AudioPlaybackRate? = nil {
+    public var playbackBaseRate: AudioPlaybackRate? = nil {
         didSet {
             guard self.playbackBaseRate != oldValue, let playbackBaseRate = self.playbackBaseRate else {
                 return
@@ -193,13 +193,13 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         }
     }
     
-    var playbackStatus: Signal<MediaPlayerStatus, NoError>? {
+    public var playbackStatus: Signal<MediaPlayerStatus, NoError>? {
         didSet {
             self.scrubbingNode.status = self.playbackStatus
         }
     }
     
-    var playbackItems: (SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?)? {
+    public var playbackItems: (SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?)? {
         didSet {
             if !arePlaylistItemsEqual(self.playbackItems?.0, oldValue?.0) || !arePlaylistItemsEqual(self.playbackItems?.1, oldValue?.1) || !arePlaylistItemsEqual(self.playbackItems?.2, oldValue?.2), let layout = validLayout {
                 self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)
@@ -207,7 +207,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         }
     }
     
-    init(presentationData: PresentationData) {
+    public init(presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
@@ -261,7 +261,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
         self.actionPlayNode.isHidden = true
         
-        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5)))
+        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5), chapters: []))
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -346,7 +346,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -361,7 +361,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    func updatePresentationData(_ presentationData: PresentationData) {
+    public func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.nameDisplayOrder = presentationData.nameDisplayOrder
@@ -375,7 +375,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
         self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
         self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
-        self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5)))
+        self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5), chapters: []))
         
         if let playbackBaseRate = self.playbackBaseRate {
             switch playbackBaseRate {
@@ -390,17 +390,17 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         }
     }
     
-    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+    public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         if scrollView.isDecelerating {
             self.changeTrack()
         }
     }
     
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+    public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.changeTrack()
     }
     
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         guard !decelerate else {
             return
         }
@@ -418,7 +418,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
         
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
@@ -472,19 +472,19 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.accessibilityAreaNode.frame = CGRect(origin: CGPoint(x: self.actionButton.frame.maxX, y: 0.0), size: CGSize(width: self.rateButton.frame.minX - self.actionButton.frame.maxX, height: minHeight))
     }
     
-    @objc func closeButtonPressed() {
+    @objc public func closeButtonPressed() {
         self.close?()
     }
     
-    @objc func rateButtonPressed() {
+    @objc public func rateButtonPressed() {
         self.toggleRate?()
     }
     
-    @objc func actionButtonPressed() {
+    @objc public func actionButtonPressed() {
         self.togglePlayPause?()
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc public func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.tapAction?()
         }
