@@ -5497,3 +5497,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "Channel.AboutItem" = "about";
 "PeerInfo.GroupAboutItem" = "about";
+
+"Widget.ApplicationStartRequired" = "Open the app to use the widget";
