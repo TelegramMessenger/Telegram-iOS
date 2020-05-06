@@ -833,7 +833,7 @@ typedef enum
     
     _didPlayToEndObserver = [[TGObserverProxy alloc] initWithTarget:self targetSelector:@selector(playerItemDidPlayToEndTime:) name:AVPlayerItemDidPlayToEndTimeNotification object:_player.currentItem];
     
-    _videoView = [[TGModernGalleryVideoView alloc] initWithFrame:_previewView.frame player:_player];
+    _videoView = [[TGModernGalleryVideoView alloc] initWithFrame: CGRectInset(_previewView.frame, -1.0, -1.0) player:_player];
     [_previewView.superview insertSubview:_videoView belowSubview:_previewView];
     
     UITapGestureRecognizer *gestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(unmutePressed)];
@@ -950,6 +950,7 @@ typedef enum
 {
     [_capturePipeline stopRecording:completed];
     [_buttonHandler ignoreEventsFor:1.0f andDisable:true];
+    [_capturePipeline stopRunning];
 }
 
 - (void)finishWithURL:(NSURL *)url dimensions:(CGSize)dimensions duration:(NSTimeInterval)duration liveUploadData:(id )liveUploadData thumbnailImage:(UIImage *)thumbnailImage isSilent:(bool)isSilent scheduleTimestamp:(int32_t)scheduleTimestamp
