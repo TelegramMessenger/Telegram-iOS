@@ -7,6 +7,7 @@
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
+@class TGSuggestionContext;
 
 @protocol TGMediaSelectableItem;
 
