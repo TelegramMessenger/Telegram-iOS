@@ -534,7 +534,7 @@ public final class PresentationCallImpl: PresentationCall {
         
         if !self.shouldPresentCallRating {
             self.ongoingContext.needsRating { needsRating in
-                self.shouldPresentCallRating = needsRating
+//                self.shouldPresentCallRating = needsRating
             }
         }
     }
