@@ -1165,8 +1165,6 @@ final class SharedApplicationContext {
                     self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                     
                     self.resetIntentsIfNeeded(context: context.context)
-                    
-                    let _ = storeCurrentCallListTabDefaultValue(accountManager: context.context.sharedContext.accountManager).start()
                 }))
             } else {
                 self.mainWindow.viewController = nil

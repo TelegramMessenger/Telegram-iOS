@@ -7,7 +7,7 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     public var defaultShowTab: Bool?
     
     public static var defaultSettings: CallListSettings {
-        return CallListSettings(showTab: true)
+        return CallListSettings(showTab: false)
     }
     
     public var showTab: Bool {
@@ -84,20 +84,6 @@ public func updateCallListSettingsInteractively(accountManager: AccountManager, 
                 currentSettings = CallListSettings.defaultSettings
             }
             return f(currentSettings)
-        })
-    }
-}
-
-public func storeCurrentCallListTabDefaultValue(accountManager: AccountManager) -> Signal<Void, NoError> {
-    return accountManager.transaction { transaction -> Void in
-        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.callListSettings, { entry in
-            let currentSettings: CallListSettings
-            if let entry = entry as? CallListSettings {
-                currentSettings = entry
-            } else {
-                currentSettings = CallListSettings(showTab: nil, defaultShowTab: CallListSettings.defaultSettings.showTab)
-            }
-            return currentSettings
         })
     }
 }
