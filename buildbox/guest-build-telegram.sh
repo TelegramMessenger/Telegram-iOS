@@ -57,7 +57,9 @@ fi
 
 mkdir "$SOURCE_PATH"
 
-if [ "$1" != "verify" ]; then
+USE_RAMDISK="0"
+
+if [ "$USE_RAMDISK" == "1" ]; then
 	SIZE_IN_BLOCKS=$((12*1024*1024*1024/512))
 	DEV=`hdid -nomount ram://$SIZE_IN_BLOCKS`
 
