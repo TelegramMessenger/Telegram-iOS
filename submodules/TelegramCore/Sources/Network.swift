@@ -323,11 +323,11 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
         var resetAddKeys: [NSNumber: NSNumber] = [:]
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         if reset.contains(.wifi) {
-            resetKeys = rawKeys.filter({ $0.connection == .wifi }).map({ $0.key as NSNumber })
+            resetKeys += rawKeys.filter({ $0.connection == .wifi }).map({ $0.key as NSNumber })
             resetAddKeys[UsageCalculationResetKey.wifi.rawValue as NSNumber] = Int64(timestamp) as NSNumber
         }
         if reset.contains(.cellular) {
-            resetKeys = rawKeys.filter({ $0.connection == .cellular }).map({ $0.key as NSNumber })
+            resetKeys += rawKeys.filter({ $0.connection == .cellular }).map({ $0.key as NSNumber })
             resetAddKeys[UsageCalculationResetKey.cellular.rawValue as NSNumber] = Int64(timestamp) as NSNumber
         }
         if !resetKeys.isEmpty {
