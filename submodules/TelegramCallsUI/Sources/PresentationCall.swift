@@ -550,12 +550,6 @@ public final class PresentationCallImpl: PresentationCall {
             self.statePromise.set(presentationState)
             self.updateTone(presentationState, callContextState: callContextState, previous: previous)
         }
-
-        if !self.shouldPresentCallRating {
-            self.ongoingContext?.needsRating { needsRating in
-//                self.shouldPresentCallRating = needsRating
-            }
-        }
     }
     
     private func updateTone(_ state: PresentationCallState, callContextState: OngoingCallContextState?, previous: CallSession?) {
