@@ -15,7 +15,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     private var buildConfig: BuildConfig?
     
     private var primaryColor: UIColor = .black
-    private var appLockedLabel: UILabel?
+    private var placeholderLabel: UILabel?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -42,23 +42,11 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
             presentationData = value
         } else {
-            presentationData = WidgetPresentationData(applicationLockedString: "Unlock the app to use widget")
+            presentationData = WidgetPresentationData(applicationLockedString: "Unlock the app to use the widget", applicationStartRequiredString: "Open the app to use the widget")
         }
         
-        let fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
-        
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
-            let appLockedLabel = UILabel()
-            if #available(iOSApplicationExtension 13.0, *) {
-                appLockedLabel.textColor = UIColor.label
-            } else {
-                appLockedLabel.textColor = self.primaryColor
-            }
-            appLockedLabel.font = UIFont.systemFont(ofSize: fontSize)
-            appLockedLabel.text = presentationData.applicationLockedString
-            appLockedLabel.sizeToFit()
-            self.appLockedLabel = appLockedLabel
-            self.view.addSubview(appLockedLabel)
+            self.setPlaceholderText(presentationData.applicationLockedString)
             return
         }
         
@@ -70,8 +58,23 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         let dataPath = rootPath + "/widget-data"
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
-            self.setWidgetData(widgetData: widgetData)
+            self.setWidgetData(widgetData: widgetData, presentationData: presentationData)
         }
+    }
+    
+    private func setPlaceholderText(_ text: String) {
+        let fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        let placeholderLabel = UILabel()
+        if #available(iOSApplicationExtension 13.0, *) {
+            placeholderLabel.textColor = UIColor.label
+        } else {
+            placeholderLabel.textColor = self.primaryColor
+        }
+        placeholderLabel.font = UIFont.systemFont(ofSize: fontSize)
+        placeholderLabel.text = text
+        placeholderLabel.sizeToFit()
+        self.placeholderLabel = placeholderLabel
+        self.view.addSubview(placeholderLabel)
     }
     
     func widgetPerformUpdate(completionHandler: (@escaping (NCUpdateResult) -> Void)) {
@@ -85,7 +88,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     private var widgetData: WidgetData?
     
-    private func setWidgetData(widgetData: WidgetData) {
+    private func setWidgetData(widgetData: WidgetData, presentationData: WidgetPresentationData) {
         self.widgetData = widgetData
         self.peerViews.forEach {
             $0.removeFromSuperview()
@@ -108,6 +111,13 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             }
         }
         
+        if self.peerViews.isEmpty {
+            self.setPlaceholderText(presentationData.applicationStartRequiredString)
+        } else {
+            self.placeholderLabel?.removeFromSuperview()
+            self.placeholderLabel = nil
+        }
+        
         if let size = self.validLayout {
             self.updateLayout(size: size)
         }
@@ -126,8 +136,8 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     private func updateLayout(size: CGSize) {
         self.validLayout = size
         
-        if let appLockedLabel = self.appLockedLabel {
-            appLockedLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - appLockedLabel.bounds.width) / 2.0), y: floor((size.height - appLockedLabel.bounds.height) / 2.0)), size: appLockedLabel.bounds.size)
+        if let placeholderLabel = self.placeholderLabel {
+            placeholderLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - placeholderLabel.bounds.width) / 2.0), y: floor((size.height - placeholderLabel.bounds.height) / 2.0)), size: placeholderLabel.bounds.size)
         }
         
         let peerSize = CGSize(width: 70.0, height: 100.0)

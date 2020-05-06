@@ -36,11 +36,13 @@ struct ChatEditMessageState: PostboxCoding, Equatable {
     let messageId: MessageId
     let inputState: ChatTextInputState
     let disableUrlPreview: String?
+    let inputTextMaxLength: Int32?
     
-    init(messageId: MessageId, inputState: ChatTextInputState, disableUrlPreview: String?) {
+    init(messageId: MessageId, inputState: ChatTextInputState, disableUrlPreview: String?, inputTextMaxLength: Int32?) {
         self.messageId = messageId
         self.inputState = inputState
         self.disableUrlPreview = disableUrlPreview
+        self.inputTextMaxLength = inputTextMaxLength
     }
     
     init(decoder: PostboxDecoder) {
@@ -51,6 +53,7 @@ struct ChatEditMessageState: PostboxCoding, Equatable {
             self.inputState = ChatTextInputState()
         }
         self.disableUrlPreview = decoder.decodeOptionalStringForKey("dup")
+        self.inputTextMaxLength = decoder.decodeOptionalInt32ForKey("tl")
     }
     
     func encode(_ encoder: PostboxEncoder) {
@@ -63,18 +66,23 @@ struct ChatEditMessageState: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "dup")
         }
+        if let inputTextMaxLength = self.inputTextMaxLength {
+            encoder.encodeInt32(inputTextMaxLength, forKey: "ml")
+        } else {
+            encoder.encodeNil(forKey: "ml")
+        }
     }
     
     static func ==(lhs: ChatEditMessageState, rhs: ChatEditMessageState) -> Bool {
-        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreview == rhs.disableUrlPreview
+        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreview == rhs.disableUrlPreview && lhs.inputTextMaxLength == rhs.inputTextMaxLength
     }
     
     func withUpdatedInputState(_ inputState: ChatTextInputState) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreview: self.disableUrlPreview)
+        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreview: self.disableUrlPreview, inputTextMaxLength: self.inputTextMaxLength)
     }
     
     func withUpdatedDisableUrlPreview(_ disableUrlPreview: String?) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreview: disableUrlPreview)
+        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreview: disableUrlPreview, inputTextMaxLength: self.inputTextMaxLength)
     }
 }
 

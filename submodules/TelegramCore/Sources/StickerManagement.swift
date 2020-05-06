@@ -116,17 +116,17 @@ public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: 
     } |> switchToLatest
 }
 
-func parsePreviewStickerSet(_ set: Api.StickerSetCovered) -> (StickerPackCollectionInfo, [StickerPackItem]) {
+func parsePreviewStickerSet(_ set: Api.StickerSetCovered, namespace: ItemCollectionId.Namespace = Namespaces.ItemCollection.CloudStickerPacks) -> (StickerPackCollectionInfo, [StickerPackItem]) {
     switch set {
         case let .stickerSetCovered(set, cover):
-            let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+            let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
             var items: [StickerPackItem] = []
             if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {
                 items.append(StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: id.id), file: file, indexKeys: []))
             }
             return (info, items)
         case let .stickerSetMultiCovered(set, covers):
-            let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+            let info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
             var items: [StickerPackItem] = []
             for cover in covers {
                 if let file = telegramMediaFileFromApiDocument(cover), let id = file.id {

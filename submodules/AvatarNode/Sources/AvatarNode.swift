@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AnimationUI
 import AppBundle
 import AccountContext
+import Emoji
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
@@ -522,7 +523,11 @@ public final class AvatarNode: ASDisplayNode {
                     context.draw(archivedChatsIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - archivedChatsIcon.size.width) / 2.0), y: floor((bounds.size.height - archivedChatsIcon.size.height) / 2.0)), size: archivedChatsIcon.size))
                 }
             } else {
-                let letters = parameters.letters
+                var letters = parameters.letters
+                if letters.count == 2 && letters[0].isSingleEmoji && letters[1].isSingleEmoji {
+                    letters = [letters[0]]
+                }
+                
                 let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
                 let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: parameters.font, NSAttributedString.Key.foregroundColor: UIColor.white])
                 

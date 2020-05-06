@@ -220,8 +220,6 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     [self _enableVideoStabilization];
     
 	_videoBufferOrientation = _videoConnection.videoOrientation;
-	
-	return;
 }
 
 - (void)destroyCaptureSession
@@ -232,7 +230,23 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 		
 		[[NSNotificationCenter defaultCenter] removeObserver:_applicationWillEnterForegroundObserver];
 		_applicationWillEnterForegroundObserver = nil;
-		
+        
+        [_captureSession beginConfiguration];
+        [_captureSession removeOutput:_videoOutput];
+        [_captureSession removeInput:_videoInput];
+        [_captureSession removeOutput:_audioOutput];
+        [_captureSession removeInput:_audioInput];
+		[_captureSession commitConfiguration];
+        
+        _audioInput = nil;
+        _audioDevice = nil;
+        _audioOutput = nil;
+        _audioConnection = nil;
+        
+        _videoInput = nil;
+        _videoDevice = nil;
+        _videoOutput = nil;
+        _videoConnection = nil;
 		_captureSession = nil;
 	}
 }

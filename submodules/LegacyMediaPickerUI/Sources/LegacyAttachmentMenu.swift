@@ -379,7 +379,9 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEdit
     
     legacyController.enableSizeClassSignal = true
 
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
+    let suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
+    
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, suggestionContext: suggestionContext, completed: { selectionContext, editingContext, currentItem in
         let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
         sendMessagesWithSignals(signals)
     }, dismissed: { [weak legacyController] in

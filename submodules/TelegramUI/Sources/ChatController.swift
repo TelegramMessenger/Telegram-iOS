@@ -2805,7 +2805,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                     if let editMessage = interfaceState.editMessage, let message = combinedInitialData.initialData?.associatedMessages[editMessage.messageId] {
-                        updated = updatedChatEditInterfaceMessagetState(state: updated, message: message)
+                        updated = updatedChatEditInterfaceMessageState(state: updated, message: message)
                     }
                     updated = updated.updatedSlowmodeState(slowmodeState)
                     return updated
@@ -3323,10 +3323,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                            return $0.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(message.text, entities: entities)), disableUrlPreview: nil))
+                            var inputTextMaxLength: Int32?
+                            for media in message.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    inputTextMaxLength = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+                                    break
+                                }
+                            }
+                            return $0.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(message.text, entities: entities)), disableUrlPreview: nil, inputTextMaxLength: inputTextMaxLength))
                         }
                         
-                        updated = updatedChatEditInterfaceMessagetState(state: updated, message: message)
+                        updated = updatedChatEditInterfaceMessageState(state: updated, message: message)
                         updated = updated.updatedInputMode({ _ in
                             return .text
                         })
@@ -5790,7 +5797,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if !desc.text.isEmpty {
                     state = state.updatedInterfaceState { state in
                         if let editMessage = state.editMessage {
-                            return state.withUpdatedEditMessage(ChatEditMessageState(messageId: editMessage.messageId, inputState: ChatTextInputState(inputText: NSAttributedString(string: desc.text)), disableUrlPreview: editMessage.disableUrlPreview))
+                            return state.withUpdatedEditMessage(editMessage.withUpdatedInputState(ChatTextInputState(inputText: NSAttributedString(string: desc.text))))
                         }
                         return state
                     }

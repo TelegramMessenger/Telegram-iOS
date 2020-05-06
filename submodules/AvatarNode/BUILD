@@ -15,6 +15,7 @@ swift_library(
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/AppBundle:AppBundle",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/Emoji:Emoji",
     ],
     visibility = [
         "//visibility:public",

@@ -32,9 +32,11 @@ public struct WidgetDataPeers: Codable, Equatable {
 
 public struct WidgetPresentationData: Codable, Equatable {
     public var applicationLockedString: String
+    public var applicationStartRequiredString: String
     
-    public init(applicationLockedString: String) {
+    public init(applicationLockedString: String, applicationStartRequiredString: String) {
         self.applicationLockedString = applicationLockedString
+        self.applicationStartRequiredString = applicationStartRequiredString
     }
 }
 

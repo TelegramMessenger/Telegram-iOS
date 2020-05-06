@@ -62,7 +62,7 @@ final class WidgetDataContext {
         
         self.widgetPresentationDataDisposable = (presentationData
         |> map { presentationData -> WidgetPresentationData in
-            return WidgetPresentationData(applicationLockedString: presentationData.strings.Widget_ApplicationLocked)
+            return WidgetPresentationData(applicationLockedString: presentationData.strings.Widget_ApplicationLocked, applicationStartRequiredString: presentationData.strings.Widget_ApplicationStartRequired)
         }
         |> distinctUntilChanged).start(next: { value in
             let path = widgetPresentationDataPath(rootPath: basePath)
