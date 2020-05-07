@@ -177,7 +177,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
 //                           }
 //                       })])
         })
-        self.scrollNode.addSubnode(selectionNode)
+//        self.scrollNode.addSubnode(selectionNode)
         self.textSelectionNode = selectionNode
         
         self.scrollNode.addSubnode(selectionNode.highlightAreaNode)
