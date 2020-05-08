@@ -185,16 +185,19 @@ private final class VisualMediaItemNode: ASDisplayNode {
         }
         
         if let file = media as? TelegramMediaFile, file.isAnimated {
-            let sampleBufferLayer: SampleBufferLayer
-            if let current = self.sampleBufferLayer {
-                sampleBufferLayer = current
-            } else {
-                sampleBufferLayer = takeSampleBufferLayer()
-                self.sampleBufferLayer = sampleBufferLayer
-                self.containerNode.layer.insertSublayer(sampleBufferLayer.layer, above: self.imageNode.layer)
+            if self.videoLayerFrameManager == nil {
+                let sampleBufferLayer: SampleBufferLayer
+                if let current = self.sampleBufferLayer {
+                    sampleBufferLayer = current
+                } else {
+                    sampleBufferLayer = takeSampleBufferLayer()
+                    self.sampleBufferLayer = sampleBufferLayer
+                    self.containerNode.layer.insertSublayer(sampleBufferLayer.layer, above: self.imageNode.layer)
+                }
+                
+                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), resource: file.resource, layerHolder: sampleBufferLayer)
+                self.videoLayerFrameManager?.start()
             }
-            self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), resource: file.resource, layerHolder: sampleBufferLayer)
-            self.videoLayerFrameManager?.start()
         } else {
             self.videoLayerFrameManager = nil
         }
