@@ -17,6 +17,8 @@ func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
         return Api.MessagesFilter.inputMessagesFilterUrl
     } else if tagMask == .voiceOrInstantVideo {
         return Api.MessagesFilter.inputMessagesFilterRoundVoice
+    } else if tagMask == .gif {
+        return Api.MessagesFilter.inputMessagesFilterGif
     } else {
         return nil
     }

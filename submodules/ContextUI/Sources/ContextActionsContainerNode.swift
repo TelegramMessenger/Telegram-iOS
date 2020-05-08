@@ -392,6 +392,7 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
 final class ContextActionsContainerNode: ASDisplayNode {
     private let actionsNode: InnerActionsContainerNode
     private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
+    private let scrollNode: ASScrollNode
     
     var panSelectionGestureEnabled: Bool = true {
         didSet {
@@ -411,10 +412,19 @@ final class ContextActionsContainerNode: ASDisplayNode {
             self.textSelectionTipNode = nil
         }
         
+        self.scrollNode = ASScrollNode()
+        self.scrollNode.canCancelAllTouchesInViews = true
+        self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.view.showsVerticalScrollIndicator = false
+        if #available(iOS 11.0, *) {
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
+        }
+        
         super.init()
         
-        self.addSubnode(self.actionsNode)
-        self.textSelectionTipNode.flatMap(self.addSubnode)
+        self.scrollNode.addSubnode(self.actionsNode)
+        self.textSelectionTipNode.flatMap(self.scrollNode.addSubnode)
+        self.addSubnode(self.scrollNode)
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -431,6 +441,11 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
         
         return contentSize
+    }
+    
+    func updateSize(containerSize: CGSize, contentSize: CGSize) {
+        self.scrollNode.view.contentSize = contentSize
+        self.scrollNode.frame = CGRect(origin: CGPoint(), size: containerSize)
     }
     
     func actionNode(at point: CGPoint) -> ContextActionNode? {

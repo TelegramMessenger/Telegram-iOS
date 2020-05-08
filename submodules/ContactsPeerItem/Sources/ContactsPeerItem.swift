@@ -32,7 +32,7 @@ public enum ContactsPeerItemStatus {
     case none
     case presence(PeerPresence, PresentationDateTimeFormat)
     case addressName(String)
-    case custom(String)
+    case custom(string: String, multiline: Bool)
 }
 
 public enum ContactsPeerItemSelection: Equatable {
@@ -499,6 +499,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
+            var multilineStatus: Bool = false
             var userPresence: TelegramUserPresence?
             
             switch item.peer {
@@ -563,8 +564,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         } else if !suffix.isEmpty {
                             statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                         }
-                    case let .custom(text):
+                    case let .custom(text, multiline):
                         statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        multilineStatus = multiline
                     }
                 }
             case let .deviceContact(_, contact):
@@ -585,8 +587,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
                 
                 switch item.status {
-                case let .custom(text):
+                case let .custom(text, multiline):
                     statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    multilineStatus = multiline
                 default:
                     break
                 }
@@ -625,7 +628,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: multilineStatus ? 3 : 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleVerticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
             let verticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0

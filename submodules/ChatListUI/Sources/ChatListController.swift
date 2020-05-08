@@ -974,8 +974,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                     var found = false
                                     for filter in presetList {
                                         if filter.id == id {
-                                            strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter))
-                                            f(.dismissWithoutContent)
+                                            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                                            |> deliverOnMainQueue).start(next: { filters in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters))
+                                                f(.dismissWithoutContent)
+                                            })
                                             found = true
                                             break
                                         }

@@ -54,7 +54,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
             case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
                 let status: ContactsPeerItemStatus
                 if count != 0 {
-                    status = .custom(strings.Contacts_ImportersCount(count))
+                    status = .custom(string: strings.Contacts_ImportersCount(count), multiline: false)
                 } else {
                     status = .none
                 }

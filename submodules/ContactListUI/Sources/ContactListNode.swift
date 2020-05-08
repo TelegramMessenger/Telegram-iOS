@@ -190,19 +190,19 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                                 let presence = presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
                                 status = .presence(presence, dateTimeFormat)
                             } else if let group = peer as? TelegramGroup {
-                                status = .custom(strings.Conversation_StatusMembers(Int32(group.participantCount)))
+                                status = .custom(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), multiline: false)
                             } else if let channel = peer as? TelegramChannel {
                                 if case .group = channel.info {
                                     if let participantCount = participantCount, participantCount != 0 {
-                                        status = .custom(strings.Conversation_StatusMembers(participantCount))
+                                        status = .custom(string: strings.Conversation_StatusMembers(participantCount), multiline: false)
                                     } else {
-                                        status = .custom(strings.Group_Status)
+                                        status = .custom(string: strings.Group_Status, multiline: false)
                                     }
                                 } else {
                                     if let participantCount = participantCount, participantCount != 0 {
-                                        status = .custom(strings.Conversation_StatusSubscribers(participantCount))
+                                        status = .custom(string: strings.Conversation_StatusSubscribers(participantCount), multiline: false)
                                     } else {
-                                        status = .custom(strings.Channel_Status)
+                                        status = .custom(string: strings.Channel_Status, multiline: false)
                                     }
                                 }
                             } else {
