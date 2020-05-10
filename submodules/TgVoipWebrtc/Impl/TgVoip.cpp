@@ -31,7 +31,7 @@ void tgvoip_openssl_aes_ige_decrypt(uint8_t* in, uint8_t* out, size_t length, ui
 }
 
 void tgvoip_openssl_rand_bytes(uint8_t* buffer, size_t len){
-    RAND_bytes(buffer, len);
+    RAND_bytes(buffer, (int)len);
 }
 
 void tgvoip_openssl_sha1(uint8_t* msg, size_t len, uint8_t* output){

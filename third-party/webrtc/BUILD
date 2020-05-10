@@ -6,6 +6,8 @@ filegroup(
     name = "webrtc_sources",
     srcs = glob([
         "webrtc-ios/**/*"
+    ], exclude = [
+        "**/.git/**",
     ]),
 )
 
@@ -34,7 +36,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
         BUILD_DIR="$(RULEDIR)/$$BUILD_ARCH"
-        rm -rf "$$BUILD_DIR"
+        #rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
 
         SOURCE_PATH="third-party/webrtc/webrtc-ios/src"
@@ -65,7 +67,7 @@ genrule(
 
         sh $$BUILD_DIR/build-webrtc-bazel.sh "$$BUILD_DIR" $$BUILD_ARCH
     """ + "\n".join([
-        "cp -f $$BUILD_DIR/src/out/$$OUT_DIR/obj/{lib} $(location {lib})".format(lib=lib) for lib in webrtc_libs
+        "cp -f $$BUILD_DIR/src/out/$$OUT_DIR/obj/sdk/libframework_objc_static.a $(location {lib})".format(lib=lib) for lib in webrtc_libs
     ]),
     outs = webrtc_libs,
     visibility = ["//visibility:public",]
