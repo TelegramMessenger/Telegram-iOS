@@ -237,7 +237,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
     return options
 }
 
-func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState, message: Message) -> ChatPresentationInterfaceState {
+func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState, message: Message) -> ChatPresentationInterfaceState {
     var updated = state
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -401,6 +401,33 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
                 f(.default)
             })))
+        }
+        
+        if data.messageActions.options.contains(.rateCall) {
+            var callId: CallId?
+            for media in message.media {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _) = action.action {
+                    if discardReason != .busy && discardReason != .missed {
+                        if let logName = callLogNameForId(id: id, account: context.account) {
+                            let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
+                            let end = logName.index(logName.endIndex, offsetBy: -4)
+                            let accessHash = logName[start..<end]
+                            if let accessHash = Int64(accessHash) {
+                                callId = CallId(id: id, accessHash: accessHash)
+                            }
+                        }
+                    }
+                    break
+                }
+            }
+            if let callId = callId {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Call_RateCall, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    let _ = controllerInteraction.rateCall(message, callId)
+                    f(.dismissWithoutContent)
+                })))
+            }
         }
         
         if data.canReply {
@@ -683,34 +710,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 f(.dismissWithoutContent)
             })))
         }
-        
-        if data.messageActions.options.contains(.rateCall) {
-            var callId: CallId?
-            for media in message.media {
-                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _) = action.action {
-                    if discardReason != .busy && discardReason != .missed {
-                        if let logName = callLogNameForId(id: id, account: context.account) {
-                            let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
-                            let end = logName.index(logName.endIndex, offsetBy: -4)
-                            let accessHash = logName[start..<end]
-                            if let accessHash = Int64(accessHash) {
-                                callId = CallId(id: id, accessHash: accessHash)
-                            }
-                        }
-                    }
-                    break
-                }
-            }
-            if let callId = callId {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Call_RateCall, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    let _ = controllerInteraction.rateCall(message, callId)
-                    f(.dismissWithoutContent)
-                })))
-            }
-        }
-        
+                
         if data.messageActions.options.contains(.forward) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)

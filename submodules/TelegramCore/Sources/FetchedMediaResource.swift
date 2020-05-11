@@ -462,7 +462,17 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                 if let partialReference = file.partialReference {
                     updatedReference = partialReference.mediaReference(media.media).resourceReference(resource)
                 }
-                if file.isSticker, messageReference.isSecret == true {
+                
+                var revalidateWithStickerpack = false
+                if file.isSticker {
+                    if messageReference.isSecret == true {
+                        revalidateWithStickerpack = true
+                    } else if case .none = messageReference.content {
+                        revalidateWithStickerpack = true
+                    }
+                }
+                
+                if revalidateWithStickerpack {
                     var stickerPackReference: StickerPackReference?
                     for attribute in file.attributes {
                         if case let .Sticker(sticker) = attribute {
@@ -503,7 +513,13 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                             if let item = item as? StickerPackItem {
                                 if media.id != nil && item.file.id == media.id {
                                     if let updatedResource = findUpdatedMediaResource(media: item.file, previousMedia: media, resource: resource) {
-                                        return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                                        return postbox.transaction { transaction -> RevalidatedMediaResource in
+                                            if let id = media.id {
+                                                updateMessageMedia(transaction: transaction, id: id, media: item.file)
+                                            }
+                                            return RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil)
+                                        }
+                                        |> castError(RevalidateMediaReferenceError.self)
                                     }
                                 }
                             }

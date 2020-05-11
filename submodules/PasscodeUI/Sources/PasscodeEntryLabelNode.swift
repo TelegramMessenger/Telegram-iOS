@@ -21,6 +21,7 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
         
         self.textNode = ASTextNode()
         self.textNode.isLayerBacked = false
+        self.textNode.textAlignment = .center
         
         super.init()
         
@@ -84,6 +85,6 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
         transition.updateFrame(node: self.wrapperNode, frame: textFrame)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(), size: textSize))
         
-        return CGSize(width: size.width, height: 25.0)
+        return CGSize(width: size.width, height: max(25.0, textSize.height))
     }
 }

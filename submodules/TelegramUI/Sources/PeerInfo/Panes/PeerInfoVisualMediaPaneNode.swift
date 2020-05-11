@@ -38,6 +38,11 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private let context: AccountContext
     private let interaction: VisualMediaItemInteraction
     
+    private var videoLayerFrameManager: SoftwareVideoLayerFrameManager?
+    private var sampleBufferLayer: SampleBufferLayer?
+    private var displayLink: ConstantDisplayLinkAnimator?
+    private var displayLinkTimestamp: Double = 0.0
+    
     private let containerNode: ContextControllerSourceNode
     private let imageNode: TransformImageNode
     private var statusNode: RadialStatusNode
@@ -179,6 +184,24 @@ private final class VisualMediaItemNode: ASDisplayNode {
             }
         }
         
+        if let file = media as? TelegramMediaFile, file.isAnimated {
+            if self.videoLayerFrameManager == nil {
+                let sampleBufferLayer: SampleBufferLayer
+                if let current = self.sampleBufferLayer {
+                    sampleBufferLayer = current
+                } else {
+                    sampleBufferLayer = takeSampleBufferLayer()
+                    self.sampleBufferLayer = sampleBufferLayer
+                    self.containerNode.layer.insertSublayer(sampleBufferLayer.layer, above: self.imageNode.layer)
+                }
+                
+                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), resource: file.resource, layerHolder: sampleBufferLayer)
+                self.videoLayerFrameManager?.start()
+            }
+        } else {
+            self.videoLayerFrameManager = nil
+        }
+        
         if let media = media, (self.item?.1 == nil || !media.isEqual(to: self.item!.1!)) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
@@ -196,7 +219,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 mediaDimensions = file.dimensions?.cgSize
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
                 
-                self.mediaBadgeNode.isHidden = false
+                self.mediaBadgeNode.isHidden = file.isAnimated
                 
                 self.resourceStatus = nil
                 
@@ -290,6 +313,9 @@ private final class VisualMediaItemNode: ASDisplayNode {
             
             self.containerNode.frame = imageFrame
             self.imageNode.frame = imageFrame
+            if let sampleBufferLayer = self.sampleBufferLayer {
+                sampleBufferLayer.layer.frame = imageFrame
+            }
             
             if let mediaDimensions = mediaDimensions {
                 let imageSize = mediaDimensions.aspectFilled(imageFrame.size)
@@ -300,8 +326,28 @@ private final class VisualMediaItemNode: ASDisplayNode {
         }
     }
     
+    func updateIsVisible(_ isVisible: Bool) {
+        if let _ = self.videoLayerFrameManager {
+            let displayLink: ConstantDisplayLinkAnimator
+            if let current = self.displayLink {
+                displayLink = current
+            } else {
+                displayLink = ConstantDisplayLinkAnimator { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.videoLayerFrameManager?.tick(timestamp: strongSelf.displayLinkTimestamp)
+                    strongSelf.displayLinkTimestamp += 1.0 / 30.0
+                }
+                displayLink.frameInterval = 2
+                self.displayLink = displayLink
+            }
+            displayLink.isPaused = !isVisible
+        }
+    }
+    
     func updateSelectionState(animated: Bool) {
-        if let (item, media, _, mediaDimensions) = self.item, let theme = self.theme {
+        if let (item, _, _, _) = self.item, let theme = self.theme {
             self.containerNode.isGestureEnabled = self.interaction.selectedMessageIds == nil
             
             if let selectedIds = self.interaction.selectedMessageIds {
@@ -379,9 +425,20 @@ private final class VisualMediaItemNode: ASDisplayNode {
 
 private final class VisualMediaItem {
     let message: Message
+    let aspectRatio: CGFloat
     
     init(message: Message) {
         self.message = message
+        
+        var aspectRatio: CGFloat = 1.0
+        for media in message.media {
+            if let file = media as? TelegramMediaFile {
+                if let dimensions = file.dimensions, dimensions.height > 1 {
+                    aspectRatio = CGFloat(dimensions.width) / CGFloat(dimensions.height)
+                }
+            }
+        }
+        self.aspectRatio = aspectRatio
     }
 }
 
@@ -434,10 +491,137 @@ private final class FloatingHeaderNode: ASDisplayNode {
     }
 }
 
+private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> MessageTags {
+    switch type {
+    case .photoOrVideo:
+        return .photoOrVideo
+    case .gifs:
+        return .gif
+    }
+}
+
+private enum ItemsLayout {
+    final class Grid {
+        let containerWidth: CGFloat
+        let itemCount: Int
+        let itemSpacing: CGFloat
+        let itemsInRow: Int
+        let itemSize: CGFloat
+        let rowCount: Int
+        let contentHeight: CGFloat
+        
+        init(containerWidth: CGFloat, itemCount: Int, bottomInset: CGFloat) {
+            self.containerWidth = containerWidth
+            self.itemCount = itemCount
+            self.itemSpacing = 1.0
+            self.itemsInRow = max(3, min(6, Int(containerWidth / 140.0)))
+            self.itemSize = floor(containerWidth / CGFloat(itemsInRow))
+            
+            self.rowCount = itemCount / self.itemsInRow + (itemCount % self.itemsInRow == 0 ? 0 : 1)
+            
+            self.contentHeight = CGFloat(self.rowCount + 1) * self.itemSpacing + CGFloat(rowCount) * itemSize + bottomInset
+        }
+        
+        func visibleRange(rect: CGRect) -> (Int, Int) {
+            var minVisibleRow = Int(floor((rect.minY - self.itemSpacing) / (self.itemSize + self.itemSpacing)))
+            minVisibleRow = max(0, minVisibleRow)
+            var maxVisibleRow = Int(ceil((rect.maxY - self.itemSpacing) / (self.itemSize + itemSpacing)))
+            maxVisibleRow = min(self.rowCount - 1, maxVisibleRow)
+            
+            let minVisibleIndex = minVisibleRow * itemsInRow
+            let maxVisibleIndex = min(self.itemCount - 1, (maxVisibleRow + 1) * itemsInRow - 1)
+            
+            return (minVisibleIndex, maxVisibleIndex)
+        }
+        
+        func frame(forItemAt index: Int, sideInset: CGFloat) -> CGRect {
+            let rowIndex = index / Int(self.itemsInRow)
+            let columnIndex = index % Int(self.itemsInRow)
+            let itemOrigin = CGPoint(x: sideInset + CGFloat(columnIndex) * (self.itemSize + self.itemSpacing), y: self.itemSpacing + CGFloat(rowIndex) * (self.itemSize + self.itemSpacing))
+            return CGRect(origin: itemOrigin, size: CGSize(width: columnIndex == self.itemsInRow ? (self.containerWidth - itemOrigin.x) : self.itemSize, height: self.itemSize))
+        }
+    }
+    
+    final class Balanced {
+        let frames: [CGRect]
+        let contentHeight: CGFloat
+        
+        init(containerWidth: CGFloat, items: [VisualMediaItem]) {
+            self.frames = calculateItemFrames(items: items, containerWidth: containerWidth)
+            if let last = self.frames.last {
+                self.contentHeight = last.maxY
+            } else {
+                self.contentHeight = 0.0
+            }
+        }
+        
+        func visibleRange(rect: CGRect) -> (Int, Int) {
+            for i in 0 ..< self.frames.count {
+                if self.frames[i].maxY >= rect.minY {
+                    for j in i ..< self.frames.count {
+                        if self.frames[j].minY >= rect.maxY {
+                            return (i, j - 1)
+                        }
+                    }
+                    
+                    break
+                }
+                return (i, self.frames.count - 1)
+            }
+            return (0, -1)
+        }
+        
+        func frame(forItemAt index: Int, sideInset: CGFloat) -> CGRect {
+            if index >= 0 && index < self.frames.count {
+                return self.frames[index]
+            } else {
+                assertionFailure()
+                return CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 100.0))
+            }
+        }
+    }
+    
+    case grid(Grid)
+    case balanced(Balanced)
+    
+    var contentHeight: CGFloat {
+        switch self {
+        case let .grid(grid):
+            return grid.contentHeight
+        case let .balanced(balanced):
+            return balanced.contentHeight
+        }
+    }
+    
+    func visibleRange(rect: CGRect) -> (Int, Int) {
+        switch self {
+        case let .grid(grid):
+            return grid.visibleRange(rect: rect)
+        case let .balanced(balanced):
+            return balanced.visibleRange(rect: rect)
+        }
+    }
+    
+    func frame(forItemAt index: Int, sideInset: CGFloat) -> CGRect {
+        switch self {
+        case let .grid(grid):
+            return grid.frame(forItemAt: index, sideInset: sideInset)
+        case let .balanced(balanced):
+            return balanced.frame(forItemAt: index, sideInset: sideInset)
+        }
+    }
+}
+
 final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
+    enum ContentType {
+        case photoOrVideo
+        case gifs
+    }
+    
     private let context: AccountContext
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
+    private let contentType: ContentType
     
     private let scrollNode: ASScrollNode
     private let floatingHeaderNode: FloatingHeaderNode
@@ -462,6 +646,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private let listDisposable = MetaDisposable()
     private var hiddenMediaDisposable: Disposable?
     private var mediaItems: [VisualMediaItem] = []
+    private var itemsLayout: ItemsLayout?
     private var visibleMediaItems: [UInt32: VisualMediaItemNode] = [:]
     
     private var numberOfItemsToRequest: Int = 50
@@ -471,10 +656,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     private var decelerationAnimator: ConstantDisplayLinkAnimator?
     
-    init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId) {
+    init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
         self.peerId = peerId
         self.chatControllerInteraction = chatControllerInteraction
+        self.contentType = contentType
         
         self.scrollNode = ASScrollNode()
         self.floatingHeaderNode = FloatingHeaderNode()
@@ -536,7 +722,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             return
         }
         self.isRequestingView = true
-        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: .photoOrVideo)
+        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
         |> deliverOnMainQueue).start(next: { [weak self] (view, updateType, _) in
             guard let strongSelf = self else {
                 return
@@ -557,6 +743,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             for entry in view.entries.reversed() {
                 self.mediaItems.append(VisualMediaItem(message: entry.message))
             }
+            self.itemsLayout = nil
             
             let wasFirstHistoryView = self.isFirstHistoryView
             self.isFirstHistoryView = false
@@ -675,15 +862,20 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
         let availableWidth = size.width - sideInset * 2.0
         
-        let itemSpacing: CGFloat = 1.0
-        let itemsInRow: Int = max(3, min(6, Int(availableWidth / 140.0)))
-        let itemSize: CGFloat = floor(availableWidth / CGFloat(itemsInRow))
+        let itemsLayout: ItemsLayout
+        if let current = self.itemsLayout {
+            itemsLayout = current
+        } else {
+            switch self.contentType {
+            case .photoOrVideo:
+                itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, itemCount: self.mediaItems.count, bottomInset: bottomInset))
+            case .gifs:
+                itemsLayout = .balanced(ItemsLayout.Balanced(containerWidth: availableWidth, items: self.mediaItems))
+            }
+            self.itemsLayout = itemsLayout
+        }
         
-        let rowCount: Int = self.mediaItems.count / itemsInRow + (self.mediaItems.count % itemsInRow == 0 ? 0 : 1)
-        
-        let contentHeight = CGFloat(rowCount + 1) * itemSpacing + CGFloat(rowCount) * itemSize + bottomInset
-        
-        self.scrollNode.view.contentSize = CGSize(width: size.width, height: contentHeight)
+        self.scrollNode.view.contentSize = CGSize(width: size.width, height: itemsLayout.contentHeight)
         self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: synchronous)
         
         if isScrollingLockedAtTop {
@@ -736,23 +928,15 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     private func updateVisibleItems(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool) {
-        let availableWidth = size.width - sideInset * 2.0
-        
-        let itemSpacing: CGFloat = 1.0
-        let itemsInRow: Int = max(3, min(6, Int(availableWidth / 140.0)))
-        let itemSize: CGFloat = floor(availableWidth / CGFloat(itemsInRow))
-        
-        let rowCount: Int = self.mediaItems.count / itemsInRow + (self.mediaItems.count % itemsInRow == 0 ? 0 : 1)
+        guard let itemsLayout = self.itemsLayout else {
+            return
+        }
         
         let headerItemMinY = self.scrollNode.view.bounds.minY + 20.0
-        let visibleRect = self.scrollNode.view.bounds.insetBy(dx: 0.0, dy: -400.0)
-        var minVisibleRow = Int(floor((visibleRect.minY - itemSpacing) / (itemSize + itemSpacing)))
-        minVisibleRow = max(0, minVisibleRow)
-        var maxVisibleRow = Int(ceil((visibleRect.maxY - itemSpacing) / (itemSize + itemSpacing)))
-        maxVisibleRow = min(rowCount - 1, maxVisibleRow)
+        let activeRect = self.scrollNode.view.bounds
+        let visibleRect = activeRect.insetBy(dx: 0.0, dy: -400.0)
         
-        let minVisibleIndex = minVisibleRow * itemsInRow
-        let maxVisibleIndex = min(self.mediaItems.count - 1, (maxVisibleRow + 1) * itemsInRow - 1)
+        let (minVisibleIndex, maxVisibleIndex) = itemsLayout.visibleRange(rect: visibleRect)
         
         var headerItem: Message?
         
@@ -761,10 +945,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             for i in minVisibleIndex ... maxVisibleIndex {
                 let stableId = self.mediaItems[i].message.stableId
                 validIds.insert(stableId)
-                let rowIndex = i / Int(itemsInRow)
-                let columnIndex = i % Int(itemsInRow)
-                let itemOrigin = CGPoint(x: sideInset + CGFloat(columnIndex) * (itemSize + itemSpacing), y: itemSpacing + CGFloat(rowIndex) * (itemSize + itemSpacing))
-                let itemFrame = CGRect(origin: itemOrigin, size: CGSize(width: columnIndex == itemsInRow ? (availableWidth - itemOrigin.x) : itemSize, height: itemSize))
+                
+                let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: sideInset)
+                
                 let itemNode: VisualMediaItemNode
                 if let current = self.visibleMediaItems[stableId] {
                     itemNode = current
@@ -782,6 +965,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     itemSynchronousLoad = synchronousLoad
                 }
                 itemNode.update(size: itemFrame.size, item: self.mediaItems[i], theme: theme, synchronousLoad: itemSynchronousLoad)
+                itemNode.updateIsVisible(itemFrame.intersects(activeRect))
             }
         }
         var removeKeys: [UInt32] = []
@@ -871,4 +1055,202 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
         return result
     }
+}
+
+private func NH_LP_TABLE_LOOKUP(_ table: inout [Int], _ i: Int, _ j: Int, _ rowsize: Int) -> Int {
+    return table[i * rowsize + j]
+}
+
+private func NH_LP_TABLE_LOOKUP_SET(_ table: inout [Int], _ i: Int, _ j: Int, _ rowsize: Int, _ value: Int) {
+    table[i * rowsize + j] = value
+}
+
+private func linearPartitionTable(_ weights: [Int], numberOfPartitions: Int) -> [Int] {
+    let n = weights.count
+    let k = numberOfPartitions
+    
+    let tableSize = n * k;
+    var tmpTable = Array<Int>(repeatElement(0, count: tableSize))
+    
+    let solutionSize = (n - 1) * (k - 1)
+    var solution = Array<Int>(repeatElement(0, count: solutionSize))
+    
+    for i in 0 ..< n {
+        let offset = i != 0 ? NH_LP_TABLE_LOOKUP(&tmpTable, i - 1, 0, k) : 0
+        NH_LP_TABLE_LOOKUP_SET(&tmpTable, i, 0, k, Int(weights[i]) + offset)
+    }
+    
+    for j in 0 ..< k {
+        NH_LP_TABLE_LOOKUP_SET(&tmpTable, 0, j, k, Int(weights[0]))
+    }
+    
+    for i in 1 ..< n {
+        for j in 1 ..< k {
+            var currentMin = 0
+            var minX = Int.max
+            
+            for x in 0 ..< i {
+                let c1 = NH_LP_TABLE_LOOKUP(&tmpTable, x, j - 1, k)
+                let c2 = NH_LP_TABLE_LOOKUP(&tmpTable, i, 0, k) - NH_LP_TABLE_LOOKUP(&tmpTable, x, 0, k)
+                let cost = max(c1, c2)
+                
+                if x == 0 || cost < currentMin {
+                    currentMin = cost;
+                    minX = x
+                }
+            }
+            
+            NH_LP_TABLE_LOOKUP_SET(&tmpTable, i, j, k, currentMin)
+            NH_LP_TABLE_LOOKUP_SET(&solution, i - 1, j - 1, k - 1, minX)
+        }
+    }
+    
+    return solution
+}
+
+private func linearPartitionForWeights(_ weights: [Int], numberOfPartitions: Int) -> [[Int]] {
+    var n = weights.count
+    var k = numberOfPartitions
+    
+    if k <= 0 {
+        return []
+    }
+    
+    if k >= n {
+        var partition: [[Int]] = []
+        for weight in weights {
+            partition.append([weight])
+        }
+        return partition
+    }
+    
+    if n == 1 {
+        return [weights]
+    }
+    
+    var solution = linearPartitionTable(weights, numberOfPartitions: numberOfPartitions)
+    let solutionRowSize = numberOfPartitions - 1
+    
+    k = k - 2;
+    n = n - 1;
+    
+    var answer: [[Int]] = []
+    
+    while k >= 0 {
+        if n < 1 {
+            answer.insert([], at: 0)
+        } else {
+            var currentAnswer: [Int] = []
+            
+            var i = NH_LP_TABLE_LOOKUP(&solution, n - 1, k, solutionRowSize) + 1
+            let range = n + 1
+            while i < range {
+                currentAnswer.append(weights[i])
+                i += 1
+            }
+            
+            answer.insert(currentAnswer, at: 0)
+            
+            n = NH_LP_TABLE_LOOKUP(&solution, n - 1, k, solutionRowSize)
+        }
+        
+        k = k - 1
+    }
+    
+    var currentAnswer: [Int] = []
+    var i = 0
+    let range = n + 1
+    while i < range {
+        currentAnswer.append(weights[i])
+        i += 1
+    }
+    
+    answer.insert(currentAnswer, at: 0)
+    
+    return answer
+}
+
+private func calculateItemFrames(items: [VisualMediaItem], containerWidth: CGFloat) -> [CGRect] {
+    var frames: [CGRect] = []
+    
+    var weights: [Int] = []
+    for item in items {
+        weights.append(Int(item.aspectRatio * 100))
+    }
+    
+    let preferredRowSize: CGFloat = 160.0
+    let idealHeight: CGFloat = preferredRowSize
+    
+    var totalItemSize: CGFloat = 0.0
+    for i in 0 ..< items.count {
+        totalItemSize += items[i].aspectRatio * idealHeight
+    }
+    let numberOfRows = max(Int(round(totalItemSize / containerWidth)), 1)
+    
+    let partition = linearPartitionForWeights(weights, numberOfPartitions:numberOfRows)
+    
+    var i = 0
+    var offset = CGPoint(x: 0.0, y: 0.0)
+    var previousItemSize: CGFloat = 0.0
+    let maxWidth = containerWidth
+    
+    let minimumInteritemSpacing: CGFloat = 1.0
+    let minimumLineSpacing: CGFloat = 1.0
+    
+    let viewportWidth: CGFloat = containerWidth
+    
+    var rowIndex = -1
+    for row in partition {
+        rowIndex += 1
+        
+        var summedRatios: CGFloat = 0.0
+        
+        var j = i
+        var n = i + row.count
+        
+        while j < n {
+            summedRatios += items[j].aspectRatio
+                
+            j += 1
+        }
+        
+        var rowSize = containerWidth - (CGFloat(row.count - 1) * minimumInteritemSpacing)
+        
+        if rowIndex == partition.count - 1 {
+            if row.count < 2 {
+                rowSize = floor(viewportWidth / 3.0) - (CGFloat(row.count - 1) * minimumInteritemSpacing)
+            } else if row.count < 3 {
+                rowSize = floor(viewportWidth * 2.0 / 3.0) - (CGFloat(row.count - 1) * minimumInteritemSpacing)
+            }
+        }
+        
+        j = i
+        n = i + row.count
+        
+        while j < n {
+            let preferredAspectRatio = items[j].aspectRatio
+            
+            let actualSize = CGSize(width: round(rowSize / summedRatios * (preferredAspectRatio)), height: preferredRowSize)
+            
+            var frame = CGRect(x: offset.x, y: offset.y, width: actualSize.width, height: actualSize.height)
+            if frame.origin.x + frame.size.width >= maxWidth - 2.0 {
+                frame.size.width = max(1.0, maxWidth - frame.origin.x)
+            }
+            
+            frames.append(frame)
+            
+            offset.x += actualSize.width + minimumInteritemSpacing
+            previousItemSize = actualSize.height
+            
+            j += 1
+        }
+        
+        if row.count > 0 {
+            offset = CGPoint(x: 0.0, y: offset.y + previousItemSize + minimumLineSpacing)
+        }
+        
+        i += row.count
+    }
+    
+    return frames
 }

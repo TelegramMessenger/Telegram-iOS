@@ -18,6 +18,7 @@ public enum UndoOverlayContent {
     case actionSucceeded(title: String, text: String, cancel: String)
     case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: ItemCollectionItem?, account: Account)
     case dice(dice: TelegramMediaDice, account: Account, text: String, action: String?)
+    case chatAddedToFolder(chatTitle: String, folderTitle: String)
 }
 
 public enum UndoOverlayAction {

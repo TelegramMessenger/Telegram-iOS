@@ -1456,7 +1456,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
-            
             if case .format = self.inputMenu.state {
                 self.inputMenu.deactivate()
                 UIMenuController.shared.update()
@@ -1561,6 +1560,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         }
+        
+        let newText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: cleanText)
+        if let interfaceState = self.presentationInterfaceState, let editMessage = interfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+            if newText.count > inputTextMaxLength {
+                return false
+            }
+        }
+        
         if cleanText != text {
             let string = NSMutableAttributedString(attributedString: editableTextNode.attributedText ?? NSAttributedString())
             var textColor: UIColor = .black

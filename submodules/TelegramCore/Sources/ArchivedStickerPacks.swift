@@ -8,6 +8,15 @@ import SyncCore
 public enum ArchivedStickerPacksNamespace: Int32 {
     case stickers = 0
     case masks = 1
+    
+    var itemCollectionNamespace: ItemCollectionId.Namespace {
+        switch self {
+            case .stickers:
+                return Namespaces.ItemCollection.CloudStickerPacks
+            case .masks:
+                return Namespaces.ItemCollection.CloudMaskPacks
+        }
+    }
 }
 
 public final class ArchivedStickerPackItem {
@@ -31,7 +40,7 @@ public func archivedStickerPacks(account: Account, namespace: ArchivedStickerPac
         switch result {
             case let .archivedStickers(_, sets):
                 for set in sets {
-                    let (info, items) = parsePreviewStickerSet(set)
+                    let (info, items) = parsePreviewStickerSet(set, namespace: namespace.itemCollectionNamespace)
                     archivedItems.append(ArchivedStickerPackItem(info: info, topItems: items))
                 }
         }

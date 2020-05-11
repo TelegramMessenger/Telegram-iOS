@@ -140,13 +140,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         size.width = min(size.width , 270.0)
         
         self.validLayout = size
-        
-        var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
-        
-        let titleSize = self.titleNode.measure(CGSize(width: size.width - 32.0, height: size.height))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
-        origin.y += titleSize.height + 13.0
-        
+                
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
@@ -168,6 +162,9 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         
         let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
         
+        var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
+        let titleSize = self.titleNode.measure(CGSize(width: size.width - 32.0, height: size.height))
+        
         var contentWidth = max(titleSize.width, minActionsWidth)
         contentWidth = max(contentWidth, 234.0)
         
@@ -180,6 +177,9 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         }
         
         let resultWidth = contentWidth + insets.left + insets.right
+        
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((resultWidth - titleSize.width) / 2.0), y: origin.y), size: titleSize))
+        origin.y += titleSize.height + 13.0
         
         let starSize = CGSize(width: 42.0, height: 38.0)
         let starsOrigin = floorToScreenPixels((resultWidth - starSize.width * 5.0) / 2.0)

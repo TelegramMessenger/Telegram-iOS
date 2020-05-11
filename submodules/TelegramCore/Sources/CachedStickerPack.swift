@@ -60,7 +60,7 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                             if cached.hash != info.hash {
                                 return (current, true, previousHash)
                             } else {
-                                return (current, true, previousHash)
+                                return (current, false, previousHash)
                             }
                         } else {
                             return (.fetching, true, nil)
@@ -72,7 +72,7 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                             if cached.hash != info.hash {
                                 return (current, true, previousHash)
                             } else {
-                                return (current, true, previousHash)
+                                return (current, false, previousHash)
                             }
                         } else {
                             return (.fetching, true, nil)
@@ -86,7 +86,7 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                             if cached.hash != info.hash {
                                 return (current, true, previousHash)
                             } else {
-                                return (current, true, previousHash)
+                                return (current, false, previousHash)
                             }
                         } else {
                             return (.fetching, true, nil)
@@ -100,7 +100,7 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                             if cached.hash != info.hash {
                                 return (current, true, previousHash)
                             } else {
-                                return (current, true, previousHash)
+                                return (current, false, previousHash)
                             }
                         } else {
                             return (.fetching, true, nil)

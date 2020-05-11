@@ -364,7 +364,8 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             result.append(.HeaderEntry)
         }
         
-        if view.laterIndex == nil, case let .peers(_, _, additionalCategories) = mode {
+        if view.laterIndex == nil, case let .peers(_, _, additionalCategories,
+            _) = mode {
             var index = 0
             for category in additionalCategories.reversed(){
                 result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))

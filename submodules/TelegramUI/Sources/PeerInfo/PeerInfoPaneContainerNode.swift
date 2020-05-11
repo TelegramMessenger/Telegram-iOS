@@ -53,6 +53,7 @@ enum PeerInfoPaneKey {
     case links
     case voice
     case music
+    case gifs
     case groupsInCommon
     case members
 }
@@ -380,7 +381,7 @@ private final class PeerInfoPendingPane {
         let paneNode: PeerInfoPaneNode
         switch key {
         case .media:
-            paneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId)
+            paneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .photoOrVideo)
         case .files:
             paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .file)
         case .links:
@@ -389,6 +390,8 @@ private final class PeerInfoPendingPane {
             paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .voiceOrInstantVideo)
         case .music:
             paneNode = PeerInfoListPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .music)
+        case .gifs:
+            paneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .gifs)
         case .groupsInCommon:
             paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
         case .members:
@@ -838,6 +841,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_PaneLinks
             case .voice:
                 title = presentationData.strings.PeerInfo_PaneVoiceAndVideo
+            case .gifs:
+                title = presentationData.strings.PeerInfo_PaneGifs
             case .music:
                 title = presentationData.strings.PeerInfo_PaneAudio
             case .groupsInCommon:

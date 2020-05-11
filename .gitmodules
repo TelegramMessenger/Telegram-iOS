@@ -17,3 +17,9 @@
 [submodule "build-system/tulsi"]
 	path = build-system/tulsi
 	url = https://github.com/ali-fareed/tulsi.git
+[submodule "third-party/depot_tools"]
+	path = third-party/depot_tools
+	url = https://chromium.googlesource.com/chromium/tools/depot_tools.git
+[submodule "third-party/webrtc/webrtc-ios"]
+	path = third-party/webrtc/webrtc-ios
+url=../webrtc-ios.git

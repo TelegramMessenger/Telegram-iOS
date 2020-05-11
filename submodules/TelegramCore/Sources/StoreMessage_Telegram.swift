@@ -63,7 +63,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                 }
             }
             if isAnimated {
-                refinedTag = nil
+                refinedTag = .gif
             }
             if file.isAnimatedSticker {
                 refinedTag = nil

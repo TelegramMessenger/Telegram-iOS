@@ -38,6 +38,7 @@ import WalletUI
 import PhoneNumberFormat
 import AccountUtils
 import AuthTransferUI
+import Emoji
 
 private let avatarFont = avatarPlaceholderFont(size: 13.0)
 
@@ -789,21 +790,6 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
         //self.contextValue.set(.single(context))
     }
     
-    /*func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
-        guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
-            return
-        }
-        let controller = TabBarAccountSwitchController(sharedContext: self.sharedContext, accounts: (primary, other), canAddAccounts: other.count + 1 < maximumNumberOfAccounts, switchToAccount: { [weak self] id in
-            self?.switchToAccount?(id)
-        }, addAccount: { [weak self] in
-            self?.addAccount?()
-        }, sourceNodes: sourceNodes)
-        self.sharedContext.mainWindow?.present(controller, on: .root)
-    }
-    
-    func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate) {
-    }*/
-    
     override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
         guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
             return
@@ -834,7 +820,10 @@ private final class SettingsControllerImpl: ItemListController, SettingsControll
                 }
             } else {
                 let peerId = peer.id
-                let displayLetters = peer.displayLetters
+                var displayLetters = peer.displayLetters
+                if displayLetters.count == 2 && displayLetters[0].isSingleEmoji && displayLetters[1].isSingleEmoji {
+                    displayLetters = [displayLetters[0]]
+                }
                 iconSignal = Signal { subscriber in
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -1656,16 +1645,21 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
             } else {
                 return Signal { subscriber in
+                    var displayLetters = primary.1.displayLetters
+                    if displayLetters.count == 2 && displayLetters[0].isSingleEmoji && displayLetters[1].isSingleEmoji {
+                        displayLetters = [displayLetters[0]]
+                    }
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: inset, y: inset)
-                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, peerId: primary.1.id)
+                        
+                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
                     })?.withRenderingMode(.alwaysOriginal)
                     
                     let selectedImage = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: inset, y: inset)
-                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, peerId: primary.1.id)
+                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
                         context.translateBy(x: -inset, y: -inset)
                         context.setLineWidth(1.0)
                         context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)

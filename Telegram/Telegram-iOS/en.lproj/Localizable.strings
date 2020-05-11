@@ -5342,6 +5342,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.PaneAudio" = "Audio";
 "PeerInfo.PaneGroups" = "Groups";
 "PeerInfo.PaneMembers" = "Members";
+"PeerInfo.PaneGifs" = "GIFs";
 
 "PeerInfo.AddToContacts" = "Add to Contacts";
 
@@ -5497,3 +5498,9 @@ Any member of this group will be able to see messages in the channel.";
 
 "Channel.AboutItem" = "about";
 "PeerInfo.GroupAboutItem" = "about";
+
+"Widget.ApplicationStartRequired" = "Open the app to use the widget";
+
+"ChatList.Context.AddToFolder" = "Add to Folder";
+"ChatList.Context.Back" = "Back";
+"ChatList.AddedToFolderTooltip" = "%1$@ has been added to folder %2$@";
