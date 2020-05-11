@@ -2043,6 +2043,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                 return
             }
+            strongSelf.view.window?.endEditing(true)
             
             var canRemoveGlobally = false
             let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
