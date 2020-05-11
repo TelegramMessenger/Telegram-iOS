@@ -126,7 +126,7 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
         
         var effectiveActionLayout = TextAlertContentActionLayout.horizontal
         for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.measure(CGSize(width: maxActionWidth, height: actionButtonHeight))
+            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
             if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
                 effectiveActionLayout = .vertical
             }

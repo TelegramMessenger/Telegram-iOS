@@ -199,7 +199,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
         let actionTitleInsets: CGFloat = 8.0
         for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.measure(CGSize(width: maxActionWidth, height: actionsHeight))
+            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionsHeight))
             minActionsWidth += actionTitleSize.width + actionTitleInsets
         }
         
