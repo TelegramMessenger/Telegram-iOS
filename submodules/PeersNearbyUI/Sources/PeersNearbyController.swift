@@ -517,9 +517,12 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         |> deliverOnMainQueue).start(next: { available in
             if available {
                 let controller = PermissionController(context: context, splashScreen: true)
+                controller.navigationPresentation = .modalInLargeLayout
                 controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon")), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
                 controller.proceed = { result in
-                    replaceTopControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: nil, mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address), completion: nil))
+                    let controller = context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: nil, mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address), completion: nil)
+                    controller.navigationPresentation = .modalInLargeLayout
+                    replaceTopControllerImpl?(controller)
                 }
                 pushControllerImpl?(controller)
             } else {
