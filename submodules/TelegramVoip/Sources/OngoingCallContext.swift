@@ -383,6 +383,8 @@ public final class OngoingCallContext {
         return self.contextState.get()
     }
     
+    private var signalingDataDisposable: Disposable?
+    
     private let receptionPromise = Promise<Int32?>(nil)
     public var reception: Signal<Int32?, NoError> {
         return self.receptionPromise.get()
@@ -428,7 +430,9 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    let context = OngoingCallThreadLocalContextWebrtcCustom(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtcCustom(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtcCustom(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtcCustom(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtcCustom), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
+                    let context = OngoingCallThreadLocalContextWebrtcCustom(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtcCustom(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtcCustom(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtcCustom(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtcCustom), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                        callSessionManager?.sendSignalingData(internalId: internalId, data: data)
+                    })
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
@@ -499,6 +503,15 @@ public final class OngoingCallContext {
                 }
             }
         }))
+        
+        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)
+        |> deliverOn(self.queue)).start(next: { [weak self] data in
+            self?.withContext { context in
+                if let context = context as? OngoingCallThreadLocalContextWebrtcCustom {
+                    context.receiveSignaling(data)
+                }
+            }
+        })
     }
     
     deinit {

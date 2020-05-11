@@ -66,7 +66,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtcCustom) {
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtcCustom);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtcCustom> _Nonnull)queue proxy:(VoipProxyServerWebrtcCustom * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtcCustom)networkType dataSaving:(OngoingCallDataSavingWebrtcCustom)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtcCustom * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtcCustom *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtcCustom> _Nonnull)queue proxy:(VoipProxyServerWebrtcCustom * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtcCustom)networkType dataSaving:(OngoingCallDataSavingWebrtcCustom)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtcCustom * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtcCustom *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData;
 - (void)stop:(void (^_Nullable)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile))completion;
 
 - (bool)needRate;
@@ -74,6 +74,9 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtcCustom) {
 - (NSString * _Nullable)debugInfo;
 - (NSString * _Nullable)version;
 - (NSData * _Nonnull)getDerivedState;
+
+
+- (void)receiveSignalingData:(NSData * _Nonnull)data;
 
 - (void)setIsMuted:(bool)isMuted;
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtcCustom)networkType;

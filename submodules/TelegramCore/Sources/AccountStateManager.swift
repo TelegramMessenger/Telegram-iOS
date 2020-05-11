@@ -653,6 +653,11 @@ public final class AccountStateManager {
                                     strongSelf.callSessionManager.updateSession(call, completion: { _ in })
                                 }
                             }
+                            if !events.addedCallSignalingData.isEmpty {
+                                for (id, data) in events.addedCallSignalingData {
+                                    strongSelf.callSessionManager.addCallSignalingData(id: id, data: data)
+                                }
+                            }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)
                             }

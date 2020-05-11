@@ -5894,6 +5894,7 @@ public extension Api {
         case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
+        case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6567,6 +6568,13 @@ public extension Api {
                     }
                     
                     break
+                case .updatePhoneCallSignalingData(let phoneCallId, let data):
+                    if boxed {
+                        buffer.appendInt32(643940105)
+                    }
+                    serializeInt64(phoneCallId, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6732,6 +6740,8 @@ public extension Api {
                 return ("updateDialogFilterOrder", [("order", order)])
                 case .updateDialogFilters:
                 return ("updateDialogFilters", [])
+                case .updatePhoneCallSignalingData(let phoneCallId, let data):
+                return ("updatePhoneCallSignalingData", [("phoneCallId", phoneCallId), ("data", data)])
     }
     }
     
@@ -8062,6 +8072,20 @@ public extension Api {
         }
         public static func parse_updateDialogFilters(_ reader: BufferReader) -> Update? {
             return Api.Update.updateDialogFilters
+        }
+        public static func parse_updatePhoneCallSignalingData(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updatePhoneCallSignalingData(phoneCallId: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

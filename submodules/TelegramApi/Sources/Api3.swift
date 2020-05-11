@@ -6477,6 +6477,21 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func sendSignalingData(peer: Api.InputPhoneCall, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-8744061)
+                    peer.serialize(buffer, true)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.sendSignalingData", parameters: [("peer", peer), ("data", data)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
     }
 }
