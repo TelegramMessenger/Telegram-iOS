@@ -82,7 +82,7 @@ open class TabBarController: ViewController {
     }
     
     open override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
-        for controller in controllers {
+        for controller in self.controllers {
             controller.updateNavigationCustomData(data, progress: progress, transition: transition)
         }
     }

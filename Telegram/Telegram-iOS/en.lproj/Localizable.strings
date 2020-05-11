@@ -5506,3 +5506,5 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.AddedToFolderTooltip" = "%1$@ has been added to folder %2$@";
 
 "OwnershipTransfer.Transfer" = "Transfer";
+
+"TwoStepAuth.Disable" = "Disable";
