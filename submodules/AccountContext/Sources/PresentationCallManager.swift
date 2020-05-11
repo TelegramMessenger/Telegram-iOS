@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -45,6 +46,8 @@ public protocol PresentationCall: class {
     func setIsMuted(_ value: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
+    
+    func getVideoView(completion: @escaping (UIView?) -> Void)
 }
 
 public protocol PresentationCallManager: class {
