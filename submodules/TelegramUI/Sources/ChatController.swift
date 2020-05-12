@@ -8913,6 +8913,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }.updatedInputMode({ _ in ChatInputMode.media(mode: .other, expanded: nil) })
                     })
                 }
+            }),
+            KeyShortcut(input: "F", modifiers: [.command], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.beginMessageSearch("")
+                }
             })
         ]
         

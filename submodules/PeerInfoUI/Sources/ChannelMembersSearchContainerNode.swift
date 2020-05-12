@@ -148,7 +148,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
             case let .participant(participant, label, revealActions, revealed, enabled):
                 let status: ContactsPeerItemStatus
                 if let label = label {
-                    status = .custom(label)
+                    status = .custom(string: label, multiline: false)
                 } else if let presence = participant.presences[participant.peer.id], self.addIcon {
                     status = .presence(presence, dateTimeFormat)
                 } else {

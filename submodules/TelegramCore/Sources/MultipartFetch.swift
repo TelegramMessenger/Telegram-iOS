@@ -271,7 +271,17 @@ private enum MultipartFetchSource {
     case master(location: MultipartFetchMasterLocation, download: DownloadWrapper)
     case cdn(masterDatacenterId: Int32, fileToken: Data, key: Data, iv: Data, download: DownloadWrapper, masterDownload: DownloadWrapper, hashSource: MultipartCdnHashSource)
     
-    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, resourceReference: MediaResourceReference?, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
+    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, resourceReference: FetchResourceReference, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
+        var resourceReferenceValue: MediaResourceReference?
+        switch resourceReference {
+        case .forceRevalidate:
+            return .fail(.revalidateMediaReference)
+        case .empty:
+            resourceReferenceValue = nil
+        case let .reference(value):
+            resourceReferenceValue = value
+        }
+        
         switch self {
             case .none:
                 return .never()
@@ -281,7 +291,7 @@ private enum MultipartFetchSource {
                 
                 switch location {
                     case let .generic(_, location):
-                        switch location(resource, resourceReference, fileReference) {
+                        switch location(resource, resourceReferenceValue, fileReference) {
                             case .none:
                                 return .fail(.revalidateMediaReference)
                             case .revalidate:
@@ -382,13 +392,19 @@ private enum MultipartFetchSource {
     }
 }
 
+private enum FetchResourceReference {
+    case empty
+    case forceRevalidate
+    case reference(MediaResourceReference)
+}
+
 private final class MultipartFetchManager {
     let parallelParts: Int
     let defaultPartSize = 128 * 1024
     var partAlignment = 4 * 1024
     
     var resource: TelegramMediaResource
-    var resourceReference: MediaResourceReference?
+    var resourceReference: FetchResourceReference
     var fileReference: Data?
     let parameters: MediaResourceFetchParameters?
     let consumerId: Int64
@@ -441,10 +457,30 @@ private final class MultipartFetchManager {
         if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
             self.fileReference = info.reference.apiFileReference
             self.continueInBackground = info.continueInBackground
-            self.resourceReference = info.reference
+            self.resourceReference = .reference(info.reference)
+            switch info.reference {
+            case let .media(media, _):
+                if let file = media.media as? TelegramMediaFile {
+                    for attribute in file.attributes {
+                        switch attribute {
+                        case let .Sticker(_, packReference, _):
+                            switch packReference {
+                            case .name:
+                                self.resourceReference = .forceRevalidate
+                            default:
+                                break
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+            default:
+                break
+            }
         } else {
             self.continueInBackground = false
-            self.resourceReference = nil
+            self.resourceReference = .empty
         }
         
         self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
@@ -611,7 +647,6 @@ private final class MultipartFetchManager {
                 guard let strongSelf = self else {
                     return
                 }
-                var data = data
                 if data.count < downloadRange.count {
                     strongSelf.completeSize = downloadRange.lowerBound + data.count
                 }
@@ -639,7 +674,11 @@ private final class MultipartFetchManager {
                                             strongSelf.fileReference = reference
                                         }
                                         strongSelf.resource = validationResult.updatedResource
-                                        strongSelf.resourceReference = validationResult.updatedReference
+                                        if let reference = validationResult.updatedReference {
+                                            strongSelf.resourceReference = .reference(reference)
+                                        } else {
+                                            strongSelf.resourceReference = .empty
+                                        }
                                         strongSelf.checkState()
                                     }
                                 }, error: { _ in

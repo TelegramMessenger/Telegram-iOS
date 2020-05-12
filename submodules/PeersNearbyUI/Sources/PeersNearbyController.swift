@@ -91,10 +91,10 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
     
     case groupsHeader(PresentationTheme, String, Bool)
     case createGroup(PresentationTheme, String, Double?, Double?, String?)
-    case group(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry)
+    case group(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry, Bool)
     
     case channelsHeader(PresentationTheme, String)
-    case channel(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry)
+    case channel(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -127,11 +127,11 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 return 1001
             case .createGroup:
                 return 1002
-            case let .group(index, _, _, _, _, _):
+            case let .group(index, _, _, _, _, _, _):
                 return 1003 + index
             case .channelsHeader:
                 return 2000
-            case let .channel(index, _, _, _, _, _):
+            case let .channel(index, _, _, _, _, _, _):
                 return 2001 + index
         }
     }
@@ -187,8 +187,8 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .group(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsDisplayOrder, lhsPeer):
-                if case let .group(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsDisplayOrder, rhsPeer) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayOrder == rhsDisplayOrder, arePeersNearbyEqual(lhsPeer, rhsPeer) {
+            case let .group(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsDisplayOrder, lhsPeer, lhsHighlighted):
+                if case let .group(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsDisplayOrder, rhsPeer, rhsHighlighted) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayOrder == rhsDisplayOrder, arePeersNearbyEqual(lhsPeer, rhsPeer), lhsHighlighted == rhsHighlighted {
                     return true
                 } else {
                     return false
@@ -199,8 +199,8 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .channel(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsDisplayOrder, lhsPeer):
-                if case let .channel(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsDisplayOrder, rhsPeer) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayOrder == rhsDisplayOrder, arePeersNearbyEqual(lhsPeer, rhsPeer) {
+            case let .channel(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsDisplayOrder, lhsPeer, lhsHighlighted):
+                if case let .channel(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsDisplayOrder, rhsPeer, rhsHighlighted) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayOrder == rhsDisplayOrder, arePeersNearbyEqual(lhsPeer, rhsPeer), lhsHighlighted == rhsHighlighted {
                     return true
                 } else {
                     return false
@@ -228,7 +228,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         switch self {
             case let .header(theme, text):
                 return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .usersHeader(theme, text, loading):
+            case let .usersHeader(_, text, loading):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .empty(theme, text):
                 return ItemListPlaceholderItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
@@ -236,7 +236,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: stop ? PresentationResourcesItemList.makeInvisibleIcon(theme) : PresentationResourcesItemList.makeVisibleIcon(theme), title: title, alwaysPlain: false, sectionId: self.section, color: stop ? .destructive : .accent, editing: false, action: {
                     arguments.toggleVisibility(!stop)
                 })
-            case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
+            case let .user(_, _, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text = strings.Map_DistanceAway(stringForDistance(peer.distance)).0
                 let isSelfPeer = peer.peer.0.id == arguments.context.account.peerId
                 if isSelfPeer {
@@ -251,7 +251,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandUsers()
                 })
-            case let .groupsHeader(theme, text, loading):
+            case let .groupsHeader(_, text, loading):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .createGroup(theme, title, latitude, longitude, address):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.createGroupIcon(theme), title: title, alwaysPlain: false, sectionId: self.section, editing: false, action: {
@@ -259,28 +259,28 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                         arguments.openCreateGroup(latitude, longitude, address)
                     }
                 })
-            case let .group(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
+            case let .group(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
                     text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)")
                 } else {
                     text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: { node, gesture in
                     arguments.contextAction(peer.peer.0, node, gesture)
                 }, hasTopGroupInset: false, tag: nil)
-            case let .channelsHeader(theme, text):
+            case let .channelsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .channel(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
+            case let .channel(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
                     text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))")
                 } else {
                     text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: { node, gesture in
                     arguments.contextAction(peer.peer.0, node, gesture)
@@ -315,7 +315,7 @@ private struct PeersNearbyData: Equatable {
     }
 }
 
-private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNearbyState, presentationData: PresentationData, displayLoading: Bool, expanded: Bool) -> [PeersNearbyEntry] {
+private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNearbyState, presentationData: PresentationData, displayLoading: Bool, expanded: Bool, chatLocation: ChatLocation?) -> [PeersNearbyEntry] {
     var entries: [PeersNearbyEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.PeopleNearby_DiscoverDescription))
@@ -344,12 +344,17 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNe
         }
     }
     
+    var highlightedPeerId: PeerId?
+    if let chatLocation = chatLocation, case let .peer(peerId) = chatLocation {
+        highlightedPeerId = peerId
+    }
+    
     entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased(), displayLoading && data == nil))
     entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup, data?.latitude, data?.longitude, data?.address))
     if let data = data, !data.groups.isEmpty {
         var i: Int32 = 0
         for group in data.groups {
-            entries.append(.group(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, group))
+            entries.append(.group(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, group, highlightedPeerId == group.peer.0.id))
             i += 1
         }
     }
@@ -357,7 +362,7 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNe
     if let data = data, !data.channels.isEmpty {
         var i: Int32 = 0
         for channel in data.channels {
-            entries.append(.channel(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, channel))
+            entries.append(.channel(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, channel, highlightedPeerId == channel.peer.0.id))
             i += 1
         }
     }
@@ -445,10 +450,19 @@ private func peerNearbyContextMenuItems(context: AccountContext, peerId: PeerId,
     }
 }
 
+private class PeersNearbyControllerImpl: ItemListController {
+    fileprivate let chatLocation = Promise<ChatLocation?>(nil)
+    
+    public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.isNodeLoaded {
+            self.chatLocation.set(.single(data as? ChatLocation))
+        }
+    }
+}
+
 
 public func peersNearbyController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
-    var replaceAllButRootControllerImpl: ((ViewController, Bool) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
@@ -462,6 +476,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     let dataPromise = Promise<PeersNearbyData?>(nil)
     let addressPromise = Promise<String?>(nil)
     let expandedPromise = ValuePromise<Bool>(false)
+    
+    let chatLocationPromise = Promise<ChatLocation?>(nil)
     
     let coordinatePromise = Promise<CLLocationCoordinate2D?>(nil)
     coordinatePromise.set(.single(nil) |> then(currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)))
@@ -517,9 +533,12 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         |> deliverOnMainQueue).start(next: { available in
             if available {
                 let controller = PermissionController(context: context, splashScreen: true)
+                controller.navigationPresentation = .modalInLargeLayout
                 controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon")), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
                 controller.proceed = { result in
-                    replaceTopControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: nil, mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address), completion: nil))
+                    let controller = context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: nil, mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address), completion: nil)
+                    controller.navigationPresentation = .modalInLargeLayout
+                    replaceTopControllerImpl?(controller)
                 }
                 pushControllerImpl?(controller)
             } else {
@@ -607,9 +626,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         |> delay(1.0, queue: Queue.mainQueue())
     )
         
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading, expandedPromise.get(), context.account.postbox.preferencesView(keys: [PreferencesKeys.peersNearby]))
+    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), chatLocationPromise.get(), displayLoading, expandedPromise.get(), context.account.postbox.preferencesView(keys: [PreferencesKeys.peersNearby]))
     |> deliverOnMainQueue
-    |> map { presentationData, data, displayLoading, expanded, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, chatLocation, displayLoading, expanded, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         let state = view.values[PreferencesKeys.peersNearby] as? PeersNearbyState ?? .default
         
@@ -622,7 +641,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PeopleNearby_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peersNearbyControllerEntries(data: data, state: state, presentationData: presentationData, displayLoading: displayLoading, expanded: expanded), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peersNearbyControllerEntries(data: data, state: state, presentationData: presentationData, displayLoading: displayLoading, expanded: expanded, chatLocation: chatLocation), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade)
         
         return (controllerState, (listState, arguments))
     }
@@ -630,13 +649,14 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = PeersNearbyControllerImpl(context: context, state: signal)
+    chatLocationPromise.set(controller.chatLocation.get())
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToProfileImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .nearbyPeer, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
-            (navigationController as? NavigationController)?.pushViewController(controller)
+            navigationController.pushViewController(controller)
         }
     }
     navigateToChatImpl = { [weak controller] peer in
@@ -647,11 +667,6 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c, animated: true)
-        }
-    }
-    replaceAllButRootControllerImpl = { [weak controller] c, a in
-        if let controller = controller {
-            (controller.navigationController as? NavigationController)?.replaceAllButRootController(c, animated: a)
         }
     }
     replaceTopControllerImpl = { [weak controller] c in

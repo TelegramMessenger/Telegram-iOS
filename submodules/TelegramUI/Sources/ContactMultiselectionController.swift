@@ -125,7 +125,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         })
         
         switch self.mode {
-        case let .chatSelection(_, selectedChats, additionalCategories):
+        case let .chatSelection(_, selectedChats, additionalCategories, _):
             let _ = (self.context.account.postbox.transaction { transaction -> [Peer] in
                 return selectedChats.compactMap(transaction.getPeer)
             }
@@ -425,7 +425,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 break
             case let .chats(chatsNode):
                 var categoryToken: EditableTokenListToken?
-                if case let .chatSelection(_, _, additionalCategories) = strongSelf.mode {
+                if case let .chatSelection(_, _, additionalCategories, _) = strongSelf.mode {
                     if let additionalCategories = additionalCategories {
                         for i in 0 ..< additionalCategories.categories.count {
                             if additionalCategories.categories[i].id == id {

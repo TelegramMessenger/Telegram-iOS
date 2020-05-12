@@ -140,6 +140,21 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
         }
     }
     
+    public mutating func addPeer(_ peerId: PeerId) -> Bool {
+        if self.pinnedPeers.contains(peerId) {
+            return false
+        }
+        if self.peers.contains(peerId) {
+            return false
+        }
+        
+        if self.peers.count + self.pinnedPeers.count >= 100 {
+            return false
+        }
+        self.peers.insert(peerId, at: 0)
+        return true
+    }
+    
     public mutating func setPeers(_ peers: [PeerId]) {
         self.peers = peers
         self.pinnedPeers = self.pinnedPeers.filter { peers.contains($0) }
@@ -175,6 +190,18 @@ public struct ChatListFilterData: Equatable, Hashable {
         self.excludeArchived = excludeArchived
         self.includePeers = includePeers
         self.excludePeers = excludePeers
+    }
+    
+    public mutating func addIncludePeer(peerId: PeerId) -> Bool {
+        if self.includePeers.peers.contains(peerId) || self.includePeers.pinnedPeers.contains(peerId) {
+            return false
+        }
+        if self.includePeers.addPeer(peerId) {
+            self.excludePeers.removeAll(where: { $0 == peerId })
+            return true
+        } else {
+            return false
+        }
     }
 }
 

@@ -1111,6 +1111,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
                     let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    self.actionsContainerNode.updateSize(containerSize: actionsSize, contentSize: actionsSize)
                     let contentSize = originalProjectedContentViewFrame.1.size
                     self.contentContainerNode.updateLayout(size: contentSize, scaledSize: contentSize, transition: transition)
                     
@@ -1237,11 +1238,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
                     var contentUnscaledSize: CGSize
                     if case .compact = layout.metrics.widthClass {
+                        self.actionsContainerNode.updateSize(containerSize: actionsSize, contentSize: actionsSize)
+                        
                         let proposedContentHeight: CGFloat
                         if layout.size.width < layout.size.height {
                             proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
                         } else {
                             proposedContentHeight = layout.size.height - topEdge - topEdge
+                            
+                            let maxActionsHeight = layout.size.height - topEdge - topEdge
+                            self.actionsContainerNode.updateSize(containerSize: CGSize(width: actionsSize.width, height: min(actionsSize.height, maxActionsHeight)), contentSize: actionsSize)
                         }
                         contentUnscaledSize = CGSize(width: constrainedWidth, height: max(100.0, proposedContentHeight))
                         
@@ -1249,6 +1255,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             contentUnscaledSize = preferredSize
                         }
                     } else {
+                        let maxActionsHeight = layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - actionsSize.height
+                        self.actionsContainerNode.updateSize(containerSize: CGSize(width: actionsSize.width, height: min(actionsSize.height, maxActionsHeight)), contentSize: actionsSize)
+                        
                         let proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
                         contentUnscaledSize = CGSize(width: min(layout.size.width, 340.0), height: min(568.0, proposedContentHeight))
                         

@@ -179,7 +179,7 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
 public func stringForMediaKind(_ kind: MessageContentKind, strings: PresentationStrings) -> (String, Bool) {
     switch kind {
     case let .text(text):
-        return (text, false)
+        return (foldLineBreaks(text), false)
     case .image:
         return (strings.Message_Photo, true)
     case .video:

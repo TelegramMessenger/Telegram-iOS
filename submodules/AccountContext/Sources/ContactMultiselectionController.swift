@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import Postbox
+import TelegramCore
 
 public struct ChatListNodeAdditionalCategory {
     public var id: Int
@@ -30,7 +31,7 @@ public enum ContactMultiselectionControllerMode {
     case groupCreation
     case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation
-    case chatSelection(title: String, selectedChats: Set<PeerId>, additionalCategories: ContactMultiselectionControllerAdditionalCategories?)
+    case chatSelection(title: String, selectedChats: Set<PeerId>, additionalCategories: ContactMultiselectionControllerAdditionalCategories?, chatListFilters: [ChatListFilter]?)
 }
 
 public enum ContactListFilter {

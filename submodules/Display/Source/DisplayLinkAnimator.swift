@@ -71,6 +71,22 @@ public final class ConstantDisplayLinkAnimator {
     private let update: () -> Void
     private var completed = false
     
+    public var frameInterval: Int = 1 {
+        didSet {
+            if #available(iOS 10.0, *) {
+                let preferredFramesPerSecond: Int
+                if self.frameInterval == 1 {
+                    preferredFramesPerSecond = 60
+                } else {
+                    preferredFramesPerSecond = 30
+                }
+                self.displayLink.preferredFramesPerSecond = preferredFramesPerSecond
+            } else {
+                self.displayLink.frameInterval = self.frameInterval
+            }
+        }
+    }
+    
     public var isPaused: Bool = true {
         didSet {
             if self.isPaused != oldValue {

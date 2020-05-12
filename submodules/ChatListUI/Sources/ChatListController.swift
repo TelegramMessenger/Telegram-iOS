@@ -584,7 +584,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         scrollToEndIfExists = true
                     }
                     
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         if let promoInfo = promoInfo {
                             switch promoInfo {
@@ -974,8 +974,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                     var found = false
                                     for filter in presetList {
                                         if filter.id == id {
-                                            strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter))
-                                            f(.dismissWithoutContent)
+                                            let _ = (currentChatListFilters(postbox: strongSelf.context.account.postbox)
+                                            |> deliverOnMainQueue).start(next: { filters in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters))
+                                                f(.dismissWithoutContent)
+                                            })
                                             found = true
                                             break
                                         }
@@ -2037,6 +2043,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                 return
             }
+            strongSelf.view.window?.endEditing(true)
             
             var canRemoveGlobally = false
             let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }

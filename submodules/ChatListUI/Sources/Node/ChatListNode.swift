@@ -18,7 +18,7 @@ import ChatListSearchItemHeader
 
 public enum ChatListNodeMode {
     case chatList
-    case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory])
+    case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?)
 }
 
 struct ChatListNodeListViewTransition {
@@ -180,7 +180,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 switch mode {
                     case .chatList:
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, filterData: filterData, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, presence: presence, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities, promoInfo: promoInfo, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: hasFailedMessages), editing: editing, hasActiveRevealControls: hasActiveRevealControls, selected: selected, header: nil, enableContextActions: true, hiddenOffset: false, interaction: nodeInteraction), directionHint: entry.directionHint)
-                    case let .peers(filter, isSelecting, _):
+                    case let .peers(filter, isSelecting, _, filters):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: Peer?
                         if let peer = peer.peers[peer.peerId] {
@@ -247,7 +247,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var header: ChatListSearchItemHeader?
                         switch mode {
-                        case let .peers(_, _, additionalCategories):
+                        case let .peers(_, _, additionalCategories, _):
                             if !additionalCategories.isEmpty {
                                 header = ChatListSearchItemHeader(type: .chats, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                             }
@@ -257,8 +257,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var status: ContactsPeerItemStatus = .none
                         if isSelecting, let itemPeer = itemPeer {
-                            if let string = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isContact: isContact) {
-                                status = .custom(string)
+                            let tagSummaryCount = summaryInfo.tagSummaryCount ?? 0
+                            let actionsSummaryCount = summaryInfo.actionsSummaryCount ?? 0
+                            let totalMentionCount = tagSummaryCount - actionsSummaryCount
+                            if let (string, multiline) = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isMuted: isRemovedFromTotalUnreadCount, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, hasUnseenMentions: totalMentionCount > 0, chatListFilters: filters) {
+                                status = .custom(string: string, multiline: multiline)
                             } else {
                                 status = .none
                             }
@@ -291,7 +294,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 switch mode {
                     case .chatList:
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, context: context, peerGroupId: peerGroupId, filterData: filterData, index: index, content: .peer(message: message, peer: peer, combinedReadState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, presence: presence, summaryInfo: summaryInfo, embeddedState: embeddedState, inputActivities: inputActivities, promoInfo: promoInfo, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: hasFailedMessages), editing: editing, hasActiveRevealControls: hasActiveRevealControls, selected: selected, header: nil, enableContextActions: true, hiddenOffset: false, interaction: nodeInteraction), directionHint: entry.directionHint)
-                    case let .peers(filter, isSelecting, _):
+                    case let .peers(filter, isSelecting, _, filters):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: Peer?
                         if let peer = peer.peers[peer.peerId] {
@@ -314,7 +317,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                         var header: ChatListSearchItemHeader?
                         switch mode {
-                        case let .peers(_, _, additionalCategories):
+                        case let .peers(_, _, additionalCategories, _):
                             if !additionalCategories.isEmpty {
                                 header = ChatListSearchItemHeader(type: .chats, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                             }
@@ -324,8 +327,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var status: ContactsPeerItemStatus = .none
                         if isSelecting, let itemPeer = itemPeer {
-                            if let string = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isContact: isContact) {
-                                status = .custom(string)
+                            let tagSummaryCount = summaryInfo.tagSummaryCount ?? 0
+                            let actionsSummaryCount = summaryInfo.actionsSummaryCount ?? 0
+                            let totalMentionCount = tagSummaryCount - actionsSummaryCount
+                            if let (string, multiline) = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isMuted: isRemovedFromTotalUnreadCount, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, hasUnseenMentions: totalMentionCount > 0, chatListFilters: filters) {
+                                status = .custom(string: string, multiline: multiline)
                             } else {
                                 status = .none
                             }
@@ -514,7 +520,7 @@ public final class ChatListNode: ListView {
         self.mode = mode
         
         var isSelecting = false
-        if case .peers(_, true, _) = mode {
+        if case .peers(_, true, _, _) = mode {
             isSelecting = true
         }
         
@@ -674,7 +680,7 @@ public final class ChatListNode: ListView {
         let currentRemovingPeerId = self.currentRemovingPeerId
         
         let savedMessagesPeer: Signal<Peer?, NoError>
-        if case let .peers(filter, _, _) = mode, filter.contains(.onlyWriteable) {
+        if case let .peers(filter, _, _, _) = mode, filter.contains(.onlyWriteable) {
             savedMessagesPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
             |> map(Optional.init)
         } else {
@@ -727,7 +733,7 @@ public final class ChatListNode: ListView {
                     switch mode {
                         case .chatList:
                             return true
-                        case let .peers(filter, _, _):
+                        case let .peers(filter, _, _, _):
                             guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
                             guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
                             guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
@@ -1807,32 +1813,52 @@ public final class ChatListNode: ListView {
     }
 }
 
-private func statusStringForPeerType(accountPeerId: PeerId, strings: PresentationStrings, peer: Peer, isContact: Bool) -> String? {
+private func statusStringForPeerType(accountPeerId: PeerId, strings: PresentationStrings, peer: Peer, isMuted: Bool, isUnread: Bool, isContact: Bool, hasUnseenMentions: Bool, chatListFilters: [ChatListFilter]?) -> (String, Bool)? {
     if accountPeerId == peer.id {
         return nil
     }
+    
+    if let chatListFilters = chatListFilters {
+        var result = ""
+        for filter in chatListFilters {
+            let predicate = chatListFilterPredicate(filter: filter.data)
+            if predicate.includes(peer: peer, groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
+                if !result.isEmpty {
+                    result.append(", ")
+                }
+                result.append(filter.title)
+            }
+        }
+        
+        if result.isEmpty {
+            return nil
+        } else {
+            return (result, true)
+        }
+    }
+    
     if let user = peer as? TelegramUser {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
-            return strings.ChatList_PeerTypeBot
+            return (strings.ChatList_PeerTypeBot, false)
         } else if isContact {
-            return strings.ChatList_PeerTypeContact
+            return (strings.ChatList_PeerTypeContact, false)
         } else {
-            return strings.ChatList_PeerTypeNonContact
+            return (strings.ChatList_PeerTypeNonContact, false)
         }
     } else if peer is TelegramSecretChat {
         if isContact {
-            return strings.ChatList_PeerTypeContact
+            return (strings.ChatList_PeerTypeContact, false)
         } else {
-            return strings.ChatList_PeerTypeNonContact
+            return (strings.ChatList_PeerTypeNonContact, false)
         }
     } else if peer is TelegramGroup {
-        return strings.ChatList_PeerTypeGroup
+        return (strings.ChatList_PeerTypeGroup, false)
     } else if let channel = peer as? TelegramChannel {
         if case .group = channel.info {
-            return strings.ChatList_PeerTypeGroup
+            return (strings.ChatList_PeerTypeGroup, false)
         } else {
-            return strings.ChatList_PeerTypeChannel
+            return (strings.ChatList_PeerTypeChannel, false)
         }
     }
-    return strings.ChatList_PeerTypeNonContact
+    return (strings.ChatList_PeerTypeNonContact, false)
 }

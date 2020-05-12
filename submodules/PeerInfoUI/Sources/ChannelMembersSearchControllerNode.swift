@@ -65,7 +65,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             case let .peer(_, participant, editing, label, enabled):
                 let status: ContactsPeerItemStatus
                 if let label = label {
-                    status = .custom(label)
+                    status = .custom(string: label, multiline: false)
                 } else {
                     status = .none
                 }
