@@ -25,6 +25,8 @@
 #import "components/renderer/metal/RTCMTLVideoView.h"
 #import "components/renderer/opengl/RTCEAGLVideoView.h"
 
+#import "RtcConnection.h"
+
 static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 static void voipLog(NSString* format, ...) {
@@ -37,82 +39,6 @@ static void voipLog(NSString* format, ...) {
         InternalVoipLoggingFunction(string);
     }
 }
-
-@interface NativePeerConnectionDelegate : NSObject <RTCPeerConnectionDelegate> {
-    id<OngoingCallThreadLocalContextQueueWebrtcCustom> _queue;
-    void (^_didGenerateIceCandidate)(RTCIceCandidate *);
-    void (^_didChangeIceState)(OngoingCallStateWebrtcCustom);
-}
-
-@end
-
-@implementation NativePeerConnectionDelegate
-
-- (instancetype)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtcCustom>)queue didGenerateIceCandidate:(void (^)(RTCIceCandidate *))didGenerateIceCandidate didChangeIceState:(void (^)(OngoingCallStateWebrtcCustom))didChangeIceState {
-    self = [super init];
-    if (self != nil) {
-        _queue = queue;
-        _didGenerateIceCandidate = [didGenerateIceCandidate copy];
-        _didChangeIceState = [didChangeIceState copy];
-    }
-    return self;
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didChangeSignalingState:(RTCSignalingState)stateChanged {
-    switch (stateChanged) {
-        case RTCSignalingStateStable:
-            _didChangeIceState(OngoingCallStateConnected);
-            break;
-        case RTCSignalingStateHaveLocalOffer:
-            _didChangeIceState(OngoingCallStateInitializing);
-            break;
-        case RTCSignalingStateHaveLocalPrAnswer:
-            _didChangeIceState(OngoingCallStateInitializing);
-            break;
-        case RTCSignalingStateHaveRemoteOffer:
-            _didChangeIceState(OngoingCallStateInitializing);
-            break;
-        case RTCSignalingStateHaveRemotePrAnswer:
-            _didChangeIceState(OngoingCallStateInitializing);
-            break;
-        default:
-            break;
-    }
-    voipLog(@"didChangeSignalingState: %d", stateChanged);
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didAddStream:(RTCMediaStream *)stream {
-    voipLog(@"Added stream: %@", stream.streamId);
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didRemoveStream:(RTCMediaStream *)stream {
-}
-
-- (void)peerConnectionShouldNegotiate:(RTCPeerConnection *)peerConnection {
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didChangeIceConnectionState:(RTCIceConnectionState)newState {
-    voipLog(@"IceConnectionState: %d", newState);
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didChangeIceGatheringState:(RTCIceGatheringState)newState {
-    voipLog(@"didChangeIceGatheringState: %d", newState);
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didGenerateIceCandidate:(RTCIceCandidate *)candidate {
-    [_queue dispatch:^{
-        _didGenerateIceCandidate(candidate);
-    }];
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection didRemoveIceCandidates:(NSArray<RTCIceCandidate *> *)candidates {
-}
-
-- (void)peerConnection:(RTCPeerConnection *)peerConnection
-    didOpenDataChannel:(RTCDataChannel *)dataChannel {
-}
-
-@end
 
 @implementation OngoingCallConnectionDescriptionWebrtcCustom
 
@@ -136,8 +62,6 @@ static void voipLog(NSString* format, ...) {
     
     bool _isOutgoing;
     void (^_sendSignalingData)(NSData * _Nonnull);
-    
-    NativePeerConnectionDelegate *_peerConnectionDelegate;
 
     OngoingCallNetworkTypeWebrtcCustom _networkType;
     NSTimeInterval _callReceiveTimeout;
@@ -148,13 +72,11 @@ static void voipLog(NSString* format, ...) {
     OngoingCallStateWebrtcCustom _state;
     int32_t _signalBars;
     
-    RTCPeerConnectionFactory *_peerConnectionFactory;
+    RtcConnection *_connection;
     
-    RTCPeerConnection *_peerConnection;
-    
-    RTCVideoCapturer *_videoCapturer;
-    RTCVideoTrack *_localVideoTrack;
-    RTCVideoTrack *_remoteVideoTrack;
+    //RTCVideoCapturer *_videoCapturer;
+    //RTCVideoTrack *_localVideoTrack;
+    //RTCVideoTrack *_remoteVideoTrack;
     
     bool _receivedRemoteDescription;
     
@@ -222,54 +144,31 @@ static void voipLog(NSString* format, ...) {
         [RTCAudioSession sharedInstance].useManualAudio = true;
         [RTCAudioSession sharedInstance].isAudioEnabled = true;
         
-        RTCDefaultVideoDecoderFactory *decoderFactory = [[RTCDefaultVideoDecoderFactory alloc] init];
-        RTCDefaultVideoEncoderFactory *encoderFactory = [[RTCDefaultVideoEncoderFactory alloc] init];
-        
-        _peerConnectionFactory = [[RTCPeerConnectionFactory alloc] initWithEncoderFactory:encoderFactory decoderFactory:decoderFactory];
-        
-        NSArray<NSString *> *iceServers = @[
-            @"stun:stun.l.google.com:19302"
-        ];
-        
-        RTCConfiguration *config = [[RTCConfiguration alloc] init];
-        config.iceServers = @[
-            [[RTCIceServer alloc] initWithURLStrings:iceServers]
-        ];
-        config.sdpSemantics = RTCSdpSemanticsUnifiedPlan;
-        config.continualGatheringPolicy = RTCContinualGatheringPolicyGatherContinually;
-        
-        RTCMediaConstraints *constraints = [[RTCMediaConstraints alloc] initWithMandatoryConstraints:nil optionalConstraints:@{ @"DtlsSrtpKeyAgreement": kRTCMediaConstraintsValueTrue }];
-        
         __weak OngoingCallThreadLocalContextWebrtcCustom *weakSelf = self;
         
-        _peerConnectionDelegate = [[NativePeerConnectionDelegate alloc] initWithQueue:_queue didGenerateIceCandidate:^(RTCIceCandidate *iceCandidate) {
-            __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
-            if (strongSelf == nil) {
-                return;
-            }
-            [strongSelf sendCandidate:iceCandidate];
-        } didChangeIceState: ^(OngoingCallStateWebrtcCustom state) {
-            __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
-            if (strongSelf == nil) {
-                return;
-            }
-            if (strongSelf.stateChanged) {
-                strongSelf.stateChanged(state);
-            }
+        _connection = [[RtcConnection alloc] initWithDiscoveredIceCandidate:^(NSString *sdp, int mLineIndex, NSString *sdpMid) {
+            [queue dispatch:^{
+                __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
+                if (strongSelf == nil) {
+                    return;
+                }
+                [strongSelf sendCandidateWithSdp:sdp mLineIndex:mLineIndex sdpMid:sdpMid];
+            }];
+        } connectionStateChanged:^(bool isConnected) {
+            [queue dispatch:^{
+                __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
+                if (strongSelf == nil) {
+                    return;
+                }
+                if (strongSelf.stateChanged) {
+                    strongSelf.stateChanged(isConnected ? OngoingCallStateConnected : OngoingCallStateInitializing);
+                }
+            }];
         }];
         
-        _peerConnection = [_peerConnectionFactory peerConnectionWithConfiguration:config  constraints:constraints delegate:_peerConnectionDelegate];
+        //RTCMediaConstraints *constraints = [[RTCMediaConstraints alloc] initWithMandatoryConstraints:nil optionalConstraints:@{ @"DtlsSrtpKeyAgreement": kRTCMediaConstraintsValueTrue }];
         
-        NSString *streamId = @"stream";
-        
-        RTCMediaConstraints *audioConstrains = [[RTCMediaConstraints alloc] initWithMandatoryConstraints:nil optionalConstraints:nil];
-        
-        RTCAudioSource *audioSource = [_peerConnectionFactory audioSourceWithConstraints:audioConstrains];
-        RTCAudioTrack * _Nonnull audioTrack = [_peerConnectionFactory audioTrackWithSource:audioSource trackId:@"audio0"];
-        
-        [_peerConnection addTrack:audioTrack streamIds:@[streamId]];
-        
-        RTCVideoSource *videoSource = [_peerConnectionFactory videoSource];
+        /*RTCVideoSource *videoSource = [_peerConnectionFactory videoSource];
         
         #if TARGET_OS_SIMULATOR
         _videoCapturer = [[RTCFileVideoCapturer alloc] initWithDelegate:videoSource];
@@ -278,31 +177,25 @@ static void voipLog(NSString* format, ...) {
         #endif
         
         _localVideoTrack = [_peerConnectionFactory videoTrackWithSource:videoSource trackId:@"video0"];
-        [_peerConnection addTrack:_localVideoTrack streamIds:@[streamId]];
+        [_peerConnection addTrack:_localVideoTrack streamIds:@[streamId]];*/
         
         if (isOutgoing) {
             id<OngoingCallThreadLocalContextQueueWebrtcCustom> queue = _queue;
-            NSDictionary *mediaConstraints = @{
-                kRTCMediaConstraintsOfferToReceiveAudio: kRTCMediaConstraintsValueTrue,
-                kRTCMediaConstraintsOfferToReceiveVideo: kRTCMediaConstraintsValueTrue
-            };
             
-            RTCMediaConstraints *connectionConstraints = [[RTCMediaConstraints alloc] initWithMandatoryConstraints:mediaConstraints optionalConstraints:nil];
-            __weak OngoingCallThreadLocalContextWebrtcCustom *weakSelf = self;
-            [_peerConnection offerForConstraints:connectionConstraints completionHandler:^(RTCSessionDescription * _Nullable sdp, NSError * _Nullable error) {
+            [_connection getOffer:^(NSString *sdp, NSString *type) {
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
                     if (strongSelf == nil) {
                         return;
                     }
                     
-                    [strongSelf->_peerConnection setLocalDescription:sdp completionHandler:^(__unused NSError * _Nullable error) {
+                    [strongSelf->_connection setLocalDescription:sdp type:type completion:^{
                         [queue dispatch:^{
                             __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
                             if (strongSelf == nil) {
                                 return;
                             }
-                            [strongSelf tryAdvertising:sdp];
+                            [strongSelf tryAdvertising:sdp type:type];
                         }];
                     }];
                 }];
@@ -318,24 +211,24 @@ static void voipLog(NSString* format, ...) {
     assert([_queue isCurrent]);
 }
 
-- (void)tryAdvertising:(RTCSessionDescription *)sessionDescription {
+- (void)tryAdvertising:(NSString *)sdp type:(NSString *)type {
     if (_receivedRemoteDescription) {
         return;
     }
     
-    [self sendSdp:sessionDescription];
+    [self sendSdp:sdp type:type];
     __weak OngoingCallThreadLocalContextWebrtcCustom *weakSelf = self;
     [_queue dispatchAfter:1.0 block:^{
         __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
         if (strongSelf == nil) {
             return;
         }
-        [strongSelf tryAdvertising:sessionDescription];
+        [strongSelf tryAdvertising:sdp type:type];
     }];
 }
 
 - (void)startLocalVideo {
-    if (_videoCapturer == nil || ![_videoCapturer isKindOfClass:[RTCCameraVideoCapturer class]]) {
+    /*if (_videoCapturer == nil || ![_videoCapturer isKindOfClass:[RTCCameraVideoCapturer class]]) {
         return;
     }
     RTCCameraVideoCapturer *cameraCapturer = (RTCCameraVideoCapturer *)_videoCapturer;
@@ -383,7 +276,7 @@ static void voipLog(NSString* format, ...) {
     }
     
     [cameraCapturer startCaptureWithDevice:frontCamera format:bestFormat fps:27 completionHandler:^(NSError * _Nonnull error) {
-    }];
+    }];*/
 }
 
 - (bool)needRate {
@@ -391,11 +284,11 @@ static void voipLog(NSString* format, ...) {
 }
 
 - (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
-    if ([_videoCapturer isKindOfClass:[RTCCameraVideoCapturer class]]) {
+    /*if ([_videoCapturer isKindOfClass:[RTCCameraVideoCapturer class]]) {
         RTCCameraVideoCapturer *cameraCapturer = (RTCCameraVideoCapturer *)_videoCapturer;
         [cameraCapturer stopCapture];
-    }
-    [_peerConnection close];
+    }*/
+    [_connection close];
     if (completion) {
         completion(@"", 0, 0, 0, 0);
     }
@@ -414,30 +307,24 @@ static void voipLog(NSString* format, ...) {
     return [NSData data];
 }
 
-- (void)sendSdp:(RTCSessionDescription *)rtcSdp {
+- (void)sendSdp:(NSString *)sdp type:(NSString *)type {
     NSMutableDictionary *json = [[NSMutableDictionary alloc] init];
     json[@"messageType"] = @"sessionDescription";
-    json[@"sdp"] = rtcSdp.sdp;
-    if (rtcSdp.type == RTCSdpTypeOffer) {
-        json[@"type"] = @"offer";
-    } else if (rtcSdp.type == RTCSdpTypePrAnswer) {
-        json[@"type"] = @"prAnswer";
-    } else if (rtcSdp.type == RTCSdpTypeAnswer) {
-        json[@"type"] = @"answer";
-    }
+    json[@"sdp"] = sdp;
+    json[@"type"] = type;
     NSData *data = [NSJSONSerialization dataWithJSONObject:json options:0 error:nil];
     if (data != nil) {
         _sendSignalingData(data);
     }
 }
 
-- (void)sendCandidate:(RTCIceCandidate *)rtcIceCandidate {
+- (void)sendCandidateWithSdp:(NSString *)sdp mLineIndex:(int)mLineIndex sdpMid:(NSString *)sdpMid {
     NSMutableDictionary *json = [[NSMutableDictionary alloc] init];
     json[@"messageType"] = @"iceCandidate";
-    json[@"sdp"] = rtcIceCandidate.sdp;
-    json[@"mLineIndex"] = @(rtcIceCandidate.sdpMLineIndex);
-    if (rtcIceCandidate.sdpMid != nil) {
-        json[@"sdpMid"] = rtcIceCandidate.sdpMid;
+    json[@"sdp"] = sdp;
+    json[@"mLineIndex"] = @(mLineIndex);
+    if (sdpMid != nil) {
+        json[@"sdpMid"] = sdpMid;
     }
     NSData *data = [NSJSONSerialization dataWithJSONObject:json options:0 error:nil];
     if (data != nil) {
@@ -466,50 +353,31 @@ static void voipLog(NSString* format, ...) {
             return;
         }
         
-        RTCSdpType type;
-        if ([typeString isEqualToString:@"offer"]) {
-            type = RTCSdpTypeOffer;
-        } else if ([typeString isEqualToString:@"prAnswer"]) {
-            type = RTCSdpTypePrAnswer;
-        } else if ([typeString isEqualToString:@"answer"]) {
-            type = RTCSdpTypeAnswer;
-        } else {
-            return;
-        }
-        
         if (_receivedRemoteDescription) {
             return;
         }
         _receivedRemoteDescription = true;
         
-        RTCSessionDescription *sessionDescription = [[RTCSessionDescription alloc] initWithType:type sdp:sdp];
-        
-        NSDictionary *mediaConstraints = @{
-            kRTCMediaConstraintsOfferToReceiveAudio: kRTCMediaConstraintsValueTrue,
-            kRTCMediaConstraintsOfferToReceiveVideo: kRTCMediaConstraintsValueTrue
-        };
-        
-        RTCMediaConstraints *connectionConstraints = [[RTCMediaConstraints alloc] initWithMandatoryConstraints:mediaConstraints optionalConstraints:nil];
-        
-        [_peerConnection setRemoteDescription:sessionDescription completionHandler:^(__unused NSError * _Nullable error) {
+        [_connection setRemoteDescription:sdp type:typeString completion:^{
         }];
         
         if (!_isOutgoing) {
             __weak OngoingCallThreadLocalContextWebrtcCustom *weakSelf = self;
-            [_peerConnection answerForConstraints:connectionConstraints completionHandler:^(RTCSessionDescription * _Nullable sdp, NSError * _Nullable error) {
-                __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
-                if (strongSelf == nil) {
-                    return;
-                }
-                
-                id<OngoingCallThreadLocalContextQueueWebrtcCustom> queue = strongSelf->_queue;
-                [strongSelf->_peerConnection setLocalDescription:sdp completionHandler:^(__unused NSError * _Nullable error) {
-                    [queue dispatch:^{
-                        __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
-                        if (strongSelf == nil) {
-                            return;
-                        }
-                        [strongSelf sendSdp:sdp];
+            id<OngoingCallThreadLocalContextQueueWebrtcCustom> queue = _queue;
+            [_connection getAnswer:^(NSString *sdp, NSString *type) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
+                    if (strongSelf == nil) {
+                        return;
+                    }
+                    [strongSelf->_connection setLocalDescription:sdp type:type completion:^{
+                        [queue dispatch:^{
+                            __strong OngoingCallThreadLocalContextWebrtcCustom *strongSelf = weakSelf;
+                            if (strongSelf == nil) {
+                                return;
+                            }
+                            [strongSelf sendSdp:sdp type:type];
+                        }];
                     }];
                 }];
             }];
@@ -531,26 +399,24 @@ static void voipLog(NSString* format, ...) {
             sdpMid = sdpMidString;
         }
         
-        RTCIceCandidate *iceCandidate = [[RTCIceCandidate alloc] initWithSdp:sdp sdpMLineIndex:[mLineIndex intValue] sdpMid:sdpMid];
-        voipLog(@"didReceiveIceCandidate: %@", iceCandidate);
-        [_peerConnection addIceCandidate:iceCandidate];
+        [_connection addIceCandidateWithSdp:sdp sdpMLineIndex:[mLineIndex intValue] sdpMid:sdpMid];
     }
 }
 
 - (void)setIsMuted:(bool)isMuted {
-    for (RTCRtpTransceiver *transceiver in _peerConnection.transceivers) {
+    /*for (RTCRtpTransceiver *transceiver in _peerConnection.transceivers) {
         if ([transceiver isKindOfClass:[RTCAudioTrack class]]) {
             RTCAudioTrack *audioTrack = (RTCAudioTrack *)transceiver;
             [audioTrack setIsEnabled:!isMuted];
         }
-    }
+    }*/
 }
 
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtcCustom)networkType {
 }
 
 - (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion {
-    if (_remoteVideoTrack == nil) {
+    /*if (_remoteVideoTrack == nil) {
         for (RTCRtpTransceiver *transceiver in _peerConnection.transceivers) {
             if (transceiver.mediaType == RTCRtpMediaTypeVideo && [transceiver.receiver.track isKindOfClass:[RTCVideoTrack class]]) {
                 _remoteVideoTrack = (RTCVideoTrack *)transceiver.receiver.track;
@@ -571,7 +437,7 @@ static void voipLog(NSString* format, ...) {
         [remoteVideoTrack addRenderer:remoteRenderer];
         completion(remoteRenderer);
         #endif
-    });
+    });*/
 }
 
 @end

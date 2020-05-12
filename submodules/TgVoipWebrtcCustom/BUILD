@@ -20,6 +20,7 @@ objc_library(
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
+        "-std=c++14",
     ],
     includes = [
         "PublicHeaders",
