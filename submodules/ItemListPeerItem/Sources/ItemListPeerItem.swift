@@ -321,6 +321,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let revealOptions: ItemListPeerItemRevealOptions?
     let switchValue: ItemListPeerItemSwitch?
     let enabled: Bool
+    let highlighted: Bool
     public let selectable: Bool
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
@@ -337,7 +338,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let displayDecorations: Bool
     let disableInteractiveTransitionIfNecessary: Bool
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -354,6 +355,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.revealOptions = revealOptions
         self.switchValue = switchValue
         self.enabled = enabled
+        self.highlighted = highlighted
         self.selectable = selectable
         self.sectionId = sectionId
         self.action = action
@@ -1114,15 +1116,25 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     if let revealed = item.editing.revealed {
                         strongSelf.setRevealOptionsOpened(revealed, animated: animated)
                     }
+                    
+                    strongSelf.updateIsHighlighted(transition: transition)
                 }
             })
         }
     }
     
-    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
-        super.setHighlighted(highlighted, at: point, animated: animated)
-        
-        if highlighted {
+    var isHighlighted = false
+    
+    var reallyHighlighted: Bool {
+        var reallyHighlighted = self.isHighlighted
+        if let (item, _, _, _) = self.layoutParams, item.highlighted {
+            reallyHighlighted = true
+        }
+        return reallyHighlighted
+    }
+    
+    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        if self.reallyHighlighted {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 var anchorNode: ASDisplayNode?
@@ -1141,20 +1153,28 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
+                if transition.isAnimated {
                     self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
                         if let strongSelf = self {
                             if completed {
                                 strongSelf.highlightedBackgroundNode.removeFromSupernode()
                             }
                         }
-                        })
+                    })
                     self.highlightedBackgroundNode.alpha = 0.0
                 } else {
                     self.highlightedBackgroundNode.removeFromSupernode()
                 }
             }
         }
+    }
+    
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
+             
+        self.isHighlighted = highlighted
+            
+        self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {

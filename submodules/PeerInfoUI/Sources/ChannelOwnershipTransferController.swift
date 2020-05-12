@@ -313,7 +313,7 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
         
         var effectiveActionLayout = TextAlertContentActionLayout.horizontal
         for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.measure(CGSize(width: maxActionWidth, height: actionButtonHeight))
+            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
             if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
                 effectiveActionLayout = .vertical
             }
@@ -419,7 +419,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
     
     let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?()
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.OwnershipTransfer_Transfer, action: {
         proceedImpl?()
     })])
     

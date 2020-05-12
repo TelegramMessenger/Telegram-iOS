@@ -589,7 +589,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                     if hasSecureValues {
                         text = presentationData.strings.TwoStepAuth_PasswordRemovePassportConfirmation
                     }
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.TwoStepAuth_Disable, action: {
                         var disablePassword = false
                         updateState { state in
                             var state = state
