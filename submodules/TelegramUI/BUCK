@@ -35,7 +35,6 @@ framework(
         "//submodules/AccountContext:AccountContext",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/TgVoip:TgVoip",
-        "//submodules/TgVoipWebrtc:TgVoipWebrtc",
         "//submodules/lottie-ios:Lottie",
         "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/WebPBinding:WebPBinding",

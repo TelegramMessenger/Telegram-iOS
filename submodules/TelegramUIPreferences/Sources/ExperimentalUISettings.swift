@@ -9,18 +9,20 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var chatListPhotos: Bool
     public var knockoutWallpaper: Bool
     public var foldersTabAtBottom: Bool
+    public var videoCalls: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
-        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, knockoutWallpaper: false, foldersTabAtBottom: false)
+        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, knockoutWallpaper: false, foldersTabAtBottom: false, videoCalls: false)
     }
     
-    public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, knockoutWallpaper: Bool, foldersTabAtBottom: Bool) {
+    public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, knockoutWallpaper: Bool, foldersTabAtBottom: Bool, videoCalls: Bool) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
         self.crashOnLongQueries = crashOnLongQueries
         self.chatListPhotos = chatListPhotos
         self.knockoutWallpaper = knockoutWallpaper
         self.foldersTabAtBottom = foldersTabAtBottom
+        self.videoCalls = videoCalls
     }
     
     public init(decoder: PostboxDecoder) {
@@ -30,6 +32,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.chatListPhotos = decoder.decodeInt32ForKey("chatListPhotos", orElse: 0) != 0
         self.knockoutWallpaper = decoder.decodeInt32ForKey("knockoutWallpaper", orElse: 0) != 0
         self.foldersTabAtBottom = decoder.decodeInt32ForKey("foldersTabAtBottom", orElse: 0) != 0
+        self.videoCalls = decoder.decodeInt32ForKey("videoCalls", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -39,6 +42,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.chatListPhotos ? 1 : 0, forKey: "chatListPhotos")
         encoder.encodeInt32(self.knockoutWallpaper ? 1 : 0, forKey: "knockoutWallpaper")
         encoder.encodeInt32(self.foldersTabAtBottom ? 1 : 0, forKey: "foldersTabAtBottom")
+        encoder.encodeInt32(self.videoCalls ? 1 : 0, forKey: "videoCalls")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

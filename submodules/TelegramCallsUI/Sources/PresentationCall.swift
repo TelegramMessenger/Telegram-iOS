@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -670,5 +671,9 @@ public final class PresentationCallImpl: PresentationCall {
     
     public func debugInfo() -> Signal<(String, String), NoError> {
         return self.debugInfoValue.get()
+    }
+    
+    public func getVideoView(completion: @escaping (UIView?) -> Void) {
+        self.ongoingContext?.getVideoView(completion: completion)
     }
 }

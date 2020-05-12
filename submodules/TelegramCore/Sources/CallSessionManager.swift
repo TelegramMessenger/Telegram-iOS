@@ -213,12 +213,15 @@ private final class CallSessionContext {
     let isOutgoing: Bool
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
+    let signalingSubscribers = Bag<(Data) -> Void>()
+    
+    let signalingDisposables = DisposableSet()
     
     let acknowledgeIncomingCallDisposable = MetaDisposable()
     
     var isEmpty: Bool {
         if case .terminated = self.state {
-            return self.subscribers.isEmpty
+            return self.subscribers.isEmpty && self.signalingSubscribers.isEmpty
         } else {
             return false
         }
@@ -249,7 +252,7 @@ private final class CallSessionManagerContext {
     private let postbox: Postbox
     private let network: Network
     private let maxLayer: Int32
-    private let versions: [String]
+    private var versions: [String]
     private let addUpdates: (Api.Updates) -> Void
     
     private let ringingSubscribers = Bag<([CallSessionRingingState]) -> Void>()
@@ -270,6 +273,10 @@ private final class CallSessionManagerContext {
     deinit {
         assert(self.queue.isCurrent())
         self.disposables.dispose()
+    }
+    
+    func updateVersions(versions: [String]) {
+        self.versions = versions.reversed()
     }
     
     func ringingStates() -> Signal<[CallSessionRingingState], NoError> {
@@ -309,6 +316,31 @@ private final class CallSessionManagerContext {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
                                 context.subscribers.remove(index)
+                                if context.isEmpty {
+                                    strongSelf.contexts.removeValue(forKey: internalId)
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+            return disposable
+        }
+    }
+    
+    func callSignalingData(internalId: CallSessionInternalId) -> Signal<Data, NoError> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            queue.async {
+                if let strongSelf = self, let context = strongSelf.contexts[internalId] {
+                    let index = context.signalingSubscribers.add { next in
+                        subscriber.putNext(next)
+                    }
+                    disposable.set(ActionDisposable {
+                        queue.async {
+                            if let strongSelf = self, let context = strongSelf.contexts[internalId] {
+                                context.signalingSubscribers.remove(index)
                                 if context.isEmpty {
                                     strongSelf.contexts.removeValue(forKey: internalId)
                                 }
@@ -523,6 +555,17 @@ private final class CallSessionManagerContext {
         }
     }
     
+    func sendSignalingData(internalId: CallSessionInternalId, data: Data) {
+        if let context = self.contexts[internalId] {
+            switch context.state {
+            case let .active(id, accessHash, _, _, _, _, _, _, _, _):
+                context.signalingDisposables.add(self.network.request(Api.functions.phone.sendSignalingData(peer: .inputPhoneCall(id: id, accessHash: accessHash), data: Buffer(data: data))).start())
+            default:
+                break
+            }
+        }
+    }
+    
     func updateSession(_ call: Api.PhoneCall, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
         var resultRingingState: (CallSessionRingingState, CallSession)?
         
@@ -723,6 +766,15 @@ private final class CallSessionManagerContext {
         completion(resultRingingState)
     }
     
+    func addCallSignalingData(id: Int64, data: Data) {
+        guard let internalId = self.contextIdByStableId[id], let context = self.contexts[internalId] else {
+            return
+        }
+        for f in context.signalingSubscribers.copyItems() {
+            f(data)
+        }
+    }
+    
     private func makeSessionEncryptionKey(config: SecretChatEncryptionConfig, gAHash: Data, b: Data, gA: Data) -> (key: Data, keyId: Int64, keyVisualHash: Data)? {
         var key = MTExp(self.network.encryptionProvider, gA, b, config.p.makeData())!
         
@@ -818,6 +870,12 @@ public final class CallSessionManager {
         }
     }
     
+    func addCallSignalingData(id: Int64, data: Data) {
+        self.withContext { context in
+            context.addCallSignalingData(id: id, data: data)
+        }
+    }
+    
     public func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
         self.withContext { context in
             context.drop(internalId: internalId, reason: reason, debugLog: debugLog)
@@ -857,6 +915,18 @@ public final class CallSessionManager {
         }
     }
     
+    public func sendSignalingData(internalId: CallSessionInternalId, data: Data) {
+        self.withContext { context in
+            context.sendSignalingData(internalId: internalId, data: data)
+        }
+    }
+    
+    public func updateVersions(versions: [String]) {
+        self.withContext { context in
+            context.updateVersions(versions: versions)
+        }
+    }
+    
     public func ringingStates() -> Signal<[CallSessionRingingState], NoError> {
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -874,6 +944,18 @@ public final class CallSessionManager {
             let disposable = MetaDisposable()
             self?.withContext { context in
                 disposable.set(context.callState(internalId: internalId).start(next: { next in
+                    subscriber.putNext(next)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func callSignalingData(internalId: CallSessionInternalId) -> Signal<Data, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            self?.withContext { context in
+                disposable.set(context.callSignalingData(internalId: internalId).start(next: { next in
                     subscriber.putNext(next)
                 }))
             }

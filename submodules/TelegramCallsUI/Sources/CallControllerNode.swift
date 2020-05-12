@@ -25,11 +25,14 @@ final class CallControllerNode: ASDisplayNode {
     private let debugInfo: Signal<(String, String), NoError>
     private var forceReportRating = false
     private let easyDebugAccess: Bool
+    private let call: PresentationCall
     
     private let containerNode: ASDisplayNode
     
     private let imageNode: TransformImageNode
     private let dimNode: ASDisplayNode
+    private var videoView: UIView?
+    private var videoViewRequested: Bool = false
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
     private let statusNode: CallControllerStatusNode
@@ -64,7 +67,7 @@ final class CallControllerNode: ASDisplayNode {
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     
-    init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool) {
+    init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool, call: PresentationCall) {
         self.sharedContext = sharedContext
         self.account = account
         self.presentationData = presentationData
@@ -72,6 +75,7 @@ final class CallControllerNode: ASDisplayNode {
         self.debugInfo = debugInfo
         self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         self.easyDebugAccess = easyDebugAccess
+        self.call = call
         
         self.containerNode = ASDisplayNode()
         if self.shouldStayHiddenUntilConnection {
@@ -81,7 +85,7 @@ final class CallControllerNode: ASDisplayNode {
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
         self.dimNode = ASDisplayNode()
-        self.dimNode.isLayerBacked = true
+        self.dimNode.isUserInteractionEnabled = false
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
         
         self.backButtonArrowNode = ASImageNode()
@@ -261,6 +265,22 @@ final class CallControllerNode: ASDisplayNode {
                     }
                 }
                 statusReception = reception
+                if !self.videoViewRequested {
+                    self.videoViewRequested = true
+                    self.call.getVideoView(completion: { [weak self] videoView in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let videoView = videoView {
+                            strongSelf.setCurrentAudioOutput?(.speaker)
+                            strongSelf.videoView = videoView
+                            strongSelf.containerNode.view.insertSubview(videoView, aboveSubview: strongSelf.dimNode.view)
+                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                            }
+                        }
+                    })
+                }
         }
         switch callState {
             case .terminated, .terminating:
@@ -367,6 +387,10 @@ final class CallControllerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        
+        if let videoView = self.videoView {
+            videoView.frame = CGRect(origin: CGPoint(), size: layout.size)
+        }
         
         if let keyPreviewNode = self.keyPreviewNode {
             transition.updateFrame(node: keyPreviewNode, frame: CGRect(origin: CGPoint(), size: layout.size))

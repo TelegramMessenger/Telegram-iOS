@@ -15,6 +15,9 @@ import WalletCore
 import WalletUI
 #endif
 import PhoneNumberFormat
+import TelegramUIPreferences
+import TelegramVoip
+import TelegramCallsUI
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -147,6 +150,8 @@ public final class AccountContextImpl: AccountContext {
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
     
+    private var experimentalUISettingsDisposable: Disposable?
+    
     #if ENABLE_WALLET
     public var hasWallets: Signal<Bool, NoError> {
         return WalletStorageInterfaceImpl(postbox: self.account.postbox).getWalletRecords()
@@ -242,12 +247,20 @@ public final class AccountContextImpl: AccountContext {
                 }
             })
         }
+        
+        self.experimentalUISettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
+        |> deliverOnMainQueue).start(next: { sharedData in
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings {
+                account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: settings.videoCalls))
+            }
+        })
     }
     
     deinit {
         self.limitsConfigurationDisposable?.dispose()
         self.managedAppSpecificContactsDisposable?.dispose()
         self.contentSettingsDisposable?.dispose()
+        self.experimentalUISettingsDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {
