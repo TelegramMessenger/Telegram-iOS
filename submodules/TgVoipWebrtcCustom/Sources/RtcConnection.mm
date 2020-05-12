@@ -1,5 +1,7 @@
 #import "RtcConnection.h"
 
+#import <UIKit/UIKit.h>
+
 #include <memory>
 #include "api/scoped_refptr.h"
 #include "rtc_base/thread.h"
@@ -16,6 +18,14 @@
 #include "api/rtc_event_log/rtc_event_log_factory.h"
 #include "sdk/media_constraints.h"
 #include "api/peer_connection_interface.h"
+#include "sdk/objc/native/src/objc_video_track_source.h"
+#include "api/video_track_source_proxy.h"
+#include "sdk/objc/api/RTCVideoRendererAdapter.h"
+#include "sdk/objc/native/api/video_frame.h"
+
+#include "VideoCameraCapturer.h"
+
+#import "VideoMetalView.h"
 
 class PeerConnectionObserverImpl : public webrtc::PeerConnectionObserver {
 private:
@@ -175,6 +185,14 @@ public:
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> _peerConnection;
     std::unique_ptr<webrtc::MediaConstraints> _nativeConstraints;
     bool _hasStartedRtcEventLog;
+    
+    rtc::scoped_refptr<webrtc::AudioTrackInterface> _localAudioTrack;
+    
+    rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> _nativeVideoSource;
+    rtc::scoped_refptr<webrtc::VideoTrackInterface> _localVideoTrack;
+    VideoCameraCapturer *_videoCapturer;
+    
+    rtc::scoped_refptr<webrtc::VideoTrackInterface> _remoteVideoTrack;
 }
 
 @end
@@ -228,25 +246,107 @@ public:
         config.continual_gathering_policy = webrtc::PeerConnectionInterface::ContinualGatheringPolicy::GATHER_CONTINUALLY;
         webrtc::PeerConnectionInterface::IceServer iceServer;
         iceServer.uri = "stun:stun.l.google.com:19302";
+        
+        /*iceServer.uri = "stun:rrrtest.uksouth.cloudapp.azure.com:3478";
+        iceServer.username = "user";
+        iceServer.password = "root";*/
+        
         config.servers.push_back(iceServer);
+        
+        /*webrtc::PeerConnectionInterface::IceServer turnServer;
+        turnServer.uri = "turn:rrrtest.uksouth.cloudapp.azure.com:3478";
+        turnServer.username = "user";
+        turnServer.password = "root";
+        
+        config.servers.push_back(turnServer);*/
+        
+        //config.type = webrtc::PeerConnectionInterface::kRelay;
         
         _observer.reset(new PeerConnectionObserverImpl(_discoveredIceCandidate, _connectionStateChanged));
         _peerConnection = _nativeFactory->CreatePeerConnection(config, nullptr, nullptr, _observer.get());
-        
-        cricket::AudioOptions options;
-        rtc::scoped_refptr<webrtc::AudioSourceInterface> audioSource = _nativeFactory->CreateAudioSource(options);
-        rtc::scoped_refptr<webrtc::AudioTrackInterface> track = _nativeFactory->CreateAudioTrack("audio0", audioSource);
+        assert(_peerConnection != nullptr);
         
         std::vector<std::string> streamIds;
         streamIds.push_back("stream");
         
-        _peerConnection->AddTrack(track, streamIds);
+        cricket::AudioOptions options;
+        rtc::scoped_refptr<webrtc::AudioSourceInterface> audioSource = _nativeFactory->CreateAudioSource(options);
+        _localAudioTrack = _nativeFactory->CreateAudioTrack("audio0", audioSource);
+        _peerConnection->AddTrack(_localAudioTrack, streamIds);
+        
+        rtc::scoped_refptr<webrtc::ObjCVideoTrackSource> objCVideoTrackSource(new rtc::RefCountedObject<webrtc::ObjCVideoTrackSource>());
+        _nativeVideoSource = webrtc::VideoTrackSourceProxy::Create(_signalingThread.get(), _workerThread.get(), objCVideoTrackSource);
+        
+        _localVideoTrack = _nativeFactory->CreateVideoTrack("video0", _nativeVideoSource);
+        _peerConnection->AddTrack(_localVideoTrack, streamIds);
+        
+        [self startLocalVideo];
     }
     return self;
 }
 
 - (void)close {
+    if (_videoCapturer != nil) {
+        [_videoCapturer stopCapture];
+    }
+    
     _peerConnection->Close();
+}
+
+- (void)startLocalVideo {
+#if TARGET_OS_SIMULATOR
+    return;
+#endif
+    _videoCapturer = [[VideoCameraCapturer alloc] initWithSource:_nativeVideoSource];
+    
+    AVCaptureDevice *frontCamera = nil;
+    for (AVCaptureDevice *device in [VideoCameraCapturer captureDevices]) {
+        if (device.position == AVCaptureDevicePositionFront) {
+            frontCamera = device;
+            break;
+        }
+    }
+    
+    if (frontCamera == nil) {
+        return;
+    }
+    
+    NSArray<AVCaptureDeviceFormat *> *sortedFormats = [[VideoCameraCapturer supportedFormatsForDevice:frontCamera] sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDeviceFormat* lhs, AVCaptureDeviceFormat *rhs) {
+        int32_t width1 = CMVideoFormatDescriptionGetDimensions(lhs.formatDescription).width;
+        int32_t width2 = CMVideoFormatDescriptionGetDimensions(rhs.formatDescription).width;
+        return width1 < width2 ? NSOrderedAscending : NSOrderedDescending;
+    }];
+    
+    AVCaptureDeviceFormat *bestFormat = nil;
+    for (AVCaptureDeviceFormat *format in sortedFormats) {
+        CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+        if (dimensions.width >= 600 || dimensions.height >= 600) {
+            bestFormat = format;
+            break;
+        }
+    }
+    
+    if (bestFormat == nil) {
+        return;
+    }
+    
+    AVFrameRateRange *frameRateRange = [[bestFormat.videoSupportedFrameRateRanges sortedArrayUsingComparator:^NSComparisonResult(AVFrameRateRange *lhs, AVFrameRateRange *rhs) {
+        if (lhs.maxFrameRate < rhs.maxFrameRate) {
+            return NSOrderedAscending;
+        } else {
+            return NSOrderedDescending;
+        }
+    }] lastObject];
+    
+    if (frameRateRange == nil) {
+        return;
+    }
+    
+    [_videoCapturer startCaptureWithDevice:frontCamera format:bestFormat fps:27];
+}
+
+- (void)setIsMuted:(bool)isMuted {
+    _localAudioTrack->set_enabled(!isMuted);
 }
 
 - (void)getOffer:(void (^)(NSString *, NSString *))completion {
@@ -293,6 +393,29 @@ public:
         _peerConnection->AddIceCandidate(std::move(nativeCandidate), [](auto error) {
         });
     }
+}
+
+- (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion {
+    if (_remoteVideoTrack == nullptr) {
+        for (auto &it : _peerConnection->GetTransceivers()) {
+            if (it->media_type() == cricket::MediaType::MEDIA_TYPE_VIDEO) {
+                _remoteVideoTrack = static_cast<webrtc::VideoTrackInterface *>(it->receiver()->track().get());
+                break;
+            }
+        }
+    }
+    
+    rtc::scoped_refptr<webrtc::VideoTrackInterface> remoteVideoTrack = _remoteVideoTrack;
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (remoteVideoTrack != nullptr) {
+            VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 240.0f)];
+            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+            [remoteRenderer addToTrack:remoteVideoTrack];
+            
+            completion(remoteRenderer);
+        }
+    });
 }
 
 @end

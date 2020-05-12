@@ -252,7 +252,7 @@ private final class CallSessionManagerContext {
     private let postbox: Postbox
     private let network: Network
     private let maxLayer: Int32
-    private let versions: [String]
+    private var versions: [String]
     private let addUpdates: (Api.Updates) -> Void
     
     private let ringingSubscribers = Bag<([CallSessionRingingState]) -> Void>()
@@ -273,6 +273,10 @@ private final class CallSessionManagerContext {
     deinit {
         assert(self.queue.isCurrent())
         self.disposables.dispose()
+    }
+    
+    func updateVersions(versions: [String]) {
+        self.versions = versions.reversed()
     }
     
     func ringingStates() -> Signal<[CallSessionRingingState], NoError> {
@@ -914,6 +918,12 @@ public final class CallSessionManager {
     public func sendSignalingData(internalId: CallSessionInternalId, data: Data) {
         self.withContext { context in
             context.sendSignalingData(internalId: internalId, data: data)
+        }
+    }
+    
+    public func updateVersions(versions: [String]) {
+        self.withContext { context in
+            context.updateVersions(versions: versions)
         }
     }
     

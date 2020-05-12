@@ -272,6 +272,7 @@ final class CallControllerNode: ASDisplayNode {
                             return
                         }
                         if let videoView = videoView {
+                            strongSelf.setCurrentAudioOutput?(.speaker)
                             strongSelf.videoView = videoView
                             strongSelf.containerNode.view.insertSubview(videoView, aboveSubview: strongSelf.dimNode.view)
                             if let (layout, navigationBarHeight) = strongSelf.validLayout {

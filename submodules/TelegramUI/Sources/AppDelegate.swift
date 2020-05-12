@@ -393,7 +393,7 @@ final class SharedApplicationContext {
             }
         }
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, voipVersions: PresentationCallManagerImpl.voipVersions, appData: self.deviceToken.get()
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, voipVersions: PresentationCallManagerImpl.voipVersions(includeExperimental: false), appData: self.deviceToken.get()
         |> map { token in
             let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
             if let data = data, let jsonString = String(data: data, encoding: .utf8) {

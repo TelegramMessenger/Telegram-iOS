@@ -74,13 +74,7 @@ static void voipLog(NSString* format, ...) {
     
     RtcConnection *_connection;
     
-    //RTCVideoCapturer *_videoCapturer;
-    //RTCVideoTrack *_localVideoTrack;
-    //RTCVideoTrack *_remoteVideoTrack;
-    
     bool _receivedRemoteDescription;
-    
-    
 }
 
 @end
@@ -201,8 +195,6 @@ static void voipLog(NSString* format, ...) {
                 }];
             }];
         }
-        
-        [self startLocalVideo];
     }
     return self;
 }
@@ -227,67 +219,11 @@ static void voipLog(NSString* format, ...) {
     }];
 }
 
-- (void)startLocalVideo {
-    /*if (_videoCapturer == nil || ![_videoCapturer isKindOfClass:[RTCCameraVideoCapturer class]]) {
-        return;
-    }
-    RTCCameraVideoCapturer *cameraCapturer = (RTCCameraVideoCapturer *)_videoCapturer;
-    AVCaptureDevice *frontCamera = nil;
-    for (AVCaptureDevice *device in [RTCCameraVideoCapturer captureDevices]) {
-        if (device.position == AVCaptureDevicePositionFront) {
-            frontCamera = device;
-            break;
-        }
-    }
-    
-    if (cameraCapturer == nil) {
-        return;
-    }
-    
-    NSArray<AVCaptureDeviceFormat *> *sortedFormats = [[RTCCameraVideoCapturer supportedFormatsForDevice:frontCamera] sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDeviceFormat* lhs, AVCaptureDeviceFormat *rhs) {
-        int32_t width1 = CMVideoFormatDescriptionGetDimensions(lhs.formatDescription).width;
-        int32_t width2 = CMVideoFormatDescriptionGetDimensions(rhs.formatDescription).width;
-        return width1 < width2 ? NSOrderedAscending : NSOrderedDescending;
-    }];
-    
-    AVCaptureDeviceFormat *bestFormat = nil;
-    for (AVCaptureDeviceFormat *format in sortedFormats) {
-        CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
-        if (dimensions.width >= 600 || dimensions.height >= 600) {
-            bestFormat = format;
-            break;
-        }
-    }
-    
-    if (bestFormat == nil) {
-        return;
-    }
-    
-    AVFrameRateRange *frameRateRange = [[bestFormat.videoSupportedFrameRateRanges sortedArrayUsingComparator:^NSComparisonResult(AVFrameRateRange *lhs, AVFrameRateRange *rhs) {
-        if (lhs.maxFrameRate < rhs.maxFrameRate) {
-            return NSOrderedAscending;
-        } else {
-            return NSOrderedDescending;
-        }
-    }] lastObject];
-    
-    if (frameRateRange == nil) {
-        return;
-    }
-    
-    [cameraCapturer startCaptureWithDevice:frontCamera format:bestFormat fps:27 completionHandler:^(NSError * _Nonnull error) {
-    }];*/
-}
-
 - (bool)needRate {
     return false;
 }
 
 - (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
-    /*if ([_videoCapturer isKindOfClass:[RTCCameraVideoCapturer class]]) {
-        RTCCameraVideoCapturer *cameraCapturer = (RTCCameraVideoCapturer *)_videoCapturer;
-        [cameraCapturer stopCapture];
-    }*/
     [_connection close];
     if (completion) {
         completion(@"", 0, 0, 0, 0);
@@ -404,40 +340,14 @@ static void voipLog(NSString* format, ...) {
 }
 
 - (void)setIsMuted:(bool)isMuted {
-    /*for (RTCRtpTransceiver *transceiver in _peerConnection.transceivers) {
-        if ([transceiver isKindOfClass:[RTCAudioTrack class]]) {
-            RTCAudioTrack *audioTrack = (RTCAudioTrack *)transceiver;
-            [audioTrack setIsEnabled:!isMuted];
-        }
-    }*/
+    [_connection setIsMuted:isMuted];
 }
 
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtcCustom)networkType {
 }
 
 - (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion {
-    /*if (_remoteVideoTrack == nil) {
-        for (RTCRtpTransceiver *transceiver in _peerConnection.transceivers) {
-            if (transceiver.mediaType == RTCRtpMediaTypeVideo && [transceiver.receiver.track isKindOfClass:[RTCVideoTrack class]]) {
-                _remoteVideoTrack = (RTCVideoTrack *)transceiver.receiver.track;
-                break;
-            }
-        }
-    }
-    
-    RTCVideoTrack *remoteVideoTrack = _remoteVideoTrack;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        #if false && TARGET_OS_SIMULATOR
-        RTCEAGLVideoView *remoteRenderer = [[RTCEAGLVideoView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 240.0f)];
-        [remoteVideoTrack addRenderer:remoteRenderer];
-        completion(remoteRenderer);
-        #else
-        RTCMTLVideoView *remoteRenderer = [[RTCMTLVideoView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 240.0f)];
-        remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-        [remoteVideoTrack addRenderer:remoteRenderer];
-        completion(remoteRenderer);
-        #endif
-    });*/
+    [_connection getRemoteCameraView:completion];
 }
 
 @end
