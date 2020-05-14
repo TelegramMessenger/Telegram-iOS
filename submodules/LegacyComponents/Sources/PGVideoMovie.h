@@ -6,7 +6,7 @@
 @interface PGVideoMovie : GPUImageOutput
 
 @property (readwrite, retain) AVAsset *asset;
-@property (readonly, nonatomic) bool shouldRepeat;
+@property (readonly, assign) bool shouldRepeat;
 
 @property (readonly, nonatomic) CGFloat progress;
 

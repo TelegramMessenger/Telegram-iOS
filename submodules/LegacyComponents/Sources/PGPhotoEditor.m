@@ -162,7 +162,6 @@
     [_currentInput removeAllTargets];
     PGVideoMovie *movie = [[PGVideoMovie alloc] initWithAsset:asset];
     movie.shouldRepeat = true;
-    movie.playAtActualSpeed = true;
     _currentInput = movie;
     
     _fullSize = true;
