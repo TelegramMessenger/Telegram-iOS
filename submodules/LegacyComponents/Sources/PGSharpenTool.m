@@ -40,14 +40,18 @@
 
 - (bool)shouldBeSkipped
 {
-    return false;
-    //return (fabsf(((NSNumber *)self.displayValue).floatValue - self.defaultValue) < FLT_EPSILON);
+    return (fabs(((NSNumber *)self.displayValue).floatValue - self.defaultValue) < FLT_EPSILON);
 }
 
 - (void)updatePassParameters
 {
     NSNumber *value = (NSNumber *)self.displayValue;
     [(PGPhotoSharpenPass *)_pass setSharpness:0.125f + value.floatValue / 100 * 0.6f];
+}
+
+- (bool)isAvialableForVideo
+{
+    return false;
 }
 
 @end

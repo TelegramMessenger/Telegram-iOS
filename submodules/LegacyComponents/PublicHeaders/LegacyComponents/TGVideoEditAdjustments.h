@@ -39,6 +39,7 @@ typedef enum
                                    cropMirrored:(bool)cropMirrored
                                  trimStartValue:(NSTimeInterval)trimStartValue
                                    trimEndValue:(NSTimeInterval)trimEndValue
+                                     toolValues:(NSDictionary *)toolValues
                                    paintingData:(TGPaintingData *)paintingData
                                       sendAsGif:(bool)sendAsGif
                                          preset:(TGMediaVideoConversionPreset)preset;

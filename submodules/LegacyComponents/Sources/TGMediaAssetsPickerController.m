@@ -429,7 +429,11 @@
         
         controller.requestOriginalFullSizeImage = ^(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
         {
-            return [editableItem originalImageSignal:position];
+            if (editableItem.isVideo && [editableItem isKindOfClass:[TGMediaAsset class]]) {
+                return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+            } else {
+                return [editableItem originalImageSignal:position];
+            }
         };
         
         [self.navigationController pushViewController:controller animated:true];

@@ -16,6 +16,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 @synthesize cropMirrored = _cropMirrored;
 @synthesize paintingData = _paintingData;
 @synthesize sendAsGif = _sendAsGif;
+@synthesize toolValues = _toolValues;
 
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize
                                        cropRect:(CGRect)cropRect
@@ -24,6 +25,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
                                    cropMirrored:(bool)cropMirrored
                                  trimStartValue:(NSTimeInterval)trimStartValue
                                    trimEndValue:(NSTimeInterval)trimEndValue
+                                     toolValues:(NSDictionary *)toolValues
                                    paintingData:(TGPaintingData *)paintingData
                                       sendAsGif:(bool)sendAsGif
                                          preset:(TGMediaVideoConversionPreset)preset
@@ -36,6 +38,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_cropMirrored = cropMirrored;
     adjustments->_trimStartValue = trimStartValue;
     adjustments->_trimEndValue = trimEndValue;
+    adjustments->_toolValues = toolValues;
     adjustments->_paintingData = paintingData;
     adjustments->_sendAsGif = sendAsGif;
     adjustments->_preset = preset;
@@ -95,6 +98,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_cropMirrored = _cropMirrored;
     adjustments->_trimStartValue = _trimStartValue;
     adjustments->_trimEndValue = _trimEndValue;
+    adjustments->_toolValues = _toolValues;
     adjustments->_paintingData = _paintingData;
     adjustments->_sendAsGif = _sendAsGif;
     adjustments->_preset = preset;
@@ -179,9 +183,17 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return CMTimeRangeMake(CMTimeMakeWithSeconds(self.trimStartValue , NSEC_PER_SEC), CMTimeMakeWithSeconds((self.trimEndValue - self.trimStartValue), NSEC_PER_SEC));
 }
 
+- (bool)toolsApplied
+{
+    if (self.toolValues.count > 0)
+        return true;
+    
+    return false;
+}
+
 - (bool)isDefaultValuesForAvatar:(bool)forAvatar
 {
-    return ![self cropAppliedForAvatar:forAvatar] && ![self hasPainting] && !_sendAsGif && _preset == TGMediaVideoConversionPresetCompressedDefault;
+    return ![self cropAppliedForAvatar:forAvatar] && ![self toolsApplied] && ![self hasPainting] && !_sendAsGif && _preset == TGMediaVideoConversionPresetCompressedDefault;
 }
 
 - (bool)isCropEqualWith:(id<TGMediaEditAdjustments>)adjusments
@@ -197,38 +209,41 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 - (BOOL)isEqual:(id)object
 {
     if (object == self)
-        return YES;
+        return true;
     
     if (!object || ![object isKindOfClass:[self class]])
-        return NO;
+        return false;
     
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)object;
     
     if (!_CGRectEqualToRectWithEpsilon(self.cropRect, adjustments.cropRect, [self _cropRectEpsilon]))
-        return NO;
+        return false;
     
     if (self.cropOrientation != adjustments.cropOrientation)
-        return NO;
+        return false;
     
     if (ABS(self.cropLockedAspectRatio - adjustments.cropLockedAspectRatio) > FLT_EPSILON)
-        return NO;
+        return false;
     
     if (self.cropMirrored != adjustments.cropMirrored)
-        return NO;
+        return false;
     
     if (fabs(self.trimStartValue - adjustments.trimStartValue) > FLT_EPSILON)
-        return NO;
+        return false;
     
     if (fabs(self.trimEndValue - adjustments.trimEndValue) > FLT_EPSILON)
-        return NO;
+        return false;
+    
+    if (![self.toolValues isEqual:adjustments.toolValues])
+        return false;
     
     if ((self.paintingData != nil && ![self.paintingData isEqual:adjustments.paintingData]) || (self.paintingData == nil && adjustments.paintingData != nil))
-        return NO;
+        return false;
     
     if (self.sendAsGif != adjustments.sendAsGif)
-        return NO;
+        return false;
     
-    return YES;
+    return true;
 }
 
 - (CGFloat)_cropRectEpsilon

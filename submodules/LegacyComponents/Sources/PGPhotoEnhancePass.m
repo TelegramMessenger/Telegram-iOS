@@ -98,6 +98,14 @@
     return [_interpolationFilter frameProcessingCompletionBlock];
 }
 
+- (GPUImageFramebuffer *)framebufferForOutput {
+    return [_interpolationFilter framebufferForOutput];
+}
+
+- (void)removeOutputFramebuffer {
+    [_interpolationFilter removeOutputFramebuffer];
+}
+
 #pragma mark - GPUImageInput
 
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex

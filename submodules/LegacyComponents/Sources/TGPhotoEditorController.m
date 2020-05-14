@@ -378,18 +378,32 @@
     }
     else
     {
-        signal = [[[[self.requestOriginalFullSizeImage(_item, position) takeLast] deliverOn:_queue] filter:^bool(id image)
-        {
-            return [image isKindOfClass:[UIImage class]];
-        }] map:^UIImage *(UIImage *image)
-        {
-            return TGPhotoEditorCrop(image, nil, _photoEditor.cropOrientation, _photoEditor.cropRotation, _photoEditor.cropRect, _photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), _photoEditor.originalSize, true);
-        }];
+        if (_item.isVideo) {
+            signal = [[self.requestOriginalFullSizeImage(_item, position) takeLast] deliverOn:_queue];
+        } else {
+            signal = [[[[self.requestOriginalFullSizeImage(_item, position) takeLast] deliverOn:_queue] filter:^bool(id image)
+            {
+                return [image isKindOfClass:[UIImage class]];
+            }] map:^UIImage *(UIImage *image)
+            {
+                return TGPhotoEditorCrop(image, nil, _photoEditor.cropOrientation, _photoEditor.cropRotation, _photoEditor.cropRect, _photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), _photoEditor.originalSize, true);
+            }];
+        }
     }
     
-    [signal startWithNext:^(UIImage *next)
+    [signal startWithNext:^(id next)
     {
-        [_photoEditor setImage:next forCropRect:_photoEditor.cropRect cropRotation:_photoEditor.cropRotation cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored fullSize:false];
+        if ([next isKindOfClass:[UIImage class]]) {
+            [_photoEditor setImage:(UIImage *)next forCropRect:_photoEditor.cropRect cropRotation:_photoEditor.cropRotation cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored fullSize:false];
+        } else if ([next isKindOfClass:[AVAsset class]]) {
+            [_photoEditor setVideoAsset:(AVAsset *)next];
+            TGDispatchOnMainThread(^
+            {
+                [_previewView performTransitionInWithCompletion:^
+                {
+                }];
+            });
+        }
         
         if (_ignoreDefaultPreviewViewTransitionIn)
         {

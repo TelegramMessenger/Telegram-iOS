@@ -980,7 +980,7 @@ typedef enum
         
         if (trimStartValue > DBL_EPSILON || trimEndValue < _duration - DBL_EPSILON)
         {
-            adjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions cropRect:CGRectMake(0.0f, 0.0f, dimensions.width, dimensions.height) cropOrientation:UIImageOrientationUp cropLockedAspectRatio:1.0 cropMirrored:false trimStartValue:trimStartValue trimEndValue:trimEndValue paintingData:nil sendAsGif:false preset:TGMediaVideoConversionPresetVideoMessage];
+            adjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions cropRect:CGRectMake(0.0f, 0.0f, dimensions.width, dimensions.height) cropOrientation:UIImageOrientationUp cropLockedAspectRatio:1.0 cropMirrored:false trimStartValue:trimStartValue trimEndValue:trimEndValue toolValues:nil paintingData:nil sendAsGif:false preset:TGMediaVideoConversionPresetVideoMessage];
             
             duration = trimEndValue - trimStartValue;
         }
