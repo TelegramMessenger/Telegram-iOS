@@ -41,6 +41,7 @@ typedef enum
 @property (nonatomic, readonly) PGPhotoProcessPass *pass;
 
 @property (nonatomic, readonly) bool isSimple;
+@property (nonatomic, readonly) bool isAvialableForVideo;
 
 @property (nonatomic, weak) PGPhotoToolComposer *toolComposer;
 

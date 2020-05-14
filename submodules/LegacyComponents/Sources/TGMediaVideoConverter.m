@@ -378,6 +378,14 @@
     [assetReader addOutput:output];
     
     AVAssetWriterInput *input = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
+    
+    NSDictionary *sourcePixelBufferAttributesDictionary = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt:kCVPixelFormatType_32BGRA], kCVPixelBufferPixelFormatTypeKey,
+    [NSNumber numberWithInt:dimensions.width], kCVPixelBufferWidthKey,
+    [NSNumber numberWithInt:dimensions.height], kCVPixelBufferHeightKey,
+    nil];
+    
+    AVAssetWriterInputPixelBufferAdaptor *pixelBufferInput = [AVAssetWriterInputPixelBufferAdaptor assetWriterInputPixelBufferAdaptorWithAssetWriterInput:input sourcePixelBufferAttributes:sourcePixelBufferAttributesDictionary];
+    
     [assetWriter addInput:input];
     
     videoProcessor = [[TGMediaSampleBufferProcessor alloc] initWithAssetReaderOutput:output assetWriterInput:input];

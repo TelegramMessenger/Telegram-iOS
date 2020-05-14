@@ -29,7 +29,9 @@
 @property (nonatomic, readonly) bool cropMirrored;
 @property (nonatomic, readonly) bool sendAsGif;
 @property (nonatomic, readonly) TGPaintingData *paintingData;
+@property (nonatomic, readonly) NSDictionary *toolValues;
 
+- (bool)toolsApplied;
 - (bool)hasPainting;
 
 - (bool)cropAppliedForAvatar:(bool)forAvatar;

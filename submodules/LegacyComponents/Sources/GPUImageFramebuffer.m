@@ -1,6 +1,8 @@
 #import "GPUImageFramebuffer.h"
 #import "GPUImageOutput.h"
 
+#import "TGTimerTarget.h"
+
 @interface GPUImageFramebuffer()
 {
     GLuint framebuffer;
@@ -24,6 +26,9 @@ void dataProviderReleaseCallback (void *info, const void *data, size_t size);
 void dataProviderUnlockCallback (void *info, const void *data, size_t size);
 
 @implementation GPUImageFramebuffer
+{
+    NSTimer *fixer;
+}
 
 #pragma mark -
 #pragma mark Initialization and teardown
@@ -252,6 +257,9 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
     }
     
     framebufferReferenceCount++;
+    
+    [fixer invalidate];
+    fixer = nil;
 }
 
 - (void)unlock
@@ -263,10 +271,18 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
 
     NSAssert(framebufferReferenceCount > 0, @"Tried to overrelease a framebuffer, did you forget to call -useNextFrameForImageCapture before using -imageFromCurrentFramebuffer?");
     framebufferReferenceCount--;
+
     if (framebufferReferenceCount < 1)
     {
         [[GPUImageContext sharedFramebufferCache] returnFramebufferToCache:self];
+    } else if (framebufferReferenceCount == 1) {
+        fixer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(fixTick) interval:0.3 repeat:false];
     }
+}
+
+- (void)fixTick {
+    [self clearAllLocks];
+    [self destroyFramebuffer];
 }
 
 - (void)clearAllLocks

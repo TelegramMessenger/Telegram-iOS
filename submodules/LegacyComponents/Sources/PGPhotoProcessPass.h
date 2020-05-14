@@ -32,7 +32,6 @@
 @property (nonatomic, readonly) GPUImageOutput <GPUImageInput> *filter;
 
 - (void)updateParameters;
-- (void)process;
 - (void)invalidate;
 
 @end

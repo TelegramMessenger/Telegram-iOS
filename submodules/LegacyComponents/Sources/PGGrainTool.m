@@ -155,4 +155,9 @@
     );
 }
 
+- (bool)isAvialableForVideo
+{
+    return false;
+}
+
 @end

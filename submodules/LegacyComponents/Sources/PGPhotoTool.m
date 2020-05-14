@@ -38,6 +38,11 @@
     return true;
 }
 
+- (bool)isAvialableForVideo
+{
+    return true;
+}
+
 - (NSInteger)order
 {
     return _order;
