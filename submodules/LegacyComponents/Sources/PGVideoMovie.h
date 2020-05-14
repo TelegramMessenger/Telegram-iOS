@@ -6,13 +6,13 @@
 @interface PGVideoMovie : GPUImageOutput
 
 @property (readwrite, retain) AVAsset *asset;
-@property (readonly, assign) bool shouldRepeat;
+@property (nonatomic, assign) bool shouldRepeat;
 
 @property (readonly, nonatomic) CGFloat progress;
 
 @property (readonly, nonatomic) AVAssetReader *assetReader;
-@property (readonly, nonatomic) BOOL audioEncodingIsFinished;
-@property (readonly, nonatomic) BOOL videoEncodingIsFinished;
+@property (readonly, nonatomic) bool audioEncodingIsFinished;
+@property (readonly, nonatomic) bool videoEncodingIsFinished;
 
 - (instancetype)initWithAsset:(AVAsset *)asset;
 
