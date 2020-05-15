@@ -253,6 +253,10 @@ public final class AccountViewTracker {
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
+    private var updatedReactionsMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextUpdatedReactionsDisposableId: Int32 = 0
+    private var updatedReactionsDisposables = DisposableDict<Int32>()
+    
     private var updatedSeenLiveLocationMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextSeenLiveLocationDisposableId: Int32 = 0
     private var seenLiveLocationDisposables = DisposableDict<Int32>()
@@ -303,6 +307,7 @@ public final class AccountViewTracker {
     
     deinit {
         self.updatedViewCountDisposables.dispose()
+        self.updatedReactionsDisposables.dispose()
         self.externallyUpdatedPeerIdDisposable.dispose()
     }
     
@@ -625,6 +630,89 @@ public final class AccountViewTracker {
                             }
                         }
                         self.updatedViewCountDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func updateReactionsForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedReactionsMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 5 * 60 {
+                    self.updatedReactionsMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedReactionsDisposableId
+                    self.nextUpdatedReactionsDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                return account.network.request(Api.functions.messages.getMessagesReactions(peer: inputPeer, id: messageIds.map { $0.id }))
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                                    return .single(nil)
+                                }
+                                |> mapToSignal { updates -> Signal<Void, NoError> in
+                                    guard let updates = updates else {
+                                        return .complete()
+                                    }
+                                    return account.postbox.transaction { transaction -> Void in
+                                        let updateList: [Api.Update]
+                                        switch updates {
+                                        case let .updates(updates, _, _, _, _):
+                                            updateList = updates
+                                        case let .updatesCombined(updates, _, _, _, _, _):
+                                            updateList = updates
+                                        case let .updateShort(update, _):
+                                            updateList = [update]
+                                        default:
+                                            updateList = []
+                                        }
+                                        for update in updateList {
+                                            switch update {
+                                            case let .updateMessageReactions(peer, msgId, reactions):
+                                                transaction.updateMessage(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), update: { currentMessage in
+                                                    
+                                                    let updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
+                                                    
+                                                    let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                                    var attributes = currentMessage.attributes
+                                                    loop: for j in 0 ..< attributes.count {
+                                                        if let attribute = attributes[j] as? ReactionsMessageAttribute {
+                                                            if updatedReactions.reactions == attribute.reactions {
+                                                                return .skip
+                                                            }
+                                                            attributes[j] = updatedReactions
+                                                            break loop
+                                                        }
+                                                    }
+                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                })
+                                            default:
+                                                break
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        |> switchToLatest)
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedReactionsDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedReactionsDisposables.set(signal.start(), forKey: disposableId)
                     }
                 }
             }
