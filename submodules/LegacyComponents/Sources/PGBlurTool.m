@@ -215,4 +215,9 @@
     return false;
 }
 
+- (bool)isAvialableForVideo
+{
+    return false;
+}
+
 @end

@@ -46,6 +46,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
                     return data.complete
                 }).start(next: { next in
                     subscriber.putNext(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop, callbacks: callbacks))
+                    subscriber.putCompletion()
                 })
 
                 return ActionDisposable {

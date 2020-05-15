@@ -1313,7 +1313,7 @@
         [self updatePlayerRange:trimEndValue];
     }
     
-    TGVideoEditAdjustments *updatedAdjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:_videoDimensions cropRect:cropRect cropOrientation:adjustments.cropOrientation cropLockedAspectRatio:adjustments.cropLockedAspectRatio cropMirrored:adjustments.cropMirrored trimStartValue:trimStartValue trimEndValue:trimEndValue paintingData:adjustments.paintingData sendAsGif:sendAsGif preset:adjustments.preset];
+    TGVideoEditAdjustments *updatedAdjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:_videoDimensions cropRect:cropRect cropOrientation:adjustments.cropOrientation cropLockedAspectRatio:adjustments.cropLockedAspectRatio cropMirrored:adjustments.cropMirrored trimStartValue:trimStartValue trimEndValue:trimEndValue toolValues:adjustments.toolValues paintingData:adjustments.paintingData sendAsGif:sendAsGif preset:adjustments.preset];
     [self.item.editingContext setAdjustments:updatedAdjustments forItem:self.item.editableMediaItem];
     
     if (sendAsGif)
@@ -1405,7 +1405,7 @@
         UIImageOrientation cropOrientation = (adjustments != nil) ? adjustments.cropOrientation : UIImageOrientationUp;
         CGFloat cropLockedAspectRatio = (adjustments != nil) ? adjustments.cropLockedAspectRatio : 0.0f;
         
-        TGVideoEditAdjustments *updatedAdjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:_videoDimensions cropRect:cropRect cropOrientation:cropOrientation cropLockedAspectRatio:cropLockedAspectRatio cropMirrored:adjustments.cropMirrored trimStartValue:_scrubberView.trimStartValue trimEndValue:_scrubberView.trimEndValue paintingData:adjustments.paintingData sendAsGif:adjustments.sendAsGif preset:adjustments.preset];
+        TGVideoEditAdjustments *updatedAdjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:_videoDimensions cropRect:cropRect cropOrientation:cropOrientation cropLockedAspectRatio:cropLockedAspectRatio cropMirrored:adjustments.cropMirrored trimStartValue:_scrubberView.trimStartValue trimEndValue:_scrubberView.trimEndValue toolValues:adjustments.toolValues paintingData:adjustments.paintingData sendAsGif:adjustments.sendAsGif preset:adjustments.preset];
         
         [self.item.editingContext setAdjustments:updatedAdjustments forItem:self.item.editableMediaItem];
     }

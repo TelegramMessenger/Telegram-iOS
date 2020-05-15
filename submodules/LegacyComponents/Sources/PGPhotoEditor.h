@@ -29,11 +29,14 @@
 
 @property (nonatomic, readonly) bool enableStickers;
 
+@property (nonatomic, readonly) bool forVideo;
+
 - (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo enableStickers:(bool)enableStickers;
 
 - (void)cleanup;
 
 - (void)setImage:(UIImage *)image forCropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored fullSize:(bool)fullSize;
+- (void)setVideoAsset:(AVAsset *)asset;
 
 - (void)processAnimated:(bool)animated completion:(void (^)(void))completion;
 
