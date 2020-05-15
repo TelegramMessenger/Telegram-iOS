@@ -669,7 +669,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                     }
                     
-                    if !strongSelf.reactionNodes.isEmpty {
+                    /*if !strongSelf.reactionNodes.isEmpty {
                         if strongSelf.reactionButtonNode == nil {
                             let reactionButtonNode = HighlightTrackingButtonNode()
                             strongSelf.reactionButtonNode = reactionButtonNode
@@ -695,7 +695,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     } else if let reactionButtonNode = strongSelf.reactionButtonNode {
                         strongSelf.reactionButtonNode = nil
                         reactionButtonNode.removeFromSupernode()
-                    }
+                    }*/
                 }
             })
         }

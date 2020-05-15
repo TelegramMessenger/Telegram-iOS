@@ -14,7 +14,13 @@ import AppBundle
 func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bool) -> Void)?) -> Signal<[FileMediaReference]?, NoError> {
     let delayRequest = true
     
-    let contextBot = resolvePeerByName(account: account, name: "gif")
+    let contextBot = account.postbox.transaction { transaction -> String in
+        let configuration = currentSearchBotsConfiguration(transaction: transaction)
+        return configuration.gifBotUsername ?? "gif"
+    }
+    |> mapToSignal { botName -> Signal<PeerId?, NoError> in
+        return resolvePeerByName(account: account, name: botName)
+    }
     |> mapToSignal { peerId -> Signal<Peer?, NoError> in
         if let peerId = peerId {
             return account.postbox.loadedPeerWithId(peerId)
@@ -78,7 +84,7 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
                     }
                     
                     if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         references.append(FileMediaReference.standalone(media: file))
                     }
                 case let .internalReference(_, _, _, _, _, _, file, _):
