@@ -190,3 +190,4 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
         self.state = .cancelled
     }
 }
+

@@ -195,7 +195,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                     self.containerNode.layer.insertSublayer(sampleBufferLayer.layer, above: self.imageNode.layer)
                 }
                 
-                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), resource: file.resource, layerHolder: sampleBufferLayer)
+                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
                 self.videoLayerFrameManager?.start()
             }
         } else {
@@ -563,8 +563,6 @@ private enum ItemsLayout {
                             return (i, j - 1)
                         }
                     }
-                    
-                    break
                 }
                 return (i, self.frames.count - 1)
             }

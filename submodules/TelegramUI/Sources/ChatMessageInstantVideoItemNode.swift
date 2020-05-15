@@ -47,6 +47,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     private var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
+    private var currentSwipeAction: ChatControllerInteractionSwipeAction?
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
@@ -138,7 +140,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if strongSelf.selectionNode != nil {
                     return false
                 }
-                return item.controllerInteraction.canSetupReply(item.message)
+                let action = item.controllerInteraction.canSetupReply(item.message)
+                strongSelf.currentSwipeAction = action
+                if case .none = action {
+                    return false
+                } else {
+                    return true
+                }
             }
             return false
         }
@@ -774,7 +782,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -800,7 +808,18 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             let translation = recognizer.translation(in: self.view)
             if case .ended = recognizer.state, translation.x < -45.0 {
                 if let item = self.item {
-                    item.controllerInteraction.setupReply(item.message.id)
+                    if let currentSwipeAction = currentSwipeAction {
+                        switch currentSwipeAction {
+                        case .none:
+                            break
+                        case .reply:
+                            item.controllerInteraction.setupReply(item.message.id)
+                        case .like:
+                            item.controllerInteraction.updateMessageLike(item.message.id, true)
+                        case .unlike:
+                            item.controllerInteraction.updateMessageLike(item.message.id, true)
+                        }
+                    }
                 }
             }
             var bounds = self.bounds

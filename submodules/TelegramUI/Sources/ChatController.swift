@@ -578,27 +578,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     var reactionItems: [ReactionContextItem] = []
                     
-                    /*let reactions: [(String, String, String)] = [
-                        ("😔", "Sad", "sad"),
-                        ("😳", "Surprised", "surprised"),
-                        ("😂", "Fun", "lol"),
-                        ("👍", "Like", "thumbsup"),
-                        ("❤", "Love", "heart"),
-                        ("🥳", "Celebrate", "celebrate"),
-                        ("😭", "Cry", "cry"),
-                        ("😒", "Meh", "meh"),
-                        ("👌", "OK", "ok"),
-                        ("😐", "Poker", "poker"),
-                        ("💩", "Poop", "poop"),
-                        ("😊", "Smile", "smile")
-                    ]
-                    
-                    for (value, text, name) in reactions {
-                        if let path = getAppBundle().path(forResource: name, ofType: "tgs") {
-                            reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
+                    var hasLike = false
+                    let heart = "❤️"
+                    for attribute in messages[0].attributes {
+                        if let attribute = attribute as? ReactionsMessageAttribute {
+                            for reaction in attribute.reactions {
+                                if reaction.value == heart {
+                                    if reaction.isSelected {
+                                        hasLike = true
+                                    }
+                                }
+                            }
+                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                            if attribute.value == heart {
+                                hasLike = true
+                            }
                         }
-                    }*/
-                    if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                    }
+                    
+                    if hasLike {
+                        reactionItems.append(ReactionContextItem(reaction: .unlike))
+                    } else {
+                        reactionItems.append(ReactionContextItem(reaction: .like))
+                    }
+                    
+                    if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         reactionItems = []
                     }
                     
@@ -614,24 +618,40 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self, let message = updatedMessages.first else {
                             return
                         }
+                        let heart = "❤️"
                         strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                                 if item.message.id == message.id {
-                                    itemNode.awaitingAppliedReaction = (value, { [weak itemNode] in
-                                        guard let controller = controller else {
-                                            return
-                                        }
-                                        if let itemNode = itemNode, let (targetNode, count) = itemNode.targetReactionNode(value: value) {
-                                            controller.dismissWithReaction(value: value, into: targetNode, hideNode: count == 1, completion: {
-                                            })
-                                        } else {
+                                    switch value {
+                                    case .like:
+                                        itemNode.awaitingAppliedReaction = (heart, { [weak itemNode] in
+                                            guard let controller = controller else {
+                                                return
+                                            }
+                                            if let itemNode = itemNode, let (targetEmptyNode, targetFilledNode) = itemNode.targetReactionNode(value: heart) {
+                                                controller.dismissWithReaction(value: heart, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: true, completion: {
+                                                })
+                                            } else {
+                                                controller.dismiss()
+                                            }
+                                        })
+                                    case .unlike:
+                                        itemNode.awaitingAppliedReaction = (nil, {
+                                            guard let controller = controller else {
+                                                return
+                                            }
                                             controller.dismiss()
-                                        }
-                                    })
+                                        })
+                                    }
                                 }
                             }
                         }
-                        let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: value).start()
+                        switch value {
+                        case .like:
+                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: heart).start()
+                        case .unlike:
+                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: nil).start()
+                        }
                     }
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -1464,13 +1484,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, canSetupReply: { [weak self] message in
             if !message.flags.contains(.Incoming) {
                 if !message.flags.intersection([.Failed, .Sending, .Unsent]).isEmpty {
-                    return false
+                    return .none
                 }
             }
             if let strongSelf = self {
-                return canReplyInChat(strongSelf.presentationInterfaceState)
+                if canReplyInChat(strongSelf.presentationInterfaceState) {
+                    return .reply
+                } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    var hasLike = false
+                    let heart = "❤️"
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ReactionsMessageAttribute {
+                            for reaction in attribute.reactions {
+                                if reaction.value == heart {
+                                    if reaction.isSelected {
+                                        hasLike = true
+                                    }
+                                }
+                            }
+                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                            if attribute.value == heart {
+                                hasLike = true
+                            }
+                        }
+                    }
+                    if hasLike {
+                        return .unlike
+                    } else {
+                        return .like
+                    }
+                }
             }
-            return false
+            return .none
         }, navigateToFirstDateMessage: { [weak self] timestamp in
             guard let strongSelf = self else {
                 return
@@ -1899,11 +1944,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     window.rootViewController?.present(controller, animated: true)
                 }
             }
-        }, updateMessageReaction: { [weak self] messageId, reaction in
+        }, updateMessageLike: { [weak self] messageId, isLiked in
             guard let strongSelf = self else {
                 return
             }
-            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: reaction).start()
+            
+            let heart = "❤️"
+            if isLiked {
+                let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: heart).start()
+            } else {
+                let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: nil).start()
+            }
         }, openMessageReactions: { [weak self] messageId in
             guard let strongSelf = self else {
                 return
@@ -6073,7 +6124,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             if mimeType == "application/pdf" {
                                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true)))
                                             }
-                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: [.FileName(fileName: item.fileName)])
+                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: [.FileName(fileName: item.fileName)])
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: nil)
                                             messages.append(message)
                                         }
@@ -6845,7 +6896,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
                 fileAttributes.append(.ImageSize(size: PixelDimensions(size)))
                 
-                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "image/webp", size: data.count, attributes: fileAttributes)
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: data.count, attributes: fileAttributes)
                 let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
                 
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
@@ -7027,7 +7078,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 })
                                 
-                                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+                                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
                                 
                                 strongSelf.recorderFeedback?.tap()
                                 strongSelf.recorderFeedback = nil
@@ -7112,7 +7163,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
             
-            self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+            self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
         }
     }
     

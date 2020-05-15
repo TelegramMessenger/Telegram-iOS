@@ -302,7 +302,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 layerHolder.layer.frame = item.frame
                 self.scrollNode.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: item.fileReference, resource: item.fileReference.media.resource, layerHolder: layerHolder)
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: item.fileReference, layerHolder: layerHolder)
                 self.visibleLayers[item.fileReference.media.fileId] = (manager, layerHolder)
                 self.visibleThumbnailLayers[item.fileReference.media.fileId]?.ready = { [weak self] in
                     if let strongSelf = self {

@@ -73,7 +73,7 @@ private final class MessageReactionCategoryContext {
         self.state.loadingMore = true
         self.statePromise.set(self.state)
         
-        /*var flags: Int32 = 0
+        var flags: Int32 = 0
         var reaction: String?
         switch self.category {
         case .all:
@@ -89,7 +89,7 @@ private final class MessageReactionCategoryContext {
             return inputPeer
         }
         |> castError(LoadReactionsError.self)
-        |> mapToSignal { inputPeer -> Signal<Api.MessageReactionsList, LoadReactionsError> in
+        |> mapToSignal { inputPeer -> Signal<Api.messages.MessageReactionsList, LoadReactionsError> in
             guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
@@ -99,7 +99,7 @@ private final class MessageReactionCategoryContext {
             }
         }
         //#if DEBUG
-        request = request |> delay(1.0, queue: .mainQueue())
+        //request = request |> delay(1.0, queue: .mainQueue())
         //#endif
         self.loadingDisposable.set((request
         |> deliverOnMainQueue).start(next: { [weak self] result in
@@ -141,7 +141,7 @@ private final class MessageReactionCategoryContext {
             })
         }, error: { _ in
             
-        }))*/
+        }))
     }
 }
 

@@ -394,7 +394,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         return false
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionNode(value: value)
         }

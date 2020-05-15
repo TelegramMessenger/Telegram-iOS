@@ -119,7 +119,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveFileNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         return self.interactiveFileNode.reactionTargetNode(value: value)
     }
 }

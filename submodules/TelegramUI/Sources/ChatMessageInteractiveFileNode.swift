@@ -958,7 +958,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.playerUpdateTimer = nil
     }
     
-    func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
+    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionNode(value: value)
         }

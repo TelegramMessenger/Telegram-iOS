@@ -610,7 +610,7 @@ final class ChatMessageAccessibilityData {
         }
         
         if isSelected == nil {
-            var canReply = item.controllerInteraction.canSetupReply(item.message)
+            var canReply = item.controllerInteraction.canSetupReply(item.message) == .reply
             for media in item.content.firstMessage.media {
                 if let _ = media as? TelegramMediaExpiredContent {
                     canReply = false
@@ -829,7 +829,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func targetReactionNode(value: String) -> (ASDisplayNode, Int)? {
+    func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         return nil
     }
 }

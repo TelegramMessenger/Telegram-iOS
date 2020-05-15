@@ -148,11 +148,29 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
 
 func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
-        case let .document(_, id, accessHash, fileReference, _, mimeType, size, thumbs, dcId, attributes):
+        case let .document(_, id, accessHash, fileReference, _, mimeType, size, thumbs, videoThumbs, dcId, attributes):
             let parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
             let (immediateThumbnail, previewRepresentations) = telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: dcId, documentId: id, accessHash: accessHash, fileReference: fileReference.makeData(), sizes: thumbs ?? [])
             
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+            var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []
+            if let videoThumbs = videoThumbs {
+                for thumb in videoThumbs {
+                    switch thumb {
+                    case let .videoSize(type, location, w, h, _):
+                        let resource: TelegramMediaResource
+                        switch location {
+                        case let .fileLocationToBeDeprecated(volumeId, localId):
+                            resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
+                        }
+                        
+                        videoThumbnails.append(TelegramMediaFile.VideoThumbnail(
+                            dimensions: PixelDimensions(width: w, height: h),
+                            resource: resource))
+                    }
+                }
+            }
+            
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
         case .documentEmpty:
             return nil
     }

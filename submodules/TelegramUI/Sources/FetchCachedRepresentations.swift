@@ -93,13 +93,16 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 }
             } else if let size = resource.size {
                 return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, 256 * 1024))
-                |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                |> mapToSignal { result -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                    let (data, _) = result
                     return fetchCachedAlbumArtworkRepresentation(account: account, resource: resource, data: data, representation: representation)
                     |> `catch` { error -> Signal<CachedMediaResourceRepresentationResult, NoError> in
                         switch error {
                             case let .moreDataNeeded(targetSize):
                                 return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, targetSize))
-                                |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                                |> mapToSignal { result ->
+                                    Signal<CachedMediaResourceRepresentationResult, NoError> in
+                                    let (data, _) = result
                                     return fetchCachedAlbumArtworkRepresentation(account: account, resource: resource, data: data, representation: representation)
                                     |> `catch` { error -> Signal<CachedMediaResourceRepresentationResult, NoError> in
                                         return .complete()

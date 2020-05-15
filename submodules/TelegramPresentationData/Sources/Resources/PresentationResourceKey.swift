@@ -240,4 +240,8 @@ public enum PresentationResourceParameterKey: Hashable {
     
     case chatBubbleLamp(incoming: Bool)
     case chatPsaInfo(color: UInt32)
+    
+    case chatMessageLike(incoming: Bool, isSelected: Bool)
+    case chatMessageFreeLike(isSelected: Bool)
+    case chatMessageMediaLike(isSelected: Bool)
 }
