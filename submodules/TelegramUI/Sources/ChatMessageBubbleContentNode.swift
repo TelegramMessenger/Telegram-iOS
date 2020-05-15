@@ -183,7 +183,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func updateIsExtractedToContextPreview(_ value: Bool) {
     }
     
-    func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
+    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         return nil
     }
 }

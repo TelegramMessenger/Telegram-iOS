@@ -39,6 +39,7 @@ final class ReactionNode: ASDisplayNode {
     private let textNode: ImmediateTextNode
     private let animationNode: AnimatedStickerNode
     private let imageNode: ASImageNode
+    private let additionalImageNode: ASImageNode
     var isMaximized: Bool?
     private let intrinsicSize: CGSize
     private let intrinsicOffset: CGPoint
@@ -56,13 +57,7 @@ final class ReactionNode: ASDisplayNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
         
-        let reactionText: String
-        switch reaction {
-        case let .reaction(_, text, _):
-            reactionText = text
-        case .reply:
-            reactionText = "Reply"
-        }
+        let reactionText: String = ""
         
         self.textNode.attributedText = NSAttributedString(string: reactionText, font: font, textColor: theme.chat.serviceMessage.dateTextColor.withWallpaper)
         let textSize = self.textNode.updateLayout(CGSize(width: 200.0, height: 100.0))
@@ -80,67 +75,19 @@ final class ReactionNode: ASDisplayNode {
         var intrinsicSize = CGSize(width: maximizedReactionSize + 14.0, height: maximizedReactionSize + 14.0)
         
         self.imageNode = ASImageNode()
+        self.additionalImageNode = ASImageNode()
         switch reaction {
-        case let .reaction(value, _, path):
-            switch value {
-            case "😔":
-                intrinsicSize.width *= 1.7
-                intrinsicSize.height *= 1.7
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            case "😳":
-                intrinsicSize.width *= 1.15
-                intrinsicSize.height *= 1.15
-                self.intrinsicOffset = CGPoint(x: 0.0, y: -0.05 * intrinsicSize.width)
-            case "😂":
-                intrinsicSize.width *= 1.2
-                intrinsicSize.height *= 1.2
-                self.intrinsicOffset = CGPoint(x: 0.0 * intrinsicSize.width, y: 0.0 * intrinsicSize.width)
-            case "👍":
-                intrinsicSize.width *= 1.256
-                intrinsicSize.height *= 1.256
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.05 * intrinsicSize.width)
-            case "🥳":
-                intrinsicSize.width *= 1.39
-                intrinsicSize.height *= 1.39
-                self.intrinsicOffset = CGPoint(x: 0.1 * intrinsicSize.width, y: -0.05 * intrinsicSize.width)
-            case "😭":
-                intrinsicSize.width *= 1.15
-                intrinsicSize.height *= 1.15
-                self.intrinsicOffset = CGPoint(x: 0.1 * intrinsicSize.width, y: 0.03 * intrinsicSize.width)
-            case "😒":
-                intrinsicSize.width *= 1.05
-                intrinsicSize.height *= 1.05
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            case "👌":
-                intrinsicSize.width *= 1.08
-                intrinsicSize.height *= 1.08
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            case "😐":
-                intrinsicSize.width *= 1.75
-                intrinsicSize.height *= 1.75
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.01 * intrinsicSize.width)
-            case "💩":
-                intrinsicSize.width *= 1.1
-                intrinsicSize.height *= 1.1
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            case "😊":
-                intrinsicSize.width *= 1.2
-                intrinsicSize.height *= 1.2
-                self.intrinsicOffset = CGPoint(x: 0.0, y: -0.01 * intrinsicSize.width)
-            default:
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            }
-            
-            var renderSize: CGSize = CGSize(width: intrinsicSize.width * 2.0, height: intrinsicSize.height * 2.0)
-            if UIScreen.main.scale.isEqual(to: 3.0) {
-                if maximizedReactionSize < 40.0 {
-                    renderSize = CGSize(width: intrinsicSize.width * 2.5, height: intrinsicSize.height * 2.5)
-                }
-            }
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(renderSize.width), height: Int(renderSize.height), mode: .direct)
-        case .reply:
+        case .like:
             self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            self.imageNode.image = UIImage(named: "Chat/Context Menu/ReactionReply", in: getAppBundle(), compatibleWith: nil)
+            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/ContextHeartFilled"), color: UIColor(rgb: 0xfe1512))
+        case .unlike:
+            self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
+            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/ContextHeartBrokenL"), color: UIColor(rgb: 0xfe1512))
+            self.additionalImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/ContextHeartBrokenR"), color: UIColor(rgb: 0xfe1512))
+        }
+        
+        if let image = self.imageNode.image {
+            intrinsicSize = image.size
         }
         
         self.intrinsicSize = intrinsicSize
@@ -149,18 +96,26 @@ final class ReactionNode: ASDisplayNode {
         
         //self.backgroundColor = .gray
         
-        self.textBackgroundNode.addSubnode(self.textNode)
-        self.addSubnode(self.textBackgroundNode)
+        //self.textBackgroundNode.addSubnode(self.textNode)
+        //self.addSubnode(self.textBackgroundNode)
         
-        self.addSubnode(self.animationNode)
+        //self.addSubnode(self.animationNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.additionalImageNode)
         self.animationNode.updateLayout(size: self.intrinsicSize)
         self.animationNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
+        
+        switch reaction {
+        case .like:
+            self.imageNode.frame = CGRect(origin: CGPoint(x: -5.0, y: -5.0), size: self.intrinsicSize)
+        case .unlike:
+            self.imageNode.frame = CGRect(origin: CGPoint(x: -6.0, y: -5.0), size: self.intrinsicSize)
+            self.additionalImageNode.frame = CGRect(origin: CGPoint(x: -3.0, y: -5.0), size: self.intrinsicSize)
+        }
     }
     
     func updateLayout(size: CGSize, scale: CGFloat, transition: ContainedViewLayoutTransition, displayText: Bool) {
-        transition.updatePosition(node: self.animationNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
+        /*transition.updatePosition(node: self.animationNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
         transition.updateTransformScale(node: self.animationNode, scale: scale, beginWithCurrentState: true)
         transition.updatePosition(node: self.imageNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
         transition.updateTransformScale(node: self.imageNode, scale: scale, beginWithCurrentState: true)
@@ -169,7 +124,7 @@ final class ReactionNode: ASDisplayNode {
         transition.updateTransformScale(node: self.textBackgroundNode, scale: displayText ? 1.0 : 0.1, beginWithCurrentState: true)
         
         transition.updateAlpha(node: self.textBackgroundNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)
-        transition.updateAlpha(node: self.textNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)
+        transition.updateAlpha(node: self.textNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)*/
     }
     
     func updateIsAnimating(_ isAnimating: Bool, animated: Bool) {
@@ -177,6 +132,21 @@ final class ReactionNode: ASDisplayNode {
             self.animationNode.visibility = true
         } else {
             self.animationNode.visibility = false
+        }
+    }
+    
+    func didAppear() {
+        switch self.reaction {
+        case .like:
+            self.imageNode.layer.animateScale(from: 1.0, to: 1.08, duration: 0.12, delay: 0.22, removeOnCompletion: false, completion: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.imageNode.layer.animateScale(from: 1.08, to: 1.0, duration: 0.12)
+            })
+        case .unlike:
+            self.imageNode.layer.animatePosition(from: CGPoint(x: -2.5, y: 0.0), to: CGPoint(), duration: 0.2, delay: 0.15, additive: true)
+            self.additionalImageNode.layer.animatePosition(from: CGPoint(x: 2.5, y: 0.0), to: CGPoint(), duration: 0.2, delay: 0.15, additive: true)
         }
     }
 }
@@ -268,9 +238,9 @@ final class ReactionSelectionNode: ASDisplayNode {
         let anchorX = max(anchorMinX, min(anchorMaxX, offsetFromStart))
         
         var maximizedIndex = -1
-        if let reaction = self.reactions.last, case .reply = reaction {
+        /*if let reaction = self.reactions.last, case .reply = reaction {
             maximizedIndex = self.reactions.count - 1
-        }
+        }*/
         if backgroundFrame.insetBy(dx: -10.0, dy: -10.0).offsetBy(dx: 0.0, dy: 10.0).contains(touchPoint) {
             maximizedIndex = Int(((touchPoint.x - anchorMinX) / (anchorMaxX - anchorMinX)) * CGFloat(self.reactionNodes.count))
             maximizedIndex = max(0, min(self.reactionNodes.count - 1, maximizedIndex))
@@ -517,3 +487,4 @@ final class ReactionSelectionNode: ASDisplayNode {
         return nil
     }
 }
+

@@ -4,7 +4,7 @@ import SyncCore
 import TelegramUIPreferences
 
 private func patternWallpaper(slug: String, topColor: UInt32, bottomColor: UInt32?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
-   return TelegramWallpaper.file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(color: topColor, bottomColor: bottomColor, intensity: intensity ?? 50, rotation: rotation))
+   return TelegramWallpaper.file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(color: topColor, bottomColor: bottomColor, intensity: intensity ?? 50, rotation: rotation))
 }
 
 var dayClassicColorPresets: [PresentationThemeAccentColor] = [

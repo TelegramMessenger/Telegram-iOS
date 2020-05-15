@@ -472,7 +472,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionNode(value: value)
         }

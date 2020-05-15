@@ -101,7 +101,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity, rotation: rotation))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }

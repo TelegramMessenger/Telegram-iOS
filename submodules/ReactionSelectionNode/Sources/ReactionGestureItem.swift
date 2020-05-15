@@ -4,6 +4,6 @@ import TelegramCore
 import SyncCore
 
 public enum ReactionGestureItem {
-    case reaction(value: String, text: String, path: String)
-    case reply
+    case like
+    case unlike
 }

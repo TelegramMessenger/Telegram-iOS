@@ -1055,7 +1055,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return self.contentImageNode?.playMediaWithSound()
     }
     
-    func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
+    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionNode(value: value)
         }

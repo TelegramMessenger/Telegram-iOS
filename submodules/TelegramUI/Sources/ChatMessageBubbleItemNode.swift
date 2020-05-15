@@ -196,6 +196,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private var reactionRecognizer: ReactionSwipeGestureRecognizer?
     
+    private var currentSwipeAction: ChatControllerInteractionSwipeAction?
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
@@ -485,13 +487,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             }
                         }
                     }
-                    return item.controllerInteraction.canSetupReply(item.message)
+                    let action = item.controllerInteraction.canSetupReply(item.message)
+                    strongSelf.currentSwipeAction = action
+                    if case .none = action {
+                        return false
+                    } else {
+                        return true
+                    }
                 }
                 return false
             }
             self.view.addGestureRecognizer(replyRecognizer)
         } else {
-            let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
+            /*let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
             self.reactionRecognizer = reactionRecognizer
             reactionRecognizer.availableReactions = { [weak self] in
                 guard let strongSelf = self, let item = strongSelf.item, !item.presentationData.isPreview && !Namespaces.Message.allScheduled.contains(item.message.id.namespace) else {
@@ -686,7 +694,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 }
             }
-            self.view.addGestureRecognizer(reactionRecognizer)
+            self.view.addGestureRecognizer(reactionRecognizer)*/
         }
     }
     
@@ -2162,7 +2170,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             
             strongSelf.awaitingAppliedReaction = nil
-            var targetNode: ASDisplayNode?
+            /*var targetNode: ASDisplayNode?
             var hideTarget = false
             if let awaitingAppliedReaction = awaitingAppliedReaction {
                 for contentNode in strongSelf.contentNodes {
@@ -2173,7 +2181,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 }
             }
-            strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)
+            strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)*/
             f()
         }
     }
@@ -3002,7 +3010,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
 
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.insertSubnode(swipeToReplyNode, belowSubnode: self.messageAccessibilityArea)
                         animateReplyNodeIn = true
@@ -3031,7 +3039,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let translation = recognizer.translation(in: self.view)
                 if case .ended = recognizer.state, translation.x < -45.0 {
                     if let item = self.item {
-                        item.controllerInteraction.setupReply(item.message.id)
+                        if let currentSwipeAction = currentSwipeAction {
+                            switch currentSwipeAction {
+                            case .none:
+                                break
+                            case .reply:
+                                item.controllerInteraction.setupReply(item.message.id)
+                            case .like:
+                                item.controllerInteraction.updateMessageLike(item.message.id, true)
+                            case .unlike:
+                                item.controllerInteraction.updateMessageLike(item.message.id, false)
+                            }
+                        }
                     }
                 }
                 var bounds = self.bounds
@@ -3094,10 +3113,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
     
-    override func targetReactionNode(value: String) -> (ASDisplayNode, Int)? {
+    override func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         for contentNode in self.contentNodes {
-            if let (reactionNode, count) = contentNode.reactionTargetNode(value: value) {
-                return (reactionNode, count)
+            if let (emptyNode, filledNode) = contentNode.reactionTargetNode(value: value) {
+                return (emptyNode, filledNode)
             }
         }
         return nil

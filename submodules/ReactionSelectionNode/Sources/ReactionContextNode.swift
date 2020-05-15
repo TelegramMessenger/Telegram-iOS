@@ -7,14 +7,15 @@ import SyncCore
 import TelegramPresentationData
 
 public final class ReactionContextItem {
-    public let value: String
-    public let text: String
-    public let path: String
+    public enum Reaction {
+        case like
+        case unlike
+    }
     
-    public init(value: String, text: String, path: String) {
-        self.value = value
-        self.text = text
-        self.path = path
+    public let reaction: ReactionContextItem.Reaction
+    
+    public init(reaction: ReactionContextItem.Reaction) {
+        self.reaction = reaction
     }
 }
 
@@ -22,14 +23,11 @@ private let largeCircleSize: CGFloat = 16.0
 private let smallCircleSize: CGFloat = 8.0
 
 private func generateBackgroundImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
-    return generateImage(CGSize(width: diameter * 2.0 + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setBlendMode(.copy)
         context.setFillColor(foreground.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur + diameter, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.fill(CGRect(origin: CGPoint(x: shadowBlur + diameter / 2.0, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-    })?.stretchableImage(withLeftCapWidth: Int(diameter + shadowBlur / 2.0), topCapHeight: Int(diameter / 2.0 + shadowBlur / 2.0))
+    })?.stretchableImage(withLeftCapWidth: Int(shadowBlur + diameter / 2.0), topCapHeight: Int(shadowBlur + diameter / 2.0))
 }
 
 private func generateBackgroundShadowImage(shadow: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
@@ -91,8 +89,8 @@ public final class ReactionContextNode: ASDisplayNode {
     private var itemNodes: [ReactionNode] = []
     private let disclosureButton: HighlightTrackingButtonNode
     
-    private var isExpanded: Bool = false
-    private var highlightedReaction: String?
+    private var isExpanded: Bool = true
+    private var highlightedReaction: ReactionContextItem.Reaction?
     private var validLayout: (CGSize, UIEdgeInsets, CGRect)?
     
     public var reactionSelected: ((ReactionGestureItem) -> Void)?
@@ -178,7 +176,14 @@ public final class ReactionContextNode: ASDisplayNode {
         self.contentContainer.addSubnode(self.disclosureButton)
         
         self.itemNodes = self.items.map { item in
-            return ReactionNode(account: account, theme: theme, reaction: .reaction(value: item.value, text: item.text, path: item.path), maximizedReactionSize: 30.0 - 18.0, loadFirstFrame: true)
+            let reactionItem: ReactionGestureItem
+            switch item.reaction {
+            case .like:
+                reactionItem = .like
+            case .unlike:
+                reactionItem = .unlike
+            }
+            return ReactionNode(account: account, theme: theme, reaction: reactionItem, maximizedReactionSize: 30.0, loadFirstFrame: true)
         }
         self.itemNodes.forEach(self.contentContainer.addSubnode)
         
@@ -205,6 +210,10 @@ public final class ReactionContextNode: ASDisplayNode {
     }
     
     private func calculateBackgroundFrame(containerSize: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, contentSize: CGSize) -> (CGRect, Bool) {
+        var contentSize = contentSize
+        contentSize.width = max(52.0, contentSize.width)
+        contentSize.height = 52.0
+        
         let sideInset: CGFloat = 12.0
         let backgroundOffset: CGPoint = CGPoint(x: 22.0, y: -7.0)
         
@@ -214,7 +223,7 @@ public final class ReactionContextNode: ASDisplayNode {
             rect = CGRect(origin: CGPoint(x: anchorRect.maxX - contentSize.width + backgroundOffset.x, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
             isLeftAligned = true
         } else {
-            rect = CGRect(origin: CGPoint(x: anchorRect.minX - backgroundOffset.x, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
+            rect = CGRect(origin: CGPoint(x: anchorRect.minX - backgroundOffset.x - 4.0, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
             isLeftAligned = false
         }
         rect.origin.x = max(sideInset, rect.origin.x)
@@ -226,12 +235,12 @@ public final class ReactionContextNode: ASDisplayNode {
     private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
         self.validLayout = (size, insets, anchorRect)
         
-        let sideInset: CGFloat = 10.0
+        let sideInset: CGFloat = 12.0
         let itemSpacing: CGFloat = 6.0
         let minimizedItemSize: CGFloat = 30.0
         let maximizedItemSize: CGFloat = 30.0 - 18.0
         let shadowBlur: CGFloat = 5.0
-        let verticalInset: CGFloat = 11.0
+        let verticalInset: CGFloat = 13.0
         let rowHeight: CGFloat = 30.0
         let rowSpacing: CGFloat = itemSpacing
         
@@ -253,15 +262,7 @@ public final class ReactionContextNode: ASDisplayNode {
             let row = CGFloat(rowIndex)
             let column = CGFloat(columnIndex)
             
-            var reactionValue: String?
-            switch self.itemNodes[i].reaction {
-            case let .reaction(value, _, _):
-                reactionValue = value
-            default:
-                break
-            }
-            
-            let isHighlighted = reactionValue != nil && self.highlightedReaction == reactionValue
+            let isHighlighted = false
             
             var itemSize: CGFloat = minimizedItemSize
             var itemOffset: CGFloat = 0.0
@@ -326,10 +327,10 @@ public final class ReactionContextNode: ASDisplayNode {
         let largeCircleFrame: CGRect
         let smallCircleFrame: CGRect
         if isLeftAligned {
-            largeCircleFrame = CGRect(origin: CGPoint(x: anchorRect.maxX + 16.0 - rowHeight + floor((rowHeight - largeCircleSize) / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
+            largeCircleFrame = CGRect(origin: CGPoint(x: backgroundFrame.midX - floor(largeCircleSize / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.maxX - 3.0, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         } else {
-            largeCircleFrame = CGRect(origin: CGPoint(x: anchorRect.minX - 18.0 + floor((rowHeight - largeCircleSize) / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
+            largeCircleFrame = CGRect(origin: CGPoint(x: backgroundFrame.midX - floor(largeCircleSize / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.minX + 3.0 - smallCircleSize, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         }
         
@@ -353,10 +354,34 @@ public final class ReactionContextNode: ASDisplayNode {
     }
     
     public func animateIn(from sourceAnchorRect: CGRect) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         
         if let (size, insets, anchorRect) = self.validLayout {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
+        }
+        
+        let smallCircleDuration: Double = 0.5
+        let largeCircleDuration: Double = 0.5
+        let largeCircleDelay: Double = 0.08
+        let mainCircleDuration: Double = 0.5
+        let mainCircleDelay: Double = 0.1
+        
+        self.smallCircleNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration)
+        self.smallCircleShadowNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration)
+        
+        self.largeCircleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: largeCircleDelay)
+        self.largeCircleNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
+        self.largeCircleShadowNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
+        
+        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: mainCircleDelay)
+        self.backgroundNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
+        self.backgroundShadowNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
+        
+        if let itemNode = self.itemNodes.first {
+            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: mainCircleDelay)
+            itemNode.didAppear()
+            itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay, completion: { _ in
+            })
         }
     }
     
@@ -377,73 +402,71 @@ public final class ReactionContextNode: ASDisplayNode {
         }
     }
     
-    public func animateOutToReaction(value: String, targetNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
+    public func animateOutToReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
         for itemNode in self.itemNodes {
             switch itemNode.reaction {
-            case let .reaction(itemValue, _, _):
-                if itemValue == value {
-                    if let snapshotView = itemNode.view.snapshotContentTree(keepTransform: true), let targetSnapshotView = targetNode.view.snapshotContentTree() {
-                        targetSnapshotView.frame = self.view.convert(targetNode.bounds, from: targetNode.view)
-                        itemNode.isHidden = true
-                        self.view.addSubview(targetSnapshotView)
-                        self.view.addSubview(snapshotView)
-                        
-                        var completedTarget = false
-                        let intermediateCompletion: () -> Void = {
-                            if completedTarget {
-                                completion()
-                            }
+            case .like:
+                if let snapshotView = itemNode.view.snapshotContentTree(keepTransform: true), let targetSnapshotView = targetFilledNode.view.snapshotContentTree() {
+                    targetSnapshotView.frame = self.view.convert(targetFilledNode.bounds, from: targetFilledNode.view)
+                    itemNode.isHidden = true
+                    self.view.addSubview(targetSnapshotView)
+                    self.view.addSubview(snapshotView)
+                    snapshotView.frame = itemNode.view.convert(itemNode.view.bounds, to: self.view)
+                    
+                    var completedTarget = false
+                    let intermediateCompletion: () -> Void = {
+                        if completedTarget {
+                            completion()
                         }
-                        
-                        let targetPosition = self.view.convert(targetNode.bounds.center, from: targetNode.view)
-                        let duration: Double = 0.3
-                        if hideNode {
-                            targetNode.isHidden = true
-                        }
-                        
-                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-                        targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        targetSnapshotView.layer.animateScale(from: snapshotView.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: 0.3, removeOnCompletion: false)
-                        
-                        let sourcePoint = snapshotView.center
-                        let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - 30.0)
-                        
-                        let x1 = sourcePoint.x
-                        let y1 = sourcePoint.y
-                        let x2 = midPoint.x
-                        let y2 = midPoint.y
-                        let x3 = targetPosition.x
-                        let y3 = targetPosition.y
-                        
-                        let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-                        let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-                        let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-                        
-                        var keyframes: [AnyObject] = []
-                        for i in 0 ..< 10 {
-                            let k = CGFloat(i) / CGFloat(10 - 1)
-                            let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
-                            let y = a * x * x + b * x + c
-                            keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
-                        }
-                        
-                        snapshotView.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", removeOnCompletion: false, completion: { [weak self] _ in
-                            if let strongSelf = self {
-                                strongSelf.hapticFeedback.tap()
-                            }
-                            completedTarget = true
-                            if hideNode {
-                                targetNode.isHidden = false
-                                targetNode.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0)
-                            }
-                            intermediateCompletion()
-                        })
-                        targetSnapshotView.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", removeOnCompletion: false)
-                        
-                        snapshotView.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / snapshotView.bounds.width, duration: 0.3, removeOnCompletion: false)
-                    } else {
-                        completion()
                     }
+                    
+                    let targetPosition = self.view.convert(targetFilledNode.bounds.center, from: targetFilledNode.view)
+                    let duration: Double = 0.3
+                    if hideNode {
+                        targetFilledNode.isHidden = true
+                    }
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                    targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    targetSnapshotView.layer.animateScale(from: snapshotView.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: 0.3, removeOnCompletion: false)
+                    
+                    let sourcePoint = snapshotView.center
+                    let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - 30.0)
+                    
+                    let x1 = sourcePoint.x
+                    let y1 = sourcePoint.y
+                    let x2 = midPoint.x
+                    let y2 = midPoint.y
+                    let x3 = targetPosition.x
+                    let y3 = targetPosition.y
+                    
+                    let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                    let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                    let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                    
+                    var keyframes: [AnyObject] = []
+                    for i in 0 ..< 10 {
+                        let k = CGFloat(i) / CGFloat(10 - 1)
+                        let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+                        let y = a * x * x + b * x + c
+                        keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
+                    }
+                    
+                    snapshotView.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", removeOnCompletion: false, completion: { [weak self] _ in
+                        if let strongSelf = self {
+                            strongSelf.hapticFeedback.tap()
+                        }
+                        completedTarget = true
+                        if hideNode {
+                            targetFilledNode.isHidden = false
+                            targetFilledNode.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0)
+                            targetEmptyNode.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0)
+                        }
+                        intermediateCompletion()
+                    })
+                    targetSnapshotView.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", removeOnCompletion: false)
+                    
+                    snapshotView.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / snapshotView.bounds.width, duration: 0.3, removeOnCompletion: false)
                     return
                 }
             default:
@@ -492,7 +515,7 @@ public final class ReactionContextNode: ASDisplayNode {
         return nil
     }
     
-    public func setHighlightedReaction(_ value: String?) {
+    public func setHighlightedReaction(_ value: ReactionContextItem.Reaction?) {
         self.highlightedReaction = value
         if let (size, insets, anchorRect) = self.validLayout {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)

@@ -563,7 +563,7 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete) -> Signal<Data, NoError> {
+    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete) -> Signal<(Data, Bool), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -582,7 +582,7 @@ public final class MediaBox {
                                 if fileSize >= result.offset + result.size {
                                     file.seek(position: Int64(result.offset))
                                     let resultData = file.readData(count: result.size)
-                                    subscriber.putNext(resultData)
+                                    subscriber.putNext((resultData, true))
                                     subscriber.putCompletion()
                                 } else {
                                     assertionFailure("data.count >= result.offset + result.size")
@@ -597,7 +597,7 @@ public final class MediaBox {
                                 case .incremental:
                                     break
                                 case .partial:
-                                    subscriber.putNext(Data())
+                                    subscriber.putNext((Data(), false))
                             }
                         }
                     }

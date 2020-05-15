@@ -1001,4 +1001,35 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/Question"), color: UIColor(rgb: color))
         })
     }
+    
+    public static func chatMessageLike(_ theme: PresentationTheme, incoming: Bool, isSelected: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageLike(incoming: incoming, isSelected: isSelected), { theme in
+            if isSelected {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/MessageHeartFilled"), color: UIColor(rgb: 0xfe1512))
+            } else {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/MessageHeartEmpty"), color: incoming ? theme.chat.message.incoming.secondaryTextColor : theme.chat.message.outgoing.secondaryTextColor)
+            }
+        })
+    }
+    
+    public static func chatMessageFreeLike(_ theme: PresentationTheme, wallpaper: TelegramWallpaper, isSelected: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageFreeLike(isSelected: isSelected), { theme in
+            if isSelected {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/MessageHeartFilled"), color: UIColor(rgb: 0xfe1512))
+            } else {
+                let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: wallpaper)
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/MessageHeartEmpty"), color: serviceColor.primaryText)
+            }
+        })
+    }
+    
+    public static func chatMessageMediaLike(_ theme: PresentationTheme, isSelected: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageMediaLike(isSelected: isSelected), { theme in
+            if isSelected {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/MessageHeartFilled"), color: UIColor(rgb: 0xfe1512))
+            } else {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/MessageHeartEmpty"), color: theme.chat.message.mediaDateAndStatusTextColor)
+            }
+        })
+    }
 }

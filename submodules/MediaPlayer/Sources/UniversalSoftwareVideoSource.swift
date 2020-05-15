@@ -8,10 +8,10 @@ import FFMpegBinding
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<UniversalSoftwareVideoSourceImpl>.fromOpaque(userData!).takeUnretainedValue()
     
-    let data: Signal<Data, NoError>
+    let data: Signal<(Data, Bool), NoError>
     
     let resourceSize: Int = context.size
-    let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
+    let readCount = min(256 * 1024, Int(bufferSize))
     let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
     
     context.currentNumberOfReads += 1
@@ -25,8 +25,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let isInitialized = context.videoStream != nil
     let mediaBox = context.mediaBox
     let reference = context.fileReference.resourceReference(context.fileReference.media.resource)
-    let disposable = data.start(next: { data in
-        if data.count == readCount {
+    let disposable = data.start(next: { result in
+        let (data, isComplete) = result
+        if data.count == readCount || isComplete {
             fetchedData = data
             semaphore.signal()
         } else {

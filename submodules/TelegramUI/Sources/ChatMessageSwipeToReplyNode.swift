@@ -5,9 +5,15 @@ import AsyncDisplayKit
 import AppBundle
 
 final class ChatMessageSwipeToReplyNode: ASDisplayNode {
+    enum Action {
+        case reply
+        case like
+        case unlike
+    }
+    
     private let backgroundNode: ASImageNode
     
-    init(fillColor: UIColor, strokeColor: UIColor, foregroundColor: UIColor) {
+    init(fillColor: UIColor, strokeColor: UIColor, foregroundColor: UIColor, action: ChatMessageSwipeToReplyNode.Action) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
@@ -25,15 +31,34 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
                 context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.width - lineWidth)))
             }
             
-            if let image = UIImage(bundleImageName: "Chat/Message/ShareIcon") {
-                let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
-                
-                context.translateBy(x: imageRect.midX, y: imageRect.midY)
-                context.scaleBy(x: -1.0, y: -1.0)
-                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                context.clip(to: imageRect, mask: image.cgImage!)
-                context.setFillColor(foregroundColor.cgColor)
-                context.fill(imageRect)
+            switch action {
+            case .reply:
+                if let image = UIImage(bundleImageName: "Chat/Message/ShareIcon") {
+                    let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
+                    
+                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                    context.clip(to: imageRect, mask: image.cgImage!)
+                    context.setFillColor(foregroundColor.cgColor)
+                    context.fill(imageRect)
+                }
+            case .like, .unlike:
+                if let image = UIImage(bundleImageName: action == .like ? "Chat/Reactions/SwipeActionHeartFilled" : "Chat/Reactions/SwipeActionHeartBroken") {
+                    let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
+                    
+                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                    if case .like = action {
+                        context.translateBy(x: 0.0, y: -1.0)
+                    } else {
+                        context.translateBy(x: 0.5, y: -1.0)
+                    }
+                    context.clip(to: imageRect, mask: image.cgImage!)
+                    context.setFillColor(foregroundColor.cgColor)
+                    context.fill(imageRect)
+                }
             }
         })
         
@@ -41,5 +66,24 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         
         self.addSubnode(self.backgroundNode)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 33.0, height: 33.0))
+    }
+}
+
+extension ChatMessageSwipeToReplyNode.Action {
+    init(_ action: ChatControllerInteractionSwipeAction?) {
+        if let action = action {
+            switch action {
+            case .none:
+                self = .reply
+            case .reply:
+                self = .reply
+            case .like:
+                self = .like
+            case .unlike:
+                self = .unlike
+            }
+        } else {
+            self = .reply
+        }
     }
 }

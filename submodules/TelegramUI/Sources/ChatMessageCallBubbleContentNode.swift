@@ -217,7 +217,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         return nil
     }
 }
