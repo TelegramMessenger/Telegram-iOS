@@ -579,18 +579,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var reactionItems: [ReactionContextItem] = []
                     
                     var hasLike = false
-                    let heart = "❤️"
+                    let hearts: [String] = ["❤", "❤️"]
                     for attribute in messages[0].attributes {
                         if let attribute = attribute as? ReactionsMessageAttribute {
                             for reaction in attribute.reactions {
-                                if reaction.value == heart {
+                                if hearts.contains(reaction.value) {
                                     if reaction.isSelected {
                                         hasLike = true
                                     }
                                 }
                             }
                         } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                            if attribute.value == heart {
+                            if let value = attribute.value, hearts.contains(value) {
                                 hasLike = true
                             }
                         }
@@ -618,18 +618,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self, let message = updatedMessages.first else {
                             return
                         }
-                        let heart = "❤️"
+                        let hearts: [String] = ["❤", "❤️"]
                         strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                                 if item.message.id == message.id {
                                     switch value {
                                     case .like:
-                                        itemNode.awaitingAppliedReaction = (heart, { [weak itemNode] in
+                                        itemNode.awaitingAppliedReaction = (hearts[0], { [weak itemNode] in
                                             guard let controller = controller else {
                                                 return
                                             }
-                                            if let itemNode = itemNode, let (targetEmptyNode, targetFilledNode) = itemNode.targetReactionNode(value: heart) {
-                                                controller.dismissWithReaction(value: heart, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: true, completion: {
+                                            if let itemNode = itemNode, let (targetEmptyNode, targetFilledNode) = itemNode.targetReactionNode(value: hearts[0]) {
+                                                controller.dismissWithReaction(value: hearts[0], targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: true, completion: {
                                                 })
                                             } else {
                                                 controller.dismiss()
@@ -648,7 +648,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         switch value {
                         case .like:
-                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: heart).start()
+                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: hearts[0]).start()
                         case .unlike:
                             let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: nil).start()
                         }
@@ -1492,18 +1492,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return .reply
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                     var hasLike = false
-                    let heart = "❤️"
+                    let hearts: [String] = ["❤", "❤️"]
                     for attribute in message.attributes {
                         if let attribute = attribute as? ReactionsMessageAttribute {
                             for reaction in attribute.reactions {
-                                if reaction.value == heart {
+                                if hearts.contains(reaction.value) {
                                     if reaction.isSelected {
                                         hasLike = true
                                     }
                                 }
                             }
                         } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                            if attribute.value == heart {
+                            if let value = attribute.value, hearts.contains(value) {
                                 hasLike = true
                             }
                         }
@@ -1949,7 +1949,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let heart = "❤️"
+            let heart = "❤"
             if isLiked {
                 let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: heart).start()
             } else {
