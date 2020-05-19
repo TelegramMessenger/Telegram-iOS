@@ -884,7 +884,25 @@ final class MediaBoxFileContext {
     func data(range: Range<Int32>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
         switch self.content {
             case let .complete(path, size):
-                next(MediaResourceData(path: path, offset: min(size, Int(range.lowerBound)), size: max(0, min(Int(range.upperBound), size) - Int(range.lowerBound)), complete: true))
+                var lowerBound = range.lowerBound
+                if lowerBound < 0 {
+                    lowerBound = 0
+                }
+                if lowerBound > Int(size) {
+                    lowerBound = Int32(clamping: size)
+                }
+                var upperBound = range.upperBound
+                if upperBound < 0 {
+                    upperBound = 0
+                }
+                if upperBound > Int(size) {
+                    upperBound = Int32(clamping: size)
+                }
+                if upperBound < lowerBound {
+                    upperBound = lowerBound
+                }
+                
+                next(MediaResourceData(path: path, offset: Int(lowerBound), size: Int(upperBound - lowerBound), complete: true))
                 return EmptyDisposable
             case let .partial(file):
                 return file.data(range: range, waitUntilAfterInitialFetch: waitUntilAfterInitialFetch, next: next)

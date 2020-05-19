@@ -104,7 +104,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 var completedRequest = false
                 let disposable = data.start(next: { result in
                     let (data, isComplete) = result
-                    if data.count == readCount || isComplete{
+                    if data.count == readCount || isComplete {
+                        precondition(data.count <= readCount)
                         fetchedData = data
                         completedRequest = true
                         semaphore.signal()
@@ -178,6 +179,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
     }
     if let fetchedData = fetchedData {
+        precondition(fetchedData.count <= readCount)
         fetchedData.withUnsafeBytes { bytes -> Void in
             precondition(bytes.baseAddress != nil)
             memcpy(buffer, bytes.baseAddress, fetchedData.count)
