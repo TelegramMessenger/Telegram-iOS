@@ -31,7 +31,16 @@ final class SoftwareVideoLayerFrameManager {
     
     private var layerRotationAngleAndAspect: (CGFloat, CGFloat)?
     
-    init(account: Account, fileReference: FileMediaReference, resource: MediaResource, layerHolder: SampleBufferLayer) {
+    init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer) {
+        var resource = fileReference.media.resource
+        for attribute in fileReference.media.attributes {
+            if case .Video = attribute {
+                if let thumbnail = fileReference.media.videoThumbnails.first {
+                    resource = thumbnail.resource
+                }
+            }
+        }
+        
         nextWorker += 1
         self.account = account
         self.resource = resource

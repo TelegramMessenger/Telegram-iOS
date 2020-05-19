@@ -162,7 +162,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 imageDimensions = content?.dimensions?.cgSize
                 if let content = content, type == "gif", let thumbnailResource = imageResource
                     , let dimensions = content.dimensions {
-                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
+                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
                     imageResource = nil
                 }
             case let .internalReference(_, _, _, title, _, image, file, _):
@@ -258,7 +258,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 self.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: videoFileReference, resource: videoFileReference.media.resource, layerHolder: layerHolder)
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: videoFileReference, layerHolder: layerHolder)
                 self.videoLayer = (thumbnailLayer, manager, layerHolder)
                 thumbnailLayer.ready = { [weak self, weak thumbnailLayer, weak manager] in
                     if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {

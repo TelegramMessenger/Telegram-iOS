@@ -12,6 +12,7 @@
 @synthesize cropMirrored = _cropMirrored;
 @synthesize paintingData = _paintingData;
 @synthesize sendAsGif = _sendAsGif;
+@synthesize toolValues = _toolValues;
 
 + (instancetype)editorValuesWithOriginalSize:(CGSize)originalSize cropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropLockedAspectRatio:(CGFloat)cropLockedAspectRatio cropMirrored:(bool)cropMirrored toolValues:(NSDictionary *)toolValues paintingData:(TGPaintingData *)paintingData sendAsGif:(bool)sendAsGif
 {

@@ -72,7 +72,7 @@
     if ([self.asset isKindOfClass:[TGMediaAsset class]] && ((TGMediaAsset *)self.asset).subtypes & TGMediaAssetSubtypePhotoLive)
         return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab | TGPhotoEditorTimerTab;
     else
-        return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorQualityTab | TGPhotoEditorTimerTab;
+        return TGPhotoEditorCropTab | TGPhotoEditorToolsTab | TGPhotoEditorPaintTab | TGPhotoEditorQualityTab;
 }
 
 - (Class)viewClass

@@ -219,8 +219,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         imageResource = thumbnail.resource
                     }
                     imageDimensions = content?.dimensions?.cgSize
-                    if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                    if type == "gif", let thumbnailResource = thumbnail?.resource, let content = content, let dimensions = content.dimensions {
+                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         imageResource = nil
                     }
                 
@@ -358,7 +358,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                             layerHolder.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.layer.addSublayer(layerHolder.layer)
-                            let manager = SoftwareVideoLayerFrameManager(account: item.account, fileReference: .standalone(media: videoFile), resource: videoFile.resource, layerHolder: layerHolder)
+                            
+                            let manager = SoftwareVideoLayerFrameManager(account: item.account, fileReference: .standalone(media: videoFile), layerHolder: layerHolder)
                             strongSelf.videoLayer = (thumbnailLayer, manager, layerHolder)
                             thumbnailLayer.ready = { [weak thumbnailLayer, weak manager] in
                                 if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {
@@ -419,7 +420,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                         case let .Fetching(_, progress):
                                             state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
                                         case .Remote:
-                                            state = .download(statusForegroundColor)
+                                            //state = .download(statusForegroundColor)
+                                            state = .none
                                         case .Local:
                                             state = .none
                                     }

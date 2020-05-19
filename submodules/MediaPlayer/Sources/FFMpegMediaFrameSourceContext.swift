@@ -91,7 +91,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     }
     
     if streamable {
-        let data: Signal<Data, NoError>
+        let data: Signal<(Data, Bool), NoError>
         data = postbox.mediaBox.resourceData(resourceReference.resource, size: resourceSize, in: requestRange, mode: .complete)
         if readCount == 0 {
             fetchedData = Data()
@@ -102,8 +102,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 let semaphore = DispatchSemaphore(value: 0)
                 let _ = context.currentSemaphore.swap(semaphore)
                 var completedRequest = false
-                let disposable = data.start(next: { data in
-                    if data.count == readCount {
+                let disposable = data.start(next: { result in
+                    let (data, isComplete) = result
+                    if data.count == readCount || isComplete{
                         fetchedData = data
                         completedRequest = true
                         semaphore.signal()

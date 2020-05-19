@@ -407,7 +407,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 self?.activateSearch()
             }, setupReply: { _ in
             }, canSetupReply: { _ in
-                return false
+                return .none
         }, navigateToFirstDateMessage: { _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
@@ -421,7 +421,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
-        }, updateMessageReaction: { _, _ in
+        }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in

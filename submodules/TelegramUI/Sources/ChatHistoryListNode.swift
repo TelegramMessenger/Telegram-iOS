@@ -457,6 +457,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let messageReactionsProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
@@ -530,6 +531,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.messageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds)
+        }
+        self.messageReactionsProcessingManager.process = { [weak context] messageIds in
+            context?.account.viewTracker.updateReactionsForMessageIds(messageIds: messageIds)
         }
         self.seenLiveLocationProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateSeenLiveLocationForMessageIds(messageIds: messageIds)
@@ -984,6 +988,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
+            var messageIdsWithUpdateableReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
@@ -1015,6 +1020,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 contentRequiredValidation = true
                             }
                         }
+                        var isAction = false
                         for media in message.media {
                             if let _ = media as? TelegramMediaUnsupported {
                                 contentRequiredValidation = true
@@ -1023,7 +1029,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.timestamp + liveBroadcastingTimeout > timestamp {
                                     messageIdsWithLiveLocation.append(message.id)
                                 }
+                            } else if let _ = media as? TelegramMediaAction {
+                                isAction = true
                             }
+                        }
+                        if !isAction && message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                            messageIdsWithUpdateableReactions.append(message.id)
                         }
                         if contentRequiredValidation {
                             messageIdsWithUnsupportedMedia.append(message.id)
@@ -1126,6 +1137,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             if !messageIdsWithViewCount.isEmpty {
                 self.messageProcessingManager.add(messageIdsWithViewCount)
+            }
+            if !messageIdsWithUpdateableReactions.isEmpty {
+                self.messageReactionsProcessingManager.add(messageIdsWithUpdateableReactions)
             }
             if !messageIdsWithLiveLocation.isEmpty {
                 self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation)

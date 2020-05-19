@@ -28,7 +28,7 @@ private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource,
 
 private func collectPreCachedResources(for document: Api.Document) -> [(MediaResource, Data)]? {
     switch document {
-        case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, dcId, _):
+        case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, _, dcId, _):
             if let thumbs = thumbs {
                 for thumb in thumbs {
                     switch thumb {

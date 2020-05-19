@@ -824,6 +824,68 @@ public struct messages {
         }
     
     }
+    public enum MessageReactionsList: TypeConstructorDescription {
+        case messageReactionsList(flags: Int32, count: Int32, reactions: [Api.MessageUserReaction], users: [Api.User], nextOffset: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageReactionsList(let flags, let count, let reactions, let users, let nextOffset):
+                    if boxed {
+                        buffer.appendInt32(-1553558980)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions.count))
+                    for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageReactionsList(let flags, let count, let reactions, let users, let nextOffset):
+                return ("messageReactionsList", [("flags", flags), ("count", count), ("reactions", reactions), ("users", users), ("nextOffset", nextOffset)])
+    }
+    }
+    
+        public static func parse_messageReactionsList(_ reader: BufferReader) -> MessageReactionsList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.MessageUserReaction]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserReaction.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.MessageReactionsList.messageReactionsList(flags: _1!, count: _2!, reactions: _3!, users: _4!, nextOffset: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum SearchCounter: TypeConstructorDescription {
         case searchCounter(flags: Int32, filter: Api.MessagesFilter, count: Int32)
     
@@ -4673,6 +4735,58 @@ public extension Api {
         }
     
     }
+    public enum VideoSize: TypeConstructorDescription {
+        case videoSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, size: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .videoSize(let type, let location, let w, let h, let size):
+                    if boxed {
+                        buffer.appendInt32(1130084743)
+                    }
+                    serializeString(type, buffer: buffer, boxed: false)
+                    location.serialize(buffer, true)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    serializeInt32(size, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .videoSize(let type, let location, let w, let h, let size):
+                return ("videoSize", [("type", type), ("location", location), ("w", w), ("h", h), ("size", size)])
+    }
+    }
+    
+        public static func parse_videoSize(_ reader: BufferReader) -> VideoSize? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.FileLocation?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.FileLocation
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.VideoSize.videoSize(type: _1!, location: _2!, w: _3!, h: _4!, size: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum LangPackDifference: TypeConstructorDescription {
         case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
     
@@ -5894,6 +6008,8 @@ public extension Api {
         case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
+        case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
+        case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6567,6 +6683,21 @@ public extension Api {
                     }
                     
                     break
+                case .updatePhoneCallSignalingData(let phoneCallId, let data):
+                    if boxed {
+                        buffer.appendInt32(643940105)
+                    }
+                    serializeInt64(phoneCallId, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    break
+                case .updateMessageReactions(let peer, let msgId, let reactions):
+                    if boxed {
+                        buffer.appendInt32(357013699)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    reactions.serialize(buffer, true)
+                    break
     }
     }
     
@@ -6732,6 +6863,10 @@ public extension Api {
                 return ("updateDialogFilterOrder", [("order", order)])
                 case .updateDialogFilters:
                 return ("updateDialogFilters", [])
+                case .updatePhoneCallSignalingData(let phoneCallId, let data):
+                return ("updatePhoneCallSignalingData", [("phoneCallId", phoneCallId), ("data", data)])
+                case .updateMessageReactions(let peer, let msgId, let reactions):
+                return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
     }
     }
     
@@ -8063,6 +8198,41 @@ public extension Api {
         public static func parse_updateDialogFilters(_ reader: BufferReader) -> Update? {
             return Api.Update.updateDialogFilters
         }
+        public static func parse_updatePhoneCallSignalingData(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updatePhoneCallSignalingData(phoneCallId: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateMessageReactions(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.MessageReactions?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.MessageReactions
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateMessageReactions(peer: _1!, msgId: _2!, reactions: _3!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     public enum PopularContact: TypeConstructorDescription {
@@ -9142,6 +9312,50 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputTheme.inputThemeSlug(slug: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum MessageReactions: TypeConstructorDescription {
+        case messageReactions(flags: Int32, results: [Api.ReactionCount])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageReactions(let flags, let results):
+                    if boxed {
+                        buffer.appendInt32(-1199954735)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(results.count))
+                    for item in results {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageReactions(let flags, let results):
+                return ("messageReactions", [("flags", flags), ("results", results)])
+    }
+    }
+    
+        public static func parse_messageReactions(_ reader: BufferReader) -> MessageReactions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.ReactionCount]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ReactionCount.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!)
             }
             else {
                 return nil
@@ -16730,7 +16944,7 @@ public extension Api {
     public enum Message: TypeConstructorDescription {
         case messageEmpty(id: Int32)
         case messageService(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
-        case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
+        case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, reactions: Api.MessageReactions?, restrictionReason: [Api.RestrictionReason]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -16752,9 +16966,9 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
-                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let date, let message, let media, let replyMarkup, let entities, let views, let editDate, let postAuthor, let groupedId, let restrictionReason):
+                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let date, let message, let media, let replyMarkup, let entities, let views, let editDate, let postAuthor, let groupedId, let reactions, let restrictionReason):
                     if boxed {
-                        buffer.appendInt32(1160515173)
+                        buffer.appendInt32(-1752573244)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -16776,6 +16990,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 15) != 0 {serializeInt32(editDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 16) != 0 {serializeString(postAuthor!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt64(groupedId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 20) != 0 {reactions!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 22) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(restrictionReason!.count))
                     for item in restrictionReason! {
@@ -16791,8 +17006,8 @@ public extension Api {
                 return ("messageEmpty", [("id", id)])
                 case .messageService(let flags, let id, let fromId, let toId, let replyToMsgId, let date, let action):
                 return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("replyToMsgId", replyToMsgId), ("date", date), ("action", action)])
-                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let date, let message, let media, let replyMarkup, let entities, let views, let editDate, let postAuthor, let groupedId, let restrictionReason):
-                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
+                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let date, let message, let media, let replyMarkup, let entities, let views, let editDate, let postAuthor, let groupedId, let reactions, let restrictionReason):
+                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("reactions", reactions), ("restrictionReason", restrictionReason)])
     }
     }
     
@@ -16883,9 +17098,13 @@ public extension Api {
             if Int(_1!) & Int(1 << 16) != 0 {_15 = parseString(reader) }
             var _16: Int64?
             if Int(_1!) & Int(1 << 17) != 0 {_16 = reader.readInt64() }
-            var _17: [Api.RestrictionReason]?
+            var _17: Api.MessageReactions?
+            if Int(_1!) & Int(1 << 20) != 0 {if let signature = reader.readInt32() {
+                _17 = Api.parse(reader, signature: signature) as? Api.MessageReactions
+            } }
+            var _18: [Api.RestrictionReason]?
             if Int(_1!) & Int(1 << 22) != 0 {if let _ = reader.readInt32() {
-                _17 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RestrictionReason.self)
+                _18 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RestrictionReason.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -16903,9 +17122,10 @@ public extension Api {
             let _c14 = (Int(_1!) & Int(1 << 15) == 0) || _14 != nil
             let _c15 = (Int(_1!) & Int(1 << 16) == 0) || _15 != nil
             let _c16 = (Int(_1!) & Int(1 << 17) == 0) || _16 != nil
-            let _c17 = (Int(_1!) & Int(1 << 22) == 0) || _17 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
-                return Api.Message.message(flags: _1!, id: _2!, fromId: _3, toId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, date: _8!, message: _9!, media: _10, replyMarkup: _11, entities: _12, views: _13, editDate: _14, postAuthor: _15, groupedId: _16, restrictionReason: _17)
+            let _c17 = (Int(_1!) & Int(1 << 20) == 0) || _17 != nil
+            let _c18 = (Int(_1!) & Int(1 << 22) == 0) || _18 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 {
+                return Api.Message.message(flags: _1!, id: _2!, fromId: _3, toId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, date: _8!, message: _9!, media: _10, replyMarkup: _11, entities: _12, views: _13, editDate: _14, postAuthor: _15, groupedId: _16, reactions: _17, restrictionReason: _18)
             }
             else {
                 return nil
@@ -18679,6 +18899,48 @@ public extension Api {
         }
     
     }
+    public enum ReactionCount: TypeConstructorDescription {
+        case reactionCount(flags: Int32, reaction: String, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reactionCount(let flags, let reaction, let count):
+                    if boxed {
+                        buffer.appendInt32(1873957073)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(reaction, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reactionCount(let flags, let reaction, let count):
+                return ("reactionCount", [("flags", flags), ("reaction", reaction), ("count", count)])
+    }
+    }
+    
+        public static func parse_reactionCount(_ reader: BufferReader) -> ReactionCount? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ReactionCount.reactionCount(flags: _1!, reaction: _2!, count: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum MessagesFilter: TypeConstructorDescription {
         case inputMessagesFilterEmpty
         case inputMessagesFilterPhotos
@@ -18984,6 +19246,44 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.EmojiKeyword.emojiKeywordDeleted(keyword: _1!, emoticons: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum MessageUserReaction: TypeConstructorDescription {
+        case messageUserReaction(userId: Int32, reaction: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageUserReaction(let userId, let reaction):
+                    if boxed {
+                        buffer.appendInt32(-764945220)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeString(reaction, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageUserReaction(let userId, let reaction):
+                return ("messageUserReaction", [("userId", userId), ("reaction", reaction)])
+    }
+    }
+    
+        public static func parse_messageUserReaction(_ reader: BufferReader) -> MessageUserReaction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageUserReaction.messageUserReaction(userId: _1!, reaction: _2!)
             }
             else {
                 return nil
@@ -22423,7 +22723,7 @@ public extension Api {
     }
     public enum Document: TypeConstructorDescription {
         case documentEmpty(id: Int64)
-        case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumbs: [Api.PhotoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
+        case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumbs: [Api.PhotoSize]?, videoThumbs: [Api.VideoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -22433,9 +22733,9 @@ public extension Api {
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     break
-                case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let dcId, let attributes):
+                case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let videoThumbs, let dcId, let attributes):
                     if boxed {
-                        buffer.appendInt32(-1683841855)
+                        buffer.appendInt32(512177195)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -22447,6 +22747,11 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(thumbs!.count))
                     for item in thumbs! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(videoThumbs!.count))
+                    for item in videoThumbs! {
                         item.serialize(buffer, true)
                     }}
                     serializeInt32(dcId, buffer: buffer, boxed: false)
@@ -22463,8 +22768,8 @@ public extension Api {
         switch self {
                 case .documentEmpty(let id):
                 return ("documentEmpty", [("id", id)])
-                case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let dcId, let attributes):
-                return ("document", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("mimeType", mimeType), ("size", size), ("thumbs", thumbs), ("dcId", dcId), ("attributes", attributes)])
+                case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let videoThumbs, let dcId, let attributes):
+                return ("document", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("mimeType", mimeType), ("size", size), ("thumbs", thumbs), ("videoThumbs", videoThumbs), ("dcId", dcId), ("attributes", attributes)])
     }
     }
     
@@ -22498,11 +22803,15 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
                 _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
             } }
-            var _9: Int32?
-            _9 = reader.readInt32()
-            var _10: [Api.DocumentAttribute]?
+            var _9: [Api.VideoSize]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.VideoSize.self)
+            } }
+            var _10: Int32?
+            _10 = reader.readInt32()
+            var _11: [Api.DocumentAttribute]?
             if let _ = reader.readInt32() {
-                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
+                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -22512,10 +22821,11 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
-            let _c9 = _9 != nil
+            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
             let _c10 = _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.Document.document(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, mimeType: _6!, size: _7!, thumbs: _8, dcId: _9!, attributes: _10!)
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.Document.document(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, mimeType: _6!, size: _7!, thumbs: _8, videoThumbs: _9, dcId: _10!, attributes: _11!)
             }
             else {
                 return nil

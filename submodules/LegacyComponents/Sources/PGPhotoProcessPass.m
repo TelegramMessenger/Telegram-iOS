@@ -148,11 +148,6 @@ NSString *const PGPhotoEnhanceColorSwapShaderString = PGShaderString
     [_filter removeAllTargets];
 }
 
-- (void)process
-{
-    
-}
-
 - (void)invalidate
 {
     

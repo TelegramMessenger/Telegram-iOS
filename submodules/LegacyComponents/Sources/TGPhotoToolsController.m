@@ -977,7 +977,11 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (TGPhotoEditorTab)availableTabs
 {
-    return TGPhotoEditorToolsTab | TGPhotoEditorTintTab | TGPhotoEditorBlurTab | TGPhotoEditorCurvesTab;
+    if (self.photoEditor.forVideo) {
+        return TGPhotoEditorToolsTab | TGPhotoEditorTintTab | TGPhotoEditorCurvesTab;
+    } else {
+        return TGPhotoEditorToolsTab | TGPhotoEditorTintTab | TGPhotoEditorBlurTab | TGPhotoEditorCurvesTab;
+    }
 }
 
 - (PGPhotoTool *)toolForTab:(TGPhotoEditorTab)tab

@@ -446,11 +446,8 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     if ([editorValues hasPainting])
         highlightedButtons |= TGPhotoEditorPaintTab;
     
-    if ([editorValues isKindOfClass:[PGPhotoEditorValues class]])
-    {
-        if ([(PGPhotoEditorValues *)editorValues toolsApplied])
-            highlightedButtons |= TGPhotoEditorToolsTab;
-    }
+    if ([editorValues toolsApplied])
+        highlightedButtons |= TGPhotoEditorToolsTab;
     
     return highlightedButtons;
 }

@@ -312,11 +312,12 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 {
     CGContextRef context = UIGraphicsGetCurrentContext();
     
-    CGFloat thickness = 1;
+    CGFloat thickness = 1.5f;
     CGFloat radius = rect.size.width / 2.0f - 5.5f;
     
-    CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-    CGContextSetShadowWithColor(context, CGSizeZero, 2.5f, [UIColor colorWithWhite:0.0f alpha:0.3f].CGColor);
+    UIColor *color = UIColorRGBA(0xeaeaea, 0.8);
+    
+    CGContextSetFillColorWithColor(context, color.CGColor);
     
     CGFloat radSpace = TGDegreesToRadians(4.0f);
     CGFloat radLen = TGDegreesToRadians(4.0f);
@@ -339,19 +340,29 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 
     CGContextFillPath(context);
     
-    CGContextSetFillColorWithColor(context, TGAccentColor().CGColor);
-    CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+    CGContextSetStrokeColorWithColor(context, color.CGColor);
     CGContextSetLineWidth(context, thickness);
     
-    void (^drawEllipse)(CGPoint) = ^(CGPoint center)
+    void (^drawEllipse)(CGPoint, bool) = ^(CGPoint center, bool clear)
     {
-        CGContextSetShadowWithColor(context, CGSizeZero, 2.5f, [UIColor clearColor].CGColor);
-        CGContextFillEllipseInRect(context, CGRectMake(center.x - 4.5f, center.y - 4.5f, 9.0f, 9.0f));
-        CGContextStrokeEllipseInRect(context, CGRectMake(center.x - 4.5f, center.y - 4.5f, 9.0f, 9.0f));
+        CGRect rect = CGRectMake(center.x - 4.5f, center.y - 4.5f, 9.0f, 9.0f);
+        if (clear) {
+            rect = CGRectInset(rect, -thickness, -thickness);
+            CGContextFillEllipseInRect(context, rect);
+        } else {
+            CGContextStrokeEllipseInRect(context, rect);
+        }
     };
+
+    CGContextSetBlendMode(context, kCGBlendModeClear);
     
-    drawEllipse(CGPointMake(5.5f, centerPoint.y));
-    drawEllipse(CGPointMake(rect.size.width - 5.5f, centerPoint.y));
+    drawEllipse(CGPointMake(5.5f, centerPoint.y), true);
+    drawEllipse(CGPointMake(rect.size.width - 5.5f, centerPoint.y), true);
+    
+    CGContextSetBlendMode(context, kCGBlendModeNormal);
+    
+    drawEllipse(CGPointMake(5.5f, centerPoint.y), false);
+    drawEllipse(CGPointMake(rect.size.width - 5.5f, centerPoint.y), false);
 }
 
 - (void)layoutSubviews
