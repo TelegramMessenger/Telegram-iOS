@@ -223,11 +223,14 @@ public class StepBarsChartController: BaseChartController {
     }
     
     public override func cancelChartInteraction() {
+        self.barsController.lineBulletsRenderer.isEnabled = false
+        self.barsController.verticalLineRenderer.values = []
         if isZoomed {
             return zoomedBarsController.hideDetailsView(animated: true)
         } else {
             return barsController.hideDetailsView(animated: true)
         }
+        
     }
     
     public override func didTapZoomIn(date: Date, pointIndex: Int) {

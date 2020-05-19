@@ -85,8 +85,7 @@ class BarsComponentController: GeneralChartComponentController {
         previewBarsChartRenderer.setup(horizontalRange: totalHorizontalRange, animated: animated)
         
         setupMainChart(verticalRange: initialVerticalRange, animated: animated)
-        setupMainChart(horizontalRange: initialHorizontalRange, animated: animated)
-        
+        setupMainChart(horizontalRange: initialHorizontalRange, animated: animated)        
         updateChartVerticalRanges(horizontalRange: initialHorizontalRange, animated: animated)
 
         super.willAppear(animated: animated)
@@ -130,6 +129,10 @@ class BarsComponentController: GeneralChartComponentController {
         mainBarsRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         horizontalScalesRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         verticalScalesRenderer.setup(horizontalRange: horizontalRange, animated: animated)
+        
+        verticalLineRenderer.setup(horizontalRange: horizontalRange, animated: animated)
+        lineBulletsRenderer.setup(horizontalRange: horizontalRange, animated: animated)
+
     }
     
     var visibleBars: BarChartRenderer.BarsData {
@@ -213,8 +216,8 @@ class BarsComponentController: GeneralChartComponentController {
     }
     
     override func showDetailsView(at chartPosition: CGFloat, detailsViewPosition: CGFloat, dataIndex: Int, date: Date, animated: Bool, feedback: Bool) {
-        let rangeWithOffset = detailsViewPosition - barsWidth / currentHorizontalMainChartRange.distance * chartFrame().width / 2
-        super.showDetailsView(at: chartPosition, detailsViewPosition: rangeWithOffset, dataIndex: dataIndex, date: date, animated: animated, feedback: feedback)
+        let rangeWithOffset = detailsViewPosition - barsWidth / currentHorizontalMainChartRange.distance * chartFrame().width / 2 + chartFrame().minX / 2
+        super.showDetailsView(at: chartPosition, detailsViewPosition: detailsViewPosition, dataIndex: dataIndex, date: date, animated: animated, feedback: feedback)
         mainBarsRenderer.setSelectedIndex(dataIndex, animated: true)
     }
     
@@ -232,6 +235,7 @@ class BarsComponentController: GeneralChartComponentController {
         verticalScalesRenderer.horizontalLinesColor = theme.barChartStrongLinesColor
         mainBarsRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
         previewBarsChartRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
+        verticalLineRenderer.linesColor = theme.chartStrongLinesColor
     }
     
     override func updateChartRangeTitle(animated: Bool) {
@@ -270,6 +274,8 @@ class BarsComponentController: GeneralChartComponentController {
         }
         currentChartValue = chartValue
         let detailsViewPosition = (chartValue - horizontalRange.lowerBound) / horizontalRange.distance * chartFrame.width + chartFrame.minX
+        
+        
         showDetailsView(at: chartValue, detailsViewPosition: detailsViewPosition, dataIndex: minIndex, date: closestDate, animated: chartWasInteracting, feedback: chartWasInteracting && chartValueUpdated)
         
         super.chartInteractionDidBegin(point: point)

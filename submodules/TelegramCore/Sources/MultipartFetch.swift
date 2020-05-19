@@ -465,7 +465,7 @@ private final class MultipartFetchManager {
                         switch attribute {
                         case let .Sticker(_, packReference, _):
                             switch packReference {
-                            case .name:
+                            case .name?:
                                 self.resourceReference = .forceRevalidate
                             default:
                                 break

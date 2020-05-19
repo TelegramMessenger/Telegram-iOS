@@ -1400,6 +1400,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                 if case .message = result {
                                     flags.remove(.Unsent)
                                     flags.remove(.Sending)
+                                    flags.remove(.Failed)
                                 } else {
                                     flags = [.Failed]
                                 }
