@@ -127,6 +127,21 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         })
     }
     
+    deinit {
+        func disableGestures(view: UIView) {
+            if let recognizers = view.gestureRecognizers {
+                for recognizer in recognizers {
+                    recognizer.isEnabled = false
+                }
+            }
+            for subview in view.subviews {
+                disableGestures(view: subview)
+            }
+        }
+        
+        disableGestures(view: self.webView)
+    }
+    
     func play() {
         self.impl.play()
     }
