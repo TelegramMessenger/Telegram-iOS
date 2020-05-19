@@ -74,6 +74,8 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
     }
     
+    public var hasSentFramesToDisplay: (() -> Void)?
+    
     var takeFrameAndQueue: (Queue, () -> MediaTrackFrameResult)?
     var timer: SwiftSignalKit.Timer?
     var polling = false
@@ -198,6 +200,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                                     return
                                 }
                                 videoLayer.enqueue(frame.sampleBuffer)
+                                strongSelf.hasSentFramesToDisplay?()
                             }
                         }
                         Queue.mainQueue().async {
@@ -226,6 +229,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                                     return
                                 }
                                 videoLayer.enqueue(frame.sampleBuffer)
+                                strongSelf.hasSentFramesToDisplay?()
                             }
                             
                             Queue.mainQueue().async {

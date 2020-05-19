@@ -23,6 +23,9 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
             postbox.mediaBox.moveResourceData(from: fromPreview.resource.id, to: toPreview.resource.id)
         }
+        if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id.uniqueId != toVideoThumbnail.resource.id.uniqueId {
+            postbox.mediaBox.moveResourceData(from: fromVideoThumbnail.resource.id, to: toVideoThumbnail.resource.id)
+        }
         if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
         }

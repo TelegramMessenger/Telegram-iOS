@@ -482,7 +482,10 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                             if let searchContext = searchContext {
                                 if let _ = searchContext.loadMoreIndex, let nextOffset = searchContext.result.nextOffset {
                                     let collection = searchContext.result.collection
-                                    return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(collection.geoPoint), offset: nextOffset)
+                                    let geoPoint = collection.geoPoint.flatMap { geoPoint -> (Double, Double) in
+                                        return (geoPoint.latitude, geoPoint.longitude)
+                                    }
+                                    return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(geoPoint), offset: nextOffset)
                                     |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
                                         return .single(nil)
                                     }

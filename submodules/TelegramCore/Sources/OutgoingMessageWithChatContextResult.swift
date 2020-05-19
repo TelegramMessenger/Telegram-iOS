@@ -22,8 +22,8 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                 attributes.append(replyMarkup)
             }
             switch result {
-                case let .internalReference(_, id, type, title, description, image, file, message):
-                    if type == "game" {
+                case let .internalReference(internalReference):
+                    if internalReference.type == "game" {
                         if peerId.namespace == Namespaces.Peer.SecretChat {
                             let filteredAttributes = attributes.filter { attribute in
                                 if let _ = attribute as? ReplyMarkupMessageAttribute {
@@ -31,26 +31,26 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                                 }
                                 return true
                             }
-                            if let media: Media = file ?? image {
+                            if let media: Media = internalReference.file ?? internalReference.image {
                                 return .message(text: caption, attributes: filteredAttributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
                             } else {
                                 return .message(text: caption, attributes: filteredAttributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)
                             }
                         } else {
-                            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: title ?? "", description: description ?? "", image: image, file: file)), replyToMessageId: nil, localGroupingKey: nil)
+                            return .message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: internalReference.title ?? "", description: internalReference.description ?? "", image: internalReference.image, file: internalReference.file)), replyToMessageId: nil, localGroupingKey: nil)
                         }
-                    } else if let file = file, type == "gif" {
+                    } else if let file = internalReference.file, internalReference.type == "gif" {
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
-                    } else if let image = image {
+                    } else if let image = internalReference.image {
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: image), replyToMessageId: nil, localGroupingKey: nil)
-                    } else if let file = file {
+                    } else if let file = internalReference.file {
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return nil
                     }
-                case let .externalReference(_, id, type, title, description, url, content, thumbnail, message):
-                    if type == "photo" {
-                        if let thumbnail = thumbnail {
+                case let .externalReference(externalReference):
+                    if externalReference.type == "photo" {
+                        if let thumbnail = externalReference.thumbnail {
                             var randomId: Int64 = 0
                             arc4random_buf(&randomId, 8)
                             let thumbnailResource = thumbnail.resource
@@ -60,16 +60,22 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                         } else {
                             return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)
                         }
-                    } else if type == "document" || type == "gif" || type == "audio" || type == "voice" {
+                    } else if externalReference.type == "document" || externalReference.type == "gif" || externalReference.type == "audio" || externalReference.type == "voice" {
+                        var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []
                         var previewRepresentations: [TelegramMediaImageRepresentation] = []
-                        if let thumbnail = thumbnail {
+                        if let thumbnail = externalReference.thumbnail {
                             var randomId: Int64 = 0
                             arc4random_buf(&randomId, 8)
                             let thumbnailResource = thumbnail.resource
-                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource))
+                            
+                            if thumbnail.mimeType.hasPrefix("video/") {
+                                videoThumbnails.append(TelegramMediaFile.VideoThumbnail(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource))
+                            } else {
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource))
+                            }
                         }
                         var fileName = "file"
-                        if let content = content {
+                        if let content = externalReference.content {
                             var contentUrl: String?
                             if let resource = content.resource as? HttpReferenceMediaResource {
                                 contentUrl = resource.url
@@ -86,32 +92,32 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                         var fileAttributes: [TelegramMediaFileAttribute] = []
                         fileAttributes.append(.FileName(fileName: fileName))
                         
-                        if type == "gif" {
+                        if externalReference.type == "gif" {
                             fileAttributes.append(.Animated)
                         }
                         
-                        if let dimensions = content?.dimensions {
+                        if let dimensions = externalReference.content?.dimensions {
                             fileAttributes.append(.ImageSize(size: dimensions))
-                            if type == "gif" {
-                                fileAttributes.append(.Video(duration: Int(Int32(content?.duration ?? 0)), size: dimensions, flags: []))
+                            if externalReference.type == "gif" {
+                                fileAttributes.append(.Video(duration: Int(Int32(externalReference.content?.duration ?? 0)), size: dimensions, flags: []))
                             }
                         }
                         
-                        if type == "audio" || type == "voice" {
-                            fileAttributes.append(.Audio(isVoice: type == "voice", duration: Int(Int32(content?.duration ?? 0)), title: title, performer: description, waveform: nil))
+                        if externalReference.type == "audio" || externalReference.type == "voice" {
+                            fileAttributes.append(.Audio(isVoice: externalReference.type == "voice", duration: Int(Int32(externalReference.content?.duration ?? 0)), title: externalReference.title, performer: externalReference.description, waveform: nil))
                         }
                         
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
                         
                         let resource: TelegramMediaResource
-                        if peerId.namespace == Namespaces.Peer.SecretChat, let webResource = content?.resource as? WebFileReferenceMediaResource {
+                        if peerId.namespace == Namespaces.Peer.SecretChat, let webResource = externalReference.content?.resource as? WebFileReferenceMediaResource {
                             resource = webResource
                         } else {
                             resource = EmptyMediaResource()
                         }
                         
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: externalReference.content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)

@@ -478,7 +478,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 currentBackgroundNode.image = backgroundImage
                             }
                         }
-                        strongSelf.backgroundNode?.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                        if let backgroundNode = strongSelf.backgroundNode {
+                            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
+                            if let previousLayoutSize = previousLayoutSize {
+                                backgroundNode.frame = backgroundNode.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
+                            }
+                            transition.updateFrame(node: backgroundNode, frame: CGRect(origin: CGPoint(), size: layoutSize))
+                        }
                     } else {
                         if let backgroundNode = strongSelf.backgroundNode {
                             backgroundNode.removeFromSupernode()

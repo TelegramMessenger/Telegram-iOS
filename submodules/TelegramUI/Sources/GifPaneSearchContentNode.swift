@@ -71,24 +71,24 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
             var references: [FileMediaReference] = []
             for result in results {
                 switch result {
-                case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
+                case let .externalReference(externalReference):
                     var imageResource: TelegramMediaResource?
                     var uniqueId: Int64?
-                    if let content = content {
+                    if let content = externalReference.content {
                         imageResource = content.resource
                         if let resource = content.resource as? WebFileReferenceMediaResource {
                             uniqueId = Int64(HashFunctions.murMurHash32(resource.url))
                         }
-                    } else if let thumbnail = thumbnail {
+                    } else if let thumbnail = externalReference.thumbnail {
                         imageResource = thumbnail.resource
                     }
                     
-                    if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
+                    if externalReference.type == "gif", let thumbnailResource = imageResource, let content = externalReference.content, let dimensions = content.dimensions {
                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         references.append(FileMediaReference.standalone(media: file))
                     }
-                case let .internalReference(_, _, _, _, _, _, file, _):
-                    if let file = file {
+                case let .internalReference(internalReference):
+                    if let file = internalReference.file {
                         references.append(FileMediaReference.standalone(media: file))
                     }
                 }

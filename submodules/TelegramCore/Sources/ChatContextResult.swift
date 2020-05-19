@@ -6,7 +6,15 @@ import MtProtoKit
 
 import SyncCore
 
-public enum ChatContextResultMessage: PostboxCoding, Equatable {
+public enum ChatContextResultMessageDecodingError: Error {
+    case generic
+}
+
+public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case data
+    }
+    
     case auto(caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, replyMarkup: ReplyMarkupMessageAttribute?)
     case mapLocation(media: TelegramMediaMap, replyMarkup: ReplyMarkupMessageAttribute?)
@@ -75,6 +83,21 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
         }
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let data = try container.decode(Data.self, forKey: .data)
+        let postboxDecoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+        self = ChatContextResultMessage(decoder: postboxDecoder)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        let postboxEncoder = PostboxEncoder()
+        self.encode(postboxEncoder)
+        
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(postboxEncoder.makeData(), forKey: .data)
+    }
+    
     public static func ==(lhs: ChatContextResultMessage, rhs: ChatContextResultMessage) -> Bool {
         switch lhs {
             case let .auto(lhsCaption, lhsEntities, lhsReplyMarkup):
@@ -138,156 +161,167 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable {
     }
 }
 
-public enum ChatContextResult: Equatable {
-    case externalReference(queryId: Int64, id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage)
-    case internalReference(queryId: Int64, id: String, type: String, title: String?, description: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, message: ChatContextResultMessage)
+public enum ChatContextResultDecodingError: Error {
+    case generic
+}
+
+public enum ChatContextResult: Equatable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case externalReference
+        case internalReference
+    }
+    
+    public struct ExternalReference: Equatable, Codable {
+        public let queryId: Int64
+        public let id: String
+        public let type: String
+        public let title: String?
+        public let description: String?
+        public let url: String?
+        public let content: TelegramMediaWebFile?
+        public let thumbnail: TelegramMediaWebFile?
+        public let message: ChatContextResultMessage
+        
+        public init(
+            queryId: Int64,
+            id: String,
+            type: String,
+            title: String?,
+            description: String?,
+            url: String?,
+            content: TelegramMediaWebFile?,
+            thumbnail: TelegramMediaWebFile?,
+            message: ChatContextResultMessage
+        ) {
+            self.queryId = queryId
+            self.id = id
+            self.type = type
+            self.title = title
+            self.description = description
+            self.url = url
+            self.content = content
+            self.thumbnail = thumbnail
+            self.message = message
+        }
+    }
+    
+    public struct InternalReference: Equatable, Codable {
+        public let queryId: Int64
+        public let id: String
+        public let type: String
+        public let title: String?
+        public let description: String?
+        public let image: TelegramMediaImage?
+        public let file: TelegramMediaFile?
+        public let message: ChatContextResultMessage
+        
+        public init(
+            queryId: Int64,
+            id: String,
+            type: String,
+            title: String?,
+            description: String?,
+            image: TelegramMediaImage?,
+            file: TelegramMediaFile?,
+            message: ChatContextResultMessage
+        ) {
+            self.queryId = queryId
+            self.id = id
+            self.type = type
+            self.title = title
+            self.description = description
+            self.image = image
+            self.file = file
+            self.message = message
+        }
+    }
+    
+    case externalReference(ExternalReference)
+    case internalReference(InternalReference)
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        if let externalReference = try? container.decode(ExternalReference.self, forKey: .externalReference) {
+            self = .externalReference(externalReference)
+        } else if let internalReference = try? container.decode(InternalReference.self, forKey: .internalReference) {
+            self = .internalReference(internalReference)
+        } else {
+            throw ChatContextResultDecodingError.generic
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .internalReference(internalReference):
+            try container.encode(internalReference, forKey: .internalReference)
+        case let .externalReference(externalReference):
+            try container.encode(externalReference, forKey: .externalReference)
+        }
+    }
 
     public var queryId: Int64 {
         switch self {
-            case let .externalReference(queryId, _, _, _, _, _, _, _, _):
-                return queryId
-            case let .internalReference(queryId, _, _, _, _, _, _, _):
-                return queryId
+            case let .externalReference(externalReference):
+                return externalReference.queryId
+            case let .internalReference(internalReference):
+                return internalReference.queryId
         }
     }
     
     public var id: String {
         switch self {
-            case let .externalReference(_, id, _, _, _, _, _, _, _):
-                return id
-            case let .internalReference(_, id, _, _, _, _, _, _):
-                return id
+            case let .externalReference(externalReference):
+                return externalReference.id
+            case let .internalReference(internalReference):
+                return internalReference.id
         }
     }
     
     public var type: String {
         switch self {
-            case let .externalReference(_, _, type, _, _, _, _, _, _):
-                return type
-            case let .internalReference(_, _, type, _, _, _, _, _):
-                return type
+            case let .externalReference(externalReference):
+                return externalReference.type
+            case let .internalReference(internalReference):
+                return internalReference.type
         }
     }
     
     public var title: String? {
         switch self {
-            case let .externalReference(_, _, _, title, _, _, _, _, _):
-                return title
-            case let .internalReference(_, _, _, title, _, _, _, _):
-                return title
+            case let .externalReference(externalReference):
+                return externalReference.title
+            case let .internalReference(internalReference):
+                return internalReference.title
         }
     }
     
     public var description: String? {
         switch self {
-            case let .externalReference(_, _, _, _, description, _, _, _, _):
-                return description
-            case let .internalReference(_, _, _, _, description, _, _, _):
-                return description
+            case let .externalReference(externalReference):
+                return externalReference.description
+            case let .internalReference(internalReference):
+                return internalReference.description
         }
     }
     
     public var message: ChatContextResultMessage {
         switch self {
-            case let .externalReference(_, _, _, _, _, _, _, _, message):
-                return message
-            case let .internalReference(_, _, _, _, _, _, _, message):
-                return message
-        }
-    }
-    
-    public static func ==(lhs: ChatContextResult, rhs: ChatContextResult) -> Bool {
-        switch lhs {
-            //id: String, type: String, title: String?, description: String?, url: String?, content: TelegramMediaWebFile?, thumbnail: TelegramMediaWebFile?, message: ChatContextResultMessage
-            case let .externalReference(lhsQueryId, lhsId, lhsType, lhsTitle, lhsDescription, lhsUrl, lhsContent, lhsThumbnail, lhsMessage):
-                if case let .externalReference(rhsQueryId, rhsId, rhsType, rhsTitle, rhsDescription, rhsUrl, rhsContent, rhsThumbnail, rhsMessage) = rhs {
-                    if lhsQueryId != rhsQueryId {
-                        return false
-                    }
-                    if lhsId != rhsId {
-                        return false
-                    }
-                    if lhsType != rhsType {
-                        return false
-                    }
-                    if lhsTitle != rhsTitle {
-                        return false
-                    }
-                    if lhsDescription != rhsDescription {
-                        return false
-                    }
-                    if lhsUrl != rhsUrl {
-                        return false
-                    }
-                    if let lhsContent = lhsContent, let rhsContent = rhsContent {
-                        if !lhsContent.isEqual(to: rhsContent) {
-                            return false
-                        }
-                    } else if (lhsContent != nil) != (rhsContent != nil) {
-                        return false
-                    }
-                    if let lhsThumbnail = lhsThumbnail, let rhsThumbnail = rhsThumbnail {
-                        if !lhsThumbnail.isEqual(to: rhsThumbnail) {
-                            return false
-                        }
-                    } else if (lhsThumbnail != nil) != (rhsThumbnail != nil) {
-                        return false
-                    }
-                    if lhsMessage != rhsMessage {
-                        return false
-                    }
-                    return true
-                } else {
-                    return false
-                }
-            case let .internalReference(lhsQueryId, lhsId, lhsType, lhsTitle, lhsDescription, lhsImage, lhsFile, lhsMessage):
-                if case let .internalReference(rhsQueryId, rhsId, rhsType, rhsTitle, rhsDescription, rhsImage, rhsFile, rhsMessage) = rhs {
-                    if lhsQueryId != rhsQueryId {
-                        return false
-                    }
-                    if lhsId != rhsId {
-                        return false
-                    }
-                    if lhsType != rhsType {
-                        return false
-                    }
-                    if lhsTitle != rhsTitle {
-                        return false
-                    }
-                    if lhsDescription != rhsDescription {
-                        return false
-                    }
-                    if let lhsImage = lhsImage, let rhsImage = rhsImage {
-                        if !lhsImage.isEqual(to: rhsImage) {
-                            return false
-                        }
-                    } else if (lhsImage != nil) != (rhsImage != nil) {
-                        return false
-                    }
-                    if let lhsFile = lhsFile, let rhsFile = rhsFile {
-                        if !lhsFile.isEqual(to: rhsFile) {
-                            return false
-                        }
-                    } else if (lhsFile != nil) != (rhsFile != nil) {
-                        return false
-                    }
-                    if lhsMessage != rhsMessage {
-                        return false
-                    }
-                    return true
-                } else {
-                    return false
-                }
+            case let .externalReference(externalReference):
+                return externalReference.message
+            case let .internalReference(internalReference):
+                return internalReference.message
         }
     }
 }
 
-public enum ChatContextResultCollectionPresentation {
+public enum ChatContextResultCollectionPresentation: Int32, Codable {
     case media
     case list
 }
 
-public struct ChatContextResultSwitchPeer: Equatable {
+public struct ChatContextResultSwitchPeer: Equatable, Codable {
     public let text: String
     public let startParam: String
     
@@ -296,11 +330,21 @@ public struct ChatContextResultSwitchPeer: Equatable {
     }
 }
 
-public final class ChatContextResultCollection: Equatable {
+public final class ChatContextResultCollection: Equatable, Codable {
+    public struct GeoPoint: Equatable, Codable {
+        public let latitude: Double
+        public let longitude: Double
+        
+        public init(latitude: Double, longitude: Double) {
+            self.latitude = latitude
+            self.longitude = longitude
+        }
+    }
+    
     public let botId: PeerId
     public let peerId: PeerId
     public let query: String
-    public let geoPoint: (Double, Double)?
+    public let geoPoint: ChatContextResultCollection.GeoPoint?
     public let queryId: Int64
     public let nextOffset: String?
     public let presentation: ChatContextResultCollectionPresentation
@@ -308,7 +352,7 @@ public final class ChatContextResultCollection: Equatable {
     public let results: [ChatContextResult]
     public let cacheTimeout: Int32
     
-    public init(botId: PeerId, peerId: PeerId, query: String, geoPoint: (Double, Double)?, queryId: Int64, nextOffset: String?, presentation: ChatContextResultCollectionPresentation, switchPeer: ChatContextResultSwitchPeer?, results: [ChatContextResult], cacheTimeout: Int32) {
+    public init(botId: PeerId, peerId: PeerId, query: String, geoPoint: ChatContextResultCollection.GeoPoint?, queryId: Int64, nextOffset: String?, presentation: ChatContextResultCollectionPresentation, switchPeer: ChatContextResultSwitchPeer?, results: [ChatContextResult], cacheTimeout: Int32) {
         self.botId = botId
         self.peerId = peerId
         self.query = query
@@ -334,7 +378,7 @@ public final class ChatContextResultCollection: Equatable {
         if lhs.query != rhs.query {
             return false
         }
-        if lhs.geoPoint?.0 != rhs.geoPoint?.0 || lhs.geoPoint?.1 != rhs.geoPoint?.1 {
+        if lhs.geoPoint != rhs.geoPoint {
             return false
         }
         if lhs.nextOffset != rhs.nextOffset {
@@ -408,7 +452,7 @@ extension ChatContextResult {
     init(apiResult: Api.BotInlineResult, queryId: Int64) {
         switch apiResult {
             case let .botInlineResult(_, id, type, title, description, url, thumb, content, sendMessage):
-                self = .externalReference(queryId: queryId, id: id, type: type, title: title, description: description, url: url, content: content.flatMap(TelegramMediaWebFile.init), thumbnail: thumb.flatMap(TelegramMediaWebFile.init), message: ChatContextResultMessage(apiMessage: sendMessage))
+                self = .externalReference(ChatContextResult.ExternalReference(queryId: queryId, id: id, type: type, title: title, description: description, url: url, content: content.flatMap(TelegramMediaWebFile.init), thumbnail: thumb.flatMap(TelegramMediaWebFile.init), message: ChatContextResultMessage(apiMessage: sendMessage)))
             case let .botInlineMediaResult(_, id, type, photo, document, title, description, sendMessage):
                 var image: TelegramMediaImage?
                 var file: TelegramMediaFile?
@@ -418,7 +462,7 @@ extension ChatContextResult {
                 if let document = document, let parsedFile = telegramMediaFileFromApiDocument(document) {
                     file = parsedFile
                 }
-                self = .internalReference(queryId: queryId, id: id, type: type, title: title, description: description, image: image, file: file, message: ChatContextResultMessage(apiMessage: sendMessage))
+                self = .internalReference(ChatContextResult.InternalReference(queryId: queryId, id: id, type: type, title: title, description: description, image: image, file: file, message: ChatContextResultMessage(apiMessage: sendMessage)))
         }
     }
 }
@@ -449,7 +493,10 @@ extension ChatContextResultCollection {
                             return true
                     }
                 })*/
-                self.init(botId: botId, peerId: peerId, query: query, geoPoint: geoPoint, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: parsedResults, cacheTimeout: cacheTime)
+                let mappedGeoPoint = geoPoint.flatMap { geoPoint -> ChatContextResultCollection.GeoPoint in
+                    return ChatContextResultCollection.GeoPoint(latitude: geoPoint.0, longitude: geoPoint.1)
+                }
+                self.init(botId: botId, peerId: peerId, query: query, geoPoint: mappedGeoPoint, queryId: queryId, nextOffset: nextOffset, presentation: (flags & (1 << 0) != 0) ? .media : .list, switchPeer: switchPeer, results: parsedResults, cacheTimeout: cacheTime)
         }
     }
 }

@@ -181,14 +181,14 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             var imageResource: TelegramMediaResource?
             var stickerFile: TelegramMediaFile?
             switch item.result {
-                case let .externalReference(_, _, _, _, _, url, content, thumbnail, _):
-                    if let thumbnail = thumbnail {
+                case let .externalReference(externalReference):
+                    if let thumbnail = externalReference.thumbnail {
                         imageResource = thumbnail.resource
                     }
                     var selectedUrl: String?
-                    if let url = url {
+                    if let url = externalReference.url {
                         selectedUrl = url
-                    } else if let content = content {
+                    } else if let content = externalReference.content {
                         if let resource = content.resource as? HttpReferenceMediaResource {
                             selectedUrl = resource.url
                         } else if let resource = content.resource as? WebFileReferenceMediaResource {
@@ -200,10 +200,10 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                             iconText = NSAttributedString(string: host.substring(to: host.index(after: host.startIndex)).uppercased(), font: iconFont, textColor: UIColor.white)
                         }
                     }
-                case let .internalReference(_, _, _, _, _, image, file, _):
-                    if let image = image {
+                case let .internalReference(internalReference):
+                    if let image = internalReference.image {
                         imageResource = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 200, height: 200))?.resource
-                    } else if let file = file {
+                    } else if let file = internalReference.file {
                         if file.isSticker {
                             stickerFile = file
                             imageResource = file.resource

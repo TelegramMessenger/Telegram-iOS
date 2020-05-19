@@ -37,13 +37,13 @@ struct WebSearchGalleryEntry: Equatable {
     
     func item(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) -> GalleryItem {
         switch self.result {
-            case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
-                if let content = content, type == "gif", let thumbnailResource = thumbnail?.resource, let dimensions = content.dimensions {
+            case let .externalReference(externalReference):
+                if let content = externalReference.content, externalReference.type == "gif", let thumbnailResource = externalReference.thumbnail?.resource, let dimensions = content.dimensions {
                     let fileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
                     return WebSearchVideoGalleryItem(context: context, presentationData: presentationData, index: self.index, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
-            case let .internalReference(_, _, _, _, _, _, file, _):
-                if let file = file {
+            case let .internalReference(internalReference):
+                if let file = internalReference.file {
                     return WebSearchVideoGalleryItem(context: context, presentationData: presentationData, index: self.index, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
         }

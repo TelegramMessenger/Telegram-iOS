@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MediaId: Hashable, PostboxCoding, CustomStringConvertible {
+public struct MediaId: Hashable, PostboxCoding, CustomStringConvertible, Codable {
     public typealias Namespace = Int32
     public typealias Id = Int64
     

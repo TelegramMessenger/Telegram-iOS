@@ -221,20 +221,20 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
     let originalSignal: Signal<UIImage, NoError>
     
     switch result {
-        case let .externalReference(_, _, _, _, _, _, content, thumbnail, _):
-            if let content = content {
+        case let .externalReference(externalReference):
+            if let content = externalReference.content {
                 imageResource = content.resource
             }
-            if let thumbnail = thumbnail {
+            if let thumbnail = externalReference.thumbnail {
                 thumbnailResource = thumbnail.resource
                 thumbnailDimensions = thumbnail.dimensions?.cgSize
             }
-            if let dimensions = content?.dimensions {
+            if let dimensions = externalReference.content?.dimensions {
                 imageDimensions = dimensions.cgSize
             }
-        case let .internalReference(_, _, _, _, _, image, _, _):
-            immediateThumbnailData = image?.immediateThumbnailData
-            if let image = image {
+        case let .internalReference(internalReference):
+            immediateThumbnailData = internalReference.image?.immediateThumbnailData
+            if let image = internalReference.image {
                 if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
                     imageDimensions = imageRepresentation.dimensions.cgSize
                     imageResource = imageRepresentation.resource

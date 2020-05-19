@@ -1176,7 +1176,7 @@ private func calculateItemFrames(items: [VisualMediaItem], containerWidth: CGFlo
         weights.append(Int(item.aspectRatio * 100))
     }
     
-    let preferredRowSize: CGFloat = 160.0
+    let preferredRowSize: CGFloat = 100.0
     let idealHeight: CGFloat = preferredRowSize
     
     var totalItemSize: CGFloat = 0.0

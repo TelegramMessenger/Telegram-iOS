@@ -1,7 +1,15 @@
 import Foundation
 import Postbox
 
+public enum TelegramMediaImageReferenceDecodingError: Error {
+    case generic
+}
+
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case data
+    }
+    
     case cloud(imageId: Int64, accessHash: Int64, fileReference: Data?)
     
     public init(decoder: PostboxDecoder) {
@@ -28,6 +36,24 @@ public enum TelegramMediaImageReference: PostboxCoding, Equatable {
         }
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let data = try container.decode(Data.self, forKey: .data)
+        let postboxDecoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+        guard let object = postboxDecoder.decodeRootObject() as? TelegramMediaImageReference else {
+            throw TelegramMediaImageReferenceDecodingError.generic
+        }
+        self = object
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        let postboxEncoder = PostboxEncoder()
+        postboxEncoder.encodeRootObject(self)
+        
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(postboxEncoder.makeData(), forKey: .data)
+    }
+    
     public static func ==(lhs: TelegramMediaImageReference, rhs: TelegramMediaImageReference) -> Bool {
         switch lhs {
             case let .cloud(imageId, accessHash, fileReference):
@@ -50,7 +76,15 @@ public struct TelegramMediaImageFlags: OptionSet {
     public static let hasStickers = TelegramMediaImageFlags(rawValue: 1 << 0)
 }
 
-public final class TelegramMediaImage: Media, Equatable {
+public enum TelegramMediaImageDecodingError: Error {
+    case generic
+}
+
+public final class TelegramMediaImage: Media, Equatable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case data
+    }
+    
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
     public let immediateThumbnailData: Data?
@@ -102,6 +136,29 @@ public final class TelegramMediaImage: Media, Equatable {
             encoder.encodeNil(forKey: "prf")
         }
         encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
+    }
+    
+    public required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let data = try container.decode(Data.self, forKey: .data)
+        let postboxDecoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+        guard let object = postboxDecoder.decodeRootObject() as? TelegramMediaImage else {
+            throw TelegramMediaImageDecodingError.generic
+        }
+        self.imageId = object.imageId
+        self.representations = object.representations
+        self.immediateThumbnailData = object.immediateThumbnailData
+        self.reference = object.reference
+        self.partialReference = object.partialReference
+        self.flags = object.flags
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        let postboxEncoder = PostboxEncoder()
+        postboxEncoder.encodeRootObject(self)
+        
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(postboxEncoder.makeData(), forKey: .data)
     }
     
     public func representationForDisplayAtSize(_ size: PixelDimensions) -> TelegramMediaImageRepresentation? {

@@ -212,14 +212,14 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
-                case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
-                    if let content = content {
+                case let .externalReference(externalReference):
+                    if let content = externalReference.content {
                         imageResource = content.resource
-                    } else if let thumbnail = thumbnail {
+                    } else if let thumbnail = externalReference.thumbnail {
                         imageResource = thumbnail.resource
                     }
-                    imageDimensions = content?.dimensions?.cgSize
-                    if type == "gif", let thumbnailResource = thumbnail?.resource, let content = content, let dimensions = content.dimensions {
+                    imageDimensions = externalReference.content?.dimensions?.cgSize
+                    if externalReference.type == "gif", let thumbnailResource = externalReference.thumbnail?.resource, let content = externalReference.content, let dimensions = content.dimensions {
                         videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         imageResource = nil
                     }
@@ -229,13 +229,13 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     } else if let imageResource = imageResource {
                         updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
                     }
-                case let .internalReference(_, _, _, _, _, image, file, _):
-                    if let image = image {
+                case let .internalReference(internalReference):
+                    if let image = internalReference.image {
                         if let largestRepresentation = largestImageRepresentation(image.representations) {
                             imageDimensions = largestRepresentation.dimensions.cgSize
                         }
                         imageResource = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 200, height: 100))?.resource
-                    } else if let file = file {
+                    } else if let file = internalReference.file {
                         if let dimensions = file.dimensions {
                             imageDimensions = dimensions.cgSize
                         } else if let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
@@ -252,7 +252,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                     }
                 
-                    if let file = file {
+                    if let file = internalReference.file {
                         if file.isVideo && file.isAnimated {
                             videoFile = file
                             imageResource = nil

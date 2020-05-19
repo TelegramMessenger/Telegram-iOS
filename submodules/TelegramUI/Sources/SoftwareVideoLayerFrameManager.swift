@@ -23,6 +23,7 @@ final class SoftwareVideoLayerFrameManager {
     
     private let account: Account
     private let resource: MediaResource
+    private let secondaryResource: MediaResource?
     private let queue: ThreadPoolQueue
     private let layerHolder: SampleBufferLayer
     
@@ -33,10 +34,12 @@ final class SoftwareVideoLayerFrameManager {
     
     init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer) {
         var resource = fileReference.media.resource
+        var secondaryResource: MediaResource?
         for attribute in fileReference.media.attributes {
             if case .Video = attribute {
                 if let thumbnail = fileReference.media.videoThumbnails.first {
                     resource = thumbnail.resource
+                    secondaryResource = fileReference.media.resource
                 }
             }
         }
@@ -44,6 +47,7 @@ final class SoftwareVideoLayerFrameManager {
         nextWorker += 1
         self.account = account
         self.resource = resource
+        self.secondaryResource = secondaryResource
         self.queue = ThreadPoolQueue(threadPool: workers)
         self.layerHolder = layerHolder
         layerHolder.layer.videoGravity = .resizeAspectFill
@@ -57,9 +61,38 @@ final class SoftwareVideoLayerFrameManager {
     }
     
     func start() {
-        self.dataDisposable.set((self.account.postbox.mediaBox.resourceData(self.resource, option: .complete(waitUntilFetchStatus: false)) |> deliverOn(applyQueue)).start(next: { [weak self] data in
-            if let strongSelf = self, data.complete {
-                let _ = strongSelf.source.swap(SoftwareVideoSource(path: data.path))
+        let secondarySignal: Signal<String?, NoError>
+        if let secondaryResource = self.secondaryResource {
+            secondarySignal = self.account.postbox.mediaBox.resourceData(self.resource, option: .complete(waitUntilFetchStatus: false))
+            |> map { data -> String? in
+                if data.complete {
+                    return data.path
+                } else {
+                    return nil
+                }
+            }
+        } else {
+            secondarySignal = .single(nil)
+        }
+        
+        let firstReady: Signal<String, NoError> = combineLatest(
+            self.account.postbox.mediaBox.resourceData(self.resource, option: .complete(waitUntilFetchStatus: false)),
+            secondarySignal
+        )
+        |> mapToSignal { first, second -> Signal<String, NoError> in
+            if first.complete {
+                return .single(first.path)
+            } else if let second = second {
+                return .single(second)
+            } else {
+                return .complete()
+            }
+        }
+        |> take(1)
+        
+        self.dataDisposable.set((firstReady |> deliverOn(applyQueue)).start(next: { [weak self] path in
+            if let strongSelf = self {
+                let _ = strongSelf.source.swap(SoftwareVideoSource(path: path))
             }
         }))
     }

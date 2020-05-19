@@ -86,12 +86,12 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
         case let .contextResult(result):
             var imageResource: TelegramMediaResource?
             switch result {
-                case let .externalReference(_, _, _, _, _, _, content, _, _):
-                    if let content = content {
+                case let .externalReference(externalReference):
+                    if let content = externalReference.content {
                         imageResource = content.resource
                     }
-                case let .internalReference(_, _, _, _, _, image, _, _):
-                    if let image = image {
+                case let .internalReference(internalReference):
+                    if let image = internalReference.image {
                         if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
                             imageResource = imageRepresentation.resource
                         }

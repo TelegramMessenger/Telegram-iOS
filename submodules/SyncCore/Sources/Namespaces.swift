@@ -70,6 +70,7 @@ public struct Namespaces {
         public static let cachedWallpapersConfiguration: Int8 = 7
         public static let cachedThemesConfiguration: Int8 = 8
         public static let cachedPollResults: Int8 = 9
+        public static let cachedContextResults: Int8 = 10
     }
     
     public struct UnorderedItemList {

@@ -234,7 +234,15 @@ public enum TelegramMediaFileReference: PostboxCoding, Equatable {
     }
 }
 
-public final class TelegramMediaFile: Media, Equatable {
+public enum TelegramMediaFileDecodingError: Error {
+    case generic
+}
+
+public final class TelegramMediaFile: Media, Equatable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case data
+    }
+    
     public final class VideoThumbnail: Equatable, PostboxCoding {
         public let dimensions: PixelDimensions
         public let resource: TelegramMediaResource
@@ -336,6 +344,32 @@ public final class TelegramMediaFile: Media, Equatable {
             encoder.encodeNil(forKey: "s")
         }
         encoder.encodeObjectArray(self.attributes, forKey: "at")
+    }
+    
+    public required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let data = try container.decode(Data.self, forKey: .data)
+        let postboxDecoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+        guard let object = postboxDecoder.decodeRootObject() as? TelegramMediaFile else {
+            throw TelegramMediaFileDecodingError.generic
+        }
+        self.fileId = object.fileId
+        self.partialReference = object.partialReference
+        self.resource = object.resource
+        self.previewRepresentations = object.previewRepresentations
+        self.videoThumbnails = object.videoThumbnails
+        self.immediateThumbnailData = object.immediateThumbnailData
+        self.mimeType = object.mimeType
+        self.size = object.size
+        self.attributes = object.attributes
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        let postboxEncoder = PostboxEncoder()
+        postboxEncoder.encodeRootObject(self)
+        
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(postboxEncoder.makeData(), forKey: .data)
     }
     
     public var fileName: String? {

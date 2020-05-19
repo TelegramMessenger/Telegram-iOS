@@ -1,6 +1,15 @@
+import Foundation
 import Postbox
 
-public class TelegramMediaWebFile: Media {
+public enum TelegramMediaWebFileDecodingError: Error {
+    case generic
+}
+
+public class TelegramMediaWebFile: Media, Codable, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case data
+    }
+    
     public let resource: TelegramMediaResource
     public let mimeType: String
     public let size: Int32
@@ -32,23 +41,45 @@ public class TelegramMediaWebFile: Media {
         encoder.encodeObjectArray(self.attributes, forKey: "at")
     }
     
+    public required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let data = try container.decode(Data.self, forKey: .data)
+        let postboxDecoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+        guard let object = postboxDecoder.decodeRootObject() as? TelegramMediaWebFile else {
+            throw TelegramMediaWebFileDecodingError.generic
+        }
+        self.resource = object.resource
+        self.mimeType = object.mimeType
+        self.size = object.size
+        self.attributes = object.attributes
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        let postboxEncoder = PostboxEncoder()
+        postboxEncoder.encodeRootObject(self)
+        
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(postboxEncoder.makeData(), forKey: .data)
+    }
+    
     public func isEqual(to other: Media) -> Bool {
         guard let other = other as? TelegramMediaWebFile else {
             return false
         }
         
-        if !self.resource.isEqual(to: other.resource) {
+        return self == other
+    }
+    
+    public static func ==(lhs: TelegramMediaWebFile, rhs: TelegramMediaWebFile) -> Bool {
+        if !lhs.resource.isEqual(to: rhs.resource) {
             return false
         }
-        
-        if self.size != other.size {
+        if lhs.size != rhs.size {
             return false
         }
-        
-        if self.mimeType != other.mimeType {
+        if lhs.mimeType != rhs.mimeType {
             return false
         }
-
         return true
     }
     

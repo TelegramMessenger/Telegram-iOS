@@ -357,6 +357,8 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
                 return false
             }
             return size <= sizeLimit
+        } else if media.id?.namespace == Namespaces.Media.LocalFile {
+            return true
         } else if category.sizeLimit == Int32.max {
             return true
         } else {
