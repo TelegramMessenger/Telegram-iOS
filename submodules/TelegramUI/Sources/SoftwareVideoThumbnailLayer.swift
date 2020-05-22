@@ -23,7 +23,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         }
     }
     
-    init(account: Account, fileReference: FileMediaReference) {
+    init(account: Account, fileReference: FileMediaReference, synchronousLoad: Bool) {
         super.init()
         
         self.backgroundColor = UIColor.clear.cgColor
@@ -31,7 +31,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         self.masksToBounds = true
         
         if let dimensions = fileReference.media.dimensions {
-            self.disposable.set((mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference)).start(next: { [weak self] transform in
+            self.disposable.set((mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference, synchronousLoad: synchronousLoad)).start(next: { [weak self] transform in
                 var boundingSize = dimensions.cgSize.aspectFilled(CGSize(width: 93.0, height: 93.0))
                 let imageSize = boundingSize
                 boundingSize.width = min(200.0, boundingSize.width)

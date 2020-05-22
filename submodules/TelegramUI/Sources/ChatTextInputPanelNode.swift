@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -11,18 +12,7 @@ import TextFormat
 import AccountContext
 import TouchDownGesture
 import ImageTransparency
-
-private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
-    context.clear(CGRect(origin: CGPoint(), size: size))
-    context.setStrokeColor(UIColor(rgb: 0x9099A2, alpha: 0.6).cgColor)
-    
-    let lineWidth: CGFloat = 2.0
-    let cutoutWidth: CGFloat = 4.0
-    context.setLineWidth(lineWidth)
-    
-    context.strokeEllipse(in: CGRect(origin: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
-    context.clear(CGRect(origin: CGPoint(x: (size.width - cutoutWidth) / 2.0, y: 0.0), size: CGSize(width: cutoutWidth, height: size.height / 2.0)))
-})
+import ActivityIndicator
 
 private let accessoryButtonFont = Font.medium(14.0)
 
@@ -217,7 +207,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let attachmentButton: HighlightableButtonNode
     let attachmentButtonDisabledNode: HighlightableButtonNode
     let searchLayoutClearButton: HighlightableButton
-    let searchLayoutProgressView: UIImageView
+    private let searchLayoutClearImageNode: ASImageNode
+    private var searchActivityIndicator: ActivityIndicator?
     var audioRecordingInfoContainerNode: ASDisplayNode?
     var audioRecordingDotNode: ASImageNode?
     var audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode?
@@ -278,6 +269,19 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     override var context: AccountContext? {
         didSet {
             self.actionButtons.micButton.account = self.context?.account
+        }
+    }
+    
+    private let statusDisposable = MetaDisposable()
+    override var interfaceInteraction: ChatPanelInterfaceInteraction? {
+        didSet {
+            if let statuses = self.interfaceInteraction?.statuses {
+                self.statusDisposable.set((statuses.inlineSearch
+                |> distinctUntilChanged
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    self?.updateIsProcessingInlineRequest(value)
+                }))
+            }
         }
     }
     
@@ -390,8 +394,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButton.isAccessibilityElement = true
         self.attachmentButtonDisabledNode = HighlightableButtonNode()
         self.searchLayoutClearButton = HighlightableButton()
-        self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
-        self.searchLayoutProgressView.isHidden = true
+        self.searchLayoutClearImageNode = ASImageNode()
+        self.searchLayoutClearImageNode.isUserInteractionEnabled = false
+        self.searchLayoutClearButton.addSubnode(self.searchLayoutClearImageNode)
         
         self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings, presentController: presentController)
         
@@ -466,8 +471,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutClearButton.addTarget(self, action: #selector(self.searchLayoutClearButtonPressed), for: .touchUpInside)
         self.searchLayoutClearButton.alpha = 0.0
         
-        self.searchLayoutClearButton.addSubview(self.searchLayoutProgressView)
-        
         self.addSubnode(self.textInputContainer)
         self.addSubnode(self.textInputBackgroundNode)
         
@@ -493,6 +496,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.statusDisposable.dispose()
     }
     
     func loadTextInputNodeIfNeeded() {
@@ -735,7 +742,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
                 
-                self.searchLayoutClearButton.setImage(PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme), for: [])
+                self.searchLayoutClearImageNode.image = PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme)
                 
                 if let audioRecordingDotNode = self.audioRecordingDotNode {
                     audioRecordingDotNode.image = PresentationResourcesChat.chatInputPanelMediaRecordingDotImage(interfaceState.theme)
@@ -1102,9 +1109,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let searchLayoutClearButtonSize = CGSize(width: 44.0, height: minimalHeight)
         let textFieldInsets = self.textFieldInsets(metrics: metrics)
         transition.updateFrame(layer: self.searchLayoutClearButton.layer, frame: CGRect(origin: CGPoint(x: width - rightInset - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset + 3.0, y: panelHeight - minimalHeight), size: searchLayoutClearButtonSize))
-
-        let searchProgressSize = self.searchLayoutProgressView.bounds.size
-        transition.updateFrame(layer: self.searchLayoutProgressView.layer, frame: CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - searchProgressSize.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - searchProgressSize.height) / 2.0)), size: searchProgressSize))
+        if let image = self.searchLayoutClearImageNode.image {
+            self.searchLayoutClearImageNode.frame = CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - image.size.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - image.size.height) / 2.0)), size: image.size)
+        }
         
         let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top + audioRecordingItemsVerticalOffset, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
         transition.updateFrame(node: self.textInputContainer, frame: textInputFrame)
@@ -1420,6 +1427,26 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if !self.bounds.size.height.isEqual(to: panelHeight) {
                 self.updateHeight(animated)
             }
+        }
+    }
+    
+    func updateIsProcessingInlineRequest(_ value: Bool) {
+        if value {
+            if self.searchActivityIndicator == nil, let currentState = self.presentationInterfaceState {
+                let searchActivityIndicator = ActivityIndicator(type: .custom(currentState.theme.list.itemAccentColor, 22.0, 1.0, false))
+                searchActivityIndicator.isUserInteractionEnabled = false
+                self.searchActivityIndicator = searchActivityIndicator
+                let indicatorSize = searchActivityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+                let size = self.searchLayoutClearButton.bounds.size
+                searchActivityIndicator.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0) + 1.0), size: indicatorSize)
+                self.searchLayoutClearImageNode.isHidden = true
+                self.searchLayoutClearButton.addSubnode(searchActivityIndicator)
+                searchActivityIndicator.layer.sublayerTransform = CATransform3DMakeScale(0.5, 0.5, 1.0)
+            }
+        } else if let searchActivityIndicator = self.searchActivityIndicator {
+            self.searchActivityIndicator = nil
+            self.searchLayoutClearImageNode.isHidden = false
+            searchActivityIndicator.removeFromSupernode()
         }
     }
     

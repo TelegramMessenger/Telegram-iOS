@@ -210,7 +210,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func dequeueTransition() {
-        if let validLayout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let validLayout = self.validLayout, let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()

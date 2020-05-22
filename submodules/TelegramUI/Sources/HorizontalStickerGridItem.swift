@@ -14,22 +14,22 @@ import TelegramAnimatedStickerNode
 final class HorizontalStickerGridItem: GridItem {
     let account: Account
     let file: TelegramMediaFile
-    let stickersInteraction: HorizontalStickersChatContextPanelInteraction
-    let interfaceInteraction: ChatPanelInterfaceInteraction
+    let isPreviewed: (HorizontalStickerGridItem) -> Bool
+    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
     
     let section: GridSection? = nil
     
-    init(account: Account, file: TelegramMediaFile, stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) {
+    init(account: Account, file: TelegramMediaFile, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.file = file
-        self.stickersInteraction = stickersInteraction
-        self.interfaceInteraction = interfaceInteraction
+        self.isPreviewed = isPreviewed
+        self.sendSticker = sendSticker
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = HorizontalStickerGridItemNode()
         node.setup(account: self.account, item: self)
-        node.interfaceInteraction = self.interfaceInteraction
+        node.sendSticker = self.sendSticker
         return node
     }
     
@@ -39,7 +39,7 @@ final class HorizontalStickerGridItem: GridItem {
             return
         }
         node.setup(account: self.account, item: self)
-        node.interfaceInteraction = self.interfaceInteraction
+        node.sendSticker = self.sendSticker
     }
 }
 
@@ -50,7 +50,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     private let stickerFetchedDisposable = MetaDisposable()
     
-    var interfaceInteraction: ChatPanelInterfaceInteraction?
+    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     
     private var currentIsPreviewing: Bool = false
     
@@ -108,11 +108,14 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                         self.addSubnode(animationNode)
                         self.animationNode = animationNode
                     }
+                    
+                    let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: item.file, small: true, size: fittedDimensions, synchronousLoad: false))
                     animationNode.started = { [weak self] in
                         self?.imageNode.alpha = 0.0
                     }
-                    let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
                     animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
@@ -158,8 +161,8 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), self, self.bounds)
+        if let (_, item, _) = self.currentState, case .ended = recognizer.state {
+            self.sendSticker?(.standalone(media: item.file), self, self.bounds)
         }
     }
     
@@ -170,7 +173,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState {
-            isPreviewing = item.stickersInteraction.previewedStickerItem == self.stickerItem
+            //isPreviewing = item.isPreviewed(self.stickerItem)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

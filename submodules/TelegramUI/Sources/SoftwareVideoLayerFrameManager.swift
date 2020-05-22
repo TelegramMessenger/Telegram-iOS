@@ -63,7 +63,7 @@ final class SoftwareVideoLayerFrameManager {
     func start() {
         let secondarySignal: Signal<String?, NoError>
         if let secondaryResource = self.secondaryResource {
-            secondarySignal = self.account.postbox.mediaBox.resourceData(self.resource, option: .complete(waitUntilFetchStatus: false))
+            secondarySignal = self.account.postbox.mediaBox.resourceData(secondaryResource, option: .complete(waitUntilFetchStatus: false))
             |> map { data -> String? in
                 if data.complete {
                     return data.path

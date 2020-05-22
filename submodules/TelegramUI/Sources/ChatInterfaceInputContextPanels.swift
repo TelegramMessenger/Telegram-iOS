@@ -71,14 +71,14 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     switch inputQueryResult {
         case let .stickers(results):
             if !results.isEmpty {
-                if let currentPanel = currentPanel as? HorizontalStickersChatContextPanelNode {
-                    currentPanel.updateResults(results.map({ $0.file }))
+                if let currentPanel = currentPanel as? InlineReactionSearchPanel {
+                    currentPanel.updateResults(results: results.map({ $0.file }))
                     return currentPanel
                 } else {
-                    let panel = HorizontalStickersChatContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                    let panel = InlineReactionSearchPanel(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
                     panel.controllerInteraction = controllerInteraction
                     panel.interfaceInteraction = interfaceInteraction
-                    panel.updateResults(results.map({ $0.file }))
+                    panel.updateResults(results: results.map({ $0.file }))
                     return panel
                 }
             }
@@ -94,7 +94,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     return panel
                 }
             }
-        case let .emojis(results, range):
+        case let .emojis(results, _):
             if !results.isEmpty {
                 if let currentPanel = currentPanel as? EmojisChatInputContextPanelNode {
                     currentPanel.updateResults(results)

@@ -66,7 +66,11 @@ private struct StickerEntry: Identifiable, Comparable {
     }
     
     func item(account: Account, stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) -> GridItem {
-        return HorizontalStickerGridItem(account: account, file: self.file, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction)
+        return HorizontalStickerGridItem(account: account, file: self.file, isPreviewed: { item in
+            return false//stickersInteraction.previewedStickerItem == item
+        }, sendSticker: { file, node, rect in
+            let _ = interfaceInteraction.sendSticker(file, node, rect)
+        })
     }
 }
 

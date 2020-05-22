@@ -281,7 +281,10 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         if let (transition, firstTime) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
-            let options = ListViewDeleteAndInsertOptions()
+            var options = ListViewDeleteAndInsertOptions()
+            options.insert(.Synchronous)
+            options.insert(.LowLatency)
+            options.insert(.PreferSynchronousResourceLoading)
             if firstTime {
                 //options.insert(.Synchronous)
                 //options.insert(.LowLatency)

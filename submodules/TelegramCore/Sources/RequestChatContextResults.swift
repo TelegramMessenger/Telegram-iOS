@@ -12,17 +12,21 @@ public enum RequestChatContextResultsError {
 
 public final class CachedChatContextResult: PostboxCoding {
     public let data: Data
+    public let timestamp: Int32
     
-    public init(data: Data) {
+    public init(data: Data, timestamp: Int32) {
         self.data = data
+        self.timestamp = timestamp
     }
     
     public init(decoder: PostboxDecoder) {
         self.data = decoder.decodeDataForKey("data") ?? Data()
+        self.timestamp = decoder.decodeInt32ForKey("timestamp", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeData(self.data, forKey: "data")
+        encoder.encodeInt32(self.timestamp, forKey: "timestamp")
     }
 }
 
@@ -35,7 +39,7 @@ private struct RequestData: Codable {
     let query: String
 }
 
-private let requestVersion = "1"
+private let requestVersion = "3"
 
 public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String) -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> {
     return account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in
@@ -69,7 +73,10 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                     let key = ValueBoxKey(MemoryBuffer(data: keyData))
                     if let cachedEntry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key)) as? CachedChatContextResult {
                         if let cachedResult = try? JSONDecoder().decode(ChatContextResultCollection.self, from: cachedEntry.data) {
-                            return .single(cachedResult)
+                            let timestamp = Int32(Date().timeIntervalSince1970)
+                            if cachedEntry.timestamp + cachedResult.cacheTimeout > timestamp {
+                                return .single(cachedResult)
+                            }
                         }
                     }
                 }
@@ -102,12 +109,12 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                 }
                 
                 return account.postbox.transaction { transaction -> ChatContextResultCollection? in
-                    if result.cacheTimeout > 10 {
+                    if result.cacheTimeout > 10 && offset.isEmpty {
                         if let resultData = try? JSONEncoder().encode(result) {
                             let requestData = RequestData(version: requestVersion, botId: botId, peerId: peerId, query: query)
                             if let keyData = try? JSONEncoder().encode(requestData) {
                                 let key = ValueBoxKey(MemoryBuffer(data: keyData))
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key), entry: CachedChatContextResult(data: resultData), collectionSpec: collectionSpec)
+                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key), entry: CachedChatContextResult(data: resultData, timestamp: Int32(Date().timeIntervalSince1970)), collectionSpec: collectionSpec)
                             }
                         }
                     }

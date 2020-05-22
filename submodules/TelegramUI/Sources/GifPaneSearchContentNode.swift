@@ -11,7 +11,7 @@ import AccountContext
 import WebSearchUI
 import AppBundle
 
-func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bool) -> Void)?) -> Signal<[FileMediaReference]?, NoError> {
+func paneGifSearchForQuery(account: Account, query: String, offset: String?, updateActivity: ((Bool) -> Void)?) -> Signal<([FileMediaReference], String?)?, NoError> {
     let delayRequest = true
     
     let contextBot = account.postbox.transaction { transaction -> String in
@@ -34,7 +34,7 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
     }
     |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
         if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-            let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, limit: 15)
+            let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, offset: offset ?? "", limit: 50)
             |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in
                     return .contextRequestResult(user, results)
@@ -66,25 +66,46 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
         }
     }
     return contextBot
-    |> mapToSignal { result -> Signal<[FileMediaReference]?, NoError> in
+    |> mapToSignal { result -> Signal<([FileMediaReference], String?)?, NoError> in
         if let r = result(nil), case let .contextRequestResult(_, collection) = r, let results = collection?.results {
             var references: [FileMediaReference] = []
             for result in results {
                 switch result {
                 case let .externalReference(externalReference):
                     var imageResource: TelegramMediaResource?
+                    var thumbnailResource: TelegramMediaResource?
+                    var thumbnailIsVideo: Bool = false
                     var uniqueId: Int64?
                     if let content = externalReference.content {
                         imageResource = content.resource
                         if let resource = content.resource as? WebFileReferenceMediaResource {
                             uniqueId = Int64(HashFunctions.murMurHash32(resource.url))
                         }
-                    } else if let thumbnail = externalReference.thumbnail {
-                        imageResource = thumbnail.resource
+                    }
+                    if let thumbnail = externalReference.thumbnail {
+                        thumbnailResource = thumbnail.resource
+                        if thumbnail.mimeType.hasPrefix("video/") {
+                            thumbnailIsVideo = true
+                        }
                     }
                     
-                    if externalReference.type == "gif", let thumbnailResource = imageResource, let content = externalReference.content, let dimensions = content.dimensions {
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                    if externalReference.type == "gif", let resource = imageResource, let content = externalReference.content, let dimensions = content.dimensions {
+                        var previews: [TelegramMediaImageRepresentation] = []
+                        var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []
+                        if let thumbnailResource = thumbnailResource {
+                            if thumbnailIsVideo {
+                                videoThumbnails.append(TelegramMediaFile.VideoThumbnail(
+                                    dimensions: dimensions,
+                                    resource: thumbnailResource
+                                ))
+                            } else {
+                                previews.append(TelegramMediaImageRepresentation(
+                                    dimensions: dimensions,
+                                    resource: thumbnailResource
+                                ))
+                            }
+                        }
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: resource, previewRepresentations: previews, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
                         references.append(FileMediaReference.standalone(media: file))
                     }
                 case let .internalReference(internalReference):
@@ -93,7 +114,7 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
                     }
                 }
             }
-            return .single(references)
+            return .single((references, collection?.nextOffset))
         } else {
             return .complete()
         }
@@ -119,6 +140,9 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     private let notFoundNode: ASImageNode
     private let notFoundLabel: ImmediateTextNode
     
+    private var nextOffset: (String, String)?
+    private var isLoadingNextResults: Bool = false
+    
     private var validLayout: CGSize?
     
     private let trendingPromise: Promise<[FileMediaReference]?>
@@ -131,6 +155,9 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     
     var deactivateSearchBar: (() -> Void)?
     var updateActivity: ((Bool) -> Void)?
+    var requestUpdateQuery: ((String) -> Void)?
+    
+    private var hasInitialText = false
     
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<[FileMediaReference]?>) {
         self.context = context
@@ -167,24 +194,79 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     }
     
     func updateText(_ text: String, languageCode: String?) {
-        let signal: Signal<[FileMediaReference]?, NoError>
+        self.hasInitialText = true
+        self.isLoadingNextResults = true
+        
+        let signal: Signal<([FileMediaReference], String?)?, NoError>
         if !text.isEmpty {
-            signal = paneGifSearchForQuery(account: self.context.account, query: text, updateActivity: self.updateActivity)
+            signal = paneGifSearchForQuery(account: self.context.account, query: text, offset: "", updateActivity: self.updateActivity)
             self.updateActivity?(true)
         } else {
             signal = self.trendingPromise.get()
+            |> map { items -> ([FileMediaReference], String?)? in
+                if let items = items {
+                    return (items, nil)
+                } else {
+                    return nil
+                }
+            }
             self.updateActivity?(false)
         }
         
         self.searchDisposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] result in
-            guard let strongSelf = self, let result = result else {
+            guard let strongSelf = self, let (result, nextOffset) = result else {
                 return
             }
             
-            strongSelf.multiplexedNode?.files = result
+            strongSelf.isLoadingNextResults = false
+            if let nextOffset = nextOffset {
+                strongSelf.nextOffset = (text, nextOffset)
+            } else {
+                strongSelf.nextOffset = nil
+            }
+            strongSelf.multiplexedNode?.files = MultiplexedVideoNodeFiles(saved: [], trending: result)
             strongSelf.updateActivity?(false)
             strongSelf.notFoundNode.isHidden = text.isEmpty || !result.isEmpty
+        }))
+    }
+    
+    private func loadMore() {
+        if self.isLoadingNextResults {
+            return
+        }
+        guard let (text, nextOffsetValue) = self.nextOffset else {
+            return
+        }
+        self.isLoadingNextResults = true
+        
+        let signal: Signal<([FileMediaReference], String?)?, NoError>
+        signal = paneGifSearchForQuery(account: self.context.account, query: text, offset: nextOffsetValue, updateActivity: self.updateActivity)
+        
+        self.searchDisposable.set((signal
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let strongSelf = self, let (result, nextOffset) = result else {
+                return
+            }
+            
+            var files = strongSelf.multiplexedNode?.files.trending ?? []
+            var currentIds = Set(files.map { $0.media.fileId })
+            for item in result {
+                if currentIds.contains(item.media.fileId) {
+                    continue
+                }
+                currentIds.insert(item.media.fileId)
+                files.append(item)
+            }
+            
+            strongSelf.isLoadingNextResults = false
+            if let nextOffset = nextOffset {
+                strongSelf.nextOffset = (text, nextOffset)
+            } else {
+                strongSelf.nextOffset = nil
+            }
+            strongSelf.multiplexedNode?.files = MultiplexedVideoNodeFiles(saved: [], trending: files)
+            strongSelf.notFoundNode.isHidden = text.isEmpty || !files.isEmpty
         }))
     }
     
@@ -223,10 +305,10 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
             
             transition.updateFrame(layer: multiplexedNode.layer, frame: nodeFrame)
-            multiplexedNode.updateLayout(size: nodeFrame.size, transition: transition)
+            multiplexedNode.updateLayout(theme: self.theme, strings: self.strings, size: nodeFrame.size, transition: transition)
         }
         
-        if firstLayout {
+        if firstLayout && !self.hasInitialText {
             self.updateText("", languageCode: nil)
         }
     }
@@ -235,7 +317,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         super.willEnterHierarchy()
         
         if self.multiplexedNode == nil {
-            let multiplexedNode = MultiplexedVideoNode(account: self.context.account)
+            let multiplexedNode = MultiplexedVideoNode(account: self.context.account, theme: self.theme, strings: self.strings)
             self.multiplexedNode = multiplexedNode
             if let layout = self.validLayout {
                 multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout)
@@ -248,7 +330,19 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in
-                self?.deactivateSearchBar?()
+                guard let strongSelf = self, let multiplexedNode = strongSelf.multiplexedNode else {
+                    return
+                }
+                
+                strongSelf.deactivateSearchBar?()
+                
+                if offset >= height - multiplexedNode.bounds.height - 200.0 {
+                    strongSelf.loadMore()
+                }
+            }
+            
+            multiplexedNode.reactionSelected = { [weak self] reaction in
+                self?.requestUpdateQuery?(reaction)
             }
         }
     }

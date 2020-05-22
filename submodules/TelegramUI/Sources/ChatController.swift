@@ -203,6 +203,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let searchResult = Promise<(SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)?>()
     private let loadingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let performingInlineSearch = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var preloadHistoryPeerId: PeerId?
     private let preloadHistoryPeerIdDisposable = MetaDisposable()
@@ -4543,7 +4544,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return nil
                 }))
            }
-        }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
+        }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         switch self.chatLocation {
             case let .peer(peerId):
@@ -5127,13 +5128,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return nil
                     })
                 }
+                if case .contextRequest = kind {
+                    self.performingInlineSearch.set(false)
+                }
             case let .update(query, signal):
                 let currentQueryAndDisposable = self.contextQueryStates[kind]
                 currentQueryAndDisposable?.1.dispose()
                 
                 var inScope = true
                 var inScopeResult: ((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?)?
-                self.contextQueryStates[kind] = (query, (signal |> deliverOnMainQueue).start(next: { [weak self] result in
+                self.contextQueryStates[kind] = (query, (signal
+                |> deliverOnMainQueue).start(next: { [weak self] result in
                     if let strongSelf = self {
                         if Thread.isMainThread && inScope {
                             inScope = false
@@ -5148,13 +5153,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }, error: { [weak self] error in
                     if let strongSelf = self {
+                        if case .contextRequest = kind {
+                            strongSelf.performingInlineSearch.set(false)
+                        }
+                        
                         switch error {
-                            case let .inlineBotLocationRequest(peerId):
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ShareInlineBotLocationConfirmation, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                    let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: Int32(Date().timeIntervalSince1970 + 10 * 60)).start()
-                                }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                    let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: 0).start()
-                                })]), in: .window(.root))
+                        case let .inlineBotLocationRequest(peerId):
+                            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ShareInlineBotLocationConfirmation, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: Int32(Date().timeIntervalSince1970 + 10 * 60)).start()
+                            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: 0).start()
+                            })]), in: .window(.root))
+                        }
+                    }
+                }, completed: { [weak self] in
+                    if let strongSelf = self {
+                        if case .contextRequest = kind {
+                            strongSelf.performingInlineSearch.set(false)
                         }
                     }
                 }))
@@ -5163,6 +5178,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedInputQueryResult(queryKind: kind, { previousResult in
                         return inScopeResult(previousResult)
                     })
+                } else {
+                    if case .contextRequest = kind {
+                        self.performingInlineSearch.set(true)
+                    }
                 }
             
                 if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {

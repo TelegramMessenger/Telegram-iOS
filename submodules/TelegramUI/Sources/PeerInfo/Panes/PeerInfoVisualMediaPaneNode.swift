@@ -56,6 +56,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private var item: (VisualMediaItem, Media?, CGSize, CGSize?)?
     private var theme: PresentationTheme?
     
+    private var hasVisibility: Bool = false
+    
     init(context: AccountContext, interaction: VisualMediaItemInteraction) {
         self.context = context
         self.interaction = interaction
@@ -192,7 +194,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 } else {
                     sampleBufferLayer = takeSampleBufferLayer()
                     self.sampleBufferLayer = sampleBufferLayer
-                    self.containerNode.layer.insertSublayer(sampleBufferLayer.layer, above: self.imageNode.layer)
+                    self.imageNode.layer.addSublayer(sampleBufferLayer.layer)
                 }
                 
                 self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
@@ -327,6 +329,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
     
     func updateIsVisible(_ isVisible: Bool) {
+        self.hasVisibility = isVisible
         if let _ = self.videoLayerFrameManager {
             let displayLink: ConstantDisplayLinkAnimator
             if let current = self.displayLink {
@@ -342,8 +345,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 displayLink.frameInterval = 2
                 self.displayLink = displayLink
             }
-            displayLink.isPaused = !isVisible
         }
+        self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
     }
     
     func updateSelectionState(animated: Bool) {
@@ -420,6 +423,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
         } else {
             self.isHidden = false
         }
+        self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
     }
 }
 

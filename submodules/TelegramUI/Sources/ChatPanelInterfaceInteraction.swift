@@ -21,13 +21,15 @@ final class ChatPanelInterfaceInteractionStatuses {
     let unblockingPeer: Signal<Bool, NoError>
     let searching: Signal<Bool, NoError>
     let loadingMessage: Signal<Bool, NoError>
+    let inlineSearch: Signal<Bool, NoError>
     
-    init(editingMessage: Signal<Float?, NoError>, startingBot: Signal<Bool, NoError>, unblockingPeer: Signal<Bool, NoError>, searching: Signal<Bool, NoError>, loadingMessage: Signal<Bool, NoError>) {
+    init(editingMessage: Signal<Float?, NoError>, startingBot: Signal<Bool, NoError>, unblockingPeer: Signal<Bool, NoError>, searching: Signal<Bool, NoError>, loadingMessage: Signal<Bool, NoError>, inlineSearch: Signal<Bool, NoError>) {
         self.editingMessage = editingMessage
         self.startingBot = startingBot
         self.unblockingPeer = unblockingPeer
         self.searching = searching
         self.loadingMessage = loadingMessage
+        self.inlineSearch = inlineSearch
     }
 }
 
