@@ -404,7 +404,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 strongSelf.statusNode.isHidden = true
                 strongSelf.mediaBadgeNode.isHidden = true
             }
-            let view = imageNode?.view.snapshotContentTree(unhide: true)
+            let view = imageNode?.view.snapshotView(afterScreenUpdates: false)
             if let strongSelf = self {
                 strongSelf.statusNode.isHidden = statusNodeHidden
                 strongSelf.mediaBadgeNode.isHidden = accessoryHidden
