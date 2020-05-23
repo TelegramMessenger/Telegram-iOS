@@ -194,7 +194,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
 //                controller.navigationPresentation = .modal
 //                strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
             }
-        }, toggleSearch: { [weak self] value, searchMode in
+        }, toggleSearch: { [weak self] value, searchMode, query in
             if let strongSelf = self {
                 if let searchMode = searchMode, value {
                     var searchContainerNode: PaneSearchContainerNode?
@@ -203,9 +203,14 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     } else {
                         searchContainerNode = PaneSearchContainerNode(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction, inputNodeInteraction: strongSelf.inputNodeInteraction, mode: searchMode, trendingGifsPromise: Promise(nil), cancel: {
                             self?.searchContainerNode?.deactivate()
-                            self?.inputNodeInteraction.toggleSearch(false, nil)
+                            self?.inputNodeInteraction.toggleSearch(false, nil, "")
                         })
                         strongSelf.searchContainerNode = searchContainerNode
+                        if !query.isEmpty {
+                            DispatchQueue.main.async {
+                                searchContainerNode?.updateQuery(query)
+                            }
+                        }
                     }
                     if let searchContainerNode = searchContainerNode {
                         strongSelf.searchContainerNodeLoadedDisposable.set((searchContainerNode.ready
@@ -644,6 +649,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     searchContainerNode.frame = containerFrame
                     searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
+                    var anchorTop = CGPoint(x: 0.0, y: 0.0)
+                    var anchorTopView: UIView = self.view
                     if let searchMode = searchMode {
                         switch searchMode {
                         case .sticker:
@@ -658,7 +665,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                     
                     if let placeholderNode = placeholderNode {
-                        searchContainerNode.animateIn(from: placeholderNode, transition: transition, completion: { [weak self] in
+                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: { [weak self] in
                         })
                     }
                 }
