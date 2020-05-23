@@ -172,7 +172,7 @@ const NSUInteger PGPhotoEnhanceSegments = 4;
         NSUInteger hMin = PGPhotoEnhanceHistogramBins - 1;
         for (NSUInteger j = 0; j < hMin; ++j)
         {
-            if (cdfs[j] != 0)
+            if (cdfs[i][j] != 0)
                 hMin = j;
         }
         

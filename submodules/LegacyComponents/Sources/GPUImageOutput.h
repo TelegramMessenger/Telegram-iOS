@@ -2,6 +2,7 @@
 #import "GPUImageFramebuffer.h"
 
 #import <UIKit/UIKit.h>
+#import <CoreImage/CoreImage.h>
 
 void runOnMainQueueWithoutDeadlocking(void (^block)(void));
 void runSynchronouslyOnVideoProcessingQueue(void (^block)(void));
@@ -79,6 +80,8 @@ void reportAvailableMemoryForGPUImage(NSString *tag);
 
 - (void)useNextFrameForImageCapture;
 - (CGImageRef)newCGImageFromCurrentlyProcessedOutput;
+- (CIImage *)newCIImageFromCurrentlyProcessedOutput;
+- (void)commitImageCapture;
 
 - (UIImage *)imageFromCurrentFramebuffer;
 - (UIImage *)imageFromCurrentFramebufferWithOrientation:(UIImageOrientation)imageOrientation;

@@ -200,6 +200,29 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     return image;
 }
 
+- (CIImage *)newCIImageFromCurrentlyProcessedOutput {
+    // Give it three seconds to process, then abort if they forgot to set up the image capture properly
+    double timeoutForImageCapture = 3.0;
+    dispatch_time_t convertedTimeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeoutForImageCapture * NSEC_PER_SEC));
+
+    if (dispatch_semaphore_wait(imageCaptureSemaphore, convertedTimeout) != 0)
+    {
+        return NULL;
+    }
+
+    GPUImageFramebuffer* framebuffer = [self framebufferForOutput];
+    
+    usingNextFrameForImageCapture = NO;
+    dispatch_semaphore_signal(imageCaptureSemaphore);
+    
+    CIImage *image = [framebuffer newCIImageFromFramebufferContents];
+    return image;
+}
+
+- (void)commitImageCapture {
+    dispatch_semaphore_signal(imageCaptureSemaphore);
+}
+
 #pragma mark -
 #pragma mark Managing the display FBOs
 

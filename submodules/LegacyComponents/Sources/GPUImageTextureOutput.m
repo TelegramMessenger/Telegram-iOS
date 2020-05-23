@@ -41,6 +41,9 @@
 
 - (CIImage *)CIImageWithSize:(CGSize)size
 {
+    EAGLContext *context = [[GPUImageContext sharedImageProcessingContext] context];
+    [EAGLContext setCurrentContext:context];
+
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CIImage *image = [[CIImage alloc] initWithTexture:self.texture size:size flipped:true colorSpace:colorSpace];
     CGColorSpaceRelease(colorSpace);

@@ -240,9 +240,13 @@
                     }];
                 }
             } else if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
+                if (capture)
+                    [_finalFilter useNextFrameForImageCapture];
+                
                 [(GPUImageTextureInput *)currentInput processTextureWithFrameTime:kCMTimeZero synchronous:synchronous];
                 if (completion != nil)
                     completion();
+                [_finalFilter commitImageCapture];
             }
         } synchronous:synchronous];
         return;
@@ -386,11 +390,12 @@
 - (CIImage *)currentResultCIImage {
     __block CIImage *image = nil;
     GPUImageOutput *currentInput = _currentInput;
-    [self processAnimated:false capture:false synchronous:true completion:^
+    [self processAnimated:false capture:true synchronous:true completion:^
     {
-        if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
-            image = [_textureOutput CIImageWithSize:[(GPUImageTextureInput *)currentInput textureSize]];
-        }
+        image = [_finalFilter newCIImageFromCurrentlyProcessedOutput];
+//        if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
+//            image = [_textureOutput CIImageWithSize:[(GPUImageTextureInput *)currentInput textureSize]];
+//        }
     }];
     return image;
 }

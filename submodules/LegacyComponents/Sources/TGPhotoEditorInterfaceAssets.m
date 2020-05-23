@@ -207,8 +207,10 @@
 
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset
 {
-    CGSize size = CGSizeMake(27.0f, 22.0f);
-    CGRect rect = CGRectInset(CGRectMake(0.0f, 0.0f, size.width, size.height), 1.0, 1.0);
+    CGFloat lineWidth = 2.0f - TGScreenPixel;
+    
+    CGSize size = CGSizeMake(28.0f, 22.0f);
+    CGRect rect = CGRectInset(CGRectMake(0.0f, 0.0f, size.width, size.height), lineWidth / 2.0, lineWidth / 2.0);
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
     
     CGContextRef context = UIGraphicsGetCurrentContext();
@@ -245,13 +247,13 @@
 
     CGContextAddPath(context, path.CGPath);
     CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
-    CGContextSetLineWidth(context, 2.0f - TGScreenPixel);
+    CGContextSetLineWidth(context, lineWidth);
     CGContextStrokePath(context);
     
     UIFont *font = [TGFont roundedFontOfSize:11];
     CGSize textSize = [label sizeWithFont:font];
     [[UIColor whiteColor] setFill];
-    [label drawInRect:CGRectMake(floor(size.width - textSize.width) / 2.0f, 4.0f, textSize.width, textSize.height) withFont:font];
+    [label drawInRect:CGRectMake((size.width - textSize.width) / 2.0f + TGScreenPixel, 4.0f, textSize.width, textSize.height) withFont:font];
     
     UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();

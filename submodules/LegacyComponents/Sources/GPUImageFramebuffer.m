@@ -380,6 +380,75 @@ void dataProviderUnlockCallback (void *info, __unused const void *data, __unused
     return cgImageFromBytes;
 }
 
+- (CIImage *)newCIImageFromFramebufferContents
+{
+    // a CGImage can only be created from a 'normal' color texture
+    NSAssert(self.textureOptions.internalFormat == GL_RGBA, @"For conversion to a CGImage the output texture format for this filter must be GL_RGBA.");
+    NSAssert(self.textureOptions.type == GL_UNSIGNED_BYTE, @"For conversion to a CGImage the type of the output texture of this filter must be GL_UNSIGNED_BYTE.");
+    
+    __block CIImage *ciImageFromBytes;
+    
+    runSynchronouslyOnVideoProcessingQueue(^{
+        [GPUImageContext useImageProcessingContext];
+        
+        NSUInteger totalBytesForImage = (int)_size.width * (int)_size.height * 4;
+        // It appears that the width of a texture must be padded out to be a multiple of 8 (32 bytes) if reading from it using a texture cache
+        
+        
+        GLubyte *rawImagePixels;
+        
+        CGDataProviderRef dataProvider = NULL;
+        if ([GPUImageContext supportsFastTextureUpload])
+        {
+            NSUInteger paddedWidthOfImage = (NSUInteger)(CVPixelBufferGetBytesPerRow(renderTarget) / 4.0);
+            NSUInteger paddedBytesForImage = paddedWidthOfImage * (int)_size.height * 4;
+
+            glFinish();
+            CFRetain(renderTarget); // I need to retain the pixel buffer here and release in the data source callback to prevent its bytes from being prematurely deallocated during a photo write operation
+            [self lockForReading];
+            rawImagePixels = (GLubyte *)CVPixelBufferGetBaseAddress(renderTarget);
+
+//            dataProvider = CGDataProviderCreateWithData((__bridge_retained void*)self, rawImagePixels, paddedBytesForImage, dataProviderUnlockCallback);
+            [[GPUImageContext sharedFramebufferCache] addFramebufferToActiveImageCaptureList:self]; // In case the framebuffer is swapped out on the filter, need to have a strong reference to it somewhere for it to hang on while the image is in existence
+            
+            ciImageFromBytes = [[CIImage alloc] initWithCVPixelBuffer:renderTarget options:nil];
+            
+            [self restoreRenderTarget];
+            [self unlock];
+            [[GPUImageContext sharedFramebufferCache] removeFramebufferFromActiveImageCaptureList:self];
+        }
+//        else
+//        {
+//            [self activateFramebuffer];
+//            rawImagePixels = (GLubyte *)malloc(totalBytesForImage);
+//            glReadPixels(0, 0, (int)_size.width, (int)_size.height, GL_RGBA, GL_UNSIGNED_BYTE, rawImagePixels);
+//            dataProvider = CGDataProviderCreateWithData(NULL, rawImagePixels, totalBytesForImage, dataProviderReleaseCallback);
+//            [self unlock]; // Don't need to keep this around anymore
+//        }
+        
+//        CGColorSpaceRef defaultRGBColorSpace = CGColorSpaceCreateDeviceRGB();
+//
+//
+//        CIImage *image = [[CIImage alloc] initWithImageProvider:dataProvider size:<#(size_t)#> :<#(size_t)#> format:kCIFormatRGBA8 colorSpace:defaultRGBColorSpace options:<#(nullable NSDictionary<CIImageOption,id> *)#>]
+        
+//        if ([GPUImageContext supportsFastTextureUpload])
+//        {
+//            cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, CVPixelBufferGetBytesPerRow(renderTarget), defaultRGBColorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst, dataProvider, NULL, NO, kCGRenderingIntentDefault);
+//        }
+//        else
+//        {
+//            cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, 4 * (int)_size.width, defaultRGBColorSpace, kCGBitmapByteOrderDefault | kCGImageAlphaPremultipliedLast, dataProvider, NULL, NO, kCGRenderingIntentDefault);
+//        }
+        
+        // Capture image with current device orientation
+//        CGDataProviderRelease(dataProvider);
+//        CGColorSpaceRelease(defaultRGBColorSpace);
+        
+    });
+    
+    return ciImageFromBytes;
+}
+
 - (void)restoreRenderTarget
 {
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE

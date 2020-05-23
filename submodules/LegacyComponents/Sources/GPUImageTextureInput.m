@@ -28,7 +28,7 @@
 - (instancetype)initWithCIImage:(CIImage *)ciImage
 {
     EAGLContext *context = [[GPUImageContext sharedImageProcessingContext] context];
-    [EAGLContext setCurrentContext:[[GPUImageContext sharedImageProcessingContext] context]];
+    [EAGLContext setCurrentContext:context];
     
     GLsizei backingWidth = ciImage.extent.size.width;
     GLsizei backingHeight = ciImage.extent.size.height;

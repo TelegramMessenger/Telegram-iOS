@@ -34,6 +34,8 @@
 
 #import <LegacyComponents/TGMenuView.h>
 
+#import "PGPhotoEditor.h"
+
 @interface TGMediaPickerGalleryVideoItemView() <TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate>
 {
     UIView *_containerView;
@@ -1442,6 +1444,8 @@
         return;
     
     AVAsset *avAsset = self.item.avAsset ?: _player.currentItem.asset;
+    TGMediaEditingContext *editingContext = self.item.editingContext;
+    id<TGMediaEditableItem> editableItem = self.item.editableMediaItem;
     
     SSignal *thumbnailsSignal = nil;
     if ([self.item.asset isKindOfClass:[TGMediaAsset class]] && ![self itemIsLivePhoto])
@@ -1452,7 +1456,26 @@
     _requestingThumbnails = true;
     
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
-    [_thumbnailsDisposable setDisposable:[[thumbnailsSignal deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *images)
+    [_thumbnailsDisposable setDisposable:[[[thumbnailsSignal map:^NSArray *(NSArray *images) {
+        id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:editableItem];
+        if (adjustments.toolsApplied) {
+            NSMutableArray *editedImages = [[NSMutableArray alloc] init];
+            PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];
+            editor.standalone = true;
+            for (UIImage *image in images) {
+                [editor setImage:image forCropRect:adjustments.cropRect cropRotation:0.0 cropOrientation:adjustments.cropOrientation cropMirrored:adjustments.cropMirrored fullSize:false];
+                UIImage *resultImage = editor.currentResultImage;
+                if (resultImage != nil) {
+                    [editedImages addObject:resultImage];
+                } else {
+                    [editedImages addObject:image];
+                }
+            }
+            return editedImages;
+        } else {
+            return images;
+        }
+    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *images)
     {
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
         if (strongSelf == nil)

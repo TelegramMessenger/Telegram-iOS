@@ -1,17 +1,12 @@
 #import <Foundation/Foundation.h>
 
-#if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
 #import <OpenGLES/EAGL.h>
 #import <OpenGLES/ES2/gl.h>
 #import <OpenGLES/ES2/glext.h>
-#else
-#import <OpenGL/OpenGL.h>
-#import <OpenGL/gl.h>
-#endif
 
 #import <QuartzCore/QuartzCore.h>
 #import <CoreMedia/CoreMedia.h>
-
+#import <CoreImage/CoreImage.h>
 
 typedef struct GPUTextureOptions {
     GLenum minFilter;
@@ -49,6 +44,7 @@ typedef struct GPUTextureOptions {
 
 // Image capture
 - (CGImageRef)newCGImageFromFramebufferContents;
+- (CIImage *)newCIImageFromFramebufferContents;
 - (void)restoreRenderTarget;
 
 // Raw data bytes
