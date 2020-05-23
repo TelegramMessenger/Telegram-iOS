@@ -358,6 +358,7 @@
         CIContext *ciContext = nil;
         if (adjustments.toolsApplied) {
             editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:true enableStickers:true];
+            editor.standalone = true;
             ciContext = [CIContext contextWithEAGLContext:[[GPUImageContext sharedImageProcessingContext] context]];
         }
             

@@ -27,6 +27,8 @@
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
 
+#import "PGPhotoEditor.h"
+
 @interface TGMediaAssetsController () <UINavigationControllerDelegate, ASWatcher>
 {
     TGMediaAssetsControllerIntent _intent;
@@ -879,12 +881,15 @@
                     
                     UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
                     {
-                        if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting)
+                        if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
                         {
                             CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
                             UIImage *paintingImage = adjustments.paintingData.stillImage;
                             if (paintingImage == nil) {
                                 paintingImage = adjustments.paintingData.image;
+                            }
+                            if (adjustments.toolsApplied) {
+                                image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
                             }
                             return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
                         }

@@ -221,7 +221,7 @@
 
 - (void)processAnimated:(bool)animated capture:(bool)capture synchronous:(bool)synchronous completion:(void (^)(void))completion
 {
-    if (self.previewOutput == nil && ![_currentInput isKindOfClass:[GPUImageTextureInput class]])
+    if (self.previewOutput == nil && !self.standalone)
         return;
     
     if (self.forVideo) {
@@ -489,6 +489,13 @@
     });
     
     return tools;
+}
+
++ (UIImage *)resultImageForImage:(UIImage *)image adjustments:(id<TGMediaEditAdjustments>)adjustments {
+    PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];
+    editor.standalone = true;
+    [editor setImage:image forCropRect:adjustments.cropRect cropRotation:0.0 cropOrientation:adjustments.cropOrientation cropMirrored:adjustments.cropMirrored fullSize:false];
+    return [editor currentResultImage];
 }
 
 @end

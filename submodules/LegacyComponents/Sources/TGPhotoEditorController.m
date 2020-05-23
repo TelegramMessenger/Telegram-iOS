@@ -1456,7 +1456,7 @@
         TGVideoEditAdjustments *adjustments = [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
         bool hasChanges = !(_initialAdjustments == nil && [adjustments isDefaultValuesForAvatar:false] && adjustments.cropOrientation == UIImageOrientationUp);
         
-        if (adjustments.paintingData != nil || adjustments.hasPainting != _initialAdjustments.hasPainting)
+        if (adjustments.paintingData != nil || adjustments.hasPainting != _initialAdjustments.hasPainting || adjustments.toolsApplied)
         {
             [[SQueue concurrentDefaultQueue] dispatch:^
             {
@@ -1484,6 +1484,10 @@
                     CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC) actualTime:nil error:NULL];
                     UIImage *image = [UIImage imageWithCGImage:imageRef];
                     CGImageRelease(imageRef);
+                    
+                    if (adjustments.toolsApplied) {
+                        image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                    }
                     
                     UIImage *paintingImage = adjustments.paintingData.stillImage;
                     if (paintingImage == nil) {

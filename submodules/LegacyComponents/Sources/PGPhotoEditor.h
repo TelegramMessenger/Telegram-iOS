@@ -31,6 +31,8 @@
 
 @property (nonatomic, readonly) bool forVideo;
 
+@property (nonatomic, assign) bool standalone;
+
 - (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo enableStickers:(bool)enableStickers;
 
 - (void)cleanup;
@@ -51,5 +53,7 @@
 
 - (id<TGMediaEditAdjustments>)exportAdjustments;
 - (id<TGMediaEditAdjustments>)exportAdjustmentsWithPaintingData:(TGPaintingData *)paintingData;
+
++ (UIImage *)resultImageForImage:(UIImage *)image adjustments:(id<TGMediaEditAdjustments>)adjustments;
 
 @end
