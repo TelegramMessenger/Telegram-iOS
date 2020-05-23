@@ -45,6 +45,7 @@ framework_dependencies = [
 ]
 
 resource_dependencies = [
+    "//submodules/LegacyComponents:LegacyComponentsAssets",
     "//submodules/LegacyComponents:LegacyComponentsResources",
     "//submodules/TelegramUI:TelegramUIAssets",
     "//submodules/TelegramUI:TelegramUIResources",

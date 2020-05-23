@@ -21,6 +21,9 @@ static_library(
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
         "//submodules/LegacyMediaPickerUI/LegacyImageProcessors:LegacyImageProcessors",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/StickerResources:StickerResources",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

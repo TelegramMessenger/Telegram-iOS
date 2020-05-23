@@ -8,6 +8,14 @@ apple_resource(
     visibility = ["PUBLIC"],
 )
 
+apple_asset_catalog(
+  name = 'LegacyComponentsAssets',
+  dirs = [
+    "LegacyImages.xcassets",
+  ],
+  visibility = ["PUBLIC"],
+)
+
 static_library(
     name = "LegacyComponents",
     srcs = glob([
