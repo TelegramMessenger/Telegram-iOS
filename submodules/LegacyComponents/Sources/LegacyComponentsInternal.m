@@ -152,5 +152,9 @@ UIImage *TGComponentsImageNamed(NSString *name) {
 }
 
 NSString *TGComponentsPathForResource(NSString *name, NSString *type) {
-    return [resourcesBundle() pathForResource:name ofType:type];
+    NSBundle *bundle = resourcesBundle();
+    if (bundle == nil) {
+        bundle = getAppBundle();
+    }
+    return [bundle pathForResource:name ofType:type];
 }

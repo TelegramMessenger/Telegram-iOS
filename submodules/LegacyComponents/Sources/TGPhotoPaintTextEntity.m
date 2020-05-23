@@ -1,5 +1,8 @@
 #import "TGPhotoPaintTextEntity.h"
 
+#import "TGPhotoPaintFont.h"
+#import "TGPaintSwatch.h"
+
 @implementation TGPhotoPaintTextEntity
 
 - (instancetype)initWithText:(NSString *)text font:(TGPhotoPaintFont *)font swatch:(TGPaintSwatch *)swatch baseFontSize:(CGFloat)baseFontSize maxWidth:(CGFloat)maxWidth stroke:(bool)stroke
@@ -28,6 +31,10 @@
     entity.angle = self.angle;
     
     return entity;
+}
+
+- (bool)animated {
+    return false;
 }
 
 - (BOOL)isEqual:(id)object

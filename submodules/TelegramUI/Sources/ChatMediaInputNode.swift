@@ -18,24 +18,24 @@ import GalleryUI
 import OverlayStatusController
 import PresentationDataUtils
 
-private struct PeerSpecificPackData {
+struct PeerSpecificPackData {
     let peer: Peer
     let info: StickerPackCollectionInfo
     let items: [ItemCollectionItem]
 }
 
-private enum CanInstallPeerSpecificPack {
+enum CanInstallPeerSpecificPack {
     case none
     case available(peer: Peer, dismissed: Bool)
 }
 
-private struct ChatMediaInputPanelTransition {
+struct ChatMediaInputPanelTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
 }
 
-private struct ChatMediaInputGridTransition {
+struct ChatMediaInputGridTransition {
     let deletions: [Int]
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
@@ -46,7 +46,7 @@ private struct ChatMediaInputGridTransition {
     let animated: Bool
 }
 
-private func preparedChatMediaInputPanelEntryTransition(context: AccountContext, from fromEntries: [ChatMediaInputPanelEntry], to toEntries: [ChatMediaInputPanelEntry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputPanelTransition {
+func preparedChatMediaInputPanelEntryTransition(context: AccountContext, from fromEntries: [ChatMediaInputPanelEntry], to toEntries: [ChatMediaInputPanelEntry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -56,7 +56,7 @@ private func preparedChatMediaInputPanelEntryTransition(context: AccountContext,
     return ChatMediaInputPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-private func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemCollectionsView, from fromEntries: [ChatMediaInputGridEntry], to toEntries: [ChatMediaInputGridEntry], update: StickerPacksCollectionUpdate, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingInteraction: TrendingPaneInteraction) -> ChatMediaInputGridTransition {
+func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemCollectionsView, from fromEntries: [ChatMediaInputGridEntry], to toEntries: [ChatMediaInputGridEntry], update: StickerPacksCollectionUpdate, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingInteraction: TrendingPaneInteraction) -> ChatMediaInputGridTransition {
     var stationaryItems: GridNodeStationaryItems = .none
     var scrollToItem: GridNodeScrollToItem?
     var animated = false
@@ -163,9 +163,11 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasGifs: Bool = true, hasUnreadTrending: Bool?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
-    entries.append(.recentGifs(theme))
+    if hasGifs {
+        entries.append(.recentGifs(theme))
+    }
     if let hasUnreadTrending = hasUnreadTrending {
         entries.append(.trending(hasUnreadTrending, theme))
     }
@@ -215,7 +217,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
     return entries
 }
 
-private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if view.lower == nil {
@@ -297,7 +299,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
     return entries
 }
 
-private enum StickerPacksCollectionPosition: Equatable {
+enum StickerPacksCollectionPosition: Equatable {
     case initial
     case scroll(aroundIndex: ItemCollectionViewEntryIndex?)
     case navigate(index: ItemCollectionViewEntryIndex?, collectionId: ItemCollectionId?)
@@ -322,7 +324,7 @@ private enum StickerPacksCollectionPosition: Equatable {
     }
 }
 
-private enum StickerPacksCollectionUpdate {
+enum StickerPacksCollectionUpdate {
     case initial
     case generic
     case scroll
@@ -353,7 +355,7 @@ final class ChatMediaInputNodeInteraction {
     }
 }
 
-private func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> StickerPacksCollectionPosition {
+func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> StickerPacksCollectionPosition {
     switch position {
         case let .scroll(index):
             if let index = index, index.collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue || index.collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
@@ -365,13 +367,12 @@ private func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> S
     return position
 }
 
-private enum ChatMediaInputPaneType {
+enum ChatMediaInputPaneType {
     case gifs
     case stickers
-    //case trending
 }
 
-private struct ChatMediaInputPaneArrangement {
+struct ChatMediaInputPaneArrangement {
     let panes: [ChatMediaInputPaneType]
     let currentIndex: Int
     let indexTransition: CGFloat
@@ -385,7 +386,7 @@ private struct ChatMediaInputPaneArrangement {
     }
 }
 
-private final class CollectionListContainerNode: ASDisplayNode {
+final class CollectionListContainerNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for subview in self.view.subviews {
             if let result = subview.hitTest(point.offsetBy(dx: -subview.frame.minX, dy: -subview.frame.minY), with: event) {

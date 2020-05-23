@@ -2,7 +2,7 @@ import Foundation
 import SwiftSignalKit
 import AsyncDisplayKit
 
-enum AnimationRendererFrameType {
+public enum AnimationRendererFrameType {
     case argb
     case yuva
 }

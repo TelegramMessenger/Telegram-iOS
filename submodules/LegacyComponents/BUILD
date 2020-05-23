@@ -7,6 +7,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "LegacyComponentsAssets",
+    srcs = glob(["LegacyImages.xcassets/**"]),
+    visibility = ["//visibility:public"],
+)
+
+
 objc_library(
     name = "LegacyComponents",
     enable_modules = True,

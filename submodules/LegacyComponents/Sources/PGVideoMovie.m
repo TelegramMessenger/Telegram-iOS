@@ -14,9 +14,9 @@ GLfloat kColorConversion601FullRangeDefault[] = {
 };
 
 GLfloat kColorConversion709Default[] = {
-    1.164,  1.164, 1.164,
-    0.0, -0.213, 2.112,
-    1.793, -0.533,   0.0,
+      1,       1,       1,
+      0, -.21482, 2.12798,
+    1.28033, -.38059,       0,
 };
 
 GLfloat *kColorConversion601 = kColorConversion601Default;
@@ -124,7 +124,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 #pragma mark Initialization and teardown
 
 
-- (instancetype)initWithAsset:(AVAsset *)asset;
+- (instancetype)initWithAsset:(AVAsset *)asset
 {
     if (!(self = [super init])) 
     {
@@ -138,7 +138,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
     return self;
 }
 
-- (void)yuvConversionSetup;
+- (void)yuvConversionSetup
 {
     if ([GPUImageContext supportsFastTextureUpload])
     {
@@ -147,7 +147,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
             _preferredConversion = kColorConversion709;
             isFullYUVRange       = YES;
-            yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kYUVFullRangeConversionForLAFragmentShaderString];
+            yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kYUVVideoRangeConversionForRGFragmentShaderString];
 
             if (!yuvConversionProgram.initialized)
             {
@@ -213,7 +213,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 {
     NSError *error = nil;
     AVAssetReader *assetReader = [AVAssetReader assetReaderWithAsset:self.asset error:&error];
-
+    
     NSMutableDictionary *outputSettings = [NSMutableDictionary dictionary];
     if ([GPUImageContext supportsFastTextureUpload]) {
         [outputSettings setObject:@(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
@@ -224,7 +224,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
         isFullYUVRange = NO;
     }
     
-    // Maybe set alwaysCopiesSampleData to NO on iOS 5.0 for faster video decoding
     AVAssetReaderTrackOutput *readerVideoTrackOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:[[self.asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0] outputSettings:outputSettings];
     readerVideoTrackOutput.alwaysCopiesSampleData = NO;
     [assetReader addOutput:readerVideoTrackOutput];
@@ -485,8 +484,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
         }
 
     }
-    
-    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
 
     [GPUImageContext useImageProcessingContext];
     
@@ -510,7 +507,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
             glActiveTexture(GL_TEXTURE4);
             if ([GPUImageContext deviceSupportsRedTextures])
             {
-                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_LUMINANCE, bufferWidth, bufferHeight, GL_LUMINANCE, GL_UNSIGNED_BYTE, 0, &luminanceTextureRef);
+                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_RED_EXT, bufferWidth, bufferHeight, GL_RED_EXT, GL_UNSIGNED_BYTE, 0, &luminanceTextureRef);
             }
             else
             {
@@ -531,7 +528,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
             glActiveTexture(GL_TEXTURE5);
             if ([GPUImageContext deviceSupportsRedTextures])
             {
-                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_LUMINANCE_ALPHA, bufferWidth/2, bufferHeight/2, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, 1, &chrominanceTextureRef);
+                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_RG_EXT, bufferWidth/2, bufferHeight/2, GL_RG_EXT, GL_UNSIGNED_BYTE, 1, &chrominanceTextureRef);
             }
             else
             {
@@ -556,6 +553,8 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                 NSInteger targetTextureIndex = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
                 [currentTarget setInputSize:CGSizeMake(bufferWidth, bufferHeight) atIndex:targetTextureIndex];
                 [currentTarget setInputFramebuffer:outputFramebuffer atIndex:targetTextureIndex];
+                
+//                [currentTarget setInputRotation:kGPUImageRotateLeft atIndex:targetTextureIndex];
             }
             
             [outputFramebuffer unlock];

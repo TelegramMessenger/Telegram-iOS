@@ -57,4 +57,6 @@ typedef struct GPUTextureOptions {
 - (NSUInteger)bytesPerRow;
 - (GLubyte *)byteBuffer;
 
++ (void)setMark:(BOOL)mark;
+
 @end

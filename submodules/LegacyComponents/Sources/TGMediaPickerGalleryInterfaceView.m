@@ -164,7 +164,7 @@
         
         if (recipientName.length > 0)
         {
-            _arrowView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PhotoPickerArrow")];
+            _arrowView = [[UIImageView alloc] initWithImage: TGTintedImage([UIImage imageNamed:@"Editor/Recipient"], UIColor.whiteColor)];
             _arrowView.alpha = 0.45f;
             [_wrapperView addSubview:_arrowView];
             

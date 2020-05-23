@@ -845,6 +845,7 @@
         case TGPhotoEditorPaintTab:
         {
             TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            paintController.stickersContext = _stickersContext;
             paintController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             
             paintController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
@@ -1408,12 +1409,12 @@
     [_currentTabController prepareTransitionOutSaving:true];
     
     TGPaintingData *paintingData = _photoEditor.paintingData;
+
     bool saving = true;
     if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
     {
         TGPhotoPaintController *paintController = (TGPhotoPaintController *)_currentTabController;
         paintingData = [paintController paintingData];
-        
         _photoEditor.paintingData = paintingData;
         
         if (paintingData != nil)
@@ -1484,27 +1485,40 @@
                     UIImage *image = [UIImage imageWithCGImage:imageRef];
                     CGImageRelease(imageRef);
                     
-                    CGSize thumbnailSize = TGPhotoThumbnailSizeForCurrentScreen();
-                    thumbnailSize.width = CGCeil(thumbnailSize.width);
-                    thumbnailSize.height = CGCeil(thumbnailSize.height);
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
                     
-                    CGSize fillSize = TGScaleToFillSize(videoDimensions, thumbnailSize);
-                    
-                    UIImage *thumbnailImage = nil;
-                    
+                    CGSize fillSize = TGScaleToFillSize(videoDimensions, image.size);
+                    UIImage *fullImage = nil;
                     UIGraphicsBeginImageContextWithOptions(fillSize, true, 0.0f);
                     CGContextRef context = UIGraphicsGetCurrentContext();
                     CGContextSetInterpolationQuality(context, kCGInterpolationMedium);
                     
                     [image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
+                    [paintingImage drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
                     
-                    if (adjustments.paintingData.image != nil)
-                        [adjustments.paintingData.image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
+                    fullImage = UIGraphicsGetImageFromCurrentImageContext();
+                    UIGraphicsEndImageContext();
+                    
+                    CGSize thumbnailSize = TGPhotoThumbnailSizeForCurrentScreen();
+                    thumbnailSize.width = CGCeil(thumbnailSize.width);
+                    thumbnailSize.height = CGCeil(thumbnailSize.height);
+                    
+                    fillSize = TGScaleToFillSize(videoDimensions, thumbnailSize);
+                    UIImage *thumbnailImage = nil;
+                    UIGraphicsBeginImageContextWithOptions(fillSize, true, 0.0f);
+                    context = UIGraphicsGetCurrentContext();
+                    CGContextSetInterpolationQuality(context, kCGInterpolationMedium);
+                    
+                    [image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
+                    [paintingImage drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
                     
                     thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();
                     UIGraphicsEndImageContext();
                     
-                    [_editingContext setImage:image thumbnailImage:thumbnailImage forItem:_item synchronous:true];
+                    [_editingContext setImage:fullImage thumbnailImage:thumbnailImage forItem:_item synchronous:true];
                 }];
             }];
         }

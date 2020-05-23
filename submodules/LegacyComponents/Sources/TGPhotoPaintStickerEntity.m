@@ -4,13 +4,16 @@
 
 @implementation TGPhotoPaintStickerEntity
 
-- (instancetype)initWithDocument:(TGDocumentMediaAttachment *)document baseSize:(CGSize)baseSize
+@synthesize animated = _animated;
+
+- (instancetype)initWithDocument:(NSData *)document baseSize:(CGSize)baseSize animated:(bool)animated
 {
     self = [super init];
     if (self != nil)
     {
         _document = document;
         _baseSize = baseSize;
+        _animated = animated;
         self.scale = 1.0;
     }
     return self;
@@ -22,6 +25,7 @@
     if (self != nil)
     {
         _emoji = emoji;
+        _animated = false;
         self.scale = 1.0f;
     }
     return self;
@@ -31,7 +35,7 @@
 {
     TGPhotoPaintStickerEntity *entity = nil;
     if (_document != nil)
-        entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:self.document baseSize:self.baseSize];
+        entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:self.document baseSize:self.baseSize animated:self.animated];
     else if (_emoji != nil)
         entity = [[TGPhotoPaintStickerEntity alloc] initWithEmoji:self.emoji];
     else
@@ -55,7 +59,7 @@
         return false;
     
     TGPhotoPaintStickerEntity *entity = (TGPhotoPaintStickerEntity *)object;
-    return entity.uuid == self.uuid && [entity.document isEqual:self.document] && CGSizeEqualToSize(entity.baseSize, self.baseSize) && CGPointEqualToPoint(entity.position, self.position) && fabs(entity.scale - self.scale) < FLT_EPSILON && fabs(entity.angle - self.angle) < FLT_EPSILON && entity.mirrored == self.mirrored;
+    return entity.uuid == self.uuid && CGSizeEqualToSize(entity.baseSize, self.baseSize) && CGPointEqualToPoint(entity.position, self.position) && fabs(entity.scale - self.scale) < FLT_EPSILON && fabs(entity.angle - self.angle) < FLT_EPSILON && entity.mirrored == self.mirrored;
 }
 
 @end

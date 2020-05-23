@@ -11,6 +11,7 @@
 @interface TGPhotoTextEntityView : TGPhotoPaintEntityView
 
 @property (nonatomic, readonly) TGPhotoPaintTextEntity *entity;
+@property (nonatomic, readonly) UIImage *image;
 
 @property (nonatomic, readonly) bool isEmpty;
 

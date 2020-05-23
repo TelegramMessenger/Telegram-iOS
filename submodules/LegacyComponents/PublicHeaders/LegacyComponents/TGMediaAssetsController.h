@@ -9,6 +9,8 @@
 @class TGMediaAssetsPickerController;
 @class TGViewController;
 
+@protocol TGPhotoPaintStickersContext;
+
 typedef enum
 {
     TGMediaAssetsControllerSendMediaIntent,
@@ -49,6 +51,7 @@ typedef enum
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
 @property (nonatomic, assign) bool allowCaptionEntities;

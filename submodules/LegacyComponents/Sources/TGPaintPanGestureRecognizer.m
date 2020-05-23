@@ -16,7 +16,11 @@
 - (void)touchesMoved:(NSSet *)inTouches withEvent:(UIEvent *)event
 {
     _touches = [inTouches copy];
-    [super touchesMoved:inTouches withEvent:event];
+    if (inTouches.count > 1) {
+        self.state = UIGestureRecognizerStateCancelled;
+    } else {
+        [super touchesMoved:inTouches withEvent:event];
+    }
 }
 
 - (void)touchesEnded:(NSSet *)inTouches withEvent:(UIEvent *)event

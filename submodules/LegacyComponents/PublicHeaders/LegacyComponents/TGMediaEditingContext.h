@@ -81,7 +81,8 @@
 - (SSignal *)timersUpdatedSignal;
 
 - (UIImage *)paintingImageForItem:(NSObject<TGMediaEditableItem> *)item;
-- (bool)setPaintingData:(NSData *)data image:(UIImage *)image forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video;
+- (UIImage *)stillPaintingImageForItem:(NSObject<TGMediaEditableItem> *)item;
+- (bool)setPaintingData:(NSData *)data image:(UIImage *)image stillImage:(UIImage *)image forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video;
 - (void)clearPaintingData;
 
 - (SSignal *)facesForItem:(NSObject<TGMediaEditableItem> *)item;

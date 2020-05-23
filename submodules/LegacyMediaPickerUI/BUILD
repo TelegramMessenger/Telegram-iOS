@@ -22,6 +22,9 @@ swift_library(
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
         "//submodules/LegacyMediaPickerUI/LegacyImageProcessors:LegacyImageProcessors",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/StickerResources:StickerResources",
     ],
     visibility = [
         "//visibility:public",

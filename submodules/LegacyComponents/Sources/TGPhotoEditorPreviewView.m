@@ -172,7 +172,7 @@
     {
         [self performTransitionInWithCompletion:nil];
     }
-    else if (_delayedImage != nil)
+    else if (_delayedImage != nil && [_delayedImage isKindOfClass:[UIImage class]])
     {
         UIImageView *transitionView = [[UIImageView alloc] initWithFrame:_snapshotView.frame];
         transitionView.image = ((UIImageView *)_snapshotView).image;

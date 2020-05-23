@@ -110,6 +110,7 @@
             pickerController.pallete = strongController.pallete;
         }
         pickerController.suggestionContext = strongController.suggestionContext;
+        pickerController.stickersContext = strongController.stickersContext;
         pickerController.localMediaCacheEnabled = strongController.localMediaCacheEnabled;
         pickerController.captionsEnabled = strongController.captionsEnabled;
         pickerController.allowCaptionEntities = strongController.allowCaptionEntities;
@@ -147,6 +148,12 @@
 {
     _suggestionContext = suggestionContext;
     self.pickerController.suggestionContext = suggestionContext;
+}
+
+- (void)setStickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
+{
+    _stickersContext = stickersContext;
+    self.pickerController.stickersContext = stickersContext;
 }
 
 - (void)setCaptionsEnabled:(bool)captionsEnabled
@@ -875,7 +882,11 @@
                         if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting)
                         {
                             CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
-                            return TGPhotoEditorCrop(image, adjustments.paintingData.image, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
+                            UIImage *paintingImage = adjustments.paintingData.stillImage;
+                            if (paintingImage == nil) {
+                                paintingImage = adjustments.paintingData.image;
+                            }
+                            return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
                         }
                         
                         return image;

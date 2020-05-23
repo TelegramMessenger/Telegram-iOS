@@ -27,6 +27,7 @@
 
 - (instancetype)initWithSize:(CGSize)size undoManager:(TGPaintUndoManager *)undoManager imageData:(NSData *)imageData;
 
+- (void)performSynchronouslyInContext:(void (^)(void))block;
 - (void)performAsynchronouslyInContext:(void (^)(void))block;
 
 - (void)paintStroke:(TGPaintPath *)path clearBuffer:(bool)clearBuffer completion:(void (^)(void))completion;

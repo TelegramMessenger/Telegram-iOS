@@ -7,6 +7,7 @@
 }
 
 @property (nonatomic, assign) NSInteger uuid;
+@property (nonatomic, readonly) bool animated;
 @property (nonatomic, assign) CGPoint position;
 @property (nonatomic, assign) CGFloat angle;
 @property (nonatomic, assign) CGFloat scale;

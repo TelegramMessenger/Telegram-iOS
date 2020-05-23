@@ -156,6 +156,7 @@ swift_library(
         ":AppIntentVocabularyResources",
         ":InfoPlistStringResources",
         "//submodules/LegacyComponents:LegacyComponentsResources",
+        "//submodules/LegacyComponents:LegacyComponentsAssets",
         "//submodules/OverlayStatusController:OverlayStatusControllerResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",

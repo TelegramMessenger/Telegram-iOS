@@ -5,13 +5,14 @@
 
 @end
 
+@protocol TGPhotoPaintStickersContext;
 
 @interface TGPhotoStickerEntityView : TGPhotoPaintEntityView
 
 @property (nonatomic, readonly) TGPhotoPaintStickerEntity *entity;
 @property (nonatomic, readonly) bool isMirrored;
 
-- (instancetype)initWithEntity:(TGPhotoPaintStickerEntity *)entity;
+- (instancetype)initWithEntity:(TGPhotoPaintStickerEntity *)entity context:(id<TGPhotoPaintStickersContext>)context;
 - (void)mirror;
 - (UIImage *)image;
 

@@ -702,7 +702,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             CGFloat offset = round(diameter * 0.06f);
             CGFloat verticalOffset = 0.0f;
             CGFloat alpha = 0.8f;
-            UIColor *iconColor = TGColorWithHexAndAlpha(0xff000000, 0.45f);
+            UIColor *iconColor = TGColorWithHexAndAlpha(0xffffffff, 1.0f);
             if (diameter <= 25.0f + FLT_EPSILON) {
                 offset = round(50.0f * 0.06f) - 1.0f;
                 verticalOffset += 0.5f;
@@ -730,16 +730,11 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             }
             else
             {
-                CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0xffffffff, alpha).CGColor);
+                CGContextSetFillColorWithColor(context, TGColorWithHexAndAlpha(0x00000000, 0.3).CGColor);
                 CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, diameter, diameter));
-                
-                CGContextBeginPath(context);
-                CGContextMoveToPoint(context, offset + floor((diameter - width) / 2.0f), verticalOffset + floor((diameter - height) / 2.0f));
-                CGContextAddLineToPoint(context, offset + floor((diameter - width) / 2.0f) + width, verticalOffset + floor(diameter / 2.0f));
-                CGContextAddLineToPoint(context, offset + floor((diameter - width) / 2.0f), verticalOffset + floor((diameter + height) / 2.0f));
-                CGContextClosePath(context);
-                CGContextSetFillColorWithColor(context, iconColor.CGColor);
-                CGContextFillPath(context);
+                                
+                UIImage *iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Play"], iconColor);
+                [iconImage drawAtPoint:CGPointMake(floor((diameter - iconImage.size.width) / 2.0f), floor((diameter - iconImage.size.height) / 2.0f)) blendMode:kCGBlendModeNormal alpha:1.0f];
             }
             
             break;

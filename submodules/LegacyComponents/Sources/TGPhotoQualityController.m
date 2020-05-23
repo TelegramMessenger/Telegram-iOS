@@ -664,7 +664,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     {
         return [[[[[SSignal single:avAsset] delay:delay onQueue:[SQueue concurrentDefaultQueue]] mapToSignal:^SSignal *(AVAsset *avAsset)
         {
-            return [TGMediaVideoConverter convertAVAsset:avAsset adjustments:adjustments watcher:nil inhibitAudio:true];
+            return [TGMediaVideoConverter convertAVAsset:avAsset adjustments:adjustments watcher:nil inhibitAudio:true entityRenderer:nil];
         }] onError:^(__unused id error) {
             delay = 1.0;
         }] retryIf:^bool(__unused id error)
