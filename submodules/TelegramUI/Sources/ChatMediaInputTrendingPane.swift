@@ -338,7 +338,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             }
         }, getItemIsPreviewed: self.getItemIsPreviewed,
         openSearch: { [weak self] in
-            self?.inputNodeInteraction?.toggleSearch(true, .trending)
+            self?.inputNodeInteraction?.toggleSearch(true, .trending, "")
         })
         
         let isPane = self.isPane

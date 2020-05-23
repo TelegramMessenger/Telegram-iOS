@@ -274,7 +274,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             },
             openSettings: {
             },
-            toggleSearch: { _, _ in
+            toggleSearch: { _, _, _ in
             },
             openPeerSpecificSettings: {
             },

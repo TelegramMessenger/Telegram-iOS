@@ -253,7 +253,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
             }
             
             if let videoFileReference = videoFileReference {
-                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: videoFileReference)
+                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: videoFileReference, synchronousLoad: false)
                 self.layer.addSublayer(thumbnailLayer)
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill

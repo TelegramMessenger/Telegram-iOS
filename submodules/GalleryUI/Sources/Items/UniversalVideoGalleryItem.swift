@@ -489,7 +489,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.playOnContentOwnership = false
                         strongSelf.initiallyActivated = true
                         strongSelf.skipInitialPause = true
-                        strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                        strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : .stop)
                     }
                 }
             }

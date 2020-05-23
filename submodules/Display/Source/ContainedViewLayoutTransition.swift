@@ -433,8 +433,8 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateAlpha(node: ASDisplayNode, alpha: CGFloat, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
-        if node.alpha.isEqual(to: alpha) {
+    func updateAlpha(node: ASDisplayNode, alpha: CGFloat, beginWithCurrentState: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if node.alpha.isEqual(to: alpha) && !force {
             if let completion = completion {
                 completion(true)
             }

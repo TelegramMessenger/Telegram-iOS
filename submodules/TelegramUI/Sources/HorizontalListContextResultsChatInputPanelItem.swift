@@ -40,7 +40,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply(.None) })
+                    return (nil, { _ in apply(synchronousLoads, .None) })
                 })
             }
         }
@@ -64,7 +64,7 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
                     let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply(animation)
+                            apply(false, animation)
                         })
                     }
                 }
@@ -188,11 +188,11 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
-            apply(.None)
+            apply(false, .None)
         }
     }
     
-    func asyncLayout() -> (_ item: HorizontalListContextResultsChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    func asyncLayout() -> (_ item: HorizontalListContextResultsChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (Bool, ListViewItemUpdateAnimation) -> Void) {
         let imageLayout = self.imageNode.asyncLayout()
         let currentImageResource = self.currentImageResource
         let currentVideoFile = self.currentVideoFile
@@ -315,7 +315,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     } else {
                         let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0)), resource: imageResource)
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                        updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .standalone(media: tmpImage))
+                        updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .standalone(media: tmpImage), synchronousLoad: true)
                     }
                 } else {
                     updateImageSignal = .complete()
@@ -324,7 +324,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: height, height: croppedImageDimensions.width + sideInset), insets: UIEdgeInsets())
             
-            return (nodeLayout, { _ in
+            return (nodeLayout, { synchronousLoads, _ in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.currentImageResource = imageResource
@@ -333,7 +333,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     
                     if let imageApply = imageApply {
                         if let updateImageSignal = updateImageSignal {
-                            strongSelf.imageNode.setSignal(updateImageSignal)
+                            strongSelf.imageNode.setSignal(updateImageSignal, attemptSynchronously: true)
                         }
                         
                         strongSelf.imageNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
@@ -351,7 +351,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                         
                         if let videoFile = videoFile {
-                            let thumbnailLayer = SoftwareVideoThumbnailLayer(account: item.account, fileReference: .standalone(media: videoFile))
+                            let thumbnailLayer = SoftwareVideoThumbnailLayer(account: item.account, fileReference: .standalone(media: videoFile), synchronousLoad: synchronousLoads)
                             thumbnailLayer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.layer.addSublayer(thumbnailLayer)
                             let layerHolder = takeSampleBufferLayer()

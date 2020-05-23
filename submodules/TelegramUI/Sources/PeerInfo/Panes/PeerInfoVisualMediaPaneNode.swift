@@ -56,6 +56,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private var item: (VisualMediaItem, Media?, CGSize, CGSize?)?
     private var theme: PresentationTheme?
     
+    private var hasVisibility: Bool = false
+    
     init(context: AccountContext, interaction: VisualMediaItemInteraction) {
         self.context = context
         self.interaction = interaction
@@ -192,7 +194,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 } else {
                     sampleBufferLayer = takeSampleBufferLayer()
                     self.sampleBufferLayer = sampleBufferLayer
-                    self.containerNode.layer.insertSublayer(sampleBufferLayer.layer, above: self.imageNode.layer)
+                    self.imageNode.layer.addSublayer(sampleBufferLayer.layer)
                 }
                 
                 self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
@@ -327,6 +329,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
     
     func updateIsVisible(_ isVisible: Bool) {
+        self.hasVisibility = isVisible
         if let _ = self.videoLayerFrameManager {
             let displayLink: ConstantDisplayLinkAnimator
             if let current = self.displayLink {
@@ -342,8 +345,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 displayLink.frameInterval = 2
                 self.displayLink = displayLink
             }
-            displayLink.isPaused = !isVisible
         }
+        self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
     }
     
     func updateSelectionState(animated: Bool) {
@@ -401,7 +404,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 strongSelf.statusNode.isHidden = true
                 strongSelf.mediaBadgeNode.isHidden = true
             }
-            let view = imageNode?.view.snapshotContentTree(unhide: true)
+            let view = imageNode?.view.snapshotView(afterScreenUpdates: false)
             if let strongSelf = self {
                 strongSelf.statusNode.isHidden = statusNodeHidden
                 strongSelf.mediaBadgeNode.isHidden = accessoryHidden
@@ -420,25 +423,30 @@ private final class VisualMediaItemNode: ASDisplayNode {
         } else {
             self.isHidden = false
         }
+        self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
     }
 }
 
 private final class VisualMediaItem {
     let message: Message
+    let dimensions: CGSize
     let aspectRatio: CGFloat
     
     init(message: Message) {
         self.message = message
         
         var aspectRatio: CGFloat = 1.0
+        var dimensions = CGSize(width: 100.0, height: 100.0)
         for media in message.media {
             if let file = media as? TelegramMediaFile {
-                if let dimensions = file.dimensions, dimensions.height > 1 {
-                    aspectRatio = CGFloat(dimensions.width) / CGFloat(dimensions.height)
+                if let dimensionsValue = file.dimensions, dimensions.height > 1 {
+                    dimensions = dimensionsValue.cgSize
+                    aspectRatio = CGFloat(dimensionsValue.width) / CGFloat(dimensionsValue.height)
                 }
             }
         }
         self.aspectRatio = aspectRatio
+        self.dimensions = dimensions
     }
 }
 
@@ -1055,199 +1063,105 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
 }
 
-private func NH_LP_TABLE_LOOKUP(_ table: inout [Int], _ i: Int, _ j: Int, _ rowsize: Int) -> Int {
-    return table[i * rowsize + j]
-}
-
-private func NH_LP_TABLE_LOOKUP_SET(_ table: inout [Int], _ i: Int, _ j: Int, _ rowsize: Int, _ value: Int) {
-    table[i * rowsize + j] = value
-}
-
-private func linearPartitionTable(_ weights: [Int], numberOfPartitions: Int) -> [Int] {
-    let n = weights.count
-    let k = numberOfPartitions
-    
-    let tableSize = n * k;
-    var tmpTable = Array<Int>(repeatElement(0, count: tableSize))
-    
-    let solutionSize = (n - 1) * (k - 1)
-    var solution = Array<Int>(repeatElement(0, count: solutionSize))
-    
-    for i in 0 ..< n {
-        let offset = i != 0 ? NH_LP_TABLE_LOOKUP(&tmpTable, i - 1, 0, k) : 0
-        NH_LP_TABLE_LOOKUP_SET(&tmpTable, i, 0, k, Int(weights[i]) + offset)
-    }
-    
-    for j in 0 ..< k {
-        NH_LP_TABLE_LOOKUP_SET(&tmpTable, 0, j, k, Int(weights[0]))
-    }
-    
-    for i in 1 ..< n {
-        for j in 1 ..< k {
-            var currentMin = 0
-            var minX = Int.max
-            
-            for x in 0 ..< i {
-                let c1 = NH_LP_TABLE_LOOKUP(&tmpTable, x, j - 1, k)
-                let c2 = NH_LP_TABLE_LOOKUP(&tmpTable, i, 0, k) - NH_LP_TABLE_LOOKUP(&tmpTable, x, 0, k)
-                let cost = max(c1, c2)
-                
-                if x == 0 || cost < currentMin {
-                    currentMin = cost;
-                    minX = x
-                }
-            }
-            
-            NH_LP_TABLE_LOOKUP_SET(&tmpTable, i, j, k, currentMin)
-            NH_LP_TABLE_LOOKUP_SET(&solution, i - 1, j - 1, k - 1, minX)
-        }
-    }
-    
-    return solution
-}
-
-private func linearPartitionForWeights(_ weights: [Int], numberOfPartitions: Int) -> [[Int]] {
-    var n = weights.count
-    var k = numberOfPartitions
-    
-    if k <= 0 {
-        return []
-    }
-    
-    if k >= n {
-        var partition: [[Int]] = []
-        for weight in weights {
-            partition.append([weight])
-        }
-        return partition
-    }
-    
-    if n == 1 {
-        return [weights]
-    }
-    
-    var solution = linearPartitionTable(weights, numberOfPartitions: numberOfPartitions)
-    let solutionRowSize = numberOfPartitions - 1
-    
-    k = k - 2;
-    n = n - 1;
-    
-    var answer: [[Int]] = []
-    
-    while k >= 0 {
-        if n < 1 {
-            answer.insert([], at: 0)
-        } else {
-            var currentAnswer: [Int] = []
-            
-            var i = NH_LP_TABLE_LOOKUP(&solution, n - 1, k, solutionRowSize) + 1
-            let range = n + 1
-            while i < range {
-                currentAnswer.append(weights[i])
-                i += 1
-            }
-            
-            answer.insert(currentAnswer, at: 0)
-            
-            n = NH_LP_TABLE_LOOKUP(&solution, n - 1, k, solutionRowSize)
-        }
-        
-        k = k - 1
-    }
-    
-    var currentAnswer: [Int] = []
-    var i = 0
-    let range = n + 1
-    while i < range {
-        currentAnswer.append(weights[i])
-        i += 1
-    }
-    
-    answer.insert(currentAnswer, at: 0)
-    
-    return answer
-}
-
 private func calculateItemFrames(items: [VisualMediaItem], containerWidth: CGFloat) -> [CGRect] {
     var frames: [CGRect] = []
     
-    var weights: [Int] = []
-    for item in items {
-        weights.append(Int(item.aspectRatio * 100))
-    }
+    var rowsCount = 0
+    var firstRowMax = 0;
+    
+    let viewPortAvailableSize = containerWidth
     
     let preferredRowSize: CGFloat = 100.0
-    let idealHeight: CGFloat = preferredRowSize
+    let itemsCount = items.count
+    let spanCount: CGFloat = 100.0
+    var spanLeft = spanCount
+    var currentItemsInRow = 0
+    var currentItemsSpanAmount: CGFloat = 0.0
     
-    var totalItemSize: CGFloat = 0.0
-    for i in 0 ..< items.count {
-        totalItemSize += items[i].aspectRatio * idealHeight
-    }
-    let numberOfRows = max(Int(round(totalItemSize / containerWidth)), 1)
+    var itemSpans: [Int: CGFloat] = [:]
+    var itemsToRow: [Int: Int] = [:]
     
-    let partition = linearPartitionForWeights(weights, numberOfPartitions:numberOfRows)
-    
-    var i = 0
-    var offset = CGPoint(x: 0.0, y: 0.0)
-    var previousItemSize: CGFloat = 0.0
-    let maxWidth = containerWidth
-    
-    let minimumInteritemSpacing: CGFloat = 1.0
-    let minimumLineSpacing: CGFloat = 1.0
-    
-    let viewportWidth: CGFloat = containerWidth
-    
-    var rowIndex = -1
-    for row in partition {
-        rowIndex += 1
-        
-        var summedRatios: CGFloat = 0.0
-        
-        var j = i
-        var n = i + row.count
-        
-        while j < n {
-            summedRatios += items[j].aspectRatio
+    for a in 0 ..< itemsCount {
+        var size: CGSize = items[a].dimensions
+        if size.width <= 0.0 {
+            size.width = 100.0
+        }
+        if size.height <= 0.0 {
+            size.height = 100.0
+        }
+        let aspect: CGFloat = size.width / size.height
+        if aspect > 4.0 || aspect < 0.2 {
+            size.width = max(size.width, size.height)
+            size.height = size.width
+        }
+
+        var requiredSpan = min(spanCount, floor(spanCount * (size.width / size.height * preferredRowSize / viewPortAvailableSize)))
+        let moveToNewRow = spanLeft < requiredSpan || requiredSpan > 33.0 && spanLeft < requiredSpan - 15.0
+        if moveToNewRow {
+            if spanLeft > 0 {
+                let spanPerItem = floor(spanLeft / CGFloat(currentItemsInRow))
                 
-            j += 1
-        }
-        
-        var rowSize = containerWidth - (CGFloat(row.count - 1) * minimumInteritemSpacing)
-        
-        if rowIndex == partition.count - 1 {
-            if row.count < 2 {
-                rowSize = floor(viewportWidth / 3.0) - (CGFloat(row.count - 1) * minimumInteritemSpacing)
-            } else if row.count < 3 {
-                rowSize = floor(viewportWidth * 2.0 / 3.0) - (CGFloat(row.count - 1) * minimumInteritemSpacing)
+                let start = a - currentItemsInRow
+                var b = start
+                while b < start + currentItemsInRow {
+                    if (b == start + currentItemsInRow - 1) {
+                        itemSpans[b] = itemSpans[b]! + spanLeft
+                    } else {
+                        itemSpans[b] = itemSpans[b]! + spanPerItem
+                    }
+                    spanLeft -= spanPerItem;
+                    
+                    b += 1
+                }
+                
+                itemsToRow[a - 1] = rowsCount
+            }
+            rowsCount += 1
+            currentItemsSpanAmount = 0
+            currentItemsInRow = 0
+            spanLeft = spanCount
+        } else {
+            if spanLeft < requiredSpan {
+                requiredSpan = spanLeft
             }
         }
-        
-        j = i
-        n = i + row.count
-        
-        while j < n {
-            let preferredAspectRatio = items[j].aspectRatio
-            
-            let actualSize = CGSize(width: round(rowSize / summedRatios * (preferredAspectRatio)), height: preferredRowSize)
-            
-            var frame = CGRect(x: offset.x, y: offset.y, width: actualSize.width, height: actualSize.height)
-            if frame.origin.x + frame.size.width >= maxWidth - 2.0 {
-                frame.size.width = max(1.0, maxWidth - frame.origin.x)
-            }
-            
-            frames.append(frame)
-            
-            offset.x += actualSize.width + minimumInteritemSpacing
-            previousItemSize = actualSize.height
-            
-            j += 1
+        if rowsCount == 0 {
+            firstRowMax = max(firstRowMax, a)
         }
-        
-        if row.count > 0 {
-            offset = CGPoint(x: 0.0, y: offset.y + previousItemSize + minimumLineSpacing)
+        if a == itemsCount - 1 {
+            itemsToRow[a] = rowsCount
         }
+        currentItemsSpanAmount += requiredSpan
+        currentItemsInRow += 1
+        spanLeft -= requiredSpan
+        spanLeft = max(0, spanLeft)
+
+        itemSpans[a] = requiredSpan
+    }
+    if itemsCount != 0 {
+        rowsCount += 1
+    }
+    
+    var verticalOffset: CGFloat = 1.0
+    
+    var currentRowHorizontalOffset: CGFloat = 0.0
+    for index in 0 ..< items.count {
+        guard let width = itemSpans[index] else {
+            continue
+        }
+        let itemWidth = floor(width * containerWidth / 100.0) - 1
         
-        i += row.count
+        var itemSize = CGSize(width: itemWidth, height: preferredRowSize)
+        if itemsToRow[index] != nil {
+            itemSize.width = max(itemSize.width, containerWidth - currentRowHorizontalOffset)
+        }
+        frames.append(CGRect(origin: CGPoint(x: currentRowHorizontalOffset, y: verticalOffset), size: itemSize))
+        currentRowHorizontalOffset += itemSize.width + 1.0
+        
+        if itemsToRow[index] != nil {
+            verticalOffset += preferredRowSize + 1.0
+            currentRowHorizontalOffset = 0.0
+        }
     }
     
     return frames

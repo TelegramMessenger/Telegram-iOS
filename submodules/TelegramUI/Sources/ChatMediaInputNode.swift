@@ -334,7 +334,7 @@ enum StickerPacksCollectionUpdate {
 final class ChatMediaInputNodeInteraction {
     let navigateToCollectionId: (ItemCollectionId) -> Void
     let openSettings: () -> Void
-    let toggleSearch: (Bool, ChatMediaInputSearchMode?) -> Void
+    let toggleSearch: (Bool, ChatMediaInputSearchMode?, String) -> Void
     let openPeerSpecificSettings: () -> Void
     let dismissPeerSpecificSettings: () -> Void
     let clearRecentlyUsedStickers: () -> Void
@@ -345,7 +345,7 @@ final class ChatMediaInputNodeInteraction {
     var previewedStickerPackItem: StickerPreviewPeekItem?
     var appearanceTransition: CGFloat = 1.0
     
-    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool, ChatMediaInputSearchMode?) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void, clearRecentlyUsedStickers: @escaping () -> Void) {
+    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool, ChatMediaInputSearchMode?, String) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void, clearRecentlyUsedStickers: @escaping () -> Void) {
         self.navigateToCollectionId = navigateToCollectionId
         self.openSettings = openSettings
         self.toggleSearch = toggleSearch
@@ -552,7 +552,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 controller.navigationPresentation = .modal
                 strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
             }
-        }, toggleSearch: { [weak self] value, searchMode in
+        }, toggleSearch: { [weak self] value, searchMode, query in
             if let strongSelf = self {
                 if let searchMode = searchMode, value {
                     var searchContainerNode: PaneSearchContainerNode?
@@ -561,9 +561,14 @@ final class ChatMediaInputNode: ChatInputNode {
                     } else {
                         searchContainerNode = PaneSearchContainerNode(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, controllerInteraction: strongSelf.controllerInteraction, inputNodeInteraction: strongSelf.inputNodeInteraction, mode: searchMode, trendingGifsPromise: strongSelf.gifPane.trendingPromise, cancel: {
                             self?.searchContainerNode?.deactivate()
-                            self?.inputNodeInteraction.toggleSearch(false, nil)
+                            self?.inputNodeInteraction.toggleSearch(false, nil, "")
                         })
                         strongSelf.searchContainerNode = searchContainerNode
+                        if !query.isEmpty {
+                            DispatchQueue.main.async {
+                                searchContainerNode?.updateQuery(query)
+                            }
+                        }
                     }
                     if let searchContainerNode = searchContainerNode {
                         strongSelf.searchContainerNodeLoadedDisposable.set((searchContainerNode.ready
@@ -1408,10 +1413,12 @@ final class ChatMediaInputNode: ChatInputNode {
                     searchContainerNode.frame = containerFrame
                     searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
+                    var anchorTop = CGPoint(x: 0.0, y: 0.0)
+                    var anchorTopView: UIView = self.view
                     if let searchMode = searchMode {
                         switch searchMode {
                         case .gif:
-                            placeholderNode = self.gifPane.searchPlaceholderNode
+                            placeholderNode = self.gifPane.visibleSearchPlaceholderNode
                         case .sticker:
                             self.stickerPane.gridNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
@@ -1428,11 +1435,9 @@ final class ChatMediaInputNode: ChatInputNode {
                         }
                     }
                     
-                    if let placeholderNode = placeholderNode {
-                        searchContainerNode.animateIn(from: placeholderNode, transition: transition, completion: { [weak self] in
-                            self?.gifPane.removeFromSupernode()
-                        })
-                    }
+                    searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: { [weak self] in
+                        self?.gifPane.removeFromSupernode()
+                    })
                 }
             }
         }
@@ -1590,8 +1595,8 @@ final class ChatMediaInputNode: ChatInputNode {
             if let searchMode = searchMode {
                 switch searchMode {
                 case .gif:
-                    placeholderNode = self.gifPane.searchPlaceholderNode
-                    paneIsEmpty = self.gifPane.isEmpty
+                    placeholderNode = self.gifPane.visibleSearchPlaceholderNode
+                    paneIsEmpty = placeholderNode != nil
                 case .sticker:
                     paneIsEmpty = true
                     self.stickerPane.gridNode.forEachItemNode { itemNode in
@@ -1613,11 +1618,14 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
             }
             if let placeholderNode = placeholderNode {
+                placeholderNode.isHidden = false
                 searchContainerNode.animateOut(to: placeholderNode, animateOutSearchBar: !paneIsEmpty, transition: transition, completion: { [weak searchContainerNode] in
                     searchContainerNode?.removeFromSupernode()
                 })
             } else {
-                searchContainerNode.removeFromSupernode()
+                transition.updateAlpha(node: searchContainerNode, alpha: 0.0, completion: { [weak searchContainerNode] _ in
+                    searchContainerNode?.removeFromSupernode()
+                })
             }
         }
         

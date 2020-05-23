@@ -165,7 +165,7 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
         switch self {
         case let .search(theme, strings):
             return PaneSearchBarPlaceholderItem(theme: theme, strings: strings, type: .stickers, activate: {
-                inputNodeInteraction.toggleSearch(true, .sticker)
+                inputNodeInteraction.toggleSearch(true, .sticker, "")
             })
         case let .peerSpecificSetup(theme, strings, dismissed):
             return StickerPanePeerSpecificSetupGridItem(theme: theme, strings: strings, setup: {

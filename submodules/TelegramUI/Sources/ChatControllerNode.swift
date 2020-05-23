@@ -1201,7 +1201,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if transition.isAnimated, let derivedLayoutState = self.derivedLayoutState {
             let offset = derivedLayoutState.inputContextPanelsOverMainPanelFrame.maxY - inputContextPanelsOverMainPanelFrame.maxY
-            transition.animateOffsetAdditive(node: self.inputContextPanelContainer, offset: -offset)
+            //transition.animateOffsetAdditive(node: self.inputContextPanelContainer, offset: -offset)
         }
         
         if let inputContextPanelNode = self.inputContextPanelNode {
