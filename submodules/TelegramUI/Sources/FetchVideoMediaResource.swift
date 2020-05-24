@@ -7,6 +7,7 @@ import SyncCore
 import LegacyComponents
 import FFMpegBinding
 import LocalMediaResources
+import LegacyMediaPickerUI
 
 private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     private let url: URL
@@ -65,9 +66,9 @@ struct VideoConversionConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> VideoConversionConfiguration {
-        #if DEBUG
-        return VideoConversionConfiguration(remuxToFMp4: true)
-        #endif
+//        #if DEBUG
+//        return VideoConversionConfiguration(remuxToFMp4: true)
+//        #endif
         
         if let data = appConfiguration.data, let conversion = data["video_conversion"] as? [String: Any] {
             let remuxToFMp4 = conversion["remux_fmp4"] as? Bool ?? VideoConversionConfiguration.defaultValue.remuxToFMp4
@@ -233,8 +234,8 @@ private final class FetchVideoLibraryMediaResourceContext {
 
 private let throttlingContext = FetchVideoLibraryMediaResourceContext()
 
-public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> take(1)
     |> map { view in
         return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
@@ -286,6 +287,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                             }
                     }
                     let updatedSize = Atomic<Int>(value: 0)
+                    let entityRenderer = adjustments.flatMap { LegacyPaintEntityRenderer(account: account, adjustments: $0) }
                     let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
                         var value = stat()
                         if stat(path, &value) == 0 {
@@ -299,7 +301,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                                 subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
                             }*/
                         }
-                    }))!
+                    }), entityRenderer: entityRenderer)!
                     let signalDisposable = signal.start(next: { next in
                         if let result = next as? TGMediaVideoConversionResult {
                             var value = stat()
@@ -352,8 +354,8 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
     }
 }
 
-func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> take(1)
     |> map { view in
         return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
@@ -377,37 +379,61 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
                 }
             }
             let updatedSize = Atomic<Int>(value: 0)
-            let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
-                var value = stat()
-                if stat(path, &value) == 0 {
-                    /*if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                        var range: Range<Int>?
-                        let _ = updatedSize.modify { updatedSize in
-                            range = updatedSize ..< Int(value.st_size)
-                            return Int(value.st_size)
+            let entityRenderer = adjustments.flatMap { LegacyPaintEntityRenderer(account: account, adjustments: $0) }
+            let signal: SSignal
+            if filteredPath.contains(".jpg") {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
+                    signal = TGMediaVideoConverter.renderUIImage(image, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                        var value = stat()
+                        if stat(path, &value) == 0 {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                                var range: Range<Int>?
+                                let _ = updatedSize.modify { updatedSize in
+                                    range = updatedSize ..< Int(value.st_size)
+                                    return Int(value.st_size)
+                                }
+                                //print("size = \(Int(value.st_size)), range: \(range!)")
+                                subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                            }
                         }
-                        //print("size = \(Int(value.st_size)), range: \(range!)")
-                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                    }*/
+                    }), entityRenderer: entityRenderer)!
+                } else {
+                    signal = SSignal.single(nil)
                 }
-            }))!
+            } else {
+                signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                    var value = stat()
+                    if stat(path, &value) == 0 {
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                            var range: Range<Int>?
+                            let _ = updatedSize.modify { updatedSize in
+                                range = updatedSize ..< Int(value.st_size)
+                                return Int(value.st_size)
+                            }
+                            //print("size = \(Int(value.st_size)), range: \(range!)")
+                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                        }
+                    }
+                }), entityRenderer: entityRenderer)!
+            }
+                
             let signalDisposable = signal.start(next: { next in
                 if let result = next as? TGMediaVideoConversionResult {
                     var value = stat()
                     if stat(result.fileURL.path, &value) == 0 {
-                        if config.remuxToFMp4 {
-                            let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
-                            if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
-                                let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
-                                subscriber.putNext(.moveTempFile(file: tempFile))
-                            } else {
-                                TempBox.shared.dispose(tempFile)
-                                subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
-                            }
-                        } else {
-                            subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
-                        }
-                        /*if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+//                        if config.remuxToFMp4 {
+//                            let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+//                            if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
+//                                let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
+//                                subscriber.putNext(.moveTempFile(file: tempFile))
+//                            } else {
+//                                TempBox.shared.dispose(tempFile)
+//                                subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+//                            }
+//                        } else {
+//                            subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+//                        }
+                        if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
                             var range: Range<Int>?
                             let _ = updatedSize.modify { updatedSize in
                                 range = updatedSize ..< Int(value.st_size)
@@ -417,7 +443,7 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
                             subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
                             subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
                             subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        }*/
+                        }
                     }
                     subscriber.putCompletion()
                 }

@@ -14,9 +14,9 @@ GLfloat kColorConversion601FullRangeDefault[] = {
 };
 
 GLfloat kColorConversion709Default[] = {
-    1.164,  1.164, 1.164,
-    0.0, -0.213, 2.112,
-    1.793, -0.533,   0.0,
+      1,       1,       1,
+      0, -.21482, 2.12798,
+    1.28033, -.38059,       0,
 };
 
 GLfloat *kColorConversion601 = kColorConversion601Default;
@@ -89,8 +89,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 @interface PGVideoMovie () <AVPlayerItemOutputPullDelegate>
 {
-    BOOL audioEncodingIsFinished, videoEncodingIsFinished;
-//    GPUImageMovieWriter *synchronizedMovieWriter;
     AVAssetReader *reader;
     AVPlayerItemVideoOutput *playerItemOutput;
     CADisplayLink *displayLink;
@@ -116,6 +114,9 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 @end
 
 @implementation PGVideoMovie
+{
+    bool videoEncodingIsFinished;
+}
 
 @synthesize asset = _asset;
 @synthesize shouldRepeat = _shouldRepeat;
@@ -123,8 +124,23 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 #pragma mark -
 #pragma mark Initialization and teardown
 
+- (UIInterfaceOrientation)orientationForTrack:(AVAsset *)asset
+{
+    AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
+    CGSize size = [videoTrack naturalSize];
+    CGAffineTransform txf = [videoTrack preferredTransform];
 
-- (instancetype)initWithAsset:(AVAsset *)asset;
+    if (size.width == txf.tx && size.height == txf.ty)
+        return UIInterfaceOrientationLandscapeRight;
+    else if (txf.tx == 0 && txf.ty == 0)
+        return UIInterfaceOrientationLandscapeLeft;
+    else if (txf.tx == 0 && txf.ty == size.width)
+        return UIInterfaceOrientationPortraitUpsideDown;
+    else
+        return UIInterfaceOrientationPortrait;
+}
+
+- (instancetype)initWithAsset:(AVAsset *)asset
 {
     if (!(self = [super init])) 
     {
@@ -138,7 +154,21 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
     return self;
 }
 
-- (void)yuvConversionSetup;
+- (instancetype)initWithPlayerItem:(AVPlayerItem *)playerItem;
+{
+    if (!(self = [super init]))
+    {
+        return nil;
+    }
+
+    [self yuvConversionSetup];
+
+    self.playerItem = playerItem;
+
+    return self;
+}
+
+- (void)yuvConversionSetup
 {
     if ([GPUImageContext supportsFastTextureUpload])
     {
@@ -147,7 +177,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
             _preferredConversion = kColorConversion709;
             isFullYUVRange       = YES;
-            yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kYUVFullRangeConversionForLAFragmentShaderString];
+            yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kYUVVideoRangeConversionForRGFragmentShaderString];
 
             if (!yuvConversionProgram.initialized)
             {
@@ -185,12 +215,11 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 {
     [playerItemOutput setDelegate:nil queue:nil];
     
-    // Moved into endProcessing
-    //if (self.playerItem && (displayLink != nil))
-    //{
-    //    [displayLink invalidate]; // remove from all run loops
-    //    displayLink = nil;
-    //}
+    if (self.playerItem && (displayLink != nil))
+    {
+        [displayLink invalidate];
+        displayLink = nil;
+    }
 }
 
 #pragma mark -
@@ -206,14 +235,18 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 {
     if (_shouldRepeat) self->keepLooping = true;
     
-    [self processAsset];
+    if (self.playerItem != nil) {
+        [self processPlayerItem];
+    } else {
+        [self processAsset];
+    }
 }
 
 - (AVAssetReader*)createAssetReader
 {
     NSError *error = nil;
     AVAssetReader *assetReader = [AVAssetReader assetReaderWithAsset:self.asset error:&error];
-
+    
     NSMutableDictionary *outputSettings = [NSMutableDictionary dictionary];
     if ([GPUImageContext supportsFastTextureUpload]) {
         [outputSettings setObject:@(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
@@ -224,25 +257,9 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
         isFullYUVRange = NO;
     }
     
-    // Maybe set alwaysCopiesSampleData to NO on iOS 5.0 for faster video decoding
     AVAssetReaderTrackOutput *readerVideoTrackOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:[[self.asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0] outputSettings:outputSettings];
-    readerVideoTrackOutput.alwaysCopiesSampleData = NO;
+    readerVideoTrackOutput.alwaysCopiesSampleData = false;
     [assetReader addOutput:readerVideoTrackOutput];
-
-//    NSArray *audioTracks = [self.asset tracksWithMediaType:AVMediaTypeAudio];
-//    BOOL shouldRecordAudioTrack = (([audioTracks count] > 0) && (self.audioEncodingTarget != nil) );
-//    AVAssetReaderTrackOutput *readerAudioTrackOutput = nil;
-//
-//    if (shouldRecordAudioTrack)
-//    {
-//        [self.audioEncodingTarget setShouldInvalidateAudioSampleWhenDone:YES];
-//
-//        // This might need to be extended to handle movies with more than one audio track
-//        AVAssetTrack* audioTrack = [audioTracks objectAtIndex:0];
-//        readerAudioTrackOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:audioTrack outputSettings:nil];
-//        readerAudioTrackOutput.alwaysCopiesSampleData = NO;
-//        [assetReader addOutput:readerAudioTrackOutput];
-//    }
 
     return assetReader;
 }
@@ -252,65 +269,62 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
     reader = [self createAssetReader];
 
     AVAssetReaderOutput *readerVideoTrackOutput = nil;
-    AVAssetReaderOutput *readerAudioTrackOutput = nil;
-
-    audioEncodingIsFinished = YES;
-    for( AVAssetReaderOutput *output in reader.outputs ) {
-        if( [output.mediaType isEqualToString:AVMediaTypeAudio] ) {
-            audioEncodingIsFinished = NO;
-            readerAudioTrackOutput = output;
-        }
-        else if( [output.mediaType isEqualToString:AVMediaTypeVideo] ) {
+    
+    for (AVAssetReaderOutput *output in reader.outputs) {
+        if( [output.mediaType isEqualToString:AVMediaTypeVideo] ) {
             readerVideoTrackOutput = output;
         }
     }
 
-    if ([reader startReading] == NO)  {
+    if (![reader startReading])  {
         return;
     }
 
     __unsafe_unretained PGVideoMovie *weakSelf = self;
 
-//    if (synchronizedMovieWriter != nil)
-//    {
-//        [synchronizedMovieWriter setVideoInputReadyCallback:^{
-//            BOOL success = [weakSelf readNextVideoFrameFromOutput:readerVideoTrackOutput];
-//            return success;
-//        }];
-//
-//        [synchronizedMovieWriter setAudioInputReadyCallback:^{
-//            BOOL success = [weakSelf readNextAudioSampleFromOutput:readerAudioTrackOutput];
-//            return success;
-//        }];
-//
-//        [synchronizedMovieWriter enableSynchronizationCallbacks];
-//    }
-//    else
-//    {
-        while (reader.status == AVAssetReaderStatusReading && (!_shouldRepeat || keepLooping))
-        {
-            [weakSelf readNextVideoFrameFromOutput:readerVideoTrackOutput];
+    while (reader.status == AVAssetReaderStatusReading && (!_shouldRepeat || keepLooping))
+    {
+        [weakSelf readNextVideoFrameFromOutput:readerVideoTrackOutput];
+    }
 
-            if ((readerAudioTrackOutput) && (!audioEncodingIsFinished))
-            {
-                [weakSelf readNextAudioSampleFromOutput:readerAudioTrackOutput];
-            }
+    if (reader.status == AVAssetReaderStatusCompleted) {
+            
+        [reader cancelReading];
 
+        if (keepLooping) {
+            reader = nil;
+            [self startProcessing];
+        } else {
+            [weakSelf endProcessing];
         }
 
-        if (reader.status == AVAssetReaderStatusCompleted) {
-                
-            [reader cancelReading];
+    }
+}
 
-            if (keepLooping) {
-                reader = nil;
-                [self startProcessing];
-            } else {
-                [weakSelf endProcessing];
-            }
+- (void)processPlayerItem
+{
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+        [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
+        [displayLink setPaused:true];
+    });
 
+    
+    runSynchronouslyOnVideoProcessingQueue(^{
+        dispatch_queue_t videoProcessingQueue = [GPUImageContext sharedContextQueue];
+        NSMutableDictionary *pixBuffAttributes = [NSMutableDictionary dictionary];
+        if ([GPUImageContext supportsFastTextureUpload]) {
+            [pixBuffAttributes setObject:@(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
         }
-//    }
+        else {
+            [pixBuffAttributes setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
+        }
+        playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixBuffAttributes];
+        [playerItemOutput setDelegate:self queue:videoProcessingQueue];
+
+        [_playerItem addOutput:playerItemOutput];
+        [playerItemOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:0.1];
+    });
 }
 
 - (void)outputMediaDataWillChange:(AVPlayerItemOutput *)sender
@@ -323,7 +337,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 	CFTimeInterval nextVSync = ([sender timestamp] + [sender duration]);
 	CMTime outputItemTime = [playerItemOutput itemTimeForHostTime:nextVSync];
     [self processPixelBufferAtTime:outputItemTime];
-
 }
 
 - (void)processPixelBufferAtTime:(CMTime)outputItemTime
@@ -371,56 +384,20 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                 CFRelease(sampleBufferRef);
             });
 
-            return YES;
+            return true;
         }
         else
         {
             if (!keepLooping) {
-                videoEncodingIsFinished = YES;
-                if( videoEncodingIsFinished && audioEncodingIsFinished )
+                videoEncodingIsFinished = true;
+                if (videoEncodingIsFinished)
                     [self endProcessing];
             }
         }
     }
-//    else if (synchronizedMovieWriter != nil)
-//    {
-//        if (reader.status == AVAssetReaderStatusCompleted)
-//        {
-//            [self endProcessing];
-//        }
-//    }
-    return NO;
+    return false;
 }
 
-- (BOOL)readNextAudioSampleFromOutput:(AVAssetReaderOutput *)readerAudioTrackOutput;
-{
-    if (reader.status == AVAssetReaderStatusReading && ! audioEncodingIsFinished)
-    {
-        CMSampleBufferRef audioSampleBufferRef = [readerAudioTrackOutput copyNextSampleBuffer];
-        if (audioSampleBufferRef)
-        {
-            CFRelease(audioSampleBufferRef);
-            return YES;
-        }
-        else
-        {
-            if (!keepLooping) {
-                audioEncodingIsFinished = YES;
-                if (videoEncodingIsFinished && audioEncodingIsFinished)
-                    [self endProcessing];
-            }
-        }
-    }
-//    else if (synchronizedMovieWriter != nil)
-//    {
-//        if (reader.status == AVAssetReaderStatusCompleted || reader.status == AVAssetReaderStatusFailed ||
-//            reader.status == AVAssetReaderStatusCancelled)
-//        {
-//            [self endProcessing];
-//        }
-//    }
-    return NO;
-}
 
 - (void)processMovieFrame:(CMSampleBufferRef)movieSampleBuffer; 
 {
@@ -485,8 +462,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
         }
 
     }
-    
-    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
 
     [GPUImageContext useImageProcessingContext];
     
@@ -510,7 +485,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
             glActiveTexture(GL_TEXTURE4);
             if ([GPUImageContext deviceSupportsRedTextures])
             {
-                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_LUMINANCE, bufferWidth, bufferHeight, GL_LUMINANCE, GL_UNSIGNED_BYTE, 0, &luminanceTextureRef);
+                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_RED_EXT, bufferWidth, bufferHeight, GL_RED_EXT, GL_UNSIGNED_BYTE, 0, &luminanceTextureRef);
             }
             else
             {
@@ -531,7 +506,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
             glActiveTexture(GL_TEXTURE5);
             if ([GPUImageContext deviceSupportsRedTextures])
             {
-                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_LUMINANCE_ALPHA, bufferWidth/2, bufferHeight/2, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, 1, &chrominanceTextureRef);
+                err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], movieFrame, NULL, GL_TEXTURE_2D, GL_RG_EXT, bufferWidth/2, bufferHeight/2, GL_RG_EXT, GL_UNSIGNED_BYTE, 1, &chrominanceTextureRef);
             }
             else
             {
@@ -556,6 +531,21 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                 NSInteger targetTextureIndex = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
                 [currentTarget setInputSize:CGSizeMake(bufferWidth, bufferHeight) atIndex:targetTextureIndex];
                 [currentTarget setInputFramebuffer:outputFramebuffer atIndex:targetTextureIndex];
+                
+                AVAsset *asset = self.asset;
+                if (asset == nil) {
+                    asset = self.playerItem.asset;
+                }
+                if (asset != nil) {
+                    UIInterfaceOrientation orientation = [self orientationForTrack:asset];
+                    if (orientation == UIInterfaceOrientationPortrait) {
+                        [currentTarget setInputRotation:kGPUImageRotateRight atIndex:targetTextureIndex];
+                    } else if (orientation == UIInterfaceOrientationLandscapeRight) {
+                        [currentTarget setInputRotation:kGPUImageRotate180 atIndex:targetTextureIndex];
+                    } else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
+                        [currentTarget setInputRotation:kGPUImageRotateLeft atIndex:targetTextureIndex];
+                    }
+                }
             }
             
             [outputFramebuffer unlock];
@@ -669,10 +659,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (AVAssetReader*)assetReader {
     return reader;
-}
-
-- (BOOL)audioEncodingIsFinished {
-    return audioEncodingIsFinished;
 }
 
 - (BOOL)videoEncodingIsFinished {

@@ -15,7 +15,7 @@
 - (void)handlePinch:(UIPinchGestureRecognizer *)gestureRecognizer;
 - (void)handleRotate:(UIRotationGestureRecognizer *)gestureRecognizer;
 
-- (UIImage *)imageInRect:(CGRect)rect background:(UIImage *)background;
+- (UIImage *)imageInRect:(CGRect)rect background:(UIImage *)background still:(bool)still;
 
 - (bool)isTrackingAnyEntityView;
 

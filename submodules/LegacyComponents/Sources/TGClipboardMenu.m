@@ -42,6 +42,7 @@
     TGClipboardPreviewItemView *previewItem = [[TGClipboardPreviewItemView alloc] initWithContext:context images:images];
     __weak TGClipboardPreviewItemView *weakPreviewItem = previewItem;
     
+    previewItem.suggestionContext = suggestionContext;
     previewItem.parentController = parentController;
     previewItem.allowCaptions = hasCaption;
     previewItem.hasTimer = hasTimer;

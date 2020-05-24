@@ -18,7 +18,6 @@
 
 + (UIColor *)editorButtonSelectionBackgroundColor;
 
-+ (UIImage *)captionIcon;
 + (UIImage *)cropIcon;
 + (UIImage *)toolsIcon;
 + (UIImage *)rotateIcon;

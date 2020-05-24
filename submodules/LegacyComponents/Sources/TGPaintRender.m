@@ -168,7 +168,8 @@ typedef struct
     for (f = state.remainder; f <= distance; f += step, pressure += pressureStep)
     {
         CGFloat alpha = boldenFirst ? boldenedAlpha : state.alpha;
-        CGFloat brushSize = MIN(brushWeight, brushWeight - pressure * brushWeight * 0.55f);
+        CGFloat brushSize = brushWeight;
+//        CGFloat brushSize = MIN(brushWeight, brushWeight - pressure * brushWeight * 0.55f);
         [state addPoint:start size:brushSize angle:vectorAngle alpha:alpha index:i];
         
         start = TGPaintAddPoints(start, TGPaintMultiplyPoint(unitVector, step));

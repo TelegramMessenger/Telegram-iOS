@@ -278,6 +278,15 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
     return nil;
 }
 
+- (CIImage *)newCIImageFromCurrentlyProcessedOutput {
+    return nil;
+}
+
+- (void)commitImageCapture
+{
+    
+}
+
 - (BOOL)providesMonochromeOutput
 {
     return NO;

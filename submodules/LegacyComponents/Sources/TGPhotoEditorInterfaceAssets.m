@@ -23,6 +23,11 @@
     return UIColorRGBA(0x000000, 0.7f);
 }
 
++ (UIColor *)toolbarIconColor
+{
+    return [UIColor whiteColor];
+}
+
 + (UIColor *)accentColor
 {
     TGMediaAssetsPallete *pallete = nil;
@@ -47,74 +52,69 @@
     return UIColorRGB(0xd1d1d1);
 }
 
-+ (UIImage *)captionIcon
-{
-    return TGComponentsImageNamed(@"PhotoEditorCaption.png");
-}
-
 + (UIImage *)cropIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorCrop.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Crop"], [self toolbarIconColor]);
 }
 
 + (UIImage *)toolsIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorTools.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Adjustments"], [self toolbarIconColor]);
 }
 
 + (UIImage *)rotateIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorRotateIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Rotate"], [self toolbarIconColor]);
 }
 
 + (UIImage *)paintIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorPaint.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Drawing"], [self toolbarIconColor]);
 }
 
 + (UIImage *)stickerIcon
 {
-    return TGComponentsImageNamed(@"PaintStickersIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/AddSticker"], [self toolbarIconColor]);
 }
 
 + (UIImage *)textIcon
 {
-    return TGComponentsImageNamed(@"PaintTextIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/AddText"], [self toolbarIconColor]);
 }
 
 + (UIImage *)eraserIcon
 {
-    return TGComponentsImageNamed(@"PaintEraserIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Eraser"], [self toolbarIconColor]);
 }
 
 + (UIImage *)mirrorIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorMirrorIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Flip"], [self toolbarIconColor]);
 }
 
 + (UIImage *)aspectRatioIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/AspectRatio"], [self toolbarIconColor]);
 }
 
 + (UIImage *)aspectRatioActiveIcon
 {
-    return TGTintedImage(TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon.png"), [self accentColor]);
+    return TGTintedImage([UIImage imageNamed:@"Editor/AspectRatio"], [self accentColor]);
 }
 
 + (UIImage *)tintIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorTintIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Tint"], [self toolbarIconColor]);
 }
 
 + (UIImage *)blurIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorBlurIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Blur"], [self toolbarIconColor]);
 }
 
 + (UIImage *)curvesIcon
 {
-    return TGComponentsImageNamed(@"PhotoEditorCurvesIcon.png");
+    return TGTintedImage([UIImage imageNamed:@"Editor/Curves"], [self toolbarIconColor]);
 }
 
 + (UIImage *)gifBackgroundImage
@@ -207,9 +207,15 @@
 
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset
 {
-    UIImage *background = TGComponentsImageNamed(@"PhotoEditorQuality");
+    CGFloat lineWidth = 2.0f - TGScreenPixel;
     
-    UIGraphicsBeginImageContextWithOptions(background.size, false, 0.0f);
+    CGSize size = CGSizeMake(28.0f, 22.0f);
+    CGRect rect = CGRectInset(CGRectMake(0.0f, 0.0f, size.width, size.height), lineWidth / 2.0, lineWidth / 2.0);
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:5.0f];
     
     NSString *label = @"";
     switch (preset)
@@ -239,12 +245,15 @@
             break;
     }
 
-    [background drawAtPoint:CGPointZero];
-
+    CGContextAddPath(context, path.CGPath);
+    CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+    CGContextSetLineWidth(context, lineWidth);
+    CGContextStrokePath(context);
+    
     UIFont *font = [TGFont roundedFontOfSize:11];
-    CGSize size = [label sizeWithFont:font];
+    CGSize textSize = [label sizeWithFont:font];
     [[UIColor whiteColor] setFill];
-    [label drawInRect:CGRectMake(floor(background.size.width - size.width) / 2.0f, 8.0f, size.width, size.height) withFont:font];
+    [label drawInRect:CGRectMake((size.width - textSize.width) / 2.0f + TGScreenPixel, 4.0f, textSize.width, textSize.height) withFont:font];
     
     UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();

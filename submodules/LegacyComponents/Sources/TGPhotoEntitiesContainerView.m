@@ -219,7 +219,7 @@
     return nil;
 }
 
-- (UIImage *)imageInRect:(CGRect)rect background:(UIImage *)background
+- (UIImage *)imageInRect:(CGRect)rect background:(UIImage *)background still:(bool)still
 {
     if (self.subviews.count < 2)
         return nil;
@@ -241,13 +241,15 @@
             {
                 TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)view;
                 UIImage *image = stickerView.image;
-                CGSize fittedSize = TGScaleToSize(image.size, view.bounds.size);
-                
-                CGContextTranslateCTM(context, view.bounds.size.width / 2.0f, view.bounds.size.height / 2.0f);
-                if (stickerView.isMirrored)
-                    CGContextScaleCTM(context, -1, 1);
-                
-                [image drawInRect:CGRectMake(-fittedSize.width / 2.0f, -fittedSize.height / 2.0f, fittedSize.width, fittedSize.height)];
+                if (image != nil) {
+                    CGSize fittedSize = TGScaleToSize(image.size, view.bounds.size);
+                    
+                    CGContextTranslateCTM(context, view.bounds.size.width / 2.0f, view.bounds.size.height / 2.0f);
+                    if (stickerView.isMirrored)
+                        CGContextScaleCTM(context, -1, 1);
+                    
+                    [image drawInRect:CGRectMake(-fittedSize.width / 2.0f, -fittedSize.height / 2.0f, fittedSize.width, fittedSize.height)];
+                }
             }];
         }
         else if ([view isKindOfClass:[TGPhotoTextEntityView class]])

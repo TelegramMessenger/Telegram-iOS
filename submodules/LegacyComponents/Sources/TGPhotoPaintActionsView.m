@@ -2,6 +2,7 @@
 
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
+#import "TGImageUtils.h"
 
 #import <LegacyComponents/TGModernButton.h>
 
@@ -24,7 +25,7 @@
         _undoButton.adjustsImageWhenDisabled = false;
         _undoButton.enabled = false;
         _undoButton.exclusiveTouch = true;
-        [_undoButton setImage:TGComponentsImageNamed(@"PaintUndoIcon") forState:UIControlStateNormal];
+        [_undoButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/Undo"], [UIColor whiteColor]) forState:UIControlStateNormal];
         [_undoButton addTarget:self action:@selector(undoButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:_undoButton];
         

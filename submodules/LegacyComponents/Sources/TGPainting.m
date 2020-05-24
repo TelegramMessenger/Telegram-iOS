@@ -145,6 +145,15 @@
 
 #pragma mark -
 
+- (void)performSynchronouslyInContext:(void (^)(void))block
+{
+    [_queue dispatch:^
+    {
+        [EAGLContext setCurrentContext:self.context];
+        block();
+    } synchronous:true];
+}
+
 - (void)performAsynchronouslyInContext:(void (^)(void))block
 {
     [_queue dispatch:^

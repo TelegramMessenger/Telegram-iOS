@@ -27,6 +27,8 @@
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
 
+#import "PGPhotoEditor.h"
+
 @interface TGMediaAssetsController () <UINavigationControllerDelegate, ASWatcher>
 {
     TGMediaAssetsControllerIntent _intent;
@@ -110,6 +112,7 @@
             pickerController.pallete = strongController.pallete;
         }
         pickerController.suggestionContext = strongController.suggestionContext;
+        pickerController.stickersContext = strongController.stickersContext;
         pickerController.localMediaCacheEnabled = strongController.localMediaCacheEnabled;
         pickerController.captionsEnabled = strongController.captionsEnabled;
         pickerController.allowCaptionEntities = strongController.allowCaptionEntities;
@@ -147,6 +150,12 @@
 {
     _suggestionContext = suggestionContext;
     self.pickerController.suggestionContext = suggestionContext;
+}
+
+- (void)setStickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
+{
+    _stickersContext = stickersContext;
+    self.pickerController.stickersContext = stickersContext;
 }
 
 - (void)setCaptionsEnabled:(bool)captionsEnabled
@@ -812,9 +821,47 @@
                             NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
                             dict[@"type"] = @"editedPhoto";
                             dict[@"image"] = image;
-                            
                             if (adjustments.paintingData.stickers.count > 0)
                                 dict[@"stickers"] = adjustments.paintingData.stickers;
+                            
+                            bool animated = false;
+                            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
+                                if (entity.animated) {
+                                    animated = true;
+                                    break;
+                                }
+                            }
+                              
+                            if (animated) {
+                                dict[@"isAnimation"] = @true;
+                                if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments];
+                                } else {
+                                    dict[@"adjustments"] = adjustments;
+                                }
+                                
+                                NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"gifvideo_%x.jpg", (int)arc4random()]];
+                                NSData *data = UIImageJPEGRepresentation(image, 0.8);
+                                [data writeToFile:filePath atomically:true];
+                                dict[@"url"] = [NSURL fileURLWithPath:filePath];
+                                
+                                
+                                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                                {
+                                    CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
+                                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                                    if (paintingImage == nil) {
+                                        paintingImage = adjustments.paintingData.image;
+                                    }
+                                    if (adjustments.toolsApplied) {
+                                        image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                                    }
+                                    UIImage *thumbnailImage = TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), asset.dimensions, true);
+                                    if (thumbnailImage != nil) {
+                                        dict[@"previewImage"] = thumbnailImage;
+                                    }
+                                }
+                            }
                             
                             if (timer != nil)
                                 dict[@"timer"] = timer;
@@ -872,10 +919,17 @@
                     
                     UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
                     {
-                        if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting)
+                        if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
                         {
                             CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
-                            return TGPhotoEditorCrop(image, adjustments.paintingData.image, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
+                            UIImage *paintingImage = adjustments.paintingData.stillImage;
+                            if (paintingImage == nil) {
+                                paintingImage = adjustments.paintingData.image;
+                            }
+                            if (adjustments.toolsApplied) {
+                                image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                            }
+                            return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
                         }
                         
                         return image;
@@ -886,7 +940,7 @@
                         CGSize imageSize = TGFillSize(asset.dimensions, CGSizeMake(384, 384));
                         return [[TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
                         {
-                            return cropVideoThumbnail(image, TGScaleToFill(asset.dimensions, CGSizeMake(256, 256)), asset.dimensions, true);
+                            return cropVideoThumbnail(image, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), asset.dimensions, true);
                         }];
                     }];
                     

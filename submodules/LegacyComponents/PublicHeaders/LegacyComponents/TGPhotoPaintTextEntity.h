@@ -1,6 +1,7 @@
 #import <LegacyComponents/TGPhotoPaintEntity.h>
-#import "TGPaintSwatch.h"
-#import "TGPhotoPaintFont.h"
+
+@class TGPaintSwatch;
+@class TGPhotoPaintFont;
 
 @interface TGPhotoPaintTextEntity : TGPhotoPaintEntity
 
@@ -10,6 +11,8 @@
 @property (nonatomic, assign) CGFloat baseFontSize;
 @property (nonatomic, assign) CGFloat maxWidth;
 @property (nonatomic, assign) bool stroke;
+
+@property (nonatomic, strong) UIImage *renderImage;
 
 - (instancetype)initWithText:(NSString *)text font:(TGPhotoPaintFont *)font swatch:(TGPaintSwatch *)swatch baseFontSize:(CGFloat)baseFontSize maxWidth:(CGFloat)maxWidth stroke:(bool)stroke;
 

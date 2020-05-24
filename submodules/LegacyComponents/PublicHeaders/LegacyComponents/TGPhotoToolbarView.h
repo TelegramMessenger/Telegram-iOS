@@ -3,9 +3,9 @@
 typedef NS_OPTIONS(NSUInteger, TGPhotoEditorTab) {
     TGPhotoEditorNoneTab        = 0,
     TGPhotoEditorCropTab        = 1 << 0,
-    TGPhotoEditorStickerTab     = 1 << 1,
-    TGPhotoEditorPaintTab       = 1 << 2,
-    TGPhotoEditorEraserTab      = 1 << 3,
+    TGPhotoEditorPaintTab       = 1 << 1,
+    TGPhotoEditorEraserTab      = 1 << 2,
+    TGPhotoEditorStickerTab     = 1 << 3,
     TGPhotoEditorTextTab        = 1 << 4,
     TGPhotoEditorToolsTab       = 1 << 5,
     TGPhotoEditorRotateTab      = 1 << 6,

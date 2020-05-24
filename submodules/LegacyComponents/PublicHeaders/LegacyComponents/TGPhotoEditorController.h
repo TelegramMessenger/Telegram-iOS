@@ -11,6 +11,8 @@
 @class TGSuggestionContext;
 @class TGPhotoEditorController;
 
+@protocol TGPhotoPaintStickersContext;
+
 typedef enum {
     TGPhotoEditorControllerGenericIntent = 0,
     TGPhotoEditorControllerAvatarIntent = (1 << 0),
@@ -24,6 +26,7 @@ typedef enum {
 
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) TGMediaEditingContext *editingContext;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
 @property (nonatomic, copy) UIView *(^beginTransitionIn)(CGRect *referenceFrame, UIView **parentView);
 @property (nonatomic, copy) void (^finishedTransitionIn)(void);

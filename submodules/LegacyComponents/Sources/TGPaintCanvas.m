@@ -22,6 +22,8 @@
     CGAffineTransform _canvasTransform;
     CGRect _dirtyRect;
     
+    CGRect _visibleRect;
+    
     TGPaintInput *_input;
     TGPaintPanGestureRecognizer *_gestureRecognizer;
     bool _beganDrawing;
@@ -40,6 +42,8 @@
     if (self != nil)
     {
         self.contentScaleFactor = _screenScale;
+        self.multipleTouchEnabled = true;
+        self.exclusiveTouch = true;
         
         _state = [[TGPaintState alloc] init];
         
@@ -82,8 +86,16 @@
 - (void)setFrame:(CGRect)frame
 {
     [super setFrame:frame];
+    _visibleRect = self.bounds;
     
     [self _updateTransform];
+}
+
+- (void)setBounds:(CGRect)bounds
+{
+    [super setBounds:bounds];
+    
+    _visibleRect = bounds;
 }
 
 - (void)_updateTransform
@@ -112,7 +124,7 @@
     _gestureRecognizer = [[TGPaintPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     _gestureRecognizer.delegate = self;
     _gestureRecognizer.minimumNumberOfTouches = 1;
-    _gestureRecognizer.maximumNumberOfTouches = 1;
+    _gestureRecognizer.maximumNumberOfTouches = 2;
     
     __weak TGPaintCanvas *weakSelf = self;
     _gestureRecognizer.shouldRecognizeTap = ^bool
@@ -162,7 +174,7 @@
     }
 }
 
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)__unused gestureRecognizer
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
 {
     if (self.shouldDraw != nil)
         return self.shouldDraw();
@@ -172,9 +184,9 @@
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
-    if (gestureRecognizer == _gestureRecognizer && ([otherGestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UIRotationGestureRecognizer class]]))
-        return false;
-    
+//    if (gestureRecognizer == _gestureRecognizer && ([otherGestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UIRotationGestureRecognizer class]]))
+//        return false;
+//
     return true;
 }
 
@@ -264,16 +276,18 @@
 
 - (CGRect)visibleRect
 {
-    return self.bounds;
+    return _visibleRect;
 }
 
 - (void)layoutSubviews
 {
     [super layoutSubviews];
     
-    [_buffers update];
-
-    [self draw];
+    [self.painting performSynchronouslyInContext:^{
+        [_buffers update];
+        
+        [self draw];
+    }];
 }
 
 #pragma mark - GL Setup

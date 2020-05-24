@@ -172,7 +172,7 @@
     {
         [self performTransitionInWithCompletion:nil];
     }
-    else if (_delayedImage != nil)
+    else if (_delayedImage != nil && [_delayedImage isKindOfClass:[UIImage class]])
     {
         UIImageView *transitionView = [[UIImageView alloc] initWithFrame:_snapshotView.frame];
         transitionView.image = ((UIImageView *)_snapshotView).image;
@@ -279,12 +279,19 @@
 
 - (void)layoutSubviews
 {
+    if (self.bounds.size.width <= 0.0f || _cropRect.size.width <= 0.0f || _originalSize.width <= 0.0f || self.paintingView.image == nil) {
+        return;
+    }
+    
     CGFloat rotation = TGRotationForOrientation(_cropOrientation);
     _paintingContainerView.transform = CGAffineTransformMakeRotation(rotation);
     _paintingContainerView.frame = self.bounds;
     
     CGFloat width = TGOrientationIsSideward(_cropOrientation, NULL) ? self.frame.size.height : self.frame.size.width;
-    CGFloat ratio = width / _cropRect.size.width;
+    CGFloat ratio = 1.0;
+    if (_cropRect.size.width > 0.0) {
+        ratio = width / _cropRect.size.width;
+    }
    
     rotation = _cropRotation;
     

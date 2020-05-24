@@ -5,7 +5,11 @@
 @class PGPhotoEditor;
 @class TGPhotoEditorPreviewView;
 
+@protocol TGPhotoPaintStickersContext;
+
 @interface TGPhotoPaintController : TGPhotoEditorTabController
+
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 

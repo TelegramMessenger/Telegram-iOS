@@ -135,7 +135,7 @@
     CGRect containerFrame = self.view.bounds;
     CGSize fittedSize = TGScaleToSize(_image.size, containerFrame.size);
 
-    _scrollView = [[TGModernGalleryZoomableScrollView alloc] initWithFrame:self.view.bounds];
+    _scrollView = [[TGModernGalleryZoomableScrollView alloc] initWithFrame:self.view.bounds hasDoubleTap:true];
     _scrollView.clipsToBounds = false;
     _scrollView.delegate = self;
     _scrollView.showsHorizontalScrollIndicator = false;

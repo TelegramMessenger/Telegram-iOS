@@ -147,15 +147,15 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
     switch (icon)
     {
         case TGPhotoPaintSettingsViewIconBrush:
-            iconImage = TGComponentsImageNamed(@"PaintBrushIcon");
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Brush"], [UIColor whiteColor]);
             break;
             
         case TGPhotoPaintSettingsViewIconText:
-            iconImage = TGComponentsImageNamed(@"PaintTextSettingsIcon");
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Font"], [UIColor whiteColor]);
             break;
             
         case TGPhotoPaintSettingsViewIconMirror:
-            iconImage = TGComponentsImageNamed(@"PaintMirrorIcon");
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Flip"], [UIColor whiteColor]);
             break;
     }
     

@@ -2,6 +2,7 @@
 
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
+#import "TGImageUtils.h"
 
 #import "TGModernButton.h"
 #import "TGPhotoEditorButton.h"
@@ -49,7 +50,7 @@
         switch (backButton)
         {
             case TGPhotoEditorBackButtonCancel:
-                cancelImage = TGComponentsImageNamed(@"PhotoPickerCancelIcon");
+                cancelImage = TGTintedImage([UIImage imageNamed:@"Editor/Cancel"], [UIColor whiteColor]);
                 break;
                 
             default:
@@ -65,7 +66,7 @@
         switch (doneButton)
         {
             case TGPhotoEditorDoneButtonCheck:
-                doneImage = TGComponentsImageNamed(@"PhotoPickerDoneIcon");
+                doneImage = TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
                 break;
                 
             default:

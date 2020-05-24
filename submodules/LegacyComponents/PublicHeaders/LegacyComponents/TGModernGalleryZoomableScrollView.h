@@ -7,4 +7,6 @@
 @property (nonatomic, copy) void (^singleTapped)();
 @property (nonatomic, copy) void (^doubleTapped)(CGPoint point);
 
+- (instancetype)initWithFrame:(CGRect)frame hasDoubleTap:(bool)hasDoubleTap;
+
 @end

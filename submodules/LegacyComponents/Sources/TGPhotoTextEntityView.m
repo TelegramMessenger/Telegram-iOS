@@ -1,5 +1,8 @@
 #import "TGPhotoTextEntityView.h"
 
+#import "TGPaintSwatch.h"
+#import "TGPhotoPaintFont.h"
+
 #import "TGColor.h"
 #import "LegacyComponentsInternal.h"
 
@@ -100,6 +103,20 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     entity.position = self.center;
     
     return entity;
+}
+
+- (UIImage *)image {
+    CGRect rect = self.bounds;
+    
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(rect.size.width, rect.size.height), false, 1.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    [self drawViewHierarchyInRect:rect afterScreenUpdates:false];
+    
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return image;
 }
 
 - (bool)isEditing

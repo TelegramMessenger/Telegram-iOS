@@ -10,6 +10,9 @@
 #import "PGPhotoEditorView.h"
 #import "PGPhotoEditorPicture.h"
 
+#import "GPUImageTextureInput.h"
+#import "GPUImageTextureOutput.h"
+
 #import <LegacyComponents/PGPhotoEditorValues.h>
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
@@ -43,6 +46,8 @@
     GPUImageOutput *_currentInput;
     NSArray *_currentProcessChain;
     GPUImageOutput <GPUImageInput> *_finalFilter;
+    
+    GPUImageTextureOutput *_textureOutput;
     
     PGPhotoHistogram *_currentHistogram;
     PGPhotoHistogramGenerator *_histogramGenerator;
@@ -101,7 +106,7 @@
             strongSelf->_histogramPipe.sink(histogram);
         };
         
-        [self _importAdjustments:adjustments];
+        [self importAdjustments:adjustments];
     }
     return self;
 }
@@ -167,6 +172,32 @@
     _fullSize = true;
 }
 
+- (void)setPlayerItem:(AVPlayerItem *)playerItem {
+    [_toolComposer invalidate];
+    _currentProcessChain = nil;
+    
+    [_currentInput removeAllTargets];
+    PGVideoMovie *movie = [[PGVideoMovie alloc] initWithPlayerItem:playerItem];
+    _currentInput = movie;
+    
+    _fullSize = true;
+}
+
+- (void)setCIImage:(CIImage *)ciImage {
+    [_toolComposer invalidate];
+    _currentProcessChain = nil;
+    
+    [_currentInput removeAllTargets];
+    GPUImageTextureInput *input = [[GPUImageTextureInput alloc] initWithCIImage:ciImage];
+    _currentInput = input;
+    
+    if (_textureOutput == nil) {
+        _textureOutput = [[GPUImageTextureOutput alloc] init];
+    }
+    
+    _fullSize = true;
+}
+
 #pragma mark - Properties
 
 - (CGSize)rotatedCropSize
@@ -201,7 +232,7 @@
 
 - (void)processAnimated:(bool)animated capture:(bool)capture synchronous:(bool)synchronous completion:(void (^)(void))completion
 {
-    if (self.previewOutput == nil)
+    if (self.previewOutput == nil && !self.standalone)
         return;
     
     if (self.forVideo) {
@@ -210,16 +241,25 @@
             [self updateProcessChain];
             
             GPUImageOutput *currentInput = _currentInput;
-
-            if (!_playing) {
-                _playing = true;
-                [_videoQueue dispatch:^{
-                    if ([currentInput isKindOfClass:[PGVideoMovie class]]) {
-                        [(PGVideoMovie *)currentInput startProcessing];
-                    }
-                }];
+            if ([currentInput isKindOfClass:[PGVideoMovie class]]) {
+                if (!_playing) {
+                    _playing = true;
+                    [_videoQueue dispatch:^{
+                        if ([currentInput isKindOfClass:[PGVideoMovie class]]) {
+                            [(PGVideoMovie *)currentInput startProcessing];
+                        }
+                    }];
+                }
+            } else if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
+                if (capture)
+                    [_finalFilter useNextFrameForImageCapture];
+                
+                [(GPUImageTextureInput *)currentInput processTextureWithFrameTime:kCMTimeZero synchronous:synchronous];
+                if (completion != nil)
+                    completion();
+                [_finalFilter commitImageCapture];
             }
-        }];
+        } synchronous:synchronous];
         return;
     }
     
@@ -281,6 +321,8 @@
 }
 
 - (void)updateProcessChain {
+    [GPUImageFramebuffer setMark:self.forVideo];
+    
     NSMutableArray *processChain = [NSMutableArray array];
     
     for (PGPhotoTool *tool in _toolComposer.advancedTools)
@@ -319,10 +361,17 @@
         }
         _finalFilter = lastFilter;
         
-        [_finalFilter addTarget:previewOutput.imageView];
+        if (_textureOutput != nil) {
+            [_finalFilter addTarget:_textureOutput];
+        }
+
+        if (previewOutput != nil) {
+            [_finalFilter addTarget:previewOutput.imageView];
+        }
         
-        if (!self.forVideo)
+        if (!self.forVideo) {
             [_finalFilter addTarget:_histogramGenerator];
+        }
     }
 }
 
@@ -349,9 +398,22 @@
     return image;
 }
 
+- (CIImage *)currentResultCIImage {
+    __block CIImage *image = nil;
+    GPUImageOutput *currentInput = _currentInput;
+    [self processAnimated:false capture:true synchronous:true completion:^
+    {
+        image = [_finalFilter newCIImageFromCurrentlyProcessedOutput];
+//        if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
+//            image = [_textureOutput CIImageWithSize:[(GPUImageTextureInput *)currentInput textureSize]];
+//        }
+    }];
+    return image;
+}
+
 #pragma mark - Editor Values
 
-- (void)_importAdjustments:(id<TGMediaEditAdjustments>)adjustments
+- (void)importAdjustments:(id<TGMediaEditAdjustments>)adjustments
 {
     _initialAdjustments = adjustments;
     
@@ -443,6 +505,13 @@
     });
     
     return tools;
+}
+
++ (UIImage *)resultImageForImage:(UIImage *)image adjustments:(id<TGMediaEditAdjustments>)adjustments {
+    PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];
+    editor.standalone = true;
+    [editor setImage:image forCropRect:adjustments.cropRect cropRotation:0.0 cropOrientation:adjustments.cropOrientation cropMirrored:adjustments.cropMirrored fullSize:false];
+    return [editor currentResultImage];
 }
 
 @end

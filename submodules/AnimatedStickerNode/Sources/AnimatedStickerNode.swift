@@ -60,12 +60,12 @@ public enum AnimatedStickerPlaybackMode {
     case still(AnimatedStickerPlaybackPosition)
 }
 
-private final class AnimatedStickerFrame {
-    let data: Data
-    let type: AnimationRendererFrameType
-    let width: Int
-    let height: Int
-    let bytesPerRow: Int
+public final class AnimatedStickerFrame {
+    public let data: Data
+    public let type: AnimationRendererFrameType
+    public let width: Int
+    public let height: Int
+    public let bytesPerRow: Int
     let index: Int
     let isLastFrame: Bool
     
@@ -80,7 +80,7 @@ private final class AnimatedStickerFrame {
     }
 }
 
-private protocol AnimatedStickerFrameSource: class {
+public protocol AnimatedStickerFrameSource: class {
     var frameRate: Int { get }
     var frameCount: Int { get }
     
@@ -97,7 +97,7 @@ private final class AnimatedStickerFrameSourceWrapper {
 }
 
 @available(iOS 9.0, *)
-private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource {
+public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
     private var data: Data
     private var dataComplete: Bool
@@ -107,15 +107,15 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
     let width: Int
     let bytesPerRow: Int
     let height: Int
-    let frameRate: Int
-    let frameCount: Int
+    public let frameRate: Int
+    public let frameCount: Int
     private var frameIndex: Int
     private let initialOffset: Int
     private var offset: Int
     var decodeBuffer: Data
     var frameBuffer: Data
     
-    init?(queue: Queue, data: Data, complete: Bool, notifyUpdated: @escaping () -> Void) {
+    public init?(queue: Queue, data: Data, complete: Bool, notifyUpdated: @escaping () -> Void) {
         self.queue = queue
         self.data = data
         self.dataComplete = complete
@@ -179,7 +179,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         assert(self.queue.isCurrent())
     }
     
-    func takeFrame() -> AnimatedStickerFrame? {
+    public func takeFrame() -> AnimatedStickerFrame? {
         var frameData: Data?
         var isLastFrame = false
         
@@ -259,7 +259,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         self.dataComplete = complete
     }
     
-    func skipToEnd() {
+    public func skipToEnd() {
     }
 }
 
@@ -310,13 +310,13 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     }
 }
 
-private final class AnimatedStickerFrameQueue {
+public final class AnimatedStickerFrameQueue {
     private let queue: Queue
     private let length: Int
     private let source: AnimatedStickerFrameSource
     private var frames: [AnimatedStickerFrame] = []
     
-    init(queue: Queue, length: Int, source: AnimatedStickerFrameSource) {
+    public init(queue: Queue, length: Int, source: AnimatedStickerFrameSource) {
         self.queue = queue
         self.length = length
         self.source = source
@@ -326,7 +326,7 @@ private final class AnimatedStickerFrameQueue {
         assert(self.queue.isCurrent())
     }
     
-    func take() -> AnimatedStickerFrame? {
+    public func take() -> AnimatedStickerFrame? {
         if self.frames.isEmpty {
             if let frame = self.source.takeFrame() {
                 self.frames.append(frame)
@@ -340,7 +340,7 @@ private final class AnimatedStickerFrameQueue {
         }
     }
     
-    func generateFramesIfNeeded() {
+    public func generateFramesIfNeeded() {
         if self.frames.isEmpty {
             if let frame = self.source.takeFrame() {
                 self.frames.append(frame)

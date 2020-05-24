@@ -24,7 +24,7 @@
         _containerView = [[TGModernGalleryImageItemContainerView alloc] initWithFrame:_internalContainerView.bounds];
         [_internalContainerView addSubview:_containerView];
         
-        _scrollView = [[TGModernGalleryZoomableScrollView alloc] initWithFrame:_containerView.bounds];
+        _scrollView = [[TGModernGalleryZoomableScrollView alloc] initWithFrame:_containerView.bounds hasDoubleTap:true];
         _scrollView.delegate = self;
         _scrollView.showsHorizontalScrollIndicator = false;
         _scrollView.showsVerticalScrollIndicator = false;

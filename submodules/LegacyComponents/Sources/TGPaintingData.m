@@ -11,21 +11,31 @@
 @interface TGPaintingData ()
 {
     UIImage *_image;
+    UIImage *_stillImage;
     NSData *_data;
     
     UIImage *(^_imageRetrievalBlock)(void);
+    UIImage *(^_stillImageRetrievalBlock)(void);
 }
 @end
 
 @implementation TGPaintingData
 
-+ (instancetype)dataWithPaintingData:(NSData *)data image:(UIImage *)image entities:(NSArray *)entities undoManager:(TGPaintUndoManager *)undoManager
++ (instancetype)dataWithPaintingData:(NSData *)data image:(UIImage *)image stillImage:(UIImage *)stillImage entities:(NSArray *)entities undoManager:(TGPaintUndoManager *)undoManager
 {
     TGPaintingData *paintingData = [[TGPaintingData alloc] init];
     paintingData->_data = data;
     paintingData->_image = image;
+    paintingData->_stillImage = stillImage;
     paintingData->_entities = entities;
     paintingData->_undoManager = undoManager;
+    return paintingData;
+}
+
++ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entities:(NSArray *)entities {
+    TGPaintingData *paintingData = [[TGPaintingData alloc] init];
+    paintingData->_imagePath = imagePath;
+    paintingData->_entities = entities;
     return paintingData;
 }
 
@@ -44,7 +54,7 @@
         NSURL *imageUrl = nil;
         
         NSData *compressedData = TGPaintGZipDeflate(data.data);
-        [context setPaintingData:compressedData image:data.image forItem:item dataUrl:&dataUrl imageUrl:&imageUrl forVideo:video];
+        [context setPaintingData:compressedData image:data.image stillImage:data.stillImage forItem:item dataUrl:&dataUrl imageUrl:&imageUrl forVideo:video];
         
         __weak TGMediaEditingContext *weakContext = context;
         [[SQueue mainQueue] dispatch:^
@@ -58,6 +68,15 @@
                 __strong TGMediaEditingContext *strongContext = weakContext;
                 if (strongContext != nil)
                     return [strongContext paintingImageForItem:item];
+                
+                return nil;
+            };
+            
+            data->_stillImageRetrievalBlock = ^UIImage *
+            {
+                __strong TGMediaEditingContext *strongContext = weakContext;
+                if (strongContext != nil)
+                    return [strongContext stillPaintingImageForItem:item];
                 
                 return nil;
             };
@@ -95,6 +114,16 @@
         return _image;
     else if (_imageRetrievalBlock != nil)
         return _imageRetrievalBlock();
+    else
+        return nil;
+}
+
+- (UIImage *)stillImage
+{
+    if (_stillImage != nil)
+            return _stillImage;
+    else if (_stillImageRetrievalBlock != nil)
+        return _stillImageRetrievalBlock();
     else
         return nil;
 }

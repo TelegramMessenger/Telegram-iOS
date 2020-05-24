@@ -94,7 +94,6 @@
         {
             // Nothing in the cache, create a new framebuffer to use
             framebufferFromCache = [[GPUImageFramebuffer alloc] initWithSize:framebufferSize textureOptions:textureOptions onlyTexture:onlyTexture];
-            framebufferFromCache.mark = mark;
         }
         else
         {
@@ -120,7 +119,6 @@
             if (framebufferFromCache == nil)
             {
                 framebufferFromCache = [[GPUImageFramebuffer alloc] initWithSize:framebufferSize textureOptions:textureOptions onlyTexture:onlyTexture];
-                framebufferFromCache.mark = mark;
             }
         }
     });

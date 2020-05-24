@@ -165,11 +165,13 @@
 
 - (void)gestureCanceled:(UIGestureRecognizer *)recognizer
 {
-     TGPaintCanvas *canvas = (TGPaintCanvas *) recognizer.view;
-     TGPainting *painting = canvas.painting;
+    TGPaintCanvas *canvas = (TGPaintCanvas *) recognizer.view;
+    TGPainting *painting = canvas.painting;
 
-     painting.activePath = nil;
-     [canvas draw];
+    [painting performAsynchronouslyInContext:^{
+        painting.activePath = nil;
+        [canvas draw];
+    }];
 }
 
 - (void)paintPath:(TGPaintPath *)path inCanvas:(TGPaintCanvas *)canvas
