@@ -554,12 +554,12 @@ private enum ItemsLayout {
         let frames: [CGRect]
         let contentHeight: CGFloat
         
-        init(containerWidth: CGFloat, items: [VisualMediaItem]) {
+        init(containerWidth: CGFloat, items: [VisualMediaItem], bottomInset: CGFloat) {
             self.frames = calculateItemFrames(items: items, containerWidth: containerWidth)
             if let last = self.frames.last {
-                self.contentHeight = last.maxY
+                self.contentHeight = last.maxY + bottomInset
             } else {
-                self.contentHeight = 0.0
+                self.contentHeight = bottomInset
             }
         }
         
@@ -876,7 +876,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             case .photoOrVideo:
                 itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, itemCount: self.mediaItems.count, bottomInset: bottomInset))
             case .gifs:
-                itemsLayout = .balanced(ItemsLayout.Balanced(containerWidth: availableWidth, items: self.mediaItems))
+                itemsLayout = .balanced(ItemsLayout.Balanced(containerWidth: availableWidth, items: self.mediaItems, bottomInset: bottomInset))
             }
             self.itemsLayout = itemsLayout
         }
@@ -1152,7 +1152,7 @@ private func calculateItemFrames(items: [VisualMediaItem], containerWidth: CGFlo
         let itemWidth = floor(width * containerWidth / 100.0) - 1
         
         var itemSize = CGSize(width: itemWidth, height: preferredRowSize)
-        if itemsToRow[index] != nil {
+        if itemsToRow[index] != nil && currentRowHorizontalOffset + itemSize.width >= containerWidth - 10.0 {
             itemSize.width = max(itemSize.width, containerWidth - currentRowHorizontalOffset)
         }
         frames.append(CGRect(origin: CGPoint(x: currentRowHorizontalOffset, y: verticalOffset), size: itemSize))

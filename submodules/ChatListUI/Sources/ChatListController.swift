@@ -1219,27 +1219,37 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 
                 strongSelf.processedFeaturedFilters = true
                 if hasFeatured {
-                    if let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) {
-                        let absoluteFrame = sourceFrame
-                        let text: String
-                        if hasFilters {
-                            text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
-                            let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
-                        } else {
-                            text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
-                        }
-                        
-                        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
-                        
-                        parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: .point(location), shouldDismissOnTouch: { point in
-                            guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                    if let _ = strongSelf.validLayout, let _ = strongSelf.parent as? TabBarController {
+                        let _ = (ApplicationSpecificNotice.incrementChatFolderTips(accountManager: strongSelf.context.sharedContext.accountManager)
+                        |> deliverOnMainQueue).start(next: { count in
+                            guard let strongSelf = self, let _ = strongSelf.validLayout, let parentController = strongSelf.parent as? TabBarController, let sourceFrame = parentController.frameForControllerTab(controller: strongSelf) else {
+                                return
+                            }
+                            if count >= 2 {
+                                return
+                            }
+                            
+                            let absoluteFrame = sourceFrame
+                            let text: String
+                            if hasFilters {
+                                text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
+                                let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
+                            } else {
+                                text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
+                            }
+                            
+                            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
+                            
+                            parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: .point(location), shouldDismissOnTouch: { point in
+                                guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
+                                    return .dismiss(consume: false)
+                                }
+                                if parentController.isPointInsideContentArea(point: point) {
+                                    return .ignore
+                                }
                                 return .dismiss(consume: false)
-                            }
-                            if parentController.isPointInsideContentArea(point: point) {
-                                return .ignore
-                            }
-                            return .dismiss(consume: false)
-                        }), in: .current)
+                            }), in: .current)
+                        })
                     }
                 }
             }))

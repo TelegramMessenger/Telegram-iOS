@@ -3692,8 +3692,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             if let strongSelf = self {
                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                                 
-                                let ready = ValuePromise<Bool>()
-                                strongSelf.activeActionDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                let ready = Promise<Bool>()
+                                strongSelf.activeActionDisposable.set((ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { _ in
                                     if let peerSelectionController = peerSelectionController {
                                         peerSelectionController.dismiss()
                                     }

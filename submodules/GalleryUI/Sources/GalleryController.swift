@@ -370,7 +370,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
     
-    private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
     private var hiddenMediaManagerIndex: Int?
@@ -381,7 +381,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     
     private let updateVisibleDisposable = MetaDisposable()
     
-    public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
+    public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
         self.invertItemOrder = invertItemOrder

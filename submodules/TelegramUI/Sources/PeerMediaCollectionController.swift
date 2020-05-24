@@ -857,8 +857,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
                                 
-                                let ready = ValuePromise<Bool>()
-                                strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                let ready = Promise<Bool>()
+                                strongSelf.messageContextDisposable.set((ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { _ in
                                     if let strongController = controller {
                                         strongController.dismiss()
                                     }

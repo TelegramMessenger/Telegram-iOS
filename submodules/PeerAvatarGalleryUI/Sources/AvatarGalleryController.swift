@@ -172,9 +172,9 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         return self._hiddenMedia.get()
     }
     
-    private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     
-    public init(context: AccountContext, peer: Peer, sourceHasRoundCorners: Bool = true, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    public init(context: AccountContext, peer: Peer, sourceHasRoundCorners: Bool = true, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
         self.sourceHasRoundCorners = sourceHasRoundCorners

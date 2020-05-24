@@ -123,6 +123,10 @@ public final class SoftwareVideoSource {
         }
         
         self.videoStream = videoStream
+        
+        if let videoStream = self.videoStream {
+            avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
+        }
     }
     
     deinit {
