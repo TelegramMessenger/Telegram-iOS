@@ -215,12 +215,11 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 {
     [playerItemOutput setDelegate:nil queue:nil];
     
-    // Moved into endProcessing
-    //if (self.playerItem && (displayLink != nil))
-    //{
-    //    [displayLink invalidate]; // remove from all run loops
-    //    displayLink = nil;
-    //}
+    if (self.playerItem && (displayLink != nil))
+    {
+        [displayLink invalidate];
+        displayLink = nil;
+    }
 }
 
 #pragma mark -
@@ -304,11 +303,14 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (void)processPlayerItem
 {
-    runSynchronouslyOnVideoProcessingQueue(^{
+    dispatch_sync(dispatch_get_main_queue(), ^{
         displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
         [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
-        [displayLink setPaused:YES];
+        [displayLink setPaused:true];
+    });
 
+    
+    runSynchronouslyOnVideoProcessingQueue(^{
         dispatch_queue_t videoProcessingQueue = [GPUImageContext sharedContextQueue];
         NSMutableDictionary *pixBuffAttributes = [NSMutableDictionary dictionary];
         if ([GPUImageContext supportsFastTextureUpload]) {
@@ -335,7 +337,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 	CFTimeInterval nextVSync = ([sender timestamp] + [sender duration]);
 	CMTime outputItemTime = [playerItemOutput itemTimeForHostTime:nextVSync];
     [self processPixelBufferAtTime:outputItemTime];
-
 }
 
 - (void)processPixelBufferAtTime:(CMTime)outputItemTime
@@ -531,13 +532,19 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                 [currentTarget setInputSize:CGSizeMake(bufferWidth, bufferHeight) atIndex:targetTextureIndex];
                 [currentTarget setInputFramebuffer:outputFramebuffer atIndex:targetTextureIndex];
                 
-                UIInterfaceOrientation orientation = [self orientationForTrack:self.asset];
-                if (orientation == UIInterfaceOrientationPortrait) {
-                    [currentTarget setInputRotation:kGPUImageRotateRight atIndex:targetTextureIndex];
-                } else if (orientation == UIInterfaceOrientationLandscapeRight) {
-                    [currentTarget setInputRotation:kGPUImageRotate180 atIndex:targetTextureIndex];
-                } else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
-                    [currentTarget setInputRotation:kGPUImageRotateLeft atIndex:targetTextureIndex];
+                AVAsset *asset = self.asset;
+                if (asset == nil) {
+                    asset = self.playerItem.asset;
+                }
+                if (asset != nil) {
+                    UIInterfaceOrientation orientation = [self orientationForTrack:asset];
+                    if (orientation == UIInterfaceOrientationPortrait) {
+                        [currentTarget setInputRotation:kGPUImageRotateRight atIndex:targetTextureIndex];
+                    } else if (orientation == UIInterfaceOrientationLandscapeRight) {
+                        [currentTarget setInputRotation:kGPUImageRotate180 atIndex:targetTextureIndex];
+                    } else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
+                        [currentTarget setInputRotation:kGPUImageRotateLeft atIndex:targetTextureIndex];
+                    }
                 }
             }
             

@@ -29,6 +29,8 @@
 #import "TGMediaPickerGalleryVideoScrubber.h"
 #import "TGMediaPickerScrubberHeaderView.h"
 
+#import "TGPhotoEditorPreviewView.h"
+
 #import <LegacyComponents/TGModernGalleryVideoView.h>
 #import "TGModernGalleryVideoContentView.h"
 
@@ -67,7 +69,10 @@
     
     UILabel *_fileInfoLabel;
     
-    TGModernGalleryVideoView *_videoView;
+//    TGModernGalleryVideoView *_videoView;
+    TGPhotoEditorPreviewView *_videoView;
+    PGPhotoEditor *_photoEditor;
+    
     UIImageView *_paintingImageView;
     
     NSTimer *_positionTimer;
@@ -150,10 +155,10 @@
         _curtainView.hidden = true;
         [_contentView addSubview:_curtainView];
         
-        _actionButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 50, 50)];
+        _actionButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
         _actionButton.modernHighlight = true;
         
-        CGFloat circleDiameter = 50.0f;
+        CGFloat circleDiameter = 60.0f;
         static UIImage *highlightImage = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^
@@ -433,6 +438,8 @@
                 
                 if (adjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
                     [strongSelf setPlayButtonHidden:true animated:false];
+                
+                [_photoEditor importAdjustments:adjustments];
             }
             else
             {
@@ -976,19 +983,22 @@
     if (_videoView != nil)
     {
         SMetaDisposable *currentAudioSession = _currentAudioSession;
-        if (currentAudioSession)
-        {
-            _videoView.deallocBlock = ^
-            {
-                [[SQueue concurrentDefaultQueue] dispatch:^
-                {
-                    [currentAudioSession setDisposable:nil];
-                }];
-            };
-        }
-        [_videoView cleanupPlayer];
+//        if (currentAudioSession)
+//        {
+//            _videoView.deallocBlock = ^
+//            {
+//                [[SQueue concurrentDefaultQueue] dispatch:^
+//                {
+//                    [currentAudioSession setDisposable:nil];
+//                }];
+//            };
+//        }
+//        [_videoView cleanupPlayer];
         [_videoView removeFromSuperview];
         _videoView = nil;
+        
+        [_photoEditor cleanup];
+        _photoEditor = nil;
     }
 
     self.isPlaying = false;
@@ -1045,14 +1055,25 @@
         
         strongSelf->_didPlayToEndObserver = [[TGObserverProxy alloc] initWithTarget:strongSelf targetSelector:@selector(playerItemDidPlayToEndTime:) name:AVPlayerItemDidPlayToEndTimeNotification object:playerItem];
         
-        strongSelf->_videoView = [[TGModernGalleryVideoView alloc] initWithFrame:strongSelf->_playerView.bounds player:strongSelf->_player];
-        strongSelf->_videoView.frame = strongSelf->_imageView.frame;
-        strongSelf->_videoView.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-        strongSelf->_videoView.playerLayer.opaque = false;
-        strongSelf->_videoView.playerLayer.backgroundColor = nil;
-        [strongSelf->_playerContainerView insertSubview:strongSelf->_videoView belowSubview:strongSelf->_paintingImageView];
+//        strongSelf->_videoView = [[TGModernGalleryVideoView alloc] initWithFrame:strongSelf->_playerView.bounds player:strongSelf->_player];
+//        strongSelf->_videoView.frame = strongSelf->_imageView.frame;
+//        strongSelf->_videoView.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+//        strongSelf->_videoView.playerLayer.opaque = false;
+//        strongSelf->_videoView.playerLayer.backgroundColor = nil;
+//        [strongSelf->_playerContainerView insertSubview:strongSelf->_videoView belowSubview:strongSelf->_paintingImageView];
         
         TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
+        
+        strongSelf->_videoView = [[TGPhotoEditorPreviewView alloc] initWithFrame:strongSelf->_imageView.frame];
+        [strongSelf->_playerContainerView insertSubview:strongSelf->_videoView belowSubview:strongSelf->_paintingImageView];
+        
+        [strongSelf->_videoView setNeedsTransitionIn];
+        [strongSelf->_videoView performTransitionInIfNeeded];
+        
+        strongSelf->_photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_videoDimensions adjustments:adjustments forVideo:true enableStickers:true];
+        strongSelf->_photoEditor.previewOutput = strongSelf->_videoView;
+        [strongSelf->_photoEditor setPlayerItem:playerItem];
+        [strongSelf->_photoEditor processAnimated:false completion:nil];
         
         [strongSelf _seekToPosition:adjustments.trimStartValue manual:false];
         if (adjustments.trimEndValue > DBL_EPSILON)

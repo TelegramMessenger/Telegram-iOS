@@ -106,7 +106,7 @@
             strongSelf->_histogramPipe.sink(histogram);
         };
         
-        [self _importAdjustments:adjustments];
+        [self importAdjustments:adjustments];
     }
     return self;
 }
@@ -167,6 +167,17 @@
     [_currentInput removeAllTargets];
     PGVideoMovie *movie = [[PGVideoMovie alloc] initWithAsset:asset];
     movie.shouldRepeat = true;
+    _currentInput = movie;
+    
+    _fullSize = true;
+}
+
+- (void)setPlayerItem:(AVPlayerItem *)playerItem {
+    [_toolComposer invalidate];
+    _currentProcessChain = nil;
+    
+    [_currentInput removeAllTargets];
+    PGVideoMovie *movie = [[PGVideoMovie alloc] initWithPlayerItem:playerItem];
     _currentInput = movie;
     
     _fullSize = true;
@@ -402,7 +413,7 @@
 
 #pragma mark - Editor Values
 
-- (void)_importAdjustments:(id<TGMediaEditAdjustments>)adjustments
+- (void)importAdjustments:(id<TGMediaEditAdjustments>)adjustments
 {
     _initialAdjustments = adjustments;
     
