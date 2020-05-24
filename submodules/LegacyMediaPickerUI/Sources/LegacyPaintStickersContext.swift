@@ -262,8 +262,9 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                     }
                     entity.image(for: time, completion: { image in
                         if var image = image {
-                            let paintingScale = max(size.width, size.height) / 1920.0
-
+                            let maxSide = max(size.width, size.height)
+                            let paintingScale = maxSide / 1920.0
+                            
                             var transform = CGAffineTransform(translationX: -image.extent.midX, y: -image.extent.midY)
                             image = image.transformed(by: transform)
                             

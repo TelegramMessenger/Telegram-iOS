@@ -1,6 +1,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import <LegacyComponents/TGMediaEditingContext.h>
 
+@class PGPhotoEditorValues;
+
 typedef enum
 {
     TGMediaVideoConversionPresetCompressedDefault,
@@ -29,7 +31,7 @@ typedef enum
 
 - (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration;
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize preset:(TGMediaVideoConversionPreset)preset;
-
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values;
 + (instancetype)editAdjustmentsWithDictionary:(NSDictionary *)dictionary;
 
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize

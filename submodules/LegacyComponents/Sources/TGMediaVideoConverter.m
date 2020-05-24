@@ -42,6 +42,7 @@
 @property (nonatomic, readonly) bool succeed;
 
 - (instancetype)initWithAssetReaderOutput:(AVAssetReaderOutput *)assetReaderOutput assetWriterInput:(AVAssetWriterInput *)assetWriterInput;
+- (instancetype)initWithUIImage:(UIImage *)image duration:(NSTimeInterval)duration assetWriterInput:(AVAssetWriterInput *)assetWriterInput;
 
 - (void)startWithTimeRange:(CMTimeRange)timeRange progressBlock:(void (^)(CGFloat progress))progressBlock completionBlock:(void (^)(void))completionBlock;
 - (void)cancel;
@@ -153,7 +154,7 @@
                     }
                 }
                 
-                if (![self setupAssetReaderWriterForItem:avAsset outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:inhibitAudio conversionContext:context error:&error])
+                if (![self setupAssetReaderWriterForAVAsset:avAsset image:nil outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:inhibitAudio conversionContext:context error:&error])
                 {
                     [subscriber putError:error];
                     return;
@@ -220,65 +221,72 @@
         SAtomic *context = [[SAtomic alloc] initWithValue:[TGMediaVideoConversionContext contextWithQueue:queue subscriber:subscriber]];
         NSURL *outputUrl = [self _randomTemporaryURL];
         
-        [queue dispatch:^
+        NSString *path = TGComponentsPathForResource(@"blank_1080p", @"mp4");
+        AVAsset *avAsset = [[AVURLAsset alloc] initWithURL:[NSURL fileURLWithPath:path] options:nil];
+        
+        NSArray *requiredKeys = @[ @"tracks", @"duration", @"playable" ];
+        [avAsset loadValuesAsynchronouslyForKeys:requiredKeys completionHandler:^
         {
-            if (((TGMediaVideoConversionContext *)context.value).cancelled)
-                return;
-            
-            TGMediaVideoConversionPreset preset = TGMediaVideoConversionPresetAnimation;
-            
-            NSError *error = nil;
-            
-            NSString *outputPath = outputUrl.path;
-            NSFileManager *fileManager = [NSFileManager defaultManager];
-            if ([fileManager fileExistsAtPath:outputPath])
+            [queue dispatch:^
             {
-                [fileManager removeItemAtPath:outputPath error:&error];
-                if (error != nil)
+                if (((TGMediaVideoConversionContext *)context.value).cancelled)
+                    return;
+                
+                TGMediaVideoConversionPreset preset = TGMediaVideoConversionPresetAnimation;
+                
+                NSError *error = nil;
+                
+                NSString *outputPath = outputUrl.path;
+                NSFileManager *fileManager = [NSFileManager defaultManager];
+                if ([fileManager fileExistsAtPath:outputPath])
+                {
+                    [fileManager removeItemAtPath:outputPath error:&error];
+                    if (error != nil)
+                    {
+                        [subscriber putError:error];
+                        return;
+                    }
+                }
+                
+                if (![self setupAssetReaderWriterForAVAsset:avAsset image:image outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:true conversionContext:context error:&error])
                 {
                     [subscriber putError:error];
                     return;
                 }
-            }
-            
-            if (![self setupAssetReaderWriterForItem:image outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:true conversionContext:context error:&error])
-            {
-                [subscriber putError:error];
-                return;
-            }
-            
-            TGDispatchAfter(1.0, queue._dispatch_queue, ^
-            {
-                if (watcher != nil)
-                    [watcher setupWithFileURL:outputUrl];
-            });
-            
-            [self processWithConversionContext:context completionBlock:^
-            {
-                TGMediaVideoConversionContext *resultContext = context.value;
-                [resultContext.imageGenerator generateCGImagesAsynchronouslyForTimes:@[ [NSValue valueWithCMTime:kCMTimeZero] ] completionHandler:^(__unused CMTime requestedTime, CGImageRef  _Nullable image, __unused CMTime actualTime, AVAssetImageGeneratorResult result, __unused NSError * _Nullable error)
+                
+                TGDispatchAfter(1.0, queue._dispatch_queue, ^
                 {
-                    UIImage *coverImage = nil;
-                    if (result == AVAssetImageGeneratorSucceeded)
-                        coverImage = [UIImage imageWithCGImage:image];
-                    
-                    __block TGMediaVideoConversionResult *contextResult = nil;
-                    [context modify:^id(TGMediaVideoConversionContext *resultContext)
+                    if (watcher != nil)
+                        [watcher setupWithFileURL:outputUrl];
+                });
+                
+                [self processWithConversionContext:context completionBlock:^
+                {
+                    TGMediaVideoConversionContext *resultContext = context.value;
+                    [resultContext.imageGenerator generateCGImagesAsynchronouslyForTimes:@[ [NSValue valueWithCMTime:kCMTimeZero] ] completionHandler:^(__unused CMTime requestedTime, CGImageRef  _Nullable image, __unused CMTime actualTime, AVAssetImageGeneratorResult result, __unused NSError * _Nullable error)
                     {
-                        id liveUploadData = nil;
-                        if (watcher != nil)
-                            liveUploadData = [watcher fileUpdated:true];
+                        UIImage *coverImage = nil;
+                        if (result == AVAssetImageGeneratorSucceeded)
+                            coverImage = [UIImage imageWithCGImage:image];
                         
-                        contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:0 duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
-                        return [resultContext finishedContext];
+                        __block TGMediaVideoConversionResult *contextResult = nil;
+                        [context modify:^id(TGMediaVideoConversionContext *resultContext)
+                        {
+                            id liveUploadData = nil;
+                            if (watcher != nil)
+                                liveUploadData = [watcher fileUpdated:true];
+                            
+                            contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:0 duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
+                            return [resultContext finishedContext];
+                        }];
+                        
+                        [subscriber putNext:contextResult];
+                        [subscriber putCompletion];
                     }];
-                    
-                    [subscriber putNext:contextResult];
-                    [subscriber putCompletion];
                 }];
             }];
         }];
-        
+                
         return [[SBlockDisposable alloc] initWithBlock:^
         {
             [queue dispatch:^
@@ -314,7 +322,7 @@
     return outputDimensions;
 }
 
-+ (AVAssetReaderVideoCompositionOutput *)setupVideoCompositionOutputWithAVAsset:(AVAsset *)avAsset composition:(AVMutableComposition *)composition videoTrack:(AVAssetTrack *)videoTrack preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments timeRange:(CMTimeRange)timeRange outputSettings:(NSDictionary **)outputSettings dimensions:(CGSize *)dimensions conversionContext:(SAtomic *)conversionContext
++ (AVAssetReaderVideoCompositionOutput *)setupVideoCompositionOutputWithAVAsset:(AVAsset *)avAsset image:(UIImage *)image composition:(AVMutableComposition *)composition videoTrack:(AVAssetTrack *)videoTrack preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments timeRange:(CMTimeRange)timeRange outputSettings:(NSDictionary **)outputSettings dimensions:(CGSize *)dimensions conversionContext:(SAtomic *)conversionContext
 {
     CGSize transformedSize = CGRectApplyAffineTransform((CGRect){CGPointZero, videoTrack.naturalSize}, videoTrack.preferredTransform).size;;
     CGRect transformedRect = CGRectMake(0, 0, transformedSize.width, transformedSize.height);
@@ -325,6 +333,8 @@
     CGRect cropRect = hasCropping ? CGRectIntegral(adjustments.cropRect) : transformedRect;
     if (cropRect.size.width < FLT_EPSILON || cropRect.size.height < FLT_EPSILON)
         cropRect = transformedRect;
+    if (image != nil)
+        cropRect = CGRectMake(0.0f, 0.0f, image.size.width, image.size.height);
 
     CGSize maxDimensions = [TGMediaVideoConversionPresetSettings maximumSizeForPreset:preset];
     CGSize outputDimensions = TGFitSizeF(cropRect.size, maxDimensions);
@@ -361,10 +371,21 @@
             editor.standalone = true;
             ciContext = [CIContext contextWithEAGLContext:[[GPUImageContext sharedImageProcessingContext] context]];
         }
-            
+        
+        CIImage *backgroundCIImage = nil;
+        if (image != nil) {
+            backgroundCIImage = [[CIImage alloc] initWithImage:image];
+        }
+        
         __block CIImage *overlayCIImage = nil;
         videoComposition = [AVMutableVideoComposition videoCompositionWithAsset:avAsset applyingCIFiltersWithHandler:^(AVAsynchronousCIImageFilteringRequest * _Nonnull request) {
             __block CIImage *resultImage = request.sourceImage;
+            
+            if (backgroundCIImage != nil) {
+                resultImage = backgroundCIImage;
+            }
+            
+            CGSize size = resultImage.extent.size;
             
             if (editor != nil) {
                 [editor setCIImage:resultImage];
@@ -374,14 +395,14 @@
             if (overlayImage != nil && overlayImage.size.width > 0.0) {
                 if (overlayCIImage == nil) {
                     overlayCIImage = [[CIImage alloc] initWithImage:overlayImage];
-                    CGFloat scale = request.sourceImage.extent.size.width / overlayCIImage.extent.size.width;
+                    CGFloat scale = size.width / overlayCIImage.extent.size.width;
                     overlayCIImage = [overlayCIImage imageByApplyingTransform:CGAffineTransformMakeScale(scale, scale)];
                 }
                 resultImage = [overlayCIImage imageByCompositingOverImage:resultImage];
             }
             
             if (entityRenderer != nil) {
-                [entityRenderer entitiesForTime:request.compositionTime size:request.sourceImage.extent.size completion:^(NSArray<CIImage *> *images) {
+                [entityRenderer entitiesForTime:request.compositionTime size:size completion:^(NSArray<CIImage *> *images) {
                     for (CIImage *image in images) {
                         resultImage = [image imageByCompositingOverImage:resultImage];
                     }
@@ -422,10 +443,13 @@
     if (!CMTIME_IS_VALID(videoComposition.frameDuration))
         videoComposition.frameDuration = CMTimeMake(1, 30);
     
+    if (image != nil)
+        videoComposition.frameDuration = CMTimeMake(1, 30);
+    
     videoComposition.renderSize = [self _renderSizeWithCropSize:cropRect.size rotateSideward:TGOrientationIsSideward(adjustments.cropOrientation, NULL)];
     if (videoComposition.renderSize.width < FLT_EPSILON || videoComposition.renderSize.height < FLT_EPSILON)
         return nil;
-        
+
     if (overlayImage != nil && entityRenderer == nil)
     {
         CALayer *parentLayer = [CALayer layer];
@@ -481,13 +505,11 @@
     return output;
 }
 
-+ (bool)setupAssetReaderWriterForItem:(id)item outputURL:(NSURL *)outputURL preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments inhibitAudio:(bool)inhibitAudio conversionContext:(SAtomic *)outConversionContext error:(NSError **)error
++ (bool)setupAssetReaderWriterForAVAsset:(AVAsset *)avAsset image:(UIImage *)image outputURL:(NSURL *)outputURL preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments inhibitAudio:(bool)inhibitAudio conversionContext:(SAtomic *)outConversionContext error:(NSError **)error
 {
-    if ([item isKindOfClass:[AVAsset class]]) {
+    if (image == nil) {
         TGMediaSampleBufferProcessor *videoProcessor = nil;
         TGMediaSampleBufferProcessor *audioProcessor = nil;
-        
-        AVAsset *avAsset = (AVAsset *)item;
         
         AVAssetTrack *audioTrack = [[avAsset tracksWithMediaType:AVMediaTypeAudio] firstObject];
         AVAssetTrack *videoTrack = [[avAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];
@@ -512,7 +534,7 @@
         
         NSDictionary *outputSettings = nil;
         AVMutableComposition *composition = [AVMutableComposition composition];
-        AVAssetReaderVideoCompositionOutput *output = [self setupVideoCompositionOutputWithAVAsset:avAsset composition:composition videoTrack:videoTrack preset:preset entityRenderer:entityRenderer adjustments:adjustments timeRange:timeRange outputSettings:&outputSettings dimensions:&dimensions conversionContext:outConversionContext];
+        AVAssetReaderVideoCompositionOutput *output = [self setupVideoCompositionOutputWithAVAsset:avAsset image:nil composition:composition videoTrack:videoTrack preset:preset entityRenderer:entityRenderer adjustments:adjustments timeRange:timeRange outputSettings:&outputSettings dimensions:&dimensions conversionContext:outConversionContext];
         if (output == nil)
             return false;
         
@@ -553,15 +575,26 @@
         }];
         
         return true;
-    } else if ([item isKindOfClass:[UIImage class]]) {
+    } else {
         TGMediaSampleBufferProcessor *videoProcessor = nil;
         
         CGSize dimensions = CGSizeZero;
         NSDictionary *outputSettings = nil;
         CMTimeRange timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(0.0, NSEC_PER_SEC), CMTimeMakeWithSeconds(4.0, NSEC_PER_SEC));
         AVMutableComposition *composition = [AVMutableComposition composition];
-        AVAssetTrack *videoTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
-        AVAssetReaderVideoCompositionOutput *output = [self setupVideoCompositionOutputWithAVAsset:composition composition:composition videoTrack:videoTrack preset:preset entityRenderer:entityRenderer adjustments:adjustments timeRange:timeRange outputSettings:&outputSettings dimensions:&dimensions conversionContext:outConversionContext];
+        
+        AVAssetTrack *videoTrack = [[avAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];
+        if (videoTrack == nil)
+            return false;
+       
+        AVMutableCompositionTrack *mutableCompositionVideoTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+        [mutableCompositionVideoTrack insertTimeRange:timeRange ofTrack:videoTrack atTime:kCMTimeZero error:nil];
+        
+        AVMutableComposition *mock = [AVMutableComposition composition];
+        AVMutableCompositionTrack *mockTrack = [mock addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+        [mockTrack insertTimeRange:timeRange ofTrack:videoTrack atTime:kCMTimeZero error:nil];
+           
+        AVAssetReaderVideoCompositionOutput *output = [self setupVideoCompositionOutputWithAVAsset:mock image:image composition:composition videoTrack:videoTrack preset:preset entityRenderer:entityRenderer adjustments:adjustments timeRange:timeRange outputSettings:&outputSettings dimensions:&dimensions conversionContext:outConversionContext];
         if (output == nil)
             return false;
         
@@ -1176,9 +1209,8 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         {
             return (CGSize){ 240.0f, 240.0f };
         }
-            
         default:
-            return (CGSize){ 640.0f, 640.0f };
+            return (CGSize){ 848.0f, 848.0f };
     }
 }
 
@@ -1224,11 +1256,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     
     NSDictionary *codecSettings = @
     {
-#if DEBUG
-    AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 500),
-#else
     AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 1000),
-#endif
     AVVideoCleanApertureKey: videoCleanApertureSettings,
     AVVideoPixelAspectRatioKey: videoAspectRatioSettings
     };
@@ -1265,7 +1293,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 300;
             
         default:
-            return 700;
+            return 500;
     }
 }
 

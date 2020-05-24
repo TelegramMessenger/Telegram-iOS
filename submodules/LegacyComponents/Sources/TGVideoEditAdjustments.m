@@ -4,6 +4,8 @@
 
 #import "TGPaintingData.h"
 
+#import "PGPhotoEditorValues.h"
+
 #import "TGPhotoPaintStickerEntity.h"
 #import "TGPhotoPaintTextEntity.h"
 
@@ -125,6 +127,26 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
     adjustments->_originalSize = originalSize;
     adjustments->_preset = preset;
+    
+    return adjustments;
+}
+
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values {
+    TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
+    adjustments->_originalSize = values.originalSize;
+    CGRect cropRect = values.cropRect;
+    if (CGRectIsEmpty(cropRect)) {
+        cropRect = CGRectMake(0.0f, 0.0f, values.originalSize.width, values.originalSize.height);
+    }
+    adjustments->_cropRect = cropRect;
+    adjustments->_cropOrientation = values.cropOrientation;
+    adjustments->_cropLockedAspectRatio = values.cropLockedAspectRatio;
+    adjustments->_cropMirrored = values.cropMirrored;
+    adjustments->_toolValues = values.toolValues;
+    adjustments->_paintingData = values.paintingData;
+    adjustments->_sendAsGif = true;
+    adjustments->_preset = TGMediaVideoConversionPresetAnimation;
+    adjustments->_toolValues = values.toolValues;
     
     return adjustments;
 }

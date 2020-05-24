@@ -380,20 +380,43 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
             }
             let updatedSize = Atomic<Int>(value: 0)
             let entityRenderer = adjustments.flatMap { LegacyPaintEntityRenderer(account: account, adjustments: $0) }
-            let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
-                var value = stat()
-                if stat(path, &value) == 0 {
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                        var range: Range<Int>?
-                        let _ = updatedSize.modify { updatedSize in
-                            range = updatedSize ..< Int(value.st_size)
-                            return Int(value.st_size)
+            let signal: SSignal
+            if filteredPath.contains(".jpg") {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
+                    signal = TGMediaVideoConverter.renderUIImage(image, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                        var value = stat()
+                        if stat(path, &value) == 0 {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                                var range: Range<Int>?
+                                let _ = updatedSize.modify { updatedSize in
+                                    range = updatedSize ..< Int(value.st_size)
+                                    return Int(value.st_size)
+                                }
+                                //print("size = \(Int(value.st_size)), range: \(range!)")
+                                subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                            }
                         }
-                        //print("size = \(Int(value.st_size)), range: \(range!)")
-                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                    }
+                    }), entityRenderer: entityRenderer)!
+                } else {
+                    signal = SSignal.single(nil)
                 }
-            }), entityRenderer: entityRenderer)!
+            } else {
+                signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                    var value = stat()
+                    if stat(path, &value) == 0 {
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                            var range: Range<Int>?
+                            let _ = updatedSize.modify { updatedSize in
+                                range = updatedSize ..< Int(value.st_size)
+                                return Int(value.st_size)
+                            }
+                            //print("size = \(Int(value.st_size)), range: \(range!)")
+                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                        }
+                    }
+                }), entityRenderer: entityRenderer)!
+            }
+                
             let signalDisposable = signal.start(next: { next in
                 if let result = next as? TGMediaVideoConversionResult {
                     var value = stat()
