@@ -8238,7 +8238,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else if let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsed = URL(string: encoded) {
             parsedUrlValue = parsed
         }
-        print("parsedUrlValue = \(parsedUrlValue)")
         let host = parsedUrlValue?.host ?? url
         
         let rawHost = (host as NSString).removingPercentEncoding ?? host
@@ -8247,7 +8246,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         latin.insert(charactersIn: "a"..."z")
         latin.insert(charactersIn: "0"..."9")
         var punctuation = CharacterSet()
-        punctuation.insert(charactersIn: ".-/+")
+        punctuation.insert(charactersIn: ".-/+_")
         var hasLatin = false
         var hasNonLatin = false
         for c in rawHost {

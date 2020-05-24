@@ -91,7 +91,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
-            if true {
+            if false {
                 var mainStickerPack: StickerPackReference?
                 var stickerPacks: [StickerPackReference] = []
                 if let message = contentContext as? Message {
@@ -122,7 +122,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     stickerPacks = [.name(name)]
                 }
                 if let mainStickerPack = mainStickerPack, !stickerPacks.isEmpty {
-                    let controller = StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, sendSticker: sendSticker)
+                    let controller = StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, parentNavigationController: navigationController, sendSticker: sendSticker)
                     present(controller, nil)
                 }
             } else {

@@ -235,7 +235,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                         let isStreamable = isMediaStreamable(message: item.message, media: file)
                         
                         var statusState: RadialStatusNodeState = .none
-                        if isStreamable {
+                        if isStreamable || file.isAnimated {
                             statusState = .none
                         } else {
                             switch status {
