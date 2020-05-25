@@ -8,7 +8,7 @@ import CoreMedia
 import UniversalMediaPlayer
 
 private let applyQueue = Queue()
-private let workers = ThreadPool(threadCount: 2, threadPriority: 0.09)
+private let workers = ThreadPool(threadCount: 3, threadPriority: 0.2)
 private var nextWorker = 0
 
 final class SoftwareVideoLayerFrameManager {
@@ -141,13 +141,34 @@ final class SoftwareVideoLayerFrameManager {
     private func poll() {
         if self.frames.count < 3 && !self.polling {
             self.polling = true
+            let minPts = self.minPts
             let maxPts = self.maxPts
             self.queue.addTask(ThreadPoolTask { [weak self] state in
                 if state.cancelled.with({ $0 }) {
                     return
                 }
                 if let strongSelf = self {
-                    let frameAndLoop = (strongSelf.source.with { $0 })?.readFrame(maxPts: maxPts)
+                    var frameAndLoop: (MediaTrackFrame?, CGFloat, CGFloat, Bool)?
+                        
+                    var hadLoop = false
+                    for _ in 0 ..< 1 {
+                        frameAndLoop = (strongSelf.source.with { $0 })?.readFrame(maxPts: maxPts)
+                        if let frameAndLoop = frameAndLoop {
+                            if frameAndLoop.0 != nil || minPts != nil {
+                                break
+                            } else {
+                                if frameAndLoop.3 {
+                                    hadLoop = true
+                                }
+                                //print("skip nil frame loop: \(frameAndLoop.3)")
+                            }
+                        } else {
+                            break
+                        }
+                    }
+                    if let loop = frameAndLoop?.3, loop {
+                        hadLoop = true
+                    }
                     
                     applyQueue.async {
                         if let strongSelf = self {
@@ -161,10 +182,23 @@ final class SoftwareVideoLayerFrameManager {
                                     strongSelf.minPts = frame.position
                                 }
                                 strongSelf.frames.append(frame)
+                                strongSelf.frames.sort(by: { lhs, rhs in
+                                    if CMTimeCompare(lhs.position, rhs.position) < 0 {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                })
+                                //print("add frame at \(CMTimeGetSeconds(frame.position))")
+                                let positions = strongSelf.frames.map { CMTimeGetSeconds($0.position) }
+                                //print("frames: \(positions)")
+                            } else {
+                                //print("not adding frames")
                             }
-                            if let loop = frameAndLoop?.3, loop {
+                            if hadLoop {
                                 strongSelf.maxPts = strongSelf.minPts
                                 strongSelf.minPts = nil
+                                //print("loop at \(strongSelf.minPts)")
                             }
                             strongSelf.poll()
                         }

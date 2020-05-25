@@ -477,7 +477,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         var paneDidScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void)?
         var fixPaneScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void)?
-        var openGifContextMenuImpl: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture) -> Void)?
+        var openGifContextMenuImpl: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
         
         self.stickerPane = ChatMediaInputStickerPane(theme: theme, strings: strings, paneDidScroll: { pane, state, transition in
             paneDidScrollImpl?(pane, state, transition)
@@ -488,8 +488,8 @@ final class ChatMediaInputNode: ChatInputNode {
             paneDidScrollImpl?(pane, state, transition)
         }, fixPaneScroll: { pane, state in
             fixPaneScrollImpl?(pane, state)
-        }, openGifContextMenu: { fileReference, sourceNode, sourceRect, gesture in
-            openGifContextMenuImpl?(fileReference, sourceNode, sourceRect, gesture)
+        }, openGifContextMenu: { fileReference, sourceNode, sourceRect, gesture, isSaved in
+            openGifContextMenuImpl?(fileReference, sourceNode, sourceRect, gesture, isSaved)
         })
         
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
@@ -563,6 +563,9 @@ final class ChatMediaInputNode: ChatInputNode {
                             self?.searchContainerNode?.deactivate()
                             self?.inputNodeInteraction.toggleSearch(false, nil, "")
                         })
+                        searchContainerNode?.openGifContextMenu = { fileReference, sourceNode, sourceRect, gesture, isSaved in
+                            self?.openGifContextMenu(fileReference: fileReference, sourceNode: sourceNode, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                        }
                         strongSelf.searchContainerNode = searchContainerNode
                         if !query.isEmpty {
                             DispatchQueue.main.async {
@@ -908,7 +911,31 @@ final class ChatMediaInputNode: ChatInputNode {
             self?.fixPaneScroll(pane: pane, state: state)
         }
         
-        openGifContextMenuImpl = { [weak self] fileReference, sourceNode, sourceRect, gesture in
+        openGifContextMenuImpl = { [weak self] fileReference, sourceNode, sourceRect, gesture, isSaved in
+            self?.openGifContextMenu(fileReference: fileReference, sourceNode: sourceNode, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+        }
+    }
+    
+    deinit {
+        self.disposable.dispose()
+        self.searchContainerNodeLoadedDisposable.dispose()
+    }
+    
+    private func openGifContextMenu(fileReference: FileMediaReference, sourceNode: ASDisplayNode, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+        let canSaveGif: Bool
+        if fileReference.media.fileId.namespace == Namespaces.Media.CloudFile {
+            canSaveGif = true
+        } else {
+            canSaveGif = false
+        }
+        
+        let _ = (self.context.account.postbox.transaction { transaction -> Bool in
+            if !canSaveGif {
+                return false
+            }
+            return isGifSaved(transaction: transaction, mediaId: fileReference.media.fileId)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] isGifSaved in
             guard let strongSelf = self else {
                 return
             }
@@ -920,29 +947,35 @@ final class ChatMediaInputNode: ChatInputNode {
             gallery.setHintWillBePresentedInPreviewingContext(true)
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: strings.MediaPicker_Send, icon: { _ in nil }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: strongSelf.strings.MediaPicker_Send, icon: { _ in nil }, action: { _, f in
                 f(.default)
-                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
+                let _ = self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             })))
-            items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { _ in nil }, action: { _, f in
-                f(.dismissWithoutContent)
-                
-                guard let strongSelf = self else {
-                    return
-                }
-                let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: fileReference.media.fileId).start()
-            })))
+            if isSaved || isGifSaved {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { _ in nil }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: fileReference.media.fileId).start()
+                })))
+            } else if canSaveGif && !isGifSaved {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Preview_SaveGif, icon: { _ in nil }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: fileReference).start()
+                })))
+            }
             
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
             let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(items), reactionItems: [], gesture: gesture)
             strongSelf.controllerInteraction.presentGlobalOverlayController(contextController, nil)
-        }
-    }
-    
-    deinit {
-        self.disposable.dispose()
-        self.searchContainerNodeLoadedDisposable.dispose()
+        })
     }
     
     private func updateThemeAndStrings(chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings) {
@@ -1068,7 +1101,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
-                            if let (file, _) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
+                            if let (_, _, _) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
                                 return nil
                                 /*return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                     PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in

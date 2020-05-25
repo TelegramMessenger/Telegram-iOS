@@ -156,6 +156,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     var deactivateSearchBar: (() -> Void)?
     var updateActivity: ((Bool) -> Void)?
     var requestUpdateQuery: ((String) -> Void)?
+    var openGifContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     
     private var hasInitialText = false
     
@@ -327,6 +328,10 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             
             multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
                 let _ = self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
+            }
+            
+            multiplexedNode.fileContextMenu = { [weak self] fileReference, sourceNode, sourceRect, gesture, isSaved in
+                self?.openGifContextMenu?(fileReference, sourceNode, sourceRect, gesture, isSaved)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in

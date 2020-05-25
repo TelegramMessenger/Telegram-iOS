@@ -7,9 +7,9 @@ import SwiftSignalKit
 public final class GalleryControllerInteraction {
     public let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     public let dismissController: () -> Void
-    public let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    public let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     
-    public init(presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, dismissController: @escaping () -> Void, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
+    public init(presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, dismissController: @escaping () -> Void, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void) {
         self.presentController = presentController
         self.dismissController = dismissController
         self.replaceRootController = replaceRootController

@@ -121,7 +121,7 @@ final class AudioWaveformNode: ASDisplayNode {
                         let diff: CGFloat
                         let samplePosition = CGFloat(i) / CGFloat(numSamples)
                         if let position = parameters.progress, abs(position - samplePosition) < 0.01  {
-                            diff = sampleWidth * 0.5
+                            diff = sampleWidth * 1.5
                         } else {
                             diff = sampleWidth * 1.5
                         }

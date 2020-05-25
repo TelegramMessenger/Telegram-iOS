@@ -535,8 +535,10 @@ public class ContactsController: ViewController {
                             return
                         }
                         if let peer = peer {
-                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                            DispatchQueue.main.async {
+                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                }
                             }
                         } else {
                             (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))

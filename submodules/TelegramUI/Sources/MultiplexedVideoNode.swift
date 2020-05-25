@@ -114,8 +114,7 @@ private final class TrendingHeaderNode: ASDisplayNode {
         let height: CGFloat = 72.0
         let leftInset: CGFloat = 10.0
         
-        //TODO:localize
-        self.titleNode.attributedText = NSAttributedString(string: "TRENDING GIFS", font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_TrendingSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset * 2.0 - sideInset * 2.0, height: 100.0))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: titleSize)
         
@@ -123,7 +122,7 @@ private final class TrendingHeaderNode: ASDisplayNode {
             return reactionNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         }
         
-        let reactionSpacing: CGFloat = 4.0
+        let reactionSpacing: CGFloat = 8.0
         var reactionsOffset: CGFloat = leftInset - 2.0
         
         for i in 0 ..< self.reactionNodes.count {
@@ -195,7 +194,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     private let timebase: CMTimebase
     
     var fileSelected: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
-    var fileContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture) -> Void)?
+    var fileContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     var enableVideoNodes = false
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
@@ -213,9 +212,8 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.contextContainerNode = ContextControllerSourceNode()
         self.scrollNode = ASScrollNode()
         
-        //TODO:localization
         self.savedTitleNode = ImmediateTextNode()
-        self.savedTitleNode.attributedText = NSAttributedString(string: "MY GIFS", font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        self.savedTitleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_SavedSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         
         self.trendingHeaderNode = TrendingHeaderNode()
         
@@ -294,8 +292,8 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             guard let strongSelf = self, let gestureLocation = gestureLocation else {
                 return
             }
-            if let (file, rect) = strongSelf.fileAt(point: gestureLocation) {
-                strongSelf.fileContextMenu?(file, strongSelf, rect.offsetBy(dx: 0.0, dy: -strongSelf.scrollNode.bounds.minY), gesture)
+            if let (file, rect, isSaved) = strongSelf.fileAt(point: gestureLocation) {
+                strongSelf.fileContextMenu?(file, strongSelf, rect.offsetBy(dx: 0.0, dy: -strongSelf.scrollNode.bounds.minY), gesture, isSaved)
             } else {
                 gesture.cancel()
             }
@@ -587,7 +585,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                     let itemWidth = floor(width * drawableSize.width / 100.0) - 1
                     
                     var itemSize = CGSize(width: itemWidth, height: preferredRowSize)
-                    if itemsToRow[index] != nil {
+                    if itemsToRow[index] != nil && currentRowHorizontalOffset + itemSize.width >= drawableSize.width - 10.0 {
                         itemSize.width = max(itemSize.width, drawableSize.width - currentRowHorizontalOffset)
                     }
                     displayItems.append(VisibleVideoItem(fileReference: files[index], frame: CGRect(origin: CGPoint(x: currentRowHorizontalOffset, y: verticalOffset), size: itemSize), isTrending: isTrending))
@@ -742,7 +740,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.view)
-            if let (file, rect) = self.fileAt(point: point) {
+            if let (file, rect, _) = self.fileAt(point: point) {
                 self.fileSelected?(file, self, rect)
             }
         }
@@ -757,15 +755,22 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
+    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect, Bool)? {
         let offsetPoint = point.offsetBy(dx: 0.0, dy: self.scrollNode.bounds.minY)
         return self.offsetFileAt(point: offsetPoint)
     }
     
-    private func offsetFileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
+    private func offsetFileAt(point: CGPoint) -> (FileMediaReference, CGRect, Bool)? {
         for item in self.displayItems {
             if item.frame.contains(point) {
-                return (item.fileReference, item.frame)
+                let isSaved: Bool
+                switch item.id {
+                case .saved:
+                    isSaved = true
+                case .trending:
+                    isSaved = false
+                }
+                return (item.fileReference, item.frame, isSaved)
             }
         }
         return nil

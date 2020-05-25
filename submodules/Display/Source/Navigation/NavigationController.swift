@@ -1057,11 +1057,31 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.setViewControllers(controllers, animated: animated)
     }
     
-    public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
-        ready?.set(true)
+    public func replaceTopController(_ controller: ViewController, animated: Bool, ready: Promise<Bool>? = nil) {
         var controllers = self.viewControllers
-        controllers.removeLast()
-        controllers.append(controller)
+        
+        if let rootContainer = self.rootContainer {
+            var controllerToReplace: ViewController?
+            switch rootContainer {
+            case let .flat(container):
+                controllerToReplace = container.controllers.last
+            case let .split(container):
+                controllerToReplace = container.detailControllers.last
+            }
+            if let controllerToReplace = controllerToReplace, let index = controllers.firstIndex(where: { $0 === controllerToReplace }) {
+                controllers[index] = controller
+                ready?.set(controller.ready.get())
+            } else {
+                ready?.set(controller.ready.get())
+                controllers.removeLast()
+                controllers.append(controller)
+            }
+        } else {
+            ready?.set(controller.ready.get())
+            controllers.removeLast()
+            controllers.append(controller)
+        }
+        
         self.setViewControllers(controllers, animated: animated)
     }
     

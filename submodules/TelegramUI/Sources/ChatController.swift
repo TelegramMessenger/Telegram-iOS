@@ -4834,7 +4834,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
             self.raiseToListen?.enabled = self.canReadHistoryValue
             self.tempVoicePlaylistEnded = { [weak self] in
-                if let strongSelf = self, let raiseToListen = strongSelf.raiseToListen {
+                guard let strongSelf = self else {
+                    return
+                }
+                if !canSendMessagesToChat(strongSelf.presentationInterfaceState) {
+                    return
+                }
+                
+                if let raiseToListen = strongSelf.raiseToListen {
                     strongSelf.voicePlaylistDidEndTimestamp = CACurrentMediaTime()
                     raiseToListen.activateBasedOnProximity(delay: 0.0)
                 }
@@ -7675,9 +7682,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                         
-                        let ready = ValuePromise<Bool>()
+                        let ready = Promise<Bool>()
                         
-                        strongSelf.controllerNavigationDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                        strongSelf.controllerNavigationDisposable.set((ready.get()
+                        |> SwiftSignalKit.filter { $0 }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { _ in
                             if let strongController = controller {
                                 strongController.dismiss()
                             }
@@ -7806,9 +7816,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             if let strongSelf = self {
                                                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                                                 
-                                                let ready = ValuePromise<Bool>()
+                                                let ready = Promise<Bool>()
                                                 
-                                                strongSelf.controllerNavigationDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                                strongSelf.controllerNavigationDisposable.set((ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { _ in
                                                     if let strongController = controller {
                                                         strongController.dismiss()
                                                     }
@@ -8244,7 +8254,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else if let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsed = URL(string: encoded) {
             parsedUrlValue = parsed
         }
-        print("parsedUrlValue = \(parsedUrlValue)")
         let host = parsedUrlValue?.host ?? url
         
         let rawHost = (host as NSString).removingPercentEncoding ?? host
@@ -8253,7 +8262,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         latin.insert(charactersIn: "a"..."z")
         latin.insert(charactersIn: "0"..."9")
         var punctuation = CharacterSet()
-        punctuation.insert(charactersIn: ".-/+")
+        punctuation.insert(charactersIn: ".-/+_")
         var hasLatin = false
         var hasNonLatin = false
         for c in rawHost {

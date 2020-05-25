@@ -97,10 +97,10 @@ class WebSearchGalleryController: ViewController {
         return self._hiddenMedia.get()
     }
     
-    private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(context: AccountContext, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
+    init(context: AccountContext, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
         self.context = context
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController

@@ -39,6 +39,8 @@ final class PaneSearchContainerNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
+    var openGifContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
+    
     var ready: Signal<Void, NoError> {
         return self.contentNode.ready
     }
@@ -87,6 +89,9 @@ final class PaneSearchContainerNode: ASDisplayNode {
         if let contentNode = self.contentNode as? GifPaneSearchContentNode {
             contentNode.requestUpdateQuery = { [weak self] query in
                 self?.updateQuery(query)
+            }
+            contentNode.openGifContextMenu = { [weak self] file, node, rect, gesture, isSaved in
+                self?.openGifContextMenu?(file, node, rect, gesture, isSaved)
             }
         }
     }

@@ -272,7 +272,7 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, groupId: PeerGroupId, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
+private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, groupId: PeerGroupId, peer: Peer, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
     if case .group = groupId {
         return []
     }
@@ -286,7 +286,9 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
         if isPinned {
             options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
         } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            if filterData == nil || peer.id.namespace != Namespaces.Peer.SecretChat {
+                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            }
         }
     }
     return options
@@ -1222,7 +1224,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else if promoInfo == nil {
                             peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.context.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, filterData: item.filterData)
                             if case let .chat(itemPeer) = contentPeer {
-                                peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.context.account.peerId, groupId: item.peerGroupId, filterData: item.filterData)
+                                peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.context.account.peerId, groupId: item.peerGroupId, peer: itemPeer.peers[itemPeer.peerId]!, filterData: item.filterData)
                             } else {
                                 peerLeftRevealOptions = []
                             }

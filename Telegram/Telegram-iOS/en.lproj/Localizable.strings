@@ -5508,3 +5508,6 @@ Any member of this group will be able to see messages in the channel.";
 "OwnershipTransfer.Transfer" = "Transfer";
 
 "TwoStepAuth.Disable" = "Disable";
+
+"Chat.Gifs.TrendingSectionHeader" = "TRENDING GIFS";
+"Chat.Gifs.SavedSectionHeader" = "MY GIFS";

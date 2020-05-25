@@ -76,11 +76,11 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
         return self._hiddenMedia.get()
     }
     
-    private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
+    private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     
     var deleteResource: ((TelegramMediaResource) -> Void)?
     
-    init(context: AccountContext, secureIdContext: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
+    init(context: AccountContext, secureIdContext: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void) {
         self.context = context
         self.secureIdContext = secureIdContext
         self.replaceRootController = replaceRootController

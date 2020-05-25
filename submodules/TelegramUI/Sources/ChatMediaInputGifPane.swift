@@ -32,7 +32,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     private let paneDidScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void
     private let fixPaneScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void
-    private let openGifContextMenu: (FileMediaReference, ASDisplayNode, CGRect, ContextGesture) -> Void
+    private let openGifContextMenu: (FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void
     
     private let searchPlaceholderNode: PaneSearchBarPlaceholderNode
     var visibleSearchPlaceholderNode: PaneSearchBarPlaceholderNode? {
@@ -56,7 +56,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     private var didScrollPreviousState: ChatMediaInputPaneScrollState?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void, openGifContextMenu: @escaping (FileMediaReference, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void, openGifContextMenu: @escaping (FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -116,7 +116,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.updateMultiplexedNodeLayout(changedIsExpanded: changedIsExpanded, transition: transition)
     }
     
-    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
+    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect, Bool)? {
         if let multiplexedNode = self.multiplexedNode {
             return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
         } else {
@@ -240,8 +240,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 let _ = self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
-            multiplexedNode.fileContextMenu = { [weak self] fileReference, sourceNode, sourceRect, gesture in
-                self?.openGifContextMenu(fileReference, sourceNode, sourceRect, gesture)
+            multiplexedNode.fileContextMenu = { [weak self] fileReference, sourceNode, sourceRect, gesture, isSaved in
+                self?.openGifContextMenu(fileReference, sourceNode, sourceRect, gesture, isSaved)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in
@@ -268,7 +268,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 }
                 
                 if let multiplexedNode = strongSelf.multiplexedNode {
-                    fixListScrolling(multiplexedNode)
+                    //fixListScrolling(multiplexedNode)
                 }
             }
             
