@@ -33,6 +33,8 @@
 
 @property (nonatomic, assign) bool standalone;
 
+@property (nonatomic, assign) bool disableAll;
+
 - (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo enableStickers:(bool)enableStickers;
 
 - (void)cleanup;

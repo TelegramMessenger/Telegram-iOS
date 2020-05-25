@@ -53,6 +53,15 @@
     return true;
 }
 
++ (instancetype)defaultValue {
+    PGTintToolValue *value = [[PGTintToolValue alloc] init];
+    value.shadowsColor = [UIColor clearColor];
+    value.shadowsIntensity = 50.0f;
+    value.highlightsColor = [UIColor clearColor];
+    value.highlightsIntensity = 50.0f;
+    return value;
+}
+
 @end
 
 
@@ -80,13 +89,7 @@
         _maximumValue = 100;
         _defaultValue = 0;
         
-        PGTintToolValue *value = [[PGTintToolValue alloc] init];
-        value.shadowsColor = [UIColor clearColor];
-        value.shadowsIntensity = 50.0f;
-        value.highlightsColor = [UIColor clearColor];
-        value.highlightsIntensity = 50.0f;
-        
-        self.value = value;
+        self.value = [PGTintToolValue defaultValue];
     }
     return self;
 }
@@ -148,6 +151,14 @@
     }
     
     return _parameters;
+}
+
+- (id)displayValue {
+    if (self.disabled) {
+        return [PGTintToolValue defaultValue];
+    } else {
+        return [super displayValue];
+    }
 }
 
 - (void)updateParameters

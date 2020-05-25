@@ -39,7 +39,6 @@
 #import "TGPhotoToolsController.h"
 #import "TGPhotoPaintController.h"
 #import "TGPhotoQualityController.h"
-#import "TGPhotoEditorItemController.h"
 
 #import "TGMessageImageViewOverlayView.h"
 

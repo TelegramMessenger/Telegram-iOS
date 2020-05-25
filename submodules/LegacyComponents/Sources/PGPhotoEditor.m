@@ -477,6 +477,15 @@
     }
 }
 
+- (void)setDisableAll:(bool)disableAll {
+    _disableAll = disableAll;
+    
+    for (PGPhotoTool *tool in self.tools)
+    {
+        tool.disabled = disableAll;
+    }
+}
+
 - (SSignal *)histogramSignal
 {
     return [[SSignal single:_currentHistogram] then:_histogramPipe.signalProducer()];

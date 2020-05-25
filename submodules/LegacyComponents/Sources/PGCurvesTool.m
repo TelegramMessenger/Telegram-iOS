@@ -286,6 +286,14 @@ const NSUInteger PGCurveDataStep = 2;
     return _parameters;
 }
 
+- (id)displayValue {
+    if (self.disabled) {
+        return [PGCurvesToolValue defaultValue];
+    } else {
+        return [super displayValue];
+    }
+}
+
 - (void)updateParameters
 {
     PGCurvesToolValue *value = (PGCurvesToolValue *)self.displayValue;
