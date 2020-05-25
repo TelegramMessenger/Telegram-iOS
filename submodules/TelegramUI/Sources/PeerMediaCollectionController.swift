@@ -325,6 +325,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 return false
             }, sendGif: { _, _, _ in
                 return false
+            }, sendBotContextResultAsGif: { _, _, _, _ in
+                return false
             }, requestMessageActionCallback: { _, _, _ in
             }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in

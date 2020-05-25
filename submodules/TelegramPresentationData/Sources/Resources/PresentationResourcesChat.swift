@@ -214,6 +214,28 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatInputMediaPanelStickersModeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelStickersModeIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/StickersMode"), color: theme.chat.inputMediaPanel.panelIconColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
+    public static func chatInputMediaPanelTrendingGifsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelTrendingGifsIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/TrendingGifs"), color: theme.chat.inputMediaPanel.panelIconColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
     public static func chatInputMediaPanelRecentStickersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentStickersIconImage.rawValue, { theme in
             return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in

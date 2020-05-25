@@ -17,10 +17,19 @@ private let deviceColorSpace: CGColorSpace = {
 }()
 
 public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
+    public enum ReceiveResult {
+        case error
+        case moreDataNeeded
+        case result(MediaTrackFrame)
+    }
+    
     private let codecContext: FFMpegAVCodecContext
     
     private let videoFrame: FFMpegAVFrame
     private var resetDecoderOnNextFrame = true
+    
+    private var defaultDuration: CMTime?
+    private var defaultTimescale: CMTimeScale?
     
     private var pixelBufferPool: CVPixelBufferPool?
     
@@ -60,10 +69,51 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return self.decode(frame: frame, ptsOffset: nil)
     }
     
+    public func sendToDecoder(frame: MediaTrackDecodableFrame) -> Bool {
+        self.defaultDuration = frame.duration
+        self.defaultTimescale = frame.pts.timescale
+        
+        let status = frame.packet.send(toDecoder: self.codecContext)
+        return status == 0
+    }
+    
+    public func sendEndToDecoder() -> Bool {
+        return self.codecContext.sendEnd()
+    }
+    
+    public func receiveFromDecoder(ptsOffset: CMTime?) -> ReceiveResult {
+        guard let defaultTimescale = self.defaultTimescale, let defaultDuration = self.defaultDuration else {
+            return .error
+        }
+        
+        let receiveResult = self.codecContext.receive(into: self.videoFrame)
+        switch receiveResult {
+        case .success:
+            var pts = CMTimeMake(value: self.videoFrame.pts, timescale: defaultTimescale)
+            if let ptsOffset = ptsOffset {
+                pts = CMTimeAdd(pts, ptsOffset)
+            }
+            if let convertedFrame = convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: self.videoFrame.duration > 0 ? CMTimeMake(value: self.videoFrame.duration, timescale: defaultTimescale) : defaultDuration) {
+                return .result(convertedFrame)
+            } else {
+                return .error
+            }
+        case .notEnoughData:
+            return .moreDataNeeded
+        case .error:
+            return .error
+        @unknown default:
+            return .error
+        }
+    }
+    
     public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?) -> MediaTrackFrame? {
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
-            if self.codecContext.receive(into: self.videoFrame) {
+            self.defaultDuration = frame.duration
+            self.defaultTimescale = frame.pts.timescale
+            
+            if self.codecContext.receive(into: self.videoFrame) == .success {
                 var pts = CMTimeMake(value: self.videoFrame.pts, timescale: frame.pts.timescale)
                 if let ptsOffset = ptsOffset {
                     pts = CMTimeAdd(pts, ptsOffset)
@@ -75,10 +125,35 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return nil
     }
     
+    public func receiveRemainingFrames(ptsOffset: CMTime?) -> [MediaTrackFrame] {
+        guard let defaultTimescale = self.defaultTimescale, let defaultDuration = self.defaultDuration else {
+            return []
+        }
+        
+        var result: [MediaTrackFrame] = []
+        result.append(contentsOf: self.delayedFrames)
+        self.delayedFrames.removeAll()
+        
+        while true {
+            if case .success = self.codecContext.receive(into: self.videoFrame) {
+                var pts = CMTimeMake(value: self.videoFrame.pts, timescale: defaultTimescale)
+                if let ptsOffset = ptsOffset {
+                    pts = CMTimeAdd(pts, ptsOffset)
+                }
+                if let convertedFrame = convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: self.videoFrame.duration > 0 ? CMTimeMake(value: self.videoFrame.duration, timescale: defaultTimescale) : defaultDuration) {
+                    result.append(convertedFrame)
+                }
+            } else {
+                break
+            }
+        }
+        return result
+    }
+    
     public func render(frame: MediaTrackDecodableFrame) -> UIImage? {
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
-            if self.codecContext.receive(into: self.videoFrame) {
+            if case .success = self.codecContext.receive(into: self.videoFrame) {
                 return convertVideoFrameToImage(self.videoFrame)
             }
         }

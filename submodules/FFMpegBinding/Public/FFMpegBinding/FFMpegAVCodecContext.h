@@ -4,6 +4,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(NSUInteger, FFMpegAVCodecContextReceiveResult)
+{
+    FFMpegAVCodecContextReceiveResultError,
+    FFMpegAVCodecContextReceiveResultNotEnoughData,
+    FFMpegAVCodecContextReceiveResultSuccess,
+};
+
 @class FFMpegAVCodec;
 @class FFMpegAVFrame;
 
@@ -17,7 +24,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (FFMpegAVSampleFormat)sampleFormat;
 
 - (bool)open;
-- (bool)receiveIntoFrame:(FFMpegAVFrame *)frame;
+- (bool)sendEnd;
+- (FFMpegAVCodecContextReceiveResult)receiveIntoFrame:(FFMpegAVFrame *)frame;
 - (void)flushBuffers;
 
 @end

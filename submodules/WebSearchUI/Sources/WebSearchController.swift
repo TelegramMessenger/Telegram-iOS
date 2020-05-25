@@ -10,8 +10,8 @@ import LegacyComponents
 import TelegramUIPreferences
 import AccountContext
 
-public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
-    return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
+public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
+    return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults)
     |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
         return .single(nil)
     }

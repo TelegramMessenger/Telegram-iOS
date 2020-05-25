@@ -130,9 +130,24 @@ final class MessageHistoryHoleIndexTable: Table {
         if !self.metadataTable.isInitialized(peerId) {
             self.metadataTable.setInitialized(peerId)
             if let tagsByNamespace = self.seedConfiguration.messageHoles[peerId.namespace] {
-                for (namespace, _) in tagsByNamespace {
+                for (namespace, tags) in tagsByNamespace {
+                    for tag in tags {
+                        self.metadataTable.setPeerTagInitialized(peerId: peerId, tag: tag)
+                    }
                     var operations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:]
                     self.add(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1), operations: &operations)
+                }
+            }
+        } else {
+            if let tagsByNamespace = self.seedConfiguration.upgradedMessageHoles[peerId.namespace] {
+                for (namespace, tags) in tagsByNamespace {
+                    for tag in tags {
+                        if !self.metadataTable.isPeerTagInitialized(peerId: peerId, tag: tag) {
+                            self.metadataTable.setPeerTagInitialized(peerId: peerId, tag: tag)
+                            var operations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:]
+                            self.add(peerId: peerId, namespace: namespace, space: .tag(tag), range: 1 ... (Int32.max - 1), operations: &operations)
+                        }
+                    }
                 }
             }
         }

@@ -32,112 +32,39 @@ private final class VisibleVideoItem {
         case trending(MediaId)
     }
     let id: Id
-    let fileReference: FileMediaReference
+    let file: MultiplexedVideoNodeFile
     let frame: CGRect
     
-    init(fileReference: FileMediaReference, frame: CGRect, isTrending: Bool) {
-        self.fileReference = fileReference
+    init(file: MultiplexedVideoNodeFile, frame: CGRect, isTrending: Bool) {
+        self.file = file
         self.frame = frame
         if isTrending {
-            self.id = .trending(fileReference.media.fileId)
+            self.id = .trending(file.file.media.fileId)
         } else {
-            self.id = .saved(fileReference.media.fileId)
+            self.id = .saved(file.file.media.fileId)
         }
+    }
+}
+
+final class MultiplexedVideoNodeFile {
+    let file: FileMediaReference
+    let contextResult: (ChatContextResultCollection, ChatContextResult)?
+    
+    init(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?) {
+        self.file = file
+        self.contextResult = contextResult
     }
 }
 
 final class MultiplexedVideoNodeFiles {
-    let saved: [FileMediaReference]
-    let trending: [FileMediaReference]
+    let saved: [MultiplexedVideoNodeFile]
+    let trending: [MultiplexedVideoNodeFile]
+    let isSearch: Bool
     
-    init(saved: [FileMediaReference], trending: [FileMediaReference]) {
+    init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool) {
         self.saved = saved
         self.trending = trending
-    }
-}
-
-private final class TrendingHeaderNode: ASDisplayNode {
-    private let titleNode: ImmediateTextNode
-    private let reactions: [String]
-    private let reactionNodes: [ImmediateTextNode]
-    private let scrollNode: ASScrollNode
-    
-    var reactionSelected: ((String) -> Void)?
-    
-    override init() {
-        self.titleNode = ImmediateTextNode()
-        self.reactions = [
-            "👍", "👎", "😍", "😂", "😯", "😕", "😢", "😡", "💪", "👏", "🙈", "😒"
-        ]
-        self.scrollNode = ASScrollNode()
-        let scrollNode = self.scrollNode
-        self.reactionNodes = reactions.map { reaction -> ImmediateTextNode in
-            let textNode = ImmediateTextNode()
-            textNode.attributedText = NSAttributedString(string: reaction, font: Font.regular(30.0), textColor: .black)
-            scrollNode.addSubnode(textNode)
-            return textNode
-        }
-        
-        super.init()
-        
-        self.scrollNode.view.showsVerticalScrollIndicator = false
-        self.scrollNode.view.showsHorizontalScrollIndicator = false
-        self.scrollNode.view.scrollsToTop = false
-        self.scrollNode.view.delaysContentTouches = false
-        self.scrollNode.view.canCancelContentTouches = true
-        if #available(iOS 11.0, *) {
-            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
-        }
-        
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.scrollNode)
-        
-        for i in 0 ..< self.reactionNodes.count {
-            self.reactionNodes[i].view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-        }
-    }
-    
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            let location = recognizer.location(in: self.scrollNode.view)
-            for i in 0 ..< self.reactionNodes.count {
-                if self.reactionNodes[i].frame.contains(location) {
-                    let reaction = self.reactions[i]
-                    self.reactionSelected?(reaction)
-                    break
-                }
-            }
-        }
-    }
-    
-    func update(theme: PresentationTheme, strings: PresentationStrings, width: CGFloat, sideInset: CGFloat) -> CGFloat {
-        let height: CGFloat = 72.0
-        let leftInset: CGFloat = 10.0
-        
-        self.titleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_TrendingSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset * 2.0 - sideInset * 2.0, height: 100.0))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: titleSize)
-        
-        let reactionSizes = self.reactionNodes.map { reactionNode -> CGSize in
-            return reactionNode.updateLayout(CGSize(width: 100.0, height: 100.0))
-        }
-        
-        let reactionSpacing: CGFloat = 8.0
-        var reactionsOffset: CGFloat = leftInset - 2.0
-        
-        for i in 0 ..< self.reactionNodes.count {
-            if i != 0 {
-                reactionsOffset += reactionSpacing
-            }
-            reactionNodes[i].frame = CGRect(origin: CGPoint(x: reactionsOffset, y: 0.0), size: reactionSizes[i])
-            reactionsOffset += reactionSizes[i].width
-        }
-        reactionsOffset += leftInset - 2.0
-        
-        self.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 28.0), size: CGSize(width: width, height: 44.0))
-        self.scrollNode.view.contentSize = CGSize(width: reactionsOffset, height: 44.0)
-        
-        return height
+        self.isSearch = isSearch
     }
 }
 
@@ -168,13 +95,19 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: []) {
-        didSet {
-            let startTime = CFAbsoluteTimeGetCurrent()
-            self.updateVisibleItems(extendSizeForTransition: 0.0, transition: .immediate, synchronous: true)
-            print("MultiplexedVideoNode files updateVisibleItems: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+    private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false)
+    
+    func setFiles(files: MultiplexedVideoNodeFiles, synchronous: Bool, resetScrollingToOffset: CGFloat?) {
+        self.files = files
+        
+        self.ignoreDidScroll = true
+        if let resetScrollingToOffset = resetScrollingToOffset {
+            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y :resetScrollingToOffset)
         }
+        self.updateVisibleItems(extendSizeForTransition: 0.0, transition: .immediate, synchronous: synchronous)
+        self.ignoreDidScroll = false
     }
+    
     private var displayItems: [VisibleVideoItem] = []
     private var visibleThumbnailLayers: [VisibleVideoItem.Id: SoftwareVideoThumbnailLayer] = [:]
     private var statusDisposable: [VisibleVideoItem.Id: MetaDisposable] = [:]
@@ -185,7 +118,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     private var visibleLayers: [VisibleVideoItem.Id: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
     
     private let savedTitleNode: ImmediateTextNode
-    private let trendingHeaderNode: TrendingHeaderNode
+    private let trendingTitleNode: ImmediateTextNode
     
     private var displayLink: CADisplayLink!
     private var timeOffset = 0.0
@@ -193,8 +126,8 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let timebase: CMTimebase
     
-    var fileSelected: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
-    var fileContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
+    var fileSelected: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect) -> Void)?
+    var fileContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     var enableVideoNodes = false
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
@@ -215,13 +148,10 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.savedTitleNode = ImmediateTextNode()
         self.savedTitleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_SavedSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         
-        self.trendingHeaderNode = TrendingHeaderNode()
+        self.trendingTitleNode = ImmediateTextNode()
+        self.trendingTitleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_TrendingSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         
         super.init()
-        
-        self.trendingHeaderNode.reactionSelected = { [weak self] reaction in
-            self?.reactionSelected?(reaction)
-        }
         
         self.isOpaque = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
@@ -229,7 +159,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.alwaysBounceVertical = true
         
         self.scrollNode.addSubnode(self.savedTitleNode)
-        self.scrollNode.addSubnode(self.trendingHeaderNode)
+        self.scrollNode.addSubnode(self.trendingTitleNode)
         
         self.addSubnode(self.trackingNode)
         self.addSubnode(self.contextContainerNode)
@@ -300,7 +230,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.contextContainerNode.customActivationProgress = { [weak self] progress, update in
-            guard let strongSelf = self, let gestureLocation = gestureLocation else {
+            guard let _ = self, let _ = gestureLocation else {
                 return
             }
             /*let minScale: CGFloat = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
@@ -356,9 +286,13 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    private var ignoreDidScroll: Bool = false
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateImmediatelyVisibleItems()
-        self.didScroll?(scrollView.contentOffset.y, scrollView.contentSize.height)
+        if !self.ignoreDidScroll {
+            self.updateImmediatelyVisibleItems()
+            self.didScroll?(scrollView.contentOffset.y, scrollView.contentSize.height)
+        }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -407,14 +341,11 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                     thumbnailLayer.frame = item.frame
                 }
             } else {
-                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: item.fileReference, synchronousLoad: synchronous)
+                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: item.file.file, synchronousLoad: synchronous)
                 thumbnailLayer.frame = item.frame
                 self.scrollNode.layer.addSublayer(thumbnailLayer)
                 self.visibleThumbnailLayers[item.id] = thumbnailLayer
             }
-            
-            let progressSize = CGSize(width: 24.0, height: 24.0)
-            let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - progressSize.width / 2.0, y: item.frame.midY - progressSize.height / 2.0), size: progressSize)
             
             if item.frame.maxY < minVisibleY {
                 continue
@@ -434,7 +365,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 layerHolder.layer.frame = item.frame
                 self.scrollNode.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: item.fileReference, layerHolder: layerHolder)
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: item.file.file, layerHolder: layerHolder)
                 self.visibleLayers[item.id] = (manager, layerHolder)
                 self.visibleThumbnailLayers[item.id]?.ready = { [weak self] in
                     if let strongSelf = self {
@@ -490,11 +421,9 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         if !drawableSize.width.isZero {
             var displayItems: [VisibleVideoItem] = []
             
-            let idealHeight = self.idealHeight
-            
             var verticalOffset: CGFloat = self.topInset
             
-            func commitFilesSpans(files: [FileMediaReference], isTrending: Bool) {
+            func commitFilesSpans(files: [MultiplexedVideoNodeFile], isTrending: Bool) {
                 var rowsCount = 0
                 var firstRowMax = 0;
                 
@@ -512,7 +441,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 for a in 0 ..< itemsCount {
                     var size: CGSize
-                    if let dimensions = files[a].media.dimensions {
+                    if let dimensions = files[a].file.media.dimensions {
                         size = dimensions.cgSize
                     } else {
                         size = CGSize(width: 100.0, height: 100.0)
@@ -588,7 +517,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                     if itemsToRow[index] != nil && currentRowHorizontalOffset + itemSize.width >= drawableSize.width - 10.0 {
                         itemSize.width = max(itemSize.width, drawableSize.width - currentRowHorizontalOffset)
                     }
-                    displayItems.append(VisibleVideoItem(fileReference: files[index], frame: CGRect(origin: CGPoint(x: currentRowHorizontalOffset, y: verticalOffset), size: itemSize), isTrending: isTrending))
+                    displayItems.append(VisibleVideoItem(file: files[index], frame: CGRect(origin: CGPoint(x: currentRowHorizontalOffset, y: verticalOffset), size: itemSize), isTrending: isTrending))
                     currentRowHorizontalOffset += itemSize.width + 1.0
                     
                     if itemsToRow[index] != nil {
@@ -598,104 +527,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             
-            func commitFiles(files: [FileMediaReference], isTrending: Bool) {
-                var weights: [Int] = []
-                var totalItemSize: CGFloat = 0.0
-                for item in files {
-                    let aspectRatio: CGFloat
-                    if let dimensions = item.media.dimensions {
-                        aspectRatio = dimensions.cgSize.width / dimensions.cgSize.height
-                    } else {
-                        aspectRatio = 1.0
-                    }
-                    weights.append(Int(aspectRatio * 100))
-                    totalItemSize += aspectRatio * idealHeight
-                }
-                
-                let numberOfRows = max(Int(round(totalItemSize / drawableSize.width)), 1)
-                
-                let partition = linearPartitionForWeights(weights, numberOfPartitions:numberOfRows)
-                
-                var i = 0
-                var offset = CGPoint(x: 0.0, y: verticalOffset)
-                var previousItemSize: CGFloat = 0.0
-                let maxWidth = drawableSize.width
-                
-                let minimumInteritemSpacing: CGFloat = 1.0
-                let minimumLineSpacing: CGFloat = 1.0
-                
-                let viewportWidth: CGFloat = drawableSize.width
-                
-                let preferredRowSize = idealHeight
-                
-                var rowIndex = -1
-                for row in partition {
-                    rowIndex += 1
-                    
-                    var summedRatios: CGFloat = 0.0
-                    
-                    var j = i
-                    var n = i + row.count
-                    
-                    while j < n {
-                        let aspectRatio: CGFloat
-                        if let dimensions = files[j].media.dimensions {
-                            aspectRatio = dimensions.cgSize.width / dimensions.cgSize.height
-                        } else {
-                            aspectRatio = 1.0
-                        }
-                        
-                        summedRatios += aspectRatio
-                        
-                        j += 1
-                    }
-                    
-                    var rowSize = drawableSize.width - (CGFloat(row.count - 1) * minimumInteritemSpacing)
-                    
-                    if rowIndex == partition.count - 1 {
-                        if row.count < 2 {
-                            rowSize = floor(viewportWidth / 3.0) - (CGFloat(row.count - 1) * minimumInteritemSpacing)
-                        } else if row.count < 3 {
-                            rowSize = floor(viewportWidth * 2.0 / 3.0) - (CGFloat(row.count - 1) * minimumInteritemSpacing)
-                        }
-                    }
-                    
-                    j = i
-                    n = i + row.count
-                    
-                    while j < n {
-                        let aspectRatio: CGFloat
-                        if let dimensions = files[j].media.dimensions {
-                            aspectRatio = dimensions.cgSize.width / dimensions.cgSize.height
-                        } else {
-                            aspectRatio = 1.0
-                        }
-                        let preferredAspectRatio = aspectRatio
-                        
-                        let actualSize = CGSize(width: round(rowSize / summedRatios * (preferredAspectRatio)), height: preferredRowSize)
-                        
-                        var frame = CGRect(x: offset.x, y: offset.y, width: actualSize.width, height: actualSize.height)
-                        if frame.origin.x + frame.size.width >= maxWidth - 2.0 {
-                            frame.size.width = max(1.0, maxWidth - frame.origin.x)
-                        }
-                        
-                        displayItems.append(VisibleVideoItem(fileReference: files[j], frame: frame, isTrending: isTrending))
-                        
-                        offset.x += actualSize.width + minimumInteritemSpacing
-                        previousItemSize = actualSize.height
-                        verticalOffset = frame.maxY
-                        
-                        j += 1
-                    }
-                    
-                    if row.count > 0 {
-                        offset = CGPoint(x: 0.0, y: offset.y + previousItemSize + minimumLineSpacing)
-                    }
-                    
-                    i += row.count
-                }
-            }
-            
+            var hasContent = false
             if !self.files.saved.isEmpty {
                 self.savedTitleNode.isHidden = false
                 let leftInset: CGFloat = 10.0
@@ -703,19 +535,26 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 self.savedTitleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset - 3.0), size: savedTitleSize)
                 verticalOffset += savedTitleSize.height + 5.0
                 commitFilesSpans(files: self.files.saved, isTrending: false)
-                //commitFiles(files: self.files.saved, isTrending: false)
+                hasContent = true
             } else {
                 self.savedTitleNode.isHidden = true
             }
             if !self.files.trending.isEmpty {
-                self.trendingHeaderNode.isHidden = false
-                let trendingHeight = self.trendingHeaderNode.update(theme: self.theme, strings: self.strings, width: drawableSize.width, sideInset: 0.0)
-                self.trendingHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: drawableSize.width, height: trendingHeight))
-                verticalOffset += trendingHeight
+                if self.files.isSearch {
+                    self.trendingTitleNode.isHidden = true
+                } else {
+                    self.trendingTitleNode.isHidden = false
+                    if hasContent {
+                        verticalOffset += 15.0
+                    }
+                    let leftInset: CGFloat = 10.0
+                    let trendingTitleSize = self.trendingTitleNode.updateLayout(CGSize(width: drawableSize.width - leftInset * 2.0, height: 100.0))
+                    self.trendingTitleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset - 3.0), size: trendingTitleSize)
+                    verticalOffset += trendingTitleSize.height + 5.0
+                }
                 commitFilesSpans(files: self.files.trending, isTrending: true)
-                //commitFiles(files: self.files.trending, isTrending: true)
             } else {
-                self.trendingHeaderNode.isHidden = true
+                self.trendingTitleNode.isHidden = true
             }
             
             let contentSize = CGSize(width: drawableSize.width, height: verticalOffset + self.bottomInset)
@@ -748,19 +587,19 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     
     func frameForItem(_ id: MediaId) -> CGRect? {
         for item in self.displayItems {
-            if item.fileReference.media.fileId == id {
+            if item.file.file.media.fileId == id {
                 return item.frame
             }
         }
         return nil
     }
     
-    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect, Bool)? {
+    func fileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
         let offsetPoint = point.offsetBy(dx: 0.0, dy: self.scrollNode.bounds.minY)
         return self.offsetFileAt(point: offsetPoint)
     }
     
-    private func offsetFileAt(point: CGPoint) -> (FileMediaReference, CGRect, Bool)? {
+    private func offsetFileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
         for item in self.displayItems {
             if item.frame.contains(point) {
                 let isSaved: Bool
@@ -770,7 +609,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 case .trending:
                     isSaved = false
                 }
-                return (item.fileReference, item.frame, isSaved)
+                return (item.file, item.frame, isSaved)
             }
         }
         return nil
