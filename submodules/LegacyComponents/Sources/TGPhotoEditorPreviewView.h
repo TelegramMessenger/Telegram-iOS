@@ -14,6 +14,7 @@
 @property (nonatomic, copy) void(^interactionEnded)(void);
 
 @property (nonatomic, readonly) bool isTracking;
+@property (nonatomic, assign) bool customTouchDownHandling;
 
 - (void)setSnapshotImage:(UIImage *)image;
 - (void)setSnapshotView:(UIView *)view;

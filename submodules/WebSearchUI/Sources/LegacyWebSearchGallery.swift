@@ -112,8 +112,8 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
 
 private class LegacyWebSearchGalleryItem: TGModernGalleryImageItem, TGModernGalleryEditableItem, TGModernGallerySelectableItem {
     var selectionContext: TGMediaSelectionContext!
-    
     var editingContext: TGMediaEditingContext!
+    var stickersContext: TGPhotoPaintStickersContext!
     let item: LegacyWebSearchItem
     
     init(item: LegacyWebSearchItem) {

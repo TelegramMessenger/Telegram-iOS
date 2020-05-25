@@ -116,6 +116,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 @implementation PGVideoMovie
 {
     bool videoEncodingIsFinished;
+    bool _shouldReprocessCurrentFrame;
 }
 
 @synthesize asset = _asset;
@@ -124,20 +125,19 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 #pragma mark -
 #pragma mark Initialization and teardown
 
-- (UIInterfaceOrientation)orientationForTrack:(AVAsset *)asset
-{
+- (UIInterfaceOrientation)orientationForTrack:(AVAsset *)asset {
     AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
-    CGSize size = [videoTrack naturalSize];
-    CGAffineTransform txf = [videoTrack preferredTransform];
-
-    if (size.width == txf.tx && size.height == txf.ty)
+    CGAffineTransform trackTransform = [videoTrack preferredTransform];
+    
+    if (trackTransform.a == -1 && trackTransform.d == -1) {
         return UIInterfaceOrientationLandscapeRight;
-    else if (txf.tx == 0 && txf.ty == 0)
+    } else if (trackTransform.a == 1 && trackTransform.d == 1)  {
         return UIInterfaceOrientationLandscapeLeft;
-    else if (txf.tx == 0 && txf.ty == size.width)
+    } else if (trackTransform.b == -1 && trackTransform.c == 1) {
         return UIInterfaceOrientationPortraitUpsideDown;
-    else
+    } else {
         return UIInterfaceOrientationPortrait;
+    }
 }
 
 - (instancetype)initWithAsset:(AVAsset *)asset
@@ -341,8 +341,10 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (void)processPixelBufferAtTime:(CMTime)outputItemTime
 {
-    if ([playerItemOutput hasNewPixelBufferForItemTime:outputItemTime])
+    if ([playerItemOutput hasNewPixelBufferForItemTime:outputItemTime] || _shouldReprocessCurrentFrame)
     {
+        _shouldReprocessCurrentFrame = false;
+        
         __unsafe_unretained PGVideoMovie *weakSelf = self;
         CVPixelBufferRef pixelBuffer = [playerItemOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
         if (pixelBuffer != NULL)
@@ -353,6 +355,10 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
             });
         }
     }
+}
+
+- (void)reprocessCurrent {
+    _shouldReprocessCurrentFrame = true;
 }
 
 - (BOOL)readNextVideoFrameFromOutput:(AVAssetReaderOutput *)readerVideoTrackOutput;
@@ -544,6 +550,8 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                         [currentTarget setInputRotation:kGPUImageRotate180 atIndex:targetTextureIndex];
                     } else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
                         [currentTarget setInputRotation:kGPUImageRotateLeft atIndex:targetTextureIndex];
+                    } else {
+                        [currentTarget setInputRotation:kGPUImageNoRotation atIndex:targetTextureIndex];
                     }
                 }
             }

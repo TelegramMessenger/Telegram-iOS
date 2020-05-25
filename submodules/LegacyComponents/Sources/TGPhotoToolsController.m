@@ -19,7 +19,6 @@
 #import <LegacyComponents/TGPaintingData.h>
 
 #import "TGPhotoEditorController.h"
-#import "TGPhotoEditorItemController.h"
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoEditorHUDView.h"
 
@@ -62,7 +61,6 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 @property (nonatomic, weak) PGPhotoEditor *photoEditor;
 @property (nonatomic, weak) TGPhotoEditorPreviewView *previewView;
-@property (nonatomic, weak) TGPhotoEditorItemController *editorItemController;
 
 @end
 
@@ -147,23 +145,36 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.hidden = true;
     previewView.interactionEnded = _interactionEnded;
+    
+    bool forVideo = _photoEditor.forVideo;
     previewView.touchedUp = ^
     {
         __strong TGPhotoToolsController *strongSelf = weakSelf;
-        if (strongSelf != nil)
+        if (strongSelf != nil) {
             [strongSelf->_hudView setText:nil];
+            
+            if (forVideo) {
+                strongSelf->_photoEditor.disableAll = false;
+            }
+        }
     };
     previewView.touchedDown = ^
     {
         __strong TGPhotoToolsController *strongSelf = weakSelf;
-        if (strongSelf != nil)
+        if (strongSelf != nil) {
             [strongSelf->_hudView setText:TGLocalized(@"PhotoEditor.Original")];
+            
+            if (forVideo) {
+                strongSelf->_photoEditor.disableAll = true;
+            }
+        }
     };
     previewView.tapped = ^{
         __strong TGPhotoToolsController *strongSelf = weakSelf;
         if (strongSelf != nil)
             [strongSelf setPreview:!strongSelf->_preview animated:true];
     };
+    previewView.customTouchDownHandling = forVideo;
     [self.view addSubview:_previewView];
     
     _wrapperView = [[TGPhotoToolsWrapperView alloc] initWithFrame:CGRectZero];
@@ -241,10 +252,6 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (BOOL)shouldAutorotate
 {
-    TGPhotoEditorItemController *controller = self.editorItemController;
-    if (controller != nil)
-        return [controller shouldAutorotate];
-    
     bool toolTracking = _toolAreaView.isTracking || _portraitToolControlView.isTracking || _landscapeToolControlView.isTracking;
     
     TGPhotoEditorPreviewView *previewView = self.previewView;
@@ -342,6 +349,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.touchedUp = nil;
     previewView.touchedDown = nil;
+    previewView.tapped = nil;
     previewView.interactionEnded = nil;
     
     [_toolAreaView.superview bringSubviewToFront:_toolAreaView];

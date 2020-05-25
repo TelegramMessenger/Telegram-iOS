@@ -900,7 +900,7 @@
     }
     
     if (adjustments.sendAsGif)
-        disabledButtons |= TGPhotoEditorToolsTab | TGPhotoEditorQualityTab;
+        disabledButtons |= TGPhotoEditorQualityTab;
     
     [_portraitToolbarView setEditButtonsHighlighted:highlightedButtons];
     [_landscapeToolbarView setEditButtonsHighlighted:highlightedButtons];

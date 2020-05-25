@@ -1147,6 +1147,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
         galleryItem.selectionContext = _selectionContext;
         galleryItem.editingContext = _editingContext;
+        galleryItem.stickersContext = _stickersContext;
         
         if (enumerationBlock != nil)
             enumerationBlock(galleryItem);
@@ -1652,6 +1653,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 intent = TGPhotoEditorControllerSignupAvatarIntent;
             }
             TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:image intent:(TGPhotoEditorControllerFromCameraIntent | intent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+            controller.stickersContext = _stickersContext;
             __weak TGPhotoEditorController *weakController = controller;
             controller.beginTransitionIn = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
             {

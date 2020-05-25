@@ -39,7 +39,6 @@
 #import "TGPhotoToolsController.h"
 #import "TGPhotoPaintController.h"
 #import "TGPhotoQualityController.h"
-#import "TGPhotoEditorItemController.h"
 
 #import "TGMessageImageViewOverlayView.h"
 
@@ -587,6 +586,7 @@
     
     bool hasImageAdjustments = editorValues.toolsApplied || saveOnly;
     bool hasPainting = editorValues.hasPainting;
+    bool hasAnimation = editorValues.paintingData.hasAnimation;
     
     SSignal *(^imageCropSignal)(UIImage *, bool) = ^(UIImage *image, bool resize)
     {
@@ -647,14 +647,14 @@
         {
             if (!hasImageAdjustments)
             {
-                if (hasPainting && self.didFinishRenderingFullSizeImage != nil)
+                if (hasPainting && !hasAnimation && self.didFinishRenderingFullSizeImage != nil)
                     self.didFinishRenderingFullSizeImage(image);
 
                 return image;
             }
             else
             {
-                if (!saveOnly && self.didFinishRenderingFullSizeImage != nil)
+                if (!saveOnly && !hasAnimation && self.didFinishRenderingFullSizeImage != nil)
                     self.didFinishRenderingFullSizeImage(image);
                 
                 return TGPhotoEditorFitImage(image, TGPhotoEditorResultImageMaxSize);

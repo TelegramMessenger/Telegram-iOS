@@ -30,6 +30,8 @@
 #import "TGMediaPickerScrubberHeaderView.h"
 
 #import "TGPhotoEditorPreviewView.h"
+#import "TGPhotoEntitiesContainerView.h"
+#import "TGPhotoPaintController.h"
 
 #import <LegacyComponents/TGModernGalleryVideoView.h>
 #import "TGModernGalleryVideoContentView.h"
@@ -69,11 +71,12 @@
     
     UILabel *_fileInfoLabel;
     
-//    TGModernGalleryVideoView *_videoView;
     TGPhotoEditorPreviewView *_videoView;
     PGPhotoEditor *_photoEditor;
     
     UIImageView *_paintingImageView;
+    UIView *_contentWrapperView;
+    TGPhotoEntitiesContainerView *_entitiesContainerView;
     
     NSTimer *_positionTimer;
     TGObserverProxy *_didPlayToEndObserver;
@@ -101,8 +104,6 @@
     
     bool _sendAsGif;
     bool _autoplayed;
-    
-    bool _ignoreNextAdjustmentsChange;
 }
 
 @property (nonatomic, strong) TGMediaPickerGalleryVideoItem *item;
@@ -148,6 +149,14 @@
         
         _paintingImageView = [[UIImageView alloc] init];
         [_playerContainerView addSubview:_paintingImageView];
+        
+        _contentWrapperView = [[UIView alloc] init];
+        [_playerContainerView addSubview:_contentWrapperView];
+        
+        _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
+        _entitiesContainerView.hidden = true;
+        _entitiesContainerView.userInteractionEnabled = false;
+        [_contentWrapperView addSubview:_entitiesContainerView];
         
         _curtainView = [[UIView alloc] init];
         _curtainView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -363,6 +372,7 @@
     
     _scrubberView.allowsTrimming = false;
     _videoDimensions = item.dimensions;
+    _entitiesContainerView.stickersContext = item.stickersContext;
     
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
     [_videoDurationVar set:[[[item.durationSignal deliverOn:[SQueue mainQueue]] catch:^SSignal *(__unused id error)
@@ -427,23 +437,21 @@
             if (strongSelf == nil)
                 return;
             
-            if (!strongSelf->_ignoreNextAdjustmentsChange)
-            {
-                [strongSelf _layoutPlayerView];
-                TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
-                strongSelf->_paintingImageView.image = adjustments.paintingData.image;
-                
-                strongSelf->_sendAsGif = adjustments.sendAsGif;
-                [strongSelf _mutePlayer:adjustments.sendAsGif];
-                
-                if (adjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
-                    [strongSelf setPlayButtonHidden:true animated:false];
-                
-                [_photoEditor importAdjustments:adjustments];
-            }
-            else
-            {
-                strongSelf->_ignoreNextAdjustmentsChange = false;
+            [strongSelf _layoutPlayerView];
+            TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
+            strongSelf->_paintingImageView.image = adjustments.paintingData.image;
+            
+            strongSelf->_sendAsGif = adjustments.sendAsGif;
+            [strongSelf _mutePlayer:adjustments.sendAsGif];
+            
+            if (adjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
+                [strongSelf setPlayButtonHidden:true animated:false];
+            
+            [strongSelf->_entitiesContainerView setupWithPaintingData:adjustments.paintingData];
+            [strongSelf->_photoEditor importAdjustments:adjustments];
+            
+            if (!strongSelf.isPlaying) {
+                [strongSelf->_photoEditor reprocess];
             }
         }]];
     }
@@ -740,6 +748,27 @@
     _imageView.frame = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, _videoDimensions.width * ratio, _videoDimensions.height * ratio);
     _paintingImageView.frame = _imageView.frame;
     _videoView.frame = _imageView.frame;
+    
+    CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:_videoDimensions keepOriginalSize:true];
+    _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    
+    CGSize fittedOriginalSize = TGScaleToSize(_videoDimensions, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize rotatedSize = fittedOriginalSize;
+    CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
+    
+    CGFloat scale = fittedOriginalSize.width / _videoDimensions.width;
+    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
+    
+    CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
+    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
+    
+    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:UIImageOrientationUp originalSize:_videoDimensions];
+    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:_videoDimensions keepOriginalSize:false];
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    
+    CGFloat contentScale = _playerWrapperView.bounds.size.width / fittedCropRect.size.width;
+    _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _playerWrapperView.bounds.size.width, _playerWrapperView.bounds.size.height);
 }
 
 - (void)singleTap
@@ -752,8 +781,10 @@
 {
     [super setIsVisible:isVisible];
     
-    if (!isVisible && _player != nil)
+    if (!isVisible && _player != nil) {
         [self stopPlayer];
+        [self setPlayButtonHidden:false animated:false];
+    }
 }
 
 - (UIView *)headerView
@@ -783,13 +814,12 @@
 {
     if (_videoView != nil)
     {
-        UIImage *image = nil;
-        
-        UIGraphicsBeginImageContextWithOptions(_videoView.bounds.size, true, [UIScreen mainScreen].scale);
-
         if (_lastRenderedScreenImage != nil)
             return _lastRenderedScreenImage;
         
+        UIImage *image = nil;
+        
+        UIGraphicsBeginImageContextWithOptions(_videoView.bounds.size, true, [UIScreen mainScreen].scale);
         AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:_player.currentItem.asset];
         generator.appliesPreferredTrackTransform = true;
         generator.maximumSize = TGFitSize(_videoDimensions, CGSizeMake(1280.0f, 1280.0f));
@@ -826,11 +856,16 @@
         generator.requestedTimeToleranceBefore = kCMTimeZero;
         CGImageRef imageRef = [generator copyCGImageAtTime:_player.currentTime actualTime:nil error:NULL];
         
-        _lastRenderedScreenImage = [UIImage imageWithCGImage:imageRef];
-        CGImageRelease(imageRef);
-        
         TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
         
+        UIImage *renderedImage = [UIImage imageWithCGImage:imageRef];
+        CGImageRelease(imageRef);
+        
+        if (adjustments.toolsApplied) {
+            renderedImage = [PGPhotoEditor resultImageForImage:renderedImage adjustments:adjustments];
+        }
+        _lastRenderedScreenImage = renderedImage;
+         
         CGSize originalSize = _videoDimensions;
         CGRect cropRect = CGRectMake(0, 0, _videoDimensions.width, _videoDimensions.height);
         UIImageOrientation cropOrientation = UIImageOrientationUp;
@@ -846,7 +881,7 @@
 
         CGRect drawRect = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, originalSize.width * ratio, originalSize.height * ratio);
         [_lastRenderedScreenImage drawInRect:drawRect];
-        
+                
         if (_paintingImageView.image != nil)
             [_paintingImageView.image drawInRect:drawRect];
     }
@@ -994,6 +1029,8 @@
 //            };
 //        }
 //        [_videoView cleanupPlayer];
+        _photoEditor.previewOutput = nil;
+        
         [_videoView removeFromSuperview];
         _videoView = nil;
         
@@ -1054,23 +1091,20 @@
         }
         
         strongSelf->_didPlayToEndObserver = [[TGObserverProxy alloc] initWithTarget:strongSelf targetSelector:@selector(playerItemDidPlayToEndTime:) name:AVPlayerItemDidPlayToEndTimeNotification object:playerItem];
-        
-//        strongSelf->_videoView = [[TGModernGalleryVideoView alloc] initWithFrame:strongSelf->_playerView.bounds player:strongSelf->_player];
-//        strongSelf->_videoView.frame = strongSelf->_imageView.frame;
-//        strongSelf->_videoView.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-//        strongSelf->_videoView.playerLayer.opaque = false;
-//        strongSelf->_videoView.playerLayer.backgroundColor = nil;
-//        [strongSelf->_playerContainerView insertSubview:strongSelf->_videoView belowSubview:strongSelf->_paintingImageView];
-        
+                
         TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
         
         strongSelf->_videoView = [[TGPhotoEditorPreviewView alloc] initWithFrame:strongSelf->_imageView.frame];
+        strongSelf->_videoView.customTouchDownHandling = true;
+        strongSelf->_videoView.userInteractionEnabled = false;
         [strongSelf->_playerContainerView insertSubview:strongSelf->_videoView belowSubview:strongSelf->_paintingImageView];
+        
+        strongSelf->_entitiesContainerView.hidden = false;
         
         [strongSelf->_videoView setNeedsTransitionIn];
         [strongSelf->_videoView performTransitionInIfNeeded];
         
-        strongSelf->_photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_videoDimensions adjustments:adjustments forVideo:true enableStickers:true];
+        strongSelf->_photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:strongSelf->_videoDimensions adjustments:adjustments forVideo:true enableStickers:true];
         strongSelf->_photoEditor.previewOutput = strongSelf->_videoView;
         [strongSelf->_photoEditor setPlayerItem:playerItem];
         [strongSelf->_photoEditor processAnimated:false completion:nil];
@@ -1229,12 +1263,17 @@
         _wasPlayingBeforeScrubbing = self.isPlaying;
     
     [self pausePressed];
+    
+    [self setPlayButtonHidden:true animated:false];
 }
 
 - (void)videoScrubberDidEndScrubbing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
 {
-    if (_wasPlayingBeforeScrubbing)
+    if (_wasPlayingBeforeScrubbing) {
         [self play];
+    } else {
+        [self setPlayButtonHidden:false animated:true];
+    }
 }
 
 - (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber valueDidChange:(NSTimeInterval)position
@@ -1260,6 +1299,8 @@
         [self preparePlayerAndPlay:false];
     
     [self pausePressed];
+    
+    [self setPlayButtonHidden:true animated:false];
 }
 
 - (void)videoScrubberDidEndEditing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
@@ -1267,6 +1308,8 @@
     _shouldResetScrubber = false;
     [self updatePlayerRange:videoScrubber.trimEndValue];
     [self updateEditAdjusments];
+    
+    [self setPlayButtonHidden:false animated:true];
 }
 
 - (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingStartValueDidChange:(NSTimeInterval)startValue

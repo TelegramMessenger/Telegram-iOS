@@ -12,6 +12,8 @@
 #import "TGMemoryImageCache.h"
 #import "TGMediaAsset.h"
 
+#import "TGPaintingData.h"
+
 @interface TGMediaImageUpdate : NSObject
 
 @property (nonatomic, readonly, strong) id<TGMediaEditableItem> item;
@@ -747,6 +749,9 @@
     
     PGPhotoEditorValues *editorValues = (PGPhotoEditorValues *)adjustments;
     if (![editorValues toolsApplied] && ![editorValues hasPainting])
+        return [SSignal complete];
+    
+    if ([editorValues.paintingData hasAnimation])
         return [SSignal complete];
     
     NSURL *url = [self _fullSizeImageUrlForItem:item];

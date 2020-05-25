@@ -163,7 +163,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         else
             _undoManager = [[TGPaintUndoManager alloc] init];
         
-        CGSize size = TGScaleToSize(photoEditor.originalSize, [self maximumPaintingSize]);
+        CGSize size = TGScaleToSize(photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
         _painting = [[TGPainting alloc] initWithSize:size undoManager:_undoManager imageData:[_photoEditor.paintingData data]];
         _undoManager.painting = _painting;
         
@@ -238,6 +238,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
     _entitiesContainerView.clipsToBounds = true;
+    _entitiesContainerView.stickersContext = _stickersContext;
     _entitiesContainerView.entitySelected = ^(TGPhotoPaintEntityView *sender)
     {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
@@ -377,6 +378,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         [self controllerInsetUpdated:UIEdgeInsetsZero];
 }
 
+- (void)setStickersContext:(id<TGPhotoPaintStickersContext>)stickersContext {
+    _stickersContext = stickersContext;
+    _entitiesContainerView.stickersContext = stickersContext;
+}
+
 - (void)setupCanvas
 {
     __weak TGPhotoPaintController *weakSelf = self;
@@ -451,7 +457,14 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [super viewDidLoad];
     
     PGPhotoEditor *photoEditor = _photoEditor;
-    [self setupWithPaintingData:photoEditor.paintingData];
+    [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    for (TGPhotoPaintEntityView *view in _entitiesContainerView.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+        
+        [self _commonEntityViewSetup:view];
+    }
     
     __weak TGPhotoPaintController *weakSelf = self;
     _undoManager.historyChanged = ^
@@ -614,17 +627,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 #pragma mark - Data Handling
 
-- (void)setupWithPaintingData:(TGPaintingData *)paintingData
-{
-    if (paintingData == nil)
-        return;
-    
-    for (TGPhotoPaintEntity *entity in paintingData.entities)
-    {
-        [self _createEntityViewWithEntity:entity];
-    }
-}
-
 - (TGPaintingData *)_prepareResultData
 {
     if (_resultData != nil)
@@ -782,12 +784,14 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoPaintEntityView *entityView = nil;
     if ([entity isKindOfClass:[TGPhotoPaintStickerEntity class]])
     {
-        TGPhotoStickerEntityView *stickerView = [self _createStickerViewWithEntity:(TGPhotoPaintStickerEntity *)entity];
+        TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+        [self _commonEntityViewSetup:stickerView];
         entityView = stickerView;
     }
     else
     {
-        TGPhotoTextEntityView *textView = [self _createTextViewWithEntity:(TGPhotoPaintTextEntity *)entity];
+        TGPhotoTextEntityView *textView = (TGPhotoTextEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+        [self _commonEntityViewSetup:textView];
         entityView = textView;
     }
     
@@ -934,13 +938,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     }
 }
 
-- (void)_commonEntityViewSetup:(TGPhotoPaintEntityView *)entityView entity:(TGPhotoPaintEntity *)entity
+- (void)_commonEntityViewSetup:(TGPhotoPaintEntityView *)entityView
 {
     [self hideMenu];
-    
-    entityView.transform = CGAffineTransformRotate(CGAffineTransformMakeScale(entity.scale, entity.scale), entity.angle);
-    entityView.center = entity.position;
-    
+
     __weak TGPhotoPaintController *weakSelf = self;
     entityView.shouldTouchEntity = ^bool (__unused TGPhotoPaintEntityView *sender)
     {
@@ -967,6 +968,29 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         [strongSelf updateActionsView];
     };
+    
+    if ([entityView isKindOfClass:[TGPhotoTextEntityView class]]) {
+        TGPhotoTextEntityView *textView = (TGPhotoTextEntityView *)entityView;
+        
+        __weak TGPhotoPaintController *weakSelf = self;
+        textView.beganEditing = ^(TGPhotoTextEntityView *sender)
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [strongSelf bringTextEntityViewFront:sender];
+        };
+        
+        textView.finishedEditing = ^(__unused TGPhotoTextEntityView *sender)
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [strongSelf sendTextEntityViewBack];
+        };
+    }
 }
 
 - (void)_registerEntityRemovalUndo:(TGPhotoPaintEntity *)entity
@@ -977,55 +1001,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     }];
 }
 
-- (TGPhotoPaintEntityView *)_createEntityViewWithEntity:(TGPhotoPaintEntity *)entity
-{
-    if ([entity isKindOfClass:[TGPhotoPaintStickerEntity class]])
-        return [self _createStickerViewWithEntity:(TGPhotoPaintStickerEntity *)entity];
-    else if ([entity isKindOfClass:[TGPhotoPaintTextEntity class]])
-        return [self _createTextViewWithEntity:(TGPhotoPaintTextEntity *)entity];
-    
-    return nil;
-}
-
-- (TGPhotoStickerEntityView *)_createStickerViewWithEntity:(TGPhotoPaintStickerEntity *)entity
-{
-    TGPhotoStickerEntityView *stickerView = [[TGPhotoStickerEntityView alloc] initWithEntity:entity context:self.stickersContext];
-    [self _commonEntityViewSetup:stickerView entity:entity];
-    [_entitiesContainerView addSubview:stickerView];
-
-    return stickerView;
-}
-
-- (TGPhotoTextEntityView *)_createTextViewWithEntity:(TGPhotoPaintTextEntity *)entity
-{
-    TGPhotoTextEntityView *textView = [[TGPhotoTextEntityView alloc] initWithEntity:entity];
-    [textView sizeToFit];
-    
-    __weak TGPhotoPaintController *weakSelf = self;
-    textView.beganEditing = ^(TGPhotoTextEntityView *sender)
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        [strongSelf bringTextEntityViewFront:sender];
-    };
-    
-    textView.finishedEditing = ^(__unused TGPhotoTextEntityView *sender)
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        [strongSelf sendTextEntityViewBack];
-    };
-    
-    [self _commonEntityViewSetup:textView entity:entity];
-    [_entitiesContainerView addSubview:textView];
-    
-    return textView;
-}
-
 #pragma mark Stickers
 
 - (void)presentStickersView
@@ -1034,7 +1009,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _stickersContext.presentStickersController(^(id document, bool animated, UIView *view, CGRect rect) {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf != nil) {
-            UIView *snapshot = [view snapshotViewAfterScreenUpdates:false];
+//            UIView *snapshot = [view snapshotViewAfterScreenUpdates:false];
             [strongSelf createNewStickerWithDocument:document animated:animated transitionPoint:CGPointZero stickersView:nil snapshotView:nil];
         }
     });
@@ -1092,7 +1067,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoPaintStickerEntity *entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:document baseSize:[self _stickerBaseSizeForCurrentPainting] animated:animated];
     [self _setStickerEntityPosition:entity];
     
-    TGPhotoStickerEntityView *stickerView = [self _createStickerViewWithEntity:entity];
+    TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+    [self _commonEntityViewSetup:stickerView];
 //    stickerView.hidden = true;
     
     CGFloat rotation = entity.angle - [self startRotation];
@@ -1137,7 +1113,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     entity.position = [self startPositionRelativeToEntity:nil];
     entity.angle = [self startRotation];
     
-    TGPhotoTextEntityView *textView = [self _createTextViewWithEntity:entity];
+    TGPhotoTextEntityView *textView = (TGPhotoTextEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+    [self _commonEntityViewSetup:textView];
     
     [self selectEntityView:textView];
     
@@ -1293,7 +1270,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     return [self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size;
 }
 
-- (CGSize)maximumPaintingSize
++ (CGSize)maximumPaintingSize
 {
     static dispatch_once_t onceToken;
     static CGSize size;
@@ -1511,11 +1488,15 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGSize)fittedContentSize
 {
-    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [self maximumPaintingSize]);
-    CGFloat scale = fittedOriginalSize.width / _photoEditor.originalSize.width;
+    return [TGPhotoPaintController fittedContentSize:_photoEditor.cropRect orientation:_photoEditor.cropOrientation originalSize:_photoEditor.originalSize];
+}
+
++ (CGSize)fittedContentSize:(CGRect)cropRect orientation:(UIImageOrientation)orientation originalSize:(CGSize)originalSize {
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGFloat scale = fittedOriginalSize.width / originalSize.width;
     
-    CGSize size = CGSizeMake(_photoEditor.cropRect.size.width * scale, _photoEditor.cropRect.size.height * scale);
-    if (_photoEditor.cropOrientation == UIImageOrientationLeft || _photoEditor.cropOrientation == UIImageOrientationRight)
+    CGSize size = CGSizeMake(cropRect.size.width * scale, cropRect.size.height * scale);
+    if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)
         size = CGSizeMake(size.height, size.width);
 
     return CGSizeMake(floor(size.width), floor(size.height));
@@ -1523,20 +1504,29 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGRect)fittedCropRect:(bool)originalSize
 {
-    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [self maximumPaintingSize]);
-    CGFloat scale = fittedOriginalSize.width / _photoEditor.originalSize.width;
+    return [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:originalSize];
+}
+
++ (CGRect)fittedCropRect:(CGRect)cropRect originalSize:(CGSize)originalSize keepOriginalSize:(bool)keepOriginalSize {
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGFloat scale = fittedOriginalSize.width / originalSize.width;
     
     CGSize size = fittedOriginalSize;
-    if (!originalSize)
-        size = CGSizeMake(_photoEditor.cropRect.size.width * scale, _photoEditor.cropRect.size.height * scale);
+    if (!keepOriginalSize)
+        size = CGSizeMake(cropRect.size.width * scale, cropRect.size.height * scale);
     
-    return CGRectMake(-_photoEditor.cropRect.origin.x * scale, -_photoEditor.cropRect.origin.y * scale, size.width, size.height);
+    return CGRectMake(-cropRect.origin.x * scale, -cropRect.origin.y * scale, size.width, size.height);
 }
 
 - (CGPoint)fittedCropCenterScale:(CGFloat)scale
 {
-    CGSize size = CGSizeMake(_photoEditor.cropRect.size.width * scale, _photoEditor.cropRect.size.height * scale);
-    CGRect rect = CGRectMake(_photoEditor.cropRect.origin.x * scale, _photoEditor.cropRect.origin.y * scale, size.width, size.height);
+    return [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect centerScale:scale];
+}
+
++ (CGPoint)fittedCropRect:(CGRect)cropRect centerScale:(CGFloat)scale
+{
+    CGSize size = CGSizeMake(cropRect.size.width * scale, cropRect.size.height * scale);
+    CGRect rect = CGRectMake(cropRect.origin.x * scale, cropRect.origin.y * scale, size.width, size.height);
     
     return CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
 }
@@ -1615,10 +1605,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     if (ABS(maxScale - minScale) < 0.01f)
         maxScale = minScale;
 
-    
-    if (iosMajorVersion() >= 11) {
-        _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
-    }
     _scrollView.contentInset = UIEdgeInsetsZero;
     
     if (_scrollView.minimumZoomScale != 0.05f)
@@ -1751,7 +1737,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     _entitiesContainerView.transform = CGAffineTransformMakeRotation(_photoEditor.cropRotation);
     
-    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [self maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, _photoEditor.cropRotation);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
     
@@ -2269,18 +2255,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)_setStickerEntityPosition:(TGPhotoPaintStickerEntity *)entity
 {
-    TGDocumentMediaAttachment *document = entity.document;
-    TGDocumentAttributeSticker *sticker = nil;
-//    for (id attribute in document.attributes)
-//    {
-//        if ([attribute isKindOfClass:[TGDocumentAttributeSticker class]])
-//        {
-//            sticker = (TGDocumentAttributeSticker *)attribute;
-//            break;
-//        }
-//    }
-    
-    TGPhotoMaskPosition *position = nil; // [self _positionForMask:sticker documentId:document.documentId];
+    TGStickerMaskDescription *mask = [_stickersContext maskDescriptionForDocument:entity.document];
+    int64_t documentId = [_stickersContext documentIdForDocument:entity.document];
+    TGPhotoMaskPosition *position = [self _positionForMaskDescription:mask documentId:documentId];
     if (position != nil)
     {
         entity.position = position.center;
@@ -2294,12 +2271,12 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     }
 }
 
-- (TGPhotoMaskPosition *)_positionForMask:(TGDocumentAttributeSticker *)sticker documentId:(int64_t)documentId
+- (TGPhotoMaskPosition *)_positionForMaskDescription:(TGStickerMaskDescription *)mask documentId:(int64_t)documentId
 {
-    if (sticker.mask == nil)
+    if (mask == nil)
         return nil;
     
-    TGPhotoMaskAnchor anchor = [TGPhotoMaskPosition anchorOfMask:sticker.mask];
+    TGPhotoMaskAnchor anchor = [TGPhotoMaskPosition anchorOfMask:mask];
     if (anchor == TGPhotoMaskAnchorNone)
         return nil;
     
@@ -2352,12 +2329,12 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             break;
     }
     
-    CGFloat scale = referenceWidth / baseSize.width * sticker.mask.zoom;
+    CGFloat scale = referenceWidth / baseSize.width * mask.zoom;
     
-    CGPoint xComp = CGPointMake(sin(M_PI_2 - angle) * referenceWidth * sticker.mask.point.x,
-                                cos(M_PI_2 - angle) * referenceWidth * sticker.mask.point.x);
-    CGPoint yComp = CGPointMake(cos(M_PI_2 + angle) * referenceWidth * sticker.mask.point.y,
-                                sin(M_PI_2 + angle) * referenceWidth * sticker.mask.point.y);
+    CGPoint xComp = CGPointMake(sin(M_PI_2 - angle) * referenceWidth * mask.point.x,
+                                cos(M_PI_2 - angle) * referenceWidth * mask.point.x);
+    CGPoint yComp = CGPointMake(cos(M_PI_2 + angle) * referenceWidth * mask.point.y,
+                                sin(M_PI_2 + angle) * referenceWidth * mask.point.y);
     
     CGPoint position = CGPointMake(referencePoint.x + xComp.x + yComp.x, referencePoint.y + xComp.y + yComp.y);
     
@@ -2425,21 +2402,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             continue;
         
         TGPhotoPaintStickerEntity *entity = view.entity;
-        TGDocumentMediaAttachment *document = entity.document;
-        TGDocumentAttributeSticker *sticker = nil;
-        for (id attribute in document.attributes)
-        {
-            if ([attribute isKindOfClass:[TGDocumentAttributeSticker class]])
-            {
-                sticker = (TGDocumentAttributeSticker *)attribute;
-                break;
-            }
-        }
-    
-        if ([TGPhotoMaskPosition anchorOfMask:sticker.mask] != anchor)
+        TGStickerMaskDescription *mask = [_stickersContext maskDescriptionForDocument:view.entity.document];
+        int64_t maskDocumentId = [_stickersContext documentIdForDocument:entity.document];
+        
+        if ([TGPhotoMaskPosition anchorOfMask:mask] != anchor)
             continue;
         
-        if ((documentId == document.documentId || _faces.count > 1) && TGPaintDistance(entity.position, anchorPoint) < minDistance)
+        if ((documentId == maskDocumentId || _faces.count > 1) && TGPaintDistance(entity.position, anchorPoint) < minDistance)
             return true;
     }
     

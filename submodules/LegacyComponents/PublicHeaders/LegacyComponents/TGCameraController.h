@@ -10,6 +10,8 @@
 @class TGSuggestionContext;
 @class TGVideoEditAdjustments;
 
+@protocol TGPhotoPaintStickersContext;
+
 typedef enum {
     TGCameraControllerGenericIntent,
     TGCameraControllerPassportIntent,
@@ -39,6 +41,7 @@ typedef enum {
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool shortcut;
 
 @property (nonatomic, strong) NSString *forcedCaption;

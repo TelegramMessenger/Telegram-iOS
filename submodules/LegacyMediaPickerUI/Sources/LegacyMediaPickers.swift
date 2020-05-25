@@ -19,11 +19,21 @@ public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> Void) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
+    
+    let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.presentStickersController = { completion in
+        presentStickers({ file, animated, view, rect in
+            let coder = PostboxEncoder()
+            coder.encodeRootObject(file)
+            completion?(coder.makeData(), animated, view, rect)
+        })
+    }
     
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
+    controller.stickersContext = paintStickersContext
     controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {

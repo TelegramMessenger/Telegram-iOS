@@ -33,6 +33,8 @@
 
 @property (nonatomic, assign) bool standalone;
 
+@property (nonatomic, assign) bool disableAll;
+
 - (instancetype)initWithOriginalSize:(CGSize)originalSize adjustments:(id<TGMediaEditAdjustments>)adjustments forVideo:(bool)forVideo enableStickers:(bool)enableStickers;
 
 - (void)cleanup;
@@ -43,6 +45,7 @@
 - (void)setCIImage:(CIImage *)ciImage;
 
 - (void)processAnimated:(bool)animated completion:(void (^)(void))completion;
+- (void)reprocess;
 
 - (void)createResultImageWithCompletion:(void (^)(UIImage *image))completion;
 - (UIImage *)currentResultImage;

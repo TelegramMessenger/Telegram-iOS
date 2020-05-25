@@ -7,6 +7,7 @@
 
 @synthesize selectionContext;
 @synthesize editingContext;
+@synthesize stickersContext;
 
 - (NSString *)uniqueId
 {

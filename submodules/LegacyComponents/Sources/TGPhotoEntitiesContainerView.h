@@ -1,12 +1,20 @@
 #import "TGPhotoPaintSparseView.h"
+#import "TGPhotoPaintStickersContext.h"
 
+@class TGPaintingData;
+@class TGPhotoPaintEntity;
 @class TGPhotoPaintEntityView;
 
 @interface TGPhotoEntitiesContainerView : TGPhotoPaintSparseView
 
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
+
 @property (nonatomic, readonly) NSUInteger entitiesCount;
 @property (nonatomic, copy) void (^entitySelected)(TGPhotoPaintEntityView *);
 @property (nonatomic, copy) void (^entityRemoved)(TGPhotoPaintEntityView *);
+
+- (void)setupWithPaintingData:(TGPaintingData *)paintingData;
+- (TGPhotoPaintEntityView *)createEntityViewWithEntity:(TGPhotoPaintEntity *)entity;
 
 - (TGPhotoPaintEntityView *)viewForUUID:(NSInteger)uuid;
 - (void)removeViewWithUUID:(NSInteger)uuid;

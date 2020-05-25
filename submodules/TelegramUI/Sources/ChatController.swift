@@ -6046,6 +6046,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             })
                         }
+                    }, presentStickers: { [weak self] completion in
+                        if let strongSelf = self {
+                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                return true
+                            })
+                            strongSelf.present(controller, in: .window(.root))
+                        }
                     })
                 }
             }, openFileGallery: {
@@ -6286,6 +6294,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                      }
                                  }
                             })
+                        }
+                    }, presentStickers: { [weak self] completion in
+                        if let strongSelf = self {
+                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                return true
+                            })
+                            strongSelf.present(controller, in: .window(.root))
                         }
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()

@@ -320,6 +320,12 @@
     } synchronous:synchronous];
 }
 
+- (void)reprocess {
+    if ([_currentInput isKindOfClass:[PGVideoMovie class]]) {
+        [(PGVideoMovie *)_currentInput reprocessCurrent];
+    }
+}
+
 - (void)updateProcessChain {
     [GPUImageFramebuffer setMark:self.forVideo];
     
@@ -474,6 +480,15 @@
         TGVideoEditAdjustments *initialAdjustments = (TGVideoEditAdjustments *)_initialAdjustments;
         
         return [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:self.originalSize cropRect:self.cropRect cropOrientation:self.cropOrientation cropLockedAspectRatio:self.cropLockedAspectRatio cropMirrored:self.cropMirrored trimStartValue:initialAdjustments.trimStartValue trimEndValue:initialAdjustments.trimEndValue toolValues:toolValues paintingData:paintingData sendAsGif:self.sendAsGif preset:self.preset];
+    }
+}
+
+- (void)setDisableAll:(bool)disableAll {
+    _disableAll = disableAll;
+    
+    for (PGPhotoTool *tool in self.tools)
+    {
+        tool.disabled = disableAll;
     }
 }
 

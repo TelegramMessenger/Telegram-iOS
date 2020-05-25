@@ -3,6 +3,7 @@
 #import <CoreMedia/CoreMedia.h>
 
 @class TGPaintingData;
+@class TGStickerMaskDescription;
 
 @protocol TGPhotoPaintEntityRenderer <NSObject>
 
@@ -12,11 +13,15 @@
 
 @protocol TGPhotoPaintStickerRenderView <NSObject>
 
+- (int64_t)documentId;
 - (UIImage *)image;
 
 @end
 
 @protocol TGPhotoPaintStickersContext <NSObject>
+
+- (int64_t)documentIdForDocument:(id)document;
+- (TGStickerMaskDescription *)maskDescriptionForDocument:(id)document;
 
 - (UIView<TGPhotoPaintStickerRenderView> *)stickerViewForDocument:(id)document;
 

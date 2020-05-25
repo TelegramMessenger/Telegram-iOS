@@ -256,7 +256,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, recipientName: recipientName, completion: { result, editingContext in
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, recipientName: recipientName, stickersContext: paintStickersContext, completion: { result, editingContext in
                     let intent: TGMediaAssetsControllerIntent = TGMediaAssetsControllerSendMediaIntent
                     let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: legacyAssetPickerItemGenerator())
                     sendMessagesWithSignals(signals, false, 0)
