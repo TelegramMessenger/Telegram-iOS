@@ -320,6 +320,12 @@
     } synchronous:synchronous];
 }
 
+- (void)reprocess {
+    if ([_currentInput isKindOfClass:[PGVideoMovie class]]) {
+        [(PGVideoMovie *)_currentInput reprocessCurrent];
+    }
+}
+
 - (void)updateProcessChain {
     [GPUImageFramebuffer setMark:self.forVideo];
     

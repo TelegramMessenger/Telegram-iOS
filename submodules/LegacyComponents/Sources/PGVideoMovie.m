@@ -116,6 +116,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 @implementation PGVideoMovie
 {
     bool videoEncodingIsFinished;
+    bool _shouldReprocessCurrentFrame;
 }
 
 @synthesize asset = _asset;
@@ -341,8 +342,10 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (void)processPixelBufferAtTime:(CMTime)outputItemTime
 {
-    if ([playerItemOutput hasNewPixelBufferForItemTime:outputItemTime])
+    if ([playerItemOutput hasNewPixelBufferForItemTime:outputItemTime] || _shouldReprocessCurrentFrame)
     {
+        _shouldReprocessCurrentFrame = false;
+        
         __unsafe_unretained PGVideoMovie *weakSelf = self;
         CVPixelBufferRef pixelBuffer = [playerItemOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
         if (pixelBuffer != NULL)
@@ -353,6 +356,10 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
             });
         }
     }
+}
+
+- (void)reprocessCurrent {
+    _shouldReprocessCurrentFrame = true;
 }
 
 - (BOOL)readNextVideoFrameFromOutput:(AVAssetReaderOutput *)readerVideoTrackOutput;

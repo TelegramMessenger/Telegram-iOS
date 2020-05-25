@@ -45,6 +45,7 @@
 - (void)setCIImage:(CIImage *)ciImage;
 
 - (void)processAnimated:(bool)animated completion:(void (^)(void))completion;
+- (void)reprocess;
 
 - (void)createResultImageWithCompletion:(void (^)(UIImage *image))completion;
 - (UIImage *)currentResultImage;

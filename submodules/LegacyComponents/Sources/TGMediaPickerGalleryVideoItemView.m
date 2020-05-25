@@ -449,6 +449,10 @@
             
             [strongSelf->_entitiesContainerView setupWithPaintingData:adjustments.paintingData];
             [strongSelf->_photoEditor importAdjustments:adjustments];
+            
+            if (!strongSelf.isPlaying) {
+                [strongSelf->_photoEditor reprocess];
+            }
         }]];
     }
     else
@@ -810,13 +814,12 @@
 {
     if (_videoView != nil)
     {
-        UIImage *image = nil;
-        
-        UIGraphicsBeginImageContextWithOptions(_videoView.bounds.size, true, [UIScreen mainScreen].scale);
-
         if (_lastRenderedScreenImage != nil)
             return _lastRenderedScreenImage;
         
+        UIImage *image = nil;
+        
+        UIGraphicsBeginImageContextWithOptions(_videoView.bounds.size, true, [UIScreen mainScreen].scale);
         AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:_player.currentItem.asset];
         generator.appliesPreferredTrackTransform = true;
         generator.maximumSize = TGFitSize(_videoDimensions, CGSizeMake(1280.0f, 1280.0f));
@@ -853,11 +856,16 @@
         generator.requestedTimeToleranceBefore = kCMTimeZero;
         CGImageRef imageRef = [generator copyCGImageAtTime:_player.currentTime actualTime:nil error:NULL];
         
-        _lastRenderedScreenImage = [UIImage imageWithCGImage:imageRef];
-        CGImageRelease(imageRef);
-        
         TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
         
+        UIImage *renderedImage = [UIImage imageWithCGImage:imageRef];
+        CGImageRelease(imageRef);
+        
+        if (adjustments.toolsApplied) {
+            renderedImage = [PGPhotoEditor resultImageForImage:renderedImage adjustments:adjustments];
+        }
+        _lastRenderedScreenImage = renderedImage;
+         
         CGSize originalSize = _videoDimensions;
         CGRect cropRect = CGRectMake(0, 0, _videoDimensions.width, _videoDimensions.height);
         UIImageOrientation cropOrientation = UIImageOrientationUp;
@@ -873,7 +881,7 @@
 
         CGRect drawRect = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, originalSize.width * ratio, originalSize.height * ratio);
         [_lastRenderedScreenImage drawInRect:drawRect];
-        
+                
         if (_paintingImageView.image != nil)
             [_paintingImageView.image drawInRect:drawRect];
     }
