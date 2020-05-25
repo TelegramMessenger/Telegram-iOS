@@ -25,6 +25,7 @@
 @interface TGMediaPickerModernGalleryMixin ()
 {
     TGMediaEditingContext *_editingContext;
+    id<TGPhotoPaintStickersContext> _stickersContext;
     bool _asFile;
     
     __weak TGViewController *_parentController;
@@ -59,6 +60,7 @@
         _context = context;
         _parentController = parentController;
         _editingContext = asFile ? nil : editingContext;
+        _stickersContext = asFile? nil : stickersContext;
         _asFile = asFile;
         _itemsLimit = itemsLimit;
         
@@ -81,7 +83,7 @@
             }
         };
         
-        NSArray *galleryItems = fetchResult != nil ? [self prepareGalleryItemsForFetchResult:fetchResult selectionContext:selectionContext editingContext:editingContext asFile:asFile enumerationBlock:enumerationBlock] : [self prepareGalleryItemsForMomentList:momentList selectionContext:selectionContext editingContext:editingContext asFile:asFile enumerationBlock:enumerationBlock];
+        NSArray *galleryItems = [self prepareGalleryItemsForFetchResult:fetchResult selectionContext:selectionContext editingContext:editingContext stickersContext:stickersContext asFile:asFile enumerationBlock:enumerationBlock];
         
         TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:[_windowManager context] items:galleryItems focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:hasTimer onlyCrop:onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions hasSelectionPanel:true hasCamera:false recipientName:recipientName];
         _galleryModel = model;
@@ -312,7 +314,7 @@
     }
     
     __block id<TGModernGalleryItem> focusItem = nil;
-    NSArray *galleryItems = [self prepareGalleryItemsForFetchResult:fetchResult selectionContext:_galleryModel.selectionContext editingContext:_editingContext asFile:_asFile enumerationBlock:^(TGMediaPickerGalleryItem *item)
+    NSArray *galleryItems = [self prepareGalleryItemsForFetchResult:fetchResult selectionContext:_galleryModel.selectionContext editingContext:_editingContext stickersContext:_stickersContext asFile:_asFile enumerationBlock:^(TGMediaPickerGalleryItem *item)
     {
         if (focusItem == nil && [item isEqual:_galleryController.currentItem])
             focusItem = item;
@@ -321,7 +323,7 @@
     [_galleryModel _replaceItems:galleryItems focusingOnItem:focusItem];
 }
 
-- (NSArray *)prepareGalleryItemsForFetchResult:(TGMediaAssetFetchResult *)fetchResult selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext asFile:(bool)asFile enumerationBlock:(void (^)(TGMediaPickerGalleryItem *))enumerationBlock
+- (NSArray *)prepareGalleryItemsForFetchResult:(TGMediaAssetFetchResult *)fetchResult selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext asFile:(bool)asFile enumerationBlock:(void (^)(TGMediaPickerGalleryItem *))enumerationBlock
 {
     NSMutableArray *galleryItems = [[NSMutableArray alloc] init];
     
@@ -350,16 +352,14 @@
                 
             default:
             {
-                if (false && asset.subtypes & TGMediaAssetSubtypePhotoLive)
-                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
-                else
-                    galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
+                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
             }
                 break;
         }
         
         galleryItem.selectionContext = selectionContext;
         galleryItem.editingContext = editingContext;
+        galleryItem.stickersContext = stickersContext;
         
         if (enumerationBlock != nil)
             enumerationBlock(galleryItem);
@@ -368,65 +368,6 @@
         
         if (galleryItem != nil)
             [galleryItems addObject:galleryItem];
-    }
-    
-    return galleryItems;
-}
-
-- (NSArray *)prepareGalleryItemsForMomentList:(TGMediaAssetMomentList *)momentList selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext asFile:(bool)asFile enumerationBlock:(void (^)(TGMediaPickerGalleryItem *))enumerationBlock
-{
-    NSMutableArray *galleryItems = [[NSMutableArray alloc] init];
-    
-    for (NSUInteger i = 0; i < momentList.count; i++)
-    {
-        TGMediaAssetMoment *moment = momentList[i];
-        
-        for (NSUInteger k = 0; k < moment.assetCount; k++)
-        {
-            TGMediaAsset *asset = [moment.fetchResult assetAtIndex:k];
-            
-            TGMediaPickerGalleryItem *galleryItem = nil;
-            switch (asset.type)
-            {
-                case TGMediaAssetVideoType:
-                {
-                    TGMediaPickerGalleryVideoItem *videoItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
-                    videoItem.selectionContext = selectionContext;
-                    videoItem.editingContext = editingContext;
-                    
-                    galleryItem = videoItem;
-                }
-                    break;
-                    
-                case TGMediaAssetGifType:
-                {
-                    TGMediaPickerGalleryGifItem *gifItem = [[TGMediaPickerGalleryGifItem alloc] initWithAsset:asset];
-                    gifItem.selectionContext = selectionContext;
-                    gifItem.editingContext = editingContext;
-                    
-                    galleryItem = gifItem;
-                }
-                    break;
-                    
-                default:
-                {
-                    TGMediaPickerGalleryPhotoItem *photoItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
-                    photoItem.selectionContext = selectionContext;
-                    photoItem.editingContext = editingContext;
-                    
-                    galleryItem = photoItem;
-                }
-                    break;
-            }
-            
-            if (enumerationBlock != nil)
-                enumerationBlock(galleryItem);
-            
-            galleryItem.asFile = asFile;
-            
-            if (galleryItem != nil)
-                [galleryItems addObject:galleryItem];
-        }
     }
     
     return galleryItems;

@@ -2,6 +2,7 @@
 #import "TGPhotoPaintEntityView.h"
 #import "TGPhotoStickerEntityView.h"
 #import "TGPhotoTextEntityView.h"
+#import "TGPaintingData.h"
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
@@ -72,6 +73,48 @@
 - (NSUInteger)entitiesCount
 {
     return MAX(0, (NSInteger)self.subviews.count - 1);
+}
+
+- (void)setupWithPaintingData:(TGPaintingData *)paintingData {
+    [self removeAll];
+    for (TGPhotoPaintEntity *entity in paintingData.entities) {
+        [self createEntityViewWithEntity:entity];
+    }
+}
+
+- (TGPhotoPaintEntityView *)createEntityViewWithEntity:(TGPhotoPaintEntity *)entity {
+    if ([entity isKindOfClass:[TGPhotoPaintStickerEntity class]])
+        return [self _createStickerViewWithEntity:(TGPhotoPaintStickerEntity *)entity];
+    else if ([entity isKindOfClass:[TGPhotoPaintTextEntity class]])
+        return [self _createTextViewWithEntity:(TGPhotoPaintTextEntity *)entity];
+    
+    return nil;
+}
+
+- (TGPhotoStickerEntityView *)_createStickerViewWithEntity:(TGPhotoPaintStickerEntity *)entity
+{
+    TGPhotoStickerEntityView *stickerView = [[TGPhotoStickerEntityView alloc] initWithEntity:entity context:self.stickersContext];
+    [self _commonEntityViewSetup:stickerView entity:entity];
+    [self addSubview:stickerView];
+
+    return stickerView;
+}
+
+- (TGPhotoTextEntityView *)_createTextViewWithEntity:(TGPhotoPaintTextEntity *)entity
+{
+    TGPhotoTextEntityView *textView = [[TGPhotoTextEntityView alloc] initWithEntity:entity];
+    [textView sizeToFit];
+    
+    [self _commonEntityViewSetup:textView entity:entity];
+    [self addSubview:textView];
+    
+    return textView;
+}
+
+- (void)_commonEntityViewSetup:(TGPhotoPaintEntityView *)entityView entity:(TGPhotoPaintEntity *)entity
+{
+    entityView.transform = CGAffineTransformRotate(CGAffineTransformMakeScale(entity.scale, entity.scale), entity.angle);
+    entityView.center = entity.position;
 }
 
 - (TGPhotoPaintEntityView *)viewForUUID:(NSInteger)uuid

@@ -18,6 +18,8 @@
 
 @property (nonatomic, readonly) UIImage *stillImage;
 
+@property (nonatomic, readonly) bool hasAnimation;
+
 + (instancetype)dataWithPaintingData:(NSData *)data image:(UIImage *)image stillImage:(UIImage *)stillImage entities:(NSArray *)entities undoManager:(TGPaintUndoManager *)undoManager;
 
 + (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entities:(NSArray *)entities;

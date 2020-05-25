@@ -20,6 +20,9 @@
 
 #import "TGMediaPickerGalleryPhotoItem.h"
 
+#import "TGPhotoEntitiesContainerView.h"
+#import "TGPhotoPaintController.h"
+
 #import <LegacyComponents/TGMenuView.h>
 
 @interface TGMediaPickerGalleryPhotoItemView ()
@@ -33,6 +36,10 @@
     UIView *_temporaryRepView;
     PHLivePhotoView *_livePhotoView;
     
+    UIView *_contentWrapperView;
+    TGPhotoEntitiesContainerView *_entitiesContainerView;
+    
+    SMetaDisposable *_adjustmentsDisposable;
     SMetaDisposable *_attributesDisposable;
     
     TGMenuContainerView *_tooltipContainerView;
@@ -54,6 +61,7 @@
     {
         __weak TGMediaPickerGalleryPhotoItemView *weakSelf = self;
         _imageView = [[TGModernGalleryImageItemImageView alloc] init];
+        _imageView.clipsToBounds = true;
         _imageView.progressChanged = ^(CGFloat value)
         {
             __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
@@ -70,17 +78,27 @@
         };
         [self.scrollView addSubview:_imageView];
         
+        _contentWrapperView = [[UIView alloc] init];
+        [_imageView addSubview:_contentWrapperView];
+        
+        _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
+        _entitiesContainerView.userInteractionEnabled = false;
+        [_contentWrapperView addSubview:_entitiesContainerView];
+        
         _fileInfoLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 200, 20)];
         _fileInfoLabel.backgroundColor = [UIColor clearColor];
         _fileInfoLabel.font = TGSystemFontOfSize(13);
         _fileInfoLabel.textAlignment = NSTextAlignmentCenter;
         _fileInfoLabel.textColor = [UIColor whiteColor];
+        
+        _adjustmentsDisposable = [[SMetaDisposable alloc] init];
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [_adjustmentsDisposable dispose];
     [_attributesDisposable dispose];
 }
 
@@ -105,6 +123,8 @@
 - (void)setItem:(TGMediaPickerGalleryPhotoItem *)item synchronously:(bool)synchronously
 {
     [super setItem:item synchronously:synchronously];
+    
+    _entitiesContainerView.stickersContext = item.stickersContext;
     
     _imageSize = item.asset.originalSize;
     [self reset];
@@ -175,6 +195,17 @@
                     }];
                 }
             }];
+            
+            SSignal *adjustmentsSignal = [item.editingContext adjustmentsSignalForItem:item.editableMediaItem];
+            [_adjustmentsDisposable setDisposable:[[adjustmentsSignal deliverOn:[SQueue mainQueue]] startWithNext:^(__unused id<TGMediaEditAdjustments> next)
+            {
+                __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                [strongSelf layoutEntities];
+                [strongSelf->_entitiesContainerView setupWithPaintingData:next.paintingData];
+            }]];
         }
         
         if (item.immediateThumbnailImage != nil)
@@ -198,25 +229,6 @@
             
             strongSelf->_livePhotoView.frame = strongSelf->_imageView.frame;
         }]];
-        
-//        if (item.asset.subtypes & TGMediaAssetSubtypePhotoLive)
-//        {
-//            _livePhotoView = [[PHLivePhotoView alloc] init];
-//            _livePhotoView.muted = true;
-//            _livePhotoView.contentMode = UIViewContentModeScaleAspectFill;
-//            _livePhotoView.hidden = self.imageView.hidden;
-//            _livePhotoView.frame = CGRectMake((self.containerView.frame.size.width - _imageSize.width) / 2.0f, (self.containerView.frame.size.height - _imageSize.height) / 2.0f, _imageSize.width, _imageSize.height);
-//            [self.containerView addSubview:_livePhotoView];
-//            
-//            [[[TGMediaAssetImageSignals livePhotoForAsset:item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(PHLivePhoto *next)
-//            {
-//                __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
-//                if (strongSelf == nil)
-//                    return;
-//                
-//                strongSelf->_livePhotoView.livePhoto = next;
-//            }];
-//        }
         
         if (!item.asFile)
             return;
@@ -405,6 +417,57 @@
         if (self.item.selectionContext != nil)
             [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
     }
+}
+
+- (void)setFrame:(CGRect)frame {
+    [super setFrame:frame];
+    
+    [self layoutEntities];
+}
+
+- (void)layoutEntities {
+    if (self.item == nil) {
+        return;
+    }
+    TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
+    CGSize videoFrameSize = self.item.asset.originalSize;
+    CGRect cropRect = CGRectMake(0, 0, videoFrameSize.width, videoFrameSize.height);
+    UIImageOrientation orientation = UIImageOrientationUp;
+    bool mirrored = false;
+    if (adjustments != nil)
+    {
+        videoFrameSize = adjustments.cropRect.size;
+        cropRect = adjustments.cropRect;
+        orientation = adjustments.cropOrientation;
+        mirrored = adjustments.cropMirrored;
+    }
+    
+    [self _layoutPlayerViewWithCropRect:cropRect videoFrameSize:videoFrameSize orientation:orientation mirrored:mirrored];
+}
+
+- (void)_layoutPlayerViewWithCropRect:(CGRect)cropRect videoFrameSize:(CGSize)videoFrameSize orientation:(UIImageOrientation)orientation mirrored:(bool)mirrored
+{
+    CGSize originalSize = self.item.asset.originalSize;
+    CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
+    _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize rotatedSize = fittedOriginalSize;
+    CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
+    
+    CGFloat scale = fittedOriginalSize.width / originalSize.width;
+    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
+    
+    CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
+    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
+    
+    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:UIImageOrientationUp originalSize:originalSize];
+    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    
+    CGFloat contentScale = _imageView.bounds.size.width / fittedCropRect.size.width;
+    _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _imageView.bounds.size.width, _imageView.bounds.size.height);
 }
 
 @end

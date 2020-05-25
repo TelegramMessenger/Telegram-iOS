@@ -1,6 +1,6 @@
 #import "TGPhotoVideoEditor.h"
 
-#import "TGMediaEditingContext.h"b
+#import "TGMediaEditingContext.h"
 
 #import "TGMediaPickerGalleryModel.h"
 #import "TGMediaPickerGalleryPhotoItem.h"
@@ -10,7 +10,7 @@
 
 @implementation TGPhotoVideoEditor
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item recipientName:(NSString *)recipientName completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
@@ -28,6 +28,7 @@
     else
         galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:item];
     galleryItem.editingContext = editingContext;
+    galleryItem.stickersContext = stickersContext;
     
     TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:true allowCaptionEntities:true hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName];
     model.controller = galleryController;

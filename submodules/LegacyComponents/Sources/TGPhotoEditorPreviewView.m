@@ -228,7 +228,8 @@
             if (self.touchedDown != nil)
                 self.touchedDown();
 
-            [self setActualImageHidden:true animated:false];
+            if (!self.customTouchDownHandling)
+                [self setActualImageHidden:true animated:false];
         }
             break;
             
@@ -240,7 +241,8 @@
             if (self.touchedUp != nil)
                 self.touchedUp();
             
-            [self setActualImageHidden:false animated:false];
+            if (!self.customTouchDownHandling)
+                [self setActualImageHidden:false animated:false];
             
             if (self.interactionEnded != nil)
                 self.interactionEnded();

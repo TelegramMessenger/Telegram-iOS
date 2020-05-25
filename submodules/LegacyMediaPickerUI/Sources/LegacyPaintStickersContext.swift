@@ -301,6 +301,41 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
     public init(context: AccountContext) {
         self.context = context
     }
+    
+    public func documentId(forDocument document: Any!) -> Int64 {
+        if let data = document as? Data{
+            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
+                return file.fileId.id
+            } else {
+                return 0
+            }
+        } else {
+            return 0
+        }
+    }
+    
+    public func maskDescription(forDocument document: Any!) -> TGStickerMaskDescription? {
+        if let data = document as? Data{
+            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
+                for attribute in file.attributes {
+                    if case let .Sticker(_, _, maskData) = attribute {
+                        if let maskData = maskData {
+                            return TGStickerMaskDescription(n: maskData.n, point: CGPoint(x: maskData.x, y: maskData.y), zoom: CGFloat(maskData.zoom))
+                        } else {
+                            return nil
+                        }
+                    }
+                }
+                return nil
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
 
     public func stickerView(forDocument document: Any!) -> (UIView & TGPhotoPaintStickerRenderView)! {
         if let data = document as? Data{

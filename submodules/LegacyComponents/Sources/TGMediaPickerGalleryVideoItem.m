@@ -12,6 +12,7 @@
 
 @synthesize selectionContext;
 @synthesize editingContext;
+@synthesize stickersContext;
 
 - (CGSize)dimensions
 {

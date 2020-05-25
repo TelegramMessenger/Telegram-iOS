@@ -139,6 +139,16 @@
     return [stickers allObjects];
 }
 
+- (bool)hasAnimation
+{
+    for (TGPhotoPaintEntity *entity in self.entities)
+    {
+        if ([entity isKindOfClass:[TGPhotoPaintStickerEntity class]] && ((TGPhotoPaintStickerEntity *)entity).animated)
+            return true;
+    }
+    return false;
+}
+
 - (BOOL)isEqual:(id)object
 {
     if (object == self)
