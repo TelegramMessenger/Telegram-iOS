@@ -364,6 +364,8 @@ public enum ChatPresentationInputQueryResult: Equatable {
     }
 }
 
+public let ChatControllerCount = Atomic<Int32>(value: 0)
+
 public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }

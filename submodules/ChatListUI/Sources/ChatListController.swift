@@ -1065,7 +1065,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             return
         }
         
-        #if false && DEBUG
+        #if true && DEBUG
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: { [weak self] in
             guard let strongSelf = self else {
                 return

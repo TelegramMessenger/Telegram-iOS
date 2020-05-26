@@ -140,8 +140,6 @@ private func calculateSlowmodeActiveUntilTimestamp(account: Account, untilTimest
     }
 }
 
-let ChatControllerCount = Atomic<Int32>(value: 0)
-
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -542,6 +540,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.controllerInteraction?.addContact(phoneNumber)
                 }
             }, storeMediaPlaybackState: { [weak self] messageId, timestamp in
+                guard let strongSelf = self else {
+                    return
+                }
                 var storedState: MediaPlaybackStoredState?
                 if let timestamp = timestamp {
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
