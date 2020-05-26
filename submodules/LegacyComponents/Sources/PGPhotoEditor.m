@@ -242,9 +242,10 @@
                 if (capture)
                     [_finalFilter useNextFrameForImageCapture];
                 
-                [(GPUImageTextureInput *)currentInput processTextureWithFrameTime:kCMTimeZero synchronous:synchronous];
-                if (completion != nil)
-                    completion();
+                [(GPUImageTextureInput *)currentInput processTextureWithFrameTime:kCMTimeZero synchronous:synchronous completion:^{
+                    if (completion != nil)
+                        completion();
+                }];
                 [_finalFilter commitImageCapture];
             }
         } synchronous:synchronous];

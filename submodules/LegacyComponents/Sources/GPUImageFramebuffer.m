@@ -295,8 +295,6 @@ static BOOL mark = false;
     
     [fixer invalidate];
     fixer = nil;
-    
-    NSLog(@"Lock, %@, count = %d", self, framebufferReferenceCount);
 }
 
 - (void)unlock
@@ -308,8 +306,6 @@ static BOOL mark = false;
 
     NSAssert(framebufferReferenceCount > 0, @"Tried to overrelease a framebuffer, did you forget to call -useNextFrameForImageCapture before using -imageFromCurrentFramebuffer?");
     framebufferReferenceCount--;
-
-    NSLog(@"Unlock, %@, count = %d", self, framebufferReferenceCount);
     
     if (framebufferReferenceCount < 1)
     {

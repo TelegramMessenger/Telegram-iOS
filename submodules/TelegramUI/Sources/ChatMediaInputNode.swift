@@ -232,10 +232,10 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme) -> [ChatMediaIn
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasSearch: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
-    if view.lower == nil {
+    if hasSearch && view.lower == nil {
         entries.append(.search(theme: theme, strings: strings))
     }
     

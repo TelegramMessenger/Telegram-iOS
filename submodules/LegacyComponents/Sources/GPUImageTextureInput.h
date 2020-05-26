@@ -11,7 +11,7 @@
 
 - (void)setCIImage:(CIImage *)ciImage;
 
-- (void)processTextureWithFrameTime:(CMTime)frameTime synchronous:(bool)synchronous;
+- (void)processTextureWithFrameTime:(CMTime)frameTime synchronous:(bool)synchronous completion:(void (^)(void))completion;
 
 - (CGSize)textureSize;
 

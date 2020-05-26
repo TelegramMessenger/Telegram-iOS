@@ -112,7 +112,7 @@
     });
 }
 
-- (void)processTextureWithFrameTime:(CMTime)frameTime synchronous:(bool)synchronous
+- (void)processTextureWithFrameTime:(CMTime)frameTime synchronous:(bool)synchronous completion:(void (^)(void))completion
 {
     void (^block)(void) = ^
     {
@@ -125,6 +125,9 @@
             [currentTarget setInputFramebuffer:outputFramebuffer atIndex:targetTextureIndex];
             [currentTarget newFrameReadyAtTime:frameTime atIndex:targetTextureIndex];
         }
+        
+        if (completion != nil)
+            completion();
     };
     
     if (synchronous)

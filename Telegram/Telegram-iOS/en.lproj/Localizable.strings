@@ -5513,3 +5513,5 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.Gifs.SavedSectionHeader" = "MY GIFS";
 
 "Paint.Framed" = "Framed";
+
+"Media.SendingOptionsTooltip" = "Hold this button to send your message with a self-destruct timer.";

@@ -384,16 +384,13 @@
             if (backgroundCIImage != nil) {
                 resultImage = backgroundCIImage;
             }
-            
-            CGSize size = resultImage.extent.size;
-            
+                        
             if (editor != nil) {
-                NSLog(@"setCIImage");
                 [editor setCIImage:resultImage];
                 resultImage = editor.currentResultCIImage;
-                NSLog(@"resultCIImage");
             }
             
+            CGSize size = resultImage.extent.size;
             if (overlayImage != nil && overlayImage.size.width > 0.0) {
                 if (overlayCIImage == nil) {
                     overlayCIImage = [[CIImage alloc] initWithImage:overlayImage];
