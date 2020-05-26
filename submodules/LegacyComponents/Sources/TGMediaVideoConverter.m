@@ -579,7 +579,7 @@
         
         CGSize dimensions = CGSizeZero;
         NSDictionary *outputSettings = nil;
-        CMTimeRange timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(0.0, NSEC_PER_SEC), CMTimeMakeWithSeconds(4.0, NSEC_PER_SEC));
+        CMTimeRange timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(0.0, NSEC_PER_SEC), CMTimeMakeWithSeconds(3.0, NSEC_PER_SEC));
         AVMutableComposition *composition = [AVMutableComposition composition];
         
         AVAssetTrack *videoTrack = [[avAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];

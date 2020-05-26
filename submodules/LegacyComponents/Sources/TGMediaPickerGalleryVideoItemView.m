@@ -255,8 +255,10 @@
     UIWindow *keyWindow = self.window; //[UIApplication sharedApplication].keyWindow;
     UIView *rootView = keyWindow.rootViewController.view;
     
-    _volumeOverlayFixView = [[MPVolumeView alloc] initWithFrame:CGRectMake(10000, 10000, 20, 20)];
-    [rootView addSubview:_volumeOverlayFixView];
+    if (iosMajorVersion() < 13) {
+        _volumeOverlayFixView = [[MPVolumeView alloc] initWithFrame:CGRectMake(10000, 10000, 20, 20)];
+        [rootView addSubview:_volumeOverlayFixView];
+    }
 }
 
 - (void)releaseVolumeOverlay
