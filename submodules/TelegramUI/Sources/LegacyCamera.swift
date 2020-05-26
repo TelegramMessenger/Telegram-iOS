@@ -34,6 +34,11 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
             done?(time)
         }
     }
+    controller.presentTimerController = { done in
+        presentSchedulePicker { time in
+            done?(time)
+        }
+    }
     
     if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
     } else {

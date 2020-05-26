@@ -724,7 +724,7 @@ typedef enum
     
     bool effectiveHasSchedule = true;
     
-    TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:_context isDark:self.pallete.isDark sendButtonFrame:[_controlsView convertRect:[_controlsView frameForSendButton] toView:nil] canSendSilently:_canSendSilently canSchedule:_canSchedule reminder:_reminder];
+    TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:_context isDark:self.pallete.isDark sendButtonFrame:[_controlsView convertRect:[_controlsView frameForSendButton] toView:nil] canSendSilently:_canSendSilently canSchedule:_canSchedule reminder:_reminder hasTimer:false];
     __weak TGVideoMessageCaptureController *weakSelf = self;
     controller.send = ^{
         __strong TGVideoMessageCaptureController *strongSelf = weakSelf;

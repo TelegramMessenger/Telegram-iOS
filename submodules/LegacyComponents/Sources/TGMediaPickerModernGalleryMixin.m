@@ -167,7 +167,7 @@
                 }
             }
             
-            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context isDark:true sendButtonFrame:strongSelf.galleryModel.interfaceView.doneButtonFrame canSendSilently:hasSilentPosting canSchedule:effectiveHasSchedule reminder:reminder];
+            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context isDark:true sendButtonFrame:strongSelf.galleryModel.interfaceView.doneButtonFrame canSendSilently:hasSilentPosting canSchedule:effectiveHasSchedule reminder:reminder hasTimer:hasTimer];
             controller.send = ^{
                 __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -189,6 +189,22 @@
                     strongSelf.completeWithItem(item, true, 0);
             };
             controller.schedule = ^{
+                __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf.presentScheduleController(^(int32_t time) {
+                    __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    strongSelf->_galleryModel.dismiss(true, false);
+                    
+                    if (strongSelf.completeWithItem != nil)
+                        strongSelf.completeWithItem(item, false, time);
+                });
+            };
+            controller.sendWithTimer = ^{
                 __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;

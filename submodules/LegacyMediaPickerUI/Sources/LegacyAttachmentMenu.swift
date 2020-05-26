@@ -150,6 +150,11 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
                 done?(time)
             }
         }
+        carouselItem.presentTimerController = { done in
+            presentSchedulePicker { time in
+                done?(time)
+            }
+        }
         carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, silentPosting, scheduleTime in
             if let controller = controller, let carouselItem = carouselItem {
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
