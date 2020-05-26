@@ -221,7 +221,7 @@
         SAtomic *context = [[SAtomic alloc] initWithValue:[TGMediaVideoConversionContext contextWithQueue:queue subscriber:subscriber]];
         NSURL *outputUrl = [self _randomTemporaryURL];
         
-        NSString *path = TGComponentsPathForResource(@"blank_1080p", @"mp4");
+        NSString *path = TGComponentsPathForResource(@"blank", @"mp4");
         AVAsset *avAsset = [[AVURLAsset alloc] initWithURL:[NSURL fileURLWithPath:path] options:nil];
         
         NSArray *requiredKeys = @[ @"tracks", @"duration", @"playable" ];
@@ -388,8 +388,10 @@
             CGSize size = resultImage.extent.size;
             
             if (editor != nil) {
+                NSLog(@"setCIImage");
                 [editor setCIImage:resultImage];
                 resultImage = editor.currentResultCIImage;
+                NSLog(@"resultCIImage");
             }
             
             if (overlayImage != nil && overlayImage.size.width > 0.0) {

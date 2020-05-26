@@ -31,8 +31,10 @@ typedef struct GPUTextureOptions {
 - (id)initWithSize:(CGSize)framebufferSize;
 - (id)initWithSize:(CGSize)framebufferSize textureOptions:(GPUTextureOptions)fboTextureOptions onlyTexture:(BOOL)onlyGenerateTexture;
 - (id)initWithSize:(CGSize)framebufferSize overriddenTexture:(GLuint)inputTexture;
+- (id)initWithSize:(CGSize)framebufferSize overridenFramebuffer:(GLuint)overridenFramebuffer overriddenTexture:(GLuint)inputTexture;
 
 // Usage
+- (void)useFramebuffer;
 - (void)activateFramebuffer;
 
 // Reference counting
