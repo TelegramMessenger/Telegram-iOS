@@ -9,7 +9,6 @@
 #import "GPUImagePicture.h"
 #import "GPUImageRawDataInput.h"
 #import "GPUImageRawDataOutput.h"
-#import "GPUImageTextureOutput.h"
 #import "GPUImageFilterGroup.h"
 #import "GPUImageFramebuffer.h"
 #import "GPUImageFramebufferCache.h"

@@ -22,8 +22,6 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
     NSArray *_fontViews;
     NSArray *_fontSeparatorViews;
     UIImageView *_selectedCheckView;
-    
-    UIView *_separatorView;
 }
 @end
 
@@ -31,7 +29,7 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
 
 @synthesize interfaceOrientation = _interfaceOrientation;
 
-- (instancetype)initWithFonts:(NSArray *)fonts selectedFont:(TGPhotoPaintFont *)__unused selectedFont selectedStroke:(bool)selectedStroke
+- (instancetype)initWithFonts:(NSArray *)fonts selectedFont:(TGPhotoPaintFont *)__unused selectedFont selectedStyle:(TGPhotoPaintTextEntityStyle)selectedStyle
 {
     self = [super initWithFrame:CGRectZero];
     if (self)
@@ -53,10 +51,10 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
         outlineButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
         outlineButton.titleLabel.font = font;
         outlineButton.contentEdgeInsets = UIEdgeInsetsMake(0.0f, 44.0f, 0.0f, 0.0f);
-        outlineButton.tag = 0;
+        outlineButton.tag = TGPhotoPaintTextEntityStyleBorder;
         [outlineButton setTitle:@"" forState:UIControlStateNormal];
         [outlineButton setTitleColor:[UIColor clearColor]];
-        [outlineButton addTarget:self action:@selector(strokeValueChanged:) forControlEvents:UIControlEventTouchUpInside];
+        [outlineButton addTarget:self action:@selector(styleValueChanged:) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:outlineButton];
         [fontViews addObject:outlineButton];
         
@@ -75,19 +73,44 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
         UIView *separatorView = [[UIView alloc] init];
         separatorView.backgroundColor = UIColorRGB(0xd6d6da);
         [self addSubview:separatorView];
-
         [separatorViews addObject:separatorView];
         
         TGModernButton *regularButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, TGPhotoTextSettingsViewMargin +  TGPhotoTextSettingsItemHeight, 0, 0)];
         regularButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
         regularButton.titleLabel.font = font;
         regularButton.contentEdgeInsets = UIEdgeInsetsMake(0.0f, 44.0f, 0.0f, 0.0f);
-        regularButton.tag = 1;
+        regularButton.tag = TGPhotoPaintTextEntityStyleClassic;
         [regularButton setTitle:TGLocalized(@"Paint.Regular") forState:UIControlStateNormal];
         [regularButton setTitleColor:[UIColor blackColor]];
-        [regularButton addTarget:self action:@selector(strokeValueChanged:) forControlEvents:UIControlEventTouchUpInside];
+        [regularButton addTarget:self action:@selector(styleValueChanged:) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:regularButton];
         [fontViews addObject:regularButton];
+        
+        separatorView = [[UIView alloc] init];
+        separatorView.backgroundColor = UIColorRGB(0xd6d6da);
+        [self addSubview:separatorView];
+        [separatorViews addObject:separatorView];
+        
+        TGModernButton *frameButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, TGPhotoTextSettingsViewMargin +  TGPhotoTextSettingsItemHeight + TGPhotoTextSettingsItemHeight, 0, 0)];
+        frameButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
+        frameButton.titleLabel.font = font;
+        frameButton.contentEdgeInsets = UIEdgeInsetsMake(0.0f, 44.0f, 0.0f, 0.0f);
+        frameButton.tag = TGPhotoPaintTextEntityStyleFrame;
+        [frameButton setTitle:@"" forState:UIControlStateNormal];
+        [frameButton setTitleColor:[UIColor blackColor]];
+        [frameButton addTarget:self action:@selector(styleValueChanged:) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:frameButton];
+        [fontViews addObject:frameButton];
+        
+        textView = [[TGPhotoTextView alloc] init];
+        textView.backgroundColor = [UIColor clearColor];
+        textView.textColor = [UIColor whiteColor];
+        textView.frameColor = [UIColor blackColor];
+        textView.font = font;
+        textView.text = TGLocalized(@"Paint.Framed");
+        [textView sizeToFit];
+        textView.frame = CGRectMake(39.0f, ceil((TGPhotoTextSettingsItemHeight - textView.frame.size.height) / 2.0f) - 1.0f, ceil(textView.frame.size.width), ceil(textView.frame.size.height + 0.5f));
+        [frameButton addSubview:textView];
         
         _fontViews = fontViews;
         _fontSeparatorViews = separatorViews;
@@ -95,7 +118,7 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
         _selectedCheckView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PaintCheck")];
         _selectedCheckView.frame = CGRectMake(15.0f, 16.0f, _selectedCheckView.frame.size.width, _selectedCheckView.frame.size.height);
         
-        [self setStroke:selectedStroke];
+        [self setStyle:selectedStyle];
     }
     return self;
 }
@@ -108,10 +131,10 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
         self.fontChanged(_fonts[sender.tag]);
 }
 
-- (void)strokeValueChanged:(TGModernButton *)sender
+- (void)styleValueChanged:(TGModernButton *)sender
 {
-    if (self.strokeChanged != nil)
-        self.strokeChanged(1 - sender.tag);
+    if (self.styleChanged != nil)
+        self.styleChanged((TGPhotoPaintTextEntityStyle)sender.tag);
 }
 
 - (void)present
@@ -145,14 +168,14 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
     }];
 }
 
-- (bool)stroke
+- (TGPhotoPaintTextEntityStyle)style
 {
-    return 1 - _selectedCheckView.superview.tag;
+    return (TGPhotoPaintTextEntityStyle)_selectedCheckView.superview.tag;
 }
 
-- (void)setStroke:(bool)stroke
+- (void)setStyle:(TGPhotoPaintTextEntityStyle)style
 {
-    [_fontViews[1 - stroke] addSubview:_selectedCheckView];
+    [_fontViews[style] addSubview:_selectedCheckView];
 }
 
 - (NSString *)font
@@ -236,8 +259,6 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
     {
         view.frame = CGRectMake(TGPhotoTextSettingsViewMargin + 44.0f, TGPhotoTextSettingsViewMargin + TGPhotoTextSettingsItemHeight * (index + 1), self.frame.size.width - TGPhotoTextSettingsViewMargin * 2 - 44.0f, thickness);
     }];
-    
-    _separatorView.frame = CGRectMake(TGPhotoTextSettingsViewMargin, TGPhotoTextSettingsViewMargin + TGPhotoTextSettingsItemHeight * _fontViews.count, self.frame.size.width - TGPhotoTextSettingsViewMargin * 2, thickness);
 }
 
 @end

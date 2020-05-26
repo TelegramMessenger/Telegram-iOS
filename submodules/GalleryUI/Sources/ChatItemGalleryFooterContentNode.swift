@@ -120,7 +120,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let scrollNode: ASScrollNode
 
     private let textNode: ImmediateTextNode
-    private var textSelectionNode: TextSelectionNode?
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
     private let backwardButton: HighlightableButtonNode
@@ -362,23 +361,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
         }
         self.statusButtonNode.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
-        
-        let accentColor = presentationData.theme.list.itemAccentColor
-        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: accentColor.withAlphaComponent(0.2), knob: accentColor), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
-//            self?.updateIsTextSelectionActive?(value)
-        }, present: { [weak self] c, a in
-            present(c, a)
-        }, rootNode: self, performAction: { [weak self] text, action in
-//            guard let strongSelf = self, let item = strongSelf.item else {
-//                return
-//            }
-//            item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
-        })
-        self.textSelectionNode = textSelectionNode
-        self.scrollNode.addSubnode(textSelectionNode)
-        self.scrollNode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
-        textSelectionNode.frame = self.textNode.frame
-        textSelectionNode.highlightAreaNode.frame = self.textNode.frame
     }
     
     deinit {
@@ -608,12 +590,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textOffset), size: textSize)
             if self.textNode.frame != textFrame {
                 self.textNode.frame = textFrame
-                
-                if let textSelectionNode = self.textSelectionNode {
-                    textSelectionNode.frame = textFrame
-                    textSelectionNode.highlightAreaNode.frame = textFrame
-                    textSelectionNode.updateLayout()
-                }
             }
         }
         

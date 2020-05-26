@@ -70,6 +70,12 @@
     UIImage *_screenImage;
     UIImage *_thumbnailImage;
     
+    AVPlayerItem *_playerItem;
+    AVPlayer *_player;
+    SMetaDisposable *_playerItemDisposable;
+    id _playerStartedObserver;
+    id _playerReachedEndObserver;
+    
     id<TGMediaEditAdjustments> _initialAdjustments;
     NSString *_caption;
     
@@ -395,7 +401,13 @@
         if ([next isKindOfClass:[UIImage class]]) {
             [_photoEditor setImage:(UIImage *)next forCropRect:_photoEditor.cropRect cropRotation:_photoEditor.cropRotation cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored fullSize:false];
         } else if ([next isKindOfClass:[AVAsset class]]) {
-            [_photoEditor setVideoAsset:(AVAsset *)next];
+            _playerItem = [AVPlayerItem playerItemWithAsset:(AVAsset *)next];
+            _player = [AVPlayer playerWithPlayerItem:_playerItem];
+            _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
+            _player.muted = true;
+            
+            [_photoEditor setPlayerItem:_playerItem];
+                        
             TGDispatchOnMainThread(^
             {
                 [_previewView performTransitionInWithCompletion:^
@@ -428,6 +440,66 @@
             }];
         }
     }];
+}
+
+- (void)_setupPlaybackStartedObserver
+{
+    CMTime startTime = CMTimeMake(10, 100);
+    if (_photoEditor.trimStartValue > DBL_EPSILON)
+        startTime = CMTimeMakeWithSeconds(_photoEditor.trimStartValue + 0.1, NSEC_PER_SEC);
+    
+    __weak TGPhotoEditorController *weakSelf = self;
+    _playerStartedObserver = [_player addBoundaryTimeObserverForTimes:@[[NSValue valueWithCMTime:startTime]] queue:NULL usingBlock:^
+    {
+        __strong TGPhotoEditorController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+    
+        [strongSelf->_player removeTimeObserver:strongSelf->_playerStartedObserver];
+        strongSelf->_playerStartedObserver = nil;
+        
+        if (CMTimeGetSeconds(strongSelf->_player.currentItem.duration) > 0)
+            [strongSelf _setupPlaybackReachedEndObserver];
+    }];
+}
+
+- (void)_setupPlaybackReachedEndObserver
+{
+    CMTime endTime = CMTimeSubtract(_player.currentItem.duration, CMTimeMake(10, 100));
+    if (_photoEditor.trimEndValue > DBL_EPSILON && _photoEditor.trimEndValue < CMTimeGetSeconds(_player.currentItem.duration))
+        endTime = CMTimeMakeWithSeconds(_photoEditor.trimEndValue - 0.1, NSEC_PER_SEC);
+    
+    CMTime startTime = CMTimeMake(5, 100);
+    if (_photoEditor.trimStartValue > DBL_EPSILON)
+        startTime = CMTimeMakeWithSeconds(_photoEditor.trimStartValue + 0.05, NSEC_PER_SEC);
+    
+    __weak TGPhotoEditorController *weakSelf = self;
+    _playerReachedEndObserver = [_player addBoundaryTimeObserverForTimes:@[[NSValue valueWithCMTime:endTime]] queue:NULL usingBlock:^
+    {
+        __strong TGPhotoEditorController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            [strongSelf->_player seekToTime:startTime];
+    }];
+}
+
+- (void)startVideoPlayback {
+    NSTimeInterval startPosition = 0.0f;
+    if (_photoEditor.trimStartValue > DBL_EPSILON)
+        startPosition = _photoEditor.trimStartValue;
+    
+    CMTime targetTime = CMTimeMakeWithSeconds(startPosition, NSEC_PER_SEC);
+    [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+    
+    [self _setupPlaybackStartedObserver];
+    [_player play];
+}
+
+- (void)stopVideoPlayback {
+    if (_playerStartedObserver != nil)
+        [_player removeTimeObserver:_playerStartedObserver];
+    if (_playerReachedEndObserver != nil)
+        [_player removeTimeObserver:_playerReachedEndObserver];
+    [_player pause];
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -870,6 +942,7 @@
                     strongSelf.finishedTransitionIn();
                 
                 strongSelf->_switchingTab = false;
+                [strongSelf startVideoPlayback];
             };
             
             controller = paintController;
@@ -1119,6 +1192,8 @@
                     strongSelf.finishedTransitionIn();
                 
                 strongSelf->_switchingTab = false;
+                
+                [strongSelf startVideoPlayback];
             };
             
             controller = toolsController;

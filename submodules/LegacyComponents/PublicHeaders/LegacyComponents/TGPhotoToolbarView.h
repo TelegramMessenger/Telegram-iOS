@@ -44,6 +44,7 @@ typedef enum
 @property (nonatomic, copy) void(^tabPressed)(TGPhotoEditorTab tab);
 
 @property (nonatomic, readonly) CGRect cancelButtonFrame;
+@property (nonatomic, readonly) CGRect doneButtonFrame;
 
 - (instancetype)initWithBackButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground;
 

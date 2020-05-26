@@ -40,7 +40,6 @@
 - (void)cleanup;
 
 - (void)setImage:(UIImage *)image forCropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored fullSize:(bool)fullSize;
-- (void)setVideoAsset:(AVAsset *)asset;
 - (void)setPlayerItem:(AVPlayerItem *)playerItem;
 - (void)setCIImage:(CIImage *)ciImage;
 

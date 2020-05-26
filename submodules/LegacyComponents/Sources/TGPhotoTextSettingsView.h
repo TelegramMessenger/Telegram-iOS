@@ -1,15 +1,16 @@
 #import <UIKit/UIKit.h>
 #import "TGPhotoPaintSettingsView.h"
 #import "TGPhotoPaintFont.h"
+#import "TGPhotoPaintTextEntity.h"
 
 @interface TGPhotoTextSettingsView : UIView <TGPhotoPaintPanelView>
 
 @property (nonatomic, copy) void (^fontChanged)(TGPhotoPaintFont *font);
-@property (nonatomic, copy) void (^strokeChanged)(bool stroke);
+@property (nonatomic, copy) void (^styleChanged)(TGPhotoPaintTextEntityStyle style);
 
 @property (nonatomic, strong) TGPhotoPaintFont *font;
-@property (nonatomic, assign) bool stroke;
+@property (nonatomic, assign) TGPhotoPaintTextEntityStyle style;
 
-- (instancetype)initWithFonts:(NSArray *)fonts selectedFont:(TGPhotoPaintFont *)font selectedStroke:(bool)selectedStroke;
+- (instancetype)initWithFonts:(NSArray *)fonts selectedFont:(TGPhotoPaintFont *)font selectedStyle:(TGPhotoPaintTextEntityStyle)selectedStyle;
 
 @end

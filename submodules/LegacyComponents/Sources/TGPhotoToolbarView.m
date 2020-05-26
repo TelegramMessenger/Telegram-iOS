@@ -347,6 +347,11 @@
         self.cancelPressed();
 }
 
+- (CGRect)doneButtonFrame
+{
+    return _doneButton.frame;
+}
+
 - (void)doneButtonPressed
 {
     if (self.donePressed != nil)

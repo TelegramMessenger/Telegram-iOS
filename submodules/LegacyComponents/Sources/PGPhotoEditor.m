@@ -11,7 +11,6 @@
 #import "PGPhotoEditorPicture.h"
 
 #import "GPUImageTextureInput.h"
-#import "GPUImageTextureOutput.h"
 
 #import <LegacyComponents/PGPhotoEditorValues.h>
 #import <LegacyComponents/TGVideoEditAdjustments.h>
@@ -46,9 +45,7 @@
     GPUImageOutput *_currentInput;
     NSArray *_currentProcessChain;
     GPUImageOutput <GPUImageInput> *_finalFilter;
-    
-    GPUImageTextureOutput *_textureOutput;
-    
+        
     PGPhotoHistogram *_currentHistogram;
     PGPhotoHistogramGenerator *_histogramGenerator;
     
@@ -94,17 +91,19 @@
 
         _histogramPipe = [[SPipe alloc] init];
         
-        __weak PGPhotoEditor *weakSelf = self;
-        _histogramGenerator = [[PGPhotoHistogramGenerator alloc] init];
-        _histogramGenerator.histogramReady = ^(PGPhotoHistogram *histogram)
-        {
-            __strong PGPhotoEditor *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
+        if (!forVideo) {
+            __weak PGPhotoEditor *weakSelf = self;
+            _histogramGenerator = [[PGPhotoHistogramGenerator alloc] init];
+            _histogramGenerator.histogramReady = ^(PGPhotoHistogram *histogram)
+            {
+                __strong PGPhotoEditor *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
 
-            strongSelf->_currentHistogram = histogram;
-            strongSelf->_histogramPipe.sink(histogram);
-        };
+                strongSelf->_currentHistogram = histogram;
+                strongSelf->_histogramPipe.sink(histogram);
+            };
+        }
         
         [self importAdjustments:adjustments];
     }
@@ -160,18 +159,6 @@
     _fullSize = fullSize;
 }
 
-- (void)setVideoAsset:(AVAsset *)asset {
-    [_toolComposer invalidate];
-    _currentProcessChain = nil;
-    
-    [_currentInput removeAllTargets];
-    PGVideoMovie *movie = [[PGVideoMovie alloc] initWithAsset:asset];
-    movie.shouldRepeat = true;
-    _currentInput = movie;
-    
-    _fullSize = true;
-}
-
 - (void)setPlayerItem:(AVPlayerItem *)playerItem {
     [_toolComposer invalidate];
     _currentProcessChain = nil;
@@ -188,11 +175,12 @@
     _currentProcessChain = nil;
     
     [_currentInput removeAllTargets];
-    GPUImageTextureInput *input = [[GPUImageTextureInput alloc] initWithCIImage:ciImage];
-    _currentInput = input;
     
-    if (_textureOutput == nil) {
-        _textureOutput = [[GPUImageTextureOutput alloc] init];
+    if ([_currentInput isKindOfClass:[GPUImageTextureInput class]]) {
+        [(GPUImageTextureInput *)_currentInput setCIImage:ciImage];
+    } else {
+        GPUImageTextureInput *input = [[GPUImageTextureInput alloc] initWithCIImage:ciImage];
+        _currentInput = input;
     }
     
     _fullSize = true;
@@ -254,9 +242,10 @@
                 if (capture)
                     [_finalFilter useNextFrameForImageCapture];
                 
-                [(GPUImageTextureInput *)currentInput processTextureWithFrameTime:kCMTimeZero synchronous:synchronous];
-                if (completion != nil)
-                    completion();
+                [(GPUImageTextureInput *)currentInput processTextureWithFrameTime:kCMTimeZero synchronous:synchronous completion:^{
+                    if (completion != nil)
+                        completion();
+                }];
                 [_finalFilter commitImageCapture];
             }
         } synchronous:synchronous];
@@ -367,15 +356,11 @@
         }
         _finalFilter = lastFilter;
         
-        if (_textureOutput != nil) {
-            [_finalFilter addTarget:_textureOutput];
-        }
-
         if (previewOutput != nil) {
             [_finalFilter addTarget:previewOutput.imageView];
         }
         
-        if (!self.forVideo) {
+        if (_histogramGenerator != nil && !self.standalone) {
             [_finalFilter addTarget:_histogramGenerator];
         }
     }
@@ -406,13 +391,9 @@
 
 - (CIImage *)currentResultCIImage {
     __block CIImage *image = nil;
-    GPUImageOutput *currentInput = _currentInput;
     [self processAnimated:false capture:true synchronous:true completion:^
     {
         image = [_finalFilter newCIImageFromCurrentlyProcessedOutput];
-//        if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
-//            image = [_textureOutput CIImageWithSize:[(GPUImageTextureInput *)currentInput textureSize]];
-//        }
     }];
     return image;
 }

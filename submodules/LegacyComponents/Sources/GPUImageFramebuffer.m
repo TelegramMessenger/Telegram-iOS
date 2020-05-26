@@ -92,6 +92,33 @@ static BOOL mark = false;
     return self;
 }
 
+- (id)initWithSize:(CGSize)framebufferSize overridenFramebuffer:(GLuint)overridenFramebuffer overriddenTexture:(GLuint)inputTexture
+{
+    if (!(self = [super init]))
+    {
+        return nil;
+    }
+    _mark = mark;
+    GPUTextureOptions defaultTextureOptions;
+    defaultTextureOptions.minFilter = GL_LINEAR;
+    defaultTextureOptions.magFilter = GL_LINEAR;
+    defaultTextureOptions.wrapS = GL_CLAMP_TO_EDGE;
+    defaultTextureOptions.wrapT = GL_CLAMP_TO_EDGE;
+    defaultTextureOptions.internalFormat = GL_RGBA;
+    defaultTextureOptions.format = GL_BGRA;
+    defaultTextureOptions.type = GL_UNSIGNED_BYTE;
+
+    _textureOptions = defaultTextureOptions;
+    _size = framebufferSize;
+    framebufferReferenceCount = 0;
+    referenceCountingDisabled = YES;
+    
+    framebuffer = overridenFramebuffer;
+    _texture = inputTexture;
+    
+    return self;
+}
+
 - (id)initWithSize:(CGSize)framebufferSize
 {
     _mark = mark;
@@ -243,6 +270,11 @@ static BOOL mark = false;
 #pragma mark -
 #pragma mark Usage
 
+- (void)useFramebuffer
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+}
+
 - (void)activateFramebuffer
 {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -274,14 +306,14 @@ static BOOL mark = false;
 
     NSAssert(framebufferReferenceCount > 0, @"Tried to overrelease a framebuffer, did you forget to call -useNextFrameForImageCapture before using -imageFromCurrentFramebuffer?");
     framebufferReferenceCount--;
-
+    
     if (framebufferReferenceCount < 1)
     {
         [[GPUImageContext sharedFramebufferCache] returnFramebufferToCache:self];
         [fixer invalidate];
         fixer = nil;
     } else if (framebufferReferenceCount == 1 && self.mark) {
-        fixer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(fixTick) interval:0.35 repeat:false];
+//        fixer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(fixTick) interval:0.35 repeat:false];
     }
 }
 

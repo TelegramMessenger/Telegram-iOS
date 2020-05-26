@@ -32,8 +32,11 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     private let blurView: UIView
     
+    private let topPanel: ASDisplayNode
     private let segmentedControlNode: SegmentedControlNode
     private let cancelButton: HighlightableButtonNode
+    private let topSeparatorNode: ASDisplayNode
+    private let bottomSeparatorNode: ASDisplayNode
     
     private let listView: ListView
     
@@ -111,23 +114,33 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         self.blurView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         
-        let segmentedTheme = SegmentedControlTheme(backgroundColor: UIColor(rgb: 0x2c2d2d), foregroundColor: UIColor(rgb: 0x656565), shadowColor: UIColor.clear, textColor: .white, dividerColor: .white)
+        self.topPanel = ASDisplayNode()
+        self.topPanel.clipsToBounds = true
+        self.topPanel.backgroundColor = UIColor(rgb: 0x151515)
+        self.topPanel.alpha = 0.4
         
-        self.segmentedControlNode = SegmentedControlNode(theme: segmentedTheme, items: [SegmentedControlItem(title: "Stickers"), SegmentedControlItem(title: "Masks")], selectedIndex: 0)
+        let segmentedTheme = SegmentedControlTheme(backgroundColor: UIColor(rgb: 0x2c2d2d), foregroundColor: UIColor(rgb: 0x656565), shadowColor: UIColor.clear, textColor: .white, dividerColor: .white)
+        self.segmentedControlNode = SegmentedControlNode(theme: segmentedTheme, items: [SegmentedControlItem(title: self.presentationData.strings.Paint_Stickers), SegmentedControlItem(title: self.presentationData.strings.Paint_Masks)], selectedIndex: 0)
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.regular(17.0), textColor: .white), for: .normal)
         
         self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
-    
         self.collectionListPanel.backgroundColor = UIColor(rgb: 0x151515)
+        self.collectionListPanel.alpha = 0.4
         
         self.collectionListContainer = CollectionListContainerNode()
         self.collectionListContainer.clipsToBounds = true
         
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
+        
+        self.topSeparatorNode = ASDisplayNode()
+        self.topSeparatorNode.backgroundColor = UIColor(rgb: 0x2c2d2d)
+        
+        self.bottomSeparatorNode = ASDisplayNode()
+        self.bottomSeparatorNode.backgroundColor = UIColor(rgb: 0x2c2d2d)
         
         var paneDidScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void)?
         self.stickerPane = ChatMediaInputStickerPane(theme: self.presentationData.theme, strings: self.presentationData.strings, paneDidScroll: { pane, state, transition in
@@ -263,12 +276,17 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.inputNodeInteraction.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: true)
         
         
-        self.collectionListPanel.addSubnode(self.listView)
+        self.addSubnode(self.topPanel)
+        
         self.collectionListContainer.addSubnode(self.collectionListPanel)
+        self.collectionListContainer.addSubnode(self.listView)
         self.addSubnode(self.collectionListContainer)
         
         self.addSubnode(self.segmentedControlNode)
         self.addSubnode(self.cancelButton)
+        
+        self.addSubnode(self.topSeparatorNode)
+        self.addSubnode(self.bottomSeparatorNode)
        
         let trendingInteraction = TrendingPaneInteraction(installPack: { [weak self] info in
         }, openPack: { [weak self] info in
@@ -365,8 +383,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                 }
                 
-                let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: hasUnreadTrending, theme: theme, hasGifs: false)
-                var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, strings: strings, theme: theme)
+                let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false)
+                var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, strings: strings, theme: theme)
                 
                 if view.higher == nil {
                     var hasTopSeparator = true
@@ -377,9 +395,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     var index = 0
                     for item in trendingPacks {
                         if !installedPacks.contains(item.info.id) {
-                            gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: hasTopSeparator)))
-                            hasTopSeparator = true
-                            index += 1
+//                            gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: hasTopSeparator)))
+//                            hasTopSeparator = true
+//                            index += 1
                         }
                     }
                 }
@@ -395,10 +413,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     strongSelf.enqueuePanelTransition(panelTransition, firstTime: panelFirstTime, thenGridTransition: gridTransition, gridFirstTime: gridFirstTime)
                     if !strongSelf.initializedArrangement {
                         strongSelf.initializedArrangement = true
-                        var currentPane = strongSelf.paneArrangement.panes[strongSelf.paneArrangement.currentIndex]
-                        if view.entries.isEmpty {
-                            //currentPane = .trending
-                        }
+                        let currentPane = strongSelf.paneArrangement.panes[strongSelf.paneArrangement.currentIndex]
                         if currentPane != strongSelf.paneArrangement.panes[strongSelf.paneArrangement.currentIndex] {
                             strongSelf.setCurrentPane(currentPane, transition: .immediate)
                         }
@@ -420,9 +435,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                 }
                 if let collectionId = topVisibleCollectionId {
-//                    if strongSelf.inputNodeInteraction.highlightedItemCollectionId != collectionId {
-//                        strongSelf.setHighlightedItemCollectionId(collectionId)
-//                    }
+                    if strongSelf.inputNodeInteraction.highlightedItemCollectionId != collectionId {
+                        strongSelf.setHighlightedItemCollectionId(collectionId)
+                    }
                 }
                 
                 if let currentView = strongSelf.currentView, let (topIndex, topItem) = visibleItems.top, let (bottomIndex, bottomItem) = visibleItems.bottom {
@@ -614,11 +629,10 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     func updateLayout(width: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         var searchMode: ChatMediaInputSearchMode?
-        
-        let wasVisible = true
-        
+                
         var displaySearch = false
-        let separatorHeight = UIScreenPixel
+        let separatorHeight = max(UIScreenPixel, 1.0 - UIScreenPixel)
+        let topPanelHeight: CGFloat = 56.0
         let panelHeight: CGFloat
         
         var isExpanded: Bool = true
@@ -632,12 +646,14 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
 //            }
         self.stickerPane.collectionListPanelOffset = 0.0
         
+        transition.updateFrame(node: self.topPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: topInset + topPanelHeight)))
+        
         var cancelSize = self.cancelButton.measure(CGSize(width: width, height: .greatestFiniteMagnitude))
         cancelSize.width += 16.0 * 2.0
-        self.cancelButton.frame = CGRect(origin: CGPoint(x: width - cancelSize.width, y: topInset + 5.0), size: cancelSize)
+        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: width - cancelSize.width, y: topInset + floorToScreenPixels((topPanelHeight - cancelSize.height) / 2.0)), size: cancelSize))
         
         let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: width - cancelSize.width - 16.0 * 2.0), transition: transition)
-        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: 16.0, y: topInset), size: controlSize))
+        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: 16.0, y: topInset + floorToScreenPixels((topPanelHeight - controlSize.height) / 2.0)), size: controlSize))
         
         if displaySearch {
             if let searchContainerNode = self.searchContainerNode {
@@ -674,20 +690,24 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
         }
         
+        let bottomPanelHeight: CGFloat = 49.0
         let contentVerticalOffset: CGFloat = displaySearch ? -(inputPanelHeight + 41.0) : 0.0
         
         let collectionListPanelOffset: CGFloat = 0.0
         
         transition.updateFrame(view: self.blurView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: maximumHeight)))
         
-        transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - 41.0 - bottomInset), size: CGSize(width: width, height: max(0.0, 41.0 + UIScreenPixel + bottomInset))))
-        transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: 41.0 + bottomInset)))
+        transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: max(0.0, bottomPanelHeight + UIScreenPixel + bottomInset))))
+        transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: bottomPanelHeight + bottomInset)))
         
-        self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 41.0, height: width)
-        transition.updatePosition(node: self.listView, position: CGPoint(x: width / 2.0, y: (41.0 - collectionListPanelOffset) / 2.0 + 2.0))
+        self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight, height: width)
+        transition.updatePosition(node: self.listView, position: CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0))
+        
+        transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + topPanelHeight), size: CGSize(width: width, height: separatorHeight)))
+        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: separatorHeight)))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 41.0, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: curve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: bottomPanelHeight, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: curve)
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -703,12 +723,12 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }
         
         for (pane, paneOrigin) in visiblePanes {
-            let paneFrame = CGRect(origin: CGPoint(x: paneOrigin + leftInset, y: topInset + 54.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight - topInset))
+            let paneFrame = CGRect(origin: CGPoint(x: paneOrigin + leftInset, y: topInset + topPanelHeight), size: CGSize(width: width - leftInset - rightInset, height: panelHeight - topInset - topPanelHeight - bottomInset - bottomPanelHeight))
             switch pane {
                 case .stickers:
                     if self.stickerPane.supernode == nil {
                         self.insertSubnode(self.stickerPane, belowSubnode: self.collectionListContainer)
-                        self.stickerPane.frame = CGRect(origin: CGPoint(x: width, y: topInset + 54.0), size: CGSize(width: width, height: panelHeight - topInset))
+                        self.stickerPane.frame = CGRect(origin: CGPoint(x: width, y: topInset + topPanelHeight), size: CGSize(width: width, height: panelHeight - topInset - topPanelHeight  - bottomInset - bottomPanelHeight))
                     }
                     if self.stickerPane.frame != paneFrame {
                         self.stickerPane.layer.removeAnimation(forKey: "position")
@@ -719,7 +739,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
         }
         
-        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 0.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: true, deviceMetrics: deviceMetrics, transition: transition)
+        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight - topInset - topPanelHeight - bottomInset - bottomPanelHeight), topInset: 0.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: true, deviceMetrics: deviceMetrics, transition: transition)
     
         if !displaySearch, let searchContainerNode = self.searchContainerNode {
             self.searchContainerNode = nil

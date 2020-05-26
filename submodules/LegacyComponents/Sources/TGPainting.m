@@ -72,23 +72,25 @@
     if (_context == nil)
         return;
     
-    [EAGLContext setCurrentContext:_context];
-    if (_paintTextureName != 0)
-        glDeleteTextures(1, &_paintTextureName);
-    
-    glDeleteBuffers(1, &_quadVBO);
-    glDeleteVertexArraysOES(1, &_quadVAO);
-    
-    if (_reusableFramebuffer != 0)
-        glDeleteFramebuffers(1, &_reusableFramebuffer);
-    
-    if (_textureName != 0)
-        glDeleteTextures(1, &_textureName);
-    
-    [_brushTexture cleanResources];
-    
-    TGPaintHasGLError();
-    [EAGLContext setCurrentContext:nil];
+    [self performSynchronouslyInContext:^{
+        [EAGLContext setCurrentContext:_context];
+        if (_paintTextureName != 0)
+            glDeleteTextures(1, &_paintTextureName);
+        
+        glDeleteBuffers(1, &_quadVBO);
+        glDeleteVertexArraysOES(1, &_quadVAO);
+        
+        if (_reusableFramebuffer != 0)
+            glDeleteFramebuffers(1, &_reusableFramebuffer);
+        
+        if (_textureName != 0)
+            glDeleteTextures(1, &_textureName);
+        
+        [_brushTexture cleanResources];
+        
+        TGPaintHasGLError();
+        [EAGLContext setCurrentContext:nil];
+    }];
 }
 
 - (void)setSize:(CGSize)size
@@ -263,11 +265,13 @@
 - (void)setBrush:(TGPaintBrush *)brush
 {
     _brush = brush;
-    if (_brushTexture != nil)
-    {
-        [_brushTexture cleanResources];
-        _brushTexture = nil;
-    }
+    [self performAsynchronouslyInContext:^{
+        if (_brushTexture != nil)
+        {
+//            [_brushTexture cleanResources];
+            _brushTexture = nil;
+        }
+    }];
 }
 
 - (void)_setupBrush

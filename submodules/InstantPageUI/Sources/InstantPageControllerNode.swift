@@ -47,8 +47,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let scrollNodeHeader: ASDisplayNode
     private let scrollNodeFooter: ASDisplayNode
     private var linkHighlightingNode: LinkHighlightingNode?
-    private var textSelectionNode: InstantPageTextSelectionNode?
-
+    private var textSelectionNode: LinkHighlightingNode?
     private var settingsNode: InstantPageSettingsNode?
     private var settingsDimNode: ASDisplayNode?
     
@@ -156,31 +155,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         |> deliverOnMainQueue).start(next: { [weak self] value in
             self?.navigationBar.setLoadProgress(value)
         }))
-        
-        let selectionNode = InstantPageTextSelectionNode(theme: InstantPageTextSelectionTheme(selection: presentationTheme.chat.message.incoming.textSelectionColor, knob: presentationTheme.chat.message.incoming.textSelectionKnobColor), strings: strings, textItemAtLocation: { [weak self] point in
-            if let strongSelf = self {
-                return strongSelf.textItemAtLocation(point)
-            }
-            return nil
-        }, updateIsActive: { active in
-            
-        }, present: { [weak self] controller, args in
-            if let strongSelf = self {
-                strongSelf.present(controller, args)
-            }
-        }, rootNode: self, performAction: { text, action in
-//            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: {
-//                           UIPasteboard.general.string = text
-//                       }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
-//                           if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-//                               strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
-//                           }
-//                       })])
-        })
-//        self.scrollNode.addSubnode(selectionNode)
-        self.textSelectionNode = selectionNode
-        
-        self.scrollNode.addSubnode(selectionNode.highlightAreaNode)
     }
     
     deinit {
@@ -484,7 +458,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.scrollNode.view.contentSize = currentLayout.contentSize
         self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: currentLayout.contentSize.height), size: CGSize(width: containerLayout.size.width, height: 2000.0))
-        self.textSelectionNode?.frame = CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
     }
     
     func updateVisibleItems(visibleBounds: CGRect, animated: Bool = false) {
@@ -656,7 +629,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if effectiveContentHeight != self.scrollNode.view.contentSize.height {
                 transition.animateView {
                     self.scrollNode.view.contentSize = CGSize(width: currentLayout.contentSize.width, height: effectiveContentHeight)
-                    self.textSelectionNode?.frame = CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
                 }
                 let previousFrame = self.scrollNodeFooter.frame
                 self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: effectiveContentHeight), size: CGSize(width: previousFrame.width, height: 2000.0))
@@ -971,12 +943,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 ])])
                                 self.present(actionSheet, nil)
                             } else if let (item, parentOffset) = self.textItemAtLocation(location) {
-//                                let textFrame = item.frame
-//                                var itemRects = item.lineRects()
-//                                for i in 0 ..< itemRects.count {
-//                                    itemRects[i] = itemRects[i].offsetBy(dx: parentOffset.x + textFrame.minX, dy: parentOffset.y + textFrame.minY).insetBy(dx: -2.0, dy: -2.0)
-//                                }
-//                                self.updateTextSelectionRects(itemRects, text: item.plainText())
+                                let textFrame = item.frame
+                                var itemRects = item.lineRects()
+                                for i in 0 ..< itemRects.count {
+                                    itemRects[i] = itemRects[i].offsetBy(dx: parentOffset.x + textFrame.minX, dy: parentOffset.y + textFrame.minY).insetBy(dx: -2.0, dy: -2.0)
+                                }
+                                self.updateTextSelectionRects(itemRects, text: item.plainText())
                             }
                         default:
                             break
@@ -984,6 +956,51 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             default:
                 break
+        }
+    }
+    
+    private func updateTextSelectionRects(_ rects: [CGRect], text: String?) {
+        if let text = text, !rects.isEmpty {
+            let textSelectionNode: LinkHighlightingNode
+            if let current = self.textSelectionNode {
+                textSelectionNode = current
+            } else {
+                textSelectionNode = LinkHighlightingNode(color: UIColor.lightGray.withAlphaComponent(0.4))
+                textSelectionNode.isUserInteractionEnabled = false
+                self.textSelectionNode = textSelectionNode
+                self.scrollNode.addSubnode(textSelectionNode)
+            }
+            textSelectionNode.frame = CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size)
+            textSelectionNode.updateRects(rects)
+            
+            var coveringRect = rects[0]
+            for i in 1 ..< rects.count {
+                coveringRect = coveringRect.union(rects[i])
+            }
+            
+            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: {
+                UIPasteboard.general.string = text
+            }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
+                if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                    strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
+                }
+            })])
+            controller.dismissed = { [weak self] in
+                self?.updateTextSelectionRects([], text: nil)
+            }
+            self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf, strongSelf.bounds)
+                } else {
+                    return nil
+                }
+            }))
+            textSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+        } else if let textSelectionNode = self.textSelectionNode {
+            self.textSelectionNode = nil
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.removeFromSupernode()
+            })
         }
     }
     
