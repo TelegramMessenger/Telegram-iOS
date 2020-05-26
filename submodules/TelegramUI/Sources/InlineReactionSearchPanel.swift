@@ -22,6 +22,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     }
     
     private let context: AccountContext
+    private var theme: PresentationTheme
     
     private let scrollNode: ASScrollNode
     private var items: [TelegramMediaFile] = []
@@ -36,8 +37,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     var updateBackgroundOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     
-    init(context: AccountContext) {
+    init(context: AccountContext, theme: PresentationTheme) {
         self.context = context
+        self.theme = theme
         
         self.scrollNode = ASScrollNode()
         
@@ -182,7 +184,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
             columnIndex += 1
             if columnIndex == itemsPerRow {
                 columnIndex = 0
-                topOffset += itemSize
+                topOffset += itemSize + itemSpacing
             }
         }
     }
@@ -194,6 +196,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         
         var minVisibleY = self.scrollNode.view.bounds.minY
         var maxVisibleY = self.scrollNode.view.bounds.maxY
+        
+        let containerSize = self.scrollNode.view.bounds.size
+        let absoluteOffset: CGFloat = -self.scrollNode.view.contentOffset.y
         
         let minActivatedY = minVisibleY
         let maxActivatedY = maxVisibleY
@@ -217,6 +222,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                     let item = HorizontalStickerGridItem(
                         account: self.context.account,
                         file: item.file,
+                        theme: self.theme,
                         isPreviewed: { _ in
                             return false
                         }, sendSticker: { [weak self] file, node, rect in
@@ -235,6 +241,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                     self.scrollNode.addSubnode(itemNode)
                 }
                 itemNode.frame = itemFrame
+                itemNode.updateAbsoluteRect(itemFrame.offsetBy(dx: 0.0, dy: absoluteOffset), within: containerSize)
                 itemNode.isVisibleInGrid = isActivated
                 validIds.insert(item.file.fileId)
             }
@@ -296,7 +303,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             
             context.restoreGState()
             
-            context.setFillColor(UIColor.white.cgColor)
+            context.setFillColor(theme.list.plainBackgroundColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
         })?.stretchableImage(withLeftCapWidth: Int(backroundDiameter / 2.0 + shadowBlur), topCapHeight: 0)
         
@@ -314,7 +321,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.backgroundContainerNode = ASDisplayNode()
         
-        self.stickersNode = InlineReactionSearchStickersNode(context: context)
+        self.stickersNode = InlineReactionSearchStickersNode(context: context, theme: theme)
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
@@ -330,7 +337,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.addSubnode(self.containerNode)
         
-        self.backgroundNode.backgroundColor = .white
+        self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor
         
         self.stickersNode.updateBackgroundOffset = { [weak self] offset, transition in
             guard let strongSelf = self, let (_, _) = strongSelf.validLayout else {
@@ -350,6 +357,9 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             }
             let _ = strongSelf.controllerInteraction?.sendSticker(file, true, node, rect)
         }
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.view.disablesInteractiveKeyboardGestureRecognizer = true
     }
     
     func updateResults(results: [TelegramMediaFile]) {

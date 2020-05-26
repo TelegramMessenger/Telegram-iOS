@@ -10,18 +10,22 @@ import StickerResources
 import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ShimmerEffect
+import TelegramPresentationData
 
 final class HorizontalStickerGridItem: GridItem {
     let account: Account
     let file: TelegramMediaFile
+    let theme: PresentationTheme
     let isPreviewed: (HorizontalStickerGridItem) -> Bool
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
     
     let section: GridSection? = nil
     
-    init(account: Account, file: TelegramMediaFile, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void) {
+    init(account: Account, file: TelegramMediaFile, theme: PresentationTheme, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.file = file
+        self.theme = theme
         self.isPreviewed = isPreviewed
         self.sendSticker = sendSticker
     }
@@ -47,6 +51,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     private var currentState: (Account, HorizontalStickerGridItem, CGSize)?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    private var placeholderNode: ShimmerEffectNode?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
@@ -76,15 +81,45 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
+        self.placeholderNode = ShimmerEffectNode()
         
         super.init()
         
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.addSubnode(self.imageNode)
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+            self.addSubnode(placeholderNode)
+        }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
     }
     
     deinit {
         self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     override func didLoad() {
@@ -105,7 +140,11 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                         animationNode.transform = self.imageNode.transform
                         animationNode.visibility = self.isVisibleInGrid
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
-                        self.addSubnode(animationNode)
+                        if let placeholderNode = self.placeholderNode {
+                            self.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                        } else {
+                            self.addSubnode(animationNode)
+                        }
                         self.animationNode = animationNode
                     }
                     
@@ -145,6 +184,15 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         let bounds = self.bounds
         let boundingSize = bounds.insetBy(dx: 2.0, dy: 2.0).size
         
+        if let placeholderNode = self.placeholderNode {
+            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
+            placeholderNode.frame = bounds
+            
+            if let theme = self.currentState?.1.theme {
+                placeholderNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor.mixedWith(theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
+            }
+        }
+        
         if let (_, _, mediaDimensions) = self.currentState {
             let imageSize = mediaDimensions.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
@@ -157,6 +205,12 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                 animationNode.position = self.imageNode.position
                 animationNode.updateLayout(size: self.imageNode.bounds.size)
             }
+        }
+    }
+    
+    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
         }
     }
     
