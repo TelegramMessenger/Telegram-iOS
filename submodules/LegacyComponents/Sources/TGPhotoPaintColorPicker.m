@@ -58,6 +58,7 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
     
     UIPanGestureRecognizer *_panGestureRecognizer;
     UILongPressGestureRecognizer *_pressGestureRecognizer;
+    UITapGestureRecognizer *_tapGestureRecognizer;
     
     CGPoint _gestureStartLocation;
     
@@ -91,6 +92,9 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
         _pressGestureRecognizer.delegate = self;
         _pressGestureRecognizer.minimumPressDuration = 0.1;
         [self addGestureRecognizer:_pressGestureRecognizer];
+        
+        _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
+        [self addGestureRecognizer:_tapGestureRecognizer];
         
         _location = [self restoreLastColorLocation];
         _weight = 0.08f;
@@ -313,6 +317,16 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
             
         default:
             break;
+    }
+}
+
+- (void)handleTap:(UITapGestureRecognizer *)gestureRecognizer
+{
+    CGPoint location = [gestureRecognizer locationInView:gestureRecognizer.view];
+    if (!CGRectContainsPoint(_knobView.frame, location))
+    {
+        CGFloat colorLocation = MAX(0.0f, MIN(1.0f, self.frame.size.width > self.frame.size.height ? location.x / gestureRecognizer.view.frame.size.width : location.y / gestureRecognizer.view.frame.size.height));
+        [self setLocation:colorLocation animated:true];
     }
 }
 

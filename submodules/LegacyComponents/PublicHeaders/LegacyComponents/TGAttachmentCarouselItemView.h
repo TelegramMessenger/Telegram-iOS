@@ -36,6 +36,7 @@
 @property (nonatomic) bool hasSchedule;
 @property (nonatomic) bool reminder;
 @property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
+@property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;

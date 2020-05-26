@@ -105,6 +105,7 @@
     bool _canSendSilently;
     bool _canSchedule;
     bool _reminder;
+    bool _hasTimer;
     bool _autorotationWasEnabled;
     bool _dismissed;
     
@@ -115,12 +116,13 @@
     UIView *_separatorView;
     TGMediaPickerSendActionSheetItemView *_sendSilentlyButton;
     TGMediaPickerSendActionSheetItemView *_scheduleButton;
+    TGMediaPickerSendActionSheetItemView *_timerButton;
 }
 @end
 
 @implementation TGMediaPickerSendActionSheetController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context isDark:(bool)isDark sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context isDark:(bool)isDark sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder hasTimer:(bool)hasTimer {
     self = [super initWithContext:context];
     if (self != nil) {
         _context = context;
@@ -129,6 +131,7 @@
         _canSendSilently = canSendSilently;
         _canSchedule = canSchedule;
         _reminder = reminder;
+        _hasTimer = hasTimer;
     }
     return self;
 }
@@ -158,7 +161,7 @@
     
     __weak TGMediaPickerSendActionSheetController *weakSelf = self;
     if (_canSendSilently) {
-        _sendSilentlyButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.SendSilently") icon:TGComponentsImageNamed(@"MediaMute") isDark:_isDark isLast:!_canSchedule];
+        _sendSilentlyButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.SendSilently") icon:TGComponentsImageNamed(@"MediaMute") isDark:_isDark isLast:!_canSchedule && !_hasTimer];
         _sendSilentlyButton.pressed = ^{
             __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
             [strongSelf sendSilentlyPressed];
@@ -167,12 +170,21 @@
     }
     
     if (_canSchedule) {
-        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(_reminder ? @"Conversation.SendMessage.SetReminder" : @"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule") isDark:_isDark isLast:true];
+        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(_reminder ? @"Conversation.SendMessage.SetReminder" : @"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule") isDark:_isDark isLast:!_hasTimer];
         _scheduleButton.pressed = ^{
             __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
             [strongSelf schedulePressed];
         };
         [_containerView addSubview:_scheduleButton];
+    }
+    
+    if (_hasTimer) {
+        _timerButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Media.SendWithTimer") icon:TGTintedImage([UIImage imageNamed:@"Editor/Timer"], [UIColor whiteColor]) isDark:_isDark isLast:true];
+        _timerButton.pressed = ^{
+            __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
+            [strongSelf timerPressed];
+        };
+        [_containerView addSubview:_timerButton];
     }
     
     TGMediaAssetsPallete *pallete = nil;
@@ -281,14 +293,20 @@
     
     CGFloat itemHeight = 44.0;
     CGFloat containerWidth = 240.0;
-    CGFloat containerHeight = _canSendSilently && _canSchedule ? itemHeight * 2.0 : itemHeight;
+    CGFloat containerHeight = (_canSendSilently + _canSchedule + _hasTimer) * itemHeight;
     containerWidth = MAX(containerWidth, MAX(_sendSilentlyButton.buttonLabel.frame.size.width, _scheduleButton.buttonLabel.frame.size.width) + 84.0);
     if (!_dismissed) {
         _containerView.frame = CGRectMake(CGRectGetMaxX(_sendButtonFrame) - containerWidth - 8.0, _sendButtonFrame.origin.y - containerHeight - 4.0, containerWidth, containerHeight);
     }
     
-    _sendSilentlyButton.frame = CGRectMake(0.0, 0.0, containerWidth, itemHeight);
-    _scheduleButton.frame = CGRectMake(0.0, containerHeight - itemHeight, containerWidth, itemHeight);
+    CGFloat offset = 0.0f;
+    _sendSilentlyButton.frame = CGRectMake(0.0, offset, containerWidth, itemHeight);
+    offset += _sendSilentlyButton.frame.size.height;
+    
+    _scheduleButton.frame = CGRectMake(0.0, offset, containerWidth, itemHeight);
+    offset += _scheduleButton.frame.size.height;
+    
+    _timerButton.frame = CGRectMake(0.0, offset, containerWidth, itemHeight);
 }
 
 - (void)sendPressed {
@@ -310,6 +328,13 @@
     
     if (self.schedule != nil)
         self.schedule();
+}
+
+- (void)timerPressed {
+    [self animateOut:false];
+    
+    if (self.sendWithTimer != nil)
+        self.sendWithTimer();
 }
 
 @end

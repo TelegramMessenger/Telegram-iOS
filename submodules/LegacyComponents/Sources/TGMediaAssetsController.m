@@ -127,6 +127,7 @@
         pickerController.hasSchedule = strongController.hasSchedule;
         pickerController.reminder = strongController.reminder;
         pickerController.presentScheduleController = strongController.presentScheduleController;
+        pickerController.presentTimerController = strongController.presentTimerController;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -233,6 +234,11 @@
 - (void)setPresentScheduleController:(void (^)(void (^)(int32_t)))presentScheduleController {
     _presentScheduleController = [presentScheduleController copy];
     self.pickerController.presentScheduleController = presentScheduleController;
+}
+
+- (void)setPresentTimerController:(void (^)(void (^)(int32_t)))presentTimerController {
+    _presentTimerController = [presentTimerController copy];
+    self.pickerController.presentTimerController = presentTimerController;
 }
 
 - (void)setOnlyCrop:(bool)onlyCrop
@@ -856,7 +862,7 @@
                                     if (adjustments.toolsApplied) {
                                         image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
                                     }
-                                    UIImage *thumbnailImage = TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), asset.dimensions, true);
+                                    UIImage *thumbnailImage = TGPhotoEditorVideoCrop(image, paintingImage, adjustments.cropOrientation, 0, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), adjustments.originalSize, true, true);
                                     if (thumbnailImage != nil) {
                                         dict[@"previewImage"] = thumbnailImage;
                                     }

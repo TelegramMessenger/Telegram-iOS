@@ -117,7 +117,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.topPanel = ASDisplayNode()
         self.topPanel.clipsToBounds = true
         self.topPanel.backgroundColor = UIColor(rgb: 0x151515)
-        self.topPanel.alpha = 0.4
+        self.topPanel.alpha = 0.3
         
         let segmentedTheme = SegmentedControlTheme(backgroundColor: UIColor(rgb: 0x2c2d2d), foregroundColor: UIColor(rgb: 0x656565), shadowColor: UIColor.clear, textColor: .white, dividerColor: .white)
         self.segmentedControlNode = SegmentedControlNode(theme: segmentedTheme, items: [SegmentedControlItem(title: self.presentationData.strings.Paint_Stickers), SegmentedControlItem(title: self.presentationData.strings.Paint_Masks)], selectedIndex: 0)
@@ -128,7 +128,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
         self.collectionListPanel.backgroundColor = UIColor(rgb: 0x151515)
-        self.collectionListPanel.alpha = 0.4
+        self.collectionListPanel.alpha = 0.3
         
         self.collectionListContainer = CollectionListContainerNode()
         self.collectionListContainer.clipsToBounds = true

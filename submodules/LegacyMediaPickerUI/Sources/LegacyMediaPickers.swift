@@ -48,6 +48,11 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
             done?(time)
         }
     }
+    controller.presentTimerController = { done in
+        presentSchedulePicker { time in
+            done?(time)
+        }
+    }
     controller.dismissalBlock = {
     }
     controller.selectionLimitExceeded = {

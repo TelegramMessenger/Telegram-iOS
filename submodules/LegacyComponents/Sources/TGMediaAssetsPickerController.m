@@ -342,6 +342,7 @@
     
     TGMediaPickerModernGalleryMixin *mixin = [self _galleryMixinForContext:_context item:asset thumbnailImage:thumbnailImage selectionContext:self.selectionContext editingContext:self.editingContext suggestionContext:self.suggestionContext hasCaptions:self.captionsEnabled allowCaptionEntities:self.allowCaptionEntities inhibitDocumentCaptions:self.inhibitDocumentCaptions asFile:asFile];
     mixin.presentScheduleController = self.presentScheduleController;
+    mixin.presentTimerController = self.presentTimerController;
     __weak TGMediaAssetsPickerController *weakSelf = self;
     mixin.thumbnailSignalForItem = ^SSignal *(id item)
     {
