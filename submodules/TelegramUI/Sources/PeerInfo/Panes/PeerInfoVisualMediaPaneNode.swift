@@ -201,6 +201,10 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.videoLayerFrameManager?.start()
             }
         } else {
+            if let sampleBufferLayer = self.sampleBufferLayer {
+                sampleBufferLayer.layer.removeFromSuperlayer()
+                self.sampleBufferLayer = nil
+            }
             self.videoLayerFrameManager = nil
         }
         
@@ -571,8 +575,8 @@ private enum ItemsLayout {
                             return (i, j - 1)
                         }
                     }
+                    return (i, self.frames.count - 1)
                 }
-                return (i, self.frames.count - 1)
             }
             return (0, -1)
         }
@@ -873,10 +877,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             itemsLayout = current
         } else {
             switch self.contentType {
-            case .photoOrVideo:
+            case .photoOrVideo, .gifs:
                 itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, itemCount: self.mediaItems.count, bottomInset: bottomInset))
-            case .gifs:
-                itemsLayout = .balanced(ItemsLayout.Balanced(containerWidth: availableWidth, items: self.mediaItems, bottomInset: bottomInset))
+            /*case .gifs:
+                itemsLayout = .balanced(ItemsLayout.Balanced(containerWidth: availableWidth, items: self.mediaItems, bottomInset: bottomInset))*/
             }
             self.itemsLayout = itemsLayout
         }

@@ -334,12 +334,18 @@ public func chatMessageSticker(account: Account, file: TelegramMediaFile, small:
     return chatMessageSticker(postbox: account.postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, thumbnail: thumbnail, synchronousLoad: synchronousLoad)
 }
 
-public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaResource, animated: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaResource, animated: Bool = false, synchronousLoad: Bool = false, nilIfEmpty: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageStickerPackThumbnailData(postbox: postbox, resource: resource, animated: animated, synchronousLoad: synchronousLoad)
     
     return signal
     |> map { fullSizeData in
         return { arguments in
+            if nilIfEmpty {
+                if fullSizeData == nil {
+                    return nil
+                }
+            }
+            
             let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
             
             let drawingRect = arguments.drawingRect

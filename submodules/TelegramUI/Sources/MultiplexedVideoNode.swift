@@ -9,6 +9,34 @@ import SyncCore
 import AVFoundation
 import ContextUI
 import TelegramPresentationData
+import ShimmerEffect
+
+final class MultiplexedVideoPlaceholderNode: ASDisplayNode {
+    private let effectNode: ShimmerEffectNode
+    private var theme: PresentationTheme?
+    private var size: CGSize?
+    
+    override init() {
+        self.effectNode = ShimmerEffectNode()
+        
+        super.init()
+        
+        self.addSubnode(self.effectNode)
+    }
+    
+    func update(size: CGSize, theme: PresentationTheme) {
+        if self.theme === theme && self.size == size {
+            return
+        }
+        
+        self.effectNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.effectNode.update(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.mixedWith(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.72), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.rect(rect: CGRect(origin: CGPoint(), size: size))], size: bounds.size)
+    }
+    
+    func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        self.effectNode.updateAbsoluteRect(absoluteRect, within: containerSize)
+    }
+}
 
 private final class MultiplexedVideoTrackingNode: ASDisplayNode {
     var inHierarchyUpdated: ((Bool) -> Void)?
@@ -60,11 +88,13 @@ final class MultiplexedVideoNodeFiles {
     let saved: [MultiplexedVideoNodeFile]
     let trending: [MultiplexedVideoNodeFile]
     let isSearch: Bool
+    let canLoadMore: Bool
     
-    init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool) {
+    init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool, canLoadMore: Bool) {
         self.saved = saved
         self.trending = trending
         self.isSearch = isSearch
+        self.canLoadMore = canLoadMore
     }
 }
 
@@ -95,7 +125,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false)
+    private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false, canLoadMore: false)
     
     func setFiles(files: MultiplexedVideoNodeFiles, synchronous: Bool, resetScrollingToOffset: CGFloat?) {
         self.files = files
@@ -109,15 +139,14 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private var displayItems: [VisibleVideoItem] = []
-    private var visibleThumbnailLayers: [VisibleVideoItem.Id: SoftwareVideoThumbnailLayer] = [:]
-    private var statusDisposable: [VisibleVideoItem.Id: MetaDisposable] = [:]
+    private var visibleThumbnailLayers: [VisibleVideoItem.Id: SoftwareVideoThumbnailNode] = [:]
+    private var visiblePlaceholderNodes: [Int: MultiplexedVideoPlaceholderNode] = [:]
 
     private let contextContainerNode: ContextControllerSourceNode
     let scrollNode: ASScrollNode
     
     private var visibleLayers: [VisibleVideoItem.Id: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
     
-    private let savedTitleNode: ImmediateTextNode
     private let trendingTitleNode: ImmediateTextNode
     
     private var displayLink: CADisplayLink!
@@ -145,9 +174,6 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.contextContainerNode = ContextControllerSourceNode()
         self.scrollNode = ASScrollNode()
         
-        self.savedTitleNode = ImmediateTextNode()
-        self.savedTitleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_SavedSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
-        
         self.trendingTitleNode = ImmediateTextNode()
         self.trendingTitleNode.attributedText = NSAttributedString(string: strings.Chat_Gifs_TrendingSectionHeader, font: Font.medium(12.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         
@@ -158,7 +184,6 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.alwaysBounceVertical = true
         
-        self.scrollNode.addSubnode(self.savedTitleNode)
         self.scrollNode.addSubnode(self.trendingTitleNode)
         
         self.addSubnode(self.trackingNode)
@@ -255,9 +280,6 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     deinit {
         self.displayLink.invalidate()
         self.displayLink.isPaused = true
-        for(_, disposable) in self.statusDisposable {
-            disposable.dispose()
-        }
         for (_, value) in self.visibleLayers {
             value.1.isFreed = true
         }
@@ -310,8 +332,17 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     private var validVisibleItemsOffset: CGFloat?
     private func updateImmediatelyVisibleItems(ensureFrames: Bool = false, synchronous: Bool = false) {
         var visibleBounds = self.scrollNode.bounds
+        let containerSize = visibleBounds.size
         visibleBounds.size.height += max(0.0, self.currentExtendSizeForTransition)
         let visibleThumbnailBounds = visibleBounds.insetBy(dx: 0.0, dy: -350.0)
+        
+        let containerWidth = containerSize.width
+        let itemSpacing: CGFloat = 1.0
+        let itemsInRow = max(3, min(6, Int(containerWidth / 140.0)))
+        let itemSize: CGFloat = floor(containerWidth / CGFloat(itemsInRow))
+        
+        let absoluteContainerSize = CGSize(width: containerSize.width, height: containerSize.height)
+        let absoluteContainerOffset = -visibleBounds.origin.y
         
         if let validVisibleItemsOffset = self.validVisibleItemsOffset, validVisibleItemsOffset.isEqual(to: visibleBounds.origin.y) {
             return
@@ -326,26 +357,44 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         var visibleThumbnailIds = Set<VisibleVideoItem.Id>()
         var visibleIds = Set<VisibleVideoItem.Id>()
         
-        for item in self.displayItems {
+        var maxVisibleIndex = -1
+        
+        for index in 0 ..< self.displayItems.count {
+            let item = self.displayItems[index]
+            
             if item.frame.maxY < minVisibleThumbnailY {
-                continue;
+                continue
             }
             if item.frame.minY > maxVisibleThumbnailY {
-                break;
+                break
             }
+            
+            maxVisibleIndex = max(maxVisibleIndex, index)
             
             visibleThumbnailIds.insert(item.id)
             
-            if let thumbnailLayer = self.visibleThumbnailLayers[item.id] {
+            let thumbnailLayer: SoftwareVideoThumbnailNode
+            if let current = self.visibleThumbnailLayers[item.id] {
+                thumbnailLayer = current
                 if ensureFrames {
                     thumbnailLayer.frame = item.frame
                 }
             } else {
-                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: item.file.file, synchronousLoad: synchronous)
+                var existingPlaceholderNode: MultiplexedVideoPlaceholderNode?
+                if let placeholderNode = self.visiblePlaceholderNodes[index] {
+                    existingPlaceholderNode = placeholderNode
+                    self.visiblePlaceholderNodes.removeValue(forKey: index)
+                    placeholderNode.removeFromSupernode()
+                }
+                
+                thumbnailLayer = SoftwareVideoThumbnailNode(account: self.account, fileReference: item.file.file, synchronousLoad: synchronous, usePlaceholder: true, existingPlaceholder: existingPlaceholderNode)
                 thumbnailLayer.frame = item.frame
-                self.scrollNode.layer.addSublayer(thumbnailLayer)
+                self.scrollNode.addSubnode(thumbnailLayer)
                 self.visibleThumbnailLayers[item.id] = thumbnailLayer
             }
+            
+            thumbnailLayer.update(theme: self.theme, size: item.frame.size)
+            thumbnailLayer.updateAbsoluteRect(item.frame.offsetBy(dx: 0.0, dy: absoluteContainerOffset), within: absoluteContainerSize)
             
             if item.frame.maxY < minVisibleY {
                 continue
@@ -375,6 +424,43 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        var visiblePlaceholderIndices = Set<Int>()
+        if self.files.canLoadMore {
+            let verticalOffset: CGFloat = self.topInset
+            
+            let sideInset: CGFloat = 0.0
+            
+            var indexImpl = maxVisibleIndex + 1
+            while true {
+                let index = indexImpl
+                indexImpl += 1
+                
+                let rowIndex = index / Int(itemsInRow)
+                let columnIndex = index % Int(itemsInRow)
+                let itemOrigin = CGPoint(x: sideInset + CGFloat(columnIndex) * (itemSize + itemSpacing), y: verticalOffset + itemSpacing + CGFloat(rowIndex) * (itemSize + itemSpacing))
+                let itemFrame = CGRect(origin: itemOrigin, size: CGSize(width: columnIndex == itemsInRow ? (containerWidth - itemOrigin.x) : itemSize, height: itemSize))
+                if itemFrame.maxY < minVisibleY {
+                    continue
+                }
+                if itemFrame.minY > maxVisibleY {
+                    break
+                }
+                visiblePlaceholderIndices.insert(index)
+                
+                let placeholderNode: MultiplexedVideoPlaceholderNode
+                if let current = self.visiblePlaceholderNodes[index] {
+                    placeholderNode = current
+                } else {
+                    placeholderNode = MultiplexedVideoPlaceholderNode()
+                    self.visiblePlaceholderNodes[index] = placeholderNode
+                    self.scrollNode.addSubnode(placeholderNode)
+                }
+                placeholderNode.frame = itemFrame
+                placeholderNode.update(size: itemFrame.size, theme: self.theme)
+                placeholderNode.updateAbsoluteRect(itemFrame.offsetBy(dx: 0.0, dy: absoluteContainerOffset), within: absoluteContainerSize)
+            }
+        }
+        
         var removeIds: [VisibleVideoItem.Id] = []
         for id in self.visibleLayers.keys {
             if !visibleIds.contains(id) {
@@ -389,12 +475,12 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        /*var removeProgressIds: [MediaId] = []
-        for id in self.visibleProgressNodes.keys {
-            if !visibleIds.contains(id) {
-                removeProgressIds.append(id)
+        var removePlaceholderIndices: [Int] = []
+        for index in self.visiblePlaceholderNodes.keys {
+            if !visiblePlaceholderIndices.contains(index) {
+                removePlaceholderIndices.append(index)
             }
-        }*/
+        }
         
         for id in removeIds {
             let (_, layerHolder) = self.visibleLayers[id]!
@@ -404,16 +490,16 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         
         for id in removeThumbnailIds {
             let thumbnailLayer = self.visibleThumbnailLayers[id]!
-            thumbnailLayer.removeFromSuperlayer()
+            thumbnailLayer.removeFromSupernode()
             self.visibleThumbnailLayers.removeValue(forKey: id)
         }
         
-        /*for id in removeProgressIds {
-            let progressNode = self.visibleProgressNodes[id]!
-            progressNode.removeFromSupernode()
-            self.visibleProgressNodes.removeValue(forKey: id)
-            self.statusDisposable.removeValue(forKey: id)?.dispose()
-        }*/
+        for index in removePlaceholderIndices {
+            if let placeholderNode = self.visiblePlaceholderNodes[index] {
+                placeholderNode.removeFromSupernode()
+                self.visiblePlaceholderNodes.removeValue(forKey: index)
+            }
+        }
     }
     
     private func updateVisibleItems(extendSizeForTransition: CGFloat, transition: ContainedViewLayoutTransition, synchronous: Bool = false) {
@@ -422,6 +508,29 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             var displayItems: [VisibleVideoItem] = []
             
             var verticalOffset: CGFloat = self.topInset
+            
+            func commitFileGrid(files: [MultiplexedVideoNodeFile], isTrending: Bool) {
+                let containerWidth = drawableSize.width
+                let itemCount = files.count
+                let itemSpacing: CGFloat = 1.0
+                let itemsInRow = max(3, min(6, Int(containerWidth / 140.0)))
+                let itemSize: CGFloat = floor(containerWidth / CGFloat(itemsInRow))
+                
+                let rowCount = itemCount / itemsInRow + (itemCount % itemsInRow == 0 ? 0 : 1)
+                
+                let sideInset: CGFloat = 0.0
+                
+                for index in 0 ..< itemCount {
+                    let rowIndex = index / Int(itemsInRow)
+                    let columnIndex = index % Int(itemsInRow)
+                    let itemOrigin = CGPoint(x: sideInset + CGFloat(columnIndex) * (itemSize + itemSpacing), y: verticalOffset + itemSpacing + CGFloat(rowIndex) * (itemSize + itemSpacing))
+                    let itemFrame = CGRect(origin: itemOrigin, size: CGSize(width: columnIndex == itemsInRow ? (containerWidth - itemOrigin.x) : itemSize, height: itemSize))
+                    displayItems.append(VisibleVideoItem(file: files[index], frame: itemFrame, isTrending: isTrending))
+                }
+                
+                let contentHeight = CGFloat(rowCount + 1) * itemSpacing + CGFloat(rowCount) * itemSize
+                verticalOffset += contentHeight
+            }
             
             func commitFilesSpans(files: [MultiplexedVideoNodeFile], isTrending: Bool) {
                 var rowsCount = 0
@@ -529,15 +638,8 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             
             var hasContent = false
             if !self.files.saved.isEmpty {
-                self.savedTitleNode.isHidden = false
-                let leftInset: CGFloat = 10.0
-                let savedTitleSize = self.savedTitleNode.updateLayout(CGSize(width: drawableSize.width - leftInset * 2.0, height: 100.0))
-                self.savedTitleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset - 3.0), size: savedTitleSize)
-                verticalOffset += savedTitleSize.height + 5.0
-                commitFilesSpans(files: self.files.saved, isTrending: false)
+                commitFileGrid(files: self.files.saved, isTrending: false)
                 hasContent = true
-            } else {
-                self.savedTitleNode.isHidden = true
             }
             if !self.files.trending.isEmpty {
                 if self.files.isSearch {
@@ -545,14 +647,14 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 } else {
                     self.trendingTitleNode.isHidden = false
                     if hasContent {
-                        verticalOffset += 15.0
+                        verticalOffset += 16.0
                     }
                     let leftInset: CGFloat = 10.0
                     let trendingTitleSize = self.trendingTitleNode.updateLayout(CGSize(width: drawableSize.width - leftInset * 2.0, height: 100.0))
                     self.trendingTitleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset - 3.0), size: trendingTitleSize)
                     verticalOffset += trendingTitleSize.height + 5.0
                 }
-                commitFilesSpans(files: self.files.trending, isTrending: true)
+                commitFileGrid(files: self.files.trending, isTrending: true)
             } else {
                 self.trendingTitleNode.isHidden = true
             }

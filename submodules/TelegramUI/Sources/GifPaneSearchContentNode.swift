@@ -11,7 +11,19 @@ import AccountContext
 import WebSearchUI
 import AppBundle
 
-func paneGifSearchForQuery(account: Account, query: String, offset: String?, incompleteResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<([MultiplexedVideoNodeFile], String?)?, NoError> {
+class PaneGifSearchForQueryResult {
+    let files: [MultiplexedVideoNodeFile]
+    let nextOffset: String?
+    let isComplete: Bool
+    
+    init(files: [MultiplexedVideoNodeFile], nextOffset: String?, isComplete: Bool) {
+        self.files = files
+        self.nextOffset = nextOffset
+        self.isComplete = isComplete
+    }
+}
+
+func paneGifSearchForQuery(account: Account, query: String, offset: String?, incompleteResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
     let contextBot = account.postbox.transaction { transaction -> String in
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
@@ -30,16 +42,14 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
             return .single(nil)
         }
     }
-    |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
+    |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool), NoError> in
         if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
             let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, limit: 1)
-            |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                return { _ in
-                    return .contextRequestResult(user, results)
-                }
+            |> map { results -> (ChatPresentationInputQueryResult?, Bool) in
+                return (.contextRequestResult(user, results), results != nil)
             }
             
-            let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
+            let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?, Bool), NoError>
             if delayRequest {
                 maybeDelayedContextResults = results |> delay(0.4, queue: Queue.concurrentDefaultQueue())
             } else {
@@ -48,12 +58,12 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
             
             return maybeDelayedContextResults
         } else {
-            return .single({ _ in return nil })
+            return .single((nil, true))
         }
     }
     return contextBot
-    |> mapToSignal { result -> Signal<([MultiplexedVideoNodeFile], String?)?, NoError> in
-        if let r = result(nil), case let .contextRequestResult(_, maybeCollection) = r, let collection = maybeCollection {
+    |> mapToSignal { result -> Signal<PaneGifSearchForQueryResult?, NoError> in
+        if let r = result.0, case let .contextRequestResult(_, maybeCollection) = r, let collection = maybeCollection {
             let results = collection.results
             var references: [MultiplexedVideoNodeFile] = []
             for result in results {
@@ -101,7 +111,7 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
                     }
                 }
             }
-            return .single((references, collection.nextOffset))
+            return .single(PaneGifSearchForQueryResult(files: references, nextOffset: collection.nextOffset, isComplete: result.1))
         } else if incompleteResults {
             return .single(nil)
         } else {
@@ -134,7 +144,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     
     private var validLayout: CGSize?
     
-    private let trendingPromise: Promise<[MultiplexedVideoNodeFile]?>
+    private let trendingPromise: Promise<ChatMediaInputGifPaneTrendingState?>
     private let searchDisposable = MetaDisposable()
     
     private let _ready = Promise<Void>()
@@ -149,7 +159,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     
     private var hasInitialText = false
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<[MultiplexedVideoNodeFile]?>) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<ChatMediaInputGifPaneTrendingState?>) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction
@@ -190,12 +200,19 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         let signal: Signal<([MultiplexedVideoNodeFile], String?)?, NoError>
         if !text.isEmpty {
             signal = paneGifSearchForQuery(account: self.context.account, query: text, offset: "", updateActivity: self.updateActivity)
+            |> map { result -> ([MultiplexedVideoNodeFile], String?)? in
+                if let result = result {
+                    return (result.files, result.nextOffset)
+                } else {
+                    return nil
+                }
+            }
             self.updateActivity?(true)
         } else {
             signal = self.trendingPromise.get()
             |> map { items -> ([MultiplexedVideoNodeFile], String?)? in
                 if let items = items {
-                    return (items, nil)
+                    return (items.files, nil)
                 } else {
                     return nil
                 }
@@ -215,7 +232,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             } else {
                 strongSelf.nextOffset = nil
             }
-            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: result, isSearch: true), synchronous: true, resetScrollingToOffset: nil)
+            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: result, isSearch: true, canLoadMore: false), synchronous: true, resetScrollingToOffset: nil)
             strongSelf.updateActivity?(false)
             strongSelf.notFoundNode.isHidden = text.isEmpty || !result.isEmpty
         }))
@@ -232,6 +249,13 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         
         let signal: Signal<([MultiplexedVideoNodeFile], String?)?, NoError>
         signal = paneGifSearchForQuery(account: self.context.account, query: text, offset: nextOffsetValue, updateActivity: self.updateActivity)
+        |> map { result -> ([MultiplexedVideoNodeFile], String?)? in
+            if let result = result {
+                return (result.files, result.nextOffset)
+            } else {
+                return nil
+            }
+        }
         
         self.searchDisposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] result in
@@ -255,7 +279,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             } else {
                 strongSelf.nextOffset = nil
             }
-            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: files, isSearch: true), synchronous: true, resetScrollingToOffset: nil)
+            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: files, isSearch: true, canLoadMore: false), synchronous: true, resetScrollingToOffset: nil)
             strongSelf.notFoundNode.isHidden = text.isEmpty || !files.isEmpty
         }))
     }

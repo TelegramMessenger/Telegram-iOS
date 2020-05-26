@@ -216,7 +216,7 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             totalRawTabSize += paneNodeSize.width
         }
         
-        let minSpacing: CGFloat = 10.0
+        let minSpacing: CGFloat = 26.0
         if tabSizes.count <= 1 {
             for i in 0 ..< tabSizes.count {
                 let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]

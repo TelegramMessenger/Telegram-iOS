@@ -11,6 +11,7 @@ import StickerResources
 import ItemListStickerPackItem
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ShimmerEffect
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
@@ -75,6 +76,8 @@ private let verticalOffset: CGFloat = 3.0
 final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private let imageNode: TransformImageNode
     private var animatedStickerNode: AnimatedStickerNode?
+    private var placeholderNode: ShimmerEffectNode?
+    private var placeholderImageNode: ASImageNode?
     private let highlightNode: ASImageNode
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
@@ -107,7 +110,12 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         self.imageNode = TransformImageNode()
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         
-        self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
+        self.placeholderImageNode = ASImageNode()
+        self.placeholderImageNode?.isUserInteractionEnabled = false
+        
+        //self.placeholderNode = ShimmerEffectNode()
+        
+        self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset - UIScreenPixel, y: floor((boundingSize.height - highlightSize.height) / 2.0) - UIScreenPixel), size: highlightSize)
         
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.imageNode.contentAnimations = [.firstUpdate]
@@ -116,10 +124,52 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         self.addSubnode(self.highlightNode)
         self.addSubnode(self.imageNode)
+        if let placeholderImageNode = self.placeholderImageNode {
+            self.addSubnode(placeholderImageNode)
+        }
+        if let placeholderNode = self.placeholderNode {
+            self.addSubnode(placeholderNode)
+        }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
     }
     
     deinit {
         self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
+        if let placeholderImageNode = self.placeholderImageNode {
+            self.placeholderImageNode = nil
+            if !animated {
+                placeholderImageNode.removeFromSupernode()
+            } else {
+                placeholderImageNode.alpha = 0.0
+                placeholderImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderImageNode] _ in
+                    placeholderImageNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     func updateStickerPackItem(account: Account, info: StickerPackCollectionInfo, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme) {
@@ -159,13 +209,13 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         let imageSize = representation.dimensions.cgSize.aspectFitted(boundingImageSize)
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
-                        self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource))
+                        self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
                         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
                     case let .animated(resource):
                         let imageSize = boundingImageSize
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
-                        self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true))
+                        self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true, nilIfEmpty: true))
                         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
                         
                         let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
@@ -178,7 +228,11 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             animatedStickerNode = AnimatedStickerNode()
                             self.animatedStickerNode = animatedStickerNode
                             animatedStickerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
-                            self.addSubnode(animatedStickerNode)
+                            if let placeholderNode = self.placeholderNode {
+                                self.insertSubnode(animatedStickerNode, belowSubnode: placeholderNode)
+                            } else {
+                                self.addSubnode(animatedStickerNode)
+                            }
                             animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
@@ -191,7 +245,32 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 }
             }
             
+            if let placeholderImageNode = self.placeholderImageNode {
+                if placeholderImageNode.image == nil {
+                    placeholderImageNode.image = generateStretchableFilledCircleImage(diameter: 10.0, color: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.mixedWith(.clear, alpha: 0.6))
+                }
+                let size = boundingSize
+                let imageSize = boundingImageSize
+                let placeholderFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                placeholderImageNode.frame = placeholderFrame
+            }
+            
+            if let placeholderNode = self.placeholderNode {
+                let size = boundingSize
+                let imageSize = boundingImageSize
+                let placeholderFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                placeholderNode.frame = CGRect(origin: CGPoint(), size: size)
+                
+                placeholderNode.update(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.mixedWith(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.8), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 5.0)], size: bounds.size)
+            }
+            
             self.updateIsHighlighted()
+        }
+    }
+    
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        if let placeholderNode = self.placeholderNode {
+            //placeholderNode.updateAbsoluteRect(rect, within: containerSize)
         }
     }
     

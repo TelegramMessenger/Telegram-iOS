@@ -11,6 +11,7 @@ import StickerResources
 import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ShimmerEffect
 
 enum ChatMediaInputStickerGridSectionAccessory {
     case none
@@ -121,6 +122,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
     let selected: () -> Void
     let interfaceInteraction: ChatControllerInteraction?
     let inputNodeInteraction: ChatMediaInputNodeInteraction
+    let theme: PresentationTheme
     
     let section: GridSection?
     
@@ -130,6 +132,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
         self.stickerItem = stickerItem
         self.interfaceInteraction = interfaceInteraction
         self.inputNodeInteraction = inputNodeInteraction
+        self.theme = theme
         self.selected = selected
         if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
             self.section = nil
@@ -170,6 +173,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentSize: CGSize?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    private var placeholderNode: ShimmerEffectNode?
     private var didSetUpAnimationNode = false
     private var item: ChatMediaInputStickerGridItem?
     
@@ -196,14 +200,43 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
+        self.placeholderNode = ShimmerEffectNode()
         
         super.init()
         
         self.addSubnode(self.imageNode)
+        if let placeholderNode = self.placeholderNode {
+            self.addSubnode(placeholderNode)
+        }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
     }
     
     deinit {
         self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     override func didLoad() {
@@ -216,7 +249,13 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         guard let item = item as? ChatMediaInputStickerGridItem else {
             return
         }
+        
+        let sideSize: CGFloat = size.width - 10.0
+        let boundingSize = CGSize(width: sideSize, height: sideSize)
+        
         self.item = item
+        
+        
         if self.currentState == nil || self.currentState!.0 !== item.account || self.currentState!.1 != item.stickerItem {
             if let dimensions = item.stickerItem.file.dimensions {
                 if item.stickerItem.file.isAnimatedSticker {
@@ -227,7 +266,11 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         animationNode.started = { [weak self] in
                             self?.imageNode.isHidden = true
                         }
-                        self.addSubnode(animationNode)
+                        if let placeholderNode = self.placeholderNode {
+                            self.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                        } else {
+                            self.addSubnode(animationNode)
+                        }
                     }
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
@@ -253,9 +296,6 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         if self.currentSize != size {
             self.currentSize = size
             
-            let sideSize: CGFloat = size.width - 10.0 //min(75.0 - 10.0, size.width)
-            let boundingSize = CGSize(width: sideSize, height: sideSize)
-            
             if let (_, _, mediaDimensions) = self.currentState {
                 let imageSize = mediaDimensions.aspectFitted(boundingSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
@@ -265,6 +305,20 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     animationNode.updateLayout(size: imageSize)
                 }
             }
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            let placeholderFrame = CGRect(origin: CGPoint(x: floor((size.width - boundingSize.width) / 2.0), y: floor((size.height - boundingSize.height) / 2.0)), size: boundingSize)
+            placeholderNode.frame = CGRect(origin: CGPoint(), size: size)
+            
+            let theme = item.theme
+            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.mixedWith(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.9), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
+        }
+    }
+    
+    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
         }
     }
     

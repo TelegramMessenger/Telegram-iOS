@@ -501,9 +501,11 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
+        self.listView.scroller.panGestureRecognizer.cancelsTouchesInView = false
         
         self.gifListView = ListView()
         self.gifListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
+        self.gifListView.scroller.panGestureRecognizer.cancelsTouchesInView = false
         
         var paneDidScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void)?
         var fixPaneScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void)?
