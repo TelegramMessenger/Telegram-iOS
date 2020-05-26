@@ -5511,3 +5511,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "Chat.Gifs.TrendingSectionHeader" = "TRENDING GIFS";
 "Chat.Gifs.SavedSectionHeader" = "MY GIFS";
+
+"Paint.Framed" = "Framed";

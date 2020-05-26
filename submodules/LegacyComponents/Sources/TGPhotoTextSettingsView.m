@@ -107,7 +107,7 @@ const CGFloat TGPhotoTextSettingsItemHeight = 44.0f;
         textView.textColor = [UIColor whiteColor];
         textView.frameColor = [UIColor blackColor];
         textView.font = font;
-        textView.text = @"Framed";
+        textView.text = TGLocalized(@"Paint.Framed");
         [textView sizeToFit];
         textView.frame = CGRectMake(39.0f, ceil((TGPhotoTextSettingsItemHeight - textView.frame.size.height) / 2.0f) - 1.0f, ceil(textView.frame.size.width), ceil(textView.frame.size.height + 0.5f));
         [frameButton addSubview:textView];

@@ -89,13 +89,11 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 @interface PGVideoMovie () <AVPlayerItemOutputPullDelegate>
 {
-    AVAssetReader *reader;
     AVPlayerItemVideoOutput *playerItemOutput;
     CADisplayLink *displayLink;
     CMTime previousFrameTime, processingFrameTime;
     CFAbsoluteTime previousActualFrameTime;
-    BOOL keepLooping;
-
+    
     GLuint luminanceTexture, chrominanceTexture;
 
     GLProgram *yuvConversionProgram;
@@ -108,19 +106,12 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
     int imageBufferWidth, imageBufferHeight;
 }
-
-- (void)processAsset;
-
 @end
 
 @implementation PGVideoMovie
 {
-    bool videoEncodingIsFinished;
     bool _shouldReprocessCurrentFrame;
 }
-
-@synthesize asset = _asset;
-@synthesize shouldRepeat = _shouldRepeat;
 
 #pragma mark -
 #pragma mark Initialization and teardown
@@ -138,20 +129,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
     } else {
         return UIInterfaceOrientationPortrait;
     }
-}
-
-- (instancetype)initWithAsset:(AVAsset *)asset
-{
-    if (!(self = [super init])) 
-    {
-      return nil;
-    }
-    
-    [self yuvConversionSetup];
-
-    self.asset = asset;
-
-    return self;
 }
 
 - (instancetype)initWithPlayerItem:(AVPlayerItem *)playerItem;
@@ -231,85 +208,13 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 //    movieWriter.encodingLiveVideo = NO;
 //}
 
-- (void)startProcessing
-{
-    if (_shouldRepeat) self->keepLooping = true;
-    
-    if (self.playerItem != nil) {
-        [self processPlayerItem];
-    } else {
-        [self processAsset];
-    }
-}
-
-- (AVAssetReader*)createAssetReader
-{
-    NSError *error = nil;
-    AVAssetReader *assetReader = [AVAssetReader assetReaderWithAsset:self.asset error:&error];
-    
-    NSMutableDictionary *outputSettings = [NSMutableDictionary dictionary];
-    if ([GPUImageContext supportsFastTextureUpload]) {
-        [outputSettings setObject:@(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
-        isFullYUVRange = YES;
-    }
-    else {
-        [outputSettings setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
-        isFullYUVRange = NO;
-    }
-    
-    AVAssetReaderTrackOutput *readerVideoTrackOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:[[self.asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0] outputSettings:outputSettings];
-    readerVideoTrackOutput.alwaysCopiesSampleData = false;
-    [assetReader addOutput:readerVideoTrackOutput];
-
-    return assetReader;
-}
-
-- (void)processAsset
-{
-    reader = [self createAssetReader];
-
-    AVAssetReaderOutput *readerVideoTrackOutput = nil;
-    
-    for (AVAssetReaderOutput *output in reader.outputs) {
-        if( [output.mediaType isEqualToString:AVMediaTypeVideo] ) {
-            readerVideoTrackOutput = output;
-        }
-    }
-
-    if (![reader startReading])  {
-        return;
-    }
-
-    __unsafe_unretained PGVideoMovie *weakSelf = self;
-
-    while (reader.status == AVAssetReaderStatusReading && (!_shouldRepeat || keepLooping))
-    {
-        [weakSelf readNextVideoFrameFromOutput:readerVideoTrackOutput];
-    }
-
-    if (reader.status == AVAssetReaderStatusCompleted) {
-            
-        [reader cancelReading];
-
-        if (keepLooping) {
-            reader = nil;
-            [self startProcessing];
-        } else {
-            [weakSelf endProcessing];
-        }
-
-    }
-}
-
-- (void)processPlayerItem
-{
+- (void)startProcessing {
     dispatch_sync(dispatch_get_main_queue(), ^{
         displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
         [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
         [displayLink setPaused:true];
     });
 
-    
     runSynchronouslyOnVideoProcessingQueue(^{
         dispatch_queue_t videoProcessingQueue = [GPUImageContext sharedContextQueue];
         NSMutableDictionary *pixBuffAttributes = [NSMutableDictionary dictionary];
@@ -329,7 +234,9 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (void)outputMediaDataWillChange:(AVPlayerItemOutput *)sender
 {
-	[displayLink setPaused:false];
+    dispatch_async(dispatch_get_main_queue(), ^{
+       [displayLink setPaused:false];
+    });
 }
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
@@ -361,50 +268,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
     _shouldReprocessCurrentFrame = true;
 }
 
-- (BOOL)readNextVideoFrameFromOutput:(AVAssetReaderOutput *)readerVideoTrackOutput;
-{
-    if (reader.status == AVAssetReaderStatusReading && !videoEncodingIsFinished)
-    {
-        CMSampleBufferRef sampleBufferRef = [readerVideoTrackOutput copyNextSampleBuffer];
-        if (sampleBufferRef) 
-        {
-            CMTime currentSampleTime = CMSampleBufferGetOutputPresentationTimeStamp(sampleBufferRef);
-            CMTime differenceFromLastFrame = CMTimeSubtract(currentSampleTime, previousFrameTime);
-            CFAbsoluteTime currentActualTime = CFAbsoluteTimeGetCurrent();
-            
-            CGFloat frameTimeDifference = CMTimeGetSeconds(differenceFromLastFrame);
-            CGFloat actualTimeDifference = currentActualTime - previousActualFrameTime;
-            
-            if (frameTimeDifference > actualTimeDifference)
-            {
-                usleep(1000000.0 * (frameTimeDifference - actualTimeDifference));
-            }
-            
-            previousFrameTime = currentSampleTime;
-            previousActualFrameTime = CFAbsoluteTimeGetCurrent();
-
-            __unsafe_unretained PGVideoMovie *weakSelf = self;
-            runSynchronouslyOnVideoProcessingQueue(^{
-                [weakSelf processMovieFrame:sampleBufferRef];
-                CMSampleBufferInvalidate(sampleBufferRef);
-                CFRelease(sampleBufferRef);
-            });
-
-            return true;
-        }
-        else
-        {
-            if (!keepLooping) {
-                videoEncodingIsFinished = true;
-                if (videoEncodingIsFinished)
-                    [self endProcessing];
-            }
-        }
-    }
-    return false;
-}
-
-
 - (void)processMovieFrame:(CMSampleBufferRef)movieSampleBuffer; 
 {
     CMTime currentSampleTime = CMSampleBufferGetOutputPresentationTimeStamp(movieSampleBuffer);
@@ -412,24 +275,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
     processingFrameTime = currentSampleTime;
     [self processMovieFrame:movieFrame withSampleTime:currentSampleTime];
-}
-
-- (CGFloat)progress
-{
-    if (AVAssetReaderStatusReading == reader.status)
-    {
-        float current = processingFrameTime.value * 1.0f / processingFrameTime.timescale;
-        float duration = self.asset.duration.value * 1.0f / self.asset.duration.timescale;
-        return current / duration;
-    }
-    else if ( AVAssetReaderStatusCompleted == reader.status )
-    {
-        return 1.f;
-    }
-    else
-    {
-        return 0.f;
-    }
 }
 
 - (void)processMovieFrame:(CVPixelBufferRef)movieFrame withSampleTime:(CMTime)currentSampleTime
@@ -538,10 +383,7 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                 [currentTarget setInputSize:CGSizeMake(bufferWidth, bufferHeight) atIndex:targetTextureIndex];
                 [currentTarget setInputFramebuffer:outputFramebuffer atIndex:targetTextureIndex];
                 
-                AVAsset *asset = self.asset;
-                if (asset == nil) {
-                    asset = self.playerItem.asset;
-                }
+                AVAsset *asset = self.playerItem.asset;
                 if (asset != nil) {
                     UIInterfaceOrientation orientation = [self orientationForTrack:asset];
                     if (orientation == UIInterfaceOrientationPortrait) {
@@ -602,27 +444,23 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 
 - (void)endProcessing
 {
-    keepLooping = NO;
-
-    [displayLink setPaused:YES];
-
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [displayLink setPaused:false];
+        if (displayLink != nil)
+        {
+            [displayLink invalidate];
+            displayLink = nil;
+        }
+    });
+    
     for (id<GPUImageInput> currentTarget in targets)
     {
         [currentTarget endProcessing];
-    }
-    
-    if (displayLink != nil)
-    {
-        [displayLink invalidate];
-        displayLink = nil;
     }
 }
 
 - (void)cancelProcessing
 {
-    if (reader) {
-        [reader cancelReading];
-    }
     [self endProcessing];
 }
 
@@ -663,14 +501,6 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 	glVertexAttribPointer(yuvConversionTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, textureCoordinates);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
-- (AVAssetReader*)assetReader {
-    return reader;
-}
-
-- (BOOL)videoEncodingIsFinished {
-    return videoEncodingIsFinished;
 }
 
 @end
