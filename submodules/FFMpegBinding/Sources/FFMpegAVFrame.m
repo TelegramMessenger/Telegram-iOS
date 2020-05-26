@@ -44,6 +44,10 @@
     return _impl->pts;
 }
 
+- (int64_t)duration {
+    return _impl->pkt_duration;
+}
+
 - (FFMpegAVFrameColorRange)colorRange {
     switch (_impl->color_range) {
         case AVCOL_RANGE_MPEG:

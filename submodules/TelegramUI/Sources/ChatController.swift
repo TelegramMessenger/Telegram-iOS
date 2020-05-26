@@ -767,6 +767,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
             }
             return true
+        }, sendBotContextResultAsGif: { [weak self] collection, result, sourceNode, sourceRect in
+            guard let strongSelf = self else {
+                return false
+            }
+            if let _ = strongSelf.presentationInterfaceState.slowmodeState, !strongSelf.presentationInterfaceState.isScheduledMessages {
+                strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceNode, sourceRect)
+                return false
+            }
+            
+            strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true)
+            
+            return true
         }, requestMessageActionCallback: { [weak self] messageId, data, isGame in
             if let strongSelf = self {
                 guard !strongSelf.presentationInterfaceState.isScheduledMessages else {
@@ -6962,16 +6974,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false) {
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false) {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
+        
         if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result, hideVia: hideVia), canSendMessagesToChat(self.presentationInterfaceState) {
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        var state = state
+                        state = state.updatedInterfaceState { interfaceState in
+                            var interfaceState = interfaceState
+                            interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
+                            interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+                            interfaceState = interfaceState.withUpdatedComposeDisableUrlPreview(nil)
+                            return interfaceState
+                        }
+                        state = state.updatedInputMode { current in
+                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil  {
+                                return .media(mode: mode, expanded: nil)
+                            }
+                            return current
+                        }
+                        return state
                     })
                 }
             })

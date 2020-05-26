@@ -39,13 +39,13 @@ final class PaneSearchContainerNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    var openGifContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
+    var openGifContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     
     var ready: Signal<Void, NoError> {
         return self.contentNode.ready
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[FileMediaReference]?>, cancel: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[MultiplexedVideoNodeFile]?>, cancel: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.controllerInteraction = controllerInteraction

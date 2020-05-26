@@ -109,6 +109,7 @@ final class SoftwareVideoLayerFrameManager {
                 while index < self.frames.count {
                     if baseTimestamp + self.frames[index].position.seconds + self.frames[index].duration.seconds <= timestamp {
                         latestFrameIndex = index
+                        //print("latestFrameIndex = \(index)")
                     }
                     index += 1
                 }
@@ -139,7 +140,7 @@ final class SoftwareVideoLayerFrameManager {
     private var polling = false
     
     private func poll() {
-        if self.frames.count < 3 && !self.polling {
+        if self.frames.count < 2 && !self.polling {
             self.polling = true
             let minPts = self.minPts
             let maxPts = self.maxPts
@@ -179,7 +180,11 @@ final class SoftwareVideoLayerFrameManager {
                             }
                             if let frame = frameAndLoop?.0 {
                                 if strongSelf.minPts == nil || CMTimeCompare(strongSelf.minPts!, frame.position) < 0 {
-                                    strongSelf.minPts = frame.position
+                                    var position = CMTimeAdd(frame.position, frame.duration)
+                                    for _ in 0 ..< 1 {
+                                        position = CMTimeAdd(position, frame.duration)
+                                    }
+                                    strongSelf.minPts = position
                                 }
                                 strongSelf.frames.append(frame)
                                 strongSelf.frames.sort(by: { lhs, rhs in
@@ -190,7 +195,7 @@ final class SoftwareVideoLayerFrameManager {
                                     }
                                 })
                                 //print("add frame at \(CMTimeGetSeconds(frame.position))")
-                                let positions = strongSelf.frames.map { CMTimeGetSeconds($0.position) }
+                                //let positions = strongSelf.frames.map { CMTimeGetSeconds($0.position) }
                                 //print("frames: \(positions)")
                             } else {
                                 //print("not adding frames")

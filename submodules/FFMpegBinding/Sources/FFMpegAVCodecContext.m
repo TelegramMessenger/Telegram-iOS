@@ -50,9 +50,20 @@
     return result >= 0;
 }
 
-- (bool)receiveIntoFrame:(FFMpegAVFrame *)frame {
-    int status = avcodec_receive_frame(_impl, (AVFrame *)[frame impl]);
+- (bool)sendEnd {
+    int status = avcodec_send_packet(_impl, nil);
     return status == 0;
+}
+
+- (FFMpegAVCodecContextReceiveResult)receiveIntoFrame:(FFMpegAVFrame *)frame {
+    int status = avcodec_receive_frame(_impl, (AVFrame *)[frame impl]);
+    if (status == 0) {
+        return FFMpegAVCodecContextReceiveResultSuccess;
+    } else if (status == -35) {
+        return FFMpegAVCodecContextReceiveResultNotEnoughData;
+    } else {
+        return FFMpegAVCodecContextReceiveResultError;
+    }
 }
 
 - (void)flushBuffers {

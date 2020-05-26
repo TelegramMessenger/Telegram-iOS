@@ -41,7 +41,7 @@ private struct RequestData: Codable {
 
 private let requestVersion = "3"
 
-public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String) -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> {
+public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false) -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> {
     return account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in
         if let bot = transaction.getPeer(botId), let peer = transaction.getPeer(peerId) {
             return (bot, peer)
@@ -92,7 +92,9 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                 flags |= (1 << 0)
                 geoPoint = Api.InputGeoPoint.inputGeoPoint(lat: latitude, long: longitude)
             }
-            return account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
+            
+            
+            var signal: Signal<ChatContextResultCollection?, RequestChatContextResultsError> = account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
             |> map { result -> ChatContextResultCollection? in
                 return ChatContextResultCollection(apiResults: result, botId: bot.id, peerId: peerId, query: query, geoPoint: location)
             }
@@ -122,6 +124,12 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                 }
                 |> castError(RequestChatContextResultsError.self)
             }
+            
+            if incompleteResults {
+                signal = .single(nil) |> then(signal)
+            }
+            
+            return signal
         }
         |> castError(RequestChatContextResultsError.self)
         |> switchToLatest

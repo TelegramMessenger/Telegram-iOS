@@ -8,9 +8,13 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 
-enum ChatMediaInputMetaSectionItemType {
+enum ChatMediaInputMetaSectionItemType: Equatable {
     case savedStickers
     case recentStickers
+    case stickersMode
+    case savedGifs
+    case trendingGifs
+    case gifEmoji(String)
 }
 
 final class ChatMediaInputMetaSectionItem: ListViewItem {
@@ -20,7 +24,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
     let selectedItem: () -> Void
     
     var selectable: Bool {
-        return true
+        return false
     }
     
     init(inputNodeInteraction: ChatMediaInputNodeInteraction, type: ChatMediaInputMetaSectionItemType, theme: PresentationTheme, selected: @escaping () -> Void) {
@@ -34,7 +38,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         async {
             let node = ChatMediaInputMetaSectionItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
-            node.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+            node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
             node.inputNodeInteraction = self.inputNodeInteraction
             node.setItem(item: self)
             node.updateTheme(theme: self.theme)
@@ -71,7 +75,10 @@ private let verticalOffset: CGFloat = 3.0 + UIScreenPixel
 
 final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     private let imageNode: ASImageNode
+    private let textNodeContainer: ASDisplayNode
+    private let textNode: ImmediateTextNode
     private let highlightNode: ASImageNode
+    private let buttonNode: HighlightTrackingButtonNode
     
     var item: ChatMediaInputMetaSectionItem?
     var currentCollectionId: ItemCollectionId?
@@ -87,26 +94,57 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
         
+        self.textNodeContainer = ASDisplayNode()
+        self.textNodeContainer.isUserInteractionEnabled = false
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.isUserInteractionEnabled = false
+        
+        self.textNodeContainer.addSubnode(self.textNode)
+        self.textNodeContainer.isUserInteractionEnabled = false
+        
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        
+        self.textNodeContainer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        
+        self.buttonNode = HighlightTrackingButtonNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.highlightNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.textNodeContainer)
+        self.addSubnode(self.buttonNode)
         
         let imageSize = CGSize(width: 26.0, height: 26.0)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
+        
+        self.textNodeContainer.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
+        
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+    }
+    
+    @objc private func buttonPressed() {
+        self.item?.selectedItem()
     }
     
     func setItem(item: ChatMediaInputMetaSectionItem) {
         self.item = item
         switch item.type {
-            case .savedStickers:
-                self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0)
-            case .recentStickers:
-                self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
+        case .savedStickers:
+            self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0)
+        case .recentStickers:
+            self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
+        default:
+            break
         }
     }
     
@@ -117,18 +155,51 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
             if let item = self.item {
                 switch item.type {
-                    case .savedStickers:
-                        self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelSavedStickersIcon(theme)
-                    case .recentStickers:
-                        self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelRecentStickersIcon(theme)
+                case .savedStickers:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelSavedStickersIcon(theme)
+                case .recentStickers:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelRecentStickersIcon(theme)
+                case .stickersMode:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelStickersModeIcon(theme)
+                case .savedGifs:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelRecentStickersIcon(theme)
+                case .trendingGifs:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
+                case let .gifEmoji(emoji):
+                    self.imageNode.image = nil
+                    self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(28.0), textColor: .black)
+                    let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
+                    self.textNode.frame = CGRect(origin: CGPoint(x: floor((self.textNodeContainer.bounds.width - textSize.width) / 2.0), y: floor((self.textNodeContainer.bounds.height - textSize.height) / 2.0)), size: textSize)
                 }
             }
         }
     }
     
     func updateIsHighlighted() {
-        if let currentCollectionId = self.currentCollectionId, let inputNodeInteraction = self.inputNodeInteraction {
+        guard let inputNodeInteraction = self.inputNodeInteraction else {
+            return
+        }
+        if let currentCollectionId = self.currentCollectionId {
             self.highlightNode.isHidden = inputNodeInteraction.highlightedItemCollectionId != currentCollectionId
+        } else if let item = self.item {
+            var isHighlighted = false
+            switch item.type {
+            case .savedGifs:
+                if case .recent = inputNodeInteraction.highlightedGifMode {
+                    isHighlighted = true
+                }
+            case .trendingGifs:
+                if case .trending = inputNodeInteraction.highlightedGifMode {
+                    isHighlighted = true
+                }
+            case let .gifEmoji(emoji):
+                if case .emojiSearch(emoji) = inputNodeInteraction.highlightedGifMode {
+                    isHighlighted = true
+                }
+            default:
+                break
+            }
+            self.highlightNode.isHidden = !isHighlighted
         }
     }
     

@@ -32,7 +32,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     private let paneDidScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void
     private let fixPaneScroll: (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void
-    private let openGifContextMenu: (FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void
+    private let openGifContextMenu: (MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void
     
     private let searchPlaceholderNode: PaneSearchBarPlaceholderNode
     var visibleSearchPlaceholderNode: PaneSearchBarPlaceholderNode? {
@@ -49,14 +49,16 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private let emptyNode: ImmediateTextNode
     
     private let disposable = MetaDisposable()
-    let trendingPromise = Promise<[FileMediaReference]?>(nil)
+    let trendingPromise = Promise<[MultiplexedVideoNodeFile]?>(nil)
     
     private var validLayout: (CGSize, CGFloat, CGFloat, Bool, Bool, DeviceMetrics)?
     private var didScrollPreviousOffset: CGFloat?
     
     private var didScrollPreviousState: ChatMediaInputPaneScrollState?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void, openGifContextMenu: @escaping (FileMediaReference, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void) {
+    private(set) var mode: ChatMediaInputGifMode = .recent
+    
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping  (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void, openGifContextMenu: @escaping (MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -72,6 +74,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.emptyNode.attributedText = NSAttributedString(string: strings.Gif_NoGifsPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.emptyNode.textAlignment = .center
         self.emptyNode.maximumNumberOfLines = 3
+        self.emptyNode.isHidden = true
         
         super.init()
         
@@ -116,12 +119,20 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.updateMultiplexedNodeLayout(changedIsExpanded: changedIsExpanded, transition: transition)
     }
     
-    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect, Bool)? {
+    func fileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
         if let multiplexedNode = self.multiplexedNode {
             return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
         } else {
             return nil
         }
+    }
+    
+    func setMode(mode: ChatMediaInputGifMode) {
+        if self.mode == mode {
+            return
+        }
+        self.mode = mode
+        self.resetMode(synchronous: true)
     }
     
     override var isEmpty: Bool {
@@ -139,13 +150,23 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     }
     
     private func updateMultiplexedNodeLayout(changedIsExpanded: Bool, transition: ContainedViewLayoutTransition) {
-        guard let (size, topInset, bottomInset, isExpanded, _, deviceMetrics) = self.validLayout else {
+        guard let (size, topInset, bottomInset, _, _, deviceMetrics) = self.validLayout else {
             return
         }
         
         if let multiplexedNode = self.multiplexedNode {
-            let previousBounds = multiplexedNode.scrollNode.layer.bounds
-            multiplexedNode.topInset = topInset + 60.0
+            let _ = multiplexedNode.scrollNode.layer.bounds
+            
+            let displaySearch: Bool
+            
+            switch self.mode {
+            case .recent:
+                displaySearch = true
+            default:
+                displaySearch = false
+            }
+            
+            multiplexedNode.topInset = topInset + (displaySearch ? 60.0 : 0.0)
             multiplexedNode.bottomInset = bottomInset
 
             if case .tablet = deviceMetrics.type, size.width > 480.0 {
@@ -156,11 +177,11 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             
             let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
 
-            var targetBounds = CGRect(origin: previousBounds.origin, size: nodeFrame.size)
+            /*var targetBounds = CGRect(origin: previousBounds.origin, size: nodeFrame.size)
             if changedIsExpanded {
                 let isEmpty = multiplexedNode.files.trending.isEmpty && multiplexedNode.files.saved.isEmpty
                 //targetBounds.origin.y = isExpanded || isEmpty ? 0.0 : 60.0
-            }
+            }*/
             
             //transition.updateBounds(layer: multiplexedNode.scrollNode.layer, bounds: targetBounds)
             transition.updateFrame(node: multiplexedNode, frame: nodeFrame)
@@ -172,8 +193,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     func initializeIfNeeded() {
         if self.multiplexedNode == nil {
-            self.trendingPromise.set(paneGifSearchForQuery(account: account, query: "", offset: nil, updateActivity: nil)
-            |> map { items -> [FileMediaReference]? in
+            self.trendingPromise.set(paneGifSearchForQuery(account: account, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
+            |> map { items -> [MultiplexedVideoNodeFile]? in
                 if let (items, _) = items {
                     return items
                 } else {
@@ -197,47 +218,12 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             self.addSubnode(multiplexedNode)
             multiplexedNode.scrollNode.addSubnode(self.searchPlaceholderNode)
             
-            let gifs = combineLatest(self.trendingPromise.get(), self.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)]))
-            |> map { trending, view -> MultiplexedVideoNodeFiles in
-                var recentGifs: OrderedItemListView?
-                if let orderedView = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)] {
-                    recentGifs = orderedView as? OrderedItemListView
-                }
-                
-                var saved: [FileMediaReference] = []
-                
-                if let recentGifs = recentGifs {
-                    saved = recentGifs.items.map { item in
-                        let file = (item.contents as! RecentMediaItem).media as! TelegramMediaFile
-                        return .savedGif(media: file)
-                    }
+            multiplexedNode.fileSelected = { [weak self] file, sourceNode, sourceRect in
+                if let (collection, result) = file.contextResult {
+                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect)
                 } else {
-                    saved = []
+                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect)
                 }
-                
-                return MultiplexedVideoNodeFiles(saved: saved, trending: trending ?? [])
-            }
-            self.disposable.set((gifs
-            |> deliverOnMainQueue).start(next: { [weak self] files in
-                if let strongSelf = self {
-                    let previousFiles = strongSelf.multiplexedNode?.files
-                    strongSelf.multiplexedNode?.files = files
-                    let wasEmpty: Bool
-                    if let previousFiles = previousFiles {
-                        wasEmpty = previousFiles.trending.isEmpty && previousFiles.saved.isEmpty
-                    } else {
-                        wasEmpty = true
-                    }
-                    let isEmpty = files.trending.isEmpty && files.saved.isEmpty
-                    strongSelf.emptyNode.isHidden = !isEmpty
-                    if wasEmpty && isEmpty {
-                        strongSelf.multiplexedNode?.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: 60.0)
-                    }
-                }
-            }))
-            
-            multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
-                let _ = self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
             multiplexedNode.fileContextMenu = { [weak self] fileReference, sourceNode, sourceRect, gesture, isSaved in
@@ -273,6 +259,85 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             }
             
             self.updateMultiplexedNodeLayout(changedIsExpanded: false, transition: .immediate)
+
+            self.resetMode(synchronous: false)
         }
+    }
+    
+    private func resetMode(synchronous: Bool) {
+        let filesSignal: Signal<MultiplexedVideoNodeFiles, NoError>
+        switch self.mode {
+        case .recent:
+            filesSignal = combineLatest(self.trendingPromise.get(), self.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)]))
+            |> map { trending, view -> MultiplexedVideoNodeFiles in
+                var recentGifs: OrderedItemListView?
+                if let orderedView = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)] {
+                    recentGifs = orderedView as? OrderedItemListView
+                }
+                
+                var saved: [MultiplexedVideoNodeFile] = []
+                
+                if let recentGifs = recentGifs {
+                    saved = recentGifs.items.map { item in
+                        let file = (item.contents as! RecentMediaItem).media as! TelegramMediaFile
+                        return MultiplexedVideoNodeFile(file: .savedGif(media: file), contextResult: nil)
+                    }
+                } else {
+                    saved = []
+                }
+                
+                return MultiplexedVideoNodeFiles(saved: saved, trending: trending ?? [], isSearch: false)
+            }
+        case .trending:
+            filesSignal = self.trendingPromise.get()
+            |> map { trending -> MultiplexedVideoNodeFiles in
+                return MultiplexedVideoNodeFiles(saved: [], trending: trending ?? [], isSearch: true)
+            }
+        case let .emojiSearch(emoji):
+            filesSignal = paneGifSearchForQuery(account: self.account, query: emoji, offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
+            |> map { trending -> MultiplexedVideoNodeFiles in
+                return MultiplexedVideoNodeFiles(saved: [], trending: trending?.0 ?? [], isSearch: true)
+            }
+        }
+        
+        var firstTime = true
+        
+        self.disposable.set((filesSignal
+        |> deliverOnMainQueue).start(next: { [weak self] files in
+            if let strongSelf = self {
+                //let previousFiles = strongSelf.multiplexedNode?.files
+                var resetScrollingToOffset: CGFloat?
+                if firstTime {
+                    firstTime = false
+                    resetScrollingToOffset = 0.0
+                }
+                
+                let displaySearch: Bool
+                
+                switch strongSelf.mode {
+                case .recent:
+                    displaySearch = true
+                default:
+                    displaySearch = false
+                }
+                
+                strongSelf.searchPlaceholderNode.isHidden = !displaySearch
+                
+                if let (_, topInset, _, _, _, _) = strongSelf.validLayout {
+                    strongSelf.multiplexedNode?.topInset = topInset + (displaySearch ? 60.0 : 0.0)
+                }
+                
+                strongSelf.multiplexedNode?.setFiles(files: files, synchronous: synchronous, resetScrollingToOffset: resetScrollingToOffset)
+                
+                /*let wasEmpty: Bool
+                if let previousFiles = previousFiles {
+                    wasEmpty = previousFiles.trending.isEmpty && previousFiles.saved.isEmpty
+                } else {
+                    wasEmpty = true
+                }
+                let isEmpty = files.trending.isEmpty && files.saved.isEmpty
+                strongSelf.emptyNode.isHidden = !isEmpty*/
+            }
+        }))
     }
 }
