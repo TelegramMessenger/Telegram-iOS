@@ -84,7 +84,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
+    private var videoLayer: (SoftwareVideoThumbnailNode, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
     private var currentAnimatedStickerFile: TelegramMediaFile?
@@ -346,14 +346,14 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     if updatedVideoFile {
                         if let (thumbnailLayer, _, layer) = strongSelf.videoLayer {
                             strongSelf.videoLayer = nil
-                            thumbnailLayer.removeFromSuperlayer()
+                            thumbnailLayer.removeFromSupernode()
                             layer.layer.removeFromSuperlayer()
                         }
                         
                         if let videoFile = videoFile {
-                            let thumbnailLayer = SoftwareVideoThumbnailLayer(account: item.account, fileReference: .standalone(media: videoFile), synchronousLoad: synchronousLoads)
+                            let thumbnailLayer = SoftwareVideoThumbnailNode(account: item.account, fileReference: .standalone(media: videoFile), synchronousLoad: synchronousLoads)
                             thumbnailLayer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
-                            strongSelf.layer.addSublayer(thumbnailLayer)
+                            strongSelf.addSubnode(thumbnailLayer)
                             let layerHolder = takeSampleBufferLayer()
                             layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                             layerHolder.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)

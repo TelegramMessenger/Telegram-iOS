@@ -61,7 +61,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
     
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
-    private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
+    private var videoLayer: (SoftwareVideoThumbnailNode, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
@@ -248,13 +248,13 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         if updatedVideoFile {
             if let (thumbnailLayer, _, layer) = self.videoLayer {
                 self.videoLayer = nil
-                thumbnailLayer.removeFromSuperlayer()
+                thumbnailLayer.removeFromSupernode()
                 layer.layer.removeFromSuperlayer()
             }
             
             if let videoFileReference = videoFileReference {
-                let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: videoFileReference, synchronousLoad: false)
-                self.layer.addSublayer(thumbnailLayer)
+                let thumbnailLayer = SoftwareVideoThumbnailNode(account: self.account, fileReference: videoFileReference, synchronousLoad: false)
+                self.addSubnode(thumbnailLayer)
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 self.layer.addSublayer(layerHolder.layer)

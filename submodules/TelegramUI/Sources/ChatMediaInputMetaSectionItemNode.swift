@@ -24,7 +24,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
     let selectedItem: () -> Void
     
     var selectable: Bool {
-        return false
+        return true
     }
     
     init(inputNodeInteraction: ChatMediaInputNodeInteraction, type: ChatMediaInputMetaSectionItemType, theme: PresentationTheme, selected: @escaping () -> Void) {
@@ -37,14 +37,16 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatMediaInputMetaSectionItemNode()
-            node.contentSize = CGSize(width: 41.0, height: 41.0)
-            node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
-            node.inputNodeInteraction = self.inputNodeInteraction
-            node.setItem(item: self)
-            node.updateTheme(theme: self.theme)
-            node.updateIsHighlighted()
-            node.updateAppearanceTransition(transition: .immediate)
             Queue.mainQueue().async {
+                node.inputNodeInteraction = self.inputNodeInteraction
+                node.setItem(item: self)
+                node.updateTheme(theme: self.theme)
+                node.updateIsHighlighted()
+                node.updateAppearanceTransition(transition: .immediate)
+                
+                node.contentSize = CGSize(width: 41.0, height: 41.0)
+                node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
+                
                 completion(node, {
                     return (nil, { _ in
                         
@@ -78,7 +80,6 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     private let textNodeContainer: ASDisplayNode
     private let textNode: ImmediateTextNode
     private let highlightNode: ASImageNode
-    private let buttonNode: HighlightTrackingButtonNode
     
     var item: ChatMediaInputMetaSectionItem?
     var currentCollectionId: ItemCollectionId?
@@ -110,30 +111,20 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         
         self.textNodeContainer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
-        self.buttonNode = HighlightTrackingButtonNode()
-        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.highlightNode)
         self.addSubnode(self.imageNode)
         self.addSubnode(self.textNodeContainer)
-        self.addSubnode(self.buttonNode)
         
         let imageSize = CGSize(width: 26.0, height: 26.0)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         
-        self.textNodeContainer.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
-        
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
-        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.textNodeContainer.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + 1.0), size: imageSize)
     }
     
     override func didLoad() {
         super.didLoad()
-    }
-    
-    @objc private func buttonPressed() {
-        self.item?.selectedItem()
     }
     
     func setItem(item: ChatMediaInputMetaSectionItem) {
@@ -167,7 +158,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
                 case let .gifEmoji(emoji):
                     self.imageNode.image = nil
-                    self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(28.0), textColor: .black)
+                    self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(27.0), textColor: .black)
                     let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
                     self.textNode.frame = CGRect(origin: CGPoint(x: floor((self.textNodeContainer.bounds.width - textSize.width) / 2.0), y: floor((self.textNodeContainer.bounds.height - textSize.height) / 2.0)), size: textSize)
                 }

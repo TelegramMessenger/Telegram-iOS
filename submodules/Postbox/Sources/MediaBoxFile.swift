@@ -131,7 +131,7 @@ private final class MediaBoxFileMap {
         self.progress = nil
     }
     
-    fileprivate func contains(_ range: Range<Int32>) -> Bool {
+    fileprivate func contains(_ range: Range<Int32>) -> Range<Int32>? {
         let maxValue: Int
         if let truncationSize = self.truncationSize {
             maxValue = Int(truncationSize)
@@ -139,7 +139,11 @@ private final class MediaBoxFileMap {
             maxValue = Int.max
         }
         let intRange: Range<Int> = Int(range.lowerBound) ..< min(maxValue, Int(range.upperBound))
-        return self.ranges.contains(integersIn: intRange)
+        if self.ranges.contains(integersIn: intRange) {
+            return Int32(intRange.lowerBound) ..< Int32(intRange.upperBound)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -385,7 +389,7 @@ final class MediaBoxPartialFile {
         }
         
         var isCompleted = false
-        if let truncationSize = self.fileMap.truncationSize, self.fileMap.contains(0 ..< truncationSize) {
+        if let truncationSize = self.fileMap.truncationSize, let _ = self.fileMap.contains(0 ..< truncationSize) {
             isCompleted = true
         }
         
@@ -432,9 +436,9 @@ final class MediaBoxPartialFile {
     func read(range: Range<Int32>) -> Data? {
         assert(self.queue.isCurrent())
         
-        if self.fileMap.contains(range) {
-            self.fd.seek(position: Int64(range.lowerBound))
-            var data = Data(count: range.count)
+        if let actualRange = self.fileMap.contains(range) {
+            self.fd.seek(position: Int64(actualRange.lowerBound))
+            var data = Data(count: actualRange.count)
             let dataCount = data.count
             let readBytes = data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Int in
                 return self.fd.read(bytes, dataCount)
@@ -452,8 +456,8 @@ final class MediaBoxPartialFile {
     func data(range: Range<Int32>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
-        if self.fileMap.contains(range) {
-            next(MediaResourceData(path: self.path, offset: Int(range.lowerBound), size: range.count, complete: true))
+        if let actualRange = self.fileMap.contains(range) {
+            next(MediaResourceData(path: self.path, offset: Int(actualRange.lowerBound), size: actualRange.count, complete: true))
             return EmptyDisposable
         }
         
@@ -481,7 +485,7 @@ final class MediaBoxPartialFile {
     func fetched(range: Range<Int32>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
-        if self.fileMap.contains(range) {
+        if let _ = self.fileMap.contains(range) {
             completed()
             return EmptyDisposable
         }
@@ -559,7 +563,7 @@ final class MediaBoxPartialFile {
         assert(self.queue.isCurrent())
         
         next(self.fileMap.ranges)
-        if let truncationSize = self.fileMap.truncationSize, self.fileMap.contains(0 ..< truncationSize) {
+        if let truncationSize = self.fileMap.truncationSize, let _ = self.fileMap.contains(0 ..< truncationSize) {
             completed()
             return EmptyDisposable
         }
@@ -676,8 +680,8 @@ final class MediaBoxPartialFile {
                                 if request.waitingUntilAfterInitialFetch {
                                     request.waitingUntilAfterInitialFetch = false
                                     
-                                    if strongSelf.fileMap.contains(request.range) {
-                                        request.completion(MediaResourceData(path: strongSelf.path, offset: Int(request.range.lowerBound), size: request.range.count, complete: true))
+                                    if let actualRange = strongSelf.fileMap.contains(request.range) {
+                                        request.completion(MediaResourceData(path: strongSelf.path, offset: Int(actualRange.lowerBound), size: actualRange.count, complete: true))
                                     } else {
                                         request.completion(MediaResourceData(path: strongSelf.path, offset: Int(request.range.lowerBound), size: 0, complete: false))
                                     }

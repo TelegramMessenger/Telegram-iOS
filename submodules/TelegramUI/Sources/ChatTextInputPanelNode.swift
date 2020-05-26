@@ -1433,7 +1433,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func updateIsProcessingInlineRequest(_ value: Bool) {
         if value {
             if self.searchActivityIndicator == nil, let currentState = self.presentationInterfaceState {
-                let searchActivityIndicator = ActivityIndicator(type: .custom(currentState.theme.list.itemAccentColor, 22.0, 1.0, false))
+                let searchActivityIndicator = ActivityIndicator(type: .custom(currentState.theme.list.itemAccentColor, 11.0, 1.0, false))
                 searchActivityIndicator.isUserInteractionEnabled = false
                 self.searchActivityIndicator = searchActivityIndicator
                 let indicatorSize = searchActivityIndicator.measure(CGSize(width: 100.0, height: 100.0))
@@ -1441,7 +1441,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 searchActivityIndicator.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0) + 1.0), size: indicatorSize)
                 self.searchLayoutClearImageNode.isHidden = true
                 self.searchLayoutClearButton.addSubnode(searchActivityIndicator)
-                searchActivityIndicator.layer.sublayerTransform = CATransform3DMakeScale(0.5, 0.5, 1.0)
+                //searchActivityIndicator.layer.sublayerTransform = CATransform3DMakeScale(0.5, 0.5, 1.0)
             }
         } else if let searchActivityIndicator = self.searchActivityIndicator {
             self.searchActivityIndicator = nil
