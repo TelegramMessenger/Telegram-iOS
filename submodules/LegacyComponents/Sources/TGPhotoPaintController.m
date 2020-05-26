@@ -99,7 +99,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     bool _appeared;
     
     TGPhotoPaintFont *_selectedTextFont;
-    bool _selectedStroke;
+    TGPhotoPaintTextEntityStyle _selectedTextStyle;
     
     TGPhotoEntitiesContainerView *_entitiesContainerView;
     TGPhotoPaintEntityView *_currentEntityView;
@@ -156,7 +156,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             [[TGPaintNeonBrush alloc] init]
         ];
         _selectedTextFont = [[TGPhotoPaintFont availableFonts] firstObject];
-        _selectedStroke = true;
+        _selectedTextStyle = TGPhotoPaintTextEntityStyleBorder;
         
         if (_photoEditor.paintingData.undoManager != nil)
             _undoManager = [_photoEditor.paintingData.undoManager copy];
@@ -1106,10 +1106,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPaintSwatch *currentSwatch = _portraitSettingsView.swatch;
     TGPaintSwatch *whiteSwatch = [TGPaintSwatch swatchWithColor:[UIColor whiteColor] colorLocation:1.0f brushWeight:currentSwatch.brushWeight];
     TGPaintSwatch *blackSwatch = [TGPaintSwatch swatchWithColor:[UIColor blackColor] colorLocation:0.85f brushWeight:currentSwatch.brushWeight];
-    [self setCurrentSwatch:_selectedStroke ? blackSwatch : whiteSwatch sender:nil];
+    [self setCurrentSwatch:_selectedTextStyle == TGPhotoPaintTextEntityStyleBorder ? blackSwatch : whiteSwatch sender:nil];
     
     CGFloat maxWidth = [self fittedContentSize].width - 26.0f;
-    TGPhotoPaintTextEntity *entity = [[TGPhotoPaintTextEntity alloc] initWithText:@"" font:_selectedTextFont swatch:_portraitSettingsView.swatch baseFontSize:[self _textBaseFontSizeForCurrentPainting] maxWidth:maxWidth stroke:_selectedStroke];
+    TGPhotoPaintTextEntity *entity = [[TGPhotoPaintTextEntity alloc] initWithText:@"" font:_selectedTextFont swatch:_portraitSettingsView.swatch baseFontSize:[self _textBaseFontSizeForCurrentPainting] maxWidth:maxWidth style:_selectedTextStyle];
     entity.position = [self startPositionRelativeToEntity:nil];
     entity.angle = [self startRotation];
     
@@ -1413,7 +1413,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)presentTextSettingsView
 {
-    TGPhotoTextSettingsView *view = [[TGPhotoTextSettingsView alloc] initWithFonts:[TGPhotoPaintFont availableFonts] selectedFont:_selectedTextFont selectedStroke:_selectedStroke];
+    TGPhotoTextSettingsView *view = [[TGPhotoTextSettingsView alloc] initWithFonts:[TGPhotoPaintFont availableFonts] selectedFont:_selectedTextFont selectedStyle:_selectedTextStyle];
     
     __weak TGPhotoPaintController *weakSelf = self;
     view.fontChanged = ^(TGPhotoPaintFont *font)
@@ -1429,21 +1429,21 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         [strongSelf settingsWrapperPressed];
     };
-    view.strokeChanged = ^(bool stroke)
+    view.styleChanged = ^(TGPhotoPaintTextEntityStyle style)
     {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
-        strongSelf->_selectedStroke = stroke;
+        strongSelf->_selectedTextStyle = style;
         
-        if (stroke && [strongSelf->_portraitSettingsView.swatch.color isEqual:[UIColor whiteColor]])
+        if (style == TGPhotoPaintTextEntityStyleBorder && [strongSelf->_portraitSettingsView.swatch.color isEqual:[UIColor whiteColor]])
         {
             TGPaintSwatch *currentSwatch = strongSelf->_portraitSettingsView.swatch;
             TGPaintSwatch *blackSwatch = [TGPaintSwatch swatchWithColor:[UIColor blackColor] colorLocation:0.85f brushWeight:currentSwatch.brushWeight];
             [strongSelf setCurrentSwatch:blackSwatch sender:nil];
         }
-        else if (!stroke && [strongSelf->_portraitSettingsView.swatch.color isEqual:UIColorRGB(0x000000)])
+        else if (style != TGPhotoPaintTextEntityStyleBorder && [strongSelf->_portraitSettingsView.swatch.color isEqual:UIColorRGB(0x000000)])
         {
             TGPaintSwatch *currentSwatch = strongSelf->_portraitSettingsView.swatch;
             TGPaintSwatch *whiteSwatch = [TGPaintSwatch swatchWithColor:[UIColor whiteColor] colorLocation:1.0f brushWeight:currentSwatch.brushWeight];
@@ -1451,7 +1451,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         }
         
         TGPhotoTextEntityView *textView = (TGPhotoTextEntityView *)strongSelf->_currentEntityView;
-        [textView setStroke:stroke];
+        [textView setStyle:style];
         
         [strongSelf settingsWrapperPressed];
     };

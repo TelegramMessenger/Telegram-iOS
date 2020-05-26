@@ -160,18 +160,6 @@
     _fullSize = fullSize;
 }
 
-- (void)setVideoAsset:(AVAsset *)asset {
-    [_toolComposer invalidate];
-    _currentProcessChain = nil;
-    
-    [_currentInput removeAllTargets];
-    PGVideoMovie *movie = [[PGVideoMovie alloc] initWithAsset:asset];
-    movie.shouldRepeat = true;
-    _currentInput = movie;
-    
-    _fullSize = true;
-}
-
 - (void)setPlayerItem:(AVPlayerItem *)playerItem {
     [_toolComposer invalidate];
     _currentProcessChain = nil;

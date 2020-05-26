@@ -15,6 +15,7 @@ protocol LegacyPaintEntity {
     var scale: CGFloat { get }
     var angle: CGFloat { get }
     var baseSize: CGSize? { get }
+    var mirrored: Bool { get }
     
     func image(for time: CMTime, completion: @escaping (CIImage?) -> Void)
 }
@@ -34,6 +35,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     
     var baseSize: CGSize? {
         return self.entity.baseSize
+    }
+    
+    var mirrored: Bool {
+        return self.entity.mirrored
     }
     
     let account: Account
@@ -183,6 +188,10 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
     var baseSize: CGSize? {
         return nil
     }
+    
+    var mirrored: Bool {
+        return false
+    }
 
     let entity: TGPhotoPaintTextEntity
 
@@ -239,8 +248,8 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
     
     public func entities(for time: CMTime, size: CGSize, completion: (([CIImage]?) -> Void)!) {
         let entities = self.entities
-//        let originalSize = self.originalSize
-//        let cropRect = self.cropRect
+        let maxSide = max(size.width, size.height)
+        let paintingScale = maxSide / 1920.0
         
         self.queue.async {
             if entities.isEmpty {
@@ -262,9 +271,6 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                     }
                     entity.image(for: time, completion: { image in
                         if var image = image {
-                            let maxSide = max(size.width, size.height)
-                            let paintingScale = maxSide / 1920.0
-                            
                             var transform = CGAffineTransform(translationX: -image.extent.midX, y: -image.extent.midY)
                             image = image.transformed(by: transform)
                             
@@ -276,6 +282,9 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                             transform = CGAffineTransform(translationX: entity.position.x * paintingScale, y: size.height - entity.position.y * paintingScale)
                             transform = transform.rotated(by: CGFloat.pi * 2 - entity.angle)
                             transform = transform.scaledBy(x: scale, y: scale)
+                            if entity.mirrored {
+                                transform = transform.scaledBy(x: -1.0, y: 1.0)
+                            }
                                                         
                             image = image.transformed(by: transform)
                             let _ = images.modify { current in
