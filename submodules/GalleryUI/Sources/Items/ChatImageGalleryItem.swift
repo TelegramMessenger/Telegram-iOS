@@ -167,7 +167,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var tilingNode: TilingNode?
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
-    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>(nil)
+    fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
@@ -262,7 +262,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             if imageReference.media.flags.contains(.hasStickers) {
                 let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
-                self._rightBarButtonItem.set(.single(rightBarButtonItem))
+                self._rightBarButtonItems.set(.single([rightBarButtonItem]))
+            } else {
+                self._rightBarButtonItems.set(.single([]))
             }
         }
         self.contextAndMedia = (self.context, imageReference.abstract)
@@ -577,8 +579,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._title.get()
     }
     
-    override func rightBarButtonItem() -> Signal<UIBarButtonItem?, NoError> {
-        return self._rightBarButtonItem.get()
+    override func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {
+        return self._rightBarButtonItems.get()
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {

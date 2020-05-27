@@ -679,12 +679,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.zoomableContent = (videoSize, videoNode)
                         
             var barButtonItems: [UIBarButtonItem] = []
-            if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
-                let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
-                barButtonItems.append(rightBarButtonItem)
-            }
             if hasLinkedStickers {
                 let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                barButtonItems.append(rightBarButtonItem)
+            }
+            if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
+                let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 barButtonItems.append(rightBarButtonItem)
             }
             self._rightBarButtonItems.set(.single(barButtonItems))
