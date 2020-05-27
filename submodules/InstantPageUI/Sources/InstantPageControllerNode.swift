@@ -115,7 +115,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.scrollNodeFooter = ASDisplayNode()
         self.scrollNodeFooter.backgroundColor = .black
-                
+        
         super.init()
         
         self.setViewBlock({
