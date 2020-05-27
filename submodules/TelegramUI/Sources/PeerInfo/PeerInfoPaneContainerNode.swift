@@ -513,8 +513,11 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     override func didLoad() {
         super.didLoad()
         
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
             guard let strongSelf = self, let currentPaneKey = strongSelf.currentPaneKey, let availablePanes = strongSelf.currentParams?.data?.availablePanes, let index = availablePanes.firstIndex(of: currentPaneKey) else {
+                return []
+            }
+            if strongSelf.tabsContainerNode.bounds.contains(strongSelf.view.convert(point, to: strongSelf.tabsContainerNode.view)) {
                 return []
             }
             if index == 0 {

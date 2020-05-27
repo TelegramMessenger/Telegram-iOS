@@ -207,7 +207,7 @@ public final class ActivityIndicator: ASDisplayNode {
             indicatorSize = CGSize(width: diameter, height: diameter)
             shouldScale = !forceDefault
         }
-        self.indicatorNode.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
+        self.indicatorNode.frame = CGRect(origin: CGPoint(x: ((size.width - indicatorSize.width) / 2.0), y: ((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
         if shouldScale, let indicatorView = self.indicatorView {
             let intrinsicSize = indicatorView.bounds.size
             self.subnodeTransform = CATransform3DMakeScale(min(1.0, indicatorSize.width / intrinsicSize.width), min(1.0, indicatorSize.height / intrinsicSize.height), 1.0)

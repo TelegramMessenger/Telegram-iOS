@@ -65,8 +65,8 @@ private struct StickerEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) -> GridItem {
-        return HorizontalStickerGridItem(account: account, file: self.file, isPreviewed: { item in
+    func item(account: Account, stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, theme: PresentationTheme) -> GridItem {
+        return HorizontalStickerGridItem(account: account, file: self.file, theme: theme, isPreviewed: { item in
             return false//stickersInteraction.previewedStickerItem == item
         }, sendSticker: { file, node, rect in
             let _ = interfaceInteraction.sendSticker(file, node, rect)
@@ -83,15 +83,15 @@ private struct StickerEntryTransition {
     let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedGridEntryTransition(account: Account, from fromEntries: [StickerEntry], to toEntries: [StickerEntry], stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) -> StickerEntryTransition {
+private func preparedGridEntryTransition(account: Account, from fromEntries: [StickerEntry], to toEntries: [StickerEntry], stickersInteraction: HorizontalStickersChatContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, theme: PresentationTheme) -> StickerEntryTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction, theme: theme), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction, theme: theme)) }
     
     return StickerEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
@@ -257,7 +257,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
             self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate, interfaceState: validLayout.4)
         }
         
-        let transition = preparedGridEntryTransition(account: self.context.account, from: previousEntries, to: entries, stickersInteraction: self.stickersInteraction, interfaceInteraction: self.interfaceInteraction!)
+        let transition = preparedGridEntryTransition(account: self.context.account, from: previousEntries, to: entries, stickersInteraction: self.stickersInteraction, interfaceInteraction: self.interfaceInteraction!, theme: self.theme)
         self.enqueueTransition(transition)
     }
     
