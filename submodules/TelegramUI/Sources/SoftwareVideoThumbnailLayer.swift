@@ -64,8 +64,10 @@ final class SoftwareVideoThumbnailNode: ASDisplayNode {
                         if let strongSelf = self {
                             strongSelf.contents = image.cgImage
                             if let placeholder = strongSelf.placeholder {
-                                strongSelf.placeholder = placeholder
-                                placeholder.removeFromSupernode()
+                                strongSelf.placeholder = nil
+                                placeholder.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak placeholder] _ in
+                                    placeholder?.removeFromSupernode()
+                                })
                             }
                             strongSelf.ready?()
                         }
