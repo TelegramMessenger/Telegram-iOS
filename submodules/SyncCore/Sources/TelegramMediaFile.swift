@@ -440,6 +440,15 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var hasLinkedStickers: Bool {
+        for attribute in self.attributes {
+            if case .HasLinkedStickers = attribute {
+                return true
+            }
+        }
+        return false
+    }
+    
     public var isMusic: Bool {
         for attribute in self.attributes {
             if case .Audio(false, _, _, _, _) = attribute {

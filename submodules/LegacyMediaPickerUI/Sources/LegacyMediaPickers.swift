@@ -143,9 +143,10 @@ private final class LegacyAssetItemWrapper: NSObject {
 public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [AnyHashable : Any]?) {
     return { anyDict, caption, entities, hash in
         let dict = anyDict as! NSDictionary
-        let stickers = (dict["stickers"] as? [TGDocumentMediaAttachment])?.compactMap { document -> FileMediaReference? in
-            if let sticker = stickerFromLegacyDocument(document) {
-                return FileMediaReference.standalone(media: sticker)
+        let stickers = (dict["stickers"] as? [Data])?.compactMap { data -> FileMediaReference? in
+            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
+                return FileMediaReference.standalone(media: file)
             } else {
                 return nil
             }
