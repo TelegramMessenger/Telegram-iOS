@@ -29,7 +29,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     private var inputNodeInteraction: ChatMediaInputNodeInteraction!
     
     private let collectionListPanel: ASDisplayNode
-    private let collectionListContainer: CollectionListContainerNode
+    private let collectionListContainer: ASDisplayNode
     
     private let blurView: UIView
     
@@ -131,7 +131,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.collectionListPanel.backgroundColor = UIColor(rgb: 0x151515)
         self.collectionListPanel.alpha = 0.3
         
-        self.collectionListContainer = CollectionListContainerNode()
+        self.collectionListContainer = ASDisplayNode()
         self.collectionListContainer.clipsToBounds = true
         
         self.listView = ListView()
@@ -822,12 +822,14 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     func animateIn() {
         self.isUserInteractionEnabled = true
         self.isHidden = false
+        self.insertSubnode(self.stickerPane, belowSubnode: self.collectionListContainer)
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     func animateOut() {
         self.isUserInteractionEnabled = false
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.stickerPane.removeFromSupernode()
             self?.isHidden = true
         })
     }
@@ -925,11 +927,7 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
             (self.displayNode as! DrawingStickersScreenNode).animateIn()
         }
     }
-    
-//    override public func inFocusUpdated(isInFocus: Bool) {
-//        self.controllerNode.inFocusUpdated(isInFocus: isInFocus)
-//    }
-    
+        
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
