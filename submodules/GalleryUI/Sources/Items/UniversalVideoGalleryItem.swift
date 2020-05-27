@@ -855,7 +855,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
-//                        seek = .timecode(time)
+                        seek = .timecode(time)
                     }
                 }
             }

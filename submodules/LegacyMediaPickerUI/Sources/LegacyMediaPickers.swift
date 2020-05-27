@@ -346,6 +346,8 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource))
                                             
                                             var imageFlags: TelegramMediaImageFlags = []
+                                                                                        
+                                            var attributes: [MessageAttribute] = []
                                             
                                             var stickerFiles: [TelegramMediaFile] = []
                                             if !stickers.isEmpty {
@@ -353,9 +355,6 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                                     stickerFiles.append(fileReference.media)
                                                 }
                                             }
-                                            
-                                            var attributes: [MessageAttribute] = []
-                                            
                                             if !stickerFiles.isEmpty {
                                                 attributes.append(EmbeddedMediaStickersMessageAttribute(files: stickerFiles))
                                                 imageFlags.insert(.hasStickers)
@@ -481,8 +480,21 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 }
                             }
                             
-                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
                             var attributes: [MessageAttribute] = []
+                            
+                            var stickerFiles: [TelegramMediaFile] = []
+                            if !stickers.isEmpty {
+                                for fileReference in stickers {
+                                    stickerFiles.append(fileReference.media)
+                                }
+                            }
+                            if !stickerFiles.isEmpty {
+                                attributes.append(EmbeddedMediaStickersMessageAttribute(files: stickerFiles))
+                                fileAttributes.append(.HasLinkedStickers)
+                            }
+                            
+                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
+
                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                             }
