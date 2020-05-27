@@ -850,19 +850,14 @@
                                 NSData *data = UIImageJPEGRepresentation(image, 0.8);
                                 [data writeToFile:filePath atomically:true];
                                 dict[@"url"] = [NSURL fileURLWithPath:filePath];
-                                
-                                
+                                  
                                 if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
                                 {
-                                    CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
                                     UIImage *paintingImage = adjustments.paintingData.stillImage;
                                     if (paintingImage == nil) {
                                         paintingImage = adjustments.paintingData.image;
                                     }
-                                    if (adjustments.toolsApplied) {
-                                        image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
-                                    }
-                                    UIImage *thumbnailImage = TGPhotoEditorVideoCrop(image, paintingImage, adjustments.cropOrientation, 0, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), adjustments.originalSize, true, true);
+                                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), adjustments.originalSize, true, true, true);
                                     if (thumbnailImage != nil) {
                                         dict[@"previewImage"] = thumbnailImage;
                                     }

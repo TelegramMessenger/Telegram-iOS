@@ -8,6 +8,7 @@
 @synthesize originalSize = _originalSize;
 @synthesize cropRect = _cropRect;
 @synthesize cropOrientation = _cropOrientation;
+@synthesize cropRotation = _cropRotation;
 @synthesize cropLockedAspectRatio = _cropLockedAspectRatio;
 @synthesize cropMirrored = _cropMirrored;
 @synthesize paintingData = _paintingData;

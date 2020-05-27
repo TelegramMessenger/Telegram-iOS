@@ -45,6 +45,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     let file: TelegramMediaFile
     let entity: TGPhotoPaintStickerEntity
     let animated: Bool
+    let durationPromise = Promise<Double>()
     
     var source: AnimatedStickerNodeSource?
     var frameSource: AnimatedStickerFrameSource?
@@ -81,6 +82,8 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                                 
                                 strongSelf.frameQueue = frameQueue
                                 strongSelf.frameSource = frameSource
+                                
+                                strongSelf.durationPromise.set(.single(Double(frameSource.frameCount) / Double(frameSource.frameRate)))
                             }
                         }
                     }))
@@ -104,6 +107,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     
     deinit {
         self.disposable.dispose()
+    }
+    
+    var duration: Signal<Double, NoError> {
+        return self.durationPromise.get()
     }
     
     private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType) -> CIImage? {
@@ -160,6 +167,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                     completion(image)
                 } else {
                     let _ = (self.imagePromise.get()
+                    |> take(1)
                     |> deliverOn(self.queue)).start(next: { [weak self] image in
                         if let strongSelf = self {
                             strongSelf.cachedCIImage = CIImage(image: image)
@@ -246,6 +254,33 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         
     }
     
+    public func duration() -> Signal<Double, NoError> {
+        var durations: [Signal<Double, NoError>] = []
+        for entity in self.entities {
+            if let sticker = entity as? LegacyPaintStickerEntity, sticker.animated {
+                durations.append(sticker.duration)
+            }
+        }
+        
+        func gcd(_ a: Int32, _ b: Int32) -> Int32 {
+            let remainder = a % b
+            if remainder != 0 {
+                return gcd(b, remainder)
+            } else {
+                return b
+            }
+        }
+        
+        func lcm(_ x: Int32, _ y: Int32) -> Int32 {
+            return x / gcd(x, y) * y
+        }
+        
+        return combineLatest(durations)
+        |> map { durations in
+            return min(6.0, Double(durations.reduce(1) { lcm(Int32($0), Int32($1)) }))
+        }
+    }
+    
     public func entities(for time: CMTime, size: CGSize, completion: (([CIImage]?) -> Void)!) {
         let entities = self.entities
         let maxSide = max(size.width, size.height)
@@ -307,7 +342,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 }
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
-    public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> Void)!
+    public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> TGPhotoPaintStickersScreen?)!
     
     private let context: AccountContext
     

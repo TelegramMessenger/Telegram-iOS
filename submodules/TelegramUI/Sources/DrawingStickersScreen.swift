@@ -16,6 +16,7 @@ import PresentationDataUtils
 import SearchBarNode
 import UndoUI
 import SegmentedControlNode
+import LegacyComponents
 
 private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
@@ -274,7 +275,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
         })
         self.inputNodeInteraction.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: true)
-        
+        self.inputNodeInteraction.displayStickerPlaceholder = false
         
         self.addSubnode(self.topPanel)
         
@@ -288,8 +289,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.addSubnode(self.topSeparatorNode)
         self.addSubnode(self.bottomSeparatorNode)
        
-        let trendingInteraction = TrendingPaneInteraction(installPack: { [weak self] info in
-        }, openPack: { [weak self] info in
+        let trendingInteraction = TrendingPaneInteraction(installPack: { info in
+        }, openPack: { info in
         }, getItemIsPreviewed: { item in
             return false
         }, openSearch: {
@@ -481,7 +482,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
     
     @objc private func cancelPressed() {
-        self.dismiss?()
+        self.animateOut()
     }
     
     private func setHighlightedItemCollectionId(_ collectionId: ItemCollectionId) {
@@ -819,11 +820,16 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
     
     func animateIn() {
+        self.isUserInteractionEnabled = true
+        self.isHidden = false
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     func animateOut() {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.isUserInteractionEnabled = false
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.isHidden = true
+        })
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -836,7 +842,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
 }
 
-final class DrawingStickersScreen: ViewController {
+final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
     private let context: AccountContext
     var selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
@@ -896,6 +902,7 @@ final class DrawingStickersScreen: ViewController {
             context: self.context,
             selectSticker: { [weak self] file, sourceNode, sourceRect in
                 if let strongSelf = self, let selectSticker = strongSelf.selectSticker {
+                    (strongSelf.displayNode as! DrawingStickersScreenNode).animateOut()
                     return selectSticker(file, sourceNode, sourceRect)
                 } else {
                     return false
@@ -927,5 +934,13 @@ final class DrawingStickersScreen: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationHeight: 0.0, transition: transition)
+    }
+    
+    func restore() {
+        (self.displayNode as! DrawingStickersScreenNode).animateIn()
+    }
+    
+    func invalidate() {
+        self.dismiss()
     }
 }

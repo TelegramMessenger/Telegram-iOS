@@ -154,7 +154,7 @@
                     }
                 }
                 
-                if (![self setupAssetReaderWriterForAVAsset:avAsset image:nil outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:inhibitAudio conversionContext:context error:&error])
+                if (![self setupAssetReaderWriterForAVAsset:avAsset image:nil duration:0.0 outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:inhibitAudio conversionContext:context error:&error])
                 {
                     [subscriber putError:error];
                     return;
@@ -212,7 +212,7 @@
     }];
 }
 
-+ (SSignal *)renderUIImage:(UIImage *)image adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)renderUIImage:(UIImage *)image duration:(NSTimeInterval)duration adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
     SQueue *queue = [[SQueue alloc] init];
        
@@ -248,7 +248,7 @@
                     }
                 }
                 
-                if (![self setupAssetReaderWriterForAVAsset:avAsset image:image outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:true conversionContext:context error:&error])
+                if (![self setupAssetReaderWriterForAVAsset:avAsset image:image duration:duration outputURL:outputUrl preset:preset entityRenderer:entityRenderer adjustments:adjustments inhibitAudio:true conversionContext:context error:&error])
                 {
                     [subscriber putError:error];
                     return;
@@ -350,18 +350,7 @@
     UIImage *overlayImage = nil;
     if (adjustments.paintingData.imagePath != nil)
         overlayImage = [UIImage imageWithContentsOfFile:adjustments.paintingData.imagePath];
-    
-    bool hasAnimation = false;
-    for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
-        if (entity.animated) {
-            hasAnimation = true;
-            break;
-        }
-    }
-    if (!hasAnimation) {
-        entityRenderer = nil;
-    }
-    
+        
     AVMutableVideoComposition *videoComposition;
     if (entityRenderer != nil || adjustments.toolsApplied) {
         PGPhotoEditor *editor = nil;
@@ -504,7 +493,7 @@
     return output;
 }
 
-+ (bool)setupAssetReaderWriterForAVAsset:(AVAsset *)avAsset image:(UIImage *)image outputURL:(NSURL *)outputURL preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments inhibitAudio:(bool)inhibitAudio conversionContext:(SAtomic *)outConversionContext error:(NSError **)error
++ (bool)setupAssetReaderWriterForAVAsset:(AVAsset *)avAsset image:(UIImage *)image duration:(NSTimeInterval)duration outputURL:(NSURL *)outputURL preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments inhibitAudio:(bool)inhibitAudio conversionContext:(SAtomic *)outConversionContext error:(NSError **)error
 {
     if (image == nil) {
         TGMediaSampleBufferProcessor *videoProcessor = nil;
@@ -579,7 +568,7 @@
         
         CGSize dimensions = CGSizeZero;
         NSDictionary *outputSettings = nil;
-        CMTimeRange timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(0.0, NSEC_PER_SEC), CMTimeMakeWithSeconds(3.0, NSEC_PER_SEC));
+        CMTimeRange timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(0.0, NSEC_PER_SEC), CMTimeMakeWithSeconds(duration, NSEC_PER_SEC));
         AVMutableComposition *composition = [AVMutableComposition composition];
         
         AVAssetTrack *videoTrack = [[avAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];

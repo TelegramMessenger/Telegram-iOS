@@ -17,6 +17,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 @synthesize originalSize = _originalSize;
 @synthesize cropRect = _cropRect;
 @synthesize cropOrientation = _cropOrientation;
+@synthesize cropRotation = _cropRotation;
 @synthesize cropLockedAspectRatio = _cropLockedAspectRatio;
 @synthesize cropMirrored = _cropMirrored;
 @synthesize paintingData = _paintingData;
@@ -26,6 +27,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize
                                        cropRect:(CGRect)cropRect
                                 cropOrientation:(UIImageOrientation)cropOrientation
+                                   cropRotation:(CGFloat)cropRotation
                           cropLockedAspectRatio:(CGFloat)cropLockedAspectRatio
                                    cropMirrored:(bool)cropMirrored
                                  trimStartValue:(NSTimeInterval)trimStartValue
@@ -39,6 +41,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_originalSize = originalSize;
     adjustments->_cropRect = cropRect;
     adjustments->_cropOrientation = cropOrientation;
+    adjustments->_cropRotation = cropRotation;
     adjustments->_cropLockedAspectRatio = cropLockedAspectRatio;
     adjustments->_cropMirrored = cropMirrored;
     adjustments->_trimStartValue = trimStartValue;
@@ -140,13 +143,12 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     }
     adjustments->_cropRect = cropRect;
     adjustments->_cropOrientation = values.cropOrientation;
+    adjustments->_cropRotation = values.cropRotation;
     adjustments->_cropLockedAspectRatio = values.cropLockedAspectRatio;
     adjustments->_cropMirrored = values.cropMirrored;
-    adjustments->_toolValues = values.toolValues;
-    adjustments->_paintingData = values.paintingData;
+    adjustments->_paintingData = [values.paintingData dataForAnimation];
     adjustments->_sendAsGif = true;
     adjustments->_preset = TGMediaVideoConversionPresetAnimation;
-    adjustments->_toolValues = values.toolValues;
     
     return adjustments;
 }
@@ -157,11 +159,11 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_originalSize = _originalSize;
     adjustments->_cropRect = _cropRect;
     adjustments->_cropOrientation = _cropOrientation;
+    adjustments->_cropRotation = _cropRotation;
     adjustments->_cropLockedAspectRatio = _cropLockedAspectRatio;
     adjustments->_cropMirrored = _cropMirrored;
     adjustments->_trimStartValue = _trimStartValue;
     adjustments->_trimEndValue = _trimEndValue;
-    adjustments->_toolValues = _toolValues;
     adjustments->_paintingData = _paintingData;
     adjustments->_sendAsGif = _sendAsGif;
     adjustments->_preset = preset;
@@ -187,6 +189,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 {
     NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
     dict[@"cropOrientation"] = @(self.cropOrientation);
+    dict[@"cropRotation"] = @(self.cropRotation);
     if ([self cropAppliedForAvatar:false])
         dict[@"cropRect"] = [NSValue valueWithCGRect:self.cropRect];
     dict[@"cropMirrored"] = @(self.cropMirrored);
@@ -279,6 +282,9 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     if (self.cropLockedAspectRatio > FLT_EPSILON)
         return true;
     
+    if (ABS(self.cropRotation) > FLT_EPSILON)
+        return true;
+    
     if (self.cropOrientation != UIImageOrientationUp)
         return true;
     
@@ -332,6 +338,9 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)object;
     
     if (!_CGRectEqualToRectWithEpsilon(self.cropRect, adjustments.cropRect, [self _cropRectEpsilon]))
+        return false;
+    
+    if (ABS(self.cropRotation - adjustments.cropRotation) > FLT_EPSILON)
         return false;
     
     if (self.cropOrientation != adjustments.cropOrientation)

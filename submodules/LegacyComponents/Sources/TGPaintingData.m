@@ -46,6 +46,13 @@
     return paintingData;
 }
 
+- (instancetype)dataForAnimation
+{
+    TGPaintingData *paintingData = [[TGPaintingData alloc] init];
+    paintingData->_entities = _entities;
+    return paintingData;
+}
+
 + (void)storePaintingData:(TGPaintingData *)data inContext:(TGMediaEditingContext *)context forItem:(id<TGMediaEditableItem>)item forVideo:(bool)video
 {
     [[TGPaintingData queue] dispatch:^

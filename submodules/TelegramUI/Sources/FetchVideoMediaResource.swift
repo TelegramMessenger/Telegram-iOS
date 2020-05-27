@@ -287,7 +287,13 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                             }
                     }
                     let updatedSize = Atomic<Int>(value: 0)
-                    let entityRenderer = adjustments.flatMap { LegacyPaintEntityRenderer(account: account, adjustments: $0) }
+                    let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                        if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                            return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                        } else {
+                            return nil
+                        }
+                    }
                     let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
                         var value = stat()
                         if stat(path, &value) == 0 {
@@ -379,24 +385,47 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                 }
             }
             let updatedSize = Atomic<Int>(value: 0)
-            let entityRenderer = adjustments.flatMap { LegacyPaintEntityRenderer(account: account, adjustments: $0) }
+            let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                    return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                } else {
+                    return nil
+                }
+            }
             let signal: SSignal
-            if filteredPath.contains(".jpg") {
+            if filteredPath.contains(".jpg"), let entityRenderer = entityRenderer {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
-                    signal = TGMediaVideoConverter.renderUIImage(image, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
-                        var value = stat()
-                        if stat(path, &value) == 0 {
-                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                                var range: Range<Int>?
-                                let _ = updatedSize.modify { updatedSize in
-                                    range = updatedSize ..< Int(value.st_size)
-                                    return Int(value.st_size)
+                    let durationSignal: SSignal = SSignal(generator: { subscriber in
+                        let disposable = (entityRenderer.duration()).start(next: { duration in
+                            subscriber?.putNext(duration)
+                            subscriber?.putCompletion()
+                        })
+                        
+                        return SBlockDisposable(block: {
+                            disposable.dispose()
+                        })
+                    })
+                    
+                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                        if let duration = duration as? Double {
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                                var value = stat()
+                                if stat(path, &value) == 0 {
+                                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                                        var range: Range<Int>?
+                                        let _ = updatedSize.modify { updatedSize in
+                                            range = updatedSize ..< Int(value.st_size)
+                                            return Int(value.st_size)
+                                        }
+                                        //print("size = \(Int(value.st_size)), range: \(range!)")
+                                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                                    }
                                 }
-                                //print("size = \(Int(value.st_size)), range: \(range!)")
-                                subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                            }
+                            }), entityRenderer: entityRenderer)!
+                        } else {
+                            return SSignal.single(nil)
                         }
-                    }), entityRenderer: entityRenderer)!
+                    })
                 } else {
                     signal = SSignal.single(nil)
                 }

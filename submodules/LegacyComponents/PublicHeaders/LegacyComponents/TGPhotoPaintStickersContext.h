@@ -18,6 +18,13 @@
 
 @end
 
+@protocol TGPhotoPaintStickersScreen <NSObject>
+
+- (void)restore;
+- (void)invalidate;
+
+@end
+
 @protocol TGPhotoPaintStickersContext <NSObject>
 
 - (int64_t)documentIdForDocument:(id)document;
@@ -25,6 +32,6 @@
 
 - (UIView<TGPhotoPaintStickerRenderView> *)stickerViewForDocument:(id)document;
 
-@property (nonatomic, copy) void(^presentStickersController)(void(^)(id, bool, UIView *, CGRect));
+@property (nonatomic, copy) id<TGPhotoPaintStickersScreen>(^presentStickersController)(void(^)(id, bool, UIView *, CGRect));
 
 @end

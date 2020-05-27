@@ -6060,6 +6060,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return true
                             })
                             strongSelf.present(controller, in: .window(.root))
+                            return controller
+                        } else {
+                            return nil
                         }
                     })
                 }
@@ -6132,6 +6135,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return true
                     })
                     strongSelf.present(controller, in: .window(.root))
+                    return controller
+                } else {
+                    return nil
                 }
             }, present: { [weak self] c, a in
                 self?.present(c, in: .window(.root), with: a)
@@ -6313,9 +6319,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }, presentTimerPicker: { [weak self] done in
                         if let strongSelf = self {
                             strongSelf.presentTimerPicker(style: .media, completion: { [weak self] time in
-                                if let strongSelf = self {
-                                     done(time)
-                                 }
+                                done(time)
                             })
                         }
                     }, presentStickers: { [weak self] completion in
@@ -6325,6 +6329,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return true
                             })
                             strongSelf.present(controller, in: .window(.root))
+                            return controller
+                        } else {
+                            return nil
                         }
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()

@@ -25,6 +25,7 @@
 @property (nonatomic, readonly) CGSize originalSize;
 @property (nonatomic, readonly) CGRect cropRect;
 @property (nonatomic, readonly) UIImageOrientation cropOrientation;
+@property (nonatomic, readonly) CGFloat cropRotation;
 @property (nonatomic, readonly) CGFloat cropLockedAspectRatio;
 @property (nonatomic, readonly) bool cropMirrored;
 @property (nonatomic, readonly) bool sendAsGif;

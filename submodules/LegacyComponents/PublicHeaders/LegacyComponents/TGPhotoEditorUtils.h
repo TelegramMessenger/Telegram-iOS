@@ -14,6 +14,7 @@ CGFloat TGRadiansToDegrees(CGFloat radians);
     
 UIImage *TGPhotoEditorCrop(UIImage *image, UIImage *paintingImage, UIImageOrientation orientation, CGFloat rotation, CGRect rect, bool mirrored, CGSize maxSize, CGSize originalSize, bool shouldResize);
 UIImage *TGPhotoEditorVideoCrop(UIImage *image, UIImage *paintingImage, UIImageOrientation orientation, CGFloat rotation, CGRect rect, bool mirrored, CGSize maxSize, CGSize originalSize, bool shouldResize, bool useImageSize);
+UIImage *TGPhotoEditorVideoExtCrop(UIImage *inputImage, UIImage *paintingImage, UIImageOrientation orientation, CGFloat rotation, CGRect rect, bool mirrored, CGSize maxSize, CGSize originalSize, bool shouldResize, bool useImageSize, bool skipImageTransform);
 UIImage *TGPhotoEditorFitImage(UIImage *image, CGSize maxSize);
 CGSize TGRotatedContentSize(CGSize contentSize, CGFloat rotation);
     

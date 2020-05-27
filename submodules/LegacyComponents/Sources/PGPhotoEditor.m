@@ -11,6 +11,7 @@
 #import "PGPhotoEditorPicture.h"
 
 #import "GPUImageTextureInput.h"
+#import "GPUImageCropFilter.h"
 
 #import <LegacyComponents/PGPhotoEditorValues.h>
 #import <LegacyComponents/TGVideoEditAdjustments.h>
@@ -43,6 +44,9 @@
     id<TGMediaEditAdjustments> _initialAdjustments;
     
     GPUImageOutput *_currentInput;
+    GPUImageCropFilter *_cropFilter;
+    GPUImageRotationMode _rotationMode;
+    
     NSArray *_currentProcessChain;
     GPUImageOutput <GPUImageInput> *_finalFilter;
         
@@ -159,13 +163,43 @@
     _fullSize = fullSize;
 }
 
-- (void)setPlayerItem:(AVPlayerItem *)playerItem {
+- (void)setPlayerItem:(AVPlayerItem *)playerItem forCropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored {
     [_toolComposer invalidate];
     _currentProcessChain = nil;
     
     [_currentInput removeAllTargets];
     PGVideoMovie *movie = [[PGVideoMovie alloc] initWithPlayerItem:playerItem];
     _currentInput = movie;
+    
+    bool hasCropping = !CGPointEqualToPoint(cropRect.origin, CGPointZero) || (!CGSizeEqualToSize(cropRect.size, CGSizeZero) && !CGSizeEqualToSize(cropRect.size, _originalSize));
+    
+    _rotationMode = kGPUImageNoRotation;
+    if (cropOrientation != UIImageOrientationUp || cropMirrored || hasCropping) {
+        CGRect normalizedCropRect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
+        if (hasCropping) {
+            normalizedCropRect = CGRectMake(cropRect.origin.x / _originalSize.width, cropRect.origin.y / _originalSize.height, cropRect.size.width / _originalSize.width, cropRect.size.height / _originalSize.height);
+        }
+        _cropFilter = [[GPUImageCropFilter alloc] initWithCropRegion:normalizedCropRect];
+        if (cropOrientation != UIImageOrientationUp || cropMirrored) {
+            switch (cropOrientation) {
+                case UIImageOrientationLeft:
+                    _rotationMode = kGPUImageRotateLeft;
+                    break;
+                case UIImageOrientationRight:
+                    _rotationMode = cropMirrored ? kGPUImageRotateRightFlipHorizontal : kGPUImageRotateRight;
+                    break;
+                case UIImageOrientationDown:
+                    _rotationMode = kGPUImageRotate180;
+                    break;
+                case UIImageOrientationUp:
+                    if (cropMirrored)
+                        _rotationMode = kGPUImageFlipHorizonal;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
     
     _fullSize = true;
 }
@@ -341,7 +375,12 @@
         _currentProcessChain = processChain;
         
         GPUImageOutput <GPUImageInput> *lastFilter = ((PGPhotoProcessPass *)_currentProcessChain.firstObject).filter;
-        [_currentInput addTarget:lastFilter];
+        if (_cropFilter != nil) {
+            [_currentInput addTarget:_cropFilter];
+            [_cropFilter addTarget:lastFilter];
+        } else {
+            [_currentInput addTarget:lastFilter];
+        }
         
         NSInteger chainLength = _currentProcessChain.count;
         if (chainLength > 1)
@@ -460,7 +499,7 @@
     {
         TGVideoEditAdjustments *initialAdjustments = (TGVideoEditAdjustments *)_initialAdjustments;
         
-        return [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:self.originalSize cropRect:self.cropRect cropOrientation:self.cropOrientation cropLockedAspectRatio:self.cropLockedAspectRatio cropMirrored:self.cropMirrored trimStartValue:initialAdjustments.trimStartValue trimEndValue:initialAdjustments.trimEndValue toolValues:toolValues paintingData:paintingData sendAsGif:self.sendAsGif preset:self.preset];
+        return [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:self.originalSize cropRect:self.cropRect cropOrientation:self.cropOrientation cropRotation:self.cropRotation cropLockedAspectRatio:self.cropLockedAspectRatio cropMirrored:self.cropMirrored trimStartValue:initialAdjustments.trimStartValue trimEndValue:initialAdjustments.trimEndValue toolValues:toolValues paintingData:paintingData sendAsGif:self.sendAsGif preset:self.preset];
     }
 }
 
