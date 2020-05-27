@@ -552,6 +552,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             replaceVideoNode = true
                                         } else if currentFile.fileId != file.fileId && file.fileId.namespace == Namespaces.Media.CloudSecretFile {
                                             replaceVideoNode = true
+                                        } else if file.isAnimated && currentFile.fileId.namespace == Namespaces.Media.LocalFile && file.fileId.namespace == Namespaces.Media.CloudFile {
+                                            replaceVideoNode = true
                                         }
                                     }
                                 } else if !(file.resource is LocalFileVideoMediaResource) {
