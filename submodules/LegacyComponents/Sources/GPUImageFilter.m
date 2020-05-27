@@ -18,8 +18,6 @@ NSString *const kGPUImageVertexShaderString = SHADER_STRING
  }
  );
 
-#if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
-
 NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 (
  varying highp vec2 texCoord;
@@ -31,21 +29,6 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
      gl_FragColor = texture2D(sourceImage, texCoord);
  }
 );
-
-#else
-
-NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
-(
- varying vec2 texCoord;
- 
- uniform sampler2D sourceImage;
- 
- void main()
- {
-     gl_FragColor = texture2D(sourceImage, texCoord);
- }
-);
-#endif
 
 
 @implementation GPUImageFilter

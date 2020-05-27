@@ -37,6 +37,7 @@ typedef enum
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize
                                        cropRect:(CGRect)cropRect
                                 cropOrientation:(UIImageOrientation)cropOrientation
+                                   cropRotation:(CGFloat)cropRotation
                           cropLockedAspectRatio:(CGFloat)cropLockedAspectRatio
                                    cropMirrored:(bool)cropMirrored
                                  trimStartValue:(NSTimeInterval)trimStartValue

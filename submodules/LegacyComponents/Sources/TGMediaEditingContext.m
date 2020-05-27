@@ -647,7 +647,9 @@
     [_paintingImageCache setImage:image forKey:itemId attributes:NULL];
     
     NSData *imageData = UIImagePNGRepresentation(image);
+    [[NSFileManager defaultManager] removeItemAtURL:imageUrl error:nil];
     bool imageSuccess = [imageData writeToURL:imageUrl options:NSDataWritingAtomic error:nil];
+    [[NSFileManager defaultManager] removeItemAtURL:dataUrl error:nil];
     bool dataSuccess = [data writeToURL:dataUrl options:NSDataWritingAtomic error:nil];
     
     if (imageSuccess && imageOutUrl != NULL)
@@ -664,6 +666,7 @@
         [_stillPaintingImageCache setImage:stillImage forKey:itemId attributes:NULL];
         
         NSData *stillImageData = UIImagePNGRepresentation(stillImage);
+        [[NSFileManager defaultManager] removeItemAtURL:stillImageUrl error:nil];
         [stillImageData writeToURL:stillImageUrl options:NSDataWritingAtomic error:nil];
         
         if (video)

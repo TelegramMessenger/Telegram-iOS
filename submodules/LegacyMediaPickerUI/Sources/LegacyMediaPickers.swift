@@ -19,12 +19,12 @@ public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> Void) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.presentStickersController = { completion in
-        presentStickers({ file, animated, view, rect in
+        return presentStickers({ file, animated, view, rect in
             let coder = PostboxEncoder()
             coder.encodeRootObject(file)
             completion?(coder.makeData(), animated, view, rect)
@@ -143,9 +143,10 @@ private final class LegacyAssetItemWrapper: NSObject {
 public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [AnyHashable : Any]?) {
     return { anyDict, caption, entities, hash in
         let dict = anyDict as! NSDictionary
-        let stickers = (dict["stickers"] as? [TGDocumentMediaAttachment])?.compactMap { document -> FileMediaReference? in
-            if let sticker = stickerFromLegacyDocument(document) {
-                return FileMediaReference.standalone(media: sticker)
+        let stickers = (dict["stickers"] as? [Data])?.compactMap { data -> FileMediaReference? in
+            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
+            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
+                return FileMediaReference.standalone(media: file)
             } else {
                 return nil
             }
@@ -345,6 +346,8 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource))
                                             
                                             var imageFlags: TelegramMediaImageFlags = []
+                                                                                        
+                                            var attributes: [MessageAttribute] = []
                                             
                                             var stickerFiles: [TelegramMediaFile] = []
                                             if !stickers.isEmpty {
@@ -352,9 +355,6 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                                     stickerFiles.append(fileReference.media)
                                                 }
                                             }
-                                            
-                                            var attributes: [MessageAttribute] = []
-                                            
                                             if !stickerFiles.isEmpty {
                                                 attributes.append(EmbeddedMediaStickersMessageAttribute(files: stickerFiles))
                                                 imageFlags.insert(.hasStickers)
@@ -480,8 +480,21 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 }
                             }
                             
-                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
                             var attributes: [MessageAttribute] = []
+                            
+                            var stickerFiles: [TelegramMediaFile] = []
+                            if !stickers.isEmpty {
+                                for fileReference in stickers {
+                                    stickerFiles.append(fileReference.media)
+                                }
+                            }
+                            if !stickerFiles.isEmpty {
+                                attributes.append(EmbeddedMediaStickersMessageAttribute(files: stickerFiles))
+                                fileAttributes.append(.HasLinkedStickers)
+                            }
+                            
+                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
+
                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                             }

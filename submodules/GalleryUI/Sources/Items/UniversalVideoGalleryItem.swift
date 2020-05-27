@@ -11,6 +11,9 @@ import UniversalMediaPlayer
 import AccountContext
 import RadialStatusNode
 import TelegramUniversalVideoContent
+import PresentationDataUtils
+import OverlayStatusController
+import StickerPackPreviewUI
 import AppBundle
 
 public enum UniversalVideoGalleryItemContentInfo {
@@ -244,7 +247,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     fileprivate let _titleView = Promise<UIView?>()
-    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>()
+    fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>()
     
     private let scrubberView: ChatVideoGalleryItemScrubberView
     private let footerContentNode: ChatItemGalleryFooterContentNode
@@ -445,8 +448,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.dismissOnOrientationChange = item.landscape
             
+            var hasLinkedStickers = false
+            if let content = item.content as? NativeVideoContent {
+                hasLinkedStickers = content.fileReference.media.hasLinkedStickers
+            }
+            
             var disablePictureInPicture = false
-    
             var disablePlayerControls = false
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
@@ -670,12 +677,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }))
             
             self.zoomableContent = (videoSize, videoNode)
-            
+                        
+            var barButtonItems: [UIBarButtonItem] = []
+            if hasLinkedStickers {
+                let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                barButtonItems.append(rightBarButtonItem)
+            }
             if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
-                self._rightBarButtonItem.set(.single(rightBarButtonItem))
+                barButtonItems.append(rightBarButtonItem)
             }
-            
+            self._rightBarButtonItems.set(.single(barButtonItems))
+        
             videoNode.playbackCompleted = { [weak videoNode] in
                 Queue.mainQueue().async {
                     item.playbackCompleted()
@@ -842,7 +855,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
-//                        seek = .timecode(time)
+                        seek = .timecode(time)
                     }
                 }
             }
@@ -1218,8 +1231,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._titleView.get()
     }
     
-    override func rightBarButtonItem() -> Signal<UIBarButtonItem?, NoError> {
-        return self._rightBarButtonItem.get()
+    override func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {
+        return self._rightBarButtonItems.get()
     }
     
     @objc func statusButtonPressed() {
@@ -1304,6 +1317,46 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     self?.completeCustomDismiss()
                 })
             }
+        }
+    }
+    
+    @objc func openStickersButtonPressed() {
+        if let content = self.item?.content as? NativeVideoContent {
+            let media = content.fileReference.abstract
+
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                guard let strongSelf = self else {
+                    return EmptyDisposable
+                }
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                (strongSelf.baseNavigationController()?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            let signal = stickerPacksAttachedToMedia(account: self.context.account, media: media)
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            let _ = (signal
+            |> deliverOnMainQueue).start(next: { [weak self] packs in
+                guard let strongSelf = self, !packs.isEmpty else {
+                    return
+                }
+                let baseNavigationController = strongSelf.baseNavigationController()
+                baseNavigationController?.view.endEditing(true)
+                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil)
+                (baseNavigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+            })
         }
     }
     

@@ -254,9 +254,12 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         let boundingSize = CGSize(width: sideSize, height: sideSize)
         
         self.item = item
-        
-        
+                        
         if self.currentState == nil || self.currentState!.0 !== item.account || self.currentState!.1 != item.stickerItem {
+            if !item.inputNodeInteraction.displayStickerPlaceholder {
+                self.removePlaceholder(animated: false)
+            }
+            
             if let dimensions = item.stickerItem.file.dimensions {
                 if item.stickerItem.file.isAnimatedSticker {
                     if self.animationNode == nil {

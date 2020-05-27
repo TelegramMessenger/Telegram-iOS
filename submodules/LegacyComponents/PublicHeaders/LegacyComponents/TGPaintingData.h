@@ -26,6 +26,8 @@
 
 + (instancetype)dataWithPaintingImagePath:(NSString *)imagePath;
 
+- (instancetype)dataForAnimation;
+
 + (void)storePaintingData:(TGPaintingData *)data inContext:(TGMediaEditingContext *)context forItem:(id<TGMediaEditableItem>)item forVideo:(bool)video;
 + (void)facilitatePaintingData:(TGPaintingData *)data;
 

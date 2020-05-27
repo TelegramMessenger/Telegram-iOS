@@ -406,7 +406,7 @@
             _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
             _player.muted = true;
             
-            [_photoEditor setPlayerItem:_playerItem];
+            [_photoEditor setPlayerItem:_playerItem forCropRect:_photoEditor.cropRect cropRotation:0.0 cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored];
                         
             TGDispatchOnMainThread(^
             {
@@ -680,14 +680,17 @@
             [photoEditor setImage:image forCropRect:photoEditor.cropRect cropRotation:photoEditor.cropRotation cropOrientation:photoEditor.cropOrientation cropMirrored:photoEditor.cropMirrored fullSize:true];
             [photoEditor createResultImageWithCompletion:^(UIImage *result)
             {
-                if (hasPainting)
-                {
-                    result = TGPaintCombineCroppedImages(result, editorValues.paintingData.image, true, photoEditor.originalSize, photoEditor.cropRect, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropMirrored);
-                    [TGPaintingData facilitatePaintingData:editorValues.paintingData];
-                }
-                
-                [subscriber putNext:result];
-                [subscriber putCompletion];
+                [_queue dispatch:^{
+                    UIImage *final = result;
+                    if (hasPainting)
+                    {
+                        final = TGPaintCombineCroppedImages(final, editorValues.paintingData.image, true, photoEditor.originalSize, photoEditor.cropRect, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropMirrored);
+                        [TGPaintingData facilitatePaintingData:editorValues.paintingData];
+                    }
+                    
+                    [subscriber putNext:final];
+                    [subscriber putCompletion];
+                }];
             }];
             
             return nil;

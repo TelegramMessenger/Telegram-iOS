@@ -37,8 +37,6 @@
 #import "TGPhotoPaintActionsView.h"
 #import "TGPhotoPaintSettingsView.h"
 
-#import "TGPhotoStickersView.h"
-
 #import "TGPhotoPaintSettingsWrapperView.h"
 #import "TGPhotoBrushSettingsView.h"
 #import "TGPhotoTextSettingsView.h"
@@ -94,7 +92,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     TGPhotoPaintSettingsWrapperView *_settingsViewWrapper;
     UIView<TGPhotoPaintPanelView> *_settingsView;
-    TGPhotoStickersView *_stickersView;
+    id<TGPhotoPaintStickersScreen> _stickersScreen;
     
     bool _appeared;
     
@@ -1005,84 +1003,28 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)presentStickersView
 {
+    if (_stickersScreen != nil) {
+        [_stickersScreen restore];
+        return;
+    }
+    
     __weak TGPhotoPaintController *weakSelf = self;
-    _stickersContext.presentStickersController(^(id document, bool animated, UIView *view, CGRect rect) {
+    _stickersScreen = _stickersContext.presentStickersController(^(id document, bool animated, UIView *view, CGRect rect) {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf != nil) {
 //            UIView *snapshot = [view snapshotViewAfterScreenUpdates:false];
-            [strongSelf createNewStickerWithDocument:document animated:animated transitionPoint:CGPointZero stickersView:nil snapshotView:nil];
+            [strongSelf createNewStickerWithDocument:document animated:animated transitionPoint:CGPointZero snapshotView:nil];
         }
     });
-    
-//    if (_stickersView == nil)
-//    {
-//        TGPhotoStickersView *view = [[TGPhotoStickersView alloc] initWithContext:_context frame:self.view.bounds];
-//        view.parentViewController = self;
-//
-//        __weak TGPhotoPaintController *weakSelf = self;
-//        __weak TGPhotoStickersView *weakStickersView = view;
-//        view.stickerSelected = ^(TGDocumentMediaAttachment *document, CGPoint transitionPoint, TGPhotoStickersView *stickersView, UIView *snapshotView)
-//        {
-//            __strong TGPhotoPaintController *strongSelf = weakSelf;
-//            if (strongSelf != nil)
-//                [strongSelf createNewStickerWithDocument:document transitionPoint:transitionPoint stickersView:stickersView snapshotView:snapshotView];
-//        };
-//        view.dismissed = ^
-//        {
-//            __strong TGPhotoStickersView *strongStickersView = weakStickersView;
-//            if (strongStickersView != nil)
-//                [strongStickersView removeFromSuperview];
-//        };
-//
-//        _stickersView = view;
-//    }
-//
-//    if ([_context currentSizeClass] == UIUserInterfaceSizeClassCompact)
-//    {
-//        _stickersView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-//        _stickersView.frame = self.view.bounds;
-//        _stickersView.safeAreaInset = self.controllerSafeAreaInset;
-//        [self.parentViewController.view addSubview:_stickersView];
-//    }
-//    else
-//    {
-//        _settingsView = _stickersView;
-//        [_stickersView sizeToFit];
-//
-//        UIView *wrapper = [self settingsViewWrapper];
-//        wrapper.userInteractionEnabled = true;
-//        [wrapper addSubview:_stickersView];
-//
-//        [self viewWillLayoutSubviews];
-//    }
-//
-//    _stickersView.outerView = self.parentViewController.view;
-//    _stickersView.targetView = _contentWrapperView;
-//
-//    [_stickersView present];
 }
 
-- (void)createNewStickerWithDocument:(id)document animated:(bool)animated transitionPoint:(CGPoint)transitionPoint stickersView:(TGPhotoStickersView *)stickersView snapshotView:(UIView *)snapshotView
+- (void)createNewStickerWithDocument:(id)document animated:(bool)animated transitionPoint:(CGPoint)transitionPoint snapshotView:(UIView *)snapshotView
 {
     TGPhotoPaintStickerEntity *entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:document baseSize:[self _stickerBaseSizeForCurrentPainting] animated:animated];
     [self _setStickerEntityPosition:entity];
     
     TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
     [self _commonEntityViewSetup:stickerView];
-//    stickerView.hidden = true;
-    
-    CGFloat rotation = entity.angle - [self startRotation];
-    
-    CGRect bounds = stickerView.realBounds;
-    CGPoint center = [stickerView.superview convertPoint:stickerView.center toView:self.parentViewController.view];
-    CGFloat scale = [[stickerView.superview.superview.layer valueForKeyPath:@"transform.scale.x"] floatValue];
-    CGRect targetFrame = CGRectMake(center.x - bounds.size.width * scale / 2.0f, center.y - bounds.size.height * scale / 2.0f, bounds.size.width * scale, bounds.size.height * scale);
-
-    [stickersView dismissWithSnapshotView:snapshotView startPoint:transitionPoint targetFrame:targetFrame targetRotation:rotation completion:^
-    {
-        stickerView.hidden = false;
-        [_entitySelectionView fadeIn];
-    }];
     
     [self selectEntityView:stickerView];
     _entitySelectionView.alpha = 0.0f;
@@ -1802,6 +1744,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 {
     _dismissing = true;
     
+    [_stickersScreen invalidate];
+    
     [_entitySelectionView removeFromSuperview];
     _entitySelectionView = nil;
     
@@ -2061,9 +2005,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     if (_settingsView != nil)
         [_settingsView setInterfaceOrientation:orientation];
-    
-    _stickersView.safeAreaInset = safeAreaInset;
-    
+        
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -2126,14 +2068,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             
             if ([_context currentSizeClass] == UIUserInterfaceSizeClassRegular)
             {
-                if ([_settingsView isKindOfClass:[TGPhotoStickersView class]])
-                {
-                    _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width / 6 * 2 - 5 - _settingsView.frame.size.width / 2.0f, _settingsViewWrapper.frame.size.height - _settingsView.frame.size.height - TGPhotoEditorToolbarSize + 10.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
-                }
-                else
-                {
-                    _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width / 2.0f - 10.0f, _settingsViewWrapper.frame.size.height - _settingsView.frame.size.height - TGPhotoEditorToolbarSize - 50.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
-                }
+                _settingsView.frame = CGRectMake(_settingsViewWrapper.frame.size.width / 2.0f - 10.0f, _settingsViewWrapper.frame.size.height - _settingsView.frame.size.height - TGPhotoEditorToolbarSize - 50.0f, _settingsView.frame.size.width, _settingsView.frame.size.height);
             }
             else
             {
