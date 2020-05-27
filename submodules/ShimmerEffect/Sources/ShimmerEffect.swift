@@ -52,7 +52,8 @@ private final class ShimmerEffectForegroundNode: ASDisplayNode {
         self.currentBackgroundColor = backgroundColor
         self.currentForegroundColor = foregroundColor
         
-        self.imageNode.image = generateImage(CGSize(width: 4.0, height: 320.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+        self.imageNode.image = generateImage(CGSize(width: 16.0, height: 320.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(backgroundColor.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
             

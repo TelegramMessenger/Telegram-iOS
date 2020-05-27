@@ -217,9 +217,7 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     return entries
 }
 
-private let reactions: [String] = ["👍", "👎", "😍", "😂", "😯", "😕", "😢", "😡", "💪", "👏", "🙈", "😒"]
-
-func chatMediaInputPanelGifModeEntries(theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, reactions: [String]) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.stickersMode(theme))
     entries.append(.savedGifs(theme))
@@ -828,10 +826,27 @@ final class ChatMediaInputNode: ChatInputNode {
         })
         self.trendingInteraction = trendingInteraction
         
+        let preferencesViewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+        let reactions: Signal<[String], NoError> = context.account.postbox.combinedView(keys: [preferencesViewKey])
+        |> map { views -> [String] in
+            let defaultReactions: [String] = ["👍", "👎", "😍", "😂", "😯", "😕", "😢", "😡", "💪", "👏", "🙈", "😒"]
+            guard let view = views.views[preferencesViewKey] as? PreferencesView else {
+                return defaultReactions
+            }
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+                return defaultReactions
+            }
+            guard let data = appConfiguration.data, let emojis = data["gif_search_emojies"] as? [String] else {
+                return defaultReactions
+            }
+            return emojis
+        }
+        |> distinctUntilChanged
+        
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get())
-        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions)
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -867,7 +882,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, hasUnreadTrending: hasUnreadTrending, theme: theme)
-            let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme)
+            let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, reactions: reactions)
             var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
             
             if view.higher == nil {

@@ -247,7 +247,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             
             if let placeholderImageNode = self.placeholderImageNode {
                 if placeholderImageNode.image == nil {
-                    placeholderImageNode.image = generateStretchableFilledCircleImage(diameter: 10.0, color: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.mixedWith(.clear, alpha: 0.6))
+                    placeholderImageNode.image = generateStretchableFilledCircleImage(diameter: 10.0, color: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.3))
                 }
                 let size = boundingSize
                 let imageSize = boundingImageSize
@@ -261,7 +261,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 let placeholderFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
                 placeholderNode.frame = CGRect(origin: CGPoint(), size: size)
                 
-                placeholderNode.update(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.mixedWith(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.8), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 5.0)], size: bounds.size)
+                placeholderNode.update(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 5.0)], size: bounds.size)
             }
             
             self.updateIsHighlighted()
