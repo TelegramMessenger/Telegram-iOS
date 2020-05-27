@@ -60,6 +60,31 @@ public func messageMediaImageCancelInteractiveFetch(context: AccountContext, mes
     context.fetchManager.cancelInteractiveFetches(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: resource)
 }
 
-public func messageMediaFileStatus(context: AccountContext, messageId: MessageId, file: TelegramMediaFile) -> Signal<MediaResourceStatus, NoError> {
-    return context.fetchManager.fetchStatus(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
+public func messageMediaFileStatus(context: AccountContext, messageId: MessageId, file: TelegramMediaFile, adjustForVideoThumbnail: Bool = false) -> Signal<MediaResourceStatus, NoError> {
+    let fileStatus = context.fetchManager.fetchStatus(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
+    if !adjustForVideoThumbnail {
+        return fileStatus
+    }
+    
+    var thumbnailStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
+    if let videoThumbnail = file.videoThumbnails.first {
+        thumbnailStatus = context.account.postbox.mediaBox.resourceStatus(videoThumbnail.resource)
+        |> map(Optional.init)
+    }
+    
+    return combineLatest(queue: context.fetchManager.queue,
+        fileStatus,
+        thumbnailStatus
+    )
+    |> map { fileStatus, thumbnailStatus -> MediaResourceStatus in
+        guard let thumbnailStatus = thumbnailStatus else {
+            return fileStatus
+        }
+        if case .Local = thumbnailStatus {
+            return thumbnailStatus
+        } else {
+            return fileStatus
+        }
+    }
+    |> distinctUntilChanged
 }

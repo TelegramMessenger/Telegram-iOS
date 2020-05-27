@@ -460,7 +460,7 @@ private final class FetchManagerCategoryContext {
 }
 
 public final class FetchManagerImpl: FetchManager {
-    private let queue = Queue.mainQueue()
+    public let queue = Queue.mainQueue()
     private let postbox: Postbox
     private let storeManager: DownloadedMediaStoreManager?
     private var nextEpisodeId: Int32 = 0
