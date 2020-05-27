@@ -637,7 +637,7 @@ public final class AccountViewTracker {
     }
     
     public func updateReactionsForMessageIds(messageIds: Set<MessageId>) {
-        self.queue.async {
+        /*self.queue.async {
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -716,7 +716,7 @@ public final class AccountViewTracker {
                     }
                 }
             }
-        }
+        }*/
     }
     
     public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {

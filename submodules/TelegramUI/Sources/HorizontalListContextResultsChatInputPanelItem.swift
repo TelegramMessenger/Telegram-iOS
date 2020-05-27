@@ -402,7 +402,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - progressSize.width) / 2.0), y: floorToScreenPixels((nodeLayout.contentSize.height - progressSize.height) / 2.0)), size: progressSize)
 
                     strongSelf.statusNode.removeFromSupernode()
-                    strongSelf.addSubnode(strongSelf.statusNode)
+                    //strongSelf.addSubnode(strongSelf.statusNode)
                     
                     strongSelf.statusNode.frame = progressFrame
 
