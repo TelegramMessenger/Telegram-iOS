@@ -580,7 +580,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     var reactionItems: [ReactionContextItem] = []
                     
-                    var hasLike = false
+                    /*var hasLike = false
                     let hearts: [String] = ["❤", "❤️"]
                     for attribute in messages[0].attributes {
                         if let attribute = attribute as? ReactionsMessageAttribute {
@@ -602,7 +602,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         reactionItems.append(ReactionContextItem(reaction: .unlike))
                     } else {
                         reactionItems.append(ReactionContextItem(reaction: .like))
-                    }
+                    }*/
                     
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         reactionItems = []
@@ -1505,7 +1505,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if canReplyInChat(strongSelf.presentationInterfaceState) {
                     return .reply
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-                    var hasLike = false
+                    /*var hasLike = false
                     let hearts: [String] = ["❤", "❤️"]
                     for attribute in message.attributes {
                         if let attribute = attribute as? ReactionsMessageAttribute {
@@ -1526,7 +1526,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return .unlike
                     } else {
                         return .like
-                    }
+                    }*/
                 }
             }
             return .none

@@ -70,7 +70,7 @@ private final class MessageReactionCategoryContext {
         if self.state.completed || self.state.loadingMore {
             return
         }
-        self.state.loadingMore = true
+        /*self.state.loadingMore = true
         self.statePromise.set(self.state)
         
         var flags: Int32 = 0
@@ -141,7 +141,7 @@ private final class MessageReactionCategoryContext {
             })
         }, error: { _ in
             
-        }))
+        }))*/
     }
 }
 
