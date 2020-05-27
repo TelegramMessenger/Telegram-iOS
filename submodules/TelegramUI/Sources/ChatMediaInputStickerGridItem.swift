@@ -312,7 +312,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             placeholderNode.frame = CGRect(origin: CGPoint(), size: size)
             
             let theme = item.theme
-            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.mixedWith(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.9), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
+            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.1), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
         }
     }
     

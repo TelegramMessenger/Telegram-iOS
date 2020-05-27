@@ -141,6 +141,9 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     func setMode(mode: ChatMediaInputGifMode) {
         if self.mode == mode {
+            if let multiplexedNode = self.multiplexedNode {
+                multiplexedNode.scrollNode.view.setContentOffset(CGPoint(), animated: true)
+            }
             return
         }
         self.mode = mode

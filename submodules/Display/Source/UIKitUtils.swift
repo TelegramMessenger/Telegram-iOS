@@ -201,6 +201,44 @@ public extension UIColor {
         return self
     }
     
+    func blitOver(_ other: UIColor, alpha: CGFloat) -> UIColor {
+        let alpha = min(1.0, max(0.0, alpha))
+        let oneMinusAlpha = 1.0 - alpha
+        
+        var r1: CGFloat = 0.0
+        var r2: CGFloat = 0.0
+        var g1: CGFloat = 0.0
+        var g2: CGFloat = 0.0
+        var b1: CGFloat = 0.0
+        var b2: CGFloat = 0.0
+        var a1: CGFloat = 0.0
+        var a2: CGFloat = 0.0
+        if self.getRed(&r1, green: &g1, blue: &b1, alpha: &a1) &&
+            other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        {
+            let resultingAlpha = max(0.0, min(1.0, alpha * a1))
+            let oneMinusResultingAlpha = 1.0 - resultingAlpha
+            
+            let r = r1 * resultingAlpha + r2 * oneMinusResultingAlpha
+            let g = g1 * resultingAlpha + g2 * oneMinusResultingAlpha
+            let b = b1 * resultingAlpha + b2 * oneMinusResultingAlpha
+            let a: CGFloat = 1.0
+            return UIColor(red: r, green: g, blue: b, alpha: a)
+        }
+        return self
+    }
+    
+    func withMultipliedAlpha(_ alpha: CGFloat) -> UIColor {
+        var r1: CGFloat = 0.0
+        var g1: CGFloat = 0.0
+        var b1: CGFloat = 0.0
+        var a1: CGFloat = 0.0
+        if self.getRed(&r1, green: &g1, blue: &b1, alpha: &a1) {
+            return UIColor(red: r1, green: g1, blue: b1, alpha: max(0.0, min(1.0, a1 * alpha)))
+        }
+        return self
+    }
+    
     func interpolateTo(_ color: UIColor, fraction: CGFloat) -> UIColor? {
         let f = min(max(0, fraction), 1)
         
