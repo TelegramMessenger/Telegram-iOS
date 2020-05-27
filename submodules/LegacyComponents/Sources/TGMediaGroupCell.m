@@ -131,14 +131,14 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         }
         
         _nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(96, 24, 0, 0)];
-        _nameLabel.backgroundColor = [UIColor whiteColor];
+        _nameLabel.backgroundColor = [UIColor clearColor];
         _nameLabel.contentMode = UIViewContentModeLeft;
         _nameLabel.font = TGSystemFontOfSize(17);
         _nameLabel.textColor = [UIColor blackColor];
         [self.contentView addSubview:_nameLabel];
         
         _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(96, 49, 0, 0)];
-        _countLabel.backgroundColor = [UIColor whiteColor];
+        _countLabel.backgroundColor = [UIColor clearColor];
         _countLabel.contentMode = UIViewContentModeLeft;
         _countLabel.font = TGSystemFontOfSize(13);
         _countLabel.textColor = [UIColor blackColor];
@@ -161,10 +161,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
     
     self.backgroundColor = pallete.backgroundColor;
     self.selectedBackgroundView.backgroundColor = pallete.selectionColor;
-    
-    _nameLabel.backgroundColor = self.backgroundColor;
-    _countLabel.backgroundColor = self.backgroundColor;
-    
+        
     _nameLabel.textColor = pallete.textColor;
     _countLabel.textColor = pallete.textColor;
     

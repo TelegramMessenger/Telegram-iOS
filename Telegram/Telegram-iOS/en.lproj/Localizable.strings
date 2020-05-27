@@ -5516,3 +5516,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Media.SendingOptionsTooltip" = "Hold this button to send your message with a self-destruct timer.";
 "Media.SendWithTimer" = "Send With Timer";
+
+"Conversation.Timer.Title" = "Send With Timer";
+"Conversation.Timer.Send" = "Send With Timer";

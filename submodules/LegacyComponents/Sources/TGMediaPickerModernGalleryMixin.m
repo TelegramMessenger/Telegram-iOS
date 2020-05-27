@@ -209,15 +209,23 @@
                 if (strongSelf == nil)
                     return;
                 
-                strongSelf.presentScheduleController(^(int32_t time) {
+                strongSelf.presentTimerController(^(int32_t time) {
                     __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
                     if (strongSelf == nil)
                         return;
                     
                     strongSelf->_galleryModel.dismiss(true, false);
                     
+                    TGMediaEditingContext *editingContext = strongSelf->_editingContext;
+                    NSMutableArray *items = [strongSelf->_galleryModel.selectionContext.selectedItems mutableCopy];
+                    [items addObject:item.asset];
+                    
+                    for (id<TGMediaEditableItem> editableItem in items) {
+                        [editingContext setTimer:@(time) forItem:editableItem];
+                    }
+                    
                     if (strongSelf.completeWithItem != nil)
-                        strongSelf.completeWithItem(item, false, time);
+                        strongSelf.completeWithItem(item, false, 0);
                 });
             };
             

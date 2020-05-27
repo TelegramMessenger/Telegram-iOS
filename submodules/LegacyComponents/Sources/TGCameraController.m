@@ -1365,6 +1365,38 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     [strongSelf _dismissTransitionForResultController:strongController];
                 });
             };
+            controller.sendWithTimer = ^{
+                __strong TGCameraController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf.presentTimerController(^(int32_t time) {
+                    __strong TGCameraController *strongSelf = weakSelf;
+                    __strong TGMediaPickerGalleryModel *strongModel = weakModel;
+                    
+                    if (strongSelf == nil || strongModel == nil)
+                        return;
+                    
+                    __strong TGModernGalleryController *strongController = weakGalleryController;
+                    if (strongController == nil)
+                        return;
+                    
+                    if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]])
+                    {
+                        TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:item];
+                        [itemView stop];
+                        [itemView setPlayButtonHidden:true animated:true];
+                    }
+                    
+                    if (strongSelf->_selectionContext.allowGrouping)
+                        [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+                    
+                    if (strongSelf.finishedWithResults != nil)
+                        strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, false, time);
+                    
+                    [strongSelf _dismissTransitionForResultController:strongController];
+                });
+            };
             
             id<LegacyComponentsOverlayWindowManager> windowManager = nil;
             id<LegacyComponentsContext> windowContext = nil;

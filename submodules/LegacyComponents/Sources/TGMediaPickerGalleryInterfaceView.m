@@ -458,10 +458,8 @@
         if (strongSelf == nil)
             return;
         
-        if (tab == TGPhotoEditorTimerTab)
-            [strongSelf openTimerSetup];
-        else
-            editorTabPressed(tab);
+        [strongSelf tooltipTimerTick];
+        editorTabPressed(tab);
     };
     _portraitToolbarView.tabPressed = tabPressed;
     _landscapeToolbarView.tabPressed = tabPressed;
@@ -913,7 +911,6 @@
 
 - (bool)shouldDisplayTooltip
 {
-//    return true;
     return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v1"] boolValue];
 }
 

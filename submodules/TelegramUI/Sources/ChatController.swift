@@ -6037,13 +6037,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, presentSchedulePicker: { [weak self] done in
                         if let strongSelf = self {
-                            strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
+                            strongSelf.presentScheduleTimePicker(style: .media, completion: { [weak self] time in
                                 if let strongSelf = self {
                                     done(time)
                                     if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                         strongSelf.openScheduledMessages()
                                     }
                                 }
+                            })
+                        }
+                    }, presentTimerPicker: { [weak self] done in
+                        if let strongSelf = self {
+                            strongSelf.presentTimerPicker(style: .media, completion: { time in
+                                done(time)
                             })
                         }
                     }, presentStickers: { [weak self] completion in
@@ -6084,12 +6090,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }, presentSchedulePicker: { [weak self] done in
                 if let strongSelf = self {
-                    strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
+                    strongSelf.presentScheduleTimePicker(style: .media, completion: { [weak self] time in
                         if let strongSelf = self {
-                             done(time)
+                            done(time)
                             if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                 strongSelf.openScheduledMessages()
                             }
+                         }
+                    })
+                }
+            }, presentTimerPicker: { [weak self] done in
+                if let strongSelf = self {
+                    strongSelf.presentTimerPicker(style: .media, completion: { [weak self] time in
+                        if let strongSelf = self {
+                            done(time)
                          }
                     })
                 }
@@ -6286,12 +6300,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }, presentSchedulePicker: { [weak self] done in
                         if let strongSelf = self {
-                            strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
+                            strongSelf.presentScheduleTimePicker(style: .media, completion: { [weak self] time in
                                 if let strongSelf = self {
                                      done(time)
                                      if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                          strongSelf.openScheduledMessages()
                                      }
+                                 }
+                            })
+                        }
+                    }, presentTimerPicker: { [weak self] done in
+                        if let strongSelf = self {
+                            strongSelf.presentTimerPicker(style: .media, completion: { [weak self] time in
+                                if let strongSelf = self {
+                                     done(time)
                                  }
                             })
                         }
@@ -9161,7 +9183,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         navigationController.pushViewController(controller)
     }
     
-    private func presentScheduleTimePicker(selectedTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    private func presentScheduleTimePicker(style: ChatScheduleTimeControllerStyle = .default, selectedTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
@@ -9182,12 +9204,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 mode = .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable)
             }
-            let controller = ChatScheduleTimeController(context: strongSelf.context, peerId: peerId, mode: mode, currentTime: selectedTime, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: dismissByTapOutside, completion: { time in
+            let controller = ChatScheduleTimeController(context: strongSelf.context, peerId: peerId, mode: mode, style: style, currentTime: selectedTime, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: dismissByTapOutside, completion: { time in
                 completion(time)
             })
             strongSelf.chatDisplayNode.dismissInput()
             strongSelf.present(controller, in: .window(.root))
         })
+    }
+    
+    private func presentTimerPicker(style: ChatTimerScreenStyle = .default, selectedTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+        guard case let .peer(peerId) = self.chatLocation else {
+            return
+        }
+        let controller = ChatTimerScreen(context: self.context, peerId: peerId, style: style, currentTime: selectedTime, dismissByTapOutside: dismissByTapOutside, completion: { time in
+            completion(time)
+        })
+        self.chatDisplayNode.dismissInput()
+        self.present(controller, in: .window(.root))
     }
     
     private var effectiveNavigationController: NavigationController? {

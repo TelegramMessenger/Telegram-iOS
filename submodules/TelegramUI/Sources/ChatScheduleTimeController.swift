@@ -13,6 +13,11 @@ enum ChatScheduleTimeControllerMode {
     case reminders
 }
 
+enum ChatScheduleTimeControllerStyle {
+    case `default`
+    case media
+}
+
 final class ChatScheduleTimeController: ViewController {
     private var controllerNode: ChatScheduleTimeControllerNode {
         return self.displayNode as! ChatScheduleTimeControllerNode
@@ -23,6 +28,7 @@ final class ChatScheduleTimeController: ViewController {
     private let context: AccountContext
     private let peerId: PeerId
     private let mode: ChatScheduleTimeControllerMode
+    private let style: ChatScheduleTimeControllerStyle
     private let currentTime: Int32?
     private let minimalTime: Int32?
     private let dismissByTapOutside: Bool
@@ -30,10 +36,11 @@ final class ChatScheduleTimeController: ViewController {
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, peerId: PeerId, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
+        self.style = style
         self.currentTime = currentTime != scheduleWhenOnlineTimestamp ? currentTime : nil
         self.minimalTime = minimalTime
         self.dismissByTapOutside = dismissByTapOutside
@@ -64,7 +71,7 @@ final class ChatScheduleTimeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
+        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, style: self.style, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
             guard let strongSelf = self else {
                 return

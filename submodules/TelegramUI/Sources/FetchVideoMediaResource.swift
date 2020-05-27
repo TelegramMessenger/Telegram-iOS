@@ -291,7 +291,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
                         var value = stat()
                         if stat(path, &value) == 0 {
-                            /*if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                                 var range: Range<Int>?
                                 let _ = updatedSize.modify { updatedSize in
                                     range = updatedSize ..< Int(value.st_size)
@@ -299,26 +299,26 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                                 }
                                 //print("size = \(Int(value.st_size)), range: \(range!)")
                                 subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                            }*/
+                            }
                         }
                     }), entityRenderer: entityRenderer)!
                     let signalDisposable = signal.start(next: { next in
                         if let result = next as? TGMediaVideoConversionResult {
                             var value = stat()
                             if stat(result.fileURL.path, &value) == 0 {
-                                if config.remuxToFMp4 {
-                                    let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
-                                    if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
-                                        let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
-                                        subscriber.putNext(.moveTempFile(file: tempFile))
-                                    } else {
-                                        TempBox.shared.dispose(tempFile)
-                                        subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
-                                    }
-                                } else {
-                                    subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
-                                }
-                                /*if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+//                                if config.remuxToFMp4 {
+//                                    let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+//                                    if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
+//                                        let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
+//                                        subscriber.putNext(.moveTempFile(file: tempFile))
+//                                    } else {
+//                                        TempBox.shared.dispose(tempFile)
+//                                        subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+//                                    }
+//                                } else {
+//                                    subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+//                                }
+                                if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
                                     var range: Range<Int>?
                                     let _ = updatedSize.modify { updatedSize in
                                         range = updatedSize ..< Int(value.st_size)
@@ -328,7 +328,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                                     subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
                                     subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
                                     subscriber.putNext(.dataPart(resourceOffset: data.count, data: Data(), range: 0 ..< 0, complete: true))
-                                }*/
+                                }
                             } else {
                                 subscriber.putError(.generic)
                             }

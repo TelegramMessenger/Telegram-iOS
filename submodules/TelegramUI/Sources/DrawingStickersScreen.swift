@@ -20,7 +20,7 @@ import SegmentedControlNode
 private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
-    private let selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    fileprivate var selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     private var searchItemContext = StickerPaneSearchGlobalItemContext()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
@@ -384,7 +384,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 }
                 
                 let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false)
-                var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, strings: strings, theme: theme)
+                let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, strings: strings, theme: theme)
                 
                 if view.higher == nil {
                     var hasTopSeparator = true
@@ -821,6 +821,10 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     func animateIn() {
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
+    
+    func animateOut() {
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+    }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
@@ -834,7 +838,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
 
 final class DrawingStickersScreen: ViewController {
     private let context: AccountContext
-    private let selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    var selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     private var controllerNode: DrawingStickersScreenNode {
         return self.displayNode as! DrawingStickersScreenNode
@@ -890,14 +894,11 @@ final class DrawingStickersScreen: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = DrawingStickersScreenNode(
             context: self.context,
-            selectSticker: self.selectSticker.flatMap { [weak self] selectSticker in
-                return { file, sourceNode, sourceRect in
-                    if selectSticker(file, sourceNode, sourceRect) {
-                        self?.dismiss()
-                        return true
-                    } else {
-                        return false
-                    }
+            selectSticker: { [weak self] file, sourceNode, sourceRect in
+                if let strongSelf = self, let selectSticker = strongSelf.selectSticker {
+                    return selectSticker(file, sourceNode, sourceRect)
+                } else {
+                    return false
                 }
             }
         )

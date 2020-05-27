@@ -256,21 +256,24 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                 completion(nil)
             } else {
                 let count = Atomic<Int>(value: 1)
-                let images = Atomic<[CIImage]>(value: [])
+                let images = Atomic<[(CIImage, Int)]>(value: [])
                 let maybeFinalize = {
                     let count = count.modify { current -> Int in
                         return current - 1
                     }
                     if count == 0 {
-                        completion(images.with { $0 })
+                        let sortedImages = images.with({ $0 }).sorted(by: { $0.1 < $1.1 }).map({ $0.0 })
+                        completion(sortedImages)
                     }
                 }
+                var i = 0
                 for entity in entities {
                     let _ = count.modify { current -> Int in
                         return current + 1
                     }
                     entity.image(for: time, completion: { image in
                         if var image = image {
+                            let index = i
                             var transform = CGAffineTransform(translationX: -image.extent.midX, y: -image.extent.midY)
                             image = image.transformed(by: transform)
                             
@@ -289,12 +292,13 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                             image = image.transformed(by: transform)
                             let _ = images.modify { current in
                                 var updated = current
-                                updated.append(image)
+                                updated.append((image, index))
                                 return updated
                             }
                         }
                         maybeFinalize()
                     })
+                    i += 1
                 }
                 maybeFinalize()
             }
