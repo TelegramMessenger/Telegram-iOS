@@ -352,7 +352,7 @@
     else if (CMTimeCompare(videoTrack.minFrameDuration, kCMTimeZero) == 1)
         frameDuration = videoTrack.minFrameDuration;
     
-    if (CMTimeCompare(frameDuration, kCMTimeZero) != 1 || !CMTIME_IS_VALID(frameDuration) || image != nil)
+    if (CMTimeCompare(frameDuration, kCMTimeZero) != 1 || !CMTIME_IS_VALID(frameDuration) || image != nil || entityRenderer != nil || adjustments.toolsApplied)
         frameDuration = CMTimeMake(1, 30);
     
     NSInteger fps = (NSInteger)(1.0 / CMTimeGetSeconds(frameDuration));

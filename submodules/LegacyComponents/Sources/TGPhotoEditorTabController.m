@@ -115,7 +115,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
     UIView *transitionViewSuperview = nil;
     UIImage *transitionImage = nil;
-    if ([referenceView isKindOfClass:[UIImageView class]])
+    if ([referenceView isKindOfClass:[UIImageView class]] && referenceView.subviews.count == 0)
         transitionImage = ((UIImageView *)referenceView).image;
     
     if (transitionImage != nil)
@@ -127,7 +127,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     }
     else
     {
-        _transitionView = referenceView;
+        _transitionView = [referenceView snapshotViewAfterScreenUpdates:false];
         transitionViewSuperview = self.view;
     }
     
@@ -239,7 +239,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         UIView *toTransitionView = nil;
         
         UIImage *transitionImage = nil;
-        if ([referenceView isKindOfClass:[UIImageView class]])
+        if ([referenceView isKindOfClass:[UIImageView class]] && referenceView.subviews.count == 0)
             transitionImage = ((UIImageView *)referenceView).image;
         
         if (transitionImage != nil)
@@ -250,7 +250,10 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         }
         else
         {
-            toTransitionView = [referenceView snapshotViewAfterScreenUpdates:false];
+            bool wasHidden = referenceView.isHidden;
+            referenceView.hidden = false;
+            toTransitionView = [referenceView snapshotViewAfterScreenUpdates:true];
+            referenceView.hidden = wasHidden;
         }
         
         [parentView addSubview:toTransitionView];

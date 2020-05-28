@@ -165,7 +165,6 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 }
                 
                 let relativeTime = currentTime - floor(currentTime / duration) * duration
-                print(relativeTime)
                 var t = relativeTime / duration
                 t = max(0.0, t)
                 t = min(1.0, t)

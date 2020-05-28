@@ -36,6 +36,7 @@
     UIView *_temporaryRepView;
     PHLivePhotoView *_livePhotoView;
     
+    UIView *_contentView;
     UIView *_contentWrapperView;
     TGPhotoEntitiesContainerView *_entitiesContainerView;
     
@@ -78,8 +79,11 @@
         };
         [self.scrollView addSubview:_imageView];
         
+        _contentView = [[UIView alloc] init];
+        [_imageView addSubview:_contentView];
+        
         _contentWrapperView = [[UIView alloc] init];
-        [_imageView addSubview:_contentWrapperView];
+        [_contentView addSubview:_contentWrapperView];
         
         _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
         _entitiesContainerView.userInteractionEnabled = false;
@@ -223,6 +227,7 @@
             if ([next isKindOfClass:[UIImage class]])
             {
                 strongSelf->_imageSize = ((UIImage *)next).size;
+                [strongSelf layoutEntities];
             }
             
             [strongSelf reset];
@@ -267,6 +272,8 @@
     view.frame = CGRectMake((self.containerView.frame.size.width - _imageSize.width) / 2.0f, (self.containerView.frame.size.height - _imageSize.height) / 2.0f, _imageSize.width, _imageSize.height);
     
     [self.containerView addSubview:view];
+    
+    [self layoutEntities];
 }
 
 - (void)setProgressVisible:(bool)progressVisible value:(CGFloat)value animated:(bool)animated
@@ -430,29 +437,51 @@
         return;
     }
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
-    CGSize videoFrameSize = self.item.asset.originalSize;
-    CGRect cropRect = CGRectMake(0, 0, videoFrameSize.width, videoFrameSize.height);
+    CGRect cropRect = CGRectMake(0, 0, self.item.asset.originalSize.width, self.item.asset.originalSize.height);
+    CGFloat rotation = 0.0;
     UIImageOrientation orientation = UIImageOrientationUp;
     bool mirrored = false;
     if (adjustments != nil)
     {
-        videoFrameSize = adjustments.cropRect.size;
         cropRect = adjustments.cropRect;
         orientation = adjustments.cropOrientation;
+        rotation = adjustments.cropRotation;
         mirrored = adjustments.cropMirrored;
     }
     
-    [self _layoutPlayerViewWithCropRect:cropRect videoFrameSize:videoFrameSize orientation:orientation mirrored:mirrored];
+    [self _layoutPlayerViewWithCropRect:cropRect orientation:orientation rotation:rotation mirrored:mirrored];
 }
 
-- (void)_layoutPlayerViewWithCropRect:(CGRect)cropRect videoFrameSize:(CGSize)videoFrameSize orientation:(UIImageOrientation)orientation mirrored:(bool)mirrored
+- (void)_layoutPlayerViewWithCropRect:(CGRect)cropRect orientation:(UIImageOrientation)orientation rotation:(CGFloat)rotation mirrored:(bool)mirrored
 {
     CGSize originalSize = self.item.asset.originalSize;
+    
+    CGSize rotatedCropSize = cropRect.size;
+    if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)
+        rotatedCropSize = CGSizeMake(rotatedCropSize.height, rotatedCropSize.width);
+    
+    CGSize containerSize = _imageSize;
+    CGSize fittedSize = TGScaleToSize(rotatedCropSize, containerSize);
+    CGRect previewFrame = CGRectMake((containerSize.width - fittedSize.width) / 2, (containerSize.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
+    
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(orientation));
+    _contentView.transform = rotationTransform;
+    _contentView.frame = previewFrame;
+    
+    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
+    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    
+    CGFloat contentScale = _contentView.bounds.size.width / fittedCropRect.size.width;
+    _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
+    
     CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
     _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    _entitiesContainerView.transform = CGAffineTransformMakeRotation(rotation);
     
     CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
-    CGSize rotatedSize = fittedOriginalSize;
+    CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, rotation);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
     
     CGFloat scale = fittedOriginalSize.width / originalSize.width;
@@ -460,14 +489,6 @@
     
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
-    
-    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:UIImageOrientationUp originalSize:originalSize];
-    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
-    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
-    
-    CGFloat contentScale = _imageView.bounds.size.width / fittedCropRect.size.width;
-    _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
-    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _imageView.bounds.size.width, _imageView.bounds.size.height);
 }
 
 @end
