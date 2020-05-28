@@ -92,7 +92,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
             
             self.animationNode?.visibility = true
             let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))
+            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
             self.animationNode?.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
         }
     }

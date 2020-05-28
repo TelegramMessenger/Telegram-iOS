@@ -42,7 +42,6 @@
 @property (nonatomic, readonly) bool succeed;
 
 - (instancetype)initWithAssetReaderOutput:(AVAssetReaderOutput *)assetReaderOutput assetWriterInput:(AVAssetWriterInput *)assetWriterInput;
-- (instancetype)initWithUIImage:(UIImage *)image duration:(NSTimeInterval)duration assetWriterInput:(AVAssetWriterInput *)assetWriterInput;
 
 - (void)startWithTimeRange:(CMTimeRange)timeRange progressBlock:(void (^)(CGFloat progress))progressBlock completionBlock:(void (^)(void))completionBlock;
 - (void)cancel;
@@ -1210,7 +1209,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     NSInteger channels = [self _audioChannelsCountForPreset:preset];
     
     AudioChannelLayout acl;
-    bzero( &acl, sizeof(acl));
+    bzero(&acl, sizeof(acl));
     acl.mChannelLayoutTag = channels > 1 ? kAudioChannelLayoutTag_Stereo : kAudioChannelLayoutTag_Mono;
     
     return @
@@ -1278,7 +1277,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 300;
             
         default:
-            return 500;
+            return 900;
     }
 }
 

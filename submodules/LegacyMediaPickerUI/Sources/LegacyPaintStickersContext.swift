@@ -53,6 +53,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     
     var frameCount: Int?
     var frameRate: Int?
+    var totalDuration: Double?
         
     let queue = Queue()
     let disposable = MetaDisposable()
@@ -71,7 +72,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 self.source = AnimatedStickerResourceSource(account: account, resource: file.resource)
                 if let source = self.source {
                     let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
                     self.disposable.set((source.cachedDataPath(width: Int(fittedDimensions.width), height: Int(fittedDimensions.height))
                         |> deliverOn(self.queue)).start(next: { [weak self] path, complete in
                         if let strongSelf = self, complete {
@@ -89,7 +90,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                                 strongSelf.frameCount = frameSource.frameCount
                                 strongSelf.frameRate = frameSource.frameRate
                                 
-                                strongSelf.durationPromise.set(.single(Double(frameSource.frameCount) / Double(frameSource.frameRate)))
+                                let duration = Double(frameSource.frameCount) / Double(frameSource.frameRate)
+                                strongSelf.totalDuration = duration
+                                
+                                strongSelf.durationPromise.set(.single(duration))
                             }
                         }
                     }))
@@ -143,26 +147,66 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
         }
     }
     
+    var currentFrameIndex: Int?
+   
     var cachedCIImage: CIImage?
     func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
         if self.animated {
             let frameQueue = self.frameQueue
+            let duration = self.totalDuration
+            let frameCount = self.frameCount
+            
+            let currentTime = CMTimeGetSeconds(time)
+            
             self.queue.async {
-                guard let frameQueue = frameQueue else {
+                guard let frameQueue = frameQueue, let duration = duration, let frameCount = frameCount else {
                     completion(nil)
                     return
                 }
-                let maybeFrame = frameQueue.syncWith { frameQueue in
-                    return frameQueue.take()
-                }
-                if let maybeFrame = maybeFrame, let frame = maybeFrame {
-                    let image = self.render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
-                    completion(image)
+                
+                let relativeTime = currentTime - floor(currentTime / duration) * duration
+                print(relativeTime)
+                var t = relativeTime / duration
+                t = max(0.0, t)
+                t = min(1.0, t)
+                
+                let startFrame: Double = 0
+                let endFrame = Double(frameCount)
+                
+                let frameOffset = Int(Double(startFrame) * (1.0 - t) + Double(endFrame - 1) * t)
+                let lowerBound: Int = 0
+                let upperBound = frameCount - 1
+                let frameIndex = max(lowerBound, min(upperBound, frameOffset))
+                
+                let currentFrameIndex = self.currentFrameIndex
+                if currentFrameIndex != frameIndex {
+                    let previousFrameIndex = currentFrameIndex
+                    self.currentFrameIndex = frameIndex
+                    
+                    var delta = 1
+                    if let previousFrameIndex = previousFrameIndex {
+                        delta = max(1, frameIndex - previousFrameIndex)
+                    }
+                    
+                    let maybeFrame = frameQueue.syncWith { frameQueue -> AnimatedStickerFrame? in
+                        var frame: AnimatedStickerFrame?
+                        for _ in 0 ..< delta {
+                            frame = frameQueue.take()
+                        }
+                        return frame
+                    }
+                    if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                        let image = self.render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
+                        completion(image)
+                        self.cachedCIImage = image
+                    } else {
+                        completion(nil)
+                    }
+                    frameQueue.with { frameQueue in
+                        frameQueue.generateFramesIfNeeded()
+                    }
                 } else {
-                    completion(nil)
-                }
-                frameQueue.with { frameQueue in
-                    frameQueue.generateFramesIfNeeded()
+                    completion(self.cachedCIImage)
                 }
             }
         } else {
@@ -283,7 +327,23 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         
         return combineLatest(durations)
         |> map { durations in
-            return min(6.0, Double(durations.reduce(1) { lcm(Int32($0), Int32($1)) }))
+            var result: Double
+            let minDuration: Double = 3.0
+            if durations.count > 1 {
+                result = min(6.0, Double(durations.reduce(1) { lcm(Int32($0), Int32($1)) }))
+            } else if let duration = durations.first {
+                result = duration
+            } else {
+                result = minDuration
+            }
+            if result < minDuration {
+                if result > 0 {
+                    result = result * ceil(minDuration / result)
+                } else {
+                    result = minDuration
+                }
+            }
+            return result
         }
     }
     
