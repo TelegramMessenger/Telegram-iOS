@@ -43,7 +43,7 @@
 @interface TGMediaPickerGalleryVideoItemView() <TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate>
 {
     UIView *_containerView;
-    TGModernGalleryVideoContentView *_contentView;
+    TGModernGalleryVideoContentView *_videoContentView;
     UIView *_playerWrapperView;
     UIView *_playerView;
     UIView *_playerContainerView;
@@ -75,6 +75,7 @@
     PGPhotoEditor *_photoEditor;
     
     UIImageView *_paintingImageView;
+    UIView *_contentView;
     UIView *_contentWrapperView;
     TGPhotoEntitiesContainerView *_entitiesContainerView;
     
@@ -131,11 +132,11 @@
         _containerView.clipsToBounds = true;
         [self addSubview:_containerView];
         
-        _contentView = [[TGModernGalleryVideoContentView alloc] init];
-        [_containerView addSubview:_contentView];
+        _videoContentView = [[TGModernGalleryVideoContentView alloc] init];
+        [_containerView addSubview:_videoContentView];
         
         _playerWrapperView = [[UIView alloc] init];
-        [_contentView addSubview:_playerWrapperView];
+        [_videoContentView addSubview:_playerWrapperView];
         
         _playerView = [[UIView alloc] init];
         _playerView.clipsToBounds = true;
@@ -150,8 +151,11 @@
         _paintingImageView = [[UIImageView alloc] init];
         [_playerContainerView addSubview:_paintingImageView];
         
+        _contentView = [[UIView alloc] init];
+        [_playerContainerView addSubview:_contentView];
+        
         _contentWrapperView = [[UIView alloc] init];
-        [_playerContainerView addSubview:_contentWrapperView];
+        [_contentView addSubview:_contentWrapperView];
         
         _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
         _entitiesContainerView.hidden = true;
@@ -162,7 +166,7 @@
         _curtainView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _curtainView.backgroundColor = [UIColor blackColor];
         _curtainView.hidden = true;
-        [_contentView addSubview:_curtainView];
+        [_videoContentView addSubview:_curtainView];
         
         _actionButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
         _actionButton.modernHighlight = true;
@@ -190,8 +194,8 @@
         
         [_actionButton addTarget:self action:@selector(playPressed) forControlEvents:UIControlEventTouchUpInside];
         
-        _contentView.button = _actionButton;
-        [_contentView addSubview:_actionButton];
+        _videoContentView.button = _actionButton;
+        [_videoContentView addSubview:_actionButton];
         
         TGMediaPickerScrubberHeaderView *headerView = [[TGMediaPickerScrubberHeaderView alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, 44)];
         _headerView = headerView;
@@ -223,7 +227,7 @@
         _fileInfoLabel.textColor = [UIColor whiteColor];
         
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(singleTap)];
-        [_contentView addGestureRecognizer:_tapGestureRecognizer];
+        [_videoContentView addGestureRecognizer:_tapGestureRecognizer];
     }
     return self;
 }
@@ -696,7 +700,7 @@
     
     [self _layoutPlayerView];
     
-    _contentView.frame = (CGRect){CGPointZero, frame.size};
+    _videoContentView.frame = (CGRect){CGPointZero, frame.size};
     
     if (_tooltipContainerView != nil && frame.size.width > frame.size.height)
     {
@@ -740,37 +744,52 @@
     
     if (CGSizeEqualToSize(videoFrameSize, CGSizeZero))
         return;
-
-    CGSize fittedSize = TGScaleToSize(videoFrameSize, self.frame.size);
-    _playerWrapperView.frame = CGRectMake((_containerView.frame.size.width - fittedSize.width) / 2, (_containerView.frame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
+    
+    CGSize fittedVideoSize = TGScaleToSize(videoFrameSize, self.frame.size);
+    _playerWrapperView.frame = CGRectMake((_containerView.frame.size.width - fittedVideoSize.width) / 2, (_containerView.frame.size.height - fittedVideoSize.height) / 2, fittedVideoSize.width, fittedVideoSize.height);
     _playerView.frame = _playerWrapperView.bounds;
     _playerContainerView.frame = _playerView.bounds;
     
-    CGFloat ratio = fittedSize.width / videoFrameSize.width;
+    CGFloat ratio = fittedVideoSize.width / videoFrameSize.width;
     _imageView.frame = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, _videoDimensions.width * ratio, _videoDimensions.height * ratio);
     _paintingImageView.frame = _imageView.frame;
     _videoView.frame = _imageView.frame;
     
-    CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:_videoDimensions keepOriginalSize:true];
+
+    CGSize originalSize = self.item.asset.originalSize;
+    
+    CGSize rotatedCropSize = cropRect.size;
+    if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)
+        rotatedCropSize = CGSizeMake(rotatedCropSize.height, rotatedCropSize.width);
+        
+    CGSize containerSize = _imageView.frame.size;
+    CGSize fittedSize = TGScaleToSize(rotatedCropSize, containerSize);
+    CGRect previewFrame = CGRectMake((containerSize.width - fittedSize.width) / 2, (containerSize.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
+    
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(orientation));
+    _contentView.transform = rotationTransform;
+    _contentView.frame = previewFrame;
+    
+    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
+    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    
+    CGFloat contentScale = _contentView.bounds.size.width / fittedCropRect.size.width;
+    _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
+    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
+    
+    CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
     _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     
-    CGSize fittedOriginalSize = TGScaleToSize(_videoDimensions, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
     CGSize rotatedSize = fittedOriginalSize;
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
     
-    CGFloat scale = fittedOriginalSize.width / _videoDimensions.width;
+    CGFloat scale = fittedOriginalSize.width / originalSize.width;
     CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
     
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
-    
-    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:UIImageOrientationUp originalSize:_videoDimensions];
-    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:_videoDimensions keepOriginalSize:false];
-    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
-    
-    CGFloat contentScale = _playerWrapperView.bounds.size.width / fittedCropRect.size.width;
-    _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
-    _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _playerWrapperView.bounds.size.width, _playerWrapperView.bounds.size.height);
 }
 
 - (void)singleTap

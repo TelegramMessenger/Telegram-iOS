@@ -380,12 +380,20 @@
         videoComposition = [AVMutableVideoComposition videoCompositionWithAsset:avAsset applyingCIFiltersWithHandler:^(AVAsynchronousCIImageFilteringRequest * _Nonnull request) {
             CIImage *resultImage = request.sourceImage;
             
+            CGSize size;
             if (backgroundCIImage != nil) {
                 resultImage = backgroundCIImage;
+                size = backgroundCIImage.extent.size;
+            } else if ([adjustments cropAppliedForAvatar:false]) {
+                CGRect cropRect = adjustments.cropRect;
+                cropRect = CGRectMake(cropRect.origin.x, size.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
+                resultImage = [resultImage imageByCroppingToRect:cropRect];
+                size = resultImage.extent.size;
+            } else {
+                size = resultImage.extent.size;
             }
-                                    
+            
             void (^process)(CIImage *, void(^)(void)) = ^(CIImage *resultImage, void(^unlock)(void)) {
-                CGSize size = resultImage.extent.size;
                 if (overlayImage != nil && overlayImage.size.width > 0.0) {
                     if (overlayCIImage == nil) {
                         overlayCIImage = [[CIImage alloc] initWithImage:overlayImage];
@@ -410,7 +418,7 @@
                 }
             };
             
-            if (editor != nil) {
+            if (editor != nil && backgroundCIImage == nil) {
                 [editor setCIImage:resultImage];
                 [editor currentResultCIImage:^(CIImage *image, void(^unlock)(void)) {
                     process(image, unlock);

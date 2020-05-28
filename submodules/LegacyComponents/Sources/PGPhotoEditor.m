@@ -163,6 +163,11 @@
     _fullSize = fullSize;
 }
 
+- (CGFloat)_cropRectEpsilon
+{
+    return MAX(_originalSize.width, _originalSize.height) * 0.005f;
+}
+
 - (void)setPlayerItem:(AVPlayerItem *)playerItem forCropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored {
     [_toolComposer invalidate];
     _currentProcessChain = nil;
@@ -171,13 +176,14 @@
     PGVideoMovie *movie = [[PGVideoMovie alloc] initWithPlayerItem:playerItem];
     _currentInput = movie;
     
-    bool hasCropping = !CGPointEqualToPoint(cropRect.origin, CGPointZero) || (!CGSizeEqualToSize(cropRect.size, CGSizeZero) && !CGSizeEqualToSize(cropRect.size, _originalSize));
+    CGRect defaultCropRect = CGRectMake(0, 0, _originalSize.width, _originalSize.height);
+    bool hasCropping = !_CGRectEqualToRectWithEpsilon(self.cropRect, CGRectZero, [self _cropRectEpsilon]) && !_CGRectEqualToRectWithEpsilon(self.cropRect, defaultCropRect, [self _cropRectEpsilon]);
     
     _rotationMode = kGPUImageNoRotation;
     if (cropOrientation != UIImageOrientationUp || cropMirrored || hasCropping) {
         CGRect normalizedCropRect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
         if (hasCropping) {
-            normalizedCropRect = CGRectMake(cropRect.origin.x / _originalSize.width, cropRect.origin.y / _originalSize.height, cropRect.size.width / _originalSize.width, cropRect.size.height / _originalSize.height);
+            normalizedCropRect = CGRectMake(MAX(0.0, MIN(1.0, cropRect.origin.x / _originalSize.width)), MAX(0.0, MIN(1.0, cropRect.origin.y / _originalSize.height)), MAX(0.0, MIN(1.0, cropRect.size.width / _originalSize.width)), MAX(0.0, MIN(1.0, cropRect.size.height / _originalSize.height)));
         }
         _cropFilter = [[GPUImageCropFilter alloc] initWithCropRegion:normalizedCropRect];
         if (cropOrientation != UIImageOrientationUp || cropMirrored) {

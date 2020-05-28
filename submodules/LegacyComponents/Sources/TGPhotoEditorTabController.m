@@ -128,7 +128,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     else
     {
         _transitionView = [referenceView snapshotViewAfterScreenUpdates:false];
-        transitionViewSuperview = self.view;
+        transitionViewSuperview = parentView;
     }
     
     
