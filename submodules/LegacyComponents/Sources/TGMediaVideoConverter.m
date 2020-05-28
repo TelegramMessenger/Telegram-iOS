@@ -382,17 +382,36 @@
             CIImage *resultImage = request.sourceImage;
             
             CGSize size;
-            CGPoint offset = CGPointZero;
+            CGPoint finalOffset = CGPointZero;
             if (backgroundCIImage != nil) {
                 resultImage = backgroundCIImage;
-                size = backgroundCIImage.extent.size;
-            } else if ([adjustments cropAppliedForAvatar:false]) {
                 size = resultImage.extent.size;
-                CGRect cropRect = adjustments.cropRect;
-                cropRect = CGRectMake(cropRect.origin.x, size.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
-                offset = CGPointMake(cropRect.origin.x, -cropRect.origin.y);
+                if ([adjustments cropAppliedForAvatar:false]) {
+                    CGRect cropRect = adjustments.cropRect;
+                    CGFloat ratio = resultImage.extent.size.width / cropRect.size.width;
+                    
+                    CGSize extendedSize = CGSizeMake(adjustments.originalSize.width * ratio, adjustments.originalSize.height * ratio);
+                    CIImage *image = [[CIImage alloc] initWithColor:[CIColor colorWithRed:0.0f green:0.0f blue:0.0f]];
+                    image = [image imageByCroppingToRect:CGRectMake(0.0, 0.0, extendedSize.width, extendedSize.height)];
+                    
+                    cropRect = CGRectMake(cropRect.origin.x * ratio, (adjustments.originalSize.height - cropRect.size.height - cropRect.origin.y) * ratio, cropRect.size.width * ratio, cropRect.size.height * ratio);
+                    
+                    resultImage = [resultImage imageByApplyingTransform:CGAffineTransformMakeTranslation(cropRect.origin.x, cropRect.origin.y)];
+                    finalOffset = CGPointMake(-cropRect.origin.x, -cropRect.origin.y);
+                    
+                    image = [resultImage imageByCompositingOverImage:image];
+                    resultImage = image;
+                    
+                    size = resultImage.extent.size;
+                }
+                
             } else {
                 size = resultImage.extent.size;
+                if ([adjustments cropAppliedForAvatar:false]) {
+                    CGRect cropRect = adjustments.cropRect;
+                    cropRect = CGRectMake(cropRect.origin.x, adjustments.originalSize.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
+                    finalOffset = CGPointMake(-cropRect.origin.x, -cropRect.origin.y);
+                }
             }
             
             void (^process)(CIImage *, void(^)(void)) = ^(CIImage *resultImage, void(^unlock)(void)) {
@@ -411,15 +430,15 @@
                         for (CIImage *image in images) {
                             mergedImage = [image imageByCompositingOverImage:mergedImage];
                         }
-                        if (!CGPointEqualToPoint(offset, CGPointZero)) {
-                            mergedImage = [mergedImage imageByApplyingTransform:CGAffineTransformMakeTranslation(offset.x, offset.y)];
+                        if (!CGPointEqualToPoint(finalOffset, CGPointZero)) {
+                            mergedImage = [mergedImage imageByApplyingTransform:CGAffineTransformMakeTranslation(finalOffset.x, finalOffset.y)];
                         }
                         [request finishWithImage:mergedImage context:ciContext];
                         unlock();
                     }];
                 } else {
-                    if (!CGPointEqualToPoint(offset, CGPointZero)) {
-                        resultImage = [resultImage imageByApplyingTransform:CGAffineTransformMakeTranslation(offset.x, offset.y)];
+                    if (!CGPointEqualToPoint(finalOffset, CGPointZero)) {
+                        resultImage = [resultImage imageByApplyingTransform:CGAffineTransformMakeTranslation(finalOffset.x, finalOffset.y)];
                     }
                     [request finishWithImage:resultImage context:ciContext];
                     unlock();

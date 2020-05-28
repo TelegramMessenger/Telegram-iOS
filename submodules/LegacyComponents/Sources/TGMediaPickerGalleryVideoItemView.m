@@ -1451,6 +1451,8 @@
     {
         if (fabs(_scrubberView.trimStartValue - adjustments.trimStartValue) > DBL_EPSILON)
         {
+            UIImage *paintingImage = _paintingImageView.image;
+            
             [[SQueue concurrentDefaultQueue] dispatch:^
             {
                 AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:_player.currentItem.asset];
@@ -1476,8 +1478,8 @@
                 
                 [image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
                 
-                if (_paintingImageView.image != nil)
-                    [_paintingImageView.image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
+                if (paintingImage != nil)
+                    [paintingImage drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
                 
                 thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();
                 UIGraphicsEndImageContext();
