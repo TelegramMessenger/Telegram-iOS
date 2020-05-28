@@ -2593,9 +2593,42 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
                 dict[@"type"] = @"editedPhoto";
                 dict[@"image"] = image;
-                
                 if (adjustments.paintingData.stickers.count > 0)
                     dict[@"stickers"] = adjustments.paintingData.stickers;
+                
+                bool animated = false;
+                for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
+                    if (entity.animated) {
+                        animated = true;
+                        break;
+                    }
+                }
+                
+                if (animated) {
+                    dict[@"isAnimation"] = @true;
+                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments];
+                    } else {
+                        dict[@"adjustments"] = adjustments;
+                    }
+                    
+                    NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"gifvideo_%x.jpg", (int)arc4random()]];
+                    NSData *data = UIImageJPEGRepresentation(image, 0.8);
+                    [data writeToFile:filePath atomically:true];
+                    dict[@"url"] = [NSURL fileURLWithPath:filePath];
+                    
+                    if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                    {
+                        UIImage *paintingImage = adjustments.paintingData.stillImage;
+                        if (paintingImage == nil) {
+                            paintingImage = adjustments.paintingData.image;
+                        }
+                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(384, 384)), adjustments.originalSize, true, true, true);
+                        if (thumbnailImage != nil) {
+                            dict[@"previewImage"] = thumbnailImage;
+                        }
+                    }
+                }
                 
                 if (timer != nil)
                     dict[@"timer"] = timer;
