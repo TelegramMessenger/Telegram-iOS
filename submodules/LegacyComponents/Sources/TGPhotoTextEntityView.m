@@ -87,7 +87,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         _textView.autocorrectionType = UITextAutocorrectionTypeNo;
         _textView.spellCheckingType = UITextSpellCheckingTypeNo;
         _textView.font = [UIFont boldSystemFontOfSize:_baseFontSize];
-        _textView.frameWidthInset = floor(_baseFontSize * 0.03);
+//        _textView.frameWidthInset = floor(_baseFontSize * 0.03);
         
         [self setSwatch:entity.swatch];
         [self setStyle:entity.style];
@@ -175,7 +175,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 {
     _font = font;
     _textView.font = [UIFont boldSystemFontOfSize:_baseFontSize];
-    _textView.frameWidthInset = floor(_baseFontSize * 0.03);
+//    _textView.frameWidthInset = floor(_baseFontSize * 0.03);
     
     [self sizeToFit];
 }
@@ -608,6 +608,8 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         NSRange range = [self characterRangeForGlyphRange:glyphsToShow actualGlyphRange:NULL];
         NSRange glyphRange = [self glyphRangeForCharacterRange:range actualCharacterRange:NULL];
         
+        
+        
         CGContextRef context = UIGraphicsGetCurrentContext();
         CGContextSaveGState(context);
         CGContextTranslateCTM(context, origin.x, origin.y);
@@ -620,21 +622,30 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         [self.rectArray removeAllObjects];
         
         [self enumerateLineFragmentsForGlyphRange:glyphRange usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
+            bool ignoreRange = false;
+            NSString *substring = [[self.textStorage string] substringWithRange:glyphRange];
+            if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
+                ignoreRange = true;
+            }
             
-            CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
-            NSValue *value = [NSValue valueWithCGRect:newRect];
-            [self.rectArray addObject:value];
+            if (!ignoreRange) {
+                CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
+                NSValue *value = [NSValue valueWithCGRect:newRect];
+                [self.rectArray addObject:value];
+            }
         }];
        
         [self preProccess];
        
+        CGRect last = CGRectNull;
         for (int i = 0; i < self.rectArray.count; i ++) {
             NSValue *curValue = [self.rectArray objectAtIndex:i];
             CGRect cur = curValue.CGRectValue;
             _radius = cur.size.height * 0.18;
             [self.path appendPath:[UIBezierPath bezierPathWithRoundedRect:cur cornerRadius:_radius]];
-            CGRect last = CGRectNull;
-            if (i > 0) {
+            if (i == 0) {
+                last = cur;
+            } else if (i > 0 && fabs(CGRectGetMaxY(last) - CGRectGetMinY(cur)) < 10.0) {
                 NSValue *lastValue = [self.rectArray objectAtIndex:i-1];
                 last = lastValue.CGRectValue;
                 CGPoint a = cur.origin;
