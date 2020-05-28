@@ -19,6 +19,7 @@ import AlertUI
 import PresentationDataUtils
 import GalleryUI
 import LegacyUI
+import LegacyMediaPickerUI
 import ItemListAvatarAndNameInfoItem
 import WebSearchUI
 import PeerAvatarGalleryUI
@@ -752,8 +753,8 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         }))
                     }
                 }
-                
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+                                
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
                     let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
