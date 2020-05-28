@@ -385,10 +385,10 @@
                 resultImage = backgroundCIImage;
                 size = backgroundCIImage.extent.size;
             } else if ([adjustments cropAppliedForAvatar:false]) {
+                size = resultImage.extent.size;
                 CGRect cropRect = adjustments.cropRect;
                 cropRect = CGRectMake(cropRect.origin.x, size.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
                 resultImage = [resultImage imageByCroppingToRect:cropRect];
-                size = resultImage.extent.size;
             } else {
                 size = resultImage.extent.size;
             }

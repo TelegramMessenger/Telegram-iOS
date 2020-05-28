@@ -371,9 +371,9 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                     let _ = count.modify { current -> Int in
                         return current + 1
                     }
+                    let index = i
                     entity.image(for: time, fps: fps, completion: { image in
                         if var image = image {
-                            let index = i
                             var transform = CGAffineTransform(translationX: -image.extent.midX, y: -image.extent.midY)
                             image = image.transformed(by: transform)
                             
