@@ -294,7 +294,7 @@
     CGFloat itemHeight = 44.0;
     CGFloat containerWidth = 240.0;
     CGFloat containerHeight = (_canSendSilently + _canSchedule + _hasTimer) * itemHeight;
-    containerWidth = MAX(containerWidth, MAX(_sendSilentlyButton.buttonLabel.frame.size.width, _scheduleButton.buttonLabel.frame.size.width) + 84.0);
+    containerWidth = MAX(containerWidth, MAX(_timerButton.buttonLabel.frame.size.width, MAX(_sendSilentlyButton.buttonLabel.frame.size.width, _scheduleButton.buttonLabel.frame.size.width)) + 84.0);
     if (!_dismissed) {
         _containerView.frame = CGRectMake(CGRectGetMaxX(_sendButtonFrame) - containerWidth - 8.0, _sendButtonFrame.origin.y - containerHeight - 4.0, containerWidth, containerHeight);
     }
