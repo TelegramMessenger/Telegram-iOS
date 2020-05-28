@@ -46,7 +46,7 @@ typedef struct GPUTextureOptions {
 
 // Image capture
 - (CGImageRef)newCGImageFromFramebufferContents;
-- (CIImage *)newCIImageFromFramebufferContents;
+- (void)newCIImageFromFramebufferContents:(void (^)(CIImage *image, void(^unlock)(void)))completion;
 - (void)restoreRenderTarget;
 
 // Raw data bytes

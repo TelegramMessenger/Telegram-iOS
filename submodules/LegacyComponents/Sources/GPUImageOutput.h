@@ -80,7 +80,7 @@ void reportAvailableMemoryForGPUImage(NSString *tag);
 
 - (void)useNextFrameForImageCapture;
 - (CGImageRef)newCGImageFromCurrentlyProcessedOutput;
-- (CIImage *)newCIImageFromCurrentlyProcessedOutput;
+- (void)newCIImageFromCurrentlyProcessedOutput:(void (^)(CIImage *image, void(^unlock)(void)))completion;
 - (void)commitImageCapture;
 
 - (UIImage *)imageFromCurrentFramebuffer;

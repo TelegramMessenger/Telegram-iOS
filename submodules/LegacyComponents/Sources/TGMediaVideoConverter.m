@@ -378,36 +378,45 @@
         
         __block CIImage *overlayCIImage = nil;
         videoComposition = [AVMutableVideoComposition videoCompositionWithAsset:avAsset applyingCIFiltersWithHandler:^(AVAsynchronousCIImageFilteringRequest * _Nonnull request) {
-            __block CIImage *resultImage = request.sourceImage;
+            CIImage *resultImage = request.sourceImage;
             
             if (backgroundCIImage != nil) {
                 resultImage = backgroundCIImage;
             }
-                        
+                                    
+            void (^process)(CIImage *, void(^)(void)) = ^(CIImage *resultImage, void(^unlock)(void)) {
+                CGSize size = resultImage.extent.size;
+                if (overlayImage != nil && overlayImage.size.width > 0.0) {
+                    if (overlayCIImage == nil) {
+                        overlayCIImage = [[CIImage alloc] initWithImage:overlayImage];
+                        CGFloat scale = size.width / overlayCIImage.extent.size.width;
+                        overlayCIImage = [overlayCIImage imageByApplyingTransform:CGAffineTransformMakeScale(scale, scale)];
+                    }
+                    resultImage = [overlayCIImage imageByCompositingOverImage:resultImage];
+                }
+                
+                if (entityRenderer != nil) {
+                    [entityRenderer entitiesForTime:request.compositionTime fps:fps size:size completion:^(NSArray<CIImage *> *images) {
+                        CIImage *mergedImage = resultImage;
+                        for (CIImage *image in images) {
+                            mergedImage = [image imageByCompositingOverImage:mergedImage];
+                        }
+                        [request finishWithImage:mergedImage context:ciContext];
+                        unlock();
+                    }];
+                } else {
+                    [request finishWithImage:resultImage context:ciContext];
+                    unlock();
+                }
+            };
+            
             if (editor != nil) {
                 [editor setCIImage:resultImage];
-                resultImage = editor.currentResultCIImage;
-            }
-            
-            CGSize size = resultImage.extent.size;
-            if (overlayImage != nil && overlayImage.size.width > 0.0) {
-                if (overlayCIImage == nil) {
-                    overlayCIImage = [[CIImage alloc] initWithImage:overlayImage];
-                    CGFloat scale = size.width / overlayCIImage.extent.size.width;
-                    overlayCIImage = [overlayCIImage imageByApplyingTransform:CGAffineTransformMakeScale(scale, scale)];
-                }
-                resultImage = [overlayCIImage imageByCompositingOverImage:resultImage];
-            }
-            
-            if (entityRenderer != nil) {
-                [entityRenderer entitiesForTime:request.compositionTime fps:fps size:size completion:^(NSArray<CIImage *> *images) {
-                    for (CIImage *image in images) {
-                        resultImage = [image imageByCompositingOverImage:resultImage];
-                    }
-                    [request finishWithImage:resultImage context:ciContext];
+                [editor currentResultCIImage:^(CIImage *image, void(^unlock)(void)) {
+                    process(image, unlock);
                 }];
             } else {
-                [request finishWithImage:resultImage context:ciContext];
+                process(resultImage, ^{});
             }
         }];
     } else {

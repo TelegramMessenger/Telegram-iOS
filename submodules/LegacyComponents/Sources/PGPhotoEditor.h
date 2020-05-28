@@ -48,7 +48,7 @@
 
 - (void)createResultImageWithCompletion:(void (^)(UIImage *image))completion;
 - (UIImage *)currentResultImage;
-- (CIImage *)currentResultCIImage;
+- (void)currentResultCIImage:(void (^)(CIImage *image, void(^unlock)(void)))completion;
 
 - (bool)hasDefaultCropping;
 

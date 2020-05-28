@@ -428,13 +428,12 @@
     return image;
 }
 
-- (CIImage *)currentResultCIImage {
-    __block CIImage *image = nil;
+- (void)currentResultCIImage:(void (^)(CIImage *image, void(^unlock)(void)))completion
+{
     [self processAnimated:false capture:true synchronous:true completion:^
     {
-        image = [_finalFilter newCIImageFromCurrentlyProcessedOutput];
+        [_finalFilter newCIImageFromCurrentlyProcessedOutput:completion];
     }];
-    return image;
 }
 
 #pragma mark - Editor Values

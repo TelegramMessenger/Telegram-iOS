@@ -278,8 +278,9 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
     return nil;
 }
 
-- (CIImage *)newCIImageFromCurrentlyProcessedOutput {
-    return nil;
+- (void)newCIImageFromCurrentlyProcessedOutput:(void (^)(CIImage *image, void(^unlock)(void)))completion
+{
+
 }
 
 - (void)commitImageCapture
