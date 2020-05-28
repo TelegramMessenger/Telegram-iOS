@@ -327,6 +327,11 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
     {
         CGFloat colorLocation = MAX(0.0f, MIN(1.0f, self.frame.size.width > self.frame.size.height ? location.x / gestureRecognizer.view.frame.size.width : location.y / gestureRecognizer.view.frame.size.height));
         [self setLocation:colorLocation animated:true];
+        
+        if (self.finishedPicking != nil)
+            self.finishedPicking();
+        
+        [self storeCurrentColorLocation];
     }
 }
 

@@ -10,6 +10,7 @@
 #import "TGImageUtils.h"
 #import "TGPhotoEditorUtils.h"
 #import "PGPhotoEditor.h"
+#import "TGPaintUtils.h"
 #import "TGPhotoPaintEntity.h"
 
 #import "TGVideoEditAdjustments.h"
@@ -381,6 +382,7 @@
             CIImage *resultImage = request.sourceImage;
             
             CGSize size;
+            CGPoint offset = CGPointZero;
             if (backgroundCIImage != nil) {
                 resultImage = backgroundCIImage;
                 size = backgroundCIImage.extent.size;
@@ -388,7 +390,7 @@
                 size = resultImage.extent.size;
                 CGRect cropRect = adjustments.cropRect;
                 cropRect = CGRectMake(cropRect.origin.x, size.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
-                resultImage = [resultImage imageByCroppingToRect:cropRect];
+                offset = CGPointMake(cropRect.origin.x, -cropRect.origin.y);
             } else {
                 size = resultImage.extent.size;
             }
@@ -409,10 +411,16 @@
                         for (CIImage *image in images) {
                             mergedImage = [image imageByCompositingOverImage:mergedImage];
                         }
+                        if (!CGPointEqualToPoint(offset, CGPointZero)) {
+                            mergedImage = [mergedImage imageByApplyingTransform:CGAffineTransformMakeTranslation(offset.x, offset.y)];
+                        }
                         [request finishWithImage:mergedImage context:ciContext];
                         unlock();
                     }];
                 } else {
+                    if (!CGPointEqualToPoint(offset, CGPointZero)) {
+                        resultImage = [resultImage imageByApplyingTransform:CGAffineTransformMakeTranslation(offset.x, offset.y)];
+                    }
                     [request finishWithImage:resultImage context:ciContext];
                     unlock();
                 }
