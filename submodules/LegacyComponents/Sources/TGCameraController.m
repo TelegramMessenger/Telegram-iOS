@@ -1252,6 +1252,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         model.inhibitMute = self.inhibitMute;
         model.controller = galleryController;
         model.suggestionContext = self.suggestionContext;
+        model.stickersContext = self.stickersContext;
         
         __weak TGModernGalleryController *weakGalleryController = galleryController;
         __weak TGMediaPickerGalleryModel *weakModel = model;

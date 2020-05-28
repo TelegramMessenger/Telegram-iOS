@@ -35,7 +35,7 @@
 
 @implementation TGClipboardGalleryMixin
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName
 {
     self = [super init];
     if (self != nil)
@@ -61,7 +61,7 @@
             }
         }];
         
-        TGClipboardGalleryModel *model = [[TGClipboardGalleryModel alloc] initWithContext:_context images:images focusIndex:focusIndex selectionContext:selectionContext editingContext:editingContext hasCaptions:hasCaptions hasTimer:hasTimer hasSelectionPanel:false recipientName:recipientName];
+        TGClipboardGalleryModel *model = [[TGClipboardGalleryModel alloc] initWithContext:_context images:images focusIndex:focusIndex selectionContext:selectionContext editingContext:editingContext stickersContext:stickersContext hasCaptions:hasCaptions hasTimer:hasTimer hasSelectionPanel:false recipientName:recipientName];
         _galleryModel = model;
         model.controller = modernGallery;
         model.suggestionContext = suggestionContext;

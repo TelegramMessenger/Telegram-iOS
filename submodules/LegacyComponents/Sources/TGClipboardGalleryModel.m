@@ -34,7 +34,7 @@
 
 @implementation TGClipboardGalleryModel
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images focusIndex:(NSUInteger)focusIndex selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images focusIndex:(NSUInteger)focusIndex selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName
 {
     self = [super init];
     if (self != nil)
@@ -49,6 +49,7 @@
             TGClipboardGalleryPhotoItem *item = [[TGClipboardGalleryPhotoItem alloc] initWithImage:image];
             item.selectionContext = selectionContext;
             item.editingContext = editingContext;
+            item.stickersContext = stickersContext;
             [items addObject:item];
             
             if (i == focusIndex)
@@ -61,6 +62,7 @@
         
         _editingContext = editingContext;
         _selectionContext = selectionContext;
+        _stickersContext = stickersContext;
         
         __weak TGClipboardGalleryModel *weakSelf = self;
         if (selectionContext != nil)
@@ -322,6 +324,7 @@
     TGPhotoEditorControllerIntent intent = isVideo ? TGPhotoEditorControllerVideoIntent : TGPhotoEditorControllerGenericIntent;
     TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:item.editableMediaItem intent:intent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_interfaceView.currentTabs selectedTab:tab];
     controller.editingContext = _editingContext;
+    controller.stickersContext = _stickersContext;
     self.editorController = controller;
     controller.suggestionContext = self.suggestionContext;
     controller.willFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges)

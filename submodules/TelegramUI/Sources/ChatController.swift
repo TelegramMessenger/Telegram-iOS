@@ -6951,6 +6951,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatDisplayNode.dismissInput()
                 let _ = presentLegacyPasteMenu(context: strongSelf.context, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, presentationData: strongSelf.presentationData, images: images, sendMessagesWithSignals: { signals in
                     self?.enqueueMediaMessages(signals: signals, silentPosting: false)
+                }, presentStickers: { [weak self] completion in
+                    if let strongSelf = self {
+                        let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                            completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                            return true
+                        })
+                        strongSelf.present(controller, in: .window(.root))
+                        return controller
+                    } else {
+                        return nil
+                    }
                 }, present: { [weak self] controller, arguments in
                     if let strongSelf = self {
                         strongSelf.present(controller, in: .window(.root), with: arguments)

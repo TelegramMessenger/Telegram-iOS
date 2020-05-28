@@ -266,7 +266,7 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
     if ([cell isKindOfClass:[TGClipboardPreviewCell class]])
         thumbnailImage = cell.imageView.image;
     
-    TGClipboardGalleryMixin *mixin = [[TGClipboardGalleryMixin alloc] initWithContext:_context image:image images:_images parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer recipientName:self.recipientName];
+    TGClipboardGalleryMixin *mixin = [[TGClipboardGalleryMixin alloc] initWithContext:_context image:image images:_images parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext stickersContext:self.stickersContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer recipientName:self.recipientName];
     
     [self _setupGalleryMixin:mixin];
     

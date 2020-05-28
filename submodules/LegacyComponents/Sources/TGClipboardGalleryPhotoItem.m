@@ -9,6 +9,7 @@
 
 @synthesize selectionContext;
 @synthesize editingContext;
+@synthesize stickersContext;
 
 - (instancetype)initWithImage:(UIImage *)image
 {

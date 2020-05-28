@@ -867,6 +867,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:asset intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = _editingContext;
+        controller.stickersContext = _stickersContext;
         controller.dontHideStatusBar = true;
         
         TGMediaAvatarEditorTransition *transition = [[TGMediaAvatarEditorTransition alloc] initWithController:controller fromView:referenceViewForAsset(asset)];

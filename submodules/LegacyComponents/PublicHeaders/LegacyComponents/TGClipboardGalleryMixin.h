@@ -5,6 +5,8 @@
 
 @class TGClipboardGalleryPhotoItem;
 
+@protocol TGPhotoPaintStickersContext;
+
 @interface TGClipboardGalleryMixin : NSObject
 
 @property (nonatomic, copy) void (^itemFocused)(TGClipboardGalleryPhotoItem *);
@@ -19,7 +21,7 @@
 @property (nonatomic, copy) void (^editorOpened)(void);
 @property (nonatomic, copy) void (^editorClosed)(void);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName;
 
 - (void)present;
 

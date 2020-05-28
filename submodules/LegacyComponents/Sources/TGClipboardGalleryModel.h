@@ -25,7 +25,8 @@
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images focusIndex:(NSUInteger)focusIndex selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images focusIndex:(NSUInteger)focusIndex selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName;
 
 @end

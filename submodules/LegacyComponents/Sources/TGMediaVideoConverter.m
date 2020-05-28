@@ -347,6 +347,17 @@
     AVMutableCompositionTrack *trimVideoTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
     [trimVideoTrack insertTimeRange:timeRange ofTrack:videoTrack atTime:kCMTimeZero error:NULL];
     
+    CMTime frameDuration = CMTimeMake(1, 30);
+    if (videoTrack.nominalFrameRate > 0)
+        frameDuration = CMTimeMake(1, (int32_t)videoTrack.nominalFrameRate);
+    else if (CMTimeCompare(videoTrack.minFrameDuration, kCMTimeZero) == 1)
+        frameDuration = videoTrack.minFrameDuration;
+    
+    if (CMTimeCompare(frameDuration, kCMTimeZero) != 1 || !CMTIME_IS_VALID(frameDuration) || image != nil)
+        frameDuration = CMTimeMake(1, 30);
+    
+    NSInteger fps = (NSInteger)(1.0 / CMTimeGetSeconds(frameDuration));
+    
     UIImage *overlayImage = nil;
     if (adjustments.paintingData.imagePath != nil)
         overlayImage = [UIImage imageWithContentsOfFile:adjustments.paintingData.imagePath];
@@ -390,7 +401,7 @@
             }
             
             if (entityRenderer != nil) {
-                [entityRenderer entitiesForTime:request.compositionTime size:size completion:^(NSArray<CIImage *> *images) {
+                [entityRenderer entitiesForTime:request.compositionTime fps:fps size:size completion:^(NSArray<CIImage *> *images) {
                     for (CIImage *image in images) {
                         resultImage = [image imageByCompositingOverImage:resultImage];
                     }
@@ -417,22 +428,8 @@
         instruction.layerInstructions = [NSArray arrayWithObject:transformer];
         videoComposition.instructions = [NSArray arrayWithObject:instruction];
     }
-        
-    if (videoTrack.nominalFrameRate > 0)
-        videoComposition.frameDuration = CMTimeMake(1, (int32_t)videoTrack.nominalFrameRate);
-    else if (CMTimeCompare(videoTrack.minFrameDuration, kCMTimeZero) == 1)
-        videoComposition.frameDuration = videoTrack.minFrameDuration;
-    else
-        videoComposition.frameDuration = CMTimeMake(1, 30);
     
-    if (CMTimeCompare(videoComposition.frameDuration, kCMTimeZero) != 1)
-        videoComposition.frameDuration = CMTimeMake(1, 30);
-    
-    if (!CMTIME_IS_VALID(videoComposition.frameDuration))
-        videoComposition.frameDuration = CMTimeMake(1, 30);
-    
-    if (image != nil)
-        videoComposition.frameDuration = CMTimeMake(1, 30);
+    videoComposition.frameDuration = frameDuration;
     
     videoComposition.renderSize = [self _renderSizeWithCropSize:cropRect.size rotateSideward:TGOrientationIsSideward(adjustments.cropOrientation, NULL)];
     if (videoComposition.renderSize.width < FLT_EPSILON || videoComposition.renderSize.height < FLT_EPSILON)

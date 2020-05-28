@@ -17,7 +17,7 @@ protocol LegacyPaintEntity {
     var baseSize: CGSize? { get }
     var mirrored: Bool { get }
     
-    func image(for time: CMTime, completion: @escaping (CIImage?) -> Void)
+    func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void)
 }
 
 private class LegacyPaintStickerEntity: LegacyPaintEntity {
@@ -51,6 +51,9 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     var frameSource: AnimatedStickerFrameSource?
     var frameQueue: QueueLocalObject<AnimatedStickerFrameQueue>?
     
+    var frameCount: Int?
+    var frameRate: Int?
+        
     let queue = Queue()
     let disposable = MetaDisposable()
     
@@ -82,6 +85,9 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                                 
                                 strongSelf.frameQueue = frameQueue
                                 strongSelf.frameSource = frameSource
+                                
+                                strongSelf.frameCount = frameSource.frameCount
+                                strongSelf.frameRate = frameSource.frameRate
                                 
                                 strongSelf.durationPromise.set(.single(Double(frameSource.frameCount) / Double(frameSource.frameRate)))
                             }
@@ -138,7 +144,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     }
     
     var cachedCIImage: CIImage?
-    func image(for time: CMTime, completion: @escaping (CIImage?) -> Void) {
+    func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
         if self.animated {
             let frameQueue = self.frameQueue
             self.queue.async {
@@ -208,7 +214,7 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
     }
 
     var cachedCIImage: CIImage?
-    func image(for time: CMTime, completion: @escaping (CIImage?) -> Void) {
+    func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
         var image: CIImage?
         if let cachedImage = self.cachedCIImage {
             image = cachedImage
@@ -281,7 +287,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         }
     }
     
-    public func entities(for time: CMTime, size: CGSize, completion: (([CIImage]?) -> Void)!) {
+    public func entities(for time: CMTime, fps: Int, size: CGSize, completion: (([CIImage]?) -> Void)!) {
         let entities = self.entities
         let maxSide = max(size.width, size.height)
         let paintingScale = maxSide / 1920.0
@@ -306,7 +312,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                     let _ = count.modify { current -> Int in
                         return current + 1
                     }
-                    entity.image(for: time, completion: { image in
+                    entity.image(for: time, fps: fps, completion: { image in
                         if var image = image {
                             let index = i
                             var transform = CGAffineTransform(translationX: -image.extent.midX, y: -image.extent.midY)

@@ -7,7 +7,7 @@
 
 @protocol TGPhotoPaintEntityRenderer <NSObject>
 
-- (void)entitiesForTime:(CMTime)time size:(CGSize)size completion:(void(^)(NSArray<CIImage *> *))completion;
+- (void)entitiesForTime:(CMTime)time fps:(NSInteger)fps size:(CGSize)size completion:(void(^)(NSArray<CIImage *> *))completion;
 
 @end
 

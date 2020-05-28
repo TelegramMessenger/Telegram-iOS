@@ -9,7 +9,7 @@
 
 @implementation TGClipboardMenu
 
-+ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName suggestionContext:(TGSuggestionContext *)suggestionContext completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
++ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
 {
     bool centered = false;
     if (sourceRect == nil)
@@ -41,7 +41,7 @@
     
     TGClipboardPreviewItemView *previewItem = [[TGClipboardPreviewItemView alloc] initWithContext:context images:images];
     __weak TGClipboardPreviewItemView *weakPreviewItem = previewItem;
-    
+    previewItem.stickersContext = stickersContext;
     previewItem.suggestionContext = suggestionContext;
     previewItem.parentController = parentController;
     previewItem.allowCaptions = hasCaption;

@@ -4,6 +4,8 @@
 @class TGMediaEditingContext;
 @class TGSuggestionContext;
 
+@protocol TGPhotoPaintStickersContext;
+
 @interface TGClipboardPreviewItemView : TGMenuSheetItemView
 
 @property (nonatomic, weak) TGViewController *parentController;
@@ -15,6 +17,7 @@
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
 @property (nonatomic, copy) void (^selectionChanged)(NSUInteger);
 @property (nonatomic, copy) void (^sendPressed)(UIImage *currentItem);
