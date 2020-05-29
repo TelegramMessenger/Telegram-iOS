@@ -857,7 +857,7 @@
                                     if (paintingImage == nil) {
                                         paintingImage = adjustments.paintingData.image;
                                     }
-                                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), adjustments.originalSize, true, true, true);
+                                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true);
                                     if (thumbnailImage != nil) {
                                         dict[@"previewImage"] = thumbnailImage;
                                     }
@@ -938,10 +938,10 @@
                     
                     SSignal *trimmedVideoThumbnailSignal = [[TGMediaAssetImageSignals avAssetForVideoAsset:asset allowNetworkAccess:false] mapToSignal:^SSignal *(AVAsset *avAsset)
                     {
-                        CGSize imageSize = TGFillSize(asset.dimensions, CGSizeMake(384, 384));
+                        CGSize imageSize = TGFillSize(asset.dimensions, CGSizeMake(512, 512));
                         return [[TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
                         {
-                            return cropVideoThumbnail(image, TGScaleToFill(asset.dimensions, CGSizeMake(384, 384)), asset.dimensions, true);
+                            return cropVideoThumbnail(image, TGScaleToFill(asset.dimensions, CGSizeMake(512, 512)), asset.dimensions, true);
                         }];
                     }];
                     

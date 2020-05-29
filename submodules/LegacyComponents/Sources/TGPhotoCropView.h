@@ -26,6 +26,7 @@
 - (void)setSnapshotImage:(UIImage *)snapshotImage;
 - (void)setSnapshotView:(UIView *)snapshotView;
 - (void)setPaintingImage:(UIImage *)paintingImage;
+- (void)setEntitiesView:(UIView *)entitiesView;
 
 - (void)animateTransitionIn;
 - (void)animateTransitionOut;

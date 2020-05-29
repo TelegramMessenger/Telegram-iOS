@@ -40,6 +40,7 @@ const CGFloat TGPhotoCropViewOverscreenSize = 1000;
     UIView *_snapshotView;
     CGSize _snapshotSize;
     UIImageView *_paintingImageView;
+    UIView *_entitiesView;
     
     UIImage *_paintingImage;
     
@@ -396,6 +397,11 @@ const CGFloat TGPhotoCropViewOverscreenSize = 1000;
         _paintingImageView.hidden = (paintingImage == nil);
         _paintingImageView.image = paintingImage;
     }
+}
+
+- (void)setEntitiesView:(UIView *)entitiesView
+{
+    _entitiesView = entitiesView;
 }
 
 #pragma mark - Crop Area

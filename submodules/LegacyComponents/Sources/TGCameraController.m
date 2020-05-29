@@ -51,6 +51,8 @@
 #import "TGCameraCapturedPhoto.h"
 #import "TGCameraCapturedVideo.h"
 
+#import "PGPhotoEditor.h"
+
 #import "TGAnimationUtils.h"
 
 const CGFloat TGCameraSwipeMinimumVelocity = 600.0f;
@@ -2633,7 +2635,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         if (paintingImage == nil) {
                             paintingImage = adjustments.paintingData.image;
                         }
-                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(384, 384)), adjustments.originalSize, true, true, true);
+                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true);
                         if (thumbnailImage != nil) {
                             dict[@"previewImage"] = thumbnailImage;
                         }
@@ -2665,19 +2667,26 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             
             UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
             {
-                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting)
+                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
                 {
                     CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
-                    return TGPhotoEditorCrop(image, adjustments.paintingData.image, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
+                    if (adjustments.toolsApplied) {
+                        image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                    }
+                    return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
                 }
                 
                 return image;
             };
             
-            CGSize imageSize = TGFillSize(asset.originalSize, CGSizeMake(384, 384));
+            CGSize imageSize = TGFillSize(asset.originalSize, CGSizeMake(512, 512));
             SSignal *trimmedVideoThumbnailSignal = [[TGMediaAssetImageSignals videoThumbnailForAVAsset:video.avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
             {
-                    return cropVideoThumbnail(image, TGScaleToFill(asset.originalSize, CGSizeMake(256, 256)), asset.originalSize, true);
+                    return cropVideoThumbnail(image, TGScaleToFill(asset.originalSize, CGSizeMake(512, 512)), asset.originalSize, true);
             }];
             
             SSignal *videoThumbnailSignal = [inlineThumbnailSignal(asset) map:^UIImage *(UIImage *image)

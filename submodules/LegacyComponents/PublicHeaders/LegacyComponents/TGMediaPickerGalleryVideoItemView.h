@@ -3,6 +3,8 @@
 #import <LegacyComponents/TGModernGalleryImageItemImageView.h>
 #import <AVFoundation/AVFoundation.h>
 
+@class TGPhotoEntitiesContainerView;
+
 @interface TGMediaPickerGalleryVideoItemView : TGModernGalleryItemView <TGModernGalleryEditableItemView>
 
 @property (nonatomic, strong) TGModernGalleryImageItemImageView *imageView;
@@ -31,5 +33,6 @@
 - (UIImage *)screenImage;
 - (UIImage *)transitionImage;
 - (CGRect)editorTransitionViewRect;
+- (TGPhotoEntitiesContainerView *)entitiesView;
 
 @end
