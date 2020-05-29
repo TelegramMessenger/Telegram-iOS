@@ -13,6 +13,8 @@
 @property (nonatomic, copy) void (^entitySelected)(TGPhotoPaintEntityView *);
 @property (nonatomic, copy) void (^entityRemoved)(TGPhotoPaintEntityView *);
 
+- (void)updateVisibility:(bool)visible;
+
 - (void)setupWithPaintingData:(TGPaintingData *)paintingData;
 - (TGPhotoPaintEntityView *)createEntityViewWithEntity:(TGPhotoPaintEntity *)entity;
 

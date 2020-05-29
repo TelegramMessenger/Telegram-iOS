@@ -86,14 +86,25 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
         }
     }
     
+    var isVisible: Bool = true
+    func setIsVisible(_ visible: Bool) {
+        self.isVisible = visible
+        updateVisibility()
+    }
+    
+    var isPlaying = false
     func updateVisibility() {
-        if !self.didSetUpAnimationNode {
-            self.didSetUpAnimationNode = true
+        let isPlaying = self.isVisible
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
             
-            self.animationNode?.visibility = true
-            let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
-            self.animationNode?.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+            self.animationNode?.visibility = isPlaying
+            if isPlaying && !self.didSetUpAnimationNode {
+                self.didSetUpAnimationNode = true
+                let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
+                self.animationNode?.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+            }
         }
     }
     

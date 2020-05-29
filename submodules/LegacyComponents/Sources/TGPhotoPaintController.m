@@ -1019,12 +1019,14 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf != nil) {
             strongSelf.controlVideoPlayback(false);
+            [strongSelf->_entitiesContainerView updateVisibility:false];
         }
     };
     _stickersScreen.screenWillDisappear = ^{
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf != nil) {
             strongSelf.controlVideoPlayback(true);
+            [strongSelf->_entitiesContainerView updateVisibility:true];
         }
     };
 }

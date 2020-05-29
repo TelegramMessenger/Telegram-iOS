@@ -13,6 +13,7 @@
 
 @protocol TGPhotoPaintStickerRenderView <NSObject>
 
+- (void)setIsVisible:(bool)isVisible;
 - (int64_t)documentId;
 - (UIImage *)image;
 

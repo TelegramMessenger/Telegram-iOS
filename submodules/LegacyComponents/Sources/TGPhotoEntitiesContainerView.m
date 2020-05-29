@@ -27,6 +27,19 @@
     return self;
 }
 
+- (void)updateVisibility:(bool)visible
+{
+    for (TGPhotoPaintEntityView *view in self.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+        
+        if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
+            [(TGPhotoStickerEntityView *)view updateVisibility:visible];
+        }
+    }
+}
+
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)__unused gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer
 {
     return false;

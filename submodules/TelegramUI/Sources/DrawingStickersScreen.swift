@@ -585,8 +585,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 }
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
             
 //                if view.higher == nil {
 //                    var hasTopSeparator = true
@@ -636,8 +636,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)

@@ -16,6 +16,8 @@
 - (void)mirror;
 - (UIImage *)image;
 
+- (void)updateVisibility:(bool)visible;
+
 - (CGRect)realBounds;
 
 @end

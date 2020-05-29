@@ -170,6 +170,10 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
     return CGRectMake((self.bounds.size.width - side) / 2.0f, (self.bounds.size.height - side) / 2.0f, side, side);
 }
 
+- (void)updateVisibility:(bool)visible {
+    [_stickerView setIsVisible:visible];
+}
+
 @end
 
 

@@ -126,7 +126,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
     
     let section: GridSection?
     
-    init(account: Account, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, canManagePeerSpecificPack: Bool?, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, canManagePeerSpecificPack: Bool?, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, hasAccessory: Bool, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.account = account
         self.index = index
         self.stickerItem = stickerItem
@@ -138,9 +138,9 @@ final class ChatMediaInputStickerGridItem: GridItem {
             self.section = nil
         } else {
             let accessory: ChatMediaInputStickerGridSectionAccessory
-            if stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, let canManage = canManagePeerSpecificPack, canManage {
+            if hasAccessory && stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, let canManage = canManagePeerSpecificPack, canManage {
                 accessory = .setup
-            } else if stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
+            } else if hasAccessory && stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
                 accessory = .clear
             } else {
                 accessory = .none

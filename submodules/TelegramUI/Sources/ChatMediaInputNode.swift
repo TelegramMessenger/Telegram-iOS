@@ -163,7 +163,7 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool?, theme: PresentationTheme, hasGifs: Bool = true) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool?, theme: PresentationTheme, hasGifs: Bool = true, hasSettings: Bool = true) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
         entries.append(.recentGifs(theme))
@@ -213,7 +213,9 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
         entries.append(.peerSpecific(theme: theme, peer: peer))
     }
     
-    entries.append(.settings(theme))
+    if hasSettings {
+        entries.append(.settings(theme))
+    }
     return entries
 }
 
@@ -230,7 +232,7 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, reactions: [Str
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasSearch: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if hasSearch && view.lower == nil {
@@ -253,7 +255,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                     savedStickerIds.insert(item.file.fileId.id)
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme))
                 }
             }
         }
@@ -269,7 +271,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                     if !savedStickerIds.contains(mediaId.id) {
                         let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
                         let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, theme: theme))
+                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme))
                         addedCount += 1
                     }
                 }
@@ -292,7 +294,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, maybeManageable: hasAccessories, theme: theme))
                 }
             }
         }
@@ -300,7 +302,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
     
     for entry in view.entries {
         if let item = entry.item as? StickerPackItem {
-            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, theme: theme))
+            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, maybeManageable: hasAccessories, theme: theme))
         }
     }
     
@@ -367,6 +369,7 @@ final class ChatMediaInputNodeInteraction {
     var previewedStickerPackItem: StickerPreviewPeekItem?
     var appearanceTransition: CGFloat = 1.0
     var displayStickerPlaceholder = true
+    var displayStickerPackManageControls = true
     
     init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, navigateBackToStickers: @escaping () -> Void, setGifMode: @escaping (ChatMediaInputGifMode) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool, ChatMediaInputSearchMode?, String) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void, clearRecentlyUsedStickers: @escaping () -> Void) {
         self.navigateToCollectionId = navigateToCollectionId

@@ -87,7 +87,7 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
 enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
     case search(theme: PresentationTheme, strings: PresentationStrings)
     case peerSpecificSetup(theme: PresentationTheme, strings: PresentationStrings, dismissed: Bool)
-    case sticker(index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, stickerPackInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, theme: PresentationTheme)
+    case sticker(index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, stickerPackInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, maybeManageable: Bool, theme: PresentationTheme)
     case trending(TrendingPanePackEntry)
     
     var index: ChatMediaInputGridEntryIndex {
@@ -96,7 +96,7 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
             return .search
         case let .peerSpecificSetup(_, _, dismissed):
             return .peerSpecificSetup(dismissed: dismissed)
-        case let .sticker(index, _, _, _, _):
+        case let .sticker(index, _, _, _, _, _):
             return .collectionIndex(index)
         case let .trending(entry):
             return .trending(entry.info.id, entry.index)
@@ -127,8 +127,8 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
             } else {
                 return false
             }
-        case let .sticker(lhsIndex, lhsStickerItem, lhsStickerPackInfo, lhsCanManagePeerSpecificPack, lhsTheme):
-            if case let .sticker(rhsIndex, rhsStickerItem, rhsStickerPackInfo, rhsCanManagePeerSpecificPack, rhsTheme) = rhs {
+        case let .sticker(lhsIndex, lhsStickerItem, lhsStickerPackInfo, lhsCanManagePeerSpecificPack, lhsMaybeManageable, lhsTheme):
+            if case let .sticker(rhsIndex, rhsStickerItem, rhsStickerPackInfo, rhsCanManagePeerSpecificPack, rhsMaybeManageable, rhsTheme) = rhs {
                 if lhsIndex != rhsIndex {
                     return false
                 }
@@ -139,6 +139,9 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
                     return false
                 }
                 if lhsCanManagePeerSpecificPack != rhsCanManagePeerSpecificPack {
+                    return false
+                }
+                if lhsMaybeManageable != rhsMaybeManageable {
                     return false
                 }
                 if lhsTheme !== rhsTheme {
@@ -173,8 +176,8 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
             }, dismiss: dismissed ? nil : {
                 inputNodeInteraction.dismissPeerSpecificSettings()
             })
-        case let .sticker(index, stickerItem, stickerPackInfo, canManagePeerSpecificPack, theme):
-            return ChatMediaInputStickerGridItem(account: account, collectionId: index.collectionId, stickerPackInfo: stickerPackInfo, index: index, stickerItem: stickerItem, canManagePeerSpecificPack: canManagePeerSpecificPack, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {  })
+        case let .sticker(index, stickerItem, stickerPackInfo, canManagePeerSpecificPack, maybeManageable, theme):
+            return ChatMediaInputStickerGridItem(account: account, collectionId: index.collectionId, stickerPackInfo: stickerPackInfo, index: index, stickerItem: stickerItem, canManagePeerSpecificPack: canManagePeerSpecificPack, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, hasAccessory: maybeManageable, theme: theme, selected: {  })
         case let .trending(entry):
             return entry.item(account: account, interaction: trendingInteraction, grid: false)
         }
