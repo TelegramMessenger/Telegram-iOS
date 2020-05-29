@@ -2635,7 +2635,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         if (paintingImage == nil) {
                             paintingImage = adjustments.paintingData.image;
                         }
-                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(384, 384)), adjustments.originalSize, true, true, true);
+                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true);
                         if (thumbnailImage != nil) {
                             dict[@"previewImage"] = thumbnailImage;
                         }
@@ -2683,10 +2683,10 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 return image;
             };
             
-            CGSize imageSize = TGFillSize(asset.originalSize, CGSizeMake(384, 384));
+            CGSize imageSize = TGFillSize(asset.originalSize, CGSizeMake(512, 512));
             SSignal *trimmedVideoThumbnailSignal = [[TGMediaAssetImageSignals videoThumbnailForAVAsset:video.avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
             {
-                    return cropVideoThumbnail(image, TGScaleToFill(asset.originalSize, CGSizeMake(256, 256)), asset.originalSize, true);
+                    return cropVideoThumbnail(image, TGScaleToFill(asset.originalSize, CGSizeMake(512, 512)), asset.originalSize, true);
             }];
             
             SSignal *videoThumbnailSignal = [inlineThumbnailSignal(asset) map:^UIImage *(UIImage *image)

@@ -769,28 +769,29 @@
     
     CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(orientation));
     _contentView.transform = rotationTransform;
-    _contentView.frame = previewFrame;
+    _contentView.frame = _imageView.frame;
     
     CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
     CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
     
-    CGFloat contentScale = _contentView.bounds.size.width / fittedCropRect.size.width;
+    CGFloat contentScale = ratio;//_contentView.bounds.size.width / fittedCropRect.size.width;
     _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
     
     CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
     _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    _entitiesContainerView.transform = CGAffineTransformMakeRotation(0.0);
     
     CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
-    CGSize rotatedSize = fittedOriginalSize;
+    CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, 0.0);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
     
     CGFloat scale = fittedOriginalSize.width / originalSize.width;
     CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
     
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
-    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, CGPointMake(offset.x, offset.y));
+//    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, CGPointMake(offset.x / contentScale, offset.y / contentScale));
 }
 
 - (TGPhotoEntitiesContainerView *)entitiesView {
