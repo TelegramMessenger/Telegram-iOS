@@ -699,7 +699,7 @@
 
     SSignal *renderedImageSignal = [[imageSignal mapToSignal:^SSignal *(UIImage *image)
     {
-        return [imageCropSignal(image, !hasImageAdjustments || hasPainting) startOn:_queue];
+        return [imageCropSignal(image, !hasImageAdjustments || hasPainting || MAX(image.size.width, image.size.height) > 4096) startOn:_queue];
     }] mapToSignal:^SSignal *(UIImage *image)
     {
         if (hasImageAdjustments)
