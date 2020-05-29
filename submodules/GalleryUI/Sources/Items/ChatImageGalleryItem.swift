@@ -261,7 +261,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self._ready.set(.single(Void()))
             }
             if imageReference.media.flags.contains(.hasStickers) {
-                let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                let rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: .white), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
                 self._rightBarButtonItems.set(.single([rightBarButtonItem]))
             } else {
                 self._rightBarButtonItems.set(.single([]))

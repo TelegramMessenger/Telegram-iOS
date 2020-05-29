@@ -680,7 +680,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
             var barButtonItems: [UIBarButtonItem] = []
             if hasLinkedStickers {
-                let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                let rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: .white), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
                 barButtonItems.append(rightBarButtonItem)
             }
             if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
