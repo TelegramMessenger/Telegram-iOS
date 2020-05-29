@@ -790,7 +790,11 @@
     CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
     
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
-    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
+    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, CGPointMake(offset.x, offset.y));
+}
+
+- (TGPhotoEntitiesContainerView *)entitiesView {
+    return _entitiesContainerView;
 }
 
 - (void)singleTap

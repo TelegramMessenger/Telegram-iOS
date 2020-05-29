@@ -116,18 +116,22 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 #pragma mark -
 #pragma mark Initialization and teardown
 
-- (UIInterfaceOrientation)orientationForTrack:(AVAsset *)asset {
+- (GPUImageRotationMode)rotationForTrack:(AVAsset *)asset {
     AVAssetTrack *videoTrack = [[asset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
     CGAffineTransform trackTransform = [videoTrack preferredTransform];
     
     if (trackTransform.a == -1 && trackTransform.d == -1) {
-        return UIInterfaceOrientationLandscapeRight;
+        return kGPUImageRotate180;
     } else if (trackTransform.a == 1 && trackTransform.d == 1)  {
-        return UIInterfaceOrientationLandscapeLeft;
+        return kGPUImageNoRotation;
     } else if (trackTransform.b == -1 && trackTransform.c == 1) {
-        return UIInterfaceOrientationPortraitUpsideDown;
+        return kGPUImageRotateLeft;
     } else {
-        return UIInterfaceOrientationPortrait;
+        if (trackTransform.c == 1) {
+            return kGPUImageRotateRightFlipVertical;
+        } else {
+            return kGPUImageRotateRight;
+        }
     }
 }
 
@@ -385,16 +389,8 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
                 
                 AVAsset *asset = self.playerItem.asset;
                 if (asset != nil) {
-                    UIInterfaceOrientation orientation = [self orientationForTrack:asset];
-                    if (orientation == UIInterfaceOrientationPortrait) {
-                        [currentTarget setInputRotation:kGPUImageRotateRight atIndex:targetTextureIndex];
-                    } else if (orientation == UIInterfaceOrientationLandscapeRight) {
-                        [currentTarget setInputRotation:kGPUImageRotate180 atIndex:targetTextureIndex];
-                    } else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
-                        [currentTarget setInputRotation:kGPUImageRotateLeft atIndex:targetTextureIndex];
-                    } else {
-                        [currentTarget setInputRotation:kGPUImageNoRotation atIndex:targetTextureIndex];
-                    }
+                    GPUImageRotationMode rotation = [self rotationForTrack:asset];
+                    [currentTarget setInputRotation:rotation atIndex:targetTextureIndex];
                 }
             }
             
