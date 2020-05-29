@@ -454,6 +454,7 @@
                 [strongSelf setPlayButtonHidden:true animated:false];
             
             [strongSelf->_entitiesContainerView setupWithPaintingData:adjustments.paintingData];
+            [strongSelf->_entitiesContainerView updateVisibility:strongSelf.isPlaying];
             [strongSelf->_photoEditor importAdjustments:adjustments];
             
             if (!strongSelf.isPlaying) {
@@ -1140,6 +1141,8 @@
             [strongSelf->_player play];
         }
         
+        [strongSelf->_entitiesContainerView updateVisibility:strongSelf.isPlaying];
+        
         strongSelf->_positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(positionTimerEvent) interval:0.25 repeat:true];
         [strongSelf positionTimerEvent];
         
@@ -1151,10 +1154,14 @@
 {
     if (object == _player && [keyPath isEqualToString:@"rate"])
     {
-        if (_player.rate > FLT_EPSILON)
+        if (_player.rate > FLT_EPSILON) {
             [_scrubberView setIsPlaying:true];
-        else
+            [_entitiesContainerView updateVisibility:true];
+        }
+        else {
             [_scrubberView setIsPlaying:false];
+            [_entitiesContainerView updateVisibility:false];
+        }
     }
 }
 
@@ -1188,6 +1195,8 @@
         _positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(positionTimerEvent) interval:0.25 repeat:true];
         [self positionTimerEvent];
     }
+    
+    [_entitiesContainerView updateVisibility:true];
 }
 
 - (void)playIfAvailable
@@ -1209,6 +1218,8 @@
     
     [_positionTimer invalidate];
     _positionTimer = nil;
+    
+    [_entitiesContainerView updateVisibility:false];
 }
 
 - (void)togglePlayback

@@ -177,7 +177,7 @@
     _currentInput = movie;
     
     CGRect defaultCropRect = CGRectMake(0, 0, _originalSize.width, _originalSize.height);
-    bool hasCropping = !_CGRectEqualToRectWithEpsilon(self.cropRect, CGRectZero, [self _cropRectEpsilon]) && !_CGRectEqualToRectWithEpsilon(self.cropRect, defaultCropRect, [self _cropRectEpsilon]);
+    bool hasCropping = !_CGRectEqualToRectWithEpsilon(cropRect, CGRectZero, [self _cropRectEpsilon]) && !_CGRectEqualToRectWithEpsilon(cropRect, defaultCropRect, [self _cropRectEpsilon]);
     
     _rotationMode = kGPUImageNoRotation;
     if (cropOrientation != UIImageOrientationUp || cropMirrored || hasCropping) {
