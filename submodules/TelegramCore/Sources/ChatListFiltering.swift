@@ -155,6 +155,19 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
         return true
     }
     
+    public mutating func removePeer(_ peerId: PeerId) -> Bool {
+        var found = false
+        if let index = self.pinnedPeers.firstIndex(of: peerId) {
+            self.pinnedPeers.remove(at: index)
+            found = true
+        }
+        if let index = self.peers.firstIndex(of: peerId) {
+            self.peers.remove(at: index)
+            found = true
+        }
+        return found
+    }
+    
     public mutating func setPeers(_ peers: [PeerId]) {
         self.peers = peers
         self.pinnedPeers = self.pinnedPeers.filter { peers.contains($0) }
@@ -202,6 +215,20 @@ public struct ChatListFilterData: Equatable, Hashable {
         } else {
             return false
         }
+    }
+    
+    public mutating func addExcludePeer(peerId: PeerId) -> Bool {
+        if self.excludePeers.contains(peerId) {
+            return false
+        }
+        if self.excludePeers.count >= 100 {
+            return false
+        }
+        
+        let _ = self.includePeers.removePeer(peerId)
+        self.excludePeers.append(peerId)
+        
+        return true
     }
 }
 

@@ -184,6 +184,22 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = string
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .chatRemovedFromFolder(chatTitle, folderTitle):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+                
+                let (rawString, attributes) = presentationData.strings.ChatList_RemovedFromFolderTooltip(chatTitle, folderTitle)
+                
+                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString, font: Font.regular(14.0), textColor: .white))
+                for (_, range) in attributes {
+                    string.addAttribute(.font, value: Font.regular(14.0), range: range)
+                }
+                
+                self.textNode.attributedText = string
+                displayUndo = false
+                self.originalRemainingSeconds = 5
             case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -368,7 +384,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder:
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder:
             break
         case .dice:
             self.panelWrapperNode.clipsToBounds = true

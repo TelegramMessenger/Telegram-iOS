@@ -127,98 +127,122 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
         
         let isContact = transaction.isPeerContact(peerId: peerId)
         
-        if case .chatList = source {
-            var hasFolders = false
-            updateChatListFiltersInteractively(transaction: transaction, { filters in
-                for filter in filters {
-                    let predicate = chatListFilterPredicate(filter: filter.data)
-                    if predicate.includes(peer: peer, groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: false) {
-                        continue
-                    }
-                    
-                    var data = filter.data
-                    if data.addIncludePeer(peerId: peerId) {
-                        hasFolders = true
-                        break
-                    }
-                }
-                return filters
-            })
-            
-            if hasFolders {
-                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToFolder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Folder"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                    let _ = (context.account.postbox.transaction { transaction -> [ContextMenuItem] in
-                        var updatedItems: [ContextMenuItem] = []
+        if case let .chatList(currentFilter) = source {
+            if let currentFilter = currentFilter {
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromFolder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/RemoveFromFolder"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    let _ = (context.account.postbox.transaction { transaction -> Void in
                         updateChatListFiltersInteractively(transaction: transaction, { filters in
-                            for filter in filters {
-                                let predicate = chatListFilterPredicate(filter: filter.data)
-                                if predicate.includes(peer: peer, groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: false) {
-                                    continue
+                            var filters = filters
+                            for i in 0 ..< filters.count {
+                                if filters[i].id == currentFilter.id {
+                                    let _ = filters[i].data.addExcludePeer(peerId: peer.id)
+                                    break
                                 }
-                                
-                                var data = filter.data
-                                if !data.addIncludePeer(peerId: peerId) {
-                                    continue
-                                }
-                                
-                                let filterType = chatListFilterType(filter)
-                                updatedItems.append(.action(ContextMenuActionItem(text: filter.title, icon: { theme in
-                                    let imageName: String
-                                    switch filterType {
-                                    case .generic:
-                                        imageName = "Chat/Context Menu/List"
-                                    case .unmuted:
-                                        imageName = "Chat/Context Menu/Unmute"
-                                    case .unread:
-                                        imageName = "Chat/Context Menu/MarkAsUnread"
-                                    case .channels:
-                                        imageName = "Chat/Context Menu/Channels"
-                                    case .groups:
-                                        imageName = "Chat/Context Menu/Groups"
-                                    case .bots:
-                                        imageName = "Chat/Context Menu/Bots"
-                                    case .contacts:
-                                        imageName = "Chat/Context Menu/User"
-                                    case .nonContacts:
-                                        imageName = "Chat/Context Menu/UnknownUser"
-                                    }
-                                    return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
-                                }, action: { c, f in
-                                    c.dismiss(completion: {
-                                        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
-                                            var filters = filters
-                                            for i in 0 ..< filters.count {
-                                                if filters[i].id == filter.id {
-                                                    let _ = filters[i].data.addIncludePeer(peerId: peerId)
-                                                    break
-                                                }
-                                            }
-                                            return filters
-                                        })).start()
-                                        
-                                        chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: filter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
-                                            return false
-                                        }), in: .current)
-                                    })
-                                })))
                             }
-                            
                             return filters
                         })
-                        
-                        updatedItems.append(.separator)
-                        updatedItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                        }, action: { c, _ in
-                            c.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController))
-                        })))
-                        
-                        return updatedItems
                     }
-                    |> deliverOnMainQueue).start(next: { updatedItems in
-                        c.setItems(.single(updatedItems))
+                    |> deliverOnMainQueue).start(completed: {
+                        c.dismiss(completion: {
+                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: currentFilter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                return false
+                            }), in: .current)
+                        })
                     })
                 })))
+            } else {
+                var hasFolders = false
+                updateChatListFiltersInteractively(transaction: transaction, { filters in
+                    for filter in filters {
+                        let predicate = chatListFilterPredicate(filter: filter.data)
+                        if predicate.includes(peer: peer, groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: false) {
+                            continue
+                        }
+                        
+                        var data = filter.data
+                        if data.addIncludePeer(peerId: peer.id) {
+                            hasFolders = true
+                            break
+                        }
+                    }
+                    return filters
+                })
+                
+                if hasFolders {
+                    items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToFolder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Folder"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        let _ = (context.account.postbox.transaction { transaction -> [ContextMenuItem] in
+                            var updatedItems: [ContextMenuItem] = []
+                            updateChatListFiltersInteractively(transaction: transaction, { filters in
+                                for filter in filters {
+                                    let predicate = chatListFilterPredicate(filter: filter.data)
+                                    if predicate.includes(peer: peer, groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: false) {
+                                        continue
+                                    }
+                                    
+                                    var data = filter.data
+                                    if !data.addIncludePeer(peerId: peer.id) {
+                                        continue
+                                    }
+                                    
+                                    let filterType = chatListFilterType(filter)
+                                    updatedItems.append(.action(ContextMenuActionItem(text: filter.title, icon: { theme in
+                                        let imageName: String
+                                        switch filterType {
+                                        case .generic:
+                                            imageName = "Chat/Context Menu/List"
+                                        case .unmuted:
+                                            imageName = "Chat/Context Menu/Unmute"
+                                        case .unread:
+                                            imageName = "Chat/Context Menu/MarkAsUnread"
+                                        case .channels:
+                                            imageName = "Chat/Context Menu/Channels"
+                                        case .groups:
+                                            imageName = "Chat/Context Menu/Groups"
+                                        case .bots:
+                                            imageName = "Chat/Context Menu/Bots"
+                                        case .contacts:
+                                            imageName = "Chat/Context Menu/User"
+                                        case .nonContacts:
+                                            imageName = "Chat/Context Menu/UnknownUser"
+                                        }
+                                        return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
+                                    }, action: { c, f in
+                                        c.dismiss(completion: {
+                                            let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                                                var filters = filters
+                                                for i in 0 ..< filters.count {
+                                                    if filters[i].id == filter.id {
+                                                        let _ = filters[i].data.addIncludePeer(peerId: peer.id)
+                                                        break
+                                                    }
+                                                }
+                                                return filters
+                                            })).start()
+                                            
+                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: filter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                                return false
+                                            }), in: .current)
+                                        })
+                                    })))
+                                }
+                                
+                                return filters
+                            })
+                            
+                            updatedItems.append(.separator)
+                            updatedItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                            }, action: { c, _ in
+                                c.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController))
+                            })))
+                            
+                            return updatedItems
+                        }
+                        |> deliverOnMainQueue).start(next: { updatedItems in
+                            c.setItems(.single(updatedItems))
+                        })
+                    })))
+                }
             }
             
             if isUnread {
