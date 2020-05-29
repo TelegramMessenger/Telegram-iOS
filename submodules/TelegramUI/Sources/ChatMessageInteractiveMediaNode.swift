@@ -1124,6 +1124,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: strings.Conversation_Processing, size: nil, muted: false, active: active)
                                 }
                             }
+                            if file.isAnimated && isMediaStreamable(message: message, media: file) {
+                                state = automaticPlayback ? .none : state
+                            }
                         } else {
                             if isMediaStreamable(message: message, media: file), let size = file.size {
                                 let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))"
