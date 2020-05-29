@@ -61,6 +61,17 @@ final class SoftwareVideoLayerFrameManager {
     }
     
     func start() {
+        func stringForResource(_ resource: MediaResource?) -> String {
+            guard let resource = resource else {
+                return "<none>"
+            }
+            if let resource = resource as? WebFileReferenceMediaResource {
+                return resource.url
+            } else {
+                return resource.id.uniqueId
+            }
+        }
+        Logger.shared.log("SoftwareVideo", "load video from \(stringForResource(self.resource)) or \(stringForResource(self.secondaryResource))")
         let secondarySignal: Signal<String?, NoError>
         if let secondaryResource = self.secondaryResource {
             secondarySignal = self.account.postbox.mediaBox.resourceData(secondaryResource, option: .complete(waitUntilFetchStatus: false))
@@ -90,7 +101,8 @@ final class SoftwareVideoLayerFrameManager {
         }
         |> take(1)
         
-        self.dataDisposable.set((firstReady |> deliverOn(applyQueue)).start(next: { [weak self] path in
+        self.dataDisposable.set((firstReady
+        |> deliverOn(applyQueue)).start(next: { [weak self] path in
             if let strongSelf = self {
                 let _ = strongSelf.source.swap(SoftwareVideoSource(path: path))
             }

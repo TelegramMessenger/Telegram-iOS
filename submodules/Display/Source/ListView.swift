@@ -4278,3 +4278,7 @@ private func findAccessibilityFocus(_ node: ASDisplayNode) -> Bool {
     }
     return false
 }
+
+public func randomfqweeqwf() {
+    print("t")
+}

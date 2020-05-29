@@ -9,4 +9,5 @@ build --strategy=SwiftCompile=local
 build --features=debug_prefix_map_pwd_is_dot
 build --features=swift.cacheable_swiftmodules
 build --features=swift.debug_prefix_map
+build --features=swift.enable_vfsoverlays
 
