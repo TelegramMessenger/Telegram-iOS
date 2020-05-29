@@ -48,15 +48,14 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     let durationPromise = Promise<Double>()
     
     var source: AnimatedStickerNodeSource?
-    var frameSource: AnimatedStickerFrameSource?
-    var frameQueue: QueueLocalObject<AnimatedStickerFrameQueue>?
+    var frameQueue = Promise<QueueLocalObject<AnimatedStickerFrameQueue>?>()
     
     var frameCount: Int?
     var frameRate: Int?
     var totalDuration: Double?
         
     let queue = Queue()
-    let disposable = MetaDisposable()
+    let disposables = DisposableSet()
     
     let imagePromise = Promise<UIImage>()
     
@@ -73,20 +72,12 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 if let source = self.source {
                     let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
-                    self.disposable.set((source.cachedDataPath(width: Int(fittedDimensions.width), height: Int(fittedDimensions.height))
+                    self.disposables.add((source.cachedDataPath(width: Int(fittedDimensions.width), height: Int(fittedDimensions.height))
                         |> deliverOn(self.queue)).start(next: { [weak self] path, complete in
                         if let strongSelf = self, complete {
                             if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                                 let queue = strongSelf.queue
                                 let frameSource = AnimatedStickerCachedFrameSource(queue: queue, data: data, complete: complete, notifyUpdated: {})!
-                                
-                                let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
-                                    return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
-                                })
-                                
-                                strongSelf.frameQueue = frameQueue
-                                strongSelf.frameSource = frameSource
-                                
                                 strongSelf.frameCount = frameSource.frameCount
                                 strongSelf.frameRate = frameSource.frameRate
                                 
@@ -94,12 +85,17 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                                 strongSelf.totalDuration = duration
                                 
                                 strongSelf.durationPromise.set(.single(duration))
+                                
+                                let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
+                                    return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
+                                })
+                                strongSelf.frameQueue.set(.single(frameQueue))
                             }
                         }
                     }))
                 }
             } else {
-                self.disposable.set((chatMessageSticker(account: self.account, file: self.file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
+                self.disposables.add((chatMessageSticker(account: self.account, file: self.file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
                 |> deliverOn(self.queue)).start(next: { [weak self] generator in
                     if let strongSelf = self {
                         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: entity.baseSize, boundingSize: entity.baseSize, intrinsicInsets: UIEdgeInsets()))
@@ -116,7 +112,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     }
     
     deinit {
-        self.disposable.dispose()
+        self.disposables.dispose()
     }
     
     var duration: Signal<Double, NoError> {
@@ -152,14 +148,17 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     var cachedCIImage: CIImage?
     func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
         if self.animated {
-            let frameQueue = self.frameQueue
-            let duration = self.totalDuration
-            let frameCount = self.frameCount
-            
             let currentTime = CMTimeGetSeconds(time)
             
-            self.queue.async {
-                guard let frameQueue = frameQueue, let duration = duration, let frameCount = frameCount else {
+            self.disposables.add((self.frameQueue.get()
+            |> take(1)
+            |> deliverOn(self.queue)).start(next: { [weak self] frameQueue in
+                guard let strongSelf = self else {
+                    completion(nil)
+                    return
+                }
+
+                guard let frameQueue = frameQueue, let duration = strongSelf.totalDuration, let frameCount = strongSelf.frameCount else {
                     completion(nil)
                     return
                 }
@@ -177,10 +176,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 let upperBound = frameCount - 1
                 let frameIndex = max(lowerBound, min(upperBound, frameOffset))
                 
-                let currentFrameIndex = self.currentFrameIndex
+                let currentFrameIndex = strongSelf.currentFrameIndex
                 if currentFrameIndex != frameIndex {
                     let previousFrameIndex = currentFrameIndex
-                    self.currentFrameIndex = frameIndex
+                    strongSelf.currentFrameIndex = frameIndex
                     
                     var delta = 1
                     if let previousFrameIndex = previousFrameIndex {
@@ -195,9 +194,9 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         return frame
                     }
                     if let maybeFrame = maybeFrame, let frame = maybeFrame {
-                        let image = self.render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
+                        let image = strongSelf.render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
                         completion(image)
-                        self.cachedCIImage = image
+                        strongSelf.cachedCIImage = image
                     } else {
                         completion(nil)
                     }
@@ -205,9 +204,9 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         frameQueue.generateFramesIfNeeded()
                     }
                 } else {
-                    completion(self.cachedCIImage)
+                    completion(strongSelf.cachedCIImage)
                 }
-            }
+            }))
         } else {
             self.queue.async {
                 var image: CIImage?
