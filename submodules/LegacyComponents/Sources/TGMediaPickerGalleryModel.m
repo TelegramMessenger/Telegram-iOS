@@ -396,7 +396,7 @@
     
     TGPhotoEditorControllerIntent intent = isVideo ? TGPhotoEditorControllerVideoIntent : TGPhotoEditorControllerGenericIntent;
     TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:item.editableMediaItem intent:intent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_interfaceView.currentTabs selectedTab:tab];
-    controller.entitiesView = 
+    controller.entitiesView = entitiesView;
     controller.editingContext = _editingContext;
     controller.stickersContext = _stickersContext;
     self.editorController = controller;

@@ -1391,11 +1391,16 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         [itemView setPlayButtonHidden:true animated:true];
                     }
                     
-                    if (strongSelf->_selectionContext.allowGrouping)
-                        [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+                    TGMediaEditingContext *editingContext = strongSelf->_editingContext;
+                    NSMutableArray *items = [strongSelf->_selectionContext.selectedItems mutableCopy];
+                    [items addObject:item.asset];
+                    
+                    for (id<TGMediaEditableItem> editableItem in items) {
+                        [editingContext setTimer:@(time) forItem:editableItem];
+                    }
                     
                     if (strongSelf.finishedWithResults != nil)
-                        strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, false, time);
+                        strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, false, 0);
                     
                     [strongSelf _dismissTransitionForResultController:strongController];
                 });

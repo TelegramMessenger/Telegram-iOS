@@ -226,13 +226,19 @@ UIImage *TGPhotoEditorVideoExtCrop(UIImage *inputImage, UIImage *paintingImage, 
     if (iosMajorVersion() < 7)
         return TGPhotoEditorLegacyCrop(inputImage, paintingImage, orientation, rotation, rect, mirrored, maxSize, shouldResize);
     
+    CGSize fittedOriginalSize = originalSize;
     if (useImageSize)
     {
         CGFloat ratio = inputImage.size.width / originalSize.width;
+        if (skipImageTransform) {
+            
+        }
         rect.origin.x = rect.origin.x * ratio;
         rect.origin.y = rect.origin.y * ratio;
         rect.size.width = rect.size.width * ratio;
         rect.size.height = rect.size.height * ratio;
+        
+        fittedOriginalSize = CGSizeMake(originalSize.width * ratio, originalSize.height * ratio);
     }
     
     CGSize fittedImageSize = shouldResize ? TGFitSize(rect.size, maxSize) : rect.size;
@@ -250,6 +256,7 @@ UIImage *TGPhotoEditorVideoExtCrop(UIImage *inputImage, UIImage *paintingImage, 
     CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
         
     UIImage *image = nil;
+    CGSize imageSize = inputImage.size;
     if (shouldResize)
     {
         CGSize referenceSize = useImageSize ? inputImage.size : originalSize;
@@ -257,6 +264,10 @@ UIImage *TGPhotoEditorVideoExtCrop(UIImage *inputImage, UIImage *paintingImage, 
         CGImageRef resizedImage = TGPhotoLanczosResize(inputImage, resizedSize);
         image = [UIImage imageWithCGImage:resizedImage scale:0.0f orientation:inputImage.imageOrientation];
         CGImageRelease(resizedImage);
+        
+        if (skipImageTransform) {
+            imageSize = CGSizeMake(image.size.width * fittedOriginalSize.width / rect.size.width, image.size.height * fittedOriginalSize.height / rect.size.height);
+        }
     }
     else
     {
@@ -287,8 +298,8 @@ UIImage *TGPhotoEditorVideoExtCrop(UIImage *inputImage, UIImage *paintingImage, 
     {
         if (mirrored)
             CGContextScaleCTM(context, -1.0f, 1.0f);
-        
-        [paintingImage drawInRect:CGRectMake(-image.size.width / 2, -image.size.height / 2, image.size.width, image.size.height)];
+                
+        [paintingImage drawInRect:CGRectMake(-imageSize.width / 2, -imageSize.height / 2, imageSize.width, imageSize.height)];
     }
     
     UIImage *croppedImage = UIGraphicsGetImageFromCurrentImageContext();
