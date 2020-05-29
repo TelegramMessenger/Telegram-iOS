@@ -1265,6 +1265,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }
     }
        
+    fileprivate var didAppear: (() -> Void)?
+    fileprivate var willDisappear: (() -> Void)?
+    
     func animateIn() {
         self.isUserInteractionEnabled = true
         self.isHidden = false
@@ -1273,10 +1276,16 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             self.insertSubnode(hiddenPane, belowSubnode: self.collectionListContainer)
         }
         
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.didAppear?()
+            }
+        })
     }
     
     func animateOut() {
+        self.willDisappear?()
+        
         self.isUserInteractionEnabled = false
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak self] _ in
             if let strongSelf = self {
@@ -1299,6 +1308,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
 }
 
 final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
+    public var screenDidAppear: (() -> Void)?
+    public var screenWillDisappear: (() -> Void)?
+    
     private let context: AccountContext
     var selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
@@ -1367,6 +1379,12 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
         )
         (self.displayNode as! DrawingStickersScreenNode).dismiss = { [weak self] in
             self?.dismiss()
+        }
+        (self.displayNode as! DrawingStickersScreenNode).didAppear = { [weak self] in
+            self?.screenDidAppear?()
+        }
+        (self.displayNode as! DrawingStickersScreenNode).willDisappear = { [weak self] in
+            self?.screenWillDisappear?()
         }
         self._ready.set(self.controllerNode.ready.get())
         

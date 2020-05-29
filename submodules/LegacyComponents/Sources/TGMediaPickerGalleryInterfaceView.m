@@ -911,12 +911,12 @@
 
 - (bool)shouldDisplayTooltip
 {
-    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v1"] boolValue];
+    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v2"] boolValue];
 }
 
 - (void)setupTooltip:(CGRect)rect
 {
-    if (_tooltipContainerView != nil)
+    if (_tooltipContainerView != nil || !_hasTimer)
         return;
     
     _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:2.5 repeat:false];
@@ -934,7 +934,7 @@
     
     [_tooltipContainerView showMenuFromRect:rect animated:false];
     
-    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedMediaTimerTooltip_v1"];
+    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedMediaTimerTooltip_v2"];
 }
 
 - (void)tooltipTimerTick

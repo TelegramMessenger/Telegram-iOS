@@ -31,6 +31,8 @@
 
 @property (nonatomic, copy) void (^tabsChanged)(void);
 
+@property (nonatomic, copy) void (^controlVideoPlayback)(bool);
+
 @property (nonatomic, assign) TGPhotoEditorTab availableTabs;
 
 @property (nonatomic, assign) TGPhotoEditorTab switchingToTab;

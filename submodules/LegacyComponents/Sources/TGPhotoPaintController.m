@@ -1012,10 +1012,21 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _stickersScreen = _stickersContext.presentStickersController(^(id document, bool animated, UIView *view, CGRect rect) {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf != nil) {
-//            UIView *snapshot = [view snapshotViewAfterScreenUpdates:false];
             [strongSelf createNewStickerWithDocument:document animated:animated transitionPoint:CGPointZero snapshotView:nil];
         }
     });
+    _stickersScreen.screenDidAppear = ^{
+        __strong TGPhotoPaintController *strongSelf = weakSelf;
+        if (strongSelf != nil) {
+            strongSelf.controlVideoPlayback(false);
+        }
+    };
+    _stickersScreen.screenWillDisappear = ^{
+        __strong TGPhotoPaintController *strongSelf = weakSelf;
+        if (strongSelf != nil) {
+            strongSelf.controlVideoPlayback(true);
+        }
+    };
 }
 
 - (void)createNewStickerWithDocument:(id)document animated:(bool)animated transitionPoint:(CGPoint)transitionPoint snapshotView:(UIView *)snapshotView

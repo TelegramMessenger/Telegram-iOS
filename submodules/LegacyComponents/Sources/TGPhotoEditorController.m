@@ -922,7 +922,16 @@
             TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
             paintController.stickersContext = _stickersContext;
             paintController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
-            
+            paintController.controlVideoPlayback = ^(bool play) {
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                if (play) {
+                    [strongSelf->_player play];
+                } else {
+                    [strongSelf->_player pause];
+                }
+            };
             paintController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
             {
                 __strong TGPhotoEditorController *strongSelf = weakSelf;

@@ -560,8 +560,14 @@
     
     controller.requestOriginalFullSizeImage = ^SSignal *(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
     {
-        if (editableItem.isVideo && [editableItem isKindOfClass:[TGMediaAsset class]]) {
-            return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+        if (editableItem.isVideo) {
+            if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
+                return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+            } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
+                return [SSignal single:((TGCameraCapturedVideo *)editableItem).avAsset];
+            } else {
+                return [editableItem originalImageSignal:position];
+            }
         } else {
             return [editableItem originalImageSignal:position];
         }

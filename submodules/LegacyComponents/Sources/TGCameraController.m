@@ -1761,7 +1761,17 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             
             controller.requestOriginalFullSizeImage = ^(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
             {
-                return [editableItem originalImageSignal:position];
+                if (editableItem.isVideo) {
+                    if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
+                        return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                    } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
+                        return [SSignal single:((TGCameraCapturedVideo *)editableItem).avAsset];
+                    } else {
+                        return [editableItem originalImageSignal:position];
+                    }
+                } else {
+                    return [editableItem originalImageSignal:position];
+                }
             };
             
             overlayController = (TGOverlayController *)controller;

@@ -20,6 +20,9 @@
 
 @protocol TGPhotoPaintStickersScreen <NSObject>
 
+@property (nonatomic, copy) void(^screenDidAppear)(void);
+@property (nonatomic, copy) void(^screenWillDisappear)(void);
+
 - (void)restore;
 - (void)invalidate;
 
