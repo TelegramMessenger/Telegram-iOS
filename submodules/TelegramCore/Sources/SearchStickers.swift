@@ -300,8 +300,12 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
 }
 
 public func searchGifs(account: Account, query: String) -> Signal<ChatContextResultCollection?, NoError> {
-    return resolvePeerByName(account: account, name: "gif")
-    |> filter { $0 != nil }
+   return account.postbox.transaction { transaction -> String in
+        let configuration = currentSearchBotsConfiguration(transaction: transaction)
+        return configuration.gifBotUsername ?? "gif"
+    } |> mapToSignal {
+         return resolvePeerByName(account: account, name: $0)
+    } |> filter { $0 != nil }
     |> map { $0! }
     |> mapToSignal { peerId -> Signal<Peer, NoError> in
         return account.postbox.loadedPeerWithId(peerId)
