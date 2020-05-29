@@ -267,11 +267,14 @@ UIImage *TGPhotoEditorVideoExtCrop(UIImage *inputImage, UIImage *paintingImage, 
         
         if (skipImageTransform) {
             imageSize = CGSizeMake(image.size.width * fittedOriginalSize.width / rect.size.width, image.size.height * fittedOriginalSize.height / rect.size.height);
+        } else {
+            imageSize = image.size;
         }
     }
     else
     {
         image = inputImage;
+        imageSize = image.size;
     }
     
     if (skipImageTransform) {
