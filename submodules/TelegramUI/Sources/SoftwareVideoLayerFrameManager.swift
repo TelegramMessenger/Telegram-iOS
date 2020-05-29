@@ -72,12 +72,12 @@ final class SoftwareVideoLayerFrameManager {
             }
         }
         Logger.shared.log("SoftwareVideo", "load video from \(stringForResource(self.resource)) or \(stringForResource(self.secondaryResource))")
-        let secondarySignal: Signal<String?, NoError>
+        let secondarySignal: Signal<(String, MediaResource)?, NoError>
         if let secondaryResource = self.secondaryResource {
             secondarySignal = self.account.postbox.mediaBox.resourceData(secondaryResource, option: .complete(waitUntilFetchStatus: false))
-            |> map { data -> String? in
+            |> map { data -> (String, MediaResource)? in
                 if data.complete {
-                    return data.path
+                    return (data.path, secondaryResource)
                 } else {
                     return nil
                 }
@@ -86,13 +86,15 @@ final class SoftwareVideoLayerFrameManager {
             secondarySignal = .single(nil)
         }
         
-        let firstReady: Signal<String, NoError> = combineLatest(
+        let firstResource = self.resource
+        
+        let firstReady: Signal<(String, MediaResource), NoError> = combineLatest(
             self.account.postbox.mediaBox.resourceData(self.resource, option: .complete(waitUntilFetchStatus: false)),
             secondarySignal
         )
-        |> mapToSignal { first, second -> Signal<String, NoError> in
+        |> mapToSignal { first, second -> Signal<(String, MediaResource), NoError> in
             if first.complete {
-                return .single(first.path)
+                return .single((first.path, firstResource))
             } else if let second = second {
                 return .single(second)
             } else {
@@ -102,8 +104,11 @@ final class SoftwareVideoLayerFrameManager {
         |> take(1)
         
         self.dataDisposable.set((firstReady
-        |> deliverOn(applyQueue)).start(next: { [weak self] path in
+        |> deliverOn(applyQueue)).start(next: { [weak self] path, resource in
             if let strongSelf = self {
+                let size = fileSize(path)
+                Logger.shared.log("SoftwareVideo", "loaded video from \(stringForResource(resource)) (file size: \(String(describing: size))")
+                
                 let _ = strongSelf.source.swap(SoftwareVideoSource(path: path))
             }
         }))
