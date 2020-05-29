@@ -21,6 +21,8 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
     private var didSetUpAnimationNode = false
     private let stickerFetchedDisposable = MetaDisposable()
     
+    private let cachedDisposable = MetaDisposable()
+    
     init(context: AccountContext, file: TelegramMediaFile) {
         self.context = context
         self.file = file
@@ -40,6 +42,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
     
     deinit {
         self.stickerFetchedDisposable.dispose()
+        self.cachedDisposable.dispose()
     }
     
     func image() -> UIImage! {
@@ -103,7 +106,11 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 self.didSetUpAnimationNode = true
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                self.animationNode?.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource)
+                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
+            
+                self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
+                |> deliverOn(Queue.concurrentDefaultQueue())).start())
             }
         }
     }

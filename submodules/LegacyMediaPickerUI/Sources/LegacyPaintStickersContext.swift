@@ -20,6 +20,30 @@ protocol LegacyPaintEntity {
     func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void)
 }
 
+private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType) -> CIImage? {
+    let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
+    assert(bytesPerRow == calculatedBytesPerRow)
+    
+    let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
+        switch type {
+            case .yuva:
+                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                    decodeYUVAToRGBA(bytes, pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
+                }
+            case .argb:
+                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                    memcpy(pixelData, bytes, data.count)
+                }
+        }
+    })
+
+    if let image = image {
+        return CIImage(image: image)
+    } else {
+        return nil
+    }
+}
+
 private class LegacyPaintStickerEntity: LegacyPaintEntity {
     var position: CGPoint {
         return self.entity.position
@@ -71,7 +95,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 self.source = AnimatedStickerResourceSource(account: account, resource: file.resource)
                 if let source = self.source {
                     let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
                     self.disposables.add((source.cachedDataPath(width: Int(fittedDimensions.width), height: Int(fittedDimensions.height))
                         |> deliverOn(self.queue)).start(next: { [weak self] path, complete in
                         if let strongSelf = self, complete {
@@ -118,31 +142,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     var duration: Signal<Double, NoError> {
         return self.durationPromise.get()
     }
-    
-    private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType) -> CIImage? {
-        let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
-        assert(bytesPerRow == calculatedBytesPerRow)
         
-        let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
-            switch type {
-                case .yuva:
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        decodeYUVAToRGBA(bytes, pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
-                    }
-                case .argb:
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        memcpy(pixelData, bytes, data.count)
-                    }
-            }
-        })
-    
-        if let image = image {
-            return CIImage(image: image)
-        } else {
-            return nil
-        }
-    }
-    
     var currentFrameIndex: Int?
    
     var cachedCIImage: CIImage?
@@ -194,7 +194,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         return frame
                     }
                     if let maybeFrame = maybeFrame, let frame = maybeFrame {
-                        let image = strongSelf.render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
+                        let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
                         completion(image)
                         strongSelf.cachedCIImage = image
                     } else {

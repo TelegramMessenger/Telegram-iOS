@@ -61,6 +61,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     private let stickerListView: ListView
     private let maskListView: ListView
+    private var hiddenListView: ListView?
     
     private var searchContainerNode: PaneSearchContainerNode?
     private let searchContainerNodeLoadedDisposable = MetaDisposable()
@@ -293,8 +294,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                 }
             }
-        }, openPeerSpecificSettings: { [weak self] in
-        }, dismissPeerSpecificSettings: { [weak self] in
+        }, openPeerSpecificSettings: {
+        }, dismissPeerSpecificSettings: {
         }, clearRecentlyUsedStickers: { [weak self] in
             if let strongSelf = self {
                 let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: strongSelf.presentationData.theme, fontSize: strongSelf.presentationData.listsFontSize))
@@ -410,8 +411,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                         }
                     }
                 }
-            }, openPeerSpecificSettings: { [weak self] in
-            }, dismissPeerSpecificSettings: { [weak self] in
+            }, openPeerSpecificSettings: {
+            }, dismissPeerSpecificSettings: {
             }, clearRecentlyUsedStickers: { [weak self] in
                 if let strongSelf = self {
                     let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: strongSelf.presentationData.theme, fontSize: strongSelf.presentationData.listsFontSize))
@@ -1274,6 +1275,11 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         if let hiddenPane = self.hiddenPane {
             self.insertSubnode(hiddenPane, belowSubnode: self.collectionListContainer)
+            self.hiddenPane = nil
+        }
+        if let hiddenListView = self.hiddenListView {
+            self.collectionListContainer.addSubnode(hiddenListView)
+            self.hiddenListView = nil
         }
         
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
@@ -1291,10 +1297,13 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             if let strongSelf = self {
                 if strongSelf.stickerPane.supernode != nil {
                     strongSelf.hiddenPane = strongSelf.stickerPane
+                    strongSelf.hiddenListView = strongSelf.stickerListView
                 } else if strongSelf.maskPane.supernode != nil {
                     strongSelf.hiddenPane = strongSelf.maskPane
+                    strongSelf.hiddenListView = strongSelf.maskListView
                 }
                 strongSelf.hiddenPane?.removeFromSupernode()
+                strongSelf.hiddenListView?.removeFromSupernode()
                 strongSelf.isHidden = true
             }
         })
