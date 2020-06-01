@@ -299,7 +299,7 @@ public func searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundSt
     } |> switchToLatest
 }
 
-public func searchGifs(account: Account, query: String) -> Signal<ChatContextResultCollection?, NoError> {
+public func searchGifs(account: Account, query: String, nextOffset: String = "") -> Signal<ChatContextResultCollection?, NoError> {
    return account.postbox.transaction { transaction -> String in
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
@@ -311,7 +311,7 @@ public func searchGifs(account: Account, query: String) -> Signal<ChatContextRes
         return account.postbox.loadedPeerWithId(peerId)
     }
     |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
-        return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: "")
+        return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: nextOffset)
         |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
             return .single(nil)
         }
