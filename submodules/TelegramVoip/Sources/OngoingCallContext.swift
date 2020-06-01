@@ -8,7 +8,7 @@ import TelegramUIPreferences
 
 import TgVoip
 //import TgVoipWebrtc
-//import TgVoipWebrtcCustom
+import TgVoipWebrtcCustom
 
 private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription {
     return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
@@ -18,9 +18,9 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     return OngoingCallConnectionDescriptionWebrtc(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
 }*/
 
-/*private func callConnectionDescriptionWebrtcCustom(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtcCustom {
+private func callConnectionDescriptionWebrtcCustom(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtcCustom {
     return OngoingCallConnectionDescriptionWebrtcCustom(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
-}*/
+}
 
 private let callLogsLimit = 20
 
@@ -85,11 +85,11 @@ private let setupLogs: Bool = {
             Logger.shared.log("TGVOIP", value)
         }
     })*/
-    /*OngoingCallThreadLocalContextWebrtcCustom.setupLoggingFunction({ value in
+    OngoingCallThreadLocalContextWebrtcCustom.setupLoggingFunction({ value in
         if let value = value {
             Logger.shared.log("TGVOIP", value)
         }
-    })*/
+    })
     return true
 }()
 
@@ -100,7 +100,7 @@ public enum OngoingCallContextState {
     case failed
 }
 
-private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue/*, OngoingCallThreadLocalContextQueueWebrtc,*/ /*OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
+private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue/*, OngoingCallThreadLocalContextQueueWebrtc*/ , OngoingCallThreadLocalContextQueueWebrtcCustom {
     private let queue: Queue
     
     init(queue: Queue) {
@@ -164,7 +164,7 @@ private func ongoingNetworkTypeForType(_ type: NetworkType) -> OngoingCallNetwor
     }
 }*/
 
-/*private func ongoingNetworkTypeForTypeWebrtcCustom(_ type: NetworkType) -> OngoingCallNetworkTypeWebrtcCustom {
+private func ongoingNetworkTypeForTypeWebrtcCustom(_ type: NetworkType) -> OngoingCallNetworkTypeWebrtcCustom {
     switch type {
         case .none:
             return .wifi
@@ -182,7 +182,7 @@ private func ongoingNetworkTypeForType(_ type: NetworkType) -> OngoingCallNetwor
                     return .cellularLte
             }
     }
-}*/
+}
 
 private func ongoingDataSavingForType(_ type: VoiceCallDataSaving) -> OngoingCallDataSaving {
     switch type {
@@ -210,7 +210,7 @@ private func ongoingDataSavingForType(_ type: VoiceCallDataSaving) -> OngoingCal
     }
 }*/
 
-/*private func ongoingDataSavingForTypeWebrtcCustom(_ type: VoiceCallDataSaving) -> OngoingCallDataSavingWebrtcCustom {
+private func ongoingDataSavingForTypeWebrtcCustom(_ type: VoiceCallDataSaving) -> OngoingCallDataSavingWebrtcCustom {
     switch type {
         case .never:
             return .never
@@ -221,7 +221,7 @@ private func ongoingDataSavingForType(_ type: VoiceCallDataSaving) -> OngoingCal
         default:
             return .never
     }
-}*/
+}
 
 private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetNetworkType(_ type: NetworkType)
@@ -292,7 +292,7 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     }
 }*/
 
-/*extension OngoingCallThreadLocalContextWebrtcCustom: OngoingCallThreadLocalContextProtocol {
+extension OngoingCallThreadLocalContextWebrtcCustom: OngoingCallThreadLocalContextProtocol {
     func nativeSetNetworkType(_ type: NetworkType) {
         self.setNetworkType(ongoingNetworkTypeForTypeWebrtcCustom(type))
     }
@@ -316,7 +316,7 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     func nativeGetDerivedState() -> Data {
         return self.getDerivedState()
     }
-}*/
+}
 
 private extension OngoingCallContextState {
     init(_ state: OngoingCallState) {
@@ -352,7 +352,7 @@ private extension OngoingCallContextState {
     }
 }*/
 
-/*private extension OngoingCallContextState {
+private extension OngoingCallContextState {
     init(_ state: OngoingCallStateWebrtcCustom) {
         switch state {
         case .initializing:
@@ -367,7 +367,7 @@ private extension OngoingCallContextState {
             self = .failed
         }
     }
-}*/
+}
 
 public final class OngoingCallContext {
     public let internalId: CallSessionInternalId
@@ -400,9 +400,9 @@ public final class OngoingCallContext {
     
     public static func versions(includeExperimental: Bool) -> [String] {
         var result: [String] = [OngoingCallThreadLocalContext.version()]
-        /*if includeExperimental {
+        if includeExperimental {
             result.append(OngoingCallThreadLocalContextWebrtcCustom.version())
-        }*/
+        }
         return result
     }
 
@@ -425,7 +425,7 @@ public final class OngoingCallContext {
         |> take(1)
         |> deliverOn(queue)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                /*if version == OngoingCallThreadLocalContextWebrtcCustom.version() {
+                if version == OngoingCallThreadLocalContextWebrtcCustom.version() {
                     var voipProxyServer: VoipProxyServerWebrtcCustom?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -453,7 +453,7 @@ public final class OngoingCallContext {
                             context.nativeSetNetworkType(networkType)
                         }
                     })
-                }*//* else if version == OngoingCallThreadLocalContextWebrtc.version() {
+                }/* else if version == OngoingCallThreadLocalContextWebrtc.version() {
                     var voipProxyServer: VoipProxyServerWebrtc?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -479,7 +479,7 @@ public final class OngoingCallContext {
                             context.nativeSetNetworkType(networkType)
                         }
                     })
-                }*/ do {
+                }*/ else {
                     var voipProxyServer: VoipProxyServer?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -512,9 +512,9 @@ public final class OngoingCallContext {
         self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)
         |> deliverOn(self.queue)).start(next: { [weak self] data in
             self?.withContext { context in
-                /*if let context = context as? OngoingCallThreadLocalContextWebrtcCustom {
+                if let context = context as? OngoingCallThreadLocalContextWebrtcCustom {
                     context.receiveSignaling(data)
-                }*/
+                }
             }
         })
     }
@@ -584,9 +584,9 @@ public final class OngoingCallContext {
     
     public func getVideoView(completion: @escaping (UIView?) -> Void) {
         self.withContext { context in
-            /*if let context = context as? OngoingCallThreadLocalContextWebrtcCustom {
+            if let context = context as? OngoingCallThreadLocalContextWebrtcCustom {
                 context.getRemoteCameraView(completion)
-            }*/
+            }
             completion(nil)
         }
     }
