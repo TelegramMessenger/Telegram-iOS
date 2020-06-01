@@ -487,6 +487,8 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: inputMaskCoords))
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
+            case .hintFileIsLarge:
+                break
             case let .Video(duration, size, videoFlags):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
@@ -588,9 +590,18 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
             hintSize = Int(size)
         }
-        if (file.resource.headerSize != 0 || file.mimeType.hasPrefix("video/mp4")) && !file.isAnimated {
-            hintFileIsLarge = true
+        
+        loop: for attr in file.attributes {
+            switch attr {
+            case .hintFileIsLarge:
+                hintFileIsLarge = true
+                break loop
+            default:
+                break loop
+            }
         }
+
+        
         let fileReference: AnyMediaReference
         if let partialReference = file.partialReference {
             fileReference = partialReference.mediaReference(file)

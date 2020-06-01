@@ -521,6 +521,8 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
                 break
+            case .hintFileIsLarge:
+                break
         }
     }
     return result
@@ -576,6 +578,8 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
                 break
+            case .hintFileIsLarge:
+                break
         }
     }
     return result
@@ -630,6 +634,8 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
+                break
+            case .hintFileIsLarge:
                 break
         }
     }
