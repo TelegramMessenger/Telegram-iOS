@@ -32,45 +32,46 @@ class BasicPacketSocketFactory;
 namespace webrtc {
 
 class RtcEventLog;
+class TgPeerConnection;
 
-class TgPeerConnectionFactory : public PeerConnectionFactoryInterface {
+class TgPeerConnectionFactory: public rtc::RefCountInterface {
  public:
-  void SetOptions(const Options& options) override;
+  void SetOptions(const PeerConnectionFactoryInterface::Options& options);
 
-  rtc::scoped_refptr<PeerConnectionInterface> CreatePeerConnection(
+  rtc::scoped_refptr<TgPeerConnection> CreatePeerConnection(
       const PeerConnectionInterface::RTCConfiguration& configuration,
       std::unique_ptr<cricket::PortAllocator> allocator,
       std::unique_ptr<rtc::RTCCertificateGeneratorInterface> cert_generator,
-      PeerConnectionObserver* observer) override;
+      PeerConnectionObserver* observer);
 
-  rtc::scoped_refptr<PeerConnectionInterface> CreatePeerConnection(
+  rtc::scoped_refptr<TgPeerConnection> CreatePeerConnection(
       const PeerConnectionInterface::RTCConfiguration& configuration,
-      PeerConnectionDependencies dependencies) override;
+      PeerConnectionDependencies dependencies);
 
   bool Initialize();
 
   RtpCapabilities GetRtpSenderCapabilities(
-      cricket::MediaType kind) const override;
+      cricket::MediaType kind) const;
 
   RtpCapabilities GetRtpReceiverCapabilities(
-      cricket::MediaType kind) const override;
+      cricket::MediaType kind) const;
 
   rtc::scoped_refptr<MediaStreamInterface> CreateLocalMediaStream(
-      const std::string& stream_id) override;
+      const std::string& stream_id);
 
   rtc::scoped_refptr<AudioSourceInterface> CreateAudioSource(
-      const cricket::AudioOptions& options) override;
+      const cricket::AudioOptions& options);
 
   rtc::scoped_refptr<VideoTrackInterface> CreateVideoTrack(
       const std::string& id,
-      VideoTrackSourceInterface* video_source) override;
+      VideoTrackSourceInterface* video_source);
 
   rtc::scoped_refptr<AudioTrackInterface> CreateAudioTrack(
       const std::string& id,
-      AudioSourceInterface* audio_source) override;
+      AudioSourceInterface* audio_source);
 
-  bool StartAecDump(FILE* file, int64_t max_size_bytes) override;
-  void StopAecDump() override;
+  bool StartAecDump(FILE* file, int64_t max_size_bytes);
+  void StopAecDump();
 
   virtual std::unique_ptr<cricket::SctpTransportInternalFactory>
   CreateSctpTransportInternalFactory();
@@ -85,7 +86,7 @@ class TgPeerConnectionFactory : public PeerConnectionFactoryInterface {
   rtc::Thread* worker_thread() { return worker_thread_; }
   rtc::Thread* network_thread() { return network_thread_; }
 
-  const Options& options() const { return options_; }
+  const PeerConnectionFactoryInterface::Options& options() const { return options_; }
 
   MediaTransportFactory* media_transport_factory() {
     return media_transport_factory_.get();
@@ -116,7 +117,7 @@ class TgPeerConnectionFactory : public PeerConnectionFactoryInterface {
   std::unique_ptr<rtc::Thread> owned_network_thread_;
   std::unique_ptr<rtc::Thread> owned_worker_thread_;
   const std::unique_ptr<TaskQueueFactory> task_queue_factory_;
-  Options options_;
+  PeerConnectionFactoryInterface::Options options_;
   std::unique_ptr<cricket::ChannelManager> channel_manager_;
   std::unique_ptr<rtc::BasicNetworkManager> default_network_manager_;
   std::unique_ptr<rtc::BasicPacketSocketFactory> default_socket_factory_;

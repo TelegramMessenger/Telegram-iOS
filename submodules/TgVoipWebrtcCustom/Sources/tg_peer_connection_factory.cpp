@@ -48,25 +48,6 @@
 
 namespace webrtc {
 
-rtc::scoped_refptr<PeerConnectionFactoryInterface>
-CreateModularPeerConnectionFactory(
-    PeerConnectionFactoryDependencies dependencies) {
-  rtc::scoped_refptr<TgPeerConnectionFactory> pc_factory(
-      new rtc::RefCountedObject<TgPeerConnectionFactory>(
-          std::move(dependencies)));
-  // Call Initialize synchronously but make sure it is executed on
-  // |signaling_thread|.
-  MethodCall<TgPeerConnectionFactory, bool> call(
-      pc_factory.get(), &TgPeerConnectionFactory::Initialize);
-  bool result = call.Marshal(RTC_FROM_HERE, pc_factory->signaling_thread());
-
-  if (!result) {
-    return nullptr;
-  }
-  return PeerConnectionFactoryProxy::Create(pc_factory->signaling_thread(),
-                                            pc_factory);
-}
-
 TgPeerConnectionFactory::TgPeerConnectionFactory(
     PeerConnectionFactoryDependencies dependencies)
     : wraps_current_thread_(false),
@@ -153,7 +134,7 @@ bool TgPeerConnectionFactory::Initialize() {
   return true;
 }
 
-void TgPeerConnectionFactory::SetOptions(const Options& options) {
+void TgPeerConnectionFactory::SetOptions(const PeerConnectionFactory::Options& options) {
   options_ = options;
 }
 
@@ -229,7 +210,7 @@ void TgPeerConnectionFactory::StopAecDump() {
   channel_manager_->StopAecDump();
 }
 
-rtc::scoped_refptr<PeerConnectionInterface>
+rtc::scoped_refptr<TgPeerConnection>
 TgPeerConnectionFactory::CreatePeerConnection(
     const PeerConnectionInterface::RTCConfiguration& configuration,
     std::unique_ptr<cricket::PortAllocator> allocator,
@@ -243,7 +224,7 @@ TgPeerConnectionFactory::CreatePeerConnection(
   return CreatePeerConnection(configuration, std::move(dependencies));
 }
 
-rtc::scoped_refptr<PeerConnectionInterface>
+rtc::scoped_refptr<TgPeerConnection>
 TgPeerConnectionFactory::CreatePeerConnection(
     const PeerConnectionInterface::RTCConfiguration& configuration,
     PeerConnectionDependencies dependencies) {
@@ -300,11 +281,10 @@ TgPeerConnectionFactory::CreatePeerConnection(
   rtc::scoped_refptr<TgPeerConnection> pc(
       new rtc::RefCountedObject<TgPeerConnection>(this, std::move(event_log),
                                                 std::move(call)));
-  ActionsBeforeInitializeForTesting(pc);
   if (!pc->Initialize(configuration, std::move(dependencies))) {
     return nullptr;
   }
-  return PeerConnectionProxy::Create(signaling_thread(), pc);
+  return pc;
 }
 
 rtc::scoped_refptr<MediaStreamInterface>

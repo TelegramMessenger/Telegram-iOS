@@ -183,7 +183,7 @@ public:
     std::unique_ptr<rtc::Thread> _networkThread;
     std::unique_ptr<rtc::Thread> _workerThread;
     std::unique_ptr<rtc::Thread> _signalingThread;
-    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> _nativeFactory;
+    rtc::scoped_refptr<webrtc::TgPeerConnectionFactory> _nativeFactory;
     
     std::unique_ptr<PeerConnectionObserverImpl> _observer;
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> _peerConnection;
@@ -255,7 +255,7 @@ public:
         if (!result) {
             return nil;
         }
-        _nativeFactory = webrtc::PeerConnectionFactoryProxy::Create(pc_factory->signaling_thread(), pc_factory);
+        _nativeFactory = pc_factory;
         
         webrtc::PeerConnectionInterface::RTCConfiguration config;
         config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;

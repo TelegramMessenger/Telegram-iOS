@@ -31,7 +31,7 @@
 #include "pc/sctp_transport.h"
 #include "pc/stats_collector.h"
 #include "pc/stream_collection.h"
-#include "pc/webrtc_session_description_factory.h"
+#include "tg_webrtc_session_description_factory.h"
 #include "rtc_base/experiments/field_trial_parser.h"
 #include "rtc_base/operations_chain.h"
 #include "rtc_base/race_checker.h"
@@ -40,6 +40,8 @@
 
 #include "tg_jsep_transport_controller.h"
 #include "tg_peer_connection_factory.h"
+#include "tg_webrtc_session_description_factory.h"
+#include "tg_rtp_sender.h"
 
 namespace webrtc {
 
@@ -61,11 +63,11 @@ class RtcEventLog;
 // - Generating offers and answers based on the current state.
 // - The ICE state machine.
 // - Generating stats.
-class TgPeerConnection : public PeerConnectionInternal,
-                       public TgJsepTransportController::Observer,
-                       public RtpSenderBase::SetStreamsObserver,
-                       public rtc::MessageHandler,
-                       public sigslot::has_slots<> {
+class TgPeerConnection : public rtc::RefCountInterface,
+public TgJsepTransportController::Observer,
+public TgRtpSenderBase::SetStreamsObserver,
+public rtc::MessageHandler,
+public sigslot::has_slots<> {
  public:
   // A bit in the usage pattern is registered when its defining event occurs at
   // least once.
@@ -122,28 +124,28 @@ class TgPeerConnection : public PeerConnectionInternal,
       const PeerConnectionInterface::RTCConfiguration& configuration,
       PeerConnectionDependencies dependencies);
 
-  rtc::scoped_refptr<StreamCollectionInterface> local_streams() override;
-  rtc::scoped_refptr<StreamCollectionInterface> remote_streams() override;
-  bool AddStream(MediaStreamInterface* local_stream) override;
-  void RemoveStream(MediaStreamInterface* local_stream) override;
+  rtc::scoped_refptr<StreamCollectionInterface> local_streams();
+  rtc::scoped_refptr<StreamCollectionInterface> remote_streams();
+  bool AddStream(MediaStreamInterface* local_stream);
+  void RemoveStream(MediaStreamInterface* local_stream);
 
   RTCErrorOr<rtc::scoped_refptr<RtpSenderInterface>> AddTrack(
       rtc::scoped_refptr<MediaStreamTrackInterface> track,
-      const std::vector<std::string>& stream_ids) override;
-  bool RemoveTrack(RtpSenderInterface* sender) override;
+      const std::vector<std::string>& stream_ids);
+  bool RemoveTrack(RtpSenderInterface* sender);
   RTCError RemoveTrackNew(
-      rtc::scoped_refptr<RtpSenderInterface> sender) override;
+      rtc::scoped_refptr<RtpSenderInterface> sender);
 
   RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>> AddTransceiver(
-      rtc::scoped_refptr<MediaStreamTrackInterface> track) override;
+      rtc::scoped_refptr<MediaStreamTrackInterface> track);
   RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>> AddTransceiver(
       rtc::scoped_refptr<MediaStreamTrackInterface> track,
-      const RtpTransceiverInit& init) override;
+      const RtpTransceiverInit& init);
   RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>> AddTransceiver(
-      cricket::MediaType media_type) override;
+      cricket::MediaType media_type);
   RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>> AddTransceiver(
       cricket::MediaType media_type,
-      const RtpTransceiverInit& init) override;
+      const RtpTransceiverInit& init);
 
   // Gets the DTLS SSL certificate associated with the audio transport on the
   // remote side. This will become populated once the DTLS connection with the
@@ -159,154 +161,153 @@ class TgPeerConnection : public PeerConnectionInternal,
 
   rtc::scoped_refptr<RtpSenderInterface> CreateSender(
       const std::string& kind,
-      const std::string& stream_id) override;
+      const std::string& stream_id);
 
   std::vector<rtc::scoped_refptr<RtpSenderInterface>> GetSenders()
-      const override;
+      const;
   std::vector<rtc::scoped_refptr<RtpReceiverInterface>> GetReceivers()
-      const override;
+      const;
   std::vector<rtc::scoped_refptr<RtpTransceiverInterface>> GetTransceivers()
-      const override;
+      const;
 
   rtc::scoped_refptr<DataChannelInterface> CreateDataChannel(
       const std::string& label,
-      const DataChannelInit* config) override;
+      const DataChannelInit* config);
   // WARNING: LEGACY. See peerconnectioninterface.h
   bool GetStats(StatsObserver* observer,
                 webrtc::MediaStreamTrackInterface* track,
-                StatsOutputLevel level) override;
+                PeerConnectionInterface::StatsOutputLevel level);
   // Spec-complaint GetStats(). See peerconnectioninterface.h
-  void GetStats(RTCStatsCollectorCallback* callback) override;
+  void GetStats(RTCStatsCollectorCallback* callback);
   void GetStats(
       rtc::scoped_refptr<RtpSenderInterface> selector,
-      rtc::scoped_refptr<RTCStatsCollectorCallback> callback) override;
+      rtc::scoped_refptr<RTCStatsCollectorCallback> callback);
   void GetStats(
       rtc::scoped_refptr<RtpReceiverInterface> selector,
-      rtc::scoped_refptr<RTCStatsCollectorCallback> callback) override;
-  void ClearStatsCache() override;
+      rtc::scoped_refptr<RTCStatsCollectorCallback> callback);
+  void ClearStatsCache();
 
-  SignalingState signaling_state() override;
+  PeerConnectionInterface::SignalingState signaling_state();
 
-  IceConnectionState ice_connection_state() override;
-  IceConnectionState standardized_ice_connection_state() override;
-  PeerConnectionState peer_connection_state() override;
-  IceGatheringState ice_gathering_state() override;
+  PeerConnectionInterface::IceConnectionState ice_connection_state();
+  PeerConnectionInterface::IceConnectionState standardized_ice_connection_state();
+  PeerConnectionInterface::PeerConnectionState peer_connection_state();
+  PeerConnectionInterface::IceGatheringState ice_gathering_state();
 
-  const SessionDescriptionInterface* local_description() const override;
-  const SessionDescriptionInterface* remote_description() const override;
-  const SessionDescriptionInterface* current_local_description() const override;
+  const SessionDescriptionInterface* local_description() const;
+  const SessionDescriptionInterface* remote_description() const;
+  const SessionDescriptionInterface* current_local_description() const;
   const SessionDescriptionInterface* current_remote_description()
-      const override;
-  const SessionDescriptionInterface* pending_local_description() const override;
+      const;
+  const SessionDescriptionInterface* pending_local_description() const;
   const SessionDescriptionInterface* pending_remote_description()
-      const override;
+      const;
 
-  void RestartIce() override;
+  void RestartIce();
 
   // JSEP01
   void CreateOffer(CreateSessionDescriptionObserver* observer,
-                   const RTCOfferAnswerOptions& options) override;
+                   const PeerConnectionInterface::RTCOfferAnswerOptions& options);
   void CreateAnswer(CreateSessionDescriptionObserver* observer,
-                    const RTCOfferAnswerOptions& options) override;
+                    const PeerConnectionInterface::RTCOfferAnswerOptions& options);
   void SetLocalDescription(SetSessionDescriptionObserver* observer,
-                           SessionDescriptionInterface* desc) override;
-  void SetLocalDescription(SetSessionDescriptionObserver* observer) override;
+                           SessionDescriptionInterface* desc);
+  void SetLocalDescription(SetSessionDescriptionObserver* observer);
   void SetRemoteDescription(SetSessionDescriptionObserver* observer,
-                            SessionDescriptionInterface* desc) override;
+                            SessionDescriptionInterface* desc);
   void SetRemoteDescription(
       std::unique_ptr<SessionDescriptionInterface> desc,
-      rtc::scoped_refptr<SetRemoteDescriptionObserverInterface> observer)
-      override;
-  PeerConnectionInterface::RTCConfiguration GetConfiguration() override;
+      rtc::scoped_refptr<SetRemoteDescriptionObserverInterface> observer);
+  PeerConnectionInterface::RTCConfiguration GetConfiguration();
   RTCError SetConfiguration(
-      const PeerConnectionInterface::RTCConfiguration& configuration) override;
-  bool AddIceCandidate(const IceCandidateInterface* candidate) override;
+      const PeerConnectionInterface::RTCConfiguration& configuration);
+  bool AddIceCandidate(const IceCandidateInterface* candidate);
   void AddIceCandidate(std::unique_ptr<IceCandidateInterface> candidate,
-                       std::function<void(RTCError)> callback) override;
+                       std::function<void(RTCError)> callback);
   bool RemoveIceCandidates(
-      const std::vector<cricket::Candidate>& candidates) override;
+      const std::vector<cricket::Candidate>& candidates);
 
-  RTCError SetBitrate(const BitrateSettings& bitrate) override;
+  RTCError SetBitrate(const BitrateSettings& bitrate);
 
-  void SetAudioPlayout(bool playout) override;
-  void SetAudioRecording(bool recording) override;
+  void SetAudioPlayout(bool playout);
+  void SetAudioRecording(bool recording);
 
   rtc::scoped_refptr<DtlsTransportInterface> LookupDtlsTransportByMid(
-      const std::string& mid) override;
+      const std::string& mid);
   rtc::scoped_refptr<DtlsTransport> LookupDtlsTransportByMidInternal(
       const std::string& mid);
 
-  rtc::scoped_refptr<SctpTransportInterface> GetSctpTransport() const override;
+  rtc::scoped_refptr<SctpTransportInterface> GetSctpTransport() const;
 
   bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output,
-                        int64_t output_period_ms) override;
-  bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output) override;
-  void StopRtcEventLog() override;
+                        int64_t output_period_ms);
+  bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output);
+  void StopRtcEventLog();
 
-  void Close() override;
+  void Close();
 
   // PeerConnectionInternal implementation.
-  rtc::Thread* network_thread() const final {
+  rtc::Thread* network_thread() const {
     return factory_->network_thread();
   }
-  rtc::Thread* worker_thread() const final { return factory_->worker_thread(); }
-  rtc::Thread* signaling_thread() const final {
+  rtc::Thread* worker_thread() const { return factory_->worker_thread(); }
+  rtc::Thread* signaling_thread() const {
     return factory_->signaling_thread();
   }
 
-  std::string session_id() const override {
+  std::string session_id() const {
     RTC_DCHECK_RUN_ON(signaling_thread());
     return session_id_;
   }
 
-  bool initial_offerer() const override {
+  bool initial_offerer() const {
     RTC_DCHECK_RUN_ON(signaling_thread());
     return transport_controller_ && transport_controller_->initial_offerer();
   }
 
   std::vector<
       rtc::scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>>
-  GetTransceiversInternal() const override {
+  GetTransceiversInternal() const {
     RTC_DCHECK_RUN_ON(signaling_thread());
     return transceivers_;
   }
 
-  sigslot::signal1<DataChannel*>& SignalDataChannelCreated() override {
+  sigslot::signal1<DataChannel*>& SignalDataChannelCreated() {
       RTC_DCHECK_RUN_ON(signaling_thread());
       return SignalDataChannelCreated_;
   }
 
-  cricket::RtpDataChannel* rtp_data_channel() const override {
+  cricket::RtpDataChannel* rtp_data_channel() const {
     return nullptr;
   }
 
   std::vector<rtc::scoped_refptr<DataChannel>> sctp_data_channels()
-      const override {
+      const {
     RTC_DCHECK_RUN_ON(signaling_thread());
     return std::vector<rtc::scoped_refptr<DataChannel>>();
   }
 
-  absl::optional<std::string> sctp_content_name() const override {
+  absl::optional<std::string> sctp_content_name() const {
     RTC_DCHECK_RUN_ON(signaling_thread());
     return sctp_mid_;
   }
 
-  absl::optional<std::string> sctp_transport_name() const override;
+  absl::optional<std::string> sctp_transport_name() const;
 
-  cricket::CandidateStatsList GetPooledCandidateStats() const override;
-  std::map<std::string, std::string> GetTransportNamesByMid() const override;
+  cricket::CandidateStatsList GetPooledCandidateStats() const;
+  std::map<std::string, std::string> GetTransportNamesByMid() const;
   std::map<std::string, cricket::TransportStats> GetTransportStatsByNames(
-      const std::set<std::string>& transport_names) override;
-  Call::Stats GetCallStats() override;
+      const std::set<std::string>& transport_names);
+  Call::Stats GetCallStats();
 
   bool GetLocalCertificate(
       const std::string& transport_name,
-      rtc::scoped_refptr<rtc::RTCCertificate>* certificate) override;
+      rtc::scoped_refptr<rtc::RTCCertificate>* certificate);
   std::unique_ptr<rtc::SSLCertChain> GetRemoteSSLCertChain(
-      const std::string& transport_name) override;
-  bool IceRestartPending(const std::string& content_name) const override;
-  bool NeedsIceRestart(const std::string& content_name) const override;
-  bool GetSslRole(const std::string& content_name, rtc::SSLRole* role) override;
+      const std::string& transport_name);
+  bool IceRestartPending(const std::string& content_name) const;
+  bool NeedsIceRestart(const std::string& content_name) const;
+  bool GetSslRole(const std::string& content_name, rtc::SSLRole* role);
 
   // Functions needed by DataChannelController
   void NoteDataAddedEvent() { NoteUsageEvent(UsageEvent::DATA_ADDED); }
@@ -457,7 +458,7 @@ class TgPeerConnection : public PeerConnectionInternal,
   cricket::VideoMediaChannel* video_media_channel() const
       RTC_RUN_ON(signaling_thread());
 
-  std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>>
+  std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>>
   GetSendersInternal() const RTC_RUN_ON(signaling_thread());
   std::vector<
       rtc::scoped_refptr<RtpReceiverProxyWithInternal<RtpReceiverInternal>>>
@@ -475,10 +476,10 @@ class TgPeerConnection : public PeerConnectionInternal,
   // onto the |operations_chain_| when the public CreateOffer(), CreateAnswer(),
   // SetLocalDescription() and SetRemoteDescription() methods are invoked.
   void DoCreateOffer(
-      const RTCOfferAnswerOptions& options,
+      const PeerConnectionInterface::RTCOfferAnswerOptions& options,
       rtc::scoped_refptr<CreateSessionDescriptionObserver> observer);
   void DoCreateAnswer(
-      const RTCOfferAnswerOptions& options,
+      const PeerConnectionInterface::RTCOfferAnswerOptions& options,
       rtc::scoped_refptr<CreateSessionDescriptionObserver> observer);
   void DoSetLocalDescription(
       std::unique_ptr<SessionDescriptionInterface> desc,
@@ -540,7 +541,7 @@ class TgPeerConnection : public PeerConnectionInternal,
       const RtpTransceiverInit& init,
       bool fire_callback = true) RTC_RUN_ON(signaling_thread());
 
-  rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
+  rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
   CreateSender(cricket::MediaType media_type,
                const std::string& id,
                rtc::scoped_refptr<MediaStreamTrackInterface> track,
@@ -554,11 +555,11 @@ class TgPeerConnection : public PeerConnectionInternal,
   // transceivers.
   rtc::scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>
   CreateAndAddTransceiver(
-      rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>> sender,
+      rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>> sender,
       rtc::scoped_refptr<RtpReceiverProxyWithInternal<RtpReceiverInternal>>
           receiver) RTC_RUN_ON(signaling_thread());
 
-  void SetIceConnectionState(IceConnectionState new_state)
+  void SetIceConnectionState(PeerConnectionInterface::IceConnectionState new_state)
       RTC_RUN_ON(signaling_thread());
   void SetStandardizedIceConnectionState(
       PeerConnectionInterface::IceConnectionState new_state)
@@ -568,7 +569,7 @@ class TgPeerConnection : public PeerConnectionInternal,
       RTC_RUN_ON(signaling_thread());
 
   // Called any time the IceGatheringState changes.
-  void OnIceGatheringChange(IceGatheringState new_state)
+  void OnIceGatheringChange(PeerConnectionInterface::IceGatheringState new_state)
       RTC_RUN_ON(signaling_thread());
   // New ICE candidate has been gathered.
   void OnIceCandidate(std::unique_ptr<IceCandidateInterface> candidate)
@@ -589,7 +590,7 @@ class TgPeerConnection : public PeerConnectionInternal,
       RTC_RUN_ON(signaling_thread());
 
   // Update the state, signaling if necessary.
-  void ChangeSignalingState(SignalingState signaling_state)
+  void ChangeSignalingState(PeerConnectionInterface::SignalingState signaling_state)
       RTC_RUN_ON(signaling_thread());
 
   // Signals from MediaStreamObserver.
@@ -732,7 +733,7 @@ class TgPeerConnection : public PeerConnectionInternal,
       cricket::MediaSessionOptions* session_options)
       RTC_RUN_ON(signaling_thread());
 
-  RTCError HandleLegacyOfferOptions(const RTCOfferAnswerOptions& options)
+  RTCError HandleLegacyOfferOptions(const PeerConnectionInterface::RTCOfferAnswerOptions& options)
       RTC_RUN_ON(signaling_thread());
   void RemoveRecvDirectionFromReceivingTransceiversOfType(
       cricket::MediaType media_type) RTC_RUN_ON(signaling_thread());
@@ -744,7 +745,7 @@ class TgPeerConnection : public PeerConnectionInternal,
 
   // Returns a MediaSessionOptions struct with options decided by
   // |constraints|, the local MediaStreams and DataChannels.
-  void GetOptionsForAnswer(const RTCOfferAnswerOptions& offer_answer_options,
+  void GetOptionsForAnswer(const PeerConnectionInterface::RTCOfferAnswerOptions& offer_answer_options,
                            cricket::MediaSessionOptions* session_options)
       RTC_RUN_ON(signaling_thread());
   void GetOptionsForPlanBAnswer(
@@ -854,12 +855,12 @@ class TgPeerConnection : public PeerConnectionInternal,
       RTC_RUN_ON(signaling_thread());
 
   // Return the RtpSender with the given track attached.
-  rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
+  rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
   FindSenderForTrack(MediaStreamTrackInterface* track) const
       RTC_RUN_ON(signaling_thread());
 
   // Return the RtpSender with the given id, or null if none exists.
-  rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
+  rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
   FindSenderById(const std::string& sender_id) const
       RTC_RUN_ON(signaling_thread());
 
@@ -888,13 +889,13 @@ class TgPeerConnection : public PeerConnectionInternal,
   InitializePortAllocatorResult InitializePortAllocator_n(
       const cricket::ServerAddresses& stun_servers,
       const std::vector<cricket::RelayServerConfig>& turn_servers,
-      const RTCConfiguration& configuration);
+      const PeerConnectionInterface::RTCConfiguration& configuration);
   // Called when SetConfiguration is called to apply the supported subset
   // of the configuration on the network thread.
   bool ReconfigurePortAllocator_n(
       const cricket::ServerAddresses& stun_servers,
       const std::vector<cricket::RelayServerConfig>& turn_servers,
-      IceTransportsType type,
+      PeerConnectionInterface::IceTransportsType type,
       int candidate_pool_size,
       PortPrunePolicy turn_port_prune_policy,
       webrtc::TurnCustomizer* turn_customizer,
@@ -914,7 +915,7 @@ class TgPeerConnection : public PeerConnectionInternal,
   // or values that conflict with other parameters.
   //
   // Returns RTCError::OK() if there are no issues.
-  RTCError ValidateConfiguration(const RTCConfiguration& config) const;
+  RTCError ValidateConfiguration(const PeerConnectionInterface::RTCConfiguration& config) const;
 
   cricket::ChannelManager* channel_manager() const;
 
@@ -1138,7 +1139,7 @@ class TgPeerConnection : public PeerConnectionInternal,
       rtc::scoped_refptr<DtlsTransport> dtls_transport,
       DataChannelTransportInterface* data_channel_transport) override;
 
-  // RtpSenderBase::SetStreamsObserver override.
+  // TgRtpSenderBase::SetStreamsObserver override.
   void OnSetStreams() override;
 
   // Returns the CryptoOptions for this TgPeerConnection. This will always
@@ -1185,16 +1186,16 @@ class TgPeerConnection : public PeerConnectionInternal,
   rtc::scoped_refptr<rtc::OperationsChain> operations_chain_
       RTC_GUARDED_BY(signaling_thread());
 
-  SignalingState signaling_state_ RTC_GUARDED_BY(signaling_thread()) = kStable;
-  IceConnectionState ice_connection_state_ RTC_GUARDED_BY(signaling_thread()) =
-      kIceConnectionNew;
+  PeerConnectionInterface::SignalingState signaling_state_ RTC_GUARDED_BY(signaling_thread()) = PeerConnectionInterface::kStable;
+  PeerConnectionInterface::IceConnectionState ice_connection_state_ RTC_GUARDED_BY(signaling_thread()) =
+      PeerConnectionInterface::kIceConnectionNew;
   PeerConnectionInterface::IceConnectionState standardized_ice_connection_state_
-      RTC_GUARDED_BY(signaling_thread()) = kIceConnectionNew;
+      RTC_GUARDED_BY(signaling_thread()) = PeerConnectionInterface::kIceConnectionNew;
   PeerConnectionInterface::PeerConnectionState connection_state_
-      RTC_GUARDED_BY(signaling_thread()) = PeerConnectionState::kNew;
+      RTC_GUARDED_BY(signaling_thread()) = PeerConnectionInterface::PeerConnectionState::kNew;
 
-  IceGatheringState ice_gathering_state_ RTC_GUARDED_BY(signaling_thread()) =
-      kIceGatheringNew;
+  PeerConnectionInterface::IceGatheringState ice_gathering_state_ RTC_GUARDED_BY(signaling_thread()) =
+      PeerConnectionInterface::kIceGatheringNew;
   PeerConnectionInterface::RTCConfiguration configuration_
       RTC_GUARDED_BY(signaling_thread());
 
@@ -1270,10 +1271,6 @@ class TgPeerConnection : public PeerConnectionInternal,
   // pointer from any thread.
   Call* const call_ptr_;
 
-  std::unique_ptr<StatsCollector> stats_
-      RTC_GUARDED_BY(signaling_thread());  // A pointer is passed to senders_
-  rtc::scoped_refptr<RTCStatsCollector> stats_collector_
-      RTC_GUARDED_BY(signaling_thread());
   // Holds changes made to transceivers during applying descriptors for
   // potential rollback. Gets cleared once signaling state goes to stable.
   std::map<rtc::scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>,
@@ -1338,7 +1335,7 @@ class TgPeerConnection : public PeerConnectionInternal,
   std::set<std::string> pending_ice_restarts_
       RTC_GUARDED_BY(signaling_thread());
 
-  std::unique_ptr<WebRtcSessionDescriptionFactory> webrtc_session_desc_factory_
+  std::unique_ptr<TgWebRtcSessionDescriptionFactory> webrtc_session_desc_factory_
       RTC_GUARDED_BY(signaling_thread());
 
   // Member variables for caching global options.
