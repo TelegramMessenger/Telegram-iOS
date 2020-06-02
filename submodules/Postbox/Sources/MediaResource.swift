@@ -17,8 +17,12 @@ public struct WrappedMediaResourceId: Hashable {
         return lhs.id.isEqual(to: rhs.id)
     }
     
-    public var hashValue: Int {
-        return self.id.hashValue
+//    public var hashValue: Int {
+//        return self.id.hashValue
+//    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id.hashValue)
     }
 }
 
