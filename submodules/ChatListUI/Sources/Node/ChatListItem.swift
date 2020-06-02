@@ -805,7 +805,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let enableChatListPhotos = item.context.sharedContext.immediateExperimentalUISettings.chatListPhotos
+            let enableChatListPhotos = true
             
             let avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
             let avatarLeftInset = 18.0 + avatarDiameter
@@ -1182,9 +1182,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var textCutout: TextNodeCutout?
             if !textLeftCutout.isZero {
-                textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 4.0), topRight: nil, bottomRight: nil)
+                textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)
             }
-            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize - textLeftCutout, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
             let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -1287,7 +1287,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(0.0, itemHeight + heightOffset)), insets: insets)
             
-            let contentImageSize = CGSize(width: 22.0, height: 22.0)
+            let contentImageSize = CGSize(width: 18.0, height: 18.0)
             
             var customActions: [ChatListItemAccessibilityCustomAction] = []
             for option in peerLeftRevealOptions {
@@ -1541,7 +1541,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.authorNode.frame = authorNodeFrame
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.size.height.isZero ? 0.0 : (authorLayout.size.height - 3.0))), size: textLayout.size)
                     strongSelf.textNode.frame = textNodeFrame
-                    let contentImageFrame = CGRect(origin: textNodeFrame.origin.offsetBy(dx: 1.0, dy: 0.0), size: contentImageSize)
+                    let contentImageFrame = CGRect(origin: textNodeFrame.origin.offsetBy(dx: 1.0, dy: 2.0), size: contentImageSize)
                     if contentImageNodeAppeared {
                         strongSelf.contentImageNode.frame = contentImageFrame
                     } else {
@@ -1750,7 +1750,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             
             var contentImageFrame = self.contentImageNode.frame
-            contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 0.0)
+            contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 2.0)
             transition.updateFrame(node: self.contentImageNode, frame: contentImageFrame)
             
             let dateFrame = self.dateNode.frame
