@@ -10,12 +10,14 @@ import LegacyComponents
 import TelegramUIPreferences
 import AccountContext
 
-public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
-    return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults)
-    |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
+    return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
+    |> `catch` { error -> Signal<RequestChatContextResultsResult?, NoError> in
         return .single(nil)
     }
-    |> mapToSignal { results -> Signal<ChatContextResultCollection?, NoError> in
+    |> mapToSignal { resultsStruct -> Signal<RequestChatContextResultsResult?, NoError> in
+        let results = resultsStruct?.results
+        
         var collection = existingResults
         var updated: Bool = false
         if let existingResults = existingResults, let results = results {
@@ -40,13 +42,15 @@ public func requestContextResults(account: Account, botId: PeerId, query: String
         if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset, updated {
             let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
             if collection.results.count > 10 {
-                return .single(collection)
+                return .single(RequestChatContextResultsResult(results: collection, isStale: resultsStruct?.isStale ?? false))
                 |> then(nextResults)
             } else {
                 return nextResults
             }
+        } else if let collection = collection {
+            return .single(RequestChatContextResultsResult(results: collection, isStale: resultsStruct?.isStale ?? false))
         } else {
-            return .single(collection)
+            return .single(nil)
         }
     }
 }
@@ -424,7 +428,7 @@ public final class WebSearchController: ViewController {
                 let results = requestContextResults(account: account, botId: user.id, query: query, peerId: peerId, limit: 64)
                 |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     return { _ in
-                        return .contextRequestResult(user, results)
+                        return .contextRequestResult(user, results?.results)
                     }
                 }
             

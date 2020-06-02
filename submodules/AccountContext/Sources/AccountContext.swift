@@ -89,7 +89,7 @@ public enum TextLinkItemActionType {
 }
 
 public enum TextLinkItem {
-    case url(String)
+    case url(url: String, concealed: Bool)
     case mention(String)
     case hashtag(String?, String)
 }

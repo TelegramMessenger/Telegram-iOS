@@ -312,6 +312,9 @@ public func searchGifs(account: Account, query: String, nextOffset: String = "")
     }
     |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
         return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: nextOffset)
+        |> map { results -> ChatContextResultCollection? in
+            return results?.results
+        }
         |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
             return .single(nil)
         }

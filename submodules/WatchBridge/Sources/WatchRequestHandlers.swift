@@ -756,6 +756,9 @@ final class WatchLocationHandler: WatchRequestHandler {
                                 return .single(nil)
                             }
                             return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
+                            |> map { results -> ChatContextResultCollection? in
+                                return results?.results
+                            }
                             |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
                                 return .single(nil)
                             }

@@ -127,15 +127,20 @@ private final class ChatInfoTitlePanelButtonNode: HighlightableButtonNode {
 final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var theme: PresentationTheme?
     
+    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private var buttons: [(ChatInfoTitleButton, ChatInfoTitlePanelButtonNode)] = []
     
     override init() {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isLayerBacked = true
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
         super.init()
         
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
     }
     
@@ -146,7 +151,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         let panelHeight: CGFloat = 55.0
         
         if themeUpdated {
-            self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
+            self.backgroundNode.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
             self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         }
         
@@ -197,6 +202,8 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                 nextButtonOrigin += buttonWidth
             }
         }
+        
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         

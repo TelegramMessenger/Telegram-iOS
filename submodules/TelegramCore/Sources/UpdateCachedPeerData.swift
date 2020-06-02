@@ -240,6 +240,19 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                 }
                                 let participants = CachedGroupParticipants(apiParticipants: chatFull.participants)
+                                
+                                var invitedBy: PeerId?
+                                if let participants = participants {
+                                    for participant in participants.participants {
+                                        if participant.peerId == accountPeerId {
+                                            if participant.invitedBy != accountPeerId {
+                                                invitedBy = participant.invitedBy
+                                            }
+                                            break
+                                        }
+                                    }
+                                }
+                                
                                 let exportedInvitation = ExportedInvitation(apiExportedInvite: chatFull.exportedInvite)
                                 let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                             
@@ -289,6 +302,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         .withUpdatedAbout(chatFull.about)
                                         .withUpdatedFlags(flags)
                                         .withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                        .withUpdatedInvitedBy(invitedBy)
                                 })
                             case .channelFull:
                                 break
@@ -298,7 +312,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                     }
                 }
             } else if let inputChannel = maybePeer.flatMap(apiInputChannel) {
-                return network.request(Api.functions.channels.getFullChannel(channel: inputChannel))
+                let fullChannelSignal = network.request(Api.functions.channels.getFullChannel(channel: inputChannel))
                 |> map(Optional.init)
                 |> `catch` { error -> Signal<Api.messages.ChatFull?, NoError> in
                     if error.errorDescription == "CHANNEL_PRIVATE" {
@@ -306,7 +320,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                     }
                     return .single(nil)
                 }
-                |> mapToSignal { result -> Signal<Bool, NoError> in
+                let participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, userId: .inputUserSelf))
+                |> map(Optional.init)
+                |> `catch` { error -> Signal<Api.channels.ChannelParticipant?, NoError> in
+                    return .single(nil)
+                }
+                
+                return combineLatest(fullChannelSignal, participantSignal)
+                |> mapToSignal { result, participantResult -> Signal<Bool, NoError> in
                     return postbox.transaction { transaction -> Bool in
                         if let result = result {
                             switch result {
@@ -423,6 +444,19 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 hasScheduledMessages = true
                                             }
                                             
+                                            var invitedBy: PeerId?
+                                            if let participantResult = participantResult {
+                                                switch participantResult {
+                                                case let.channelParticipant(participant, _):
+                                                    switch participant {
+                                                    case let .channelParticipantSelf(_, inviterId, _):
+                                                        invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId)
+                                                    default:
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                            
                                             var minAvailableMessageIdUpdated = false
                                             transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 var previous: CachedChannelData
@@ -451,6 +485,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedSlowModeValidUntilTimestamp(slowmodeNextSendDate)
                                                     .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                                     .withUpdatedStatsDatacenterId(statsDc ?? 0)
+                                                    .withUpdatedInvitedBy(invitedBy)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
