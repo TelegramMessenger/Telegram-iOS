@@ -307,7 +307,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                     saved = []
                 }
                 
-                return (MultiplexedVideoNodeFiles(saved: saved, trending: trending?.files ?? [], isSearch: false, canLoadMore: false), nil)
+                return (MultiplexedVideoNodeFiles(saved: saved, trending: trending?.files ?? [], isSearch: false, canLoadMore: false, isStale: false), nil)
             }
         case .trending:
             if let searchOffset = searchOffset {
@@ -319,16 +319,16 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                     } else {
                         canLoadMore = true
                     }
-                    return (MultiplexedVideoNodeFiles(saved: [], trending: result?.files ?? [], isSearch: true, canLoadMore: canLoadMore), result?.nextOffset)
+                    return (MultiplexedVideoNodeFiles(saved: [], trending: result?.files ?? [], isSearch: true, canLoadMore: canLoadMore, isStale: false), result?.nextOffset)
                 }
             } else {
                 filesSignal = self.trendingPromise.get()
                 |> map { trending -> (MultiplexedVideoNodeFiles, String?) in
-                    return (MultiplexedVideoNodeFiles(saved: [], trending: trending?.files ?? [], isSearch: true, canLoadMore: false), trending?.nextOffset)
+                    return (MultiplexedVideoNodeFiles(saved: [], trending: trending?.files ?? [], isSearch: true, canLoadMore: false, isStale: false), trending?.nextOffset)
                 }
             }
         case let .emojiSearch(emoji):
-            filesSignal = paneGifSearchForQuery(account: self.account, query: emoji, offset: searchOffset, incompleteResults: true, delayRequest: false, updateActivity: nil)
+            filesSignal = paneGifSearchForQuery(account: self.account, query: emoji, offset: searchOffset, incompleteResults: true, staleCachedResults: searchOffset == nil, delayRequest: false, updateActivity: nil)
             |> map { result -> (MultiplexedVideoNodeFiles, String?) in
                 let canLoadMore: Bool
                 if let result = result {
@@ -336,7 +336,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 } else {
                     canLoadMore = true
                 }
-                return (MultiplexedVideoNodeFiles(saved: [], trending: result?.files ?? [], isSearch: true, canLoadMore: canLoadMore), result?.nextOffset)
+                return (MultiplexedVideoNodeFiles(saved: [], trending: result?.files ?? [], isSearch: true, canLoadMore: canLoadMore, isStale: result?.isStale ?? false), result?.nextOffset)
             }
         }
         
@@ -384,7 +384,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                         existingFileIds.insert(file.file.media.fileId)
                         resultFiles.append(file)
                     }
-                    files = MultiplexedVideoNodeFiles(saved: [], trending: resultFiles, isSearch: true, canLoadMore: addedFiles.canLoadMore)
+                    files = MultiplexedVideoNodeFiles(saved: [], trending: resultFiles, isSearch: true, canLoadMore: addedFiles.canLoadMore, isStale: addedFiles.isStale)
                 }
                 
                 strongSelf.nextOffset = nextOffset

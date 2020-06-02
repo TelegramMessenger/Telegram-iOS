@@ -256,7 +256,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     }
                     |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                         return { _ in
-                            return .contextRequestResult(user, results)
+                            return .contextRequestResult(user, results?.results)
                         }
                     }
                     

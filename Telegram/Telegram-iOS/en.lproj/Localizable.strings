@@ -5521,3 +5521,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Timer.Title" = "Send With Timer";
 "Conversation.Timer.Send" = "Send With Timer";
+
+"Conversation.NoticeInvitedByInChannel" = "%@ invited you to this channel";
+"Conversation.NoticeInvitedByInGroup" = "%@ invited you to this group";

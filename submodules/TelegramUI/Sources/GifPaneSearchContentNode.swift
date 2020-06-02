@@ -15,15 +15,17 @@ class PaneGifSearchForQueryResult {
     let files: [MultiplexedVideoNodeFile]
     let nextOffset: String?
     let isComplete: Bool
+    let isStale: Bool
     
-    init(files: [MultiplexedVideoNodeFile], nextOffset: String?, isComplete: Bool) {
+    init(files: [MultiplexedVideoNodeFile], nextOffset: String?, isComplete: Bool, isStale: Bool) {
         self.files = files
         self.nextOffset = nextOffset
         self.isComplete = isComplete
+        self.isStale = isStale
     }
 }
 
-func paneGifSearchForQuery(account: Account, query: String, offset: String?, incompleteResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
+func paneGifSearchForQuery(account: Account, query: String, offset: String?, incompleteResults: Bool = false, staleCachedResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
     let contextBot = account.postbox.transaction { transaction -> String in
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
@@ -42,14 +44,14 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
             return .single(nil)
         }
     }
-    |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool), NoError> in
+    |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in
         if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-            let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, limit: 1)
-            |> map { results -> (ChatPresentationInputQueryResult?, Bool) in
-                return (.contextRequestResult(user, results), results != nil)
+            let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
+            |> map { results -> (ChatPresentationInputQueryResult?, Bool, Bool) in
+                return (.contextRequestResult(user, results?.results), results != nil, results?.isStale ?? false)
             }
             
-            let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?, Bool), NoError>
+            let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError>
             if delayRequest {
                 maybeDelayedContextResults = results |> delay(0.4, queue: Queue.concurrentDefaultQueue())
             } else {
@@ -58,7 +60,7 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
             
             return maybeDelayedContextResults
         } else {
-            return .single((nil, true))
+            return .single((nil, true, false))
         }
     }
     return contextBot
@@ -111,7 +113,7 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
                     }
                 }
             }
-            return .single(PaneGifSearchForQueryResult(files: references, nextOffset: collection.nextOffset, isComplete: result.1))
+            return .single(PaneGifSearchForQueryResult(files: references, nextOffset: collection.nextOffset, isComplete: result.1, isStale: result.2))
         } else if incompleteResults {
             return .single(nil)
         } else {
@@ -232,7 +234,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             } else {
                 strongSelf.nextOffset = nil
             }
-            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: result, isSearch: true, canLoadMore: false), synchronous: true, resetScrollingToOffset: nil)
+            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: result, isSearch: true, canLoadMore: false, isStale: false), synchronous: true, resetScrollingToOffset: nil)
             strongSelf.updateActivity?(false)
             strongSelf.notFoundNode.isHidden = text.isEmpty || !result.isEmpty
         }))
@@ -279,7 +281,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             } else {
                 strongSelf.nextOffset = nil
             }
-            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: files, isSearch: true, canLoadMore: false), synchronous: true, resetScrollingToOffset: nil)
+            strongSelf.multiplexedNode?.setFiles(files: MultiplexedVideoNodeFiles(saved: [], trending: files, isSearch: true, canLoadMore: false, isStale: false), synchronous: true, resetScrollingToOffset: nil)
             strongSelf.notFoundNode.isHidden = text.isEmpty || !files.isEmpty
         }))
     }

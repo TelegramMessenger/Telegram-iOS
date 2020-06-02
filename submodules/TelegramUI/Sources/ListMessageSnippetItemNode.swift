@@ -244,11 +244,13 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                             isInstantView = true
                         }
                         
-                        primaryUrl = content.url
+                        let (parsedUrl, _) = parseUrl(url: content.url)
+                        
+                        primaryUrl = parsedUrl
                         
                         processed = true
                         var hostName: String = ""
-                        if let url = URL(string: content.url), let host = url.host, !host.isEmpty {
+                        if let url = URL(string: parsedUrl), let host = url.host, !host.isEmpty {
                             hostName = host
                             iconText = NSAttributedString(string: host[..<host.index(after: host.startIndex)].uppercased(), font: iconFont, textColor: UIColor.white)
                         }
@@ -312,14 +314,18 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     range.location = max(0, nsString.length - range.length)
                                     range.length = nsString.length - range.location
                                 }
-                                var urlString = nsString.substring(with: range)
+                                let tempUrlString = nsString.substring(with: range)
+                                
+                                var (urlString, concealed) = parseUrl(url: tempUrlString)
+                                
                                 let rawUrlString = urlString
                                 var parsedUrl = URL(string: urlString)
                                 if parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty {
                                     urlString = "http://" + urlString
                                     parsedUrl = URL(string: urlString)
                                 }
-                                if let url = parsedUrl, let host = url.host {
+                                let host: String? = concealed ? urlString : parsedUrl?.host
+                                if let url = parsedUrl, let host = host {
                                     primaryUrl = urlString
                                     if url.path.hasPrefix("/addstickers/") {
                                         title = NSAttributedString(string: urlString, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
@@ -331,7 +337,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                         title = NSAttributedString(string: host, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                                     }
                                     let mutableDescriptionText = NSMutableAttributedString()
-                                    if item.message.text != rawUrlString {
+                                    
+                                    let (messageTextUrl, _) = parseUrl(url: item.message.text)
+                                    
+                                    if messageTextUrl != rawUrlString {
                                        mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor))
                                     }
                                     
