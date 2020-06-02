@@ -63,9 +63,370 @@ class RtcEventLog;
 // - Generating offers and answers based on the current state.
 // - The ICE state machine.
 // - Generating stats.
-class TgPeerConnection : public rtc::RefCountInterface,
+
+class RTC_EXPORT TgPeerConnectionInterface : public rtc::RefCountInterface {
+ public:
+  // Accessor methods to active local streams.
+  // This method is not supported with kUnifiedPlan semantics. Please use
+  // GetSenders() instead.
+  virtual rtc::scoped_refptr<StreamCollectionInterface> local_streams() = 0;
+
+  // Accessor methods to remote streams.
+  // This method is not supported with kUnifiedPlan semantics. Please use
+  // GetReceivers() instead.
+  virtual rtc::scoped_refptr<StreamCollectionInterface> remote_streams() = 0;
+
+  // Add a new MediaStream to be sent on this PeerConnection.
+  // Note that a SessionDescription negotiation is needed before the
+  // remote peer can receive the stream.
+  //
+  // This has been removed from the standard in favor of a track-based API. So,
+  // this is equivalent to simply calling AddTrack for each track within the
+  // stream, with the one difference that if "stream->AddTrack(...)" is called
+  // later, the PeerConnection will automatically pick up the new track. Though
+  // this functionality will be deprecated in the future.
+  //
+  // This method is not supported with kUnifiedPlan semantics. Please use
+  // AddTrack instead.
+  virtual bool AddStream(MediaStreamInterface* stream) = 0;
+
+  // Remove a MediaStream from this PeerConnection.
+  // Note that a SessionDescription negotiation is needed before the
+  // remote peer is notified.
+  //
+  // This method is not supported with kUnifiedPlan semantics. Please use
+  // RemoveTrack instead.
+  virtual void RemoveStream(MediaStreamInterface* stream) = 0;
+
+  // Add a new MediaStreamTrack to be sent on this PeerConnection, and return
+  // the newly created RtpSender. The RtpSender will be associated with the
+  // streams specified in the |stream_ids| list.
+  //
+  // Errors:
+  // - INVALID_PARAMETER: |track| is null, has a kind other than audio or video,
+  //       or a sender already exists for the track.
+  // - INVALID_STATE: The PeerConnection is closed.
+  virtual RTCErrorOr<rtc::scoped_refptr<RtpSenderInterface>> AddTrack(
+      rtc::scoped_refptr<MediaStreamTrackInterface> track,
+      const std::vector<std::string>& stream_ids) = 0;
+
+  // Remove an RtpSender from this PeerConnection.
+  // Returns true on success.
+  // TODO(steveanton): Replace with signature that returns RTCError.
+  virtual bool RemoveTrack(RtpSenderInterface* sender) = 0;
+
+  // Plan B semantics: Removes the RtpSender from this PeerConnection.
+  // Unified Plan semantics: Stop sending on the RtpSender and mark the
+  // corresponding RtpTransceiver direction as no longer sending.
+  //
+  // Errors:
+  // - INVALID_PARAMETER: |sender| is null or (Plan B only) the sender is not
+  //       associated with this PeerConnection.
+  // - INVALID_STATE: PeerConnection is closed.
+  // TODO(bugs.webrtc.org/9534): Rename to RemoveTrack once the other signature
+  // is removed.
+  virtual RTCError RemoveTrackNew(
+      rtc::scoped_refptr<RtpSenderInterface> sender);
+
+  // AddTransceiver creates a new RtpTransceiver and adds it to the set of
+  // transceivers. Adding a transceiver will cause future calls to CreateOffer
+  // to add a media description for the corresponding transceiver.
+  //
+  // The initial value of |mid| in the returned transceiver is null. Setting a
+  // new session description may change it to a non-null value.
+  //
+  // https://w3c.github.io/webrtc-pc/#dom-rtcpeerconnection-addtransceiver
+  //
+  // Optionally, an RtpTransceiverInit structure can be specified to configure
+  // the transceiver from construction. If not specified, the transceiver will
+  // default to having a direction of kSendRecv and not be part of any streams.
+  //
+  // These methods are only available when Unified Plan is enabled (see
+  // RTCConfiguration).
+  //
+  // Common errors:
+  // - INTERNAL_ERROR: The configuration does not have Unified Plan enabled.
+
+  // Adds a transceiver with a sender set to transmit the given track. The kind
+  // of the transceiver (and sender/receiver) will be derived from the kind of
+  // the track.
+  // Errors:
+  // - INVALID_PARAMETER: |track| is null.
+  virtual RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>
+  AddTransceiver(rtc::scoped_refptr<MediaStreamTrackInterface> track) = 0;
+  virtual RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>
+  AddTransceiver(rtc::scoped_refptr<MediaStreamTrackInterface> track,
+                 const RtpTransceiverInit& init) = 0;
+
+  // Adds a transceiver with the given kind. Can either be MEDIA_TYPE_AUDIO or
+  // MEDIA_TYPE_VIDEO.
+  // Errors:
+  // - INVALID_PARAMETER: |media_type| is not MEDIA_TYPE_AUDIO or
+  //                      MEDIA_TYPE_VIDEO.
+  virtual RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>
+  AddTransceiver(cricket::MediaType media_type) = 0;
+  virtual RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>
+  AddTransceiver(cricket::MediaType media_type,
+                 const RtpTransceiverInit& init) = 0;
+
+  // Creates a sender without a track. Can be used for "early media"/"warmup"
+  // use cases, where the application may want to negotiate video attributes
+  // before a track is available to send.
+  //
+  // The standard way to do this would be through "addTransceiver", but we
+  // don't support that API yet.
+  //
+  // |kind| must be "audio" or "video".
+  //
+  // |stream_id| is used to populate the msid attribute; if empty, one will
+  // be generated automatically.
+  //
+  // This method is not supported with kUnifiedPlan semantics. Please use
+  // AddTransceiver instead.
+  virtual rtc::scoped_refptr<RtpSenderInterface> CreateSender(
+      const std::string& kind,
+      const std::string& stream_id) = 0;
+
+  // If Plan B semantics are specified, gets all RtpSenders, created either
+  // through AddStream, AddTrack, or CreateSender. All senders of a specific
+  // media type share the same media description.
+  //
+  // If Unified Plan semantics are specified, gets the RtpSender for each
+  // RtpTransceiver.
+  virtual std::vector<rtc::scoped_refptr<RtpSenderInterface>> GetSenders()
+      const = 0;
+
+  // If Plan B semantics are specified, gets all RtpReceivers created when a
+  // remote description is applied. All receivers of a specific media type share
+  // the same media description. It is also possible to have a media description
+  // with no associated RtpReceivers, if the directional attribute does not
+  // indicate that the remote peer is sending any media.
+  //
+  // If Unified Plan semantics are specified, gets the RtpReceiver for each
+  // RtpTransceiver.
+  virtual std::vector<rtc::scoped_refptr<RtpReceiverInterface>> GetReceivers()
+      const = 0;
+
+  // Get all RtpTransceivers, created either through AddTransceiver, AddTrack or
+  // by a remote description applied with SetRemoteDescription.
+  //
+  // Note: This method is only available when Unified Plan is enabled (see
+  // RTCConfiguration).
+  virtual std::vector<rtc::scoped_refptr<RtpTransceiverInterface>>
+  GetTransceivers() const = 0;
+
+  
+  // Clear cached stats in the RTCStatsCollector.
+  // Exposed for testing while waiting for automatic cache clear to work.
+  // https://bugs.webrtc.org/8693
+  virtual void ClearStatsCache() {}
+
+  // Create a data channel with the provided config, or default config if none
+  // is provided. Note that an offer/answer negotiation is still necessary
+  // before the data channel can be used.
+  //
+  // Also, calling CreateDataChannel is the only way to get a data "m=" section
+  // in SDP, so it should be done before CreateOffer is called, if the
+  // application plans to use data channels.
+  virtual rtc::scoped_refptr<DataChannelInterface> CreateDataChannel(
+      const std::string& label,
+      const DataChannelInit* config) = 0;
+
+  // Returns the more recently applied description; "pending" if it exists, and
+  // otherwise "current". See below.
+  virtual const SessionDescriptionInterface* local_description() const = 0;
+  virtual const SessionDescriptionInterface* remote_description() const = 0;
+
+  // A "current" description the one currently negotiated from a complete
+  // offer/answer exchange.
+  virtual const SessionDescriptionInterface* current_local_description()
+      const = 0;
+  virtual const SessionDescriptionInterface* current_remote_description()
+      const = 0;
+
+  // A "pending" description is one that's part of an incomplete offer/answer
+  // exchange (thus, either an offer or a pranswer). Once the offer/answer
+  // exchange is finished, the "pending" description will become "current".
+  virtual const SessionDescriptionInterface* pending_local_description()
+      const = 0;
+  virtual const SessionDescriptionInterface* pending_remote_description()
+      const = 0;
+
+  // Tells the PeerConnection that ICE should be restarted. This triggers a need
+  // for negotiation and subsequent CreateOffer() calls will act as if
+  // RTCOfferAnswerOptions::ice_restart is true.
+  // https://w3c.github.io/webrtc-pc/#dom-rtcpeerconnection-restartice
+  // TODO(hbos): Remove default implementation when downstream projects
+  // implement this.
+  virtual void RestartIce() = 0;
+
+  // Create a new offer.
+  // The CreateSessionDescriptionObserver callback will be called when done.
+  virtual void CreateOffer(CreateSessionDescriptionObserver* observer,
+                           const PeerConnectionInterface::RTCOfferAnswerOptions& options) = 0;
+
+  // Create an answer to an offer.
+  // The CreateSessionDescriptionObserver callback will be called when done.
+  virtual void CreateAnswer(CreateSessionDescriptionObserver* observer,
+                            const PeerConnectionInterface::RTCOfferAnswerOptions& options) = 0;
+
+  // Sets the local session description.
+  // The PeerConnection takes the ownership of |desc| even if it fails.
+  // The |observer| callback will be called when done.
+  // TODO(deadbeef): Change |desc| to be a unique_ptr, to make it clear
+  // that this method always takes ownership of it.
+  virtual void SetLocalDescription(SetSessionDescriptionObserver* observer,
+                                   SessionDescriptionInterface* desc) = 0;
+  // Implicitly creates an offer or answer (depending on the current signaling
+  // state) and performs SetLocalDescription() with the newly generated session
+  // description.
+  // TODO(hbos): Make pure virtual when implemented by downstream projects.
+  virtual void SetLocalDescription(SetSessionDescriptionObserver* observer) {}
+  // Sets the remote session description.
+  // The PeerConnection takes the ownership of |desc| even if it fails.
+  // The |observer| callback will be called when done.
+  // TODO(hbos): Remove when Chrome implements the new signature.
+  virtual void SetRemoteDescription(SetSessionDescriptionObserver* observer,
+                                    SessionDescriptionInterface* desc) {}
+  virtual void SetRemoteDescription(
+      std::unique_ptr<SessionDescriptionInterface> desc,
+      rtc::scoped_refptr<SetRemoteDescriptionObserverInterface> observer) = 0;
+
+  virtual PeerConnectionInterface::RTCConfiguration GetConfiguration() = 0;
+
+  // Sets the PeerConnection's global configuration to |config|.
+  //
+  // The members of |config| that may be changed are |type|, |servers|,
+  // |ice_candidate_pool_size| and |prune_turn_ports| (though the candidate
+  // pool size can't be changed after the first call to SetLocalDescription).
+  // Note that this means the BUNDLE and RTCP-multiplexing policies cannot be
+  // changed with this method.
+  //
+  // Any changes to STUN/TURN servers or ICE candidate policy will affect the
+  // next gathering phase, and cause the next call to createOffer to generate
+  // new ICE credentials, as described in JSEP. This also occurs when
+  // |prune_turn_ports| changes, for the same reasoning.
+  //
+  // If an error occurs, returns false and populates |error| if non-null:
+  // - INVALID_MODIFICATION if |config| contains a modified parameter other
+  //   than one of the parameters listed above.
+  // - INVALID_RANGE if |ice_candidate_pool_size| is out of range.
+  // - SYNTAX_ERROR if parsing an ICE server URL failed.
+  // - INVALID_PARAMETER if a TURN server is missing |username| or |password|.
+  // - INTERNAL_ERROR if an unexpected error occurred.
+  //
+  // TODO(nisse): Make this pure virtual once all Chrome subclasses of
+  // PeerConnectionInterface implement it.
+  virtual RTCError SetConfiguration(
+      const PeerConnectionInterface::RTCConfiguration& config);
+
+  // Provides a remote candidate to the ICE Agent.
+  // A copy of the |candidate| will be created and added to the remote
+  // description. So the caller of this method still has the ownership of the
+  // |candidate|.
+  // TODO(hbos): The spec mandates chaining this operation onto the operations
+  // chain; deprecate and remove this version in favor of the callback-based
+  // signature.
+  virtual bool AddIceCandidate(const IceCandidateInterface* candidate) = 0;
+  // TODO(hbos): Remove default implementation once implemented by downstream
+  // projects.
+  virtual void AddIceCandidate(std::unique_ptr<IceCandidateInterface> candidate,
+                               std::function<void(RTCError)> callback) {}
+
+  // Removes a group of remote candidates from the ICE agent. Needed mainly for
+  // continual gathering, to avoid an ever-growing list of candidates as
+  // networks come and go.
+  virtual bool RemoveIceCandidates(
+      const std::vector<cricket::Candidate>& candidates) = 0;
+
+  // SetBitrate limits the bandwidth allocated for all RTP streams sent by
+  // this PeerConnection. Other limitations might affect these limits and
+  // are respected (for example "b=AS" in SDP).
+  //
+  // Setting |current_bitrate_bps| will reset the current bitrate estimate
+  // to the provided value.
+  virtual RTCError SetBitrate(const BitrateSettings& bitrate);
+
+  // TODO(nisse): Deprecated - use version above. These two default
+  // implementations require subclasses to implement one or the other
+  // of the methods.
+  virtual RTCError SetBitrate(const PeerConnectionInterface::BitrateParameters& bitrate_parameters);
+
+  // Enable/disable playout of received audio streams. Enabled by default. Note
+  // that even if playout is enabled, streams will only be played out if the
+  // appropriate SDP is also applied. Setting |playout| to false will stop
+  // playout of the underlying audio device but starts a task which will poll
+  // for audio data every 10ms to ensure that audio processing happens and the
+  // audio statistics are updated.
+  // TODO(henrika): deprecate and remove this.
+  virtual void SetAudioPlayout(bool playout) {}
+
+  // Enable/disable recording of transmitted audio streams. Enabled by default.
+  // Note that even if recording is enabled, streams will only be recorded if
+  // the appropriate SDP is also applied.
+  // TODO(henrika): deprecate and remove this.
+  virtual void SetAudioRecording(bool recording) {}
+
+  // Looks up the DtlsTransport associated with a MID value.
+  // In the Javascript API, DtlsTransport is a property of a sender, but
+  // because the PeerConnection owns the DtlsTransport in this implementation,
+  // it is better to look them up on the PeerConnection.
+  virtual rtc::scoped_refptr<DtlsTransportInterface> LookupDtlsTransportByMid(
+      const std::string& mid) = 0;
+
+  // Returns the SCTP transport, if any.
+  virtual rtc::scoped_refptr<SctpTransportInterface> GetSctpTransport()
+      const = 0;
+
+  // Returns the current SignalingState.
+  virtual PeerConnectionInterface::SignalingState signaling_state() = 0;
+
+  // Returns an aggregate state of all ICE *and* DTLS transports.
+  // This is left in place to avoid breaking native clients who expect our old,
+  // nonstandard behavior.
+  // TODO(jonasolsson): deprecate and remove this.
+  virtual PeerConnectionInterface::IceConnectionState ice_connection_state() = 0;
+
+  // Returns an aggregated state of all ICE transports.
+  virtual PeerConnectionInterface::IceConnectionState standardized_ice_connection_state() = 0;
+
+  // Returns an aggregated state of all ICE and DTLS transports.
+  virtual PeerConnectionInterface::PeerConnectionState peer_connection_state() = 0;
+
+  virtual PeerConnectionInterface::IceGatheringState ice_gathering_state() = 0;
+
+  // Start RtcEventLog using an existing output-sink. Takes ownership of
+  // |output| and passes it on to Call, which will take the ownership. If the
+  // operation fails the output will be closed and deallocated. The event log
+  // will send serialized events to the output object every |output_period_ms|.
+  // Applications using the event log should generally make their own trade-off
+  // regarding the output period. A long period is generally more efficient,
+  // with potential drawbacks being more bursty thread usage, and more events
+  // lost in case the application crashes. If the |output_period_ms| argument is
+  // omitted, webrtc selects a default deemed to be workable in most cases.
+  virtual bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output,
+                                int64_t output_period_ms) = 0;
+  virtual bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output) = 0;
+
+  // Stops logging the RtcEventLog.
+  virtual void StopRtcEventLog() = 0;
+
+  // Terminates all media, closes the transports, and in general releases any
+  // resources used by the PeerConnection. This is an irreversible operation.
+  //
+  // Note that after this method completes, the PeerConnection will no longer
+  // use the PeerConnectionObserver interface passed in on construction, and
+  // thus the observer object can be safely destroyed.
+  virtual void Close() = 0;
+
+ protected:
+  // Dtor protected as objects shouldn't be deleted via this interface.
+  ~TgPeerConnectionInterface() override = default;
+};
+
+class TgPeerConnection : public TgPeerConnectionInterface,
 public TgJsepTransportController::Observer,
-public TgRtpSenderBase::SetStreamsObserver,
+public RtpSenderBase::SetStreamsObserver,
 public rtc::MessageHandler,
 public sigslot::has_slots<> {
  public:
@@ -458,7 +819,7 @@ public sigslot::has_slots<> {
   cricket::VideoMediaChannel* video_media_channel() const
       RTC_RUN_ON(signaling_thread());
 
-  std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>>
+  std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>>
   GetSendersInternal() const RTC_RUN_ON(signaling_thread());
   std::vector<
       rtc::scoped_refptr<RtpReceiverProxyWithInternal<RtpReceiverInternal>>>
@@ -541,7 +902,7 @@ public sigslot::has_slots<> {
       const RtpTransceiverInit& init,
       bool fire_callback = true) RTC_RUN_ON(signaling_thread());
 
-  rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
+  rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
   CreateSender(cricket::MediaType media_type,
                const std::string& id,
                rtc::scoped_refptr<MediaStreamTrackInterface> track,
@@ -555,7 +916,7 @@ public sigslot::has_slots<> {
   // transceivers.
   rtc::scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>
   CreateAndAddTransceiver(
-      rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>> sender,
+      rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>> sender,
       rtc::scoped_refptr<RtpReceiverProxyWithInternal<RtpReceiverInternal>>
           receiver) RTC_RUN_ON(signaling_thread());
 
@@ -855,12 +1216,12 @@ public sigslot::has_slots<> {
       RTC_RUN_ON(signaling_thread());
 
   // Return the RtpSender with the given track attached.
-  rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
+  rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
   FindSenderForTrack(MediaStreamTrackInterface* track) const
       RTC_RUN_ON(signaling_thread());
 
   // Return the RtpSender with the given id, or null if none exists.
-  rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
+  rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
   FindSenderById(const std::string& sender_id) const
       RTC_RUN_ON(signaling_thread());
 
@@ -1139,7 +1500,7 @@ public sigslot::has_slots<> {
       rtc::scoped_refptr<DtlsTransport> dtls_transport,
       DataChannelTransportInterface* data_channel_transport) override;
 
-  // TgRtpSenderBase::SetStreamsObserver override.
+  // RtpSenderBase::SetStreamsObserver override.
   void OnSetStreams() override;
 
   // Returns the CryptoOptions for this TgPeerConnection. This will always

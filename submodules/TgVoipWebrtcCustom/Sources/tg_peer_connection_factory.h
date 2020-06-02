@@ -23,6 +23,7 @@
 #include "pc/channel_manager.h"
 #include "rtc_base/rtc_certificate_generator.h"
 #include "rtc_base/thread.h"
+#include "pc/peer_connection_factory.h"
 
 namespace rtc {
 class BasicNetworkManager;
@@ -33,18 +34,102 @@ namespace webrtc {
 
 class RtcEventLog;
 class TgPeerConnection;
+class TgPeerConnectionInterface;
 
-class TgPeerConnectionFactory: public rtc::RefCountInterface {
+class RTC_EXPORT TgPeerConnectionFactoryInterface
+    : public rtc::RefCountInterface {
  public:
-  void SetOptions(const PeerConnectionFactoryInterface::Options& options);
+  // Set the options to be used for subsequently created PeerConnections.
+    virtual void SetOptions(const PeerConnectionFactoryInterface::Options& options) = 0;
 
-  rtc::scoped_refptr<TgPeerConnection> CreatePeerConnection(
+  // The preferred way to create a new peer connection. Simply provide the
+  // configuration and a PeerConnectionDependencies structure.
+  // TODO(benwright): Make pure virtual once downstream mock PC factory classes
+  // are updated.
+  virtual rtc::scoped_refptr<TgPeerConnectionInterface> CreatePeerConnection(
+      const PeerConnectionInterface::RTCConfiguration& configuration,
+      PeerConnectionDependencies dependencies);
+
+  // Deprecated; |allocator| and |cert_generator| may be null, in which case
+  // default implementations will be used.
+  //
+  // |observer| must not be null.
+  //
+  // Note that this method does not take ownership of |observer|; it's the
+  // responsibility of the caller to delete it. It can be safely deleted after
+  // Close has been called on the returned PeerConnection, which ensures no
+  // more observer callbacks will be invoked.
+  virtual rtc::scoped_refptr<TgPeerConnectionInterface> CreatePeerConnection(
       const PeerConnectionInterface::RTCConfiguration& configuration,
       std::unique_ptr<cricket::PortAllocator> allocator,
       std::unique_ptr<rtc::RTCCertificateGeneratorInterface> cert_generator,
       PeerConnectionObserver* observer);
 
-  rtc::scoped_refptr<TgPeerConnection> CreatePeerConnection(
+  // Returns the capabilities of an RTP sender of type |kind|.
+  // If for some reason you pass in MEDIA_TYPE_DATA, returns an empty structure.
+  // TODO(orphis): Make pure virtual when all subclasses implement it.
+  virtual RtpCapabilities GetRtpSenderCapabilities(
+      cricket::MediaType kind) const;
+
+  // Returns the capabilities of an RTP receiver of type |kind|.
+  // If for some reason you pass in MEDIA_TYPE_DATA, returns an empty structure.
+  // TODO(orphis): Make pure virtual when all subclasses implement it.
+  virtual RtpCapabilities GetRtpReceiverCapabilities(
+      cricket::MediaType kind) const;
+
+  virtual rtc::scoped_refptr<MediaStreamInterface> CreateLocalMediaStream(
+      const std::string& stream_id) = 0;
+
+  // Creates an AudioSourceInterface.
+  // |options| decides audio processing settings.
+  virtual rtc::scoped_refptr<AudioSourceInterface> CreateAudioSource(
+      const cricket::AudioOptions& options) = 0;
+
+  // Creates a new local VideoTrack. The same |source| can be used in several
+  // tracks.
+  virtual rtc::scoped_refptr<VideoTrackInterface> CreateVideoTrack(
+      const std::string& label,
+      VideoTrackSourceInterface* source) = 0;
+
+  // Creates an new AudioTrack. At the moment |source| can be null.
+  virtual rtc::scoped_refptr<AudioTrackInterface> CreateAudioTrack(
+      const std::string& label,
+      AudioSourceInterface* source) = 0;
+
+  // Starts AEC dump using existing file. Takes ownership of |file| and passes
+  // it on to VoiceEngine (via other objects) immediately, which will take
+  // the ownerhip. If the operation fails, the file will be closed.
+  // A maximum file size in bytes can be specified. When the file size limit is
+  // reached, logging is stopped automatically. If max_size_bytes is set to a
+  // value <= 0, no limit will be used, and logging will continue until the
+  // StopAecDump function is called.
+  // TODO(webrtc:6463): Delete default implementation when downstream mocks
+  // classes are updated.
+  virtual bool StartAecDump(FILE* file, int64_t max_size_bytes) {
+    return false;
+  }
+
+  // Stops logging the AEC dump.
+  virtual void StopAecDump() = 0;
+
+ protected:
+  // Dtor and ctor protected as objects shouldn't be created or deleted via
+  // this interface.
+  TgPeerConnectionFactoryInterface() {}
+  ~TgPeerConnectionFactoryInterface() override = default;
+};
+
+class TgPeerConnectionFactory: public TgPeerConnectionFactoryInterface {
+ public:
+  void SetOptions(const PeerConnectionFactoryInterface::Options& options);
+
+  rtc::scoped_refptr<TgPeerConnectionInterface> CreatePeerConnection(
+      const PeerConnectionInterface::RTCConfiguration& configuration,
+      std::unique_ptr<cricket::PortAllocator> allocator,
+      std::unique_ptr<rtc::RTCCertificateGeneratorInterface> cert_generator,
+      PeerConnectionObserver* observer);
+
+  rtc::scoped_refptr<TgPeerConnectionInterface> CreatePeerConnection(
       const PeerConnectionInterface::RTCConfiguration& configuration,
       PeerConnectionDependencies dependencies);
 
@@ -133,6 +218,43 @@ class TgPeerConnectionFactory: public rtc::RefCountInterface {
   std::unique_ptr<NetEqFactory> neteq_factory_;
   const std::unique_ptr<WebRtcKeyValueConfig> trials_;
 };
+
+BEGIN_SIGNALING_PROXY_MAP(TgPeerConnectionFactory)
+PROXY_SIGNALING_THREAD_DESTRUCTOR()
+PROXY_METHOD1(void, SetOptions, const PeerConnectionFactory::Options&)
+PROXY_METHOD4(rtc::scoped_refptr<TgPeerConnectionInterface>,
+              CreatePeerConnection,
+              const PeerConnectionInterface::RTCConfiguration&,
+              std::unique_ptr<cricket::PortAllocator>,
+              std::unique_ptr<rtc::RTCCertificateGeneratorInterface>,
+              PeerConnectionObserver*)
+PROXY_METHOD2(rtc::scoped_refptr<TgPeerConnectionInterface>,
+              CreatePeerConnection,
+              const PeerConnectionInterface::RTCConfiguration&,
+              PeerConnectionDependencies)
+PROXY_CONSTMETHOD1(webrtc::RtpCapabilities,
+                   GetRtpSenderCapabilities,
+                   cricket::MediaType)
+PROXY_CONSTMETHOD1(webrtc::RtpCapabilities,
+                   GetRtpReceiverCapabilities,
+                   cricket::MediaType)
+PROXY_METHOD1(rtc::scoped_refptr<MediaStreamInterface>,
+              CreateLocalMediaStream,
+              const std::string&)
+PROXY_METHOD1(rtc::scoped_refptr<AudioSourceInterface>,
+              CreateAudioSource,
+              const cricket::AudioOptions&)
+PROXY_METHOD2(rtc::scoped_refptr<VideoTrackInterface>,
+              CreateVideoTrack,
+              const std::string&,
+              VideoTrackSourceInterface*)
+PROXY_METHOD2(rtc::scoped_refptr<AudioTrackInterface>,
+              CreateAudioTrack,
+              const std::string&,
+              AudioSourceInterface*)
+PROXY_METHOD2(bool, StartAecDump, FILE*, int64_t)
+PROXY_METHOD0(void, StopAecDump)
+END_PROXY_MAP()
 
 }  // namespace webrtc
 

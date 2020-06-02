@@ -87,6 +87,34 @@ using cricket::STUN_PORT_TYPE;
 
 namespace webrtc {
 
+RTCError TgPeerConnectionInterface::RemoveTrackNew(
+    rtc::scoped_refptr<RtpSenderInterface> sender) {
+  return RTCError(RemoveTrack(sender) ? RTCErrorType::NONE
+                                      : RTCErrorType::INTERNAL_ERROR);
+}
+
+RTCError TgPeerConnectionInterface::SetConfiguration(
+    const PeerConnectionInterface::RTCConfiguration& config) {
+  return RTCError();
+}
+
+RTCError TgPeerConnectionInterface::SetBitrate(const BitrateSettings& bitrate) {
+  PeerConnectionInterface::BitrateParameters bitrate_parameters;
+  bitrate_parameters.min_bitrate_bps = bitrate.min_bitrate_bps;
+  bitrate_parameters.current_bitrate_bps = bitrate.start_bitrate_bps;
+  bitrate_parameters.max_bitrate_bps = bitrate.max_bitrate_bps;
+  return SetBitrate(bitrate_parameters);
+}
+
+RTCError TgPeerConnectionInterface::SetBitrate(
+    const PeerConnectionInterface::BitrateParameters& bitrate_parameters) {
+  BitrateSettings bitrate;
+  bitrate.min_bitrate_bps = bitrate_parameters.min_bitrate_bps;
+  bitrate.start_bitrate_bps = bitrate_parameters.current_bitrate_bps;
+  bitrate.max_bitrate_bps = bitrate_parameters.max_bitrate_bps;
+  return SetBitrate(bitrate);
+}
+
 // Error messages
 const char kBundleWithoutRtcpMux[] =
 "rtcp-mux must be enabled when BUNDLE "
@@ -373,100 +401,6 @@ bool MediaSectionsInSameOrder(const SessionDescription& current_desc,
 bool MediaSectionsHaveSameCount(const SessionDescription& desc1,
                                 const SessionDescription& desc2) {
     return desc1.contents().size() == desc2.contents().size();
-}
-
-void NoteKeyProtocolAndMedia(KeyExchangeProtocolType protocol_type,
-                             cricket::MediaType media_type) {
-    // Array of structs needed to map {KeyExchangeProtocolType,
-    // cricket::MediaType} to KeyExchangeProtocolMedia without using std::map in
-    // order to avoid -Wglobal-constructors and -Wexit-time-destructors.
-    static constexpr struct {
-        KeyExchangeProtocolType protocol_type;
-        cricket::MediaType media_type;
-        KeyExchangeProtocolMedia protocol_media;
-    } kEnumCounterKeyProtocolMediaMap[] = {
-        {kEnumCounterKeyProtocolDtls, cricket::MEDIA_TYPE_AUDIO,
-            kEnumCounterKeyProtocolMediaTypeDtlsAudio},
-        {kEnumCounterKeyProtocolDtls, cricket::MEDIA_TYPE_VIDEO,
-            kEnumCounterKeyProtocolMediaTypeDtlsVideo},
-        {kEnumCounterKeyProtocolDtls, cricket::MEDIA_TYPE_DATA,
-            kEnumCounterKeyProtocolMediaTypeDtlsData},
-        {kEnumCounterKeyProtocolSdes, cricket::MEDIA_TYPE_AUDIO,
-            kEnumCounterKeyProtocolMediaTypeSdesAudio},
-        {kEnumCounterKeyProtocolSdes, cricket::MEDIA_TYPE_VIDEO,
-            kEnumCounterKeyProtocolMediaTypeSdesVideo},
-        {kEnumCounterKeyProtocolSdes, cricket::MEDIA_TYPE_DATA,
-            kEnumCounterKeyProtocolMediaTypeSdesData},
-    };
-    
-    RTC_HISTOGRAM_ENUMERATION("WebRTC.PeerConnection.KeyProtocol", protocol_type,
-                              kEnumCounterKeyProtocolMax);
-    
-    for (const auto& i : kEnumCounterKeyProtocolMediaMap) {
-        if (i.protocol_type == protocol_type && i.media_type == media_type) {
-            RTC_HISTOGRAM_ENUMERATION("WebRTC.PeerConnection.KeyProtocolByMedia",
-                                      i.protocol_media,
-                                      kEnumCounterKeyProtocolMediaTypeMax);
-        }
-    }
-}
-
-void NoteAddIceCandidateResult(int result) {
-    RTC_HISTOGRAM_ENUMERATION("WebRTC.PeerConnection.AddIceCandidate", result,
-                              kAddIceCandidateMax);
-}
-
-// Checks that each non-rejected content has SDES crypto keys or a DTLS
-// fingerprint, unless it's in a BUNDLE group, in which case only the
-// BUNDLE-tag section (first media section/description in the BUNDLE group)
-// needs a ufrag and pwd. Mismatches, such as replying with a DTLS fingerprint
-// to SDES keys, will be caught in TgJsepTransport negotiation, and backstopped
-// by Channel's |srtp_required| check.
-RTCError VerifyCrypto(const SessionDescription* desc, bool dtls_enabled) {
-    const cricket::ContentGroup* bundle =
-    desc->GetGroupByName(cricket::GROUP_TYPE_BUNDLE);
-    for (const cricket::ContentInfo& content_info : desc->contents()) {
-        if (content_info.rejected) {
-            continue;
-        }
-        // Note what media is used with each crypto protocol, for all sections.
-        NoteKeyProtocolAndMedia(dtls_enabled ? webrtc::kEnumCounterKeyProtocolDtls
-                                : webrtc::kEnumCounterKeyProtocolSdes,
-                                content_info.media_description()->type());
-        const std::string& mid = content_info.name;
-        if (bundle && bundle->HasContentName(mid) &&
-            mid != *(bundle->FirstContentName())) {
-            // This isn't the first media section in the BUNDLE group, so it's not
-            // required to have crypto attributes, since only the crypto attributes
-            // from the first section actually get used.
-            continue;
-        }
-        
-        // If the content isn't rejected or bundled into another m= section, crypto
-        // must be present.
-        const MediaContentDescription* media = content_info.media_description();
-        const TransportInfo* tinfo = desc->GetTransportInfoByName(mid);
-        if (!media || !tinfo) {
-            // Something is not right.
-            LOG_AND_RETURN_ERROR(RTCErrorType::INVALID_PARAMETER, kInvalidSdp);
-        }
-        if (dtls_enabled) {
-            if (!tinfo->description.identity_fingerprint) {
-                RTC_LOG(LS_WARNING)
-                << "Session description must have DTLS fingerprint if "
-                "DTLS enabled.";
-                return RTCError(RTCErrorType::INVALID_PARAMETER,
-                                kSdpWithoutDtlsFingerprint);
-            }
-        } else {
-            if (media->cryptos().empty()) {
-                RTC_LOG(LS_WARNING)
-                << "Session description must have SDES when DTLS disabled.";
-                return RTCError(RTCErrorType::INVALID_PARAMETER, kSdpWithoutSdesCrypto);
-            }
-        }
-    }
-    return RTCError::OK();
 }
 
 // Checks that each non-rejected content has ice-ufrag and ice-pwd set, unless
@@ -809,140 +743,6 @@ private:
     rtc::scoped_refptr<SetSessionDescriptionObserver> wrapper_;
 };
 
-bool PeerConnectionInterface::RTCConfiguration::operator==(
-                                                           const PeerConnectionInterface::RTCConfiguration& o) const {
-    // This static_assert prevents us from accidentally breaking operator==.
-    // Note: Order matters! Fields must be ordered the same as RTCConfiguration.
-    struct stuff_being_tested_for_equality {
-        IceServers servers;
-        IceTransportsType type;
-        BundlePolicy bundle_policy;
-        RtcpMuxPolicy rtcp_mux_policy;
-        std::vector<rtc::scoped_refptr<rtc::RTCCertificate>> certificates;
-        int ice_candidate_pool_size;
-        bool disable_ipv6;
-        bool disable_ipv6_on_wifi;
-        int max_ipv6_networks;
-        bool disable_link_local_networks;
-        bool enable_rtp_data_channel;
-        absl::optional<int> screencast_min_bitrate;
-        absl::optional<bool> combined_audio_video_bwe;
-        absl::optional<bool> enable_dtls_srtp;
-        TcpCandidatePolicy tcp_candidate_policy;
-        CandidateNetworkPolicy candidate_network_policy;
-        int audio_jitter_buffer_max_packets;
-        bool audio_jitter_buffer_fast_accelerate;
-        int audio_jitter_buffer_min_delay_ms;
-        bool audio_jitter_buffer_enable_rtx_handling;
-        int ice_connection_receiving_timeout;
-        int ice_backup_candidate_pair_ping_interval;
-        ContinualGatheringPolicy continual_gathering_policy;
-        bool prioritize_most_likely_ice_candidate_pairs;
-        struct cricket::MediaConfig media_config;
-        bool prune_turn_ports;
-        PortPrunePolicy turn_port_prune_policy;
-        bool presume_writable_when_fully_relayed;
-        bool enable_ice_renomination;
-        bool redetermine_role_on_ice_restart;
-        bool surface_ice_candidates_on_ice_transport_type_changed;
-        absl::optional<int> ice_check_interval_strong_connectivity;
-        absl::optional<int> ice_check_interval_weak_connectivity;
-        absl::optional<int> ice_check_min_interval;
-        absl::optional<int> ice_unwritable_timeout;
-        absl::optional<int> ice_unwritable_min_checks;
-        absl::optional<int> ice_inactive_timeout;
-        absl::optional<int> stun_candidate_keepalive_interval;
-        absl::optional<rtc::IntervalRange> ice_regather_interval_range;
-        webrtc::TurnCustomizer* turn_customizer;
-        SdpSemantics sdp_semantics;
-        absl::optional<rtc::AdapterType> network_preference;
-        bool active_reset_srtp_params;
-        bool use_media_transport;
-        bool use_media_transport_for_data_channels;
-        absl::optional<bool> use_datagram_transport;
-        absl::optional<bool> use_datagram_transport_for_data_channels;
-        absl::optional<bool> use_datagram_transport_for_data_channels_receive_only;
-        absl::optional<CryptoOptions> crypto_options;
-        bool offer_extmap_allow_mixed;
-        std::string turn_logging_id;
-        bool enable_implicit_rollback;
-        absl::optional<bool> allow_codec_switching;
-    };
-    static_assert(sizeof(stuff_being_tested_for_equality) == sizeof(*this),
-                  "Did you add something to RTCConfiguration and forget to "
-                  "update operator==?");
-    return type == o.type && servers == o.servers &&
-    bundle_policy == o.bundle_policy &&
-    rtcp_mux_policy == o.rtcp_mux_policy &&
-    tcp_candidate_policy == o.tcp_candidate_policy &&
-    candidate_network_policy == o.candidate_network_policy &&
-    audio_jitter_buffer_max_packets == o.audio_jitter_buffer_max_packets &&
-    audio_jitter_buffer_fast_accelerate ==
-    o.audio_jitter_buffer_fast_accelerate &&
-    audio_jitter_buffer_min_delay_ms ==
-    o.audio_jitter_buffer_min_delay_ms &&
-    audio_jitter_buffer_enable_rtx_handling ==
-    o.audio_jitter_buffer_enable_rtx_handling &&
-    ice_connection_receiving_timeout ==
-    o.ice_connection_receiving_timeout &&
-    ice_backup_candidate_pair_ping_interval ==
-    o.ice_backup_candidate_pair_ping_interval &&
-    continual_gathering_policy == o.continual_gathering_policy &&
-    certificates == o.certificates &&
-    prioritize_most_likely_ice_candidate_pairs ==
-    o.prioritize_most_likely_ice_candidate_pairs &&
-    media_config == o.media_config && disable_ipv6 == o.disable_ipv6 &&
-    disable_ipv6_on_wifi == o.disable_ipv6_on_wifi &&
-    max_ipv6_networks == o.max_ipv6_networks &&
-    disable_link_local_networks == o.disable_link_local_networks &&
-    enable_rtp_data_channel == o.enable_rtp_data_channel &&
-    screencast_min_bitrate == o.screencast_min_bitrate &&
-    combined_audio_video_bwe == o.combined_audio_video_bwe &&
-    enable_dtls_srtp == o.enable_dtls_srtp &&
-    ice_candidate_pool_size == o.ice_candidate_pool_size &&
-    prune_turn_ports == o.prune_turn_ports &&
-    turn_port_prune_policy == o.turn_port_prune_policy &&
-    presume_writable_when_fully_relayed ==
-    o.presume_writable_when_fully_relayed &&
-    enable_ice_renomination == o.enable_ice_renomination &&
-    redetermine_role_on_ice_restart == o.redetermine_role_on_ice_restart &&
-    surface_ice_candidates_on_ice_transport_type_changed ==
-    o.surface_ice_candidates_on_ice_transport_type_changed &&
-    ice_check_interval_strong_connectivity ==
-    o.ice_check_interval_strong_connectivity &&
-    ice_check_interval_weak_connectivity ==
-    o.ice_check_interval_weak_connectivity &&
-    ice_check_min_interval == o.ice_check_min_interval &&
-    ice_unwritable_timeout == o.ice_unwritable_timeout &&
-    ice_unwritable_min_checks == o.ice_unwritable_min_checks &&
-    ice_inactive_timeout == o.ice_inactive_timeout &&
-    stun_candidate_keepalive_interval ==
-    o.stun_candidate_keepalive_interval &&
-    ice_regather_interval_range == o.ice_regather_interval_range &&
-    turn_customizer == o.turn_customizer &&
-    sdp_semantics == o.sdp_semantics &&
-    network_preference == o.network_preference &&
-    active_reset_srtp_params == o.active_reset_srtp_params &&
-    use_media_transport == o.use_media_transport &&
-    use_media_transport_for_data_channels ==
-    o.use_media_transport_for_data_channels &&
-    use_datagram_transport == o.use_datagram_transport &&
-    use_datagram_transport_for_data_channels ==
-    o.use_datagram_transport_for_data_channels &&
-    use_datagram_transport_for_data_channels_receive_only ==
-    o.use_datagram_transport_for_data_channels_receive_only &&
-    crypto_options == o.crypto_options &&
-    offer_extmap_allow_mixed == o.offer_extmap_allow_mixed &&
-    turn_logging_id == o.turn_logging_id &&
-    enable_implicit_rollback == o.enable_implicit_rollback &&
-    allow_codec_switching == o.allow_codec_switching;
-}
-
-bool PeerConnectionInterface::RTCConfiguration::operator!=(
-                                                           const PeerConnectionInterface::RTCConfiguration& o) const {
-    return !(*this == o);
-}
-
 void TgPeerConnection::TransceiverStableState::set_newly_created() {
     RTC_DCHECK(!has_m_section_);
     newly_created_ = true;
@@ -966,7 +766,7 @@ void TgPeerConnection::TransceiverStableState::SetRemoteStreamIdsIfUnset(
 }
 
 // Generate a RTCP CNAME when a TgPeerConnection is created.
-std::string GenerateRtcpCname() {
+std::string TgGenerateRtcpCname() {
     std::string cname;
     if (!rtc::CreateRandomString(kRtcpCnameLength, &cname)) {
         RTC_LOG(LS_ERROR) << "Failed to generate CNAME.";
@@ -975,7 +775,7 @@ std::string GenerateRtcpCname() {
     return cname;
 }
 
-bool ValidateOfferAnswerOptions(
+bool TgValidateOfferAnswerOptions(
                                 const PeerConnectionInterface::RTCOfferAnswerOptions& rtc_options) {
     return IsValidOfferToReceiveMedia(rtc_options.offer_to_receive_audio) &&
     IsValidOfferToReceiveMedia(rtc_options.offer_to_receive_video);
@@ -983,7 +783,7 @@ bool ValidateOfferAnswerOptions(
 
 // From |rtc_options|, fill parts of |session_options| shared by all generated
 // m= sections (in other words, nothing that involves a map/array).
-void ExtractSharedMediaSessionOptions(
+void TgExtractSharedMediaSessionOptions(
                                       const PeerConnectionInterface::RTCOfferAnswerOptions& rtc_options,
                                       cricket::MediaSessionOptions* session_options) {
     session_options->vad_enabled = rtc_options.voice_activity_detection;
@@ -1003,7 +803,7 @@ datagram_transport_config_(
                            field_trial::FindFullName(kDatagramTransportFieldTrial)),
 datagram_transport_data_channel_config_(
                                         field_trial::FindFullName(kDatagramTransportDataChannelFieldTrial)),
-rtcp_cname_(GenerateRtcpCname()),
+rtcp_cname_(TgGenerateRtcpCname()),
 local_streams_(StreamCollection::Create()),
 remote_streams_(StreamCollection::Create()),
 call_(std::move(call)),
@@ -1717,7 +1517,7 @@ TgPeerConnection::AddTransceiver(
         }
     }
     
-    if (UnimplementedRtpParameterHasValue(parameters)) {
+    if (TgUnimplementedRtpParameterHasValue(parameters)) {
         LOG_AND_RETURN_ERROR(
                              RTCErrorType::UNSUPPORTED_PARAMETER,
                              "Attempted to set an unimplemented parameter of RtpParameters.");
@@ -1748,7 +1548,7 @@ TgPeerConnection::AddTransceiver(
     return rtc::scoped_refptr<RtpTransceiverInterface>(transceiver);
 }
 
-rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
+rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
 TgPeerConnection::CreateSender(
                                cricket::MediaType media_type,
                                const std::string& id,
@@ -1756,19 +1556,19 @@ TgPeerConnection::CreateSender(
                                const std::vector<std::string>& stream_ids,
                                const std::vector<RtpEncodingParameters>& send_encodings) {
     RTC_DCHECK_RUN_ON(signaling_thread());
-    rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>> sender;
+    rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>> sender;
     if (media_type == cricket::MEDIA_TYPE_AUDIO) {
         RTC_DCHECK(!track ||
                    (track->kind() == MediaStreamTrackInterface::kAudioKind));
-        sender = RtpSenderProxyWithInternal<TgRtpSenderInternal>::Create(
+        sender = RtpSenderProxyWithInternal<RtpSenderInternal>::Create(
                                                                        signaling_thread(),
-                                                                       TgAudioRtpSender::Create(worker_thread(), id, stats_.get(), this));
+                                                                       TgAudioRtpSender::Create(worker_thread(), id, this));
         NoteUsageEvent(UsageEvent::AUDIO_ADDED);
     } else {
         RTC_DCHECK_EQ(media_type, cricket::MEDIA_TYPE_VIDEO);
         RTC_DCHECK(!track ||
                    (track->kind() == MediaStreamTrackInterface::kVideoKind));
-        sender = RtpSenderProxyWithInternal<TgRtpSenderInternal>::Create(
+        sender = RtpSenderProxyWithInternal<RtpSenderInternal>::Create(
                                                                        signaling_thread(), TgVideoRtpSender::Create(worker_thread(), id, this));
         NoteUsageEvent(UsageEvent::VIDEO_ADDED);
     }
@@ -1801,7 +1601,7 @@ TgPeerConnection::CreateReceiver(cricket::MediaType media_type,
 
 rtc::scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>
 TgPeerConnection::CreateAndAddTransceiver(
-                                          rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>> sender,
+                                          rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>> sender,
                                           rtc::scoped_refptr<RtpReceiverProxyWithInternal<RtpReceiverInternal>>
                                           receiver) {
     // Ensure that the new sender does not have an ID that is already in use by
@@ -1849,19 +1649,19 @@ rtc::scoped_refptr<RtpSenderInterface> TgPeerConnection::CreateSender(
     }
     
     // TODO(steveanton): Move construction of the RtpSenders to RtpTransceiver.
-    rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>> new_sender;
+    rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>> new_sender;
     if (kind == MediaStreamTrackInterface::kAudioKind) {
         auto audio_sender = TgAudioRtpSender::Create(
-                                                   worker_thread(), rtc::CreateRandomUuid(), stats_.get(), this);
+                                                   worker_thread(), rtc::CreateRandomUuid(), this);
         audio_sender->SetMediaChannel(voice_media_channel());
-        new_sender = RtpSenderProxyWithInternal<TgRtpSenderInternal>::Create(
+        new_sender = RtpSenderProxyWithInternal<RtpSenderInternal>::Create(
                                                                            signaling_thread(), audio_sender);
         GetAudioTransceiver()->internal()->AddSender(new_sender);
     } else if (kind == MediaStreamTrackInterface::kVideoKind) {
         auto video_sender =
         TgVideoRtpSender::Create(worker_thread(), rtc::CreateRandomUuid(), this);
         video_sender->SetMediaChannel(video_media_channel());
-        new_sender = RtpSenderProxyWithInternal<TgRtpSenderInternal>::Create(
+        new_sender = RtpSenderProxyWithInternal<RtpSenderInternal>::Create(
                                                                            signaling_thread(), video_sender);
         GetVideoTransceiver()->internal()->AddSender(new_sender);
     } else {
@@ -1883,9 +1683,9 @@ const {
     return ret;
 }
 
-std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>>
+std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>>
 TgPeerConnection::GetSendersInternal() const {
-    std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>>
+    std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>>
     all_senders;
     for (const auto& transceiver : transceivers_) {
         auto senders = transceiver->internal()->senders();
@@ -2031,7 +1831,7 @@ void TgPeerConnection::DoCreateOffer(
         return;
     }
     
-    if (!ValidateOfferAnswerOptions(options)) {
+    if (!TgValidateOfferAnswerOptions(options)) {
         std::string error = "CreateOffer called with invalid options.";
         RTC_LOG(LS_ERROR) << error;
         PostCreateSessionDescriptionFailure(
@@ -3305,7 +3105,7 @@ static std::vector<RtpEncodingParameters> GetSendEncodingsFromRemoteDescription(
 
 static RTCError UpdateSimulcastLayerStatusInSender(
                                                    const std::vector<SimulcastLayer>& layers,
-                                                   rtc::scoped_refptr<TgRtpSenderInternal> sender) {
+                                                   rtc::scoped_refptr<RtpSenderInternal> sender) {
     RTC_DCHECK(sender);
     RtpParameters parameters = sender->GetParametersInternal();
     std::vector<std::string> disabled_layers;
@@ -3347,7 +3147,7 @@ static bool SimulcastIsRejected(
 }
 
 static RTCError DisableSimulcastInSender(
-                                         rtc::scoped_refptr<TgRtpSenderInternal> sender) {
+                                         rtc::scoped_refptr<RtpSenderInternal> sender) {
     RTC_DCHECK(sender);
     RtpParameters parameters = sender->GetParametersInternal();
     if (parameters.encodings.size() <= 1) {
@@ -3783,34 +3583,29 @@ bool TgPeerConnection::AddIceCandidate(
     TRACE_EVENT0("webrtc", "TgPeerConnection::AddIceCandidate");
     if (IsClosed()) {
         RTC_LOG(LS_ERROR) << "AddIceCandidate: TgPeerConnection is closed.";
-        NoteAddIceCandidateResult(kAddIceCandidateFailClosed);
         return false;
     }
     
     if (!remote_description()) {
         RTC_LOG(LS_ERROR) << "AddIceCandidate: ICE candidates can't be added "
         "without any remote session description.";
-        NoteAddIceCandidateResult(kAddIceCandidateFailNoRemoteDescription);
         return false;
     }
     
     if (!ice_candidate) {
         RTC_LOG(LS_ERROR) << "AddIceCandidate: Candidate is null.";
-        NoteAddIceCandidateResult(kAddIceCandidateFailNullCandidate);
         return false;
     }
     
     bool valid = false;
     bool ready = ReadyToUseRemoteCandidate(ice_candidate, nullptr, &valid);
     if (!valid) {
-        NoteAddIceCandidateResult(kAddIceCandidateFailNotValid);
         return false;
     }
     
     // Add this candidate to the remote session description.
     if (!mutable_remote_description()->AddCandidate(ice_candidate)) {
         RTC_LOG(LS_ERROR) << "AddIceCandidate: Candidate cannot be used.";
-        NoteAddIceCandidateResult(kAddIceCandidateFailInAddition);
         return false;
     }
     
@@ -3818,14 +3613,11 @@ bool TgPeerConnection::AddIceCandidate(
         bool result = UseCandidate(ice_candidate);
         if (result) {
             NoteUsageEvent(UsageEvent::ADD_ICE_CANDIDATE_SUCCEEDED);
-            NoteAddIceCandidateResult(kAddIceCandidateSuccess);
         } else {
-            NoteAddIceCandidateResult(kAddIceCandidateFailNotUsable);
         }
         return result;
     } else {
         RTC_LOG(LS_INFO) << "AddIceCandidate: Not ready to use candidate.";
-        NoteAddIceCandidateResult(kAddIceCandidateFailNotReady);
         return true;
     }
 }
@@ -4508,7 +4300,7 @@ void TgPeerConnection::PostCreateSessionDescriptionFailure(
 void TgPeerConnection::GetOptionsForOffer(
                                           const PeerConnectionInterface::RTCOfferAnswerOptions& offer_answer_options,
                                           cricket::MediaSessionOptions* session_options) {
-    ExtractSharedMediaSessionOptions(offer_answer_options, session_options);
+    TgExtractSharedMediaSessionOptions(offer_answer_options, session_options);
     
     GetOptionsForUnifiedPlanOffer(offer_answer_options, session_options);
     
@@ -4720,7 +4512,7 @@ void TgPeerConnection::GetOptionsForUnifiedPlanOffer(
 void TgPeerConnection::GetOptionsForAnswer(
                                            const PeerConnectionInterface::RTCOfferAnswerOptions& offer_answer_options,
                                            cricket::MediaSessionOptions* session_options) {
-    ExtractSharedMediaSessionOptions(offer_answer_options, session_options);
+    TgExtractSharedMediaSessionOptions(offer_answer_options, session_options);
     
     GetOptionsForUnifiedPlanAnswer(offer_answer_options, session_options);
     
@@ -5118,7 +4910,7 @@ bool TgPeerConnection::HasRtpSender(cricket::MediaType type) const {
     return false;
 }
 
-rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
+rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
 TgPeerConnection::FindSenderForTrack(MediaStreamTrackInterface* track) const {
     for (const auto& transceiver : transceivers_) {
         for (auto sender : transceiver->internal()->senders()) {
@@ -5130,7 +4922,7 @@ TgPeerConnection::FindSenderForTrack(MediaStreamTrackInterface* track) const {
     return nullptr;
 }
 
-rtc::scoped_refptr<RtpSenderProxyWithInternal<TgRtpSenderInternal>>
+rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>
 TgPeerConnection::FindSenderById(const std::string& sender_id) const {
     for (const auto& transceiver : transceivers_) {
         for (auto sender : transceiver->internal()->senders()) {
@@ -6058,13 +5850,6 @@ RTCError TgPeerConnection::ValidateSessionDescription(
     
     // Verify crypto settings.
     std::string crypto_error;
-    if (webrtc_session_desc_factory_->SdesPolicy() == cricket::SEC_REQUIRED ||
-        dtls_enabled_) {
-        RTCError crypto_error = VerifyCrypto(sdesc->description(), dtls_enabled_);
-        if (!crypto_error.ok()) {
-            return crypto_error;
-        }
-    }
     
     // Verify ice-ufrag and ice-pwd.
     if (!VerifyIceUfragPwdPresent(sdesc->description())) {

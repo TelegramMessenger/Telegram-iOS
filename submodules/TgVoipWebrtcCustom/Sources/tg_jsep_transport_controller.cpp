@@ -25,6 +25,8 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/thread.h"
 
+#include "tg_dtls_transport.h"
+
 using webrtc::SdpType;
 
 namespace {
@@ -481,7 +483,7 @@ TgJsepTransportController::CreateDtlsTransport(
     dtls = config_.dtls_transport_factory->CreateDtlsTransport(
         ice, config_.crypto_options);
   } else {
-    dtls = std::make_unique<cricket::DtlsTransport>(ice, config_.crypto_options,
+    dtls = std::make_unique<cricket::TgDtlsTransport>(ice, config_.crypto_options,
                                                     config_.event_log);
   }
 
@@ -1153,9 +1155,9 @@ RTCError TgJsepTransportController::MaybeCreateJsepTransport(
       CreateDtlsTransport(content_info, ice->internal(), nullptr);
 
   //std::unique_ptr<cricket::DtlsTransportInternal> rtcp_dtls_transport;
-  std::unique_ptr<TgRtpTransport> unencrypted_rtp_transport;
+  //std::unique_ptr<TgRtpTransport> unencrypted_rtp_transport;
   //std::unique_ptr<SrtpTransport> sdes_transport;
-  //std::unique_ptr<DtlsSrtpTransport> dtls_srtp_transport;
+  std::unique_ptr<DtlsSrtpTransport> dtls_srtp_transport;
   //std::unique_ptr<RtpTransportInternal> datagram_rtp_transport;
 
   //rtc::scoped_refptr<webrtc::IceTransportInterface> rtcp_ice;
@@ -1189,18 +1191,18 @@ RTCError TgJsepTransportController::MaybeCreateJsepTransport(
 
   /*if (config_.disable_encryption) {
     RTC_LOG(LS_INFO)
-        << "Creating UnencryptedRtpTransport, becayse encryption is disabled.";*/
+        << "Creating UnencryptedRtpTransport, becayse encryption is disabled.";
     unencrypted_rtp_transport = CreateUnencryptedRtpTransport(
-        content_info.name, rtp_dtls_transport.get(), /*rtcp_dtls_transport.get()*/nullptr);
-  /*} else if (!content_desc->cryptos().empty()) {
+        content_info.name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
+  } else if (!content_desc->cryptos().empty()) {
     sdes_transport = CreateSdesTransport(
         content_info.name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
     RTC_LOG(LS_INFO) << "Creating SdesTransport.";
-  } else {
+  } else {*/
     RTC_LOG(LS_INFO) << "Creating DtlsSrtpTransport.";
     dtls_srtp_transport = CreateDtlsSrtpTransport(
-        content_info.name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
-  }*/
+        content_info.name, rtp_dtls_transport.get(), nullptr);
+  //}
 
   /*std::unique_ptr<cricket::SctpTransportInternal> sctp_transport;
   if (config_.sctp_factory) {
@@ -1216,8 +1218,8 @@ RTCError TgJsepTransportController::MaybeCreateJsepTransport(
   std::unique_ptr<cricket::TgJsepTransport> jsep_transport =
       std::make_unique<cricket::TgJsepTransport>(
           content_info.name, certificate_, std::move(ice), /*std::move(rtcp_ice)*/nullptr,
-          std::move(unencrypted_rtp_transport), /*std::move(sdes_transport)*/nullptr,
-          /*std::move(dtls_srtp_transport)*/nullptr, /*std::move(datagram_rtp_transport)*/nullptr,
+          /*std::move(unencrypted_rtp_transport)*/nullptr, /*std::move(sdes_transport)*/nullptr,
+          std::move(dtls_srtp_transport), /*std::move(datagram_rtp_transport)*/nullptr,
           std::move(rtp_dtls_transport), /*std::move(rtcp_dtls_transport)*/nullptr,
           /*std::move(sctp_transport)*/nullptr, /*std::move(datagram_transport)*/nullptr,
           /*data_channel_transport*/nullptr);

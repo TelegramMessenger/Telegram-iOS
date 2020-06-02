@@ -90,7 +90,7 @@ RtpParameters RestoreEncodingLayers(
 
 // Returns true if any RtpParameters member that isn't implemented contains a
 // value.
-bool UnimplementedRtpParameterHasValue(const RtpParameters& parameters) {
+bool TgUnimplementedRtpParameterHasValue(const RtpParameters& parameters) {
   if (!parameters.mid.empty()) {
     return true;
   }
@@ -103,265 +103,6 @@ bool UnimplementedRtpParameterHasValue(const RtpParameters& parameters) {
     }
   }
   return false;
-}
-
-TgRtpSenderBase::TgRtpSenderBase(rtc::Thread* worker_thread,
-                             const std::string& id,
-                             SetStreamsObserver* set_streams_observer)
-    : worker_thread_(worker_thread),
-      id_(id),
-      set_streams_observer_(set_streams_observer) {
-  RTC_DCHECK(worker_thread);
-  init_parameters_.encodings.emplace_back();
-}
-
-void TgRtpSenderBase::SetFrameEncryptor(
-    rtc::scoped_refptr<FrameEncryptorInterface> frame_encryptor) {
-  frame_encryptor_ = std::move(frame_encryptor);
-  // Special Case: Set the frame encryptor to any value on any existing channel.
-  if (media_channel_ && ssrc_ && !stopped_) {
-    worker_thread_->Invoke<void>(RTC_FROM_HERE, [&] {
-      media_channel_->SetFrameEncryptor(ssrc_, frame_encryptor_);
-    });
-  }
-}
-
-void TgRtpSenderBase::SetMediaChannel(cricket::MediaChannel* media_channel) {
-  RTC_DCHECK(media_channel == nullptr ||
-             media_channel->media_type() == media_type());
-  media_channel_ = media_channel;
-}
-
-RtpParameters TgRtpSenderBase::GetParametersInternal() const {
-  if (stopped_) {
-    return RtpParameters();
-  }
-  if (!media_channel_ || !ssrc_) {
-    return init_parameters_;
-  }
-  return worker_thread_->Invoke<RtpParameters>(RTC_FROM_HERE, [&] {
-    RtpParameters result = media_channel_->GetRtpSendParameters(ssrc_);
-    RemoveEncodingLayers(disabled_rids_, &result.encodings);
-    return result;
-  });
-}
-
-RtpParameters TgRtpSenderBase::GetParameters() const {
-  RtpParameters result = GetParametersInternal();
-  last_transaction_id_ = rtc::CreateRandomUuid();
-  result.transaction_id = last_transaction_id_.value();
-  return result;
-}
-
-RTCError TgRtpSenderBase::SetParametersInternal(const RtpParameters& parameters) {
-  RTC_DCHECK(!stopped_);
-
-  if (UnimplementedRtpParameterHasValue(parameters)) {
-    LOG_AND_RETURN_ERROR(
-        RTCErrorType::UNSUPPORTED_PARAMETER,
-        "Attempted to set an unimplemented parameter of RtpParameters.");
-  }
-  if (!media_channel_ || !ssrc_) {
-    auto result = cricket::CheckRtpParametersInvalidModificationAndValues(
-        init_parameters_, parameters);
-    if (result.ok()) {
-      init_parameters_ = parameters;
-    }
-    return result;
-  }
-  return worker_thread_->Invoke<RTCError>(RTC_FROM_HERE, [&] {
-    RtpParameters rtp_parameters = parameters;
-    if (!disabled_rids_.empty()) {
-      // Need to add the inactive layers.
-      RtpParameters old_parameters =
-          media_channel_->GetRtpSendParameters(ssrc_);
-      rtp_parameters = RestoreEncodingLayers(parameters, disabled_rids_,
-                                             old_parameters.encodings);
-    }
-    return media_channel_->SetRtpSendParameters(ssrc_, rtp_parameters);
-  });
-}
-
-RTCError TgRtpSenderBase::SetParameters(const RtpParameters& parameters) {
-  TRACE_EVENT0("webrtc", "TgRtpSenderBase::SetParameters");
-  if (stopped_) {
-    LOG_AND_RETURN_ERROR(RTCErrorType::INVALID_STATE,
-                         "Cannot set parameters on a stopped sender.");
-  }
-  if (!last_transaction_id_) {
-    LOG_AND_RETURN_ERROR(
-        RTCErrorType::INVALID_STATE,
-        "Failed to set parameters since getParameters() has never been called"
-        " on this sender");
-  }
-  if (last_transaction_id_ != parameters.transaction_id) {
-    LOG_AND_RETURN_ERROR(
-        RTCErrorType::INVALID_MODIFICATION,
-        "Failed to set parameters since the transaction_id doesn't match"
-        " the last value returned from getParameters()");
-  }
-
-  RTCError result = SetParametersInternal(parameters);
-  last_transaction_id_.reset();
-  return result;
-}
-
-void TgRtpSenderBase::SetStreams(const std::vector<std::string>& stream_ids) {
-  set_stream_ids(stream_ids);
-  if (set_streams_observer_)
-    set_streams_observer_->OnSetStreams();
-}
-
-bool TgRtpSenderBase::SetTrack(MediaStreamTrackInterface* track) {
-  TRACE_EVENT0("webrtc", "TgRtpSenderBase::SetTrack");
-  if (stopped_) {
-    RTC_LOG(LS_ERROR) << "SetTrack can't be called on a stopped RtpSender.";
-    return false;
-  }
-  if (track && track->kind() != track_kind()) {
-    RTC_LOG(LS_ERROR) << "SetTrack with " << track->kind()
-                      << " called on RtpSender with " << track_kind()
-                      << " track.";
-    return false;
-  }
-
-  // Detach from old track.
-  if (track_) {
-    DetachTrack();
-    track_->UnregisterObserver(this);
-    RemoveTrackFromStats();
-  }
-
-  // Attach to new track.
-  bool prev_can_send_track = can_send_track();
-  // Keep a reference to the old track to keep it alive until we call SetSend.
-  rtc::scoped_refptr<MediaStreamTrackInterface> old_track = track_;
-  track_ = track;
-  if (track_) {
-    track_->RegisterObserver(this);
-    AttachTrack();
-  }
-
-  // Update channel.
-  if (can_send_track()) {
-    SetSend();
-    AddTrackToStats();
-  } else if (prev_can_send_track) {
-    ClearSend();
-  }
-  attachment_id_ = (track_ ? GenerateUniqueId() : 0);
-  return true;
-}
-
-void TgRtpSenderBase::SetSsrc(uint32_t ssrc) {
-  TRACE_EVENT0("webrtc", "TgRtpSenderBase::SetSsrc");
-  if (stopped_ || ssrc == ssrc_) {
-    return;
-  }
-  // If we are already sending with a particular SSRC, stop sending.
-  if (can_send_track()) {
-    ClearSend();
-    RemoveTrackFromStats();
-  }
-  ssrc_ = ssrc;
-  if (can_send_track()) {
-    SetSend();
-    AddTrackToStats();
-  }
-  if (!init_parameters_.encodings.empty()) {
-    worker_thread_->Invoke<void>(RTC_FROM_HERE, [&] {
-      RTC_DCHECK(media_channel_);
-      // Get the current parameters, which are constructed from the SDP.
-      // The number of layers in the SDP is currently authoritative to support
-      // SDP munging for Plan-B simulcast with "a=ssrc-group:SIM <ssrc-id>..."
-      // lines as described in RFC 5576.
-      // All fields should be default constructed and the SSRC field set, which
-      // we need to copy.
-      RtpParameters current_parameters =
-          media_channel_->GetRtpSendParameters(ssrc_);
-      RTC_DCHECK_GE(current_parameters.encodings.size(),
-                    init_parameters_.encodings.size());
-      for (size_t i = 0; i < init_parameters_.encodings.size(); ++i) {
-        init_parameters_.encodings[i].ssrc =
-            current_parameters.encodings[i].ssrc;
-        init_parameters_.encodings[i].rid = current_parameters.encodings[i].rid;
-        current_parameters.encodings[i] = init_parameters_.encodings[i];
-      }
-      current_parameters.degradation_preference =
-          init_parameters_.degradation_preference;
-      media_channel_->SetRtpSendParameters(ssrc_, current_parameters);
-      init_parameters_.encodings.clear();
-    });
-  }
-  // Attempt to attach the frame decryptor to the current media channel.
-  if (frame_encryptor_) {
-    SetFrameEncryptor(frame_encryptor_);
-  }
-}
-
-void TgRtpSenderBase::Stop() {
-  TRACE_EVENT0("webrtc", "TgRtpSenderBase::Stop");
-  // TODO(deadbeef): Need to do more here to fully stop sending packets.
-  if (stopped_) {
-    return;
-  }
-  if (track_) {
-    DetachTrack();
-    track_->UnregisterObserver(this);
-  }
-  if (can_send_track()) {
-    ClearSend();
-    RemoveTrackFromStats();
-  }
-  media_channel_ = nullptr;
-  set_streams_observer_ = nullptr;
-  stopped_ = true;
-}
-
-RTCError TgRtpSenderBase::DisableEncodingLayers(
-    const std::vector<std::string>& rids) {
-  if (stopped_) {
-    LOG_AND_RETURN_ERROR(RTCErrorType::INVALID_STATE,
-                         "Cannot disable encodings on a stopped sender.");
-  }
-
-  if (rids.empty()) {
-    return RTCError::OK();
-  }
-
-  // Check that all the specified layers exist and disable them in the channel.
-  RtpParameters parameters = GetParametersInternal();
-  for (const std::string& rid : rids) {
-    if (absl::c_none_of(parameters.encodings,
-                        [&rid](const RtpEncodingParameters& encoding) {
-                          return encoding.rid == rid;
-                        })) {
-      LOG_AND_RETURN_ERROR(RTCErrorType::INVALID_PARAMETER,
-                           "RID: " + rid + " does not refer to a valid layer.");
-    }
-  }
-
-  if (!media_channel_ || !ssrc_) {
-    RemoveEncodingLayers(rids, &init_parameters_.encodings);
-    // Invalidate any transaction upon success.
-    last_transaction_id_.reset();
-    return RTCError::OK();
-  }
-
-  for (RtpEncodingParameters& encoding : parameters.encodings) {
-    // Remain active if not in the disable list.
-    encoding.active &= absl::c_none_of(
-        rids,
-        [&encoding](const std::string& rid) { return encoding.rid == rid; });
-  }
-
-  RTCError result = SetParametersInternal(parameters);
-  if (result.ok()) {
-    disabled_rids_.insert(disabled_rids_.end(), rids.begin(), rids.end());
-    // Invalidate any transaction upon success.
-    last_transaction_id_.reset();
-  }
-  return result;
 }
 
 TgLocalAudioSinkAdapter::TgLocalAudioSinkAdapter() : sink_(nullptr) {}
@@ -393,19 +134,16 @@ void TgLocalAudioSinkAdapter::SetSink(cricket::AudioSource::Sink* sink) {
 rtc::scoped_refptr<TgAudioRtpSender> TgAudioRtpSender::Create(
     rtc::Thread* worker_thread,
     const std::string& id,
-    StatsCollector* stats,
     SetStreamsObserver* set_streams_observer) {
   return rtc::scoped_refptr<TgAudioRtpSender>(
-      new rtc::RefCountedObject<TgAudioRtpSender>(worker_thread, id, stats,
+      new rtc::RefCountedObject<TgAudioRtpSender>(worker_thread, id,
                                                 set_streams_observer));
 }
 
 TgAudioRtpSender::TgAudioRtpSender(rtc::Thread* worker_thread,
                                const std::string& id,
-                               StatsCollector* stats,
                                SetStreamsObserver* set_streams_observer)
-    : TgRtpSenderBase(worker_thread, id, set_streams_observer),
-      stats_(stats),
+    : RtpSenderBase(worker_thread, id, set_streams_observer),
       dtmf_sender_proxy_(DtmfSenderProxy::Create(
           rtc::Thread::Current(),
           DtmfSender::Create(rtc::Thread::Current(), this))),
@@ -477,15 +215,9 @@ void TgAudioRtpSender::AttachTrack() {
 }
 
 void TgAudioRtpSender::AddTrackToStats() {
-  if (can_send_track() && stats_) {
-    stats_->AddLocalAudioTrack(audio_track().get(), ssrc_);
-  }
 }
 
 void TgAudioRtpSender::RemoveTrackFromStats() {
-  if (can_send_track() && stats_) {
-    stats_->RemoveLocalAudioTrack(audio_track().get(), ssrc_);
-  }
 }
 
 rtc::scoped_refptr<DtmfSenderInterface> TgAudioRtpSender::GetDtmfSender() const {
@@ -550,7 +282,7 @@ rtc::scoped_refptr<TgVideoRtpSender> TgVideoRtpSender::Create(
 TgVideoRtpSender::TgVideoRtpSender(rtc::Thread* worker_thread,
                                const std::string& id,
                                SetStreamsObserver* set_streams_observer)
-    : TgRtpSenderBase(worker_thread, id, set_streams_observer) {}
+    : RtpSenderBase(worker_thread, id, set_streams_observer) {}
 
 TgVideoRtpSender::~TgVideoRtpSender() {
   Stop();

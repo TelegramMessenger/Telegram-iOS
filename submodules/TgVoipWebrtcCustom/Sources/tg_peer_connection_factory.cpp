@@ -48,6 +48,136 @@
 
 namespace webrtc {
 
+rtc::scoped_refptr<TgPeerConnectionInterface>
+TgPeerConnectionFactoryInterface::CreatePeerConnection(
+    const PeerConnectionInterface::RTCConfiguration& configuration,
+    std::unique_ptr<cricket::PortAllocator> allocator,
+    std::unique_ptr<rtc::RTCCertificateGeneratorInterface> cert_generator,
+    PeerConnectionObserver* observer) {
+  return nullptr;
+}
+
+rtc::scoped_refptr<TgPeerConnectionInterface>
+TgPeerConnectionFactoryInterface::CreatePeerConnection(
+    const PeerConnectionInterface::RTCConfiguration& configuration,
+    PeerConnectionDependencies dependencies) {
+  return nullptr;
+}
+
+RtpCapabilities TgPeerConnectionFactoryInterface::GetRtpSenderCapabilities(
+    cricket::MediaType kind) const {
+  return {};
+}
+
+RtpCapabilities TgPeerConnectionFactoryInterface::GetRtpReceiverCapabilities(
+    cricket::MediaType kind) const {
+  return {};
+}
+
+BEGIN_SIGNALING_PROXY_MAP(TgPeerConnection)
+PROXY_SIGNALING_THREAD_DESTRUCTOR()
+PROXY_METHOD0(rtc::scoped_refptr<StreamCollectionInterface>, local_streams)
+PROXY_METHOD0(rtc::scoped_refptr<StreamCollectionInterface>, remote_streams)
+PROXY_METHOD1(bool, AddStream, MediaStreamInterface*)
+PROXY_METHOD1(void, RemoveStream, MediaStreamInterface*)
+PROXY_METHOD2(RTCErrorOr<rtc::scoped_refptr<RtpSenderInterface>>,
+              AddTrack,
+              rtc::scoped_refptr<MediaStreamTrackInterface>,
+              const std::vector<std::string>&)
+PROXY_METHOD1(bool, RemoveTrack, RtpSenderInterface*)
+PROXY_METHOD1(RTCError, RemoveTrackNew, rtc::scoped_refptr<RtpSenderInterface>)
+PROXY_METHOD1(RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>,
+              AddTransceiver,
+              rtc::scoped_refptr<MediaStreamTrackInterface>)
+PROXY_METHOD2(RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>,
+              AddTransceiver,
+              rtc::scoped_refptr<MediaStreamTrackInterface>,
+              const RtpTransceiverInit&)
+PROXY_METHOD1(RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>,
+              AddTransceiver,
+              cricket::MediaType)
+PROXY_METHOD2(RTCErrorOr<rtc::scoped_refptr<RtpTransceiverInterface>>,
+              AddTransceiver,
+              cricket::MediaType,
+              const RtpTransceiverInit&)
+PROXY_METHOD2(rtc::scoped_refptr<RtpSenderInterface>,
+              CreateSender,
+              const std::string&,
+              const std::string&)
+PROXY_CONSTMETHOD0(std::vector<rtc::scoped_refptr<RtpSenderInterface>>,
+                   GetSenders)
+PROXY_CONSTMETHOD0(std::vector<rtc::scoped_refptr<RtpReceiverInterface>>,
+                   GetReceivers)
+PROXY_CONSTMETHOD0(std::vector<rtc::scoped_refptr<RtpTransceiverInterface>>,
+                   GetTransceivers)
+PROXY_METHOD0(void, ClearStatsCache)
+PROXY_METHOD2(rtc::scoped_refptr<DataChannelInterface>,
+              CreateDataChannel,
+              const std::string&,
+              const DataChannelInit*)
+PROXY_CONSTMETHOD0(const SessionDescriptionInterface*, local_description)
+PROXY_CONSTMETHOD0(const SessionDescriptionInterface*, remote_description)
+PROXY_CONSTMETHOD0(const SessionDescriptionInterface*,
+                   current_local_description)
+PROXY_CONSTMETHOD0(const SessionDescriptionInterface*,
+                   current_remote_description)
+PROXY_CONSTMETHOD0(const SessionDescriptionInterface*,
+                   pending_local_description)
+PROXY_CONSTMETHOD0(const SessionDescriptionInterface*,
+                   pending_remote_description)
+PROXY_METHOD0(void, RestartIce)
+PROXY_METHOD2(void,
+              CreateOffer,
+              CreateSessionDescriptionObserver*,
+              const PeerConnectionInterface::RTCOfferAnswerOptions&)
+PROXY_METHOD2(void,
+              CreateAnswer,
+              CreateSessionDescriptionObserver*,
+              const PeerConnectionInterface::RTCOfferAnswerOptions&)
+PROXY_METHOD2(void,
+              SetLocalDescription,
+              SetSessionDescriptionObserver*,
+              SessionDescriptionInterface*)
+PROXY_METHOD1(void, SetLocalDescription, SetSessionDescriptionObserver*)
+PROXY_METHOD2(void,
+              SetRemoteDescription,
+              SetSessionDescriptionObserver*,
+              SessionDescriptionInterface*)
+PROXY_METHOD2(void,
+              SetRemoteDescription,
+              std::unique_ptr<SessionDescriptionInterface>,
+              rtc::scoped_refptr<SetRemoteDescriptionObserverInterface>)
+PROXY_METHOD0(PeerConnectionInterface::RTCConfiguration, GetConfiguration)
+PROXY_METHOD1(RTCError,
+              SetConfiguration,
+              const PeerConnectionInterface::RTCConfiguration&)
+PROXY_METHOD1(bool, AddIceCandidate, const IceCandidateInterface*)
+PROXY_METHOD2(void,
+              AddIceCandidate,
+              std::unique_ptr<IceCandidateInterface>,
+              std::function<void(RTCError)>)
+PROXY_METHOD1(bool, RemoveIceCandidates, const std::vector<cricket::Candidate>&)
+PROXY_METHOD1(RTCError, SetBitrate, const BitrateSettings&)
+PROXY_METHOD1(void, SetAudioPlayout, bool)
+PROXY_METHOD1(void, SetAudioRecording, bool)
+PROXY_METHOD1(rtc::scoped_refptr<DtlsTransportInterface>,
+              LookupDtlsTransportByMid,
+              const std::string&)
+PROXY_CONSTMETHOD0(rtc::scoped_refptr<SctpTransportInterface>, GetSctpTransport)
+PROXY_METHOD0(PeerConnectionInterface::SignalingState, signaling_state)
+PROXY_METHOD0(PeerConnectionInterface::IceConnectionState, ice_connection_state)
+PROXY_METHOD0(PeerConnectionInterface::IceConnectionState, standardized_ice_connection_state)
+PROXY_METHOD0(PeerConnectionInterface::PeerConnectionState, peer_connection_state)
+PROXY_METHOD0(PeerConnectionInterface::IceGatheringState, ice_gathering_state)
+PROXY_METHOD2(bool,
+              StartRtcEventLog,
+              std::unique_ptr<RtcEventLogOutput>,
+              int64_t)
+PROXY_METHOD1(bool, StartRtcEventLog, std::unique_ptr<RtcEventLogOutput>)
+PROXY_METHOD0(void, StopRtcEventLog)
+PROXY_METHOD0(void, Close)
+END_PROXY_MAP()
+
 TgPeerConnectionFactory::TgPeerConnectionFactory(
     PeerConnectionFactoryDependencies dependencies)
     : wraps_current_thread_(false),
@@ -210,7 +340,7 @@ void TgPeerConnectionFactory::StopAecDump() {
   channel_manager_->StopAecDump();
 }
 
-rtc::scoped_refptr<TgPeerConnection>
+rtc::scoped_refptr<TgPeerConnectionInterface>
 TgPeerConnectionFactory::CreatePeerConnection(
     const PeerConnectionInterface::RTCConfiguration& configuration,
     std::unique_ptr<cricket::PortAllocator> allocator,
@@ -224,7 +354,7 @@ TgPeerConnectionFactory::CreatePeerConnection(
   return CreatePeerConnection(configuration, std::move(dependencies));
 }
 
-rtc::scoped_refptr<TgPeerConnection>
+rtc::scoped_refptr<TgPeerConnectionInterface>
 TgPeerConnectionFactory::CreatePeerConnection(
     const PeerConnectionInterface::RTCConfiguration& configuration,
     PeerConnectionDependencies dependencies) {
@@ -284,7 +414,7 @@ TgPeerConnectionFactory::CreatePeerConnection(
   if (!pc->Initialize(configuration, std::move(dependencies))) {
     return nullptr;
   }
-  return pc;
+  return TgPeerConnectionProxy::Create(signaling_thread(), pc);
 }
 
 rtc::scoped_refptr<MediaStreamInterface>

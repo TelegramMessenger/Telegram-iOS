@@ -73,15 +73,7 @@ TgRtpDataMediaChannel::~TgRtpDataMediaChannel() {
   }
 }
 
-void RTC_NO_SANITIZE("float-cast-overflow")  // bugs.webrtc.org/8204
-    RtpClock::Tick(double now, int* seq_num, uint32_t* timestamp) {
-  *seq_num = ++last_seq_num_;
-  *timestamp = timestamp_offset_ + static_cast<uint32_t>(now * clockrate_);
-  // UBSan: 5.92374e+10 is outside the range of representable values of type
-  // 'unsigned int'
-}
-
-const DataCodec* FindUnknownCodec(const std::vector<DataCodec>& codecs) {
+const DataCodec* TgFindUnknownCodec(const std::vector<DataCodec>& codecs) {
   DataCodec data_codec(kGoogleRtpDataCodecPlType, kGoogleRtpDataCodecName);
   std::vector<DataCodec>::const_iterator iter;
   for (iter = codecs.begin(); iter != codecs.end(); ++iter) {
@@ -92,7 +84,7 @@ const DataCodec* FindUnknownCodec(const std::vector<DataCodec>& codecs) {
   return NULL;
 }
 
-const DataCodec* FindKnownCodec(const std::vector<DataCodec>& codecs) {
+const DataCodec* TgFindKnownCodec(const std::vector<DataCodec>& codecs) {
   DataCodec data_codec(kGoogleRtpDataCodecPlType, kGoogleRtpDataCodecName);
   std::vector<DataCodec>::const_iterator iter;
   for (iter = codecs.begin(); iter != codecs.end(); ++iter) {
@@ -104,7 +96,7 @@ const DataCodec* FindKnownCodec(const std::vector<DataCodec>& codecs) {
 }
 
 bool TgRtpDataMediaChannel::SetRecvCodecs(const std::vector<DataCodec>& codecs) {
-  const DataCodec* unknown_codec = FindUnknownCodec(codecs);
+  const DataCodec* unknown_codec = TgFindUnknownCodec(codecs);
   if (unknown_codec) {
     RTC_LOG(LS_WARNING) << "Failed to SetRecvCodecs because of unknown codec: "
                         << unknown_codec->ToString();
@@ -116,7 +108,7 @@ bool TgRtpDataMediaChannel::SetRecvCodecs(const std::vector<DataCodec>& codecs) 
 }
 
 bool TgRtpDataMediaChannel::SetSendCodecs(const std::vector<DataCodec>& codecs) {
-  const DataCodec* known_codec = FindKnownCodec(codecs);
+  const DataCodec* known_codec = TgFindKnownCodec(codecs);
   if (!known_codec) {
     RTC_LOG(LS_WARNING)
         << "Failed to SetSendCodecs because there is no known codec.";

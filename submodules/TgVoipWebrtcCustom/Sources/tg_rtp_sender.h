@@ -26,178 +26,13 @@
 #include "pc/dtmf_sender.h"
 #include "rtc_base/critical_section.h"
 
+#include "pc/rtp_sender.h"
+
 namespace webrtc {
 
 class StatsCollector;
 
-bool UnimplementedRtpParameterHasValue(const RtpParameters& parameters);
-
-// Internal interface used by PeerConnection.
-class TgRtpSenderInternal : public RtpSenderInterface {
- public:
-  // Sets the underlying MediaEngine channel associated with this RtpSender.
-  // A VoiceMediaChannel should be used for audio RtpSenders and
-  // a VideoMediaChannel should be used for video RtpSenders.
-  // Must call SetMediaChannel(nullptr) before the media channel is destroyed.
-  virtual void SetMediaChannel(cricket::MediaChannel* media_channel) = 0;
-
-  // Used to set the SSRC of the sender, once a local description has been set.
-  // If |ssrc| is 0, this indiates that the sender should disconnect from the
-  // underlying transport (this occurs if the sender isn't seen in a local
-  // description).
-  virtual void SetSsrc(uint32_t ssrc) = 0;
-
-  virtual void set_stream_ids(const std::vector<std::string>& stream_ids) = 0;
-  virtual void set_init_send_encodings(
-      const std::vector<RtpEncodingParameters>& init_send_encodings) = 0;
-  virtual void set_transport(
-      rtc::scoped_refptr<DtlsTransportInterface> dtls_transport) = 0;
-
-  virtual void Stop() = 0;
-
-  // |GetParameters| and |SetParameters| operate with a transactional model.
-  // Allow access to get/set parameters without invalidating transaction id.
-  virtual RtpParameters GetParametersInternal() const = 0;
-  virtual RTCError SetParametersInternal(const RtpParameters& parameters) = 0;
-
-  // Returns an ID that changes every time SetTrack() is called, but
-  // otherwise remains constant. Used to generate IDs for stats.
-  // The special value zero means that no track is attached.
-  virtual int AttachmentId() const = 0;
-
-  // Disables the layers identified by the specified RIDs.
-  // If the specified list is empty, this is a no-op.
-  virtual RTCError DisableEncodingLayers(
-      const std::vector<std::string>& rid) = 0;
-};
-
-// Shared implementation for RtpSenderInternal interface.
-class TgRtpSenderBase : public TgRtpSenderInternal, public ObserverInterface {
- public:
-  class SetStreamsObserver {
-   public:
-    virtual ~SetStreamsObserver() = default;
-    virtual void OnSetStreams() = 0;
-  };
-
-  // Sets the underlying MediaEngine channel associated with this RtpSender.
-  // A VoiceMediaChannel should be used for audio RtpSenders and
-  // a VideoMediaChannel should be used for video RtpSenders.
-  // Must call SetMediaChannel(nullptr) before the media channel is destroyed.
-  void SetMediaChannel(cricket::MediaChannel* media_channel) override;
-
-  bool SetTrack(MediaStreamTrackInterface* track) override;
-  rtc::scoped_refptr<MediaStreamTrackInterface> track() const override {
-    return track_;
-  }
-
-  RtpParameters GetParameters() const override;
-  RTCError SetParameters(const RtpParameters& parameters) override;
-
-  // |GetParameters| and |SetParameters| operate with a transactional model.
-  // Allow access to get/set parameters without invalidating transaction id.
-  RtpParameters GetParametersInternal() const override;
-  RTCError SetParametersInternal(const RtpParameters& parameters) override;
-
-  // Used to set the SSRC of the sender, once a local description has been set.
-  // If |ssrc| is 0, this indiates that the sender should disconnect from the
-  // underlying transport (this occurs if the sender isn't seen in a local
-  // description).
-  void SetSsrc(uint32_t ssrc) override;
-  uint32_t ssrc() const override { return ssrc_; }
-
-  std::vector<std::string> stream_ids() const override { return stream_ids_; }
-  void set_stream_ids(const std::vector<std::string>& stream_ids) override {
-    stream_ids_ = stream_ids;
-  }
-  void SetStreams(const std::vector<std::string>& stream_ids) override;
-
-  std::string id() const override { return id_; }
-
-  void set_init_send_encodings(
-      const std::vector<RtpEncodingParameters>& init_send_encodings) override {
-    init_parameters_.encodings = init_send_encodings;
-  }
-  std::vector<RtpEncodingParameters> init_send_encodings() const override {
-    return init_parameters_.encodings;
-  }
-
-  void set_transport(
-      rtc::scoped_refptr<DtlsTransportInterface> dtls_transport) override {
-    dtls_transport_ = dtls_transport;
-  }
-  rtc::scoped_refptr<DtlsTransportInterface> dtls_transport() const override {
-    return dtls_transport_;
-  }
-
-  void SetFrameEncryptor(
-      rtc::scoped_refptr<FrameEncryptorInterface> frame_encryptor) override;
-
-  rtc::scoped_refptr<FrameEncryptorInterface> GetFrameEncryptor()
-      const override {
-    return frame_encryptor_;
-  }
-
-  void Stop() override;
-
-  // Returns an ID that changes every time SetTrack() is called, but
-  // otherwise remains constant. Used to generate IDs for stats.
-  // The special value zero means that no track is attached.
-  int AttachmentId() const override { return attachment_id_; }
-
-  // Disables the layers identified by the specified RIDs.
-  // If the specified list is empty, this is a no-op.
-  RTCError DisableEncodingLayers(const std::vector<std::string>& rid) override;
-
- protected:
-  // If |set_streams_observer| is not null, it is invoked when SetStreams()
-  // is called. |set_streams_observer| is not owned by this object. If not
-  // null, it must be valid at least until this sender becomes stopped.
-  TgRtpSenderBase(rtc::Thread* worker_thread,
-                const std::string& id,
-                SetStreamsObserver* set_streams_observer);
-  // TODO(nisse): Since SSRC == 0 is technically valid, figure out
-  // some other way to test if we have a valid SSRC.
-  bool can_send_track() const { return track_ && ssrc_; }
-
-  virtual std::string track_kind() const = 0;
-
-  // Enable sending on the media channel.
-  virtual void SetSend() = 0;
-  // Disable sending on the media channel.
-  virtual void ClearSend() = 0;
-
-  // Template method pattern to allow subclasses to add custom behavior for
-  // when tracks are attached, detached, and for adding tracks to statistics.
-  virtual void AttachTrack() {}
-  virtual void DetachTrack() {}
-  virtual void AddTrackToStats() {}
-  virtual void RemoveTrackFromStats() {}
-
-  rtc::Thread* worker_thread_;
-  uint32_t ssrc_ = 0;
-  bool stopped_ = false;
-  int attachment_id_ = 0;
-  const std::string id_;
-
-  std::vector<std::string> stream_ids_;
-  RtpParameters init_parameters_;
-
-  cricket::MediaChannel* media_channel_ = nullptr;
-  rtc::scoped_refptr<MediaStreamTrackInterface> track_;
-
-  rtc::scoped_refptr<DtlsTransportInterface> dtls_transport_;
-  rtc::scoped_refptr<FrameEncryptorInterface> frame_encryptor_;
-  // |last_transaction_id_| is used to verify that |SetParameters| is receiving
-  // the parameters object that was last returned from |GetParameters|.
-  // As such, it is used for internal verification and is not observable by the
-  // the client. It is marked as mutable to enable |GetParameters| to be a
-  // const method.
-  mutable absl::optional<std::string> last_transaction_id_;
-  std::vector<std::string> disabled_rids_;
-
-  SetStreamsObserver* set_streams_observer_ = nullptr;
-};
+bool TgUnimplementedRtpParameterHasValue(const RtpParameters& parameters);
 
 // TgLocalAudioSinkAdapter receives data callback as a sink to the local
 // AudioTrack, and passes the data to the sink of AudioSource.
@@ -223,7 +58,7 @@ class TgLocalAudioSinkAdapter : public AudioTrackSinkInterface,
   rtc::CriticalSection lock_;
 };
 
-class TgAudioRtpSender : public DtmfProviderInterface, public TgRtpSenderBase {
+class TgAudioRtpSender : public DtmfProviderInterface, public RtpSenderBase {
  public:
   // Construct an RtpSender for audio with the given sender ID.
   // The sender is initialized with no track to send and no associated streams.
@@ -235,7 +70,6 @@ class TgAudioRtpSender : public DtmfProviderInterface, public TgRtpSenderBase {
   static rtc::scoped_refptr<TgAudioRtpSender> Create(
       rtc::Thread* worker_thread,
       const std::string& id,
-      StatsCollector* stats,
       SetStreamsObserver* set_streams_observer);
   virtual ~TgAudioRtpSender();
 
@@ -259,7 +93,6 @@ class TgAudioRtpSender : public DtmfProviderInterface, public TgRtpSenderBase {
  protected:
   TgAudioRtpSender(rtc::Thread* worker_thread,
                  const std::string& id,
-                 StatsCollector* stats,
                  SetStreamsObserver* set_streams_observer);
 
   void SetSend() override;
@@ -281,7 +114,6 @@ class TgAudioRtpSender : public DtmfProviderInterface, public TgRtpSenderBase {
   }
   sigslot::signal0<> SignalDestroyed;
 
-  StatsCollector* stats_ = nullptr;
   rtc::scoped_refptr<DtmfSenderInterface> dtmf_sender_proxy_;
   bool cached_track_enabled_ = false;
 
@@ -290,7 +122,7 @@ class TgAudioRtpSender : public DtmfProviderInterface, public TgRtpSenderBase {
   std::unique_ptr<TgLocalAudioSinkAdapter> sink_adapter_;
 };
 
-class TgVideoRtpSender : public TgRtpSenderBase {
+class TgVideoRtpSender : public RtpSenderBase {
  public:
   // Construct an RtpSender for video with the given sender ID.
   // The sender is initialized with no track to send and no associated streams.
