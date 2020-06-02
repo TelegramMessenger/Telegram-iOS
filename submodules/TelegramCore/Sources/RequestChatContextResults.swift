@@ -136,7 +136,7 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                 }
                 
                 return account.postbox.transaction { transaction -> RequestChatContextResultsResult? in
-                    if result.cacheTimeout > 10 {
+                    if result.cacheTimeout > 10, offset.isEmpty && location == nil {
                         if let resultData = try? JSONEncoder().encode(result) {
                             let requestData = RequestData(version: requestVersion, botId: botId, peerId: peerId, query: query)
                             if let keyData = try? JSONEncoder().encode(requestData) {
