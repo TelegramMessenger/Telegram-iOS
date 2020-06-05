@@ -3680,6 +3680,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self, let (searchResult, searchState, searchLocation) = searchResult {
                             
                             let controller = ChatSearchResultsController(context: strongSelf.context, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, navigateToMessageIndex: { index in
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
                             }, resultsUpdated: { results, state in
                                 guard let strongSelf = self else {

@@ -814,14 +814,16 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.listContainerTransformNode.addSubnode(self.listContainerNode)
         self.addSubnode(self.listContainerTransformNode)
         
-        let avatarReady = self.avatarContainerNode.avatarNode.ready
+        let avatarReady = (self.avatarContainerNode.avatarNode.ready
         |> mapToSignal { _ -> Signal<Bool, NoError> in
             return .complete()
         }
-        |> then(.single(true))
+        |> then(.single(true)))
         
         let galleryReady = self.listContainerNode.isReady.get()
-        |> filter { $0 }
+        |> filter { value in
+            return value
+        }
         |> take(1)
         
         let combinedSignal: Signal<Bool, NoError>
@@ -838,7 +840,9 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         }
         
         self.isReady.set(combinedSignal
-        |> filter { $0 }
+        |> filter { value in
+            return value
+        }
         |> take(1))
     }
     

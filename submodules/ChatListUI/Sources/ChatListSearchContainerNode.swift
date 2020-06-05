@@ -485,7 +485,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 })
             case let .message(message, peer, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: peer, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: true, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(messages: [message], peer: peer, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: true, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             case let .addContact(phoneNumber, theme, strings):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     interaction.addContact(phoneNumber)
@@ -1385,8 +1385,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 bounds = selectedItemNode.bounds
             }
             switch item.content {
-                case let .peer(message, peer, _, _, _, _, _, _, _, _, _, _):
-                    return (selectedItemNode.view, bounds, message?.id ?? peer.peerId)
+                case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _):
+                    return (selectedItemNode.view, bounds, messages.last?.id ?? peer.peerId)
                 case let .groupReference(groupId, _, _, _, _):
                     return (selectedItemNode.view, bounds, groupId)
             }

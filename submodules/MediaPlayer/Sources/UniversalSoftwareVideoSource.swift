@@ -10,7 +10,6 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     let data: Signal<(Data, Bool), NoError>
     
-    let resourceSize: Int = context.size
     let readCount = min(256 * 1024, Int(bufferSize))
     let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
     
@@ -22,7 +21,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let requiredDataIsNotLocallyAvailable = context.requiredDataIsNotLocallyAvailable
     var fetchedData: Data?
     let fetchDisposable = MetaDisposable()
-    let isInitialized = context.videoStream != nil
+    let isInitialized = context.videoStream != nil || context.automaticallyFetchHeader
     let mediaBox = context.mediaBox
     let reference = context.fileReference.resourceReference(context.fileReference.media.resource)
     let disposable = data.start(next: { result in
@@ -94,6 +93,7 @@ private final class UniversalSoftwareVideoSourceImpl {
     fileprivate let mediaBox: MediaBox
     fileprivate let fileReference: FileMediaReference
     fileprivate let size: Int
+    fileprivate let automaticallyFetchHeader: Bool
     
     fileprivate let state: ValuePromise<UniversalSoftwareVideoSourceState>
     
@@ -108,7 +108,7 @@ private final class UniversalSoftwareVideoSourceImpl {
     fileprivate var currentNumberOfReads: Int = 0
     fileprivate var currentReadBytes: Int = 0
     
-    init?(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>) {
+    init?(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>, automaticallyFetchHeader: Bool) {
         guard let size = fileReference.media.size else {
             return nil
         }
@@ -116,6 +116,7 @@ private final class UniversalSoftwareVideoSourceImpl {
         self.mediaBox = mediaBox
         self.fileReference = fileReference
         self.size = size
+        self.automaticallyFetchHeader = automaticallyFetchHeader
         
         self.state = state
         state.set(.initializing)
@@ -139,6 +140,9 @@ private final class UniversalSoftwareVideoSourceImpl {
         if !avFormatContext.findStreamInfo() {
             return nil
         }
+        
+        print("Header read in \(self.currentReadBytes) bytes")
+        self.currentReadBytes = 0
         
         self.avFormatContext = avFormatContext
         
@@ -251,15 +255,17 @@ private final class UniversalSoftwareVideoSourceImpl {
     
         self.currentNumberOfReads = 0
         self.currentReadBytes = 0
-        for _ in 0 ..< 10 {
+        for i in 0 ..< 10 {
+            let _ = i
             let (decodableFrame, loop) = self.readDecodableFrame()
             if let decodableFrame = decodableFrame {
                 if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
-                    //print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
+                    print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
                     return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
                 }
             }
         }
+        print("No frame in \(self.currentReadBytes / 1024) KB")
         return (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), true)
     }
 }
@@ -276,12 +282,20 @@ private final class UniversalSoftwareVideoSourceThreadParams: NSObject {
     let fileReference: FileMediaReference
     let state: ValuePromise<UniversalSoftwareVideoSourceState>
     let cancelInitialization: Signal<Bool, NoError>
+    let automaticallyFetchHeader: Bool
     
-    init(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>) {
+    init(
+        mediaBox: MediaBox,
+        fileReference: FileMediaReference,
+        state: ValuePromise<UniversalSoftwareVideoSourceState>,
+        cancelInitialization: Signal<Bool, NoError>,
+        automaticallyFetchHeader: Bool
+    ) {
         self.mediaBox = mediaBox
         self.fileReference = fileReference
         self.state = state
         self.cancelInitialization = cancelInitialization
+        self.automaticallyFetchHeader = automaticallyFetchHeader
     }
 }
 
@@ -306,7 +320,7 @@ private final class UniversalSoftwareVideoSourceThread: NSObject {
         let timer = Timer(fireAt: .distantFuture, interval: 0.0, target: UniversalSoftwareVideoSourceThread.self, selector: #selector(UniversalSoftwareVideoSourceThread.none), userInfo: nil, repeats: false)
         runLoop.add(timer, forMode: .common)
         
-        let source = UniversalSoftwareVideoSourceImpl(mediaBox: params.mediaBox, fileReference: params.fileReference, state: params.state, cancelInitialization: params.cancelInitialization)
+        let source = UniversalSoftwareVideoSourceImpl(mediaBox: params.mediaBox, fileReference: params.fileReference, state: params.state, cancelInitialization: params.cancelInitialization, automaticallyFetchHeader: params.automaticallyFetchHeader)
         Thread.current.threadDictionary["source"] = source
         
         while true {
@@ -342,17 +356,17 @@ private final class UniversalSoftwareVideoSourceThread: NSObject {
     }
 }
 
-enum UniversalSoftwareVideoSourceTakeFrameResult {
+public enum UniversalSoftwareVideoSourceTakeFrameResult {
     case waitingForData
     case image(UIImage?)
 }
 
-final class UniversalSoftwareVideoSource {
+public final class UniversalSoftwareVideoSource {
     private let thread: Thread
     private let stateValue: ValuePromise<UniversalSoftwareVideoSourceState> = ValuePromise(.initializing, ignoreRepeated: true)
     private let cancelInitialization: ValuePromise<Bool> = ValuePromise(false)
     
-    var ready: Signal<Bool, NoError> {
+    public var ready: Signal<Bool, NoError> {
         return self.stateValue.get()
         |> map { value -> Bool in
             switch value {
@@ -364,8 +378,8 @@ final class UniversalSoftwareVideoSource {
         }
     }
     
-    init(mediaBox: MediaBox, fileReference: FileMediaReference) {
-        self.thread = Thread(target: UniversalSoftwareVideoSourceThread.self, selector: #selector(UniversalSoftwareVideoSourceThread.entryPoint(_:)), object: UniversalSoftwareVideoSourceThreadParams(mediaBox: mediaBox, fileReference: fileReference, state: self.stateValue, cancelInitialization: self.cancelInitialization.get()))
+    public init(mediaBox: MediaBox, fileReference: FileMediaReference, automaticallyFetchHeader: Bool = false) {
+        self.thread = Thread(target: UniversalSoftwareVideoSourceThread.self, selector: #selector(UniversalSoftwareVideoSourceThread.entryPoint(_:)), object: UniversalSoftwareVideoSourceThreadParams(mediaBox: mediaBox, fileReference: fileReference, state: self.stateValue, cancelInitialization: self.cancelInitialization.get(), automaticallyFetchHeader: automaticallyFetchHeader))
         self.thread.name = "UniversalSoftwareVideoSource"
         self.thread.start()
     }
