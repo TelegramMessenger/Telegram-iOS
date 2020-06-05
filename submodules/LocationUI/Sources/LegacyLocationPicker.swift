@@ -61,6 +61,9 @@ public func legacyLocationPickerController(context: AccountContext, selfPeer: Pe
                     return .single(nil)
                 }
                 return requestChatContextResults(account: context.account, botId: peerId, peerId: selfPeer.id, query: query ?? "", location: .single((location?.coordinate.latitude ?? 0.0, location?.coordinate.longitude ?? 0.0)), offset: "")
+                |> map { results -> ChatContextResultCollection? in
+                    return results?.results
+                }
                 |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
                     return .single(nil)
                 }

@@ -9,6 +9,7 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import StickerPackPreviewUI
 
 private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
     private final class DisplayItem {
@@ -23,6 +24,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     
     private let context: AccountContext
     private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     private let scrollNode: ASScrollNode
     private var items: [TelegramMediaFile] = []
@@ -34,12 +36,17 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     private var ignoreScrolling: Bool = false
     private var animateInOnLayout: Bool = false
     
+    var previewedStickerItem: StickerPackItem?
+    
     var updateBackgroundOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme) {
+    var getControllerInteraction: (() -> ChatControllerInteraction?)?
+    
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         
         self.scrollNode = ASScrollNode()
         
@@ -54,6 +61,112 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         self.scrollNode.view.delegate = self
         
         self.addSubnode(self.scrollNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
+            if let strongSelf = self {
+                let convertedPoint = strongSelf.scrollNode.view.convert(point, from: strongSelf.view)
+                guard strongSelf.scrollNode.view.bounds.contains(convertedPoint) else {
+                    return nil
+                }
+                
+                var selectedNode: HorizontalStickerGridItemNode?
+                for (_, node) in strongSelf.itemNodes {
+                    if node.frame.contains(convertedPoint) {
+                        selectedNode = node
+                        break
+                    }
+                }
+                
+                if let itemNode = selectedNode, let item = itemNode.stickerItem {
+                    return strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                        return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                    }
+                    |> deliverOnMainQueue
+                    |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                        if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
+                            var menuItems: [PeekControllerMenuItem] = []
+                            menuItems = [
+                                PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { _, _ in
+                                    return controllerInteraction.sendSticker(.standalone(media: item.file), true, itemNode, itemNode.bounds)
+                                }),
+                                PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                    if let strongSelf = self {
+                                        if isStarred {
+                                            let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
+                                        } else {
+                                            let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
+                                        }
+                                    }
+                                    return true
+                                }),
+                                PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                    if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
+                                        loop: for attribute in item.file.attributes {
+                                            switch attribute {
+                                            case let .Sticker(_, packReference, _):
+                                                if let packReference = packReference {
+                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                        if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
+                                                            return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
+                                                        } else {
+                                                            return false
+                                                        }
+                                                    })
+                                                    
+                                                    controllerInteraction.navigationController()?.view.window?.endEditing(true)
+                                                    controllerInteraction.presentController(controller, nil)
+                                                }
+                                                break loop
+                                            default:
+                                                break
+                                            }
+                                        }
+                                        return true
+                                    }
+                                    return true
+                                }),
+                                PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                            ]
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                        } else {
+                            return nil
+                        }
+                    }
+                }
+            }
+            return nil
+            }, present: { [weak self] content, sourceNode in
+                if let strongSelf = self {
+                    let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                        return sourceNode
+                    })
+                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(controller, nil)
+                    return controller
+                }
+                return nil
+            }, updateContent: { [weak self] content in
+                if let strongSelf = self {
+                    var item: StickerPackItem?
+                    if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
+                        item = contentItem
+                    }
+                    strongSelf.updatePreviewingItem(item: item, animated: true)
+                }
+        }))
+    }
+    
+    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
+        if self.previewedStickerItem != item {
+            self.previewedStickerItem = item
+            
+            for (_, itemNode) in self.itemNodes {
+                itemNode.updatePreviewing(animated: animated)
+            }
+        }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -223,8 +336,8 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                         account: self.context.account,
                         file: item.file,
                         theme: self.theme,
-                        isPreviewed: { _ in
-                            return false
+                        isPreviewed: { [weak self] item in
+                            return item.file.fileId == self?.previewedStickerItem?.file.fileId
                         }, sendSticker: { [weak self] file, node, rect in
                             self?.sendSticker?(file, node, rect)
                         }
@@ -321,7 +434,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.backgroundContainerNode = ASDisplayNode()
         
-        self.stickersNode = InlineReactionSearchStickersNode(context: context, theme: theme)
+        self.stickersNode = InlineReactionSearchStickersNode(context: context, theme: theme, strings: strings)
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
@@ -338,6 +451,10 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         self.addSubnode(self.containerNode)
         
         self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor
+        
+        self.stickersNode.getControllerInteraction = { [weak self] in
+            return self?.controllerInteraction
+        }
         
         self.stickersNode.updateBackgroundOffset = { [weak self] offset, transition in
             guard let strongSelf = self, let (_, _) = strongSelf.validLayout else {
@@ -360,6 +477,11 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         self.view.disablesInteractiveKeyboardGestureRecognizer = true
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
     }
     
     func updateResults(results: [TelegramMediaFile]) {

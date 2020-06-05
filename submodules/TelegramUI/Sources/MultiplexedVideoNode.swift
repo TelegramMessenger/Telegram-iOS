@@ -89,12 +89,14 @@ final class MultiplexedVideoNodeFiles {
     let trending: [MultiplexedVideoNodeFile]
     let isSearch: Bool
     let canLoadMore: Bool
+    let isStale: Bool
     
-    init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool, canLoadMore: Bool) {
+    init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool, canLoadMore: Bool, isStale: Bool) {
         self.saved = saved
         self.trending = trending
         self.isSearch = isSearch
         self.canLoadMore = canLoadMore
+        self.isStale = isStale
     }
 }
 
@@ -125,7 +127,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false, canLoadMore: false)
+    private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false, canLoadMore: false, isStale: false)
     
     func setFiles(files: MultiplexedVideoNodeFiles, synchronous: Bool, resetScrollingToOffset: CGFloat?) {
         self.files = files
@@ -248,7 +250,11 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 return
             }
             if let (file, rect, isSaved) = strongSelf.fileAt(point: gestureLocation) {
-                strongSelf.fileContextMenu?(file, strongSelf, rect.offsetBy(dx: 0.0, dy: -strongSelf.scrollNode.bounds.minY), gesture, isSaved)
+                if !strongSelf.files.isStale {
+                    strongSelf.fileContextMenu?(file, strongSelf, rect.offsetBy(dx: 0.0, dy: -strongSelf.scrollNode.bounds.minY), gesture, isSaved)
+                } else {
+                    gesture.cancel()
+                }
             } else {
                 gesture.cancel()
             }
@@ -682,7 +688,9 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.view)
             if let (file, rect, _) = self.fileAt(point: point) {
-                self.fileSelected?(file, self, rect)
+                if !self.files.isStale {
+                    self.fileSelected?(file, self, rect)
+                }
             }
         }
     }

@@ -107,6 +107,15 @@ public class ImmediateTextNode: TextNode {
         return ImmediateTextNodeLayoutInfo(size: layout.size, truncated: layout.truncated)
     }
     
+    public func updateLayoutFullInfo(_ constrainedSize: CGSize) -> TextNodeLayout {
+        self.constrainedSize = constrainedSize
+        
+        let makeLayout = TextNode.asyncLayout(self)
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets))
+        let _ = apply()
+        return layout
+    }
+    
     public func redrawIfPossible() {
         if let constrainedSize = self.constrainedSize {
             let _ = self.updateLayout(constrainedSize)

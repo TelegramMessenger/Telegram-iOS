@@ -2129,7 +2129,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                     }
                 }
             }
-        } |> filter({ $0._0 != nil || $0._1 != nil })
+        }
         
         return signal
     } else {

@@ -23,7 +23,9 @@ final class AudioWaveformNode: ASDisplayNode {
     
     var progress: CGFloat? {
         didSet {
-            self.setNeedsDisplay()
+            if self.progress != oldValue {
+                self.setNeedsDisplay()
+            }
         }
     }
     

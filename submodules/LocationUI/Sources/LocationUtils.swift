@@ -40,6 +40,9 @@ public func nearbyVenues(account: Account, latitude: Double, longitude: Double, 
             return .single(nil)
         }
         return requestChatContextResults(account: account, botId: peerId, peerId: account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
+        |> map { results -> ChatContextResultCollection? in
+            return results?.results
+        }
         |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
             return .single(nil)
         }

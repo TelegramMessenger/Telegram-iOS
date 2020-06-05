@@ -14,6 +14,7 @@ import InstantPageUI
 import HashtagSearchUI
 import StickerPackPreviewUI
 import JoinLinkPreviewUI
+import PresentationDataUtils
 
 func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let presentImpl: (ViewController, Any?) -> Void = { controllerToPresent, _ in
@@ -89,8 +90,26 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     switch action {
         case .tap:
             switch itemLink {
-                case let .url(url):
-                    openLinkImpl(url)
+                case .url(let url, var concealed):
+                    let (parsedString, parsedConcealed) = parseUrl(url: url)
+                    if parsedConcealed {
+                        concealed = true
+                    }
+                    
+                    if concealed {
+                        var rawDisplayUrl: String = parsedString
+                        let maxLength = 180
+                        if rawDisplayUrl.count > maxLength {
+                            rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
+                        }
+                        var displayUrl = rawDisplayUrl
+                        displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
+                        controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                            openLinkImpl(url)
+                        })]), in: .window(.root))
+                    } else {
+                        openLinkImpl(url)
+                    }
                 case let .mention(mention):
                     openPeerMentionImpl(mention)
                 case let .hashtag(_, hashtag):
@@ -105,12 +124,13 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
             }
         case .longTap:
             switch itemLink {
-                case let .url(url):
+                case let .url(url, _):
                     let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url)).count > 1
                     let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
                     let actionSheet = ActionSheetController(presentationData: presentationData)
+                    let (displayUrl, _) = parseUrl(url: url)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: url),
+                        ActionSheetTextItem(title: displayUrl),
                         ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             openLinkImpl(url)

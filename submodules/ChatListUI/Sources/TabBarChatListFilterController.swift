@@ -101,14 +101,14 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                 }
                 
                 var count = 0
-                var hasUnmutedUnread = false
+                var unmutedUnreadCount = 0
                 if let totalState = totalStates[.root] {
                     for tag in tags {
                         if filter.data.excludeMuted {
                             if let value = totalState.filteredCounters[tag] {
                                 if value.chatCount != 0 {
                                     count += Int(value.chatCount)
-                                    hasUnmutedUnread = true
+                                    unmutedUnreadCount += Int(value.chatCount)
                                 }
                             }
                         } else {
@@ -117,7 +117,7 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                             }
                             if let value = totalState.filteredCounters[tag] {
                                 if value.chatCount != 0 {
-                                    hasUnmutedUnread = true
+                                    unmutedUnreadCount += Int(value.chatCount)
                                 }
                             }
                         }
@@ -130,7 +130,7 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                                 if let value = totalState.filteredCounters[tag] {
                                     if value.chatCount != 0 {
                                         count += Int(value.chatCount)
-                                        hasUnmutedUnread = true
+                                        unmutedUnreadCount += Int(value.chatCount)
                                     }
                                 }
                             } else {
@@ -139,7 +139,7 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                                 }
                                 if let value = totalState.filteredCounters[tag] {
                                     if value.chatCount != 0 {
-                                        hasUnmutedUnread = true
+                                        unmutedUnreadCount += Int(value.chatCount)
                                     }
                                 }
                             }
@@ -170,7 +170,7 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                             if matchesGroup && peerCount != 0 {
                                 count += 1
                                 if hasUnmuted {
-                                    hasUnmutedUnread = true
+                                    unmutedUnreadCount += 1
                                 }
                             }
                         }
@@ -181,7 +181,6 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                         var matches = true
                         if tags.contains(tag) {
                             if isMuted && filter.data.excludeMuted {
-                            } else {
                                 matches = false
                             }
                         }
@@ -200,11 +199,14 @@ func chatListFilterItems(postbox: Postbox) -> Signal<(Int, [(ChatListFilter, Int
                             }
                             if matchesGroup && peerCount != 0 {
                                 count -= 1
+                                if !isMuted {
+                                    unmutedUnreadCount -= 1
+                                }
                             }
                         }
                     }
                 }
-                result.append((filter, max(0, count), hasUnmutedUnread))
+                result.append((filter, max(0, count), unmutedUnreadCount > 0))
             }
             
             return (totalBadge, result)

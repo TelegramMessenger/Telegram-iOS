@@ -814,14 +814,16 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.listContainerTransformNode.addSubnode(self.listContainerNode)
         self.addSubnode(self.listContainerTransformNode)
         
-        let avatarReady = self.avatarContainerNode.avatarNode.ready
+        let avatarReady = (self.avatarContainerNode.avatarNode.ready
         |> mapToSignal { _ -> Signal<Bool, NoError> in
             return .complete()
         }
-        |> then(.single(true))
+        |> then(.single(true)))
         
         let galleryReady = self.listContainerNode.isReady.get()
-        |> filter { $0 }
+        |> filter { value in
+            return value
+        }
         |> take(1)
         
         let combinedSignal: Signal<Bool, NoError>
@@ -838,7 +840,9 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         }
         
         self.isReady.set(combinedSignal
-        |> filter { $0 }
+        |> filter { value in
+            return value
+        }
         |> take(1))
     }
     
@@ -1674,7 +1678,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
     
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+        var contentOffset = contentOffset
+        
+        if isMediaOnly {
+            if isModalOverlay {
+                contentOffset = 312.0
+            } else {
+                contentOffset = 212.0
+            }
+        }
+        
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         

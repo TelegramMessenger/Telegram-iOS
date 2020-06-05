@@ -502,6 +502,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, toggleMembersSearch: { _ in
         }, navigateToMessage: { _ in
         }, navigateToChat: { _ in
+        }, navigateToProfile: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
         }, sendContextResult: { _, _, _, _ in

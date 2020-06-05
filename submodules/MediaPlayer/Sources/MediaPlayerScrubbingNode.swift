@@ -710,12 +710,13 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         } else if let _ = self.scrubbingTimestampValue {
             needsAnimation = false
         } else if let statusValue = self.statusValue {
-            if case .buffering(true, _) = statusValue.status {
+            switch statusValue.status {
+            case .buffering:
                 needsAnimation = false
-            } else if Double(0.0).isLess(than: statusValue.duration) {
+            case .paused:
+                needsAnimation = false
+            case .playing:
                 needsAnimation = true
-            } else {
-                needsAnimation = false
             }
         } else {
             needsAnimation = false

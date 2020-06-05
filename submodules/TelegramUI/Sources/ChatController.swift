@@ -1219,7 +1219,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 switch action {
                     case let .url(url):
-                        var cleanUrl = url
+                        var (cleanUrl, _) = parseUrl(url: url)
                         var canAddToReadingList = true
                         var canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                         let mailtoString = "mailto:"
@@ -2301,9 +2301,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             var contactStatus: ChatContactStatus?
                             if let peer = peerView.peers[peerView.peerId] {
                                 if let cachedData = peerView.cachedData as? CachedUserData {
-                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings)
+                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil)
                                 } else if let cachedData = peerView.cachedData as? CachedGroupData {
-                                    contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings)
+                                    var invitedBy: Peer?
+                                    if let invitedByPeerId = cachedData.invitedBy {
+                                        if let peer = peerView.peers[invitedByPeerId] {
+                                            invitedBy = peer
+                                        }
+                                    }
+                                    contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy)
                                 } else if let cachedData = peerView.cachedData as? CachedChannelData {
                                     var canReportIrrelevantLocation = true
                                     if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.participationStatus == .member {
@@ -2312,7 +2318,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if let peerReportNotice = peerReportNotice, peerReportNotice {
                                         canReportIrrelevantLocation = false
                                     }
-                                    contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings)
+                                    var invitedBy: Peer?
+                                    if let invitedByPeerId = cachedData.invitedBy {
+                                        if let peer = peerView.peers[invitedByPeerId] {
+                                            invitedBy = peer
+                                        }
+                                    }
+                                    contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy)
                                 }
                                 
                                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -3668,6 +3680,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self, let (searchResult, searchState, searchLocation) = searchResult {
                             
                             let controller = ChatSearchResultsController(context: strongSelf.context, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, navigateToMessageIndex: { index in
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
                             }, resultsUpdated: { results, state in
                                 guard let strongSelf = self else {
@@ -3792,6 +3807,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let navigationController = strongSelf.effectiveNavigationController {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, keepStack: .always))
             }
+        }, navigateToProfile: { [weak self] peerId in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.openPeer(peerId: peerId, navigation: .default, fromMessage: nil)
         }, openPeerInfo: { [weak self] in
             self?.navigationButtonAction(.openChatInfo(expandAvatar: false))
         }, togglePeerNotifications: { [weak self] in
@@ -7801,7 +7821,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 switch self.chatLocation {
                     case let .peer(selfPeerId):
                         switch navigation {
-                            case .info:
+                            case .info, .default:
                                 let peerSignal: Signal<Peer?, NoError>
                                 if let fromMessage = fromMessage {
                                     peerSignal = loadedPeerFromMessage(account: self.context.account, peerId: peerId, messageId: fromMessage.id)
@@ -8219,7 +8239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func openResolved(_ result: ResolvedUrl, message: Message? = nil) {
+    private func openResolved(_ result: ResolvedUrl) {
         self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: self.effectiveNavigationController, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
@@ -8261,113 +8281,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
             self?.chatDisplayNode.dismissInput()
-        }, contentContext: message)
+        }, contentContext: nil)
     }
     
     private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
         self.commitPurposefulAction()
         
-        var concealed = concealed
-        
-        let openImpl: () -> Void = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-        
-            let disposable: MetaDisposable
-            if let current = strongSelf.resolveUrlDisposable {
-                disposable = current
-            } else {
-                disposable = MetaDisposable()
-                strongSelf.resolveUrlDisposable = disposable
-            }
-            var cancelImpl: (() -> Void)?
-            let presentationData = strongSelf.presentationData
-            let progressSignal = Signal<Never, NoError> { subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
-                    cancelImpl?()
-                }))
-                self?.present(controller, in: .window(.root))
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
-                    }
-                }
-            }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            cancelImpl = { [weak self] in
-                self?.resolveUrlDisposable?.set(nil)
-            }
-            disposable.set((strongSelf.context.sharedContext.resolveUrl(account: strongSelf.context.account, url: url)
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
-                }
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                if let strongSelf = self {
-                    strongSelf.openResolved(result, message: message)
-                }
-            }))
-        }
-        
-        var parsedUrlValue: URL?
-        if let parsed = URL(string: url) {
-            parsedUrlValue = parsed
-        } else if let parsed = URL(string: "https://" + url) {
-            parsedUrlValue = parsed
-        } else if let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsed = URL(string: encoded) {
-            parsedUrlValue = parsed
-        }
-        let host = parsedUrlValue?.host ?? url
-        
-        let rawHost = (host as NSString).removingPercentEncoding ?? host
-        var latin = CharacterSet()
-        latin.insert(charactersIn: "A"..."Z")
-        latin.insert(charactersIn: "a"..."z")
-        latin.insert(charactersIn: "0"..."9")
-        var punctuation = CharacterSet()
-        punctuation.insert(charactersIn: ".-/+_")
-        var hasLatin = false
-        var hasNonLatin = false
-        for c in rawHost {
-            if c.unicodeScalars.allSatisfy(punctuation.contains) {
-            } else if c.unicodeScalars.allSatisfy(latin.contains) {
-                hasLatin = true
-            } else {
-                hasNonLatin = true
-            }
-        }
-        if hasLatin && hasNonLatin {
-            concealed = true
-        }
-        
-        if let parsedUrlValue = parsedUrlValue, isConcealedUrlWhitelisted(parsedUrlValue) {
-            concealed = false
-        }
-        
-        if concealed {
-            var rawDisplayUrl: String
-            if hasNonLatin {
-                rawDisplayUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url
-            } else {
-                rawDisplayUrl = url
-            }
-            let maxLength = 180
-            if rawDisplayUrl.count > maxLength {
-                rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
-            }
-            var displayUrl = rawDisplayUrl
-            displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
-            self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
-                openImpl()
-            })]), in: .window(.root))
-        } else {
-            openImpl()
-        }
+        openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, present: { [weak self] c in
+            self?.present(c, in: .window(.root))
+        }, openResolved: { [weak self] resolved in
+            self?.openResolved(resolved)
+        })
     }
     
     private func openUrlIn(_ url: String) {
@@ -9285,5 +9209,110 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
     
     func animatedIn() {
+    }
+}
+
+func parseUrl(url: String) -> (string: String, concealed: Bool) {
+    var parsedUrlValue: URL?
+    if let parsed = URL(string: url) {
+        parsedUrlValue = parsed
+    } else if let parsed = URL(string: "https://" + url) {
+        parsedUrlValue = parsed
+    } else if let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsed = URL(string: encoded) {
+        parsedUrlValue = parsed
+    }
+    let host = parsedUrlValue?.host ?? url
+    
+    let rawHost = (host as NSString).removingPercentEncoding ?? host
+    var latin = CharacterSet()
+    latin.insert(charactersIn: "A"..."Z")
+    latin.insert(charactersIn: "a"..."z")
+    latin.insert(charactersIn: "0"..."9")
+    var punctuation = CharacterSet()
+    punctuation.insert(charactersIn: ".-/+_")
+    var hasLatin = false
+    var hasNonLatin = false
+    for c in rawHost {
+        if c.unicodeScalars.allSatisfy(punctuation.contains) {
+        } else if c.unicodeScalars.allSatisfy(latin.contains) {
+            hasLatin = true
+        } else {
+            hasNonLatin = true
+        }
+    }
+    var concealed = false
+    if hasLatin && hasNonLatin {
+        concealed = true
+    }
+    
+    var rawDisplayUrl: String
+    if hasNonLatin {
+        rawDisplayUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url
+    } else {
+        rawDisplayUrl = url
+    }
+    
+    if let parsedUrlValue = parsedUrlValue, isConcealedUrlWhitelisted(parsedUrlValue) {
+        concealed = false
+    }
+    
+    return (rawDisplayUrl, concealed)
+}
+
+func openUserGeneratedUrl(context: AccountContext, url: String, concealed: Bool, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void) {
+    var concealed = concealed
+    
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    
+    let openImpl: () -> Void = {
+        let disposable = MetaDisposable()
+        var cancelImpl: (() -> Void)?
+        let progressSignal = Signal<Never, NoError> { subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            present(controller)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        cancelImpl = {
+            disposable.dispose()
+        }
+        disposable.set((context.sharedContext.resolveUrl(account: context.account, url: url)
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        |> deliverOnMainQueue).start(next: { result in
+            openResolved(result)
+        }))
+    }
+    
+    let (parsedString, parsedConcealed) = parseUrl(url: url)
+    if parsedConcealed {
+        concealed = true
+    }
+    
+    if concealed {
+        var rawDisplayUrl: String = parsedString
+        let maxLength = 180
+        if rawDisplayUrl.count > maxLength {
+            rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
+        }
+        var displayUrl = rawDisplayUrl
+        displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
+        present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+            openImpl()
+        })]))
+    } else {
+        openImpl()
     }
 }

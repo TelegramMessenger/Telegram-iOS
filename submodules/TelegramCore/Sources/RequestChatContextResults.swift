@@ -41,7 +41,17 @@ private struct RequestData: Codable {
 
 private let requestVersion = "3"
 
-public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false) -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> {
+public struct RequestChatContextResultsResult {
+    public let results: ChatContextResultCollection
+    public let isStale: Bool
+    
+    public init(results: ChatContextResultCollection, isStale: Bool) {
+        self.results = results
+        self.isStale = isStale
+    }
+}
+
+public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {
     return account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in
         if let bot = transaction.getPeer(botId), let peer = transaction.getPeer(peerId) {
             return (bot, peer)
@@ -61,12 +71,14 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
         }
     }
     |> castError(RequestChatContextResultsError.self)
-    |> mapToSignal { botAndPeer, location -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> in
+    |> mapToSignal { botAndPeer, location -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> in
         guard let (bot, peer) = botAndPeer, let inputBot = apiInputUser(bot) else {
             return .single(nil)
         }
         
-        return account.postbox.transaction { transaction -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> in
+        return account.postbox.transaction { transaction -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> in
+            var staleResult: RequestChatContextResultsResult?
+            
             if offset.isEmpty && location == nil {
                 let requestData = RequestData(version: requestVersion, botId: botId, peerId: peerId, query: query)
                 if let keyData = try? JSONEncoder().encode(requestData) {
@@ -75,7 +87,21 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                         if let cachedResult = try? JSONDecoder().decode(ChatContextResultCollection.self, from: cachedEntry.data) {
                             let timestamp = Int32(Date().timeIntervalSince1970)
                             if cachedEntry.timestamp + cachedResult.cacheTimeout > timestamp {
-                                return .single(cachedResult)
+                                return .single(RequestChatContextResultsResult(results: cachedResult, isStale: false))
+                            } else if staleCachedResults {
+                                let staleCollection = ChatContextResultCollection(
+                                    botId: cachedResult.botId,
+                                    peerId: cachedResult.peerId,
+                                    query: cachedResult.query,
+                                    geoPoint: cachedResult.geoPoint,
+                                    queryId: cachedResult.queryId,
+                                    nextOffset: nil,
+                                    presentation: cachedResult.presentation,
+                                    switchPeer: cachedResult.switchPeer,
+                                    results: cachedResult.results,
+                                    cacheTimeout: 0
+                                )
+                                staleResult = RequestChatContextResultsResult(results: staleCollection, isStale: true)
                             }
                         }
                     }
@@ -93,8 +119,7 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                 geoPoint = Api.InputGeoPoint.inputGeoPoint(lat: latitude, long: longitude)
             }
             
-            
-            var signal: Signal<ChatContextResultCollection?, RequestChatContextResultsError> = account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
+            var signal: Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> = account.network.request(Api.functions.messages.getInlineBotResults(flags: flags, bot: inputBot, peer: inputPeer, geoPoint: geoPoint, query: query, offset: offset))
             |> map { result -> ChatContextResultCollection? in
                 return ChatContextResultCollection(apiResults: result, botId: bot.id, peerId: peerId, query: query, geoPoint: location)
             }
@@ -105,13 +130,13 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                     return .generic
                 }
             }
-            |> mapToSignal { result -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> in
+            |> mapToSignal { result -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> in
                 guard let result = result else {
                     return .single(nil)
                 }
                 
-                return account.postbox.transaction { transaction -> ChatContextResultCollection? in
-                    if result.cacheTimeout > 10 {
+                return account.postbox.transaction { transaction -> RequestChatContextResultsResult? in
+                    if result.cacheTimeout > 10, offset.isEmpty && location == nil {
                         if let resultData = try? JSONEncoder().encode(result) {
                             let requestData = RequestData(version: requestVersion, botId: botId, peerId: peerId, query: query)
                             if let keyData = try? JSONEncoder().encode(requestData) {
@@ -120,13 +145,13 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
                             }
                         }
                     }
-                    return result
+                    return RequestChatContextResultsResult(results: result, isStale: false)
                 }
                 |> castError(RequestChatContextResultsError.self)
             }
             
             if incompleteResults {
-                signal = .single(nil) |> then(signal)
+                signal = .single(staleResult) |> then(signal)
             }
             
             return signal

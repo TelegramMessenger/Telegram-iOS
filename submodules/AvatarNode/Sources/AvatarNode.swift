@@ -330,7 +330,7 @@ public final class AvatarNode: ASDisplayNode {
             if let peer = peer, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
                 self.contents = nil
                 self.displaySuspended = true
-                self.imageReady.set(self.imageNode.ready)
+                self.imageReady.set(self.imageNode.contentReady)
                 self.imageNode.setSignal(signal |> beforeNext { [weak self] next in
                     Queue.mainQueue().async {
                         self?.unroundedImage = next?.1

@@ -905,6 +905,7 @@ public class TextNode: ASDisplayNode {
                 var strikethroughs: [TextNodeStrikethrough] = []
                 
                 var lineConstrainedWidth = constrainedSize.width
+                var lineConstrainedWidthDelta: CGFloat = 0.0
                 var lineOriginY = floorToScreenPixels(layoutSize.height + fontAscent)
                 if !first {
                     lineOriginY += fontLineSpacing
@@ -915,6 +916,7 @@ public class TextNode: ASDisplayNode {
                 if cutoutEnabled {
                     if lineOriginY - fontLineHeight < cutoutMaxY && lineOriginY + fontLineHeight > cutoutMinY {
                         lineConstrainedWidth = max(1.0, lineConstrainedWidth - cutoutWidth)
+                        lineConstrainedWidthDelta = -cutoutWidth
                         lineCutoutOffset = cutoutOffset
                         lineAdditionalWidth = cutoutWidth
                     }
@@ -945,6 +947,7 @@ public class TextNode: ASDisplayNode {
                     let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
                     
                     var lineConstrainedSize = constrainedSize
+                    lineConstrainedSize.width += lineConstrainedWidthDelta
                     if bottomCutoutEnabled {
                         lineConstrainedSize.width -= bottomCutoutSize.width
                     }

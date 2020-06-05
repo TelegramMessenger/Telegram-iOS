@@ -217,6 +217,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             return (geoPoint.latitude, geoPoint.longitude)
         }
         self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
+        |> map { results -> ChatContextResultCollection? in
+            return results?.results
+        }
         |> deliverOnMainQueue).start(next: { [weak self] nextResults in
             guard let strongSelf = self, let nextResults = nextResults else {
                 return
