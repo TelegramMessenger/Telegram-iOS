@@ -8,9 +8,6 @@
 @property (nonatomic, copy) void (^fontChanged)(TGPhotoPaintFont *font);
 @property (nonatomic, copy) void (^styleChanged)(TGPhotoPaintTextEntityStyle style);
 
-@property (nonatomic, strong) TGPhotoPaintFont *font;
-@property (nonatomic, assign) TGPhotoPaintTextEntityStyle style;
-
 - (instancetype)initWithFonts:(NSArray *)fonts selectedFont:(TGPhotoPaintFont *)font selectedStyle:(TGPhotoPaintTextEntityStyle)selectedStyle;
 
 @end

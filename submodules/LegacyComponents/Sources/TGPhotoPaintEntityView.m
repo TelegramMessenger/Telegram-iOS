@@ -221,3 +221,27 @@ const CGFloat TGPhotoPaintEntityMinScale = 0.12f;
 }
 
 @end
+
+@implementation UIView (PixelColor)
+
+- (UIColor *)colorAtPoint:(CGPoint)point
+{
+    if (point.x > self.bounds.size.width || point.y > self.bounds.size.height)
+        return nil;
+    
+    unsigned char pixel[4] = {0};
+    
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(pixel, 1, 1, 8, 4, colorSpace, kCGBitmapAlphaInfoMask & kCGImageAlphaPremultipliedLast);
+    
+    CGContextTranslateCTM(context, -point.x, -point.y);
+    
+    [self.layer renderInContext:context];
+    
+    CGContextRelease(context);
+    CGColorSpaceRelease(colorSpace);
+    
+    return [UIColor colorWithRed:pixel[0] / 255.0 green:pixel[1] / 255.0 blue:pixel[2] / 255.0 alpha:pixel[3] / 255.0];
+}
+
+@end

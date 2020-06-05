@@ -270,13 +270,21 @@
             
             GPUImageOutput *currentInput = _currentInput;
             if ([currentInput isKindOfClass:[PGVideoMovie class]]) {
-                if (!_playing) {
-                    _playing = true;
-                    [_videoQueue dispatch:^{
-                        if ([currentInput isKindOfClass:[PGVideoMovie class]]) {
-                            [(PGVideoMovie *)currentInput startProcessing];
-                        }
-                    }];
+                if (capture) {
+                    if ([currentInput isKindOfClass:[PGVideoMovie class]])
+                        [(PGVideoMovie *)currentInput process];
+                    [_finalFilter useNextFrameForImageCapture];
+                    if (completion != nil)
+                        completion();
+                } else {
+                    if (!_playing) {
+                        _playing = true;
+                        [_videoQueue dispatch:^{
+                            if ([currentInput isKindOfClass:[PGVideoMovie class]]) {
+                                [(PGVideoMovie *)currentInput startProcessing];
+                            }
+                        }];
+                    }
                 }
             } else if ([currentInput isKindOfClass:[GPUImageTextureInput class]]) {
                 if (capture)

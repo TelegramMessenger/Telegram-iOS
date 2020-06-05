@@ -5521,3 +5521,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Timer.Title" = "Send With Timer";
 "Conversation.Timer.Send" = "Send With Timer";
+
+"Paint.Pen" = "Pen";
+"Paint.Marker" = "Marker";
+"Paint.Neon" = "Neon";
+"Paint.Arrow" = "Arrow";

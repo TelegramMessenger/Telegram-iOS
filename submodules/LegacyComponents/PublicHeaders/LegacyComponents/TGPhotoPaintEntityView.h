@@ -4,6 +4,12 @@
 @class TGPhotoPaintEntitySelectionView;
 @class TGPaintUndoManager;
 
+@interface UIView (PixelColor)
+
+- (UIColor *)colorAtPoint:(CGPoint)point;
+
+@end
+
 @interface TGPhotoPaintEntityView : UIView
 {
     NSInteger _entityUUID;

@@ -1,7 +1,5 @@
 #import "TGMediaPickerGalleryPhotoItemView.h"
 
-#import <PhotosUI/PhotosUI.h>
-
 #import "LegacyComponentsInternal.h"
 #import "TGFont.h"
 #import "TGStringUtils.h"
@@ -34,7 +32,6 @@
     void (^_currentAvailabilityObserver)(bool);
     
     UIView *_temporaryRepView;
-    PHLivePhotoView *_livePhotoView;
     
     UIView *_contentView;
     UIView *_contentWrapperView;
@@ -116,11 +113,6 @@
 {
     _imageView.hidden = false;
     [_imageView reset];
-    if (_livePhotoView != nil)
-    {
-        [_livePhotoView removeFromSuperview];
-        _livePhotoView = nil;
-    }
     [self setProgressVisible:false value:0.0f animated:false];
 }
 
@@ -231,8 +223,7 @@
             }
             
             [strongSelf reset];
-            
-            strongSelf->_livePhotoView.frame = strongSelf->_imageView.frame;
+
         }]];
         
         if (!item.asFile)

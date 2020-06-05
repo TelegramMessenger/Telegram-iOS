@@ -19,6 +19,11 @@ const CGFloat TGPaintRadialBrushHardness = 0.92f;
     return 0.0f;
 }
 
+//- (CGFloat)dynamic
+//{
+//    return 0.75f;
+//}
+
 - (CGImageRef)generateRadialStampForSize:(CGSize)size hardness:(CGFloat)hardness
 {
     CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceGray();

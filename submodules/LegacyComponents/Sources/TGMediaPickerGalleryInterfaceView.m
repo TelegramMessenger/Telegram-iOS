@@ -21,6 +21,7 @@
 #import "TGModernGallerySelectableItem.h"
 #import "TGModernGalleryEditableItem.h"
 #import "TGMediaPickerGalleryPhotoItem.h"
+#import "TGMediaPickerGalleryVideoItem.h"
 #import "TGMediaPickerGalleryPhotoItemView.h"
 #import "TGMediaPickerGalleryVideoItemView.h"
 
@@ -571,7 +572,15 @@
             [strongSelf->_portraitToolbarView setEditButtonsEnabled:available animated:true];
             [strongSelf->_landscapeToolbarView setEditButtonsEnabled:available animated:true];
             
+            
+            
             bool sendableAsGif = !strongSelf->_inhibitMute && [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
+            if ([strongSelf->_currentItem isKindOfClass:[TGMediaPickerGalleryVideoItem class]]) {
+                TGMediaPickerGalleryVideoItem *item = (TGMediaPickerGalleryVideoItem *)strongSelf->_currentItem;
+                if ([item.asset isKindOfClass:[TGCameraCapturedVideo class]] && ((TGCameraCapturedVideo *)item.asset).isAnimation) {
+                    sendableAsGif = false;
+                }
+            }
             strongSelf->_muteButton.hidden = !sendableAsGif;
         }
     }]];

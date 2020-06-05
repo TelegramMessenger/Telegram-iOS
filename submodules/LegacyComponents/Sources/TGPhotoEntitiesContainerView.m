@@ -47,7 +47,7 @@
 
 - (void)handleTap:(UITapGestureRecognizer *)gestureRecognizer
 {
-    CGPoint location = [gestureRecognizer locationInView:self];
+    CGPoint point = [gestureRecognizer locationInView:self];
     
     NSMutableArray *intersectedViews = [[NSMutableArray alloc] init];
     for (TGPhotoPaintEntityView *view in self.subviews)
@@ -55,7 +55,7 @@
         if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
             continue;
         
-        if ([view pointInside:[view convertPoint:location fromView:self] withEvent:nil])
+        if ([view pointInside:[view convertPoint:point fromView:self] withEvent:nil])
             [intersectedViews addObject:view];
     }
     
@@ -65,7 +65,7 @@
         __block TGPhotoPaintEntityView *subresult = nil;
         [intersectedViews enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(TGPhotoPaintEntityView *view, __unused NSUInteger index, BOOL *stop)
         {
-            if ([view precisePointInside:[view convertPoint:location fromView:self]])
+            if ([view precisePointInside:[view convertPoint:point fromView:self]])
             {
                 subresult = view;
                 *stop = true;
@@ -81,6 +81,40 @@
     
     if (self.entitySelected != nil)
         self.entitySelected(result);
+}
+
+- (UIColor *)colorAtPoint:(CGPoint)point {
+    NSMutableArray *intersectedViews = [[NSMutableArray alloc] init];
+    for (TGPhotoPaintEntityView *view in self.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+        
+        if ([view pointInside:[view convertPoint:point fromView:self] withEvent:nil])
+            [intersectedViews addObject:view];
+    }
+    
+    TGPhotoPaintEntityView *result = nil;
+    if (intersectedViews.count > 1)
+    {
+        __block TGPhotoPaintEntityView *subresult = nil;
+        [intersectedViews enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(TGPhotoPaintEntityView *view, __unused NSUInteger index, BOOL *stop)
+         {
+            if ([view precisePointInside:[view convertPoint:point fromView:self]])
+            {
+                subresult = view;
+                *stop = true;
+            }
+        }];
+        
+        result = subresult ?: intersectedViews.lastObject;
+    }
+    else if (intersectedViews.count == 1)
+    {
+        result = intersectedViews.firstObject;
+    }
+    
+    return [result colorAtPoint:[result convertPoint:point fromView:self]];
 }
 
 - (NSUInteger)entitiesCount
