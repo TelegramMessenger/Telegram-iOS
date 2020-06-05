@@ -3,21 +3,49 @@
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
+#import "LegacyComponentsGlobals.h"
+#import "TGStringUtils.h"
+#import "TGMediaAsset.h"
+#import "TGMediaAsset+TGMediaEditableItem.h"
+
+#import "TGGifConverter.h"
+
 @interface TGCameraCapturedVideo ()
 {
     CGSize _cachedSize;
     NSTimeInterval _cachedDuration;
+    
+    AVURLAsset *_cachedAVAsset;
 }
 @end
 
 @implementation TGCameraCapturedVideo
+
++ (NSURL *)videoURLForAsset:(TGMediaAsset *)asset {
+    NSURL *convertedGifsUrl = [NSURL fileURLWithPath:[[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:@"convertedGifs"]];
+    [[NSFileManager defaultManager] createDirectoryAtPath:convertedGifsUrl.path withIntermediateDirectories:true attributes:nil error:nil];
+    return [convertedGifsUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", [TGStringUtils md5:asset.identifier]]];
+}
 
 - (instancetype)initWithURL:(NSURL *)url
 {
     self = [super init];
     if (self != nil)
     {
-        _avAsset = [[AVURLAsset alloc] initWithURL:url options:nil];
+        _cachedAVAsset = [[AVURLAsset alloc] initWithURL:url options:nil];
+        _cachedSize = CGSizeZero;
+        _cachedDuration = 0.0;
+    }
+    return self;
+}
+
+- (instancetype)initWithAsset:(TGMediaAsset *)asset
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _originalAsset = asset;
+        
         _cachedSize = CGSizeZero;
         _cachedDuration = 0.0;
     }
@@ -26,7 +54,9 @@
 
 - (void)_cleanUp
 {
-    [[NSFileManager defaultManager] removeItemAtPath:_avAsset.URL.path error:nil];
+    if (_originalAsset == nil) {
+        [[NSFileManager defaultManager] removeItemAtPath:_cachedAVAsset.URL.path error:nil];
+    }
 }
 
 - (bool)isVideo
@@ -34,9 +64,47 @@
     return true;
 }
 
+- (bool)isAnimation {
+    return _originalAsset != nil;
+}
+
+- (SSignal *)avAsset {
+    if (_originalAsset != nil) {
+        if (_cachedAVAsset != nil) {
+             return [SSignal single:_cachedAVAsset];
+        } else {
+            NSURL *videoUrl = [TGCameraCapturedVideo videoURLForAsset:_originalAsset];
+            return [[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
+                NSData *data = assetData.imageData;
+                
+                const char *gif87Header = "GIF87";
+                const char *gif89Header = "GIF89";
+                if (data.length >= 5 && (!memcmp(data.bytes, gif87Header, 5) || !memcmp(data.bytes, gif89Header, 5)))
+                {
+                    return [[TGGifConverter convertGifToMp4:data] map:^id(NSDictionary *result)
+                    {
+                        NSString *filePath = result[@"path"];
+                        [[NSFileManager defaultManager] moveItemAtPath:filePath toPath:videoUrl.path error:nil];
+                        
+                        return [AVURLAsset assetWithURL:videoUrl];
+                    }];
+                } else {
+                    return [SSignal complete];
+                }
+            }];
+        }
+    } else {
+        return [SSignal single:_cachedAVAsset];
+    }
+}
+
 - (NSString *)uniqueIdentifier
 {
-    return _avAsset.URL.absoluteString;
+    if (_originalAsset) {
+        return _originalAsset.uniqueIdentifier;
+    } else {
+        return _cachedAVAsset.URL.absoluteString;
+    }
 }
 
 - (CGSize)originalSize
@@ -44,7 +112,11 @@
     if (!CGSizeEqualToSize(_cachedSize, CGSizeZero))
         return _cachedSize;
     
-    AVAssetTrack *track = _avAsset.tracks.firstObject;
+    if (_originalAsset != nil) {
+        return [_originalAsset originalSize];
+    }
+    
+    AVAssetTrack *track = _cachedAVAsset.tracks.firstObject;
     _cachedSize = CGRectApplyAffineTransform((CGRect){ CGPointZero, track.naturalSize }, track.preferredTransform).size;
     return _cachedSize;
 }
@@ -59,29 +131,41 @@
     if (_cachedDuration > DBL_EPSILON)
         return _cachedDuration;
     
-    _cachedDuration = CMTimeGetSeconds(_avAsset.duration);
+    if (_cachedAVAsset != nil) {
+        _cachedDuration = CMTimeGetSeconds(_cachedAVAsset.duration);
+    }
     return _cachedDuration;
 }
 
 - (SSignal *)thumbnailImageSignal
 {
-    CGFloat thumbnailImageSide = TGPhotoEditorScreenImageMaxSize().width;
-    CGSize size = TGScaleToSize(self.originalSize, CGSizeMake(thumbnailImageSide, thumbnailImageSide));
+    if (_originalAsset != nil) {
+        return [_originalAsset thumbnailImageSignal];
+    } else {
+        CGFloat thumbnailImageSide = TGPhotoEditorScreenImageMaxSize().width;
+        CGSize size = TGScaleToSize(self.originalSize, CGSizeMake(thumbnailImageSide, thumbnailImageSide));
     
-    return [TGMediaAssetImageSignals videoThumbnailForAVAsset:_avAsset size:size timestamp:kCMTimeZero];
+        return [TGMediaAssetImageSignals videoThumbnailForAVAsset:_cachedAVAsset size:size timestamp:kCMTimeZero];
+    }
 }
 
-- (SSignal *)screenImageSignal:(NSTimeInterval)__unused position
+- (SSignal *)screenImageSignal:(NSTimeInterval)position
 {
-    CGFloat imageSide = 1280.0f;
-    CGSize size = TGScaleToSize(self.originalSize, CGSizeMake(imageSide, imageSide));
-    
-    return [TGMediaAssetImageSignals videoThumbnailForAVAsset:_avAsset size:size timestamp:kCMTimeZero];
+    if (_originalAsset != nil) {
+        return [_originalAsset screenImageSignal:position];
+    } else {
+        CGFloat imageSide = 1280.0f;
+        CGSize size = TGScaleToSize(self.originalSize, CGSizeMake(imageSide, imageSide));
+
+        return [TGMediaAssetImageSignals videoThumbnailForAVAsset:_cachedAVAsset size:size timestamp:kCMTimeZero];
+    }
 }
 
 - (SSignal *)originalImageSignal:(NSTimeInterval)position
 {
-    return [TGMediaAssetImageSignals videoThumbnailForAVAsset:_avAsset size:self.originalSize timestamp:CMTimeMakeWithSeconds(position, NSEC_PER_SEC)];
+    return [[self avAsset] mapToSignal:^SSignal *(AVURLAsset *avAsset) {
+        return [TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:self.originalSize timestamp:CMTimeMakeWithSeconds(position, NSEC_PER_SEC)];
+    }];
 }
 
 @end

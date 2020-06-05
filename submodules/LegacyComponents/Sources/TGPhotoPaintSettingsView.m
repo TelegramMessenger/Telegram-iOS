@@ -14,6 +14,7 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
 @interface TGPhotoPaintSettingsView ()
 {
     TGPhotoPaintColorPicker *_colorPicker;
+    TGModernButton *_eyedropperButton;
     TGModernButton *_settingsButton;
     TGPhotoPaintSettingsViewIcon _icon;
     
@@ -54,7 +55,13 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
         };
         [self addSubview:_colorPicker];
         
-        _icon = TGPhotoPaintSettingsViewIconBrush;
+        _icon = TGPhotoPaintSettingsViewIconBrushPen;
+        
+        _eyedropperButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 44.0f, 44.0f)];
+        _eyedropperButton.exclusiveTouch = true;
+        [_eyedropperButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/Eyedropper"], [UIColor whiteColor]) forState:UIControlStateNormal];
+        [_eyedropperButton addTarget:self action:@selector(eyedropperButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+//        [self addSubview:_eyedropperButton];
         
         _settingsButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 44.0f, 44.0f)];
         _settingsButton.exclusiveTouch = true;
@@ -83,6 +90,12 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     _colorPicker.orientation = interfaceOrientation;
+}
+
+- (void)eyedropperButtonPressed
+{
+    if (self.eyedropperPressed != nil)
+        self.eyedropperPressed();
 }
 
 - (void)settingsButtonPressed
@@ -143,25 +156,35 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
 
 - (UIImage *)_imageForIcon:(TGPhotoPaintSettingsViewIcon)icon highlighted:(bool)highlighted
 {
+    UIColor *color = highlighted ? [TGPhotoEditorInterfaceAssets accentColor] : [UIColor whiteColor];
     UIImage *iconImage = nil;
     switch (icon)
     {
-        case TGPhotoPaintSettingsViewIconBrush:
-            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Brush"], [UIColor whiteColor]);
+        case TGPhotoPaintSettingsViewIconBrushPen:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/BrushSelectedPen"], color);
             break;
-            
-        case TGPhotoPaintSettingsViewIconText:
-            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Font"], [UIColor whiteColor]);
+        case TGPhotoPaintSettingsViewIconBrushMarker:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/BrushSelectedMarker"], color);
             break;
-            
+        case TGPhotoPaintSettingsViewIconBrushNeon:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/BrushSelectedNeon"], color);
+            break;
+        case TGPhotoPaintSettingsViewIconBrushArrow:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/BrushSelectedArrow"], color);
+            break;
+        case TGPhotoPaintSettingsViewIconTextRegular:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/TextSelectedRegular"], color);
+            break;
+        case TGPhotoPaintSettingsViewIconTextOutlined:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/TextSelectedOutlined"], color);
+            break;
+        case TGPhotoPaintSettingsViewIconTextFramed:
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/TextSelectedFramed"], color);
+            break;
         case TGPhotoPaintSettingsViewIconMirror:
-            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Flip"], [UIColor whiteColor]);
+            iconImage = TGTintedImage([UIImage imageNamed:@"Editor/Flip"], color);
             break;
     }
-    
-    if (highlighted)
-        iconImage = TGTintedImage(iconImage, [TGPhotoEditorInterfaceAssets accentColor]);
-    
     return iconImage;
 }
 
@@ -188,22 +211,27 @@ const CGFloat TGPhotoPaintSettingsPadPickerWidth = 360.0f;
 
 - (void)layoutSubviews
 {
+    CGFloat leftInset = 23.0f;
+    CGFloat rightInset = 66.0f;
+    CGFloat colorPickerHeight = 10.0f;
     if (self.frame.size.width > self.frame.size.height)
     {
         if ([_context currentSizeClass] == UIUserInterfaceSizeClassRegular)
         {
-            _colorPicker.frame = CGRectMake(ceil((self.frame.size.width - TGPhotoPaintSettingsPadPickerWidth) / 2.0f), ceil((self.frame.size.height - 18.0f) / 2.0f), TGPhotoPaintSettingsPadPickerWidth, 18.0f);
+            _colorPicker.frame = CGRectMake(ceil((self.frame.size.width - TGPhotoPaintSettingsPadPickerWidth) / 2.0f), ceil((self.frame.size.height - colorPickerHeight) / 2.0f), TGPhotoPaintSettingsPadPickerWidth, colorPickerHeight);
             _settingsButton.frame = CGRectMake(CGRectGetMaxX(_colorPicker.frame) + 11.0f, floor((self.frame.size.height - _settingsButton.frame.size.height) / 2.0f) + 1.0f, _settingsButton.frame.size.width, _settingsButton.frame.size.height);
         }
         else
         {
-            _colorPicker.frame = CGRectMake(23.0f, ceil((self.frame.size.height - 18.0f) / 2.0f), self.frame.size.width - 23.0f - 66.0f, 18.0f);
+            _colorPicker.frame = CGRectMake(leftInset, ceil((self.frame.size.height - colorPickerHeight) / 2.0f), self.frame.size.width - leftInset - rightInset, colorPickerHeight);
+            _eyedropperButton.frame = CGRectMake(10.0f, floor((self.frame.size.height - _eyedropperButton.frame.size.height) / 2.0f) + 1.0f, _eyedropperButton.frame.size.width, _eyedropperButton.frame.size.height);
             _settingsButton.frame = CGRectMake(self.frame.size.width - _settingsButton.frame.size.width - 10.0f, floor((self.frame.size.height - _settingsButton.frame.size.height) / 2.0f) + 1.0f, _settingsButton.frame.size.width, _settingsButton.frame.size.height);
         }
     }
     else
     {
-        _colorPicker.frame = CGRectMake(ceil((self.frame.size.width - 18.0f) / 2.0f), 66.0f, 18.0f, self.frame.size.height - 23.0f - 66.0f);
+        _colorPicker.frame = CGRectMake(ceil((self.frame.size.width - colorPickerHeight) / 2.0f), rightInset, colorPickerHeight, self.frame.size.height - leftInset - rightInset);
+        _eyedropperButton.frame = CGRectMake(floor((self.frame.size.width - _eyedropperButton.frame.size.width) / 2.0f), self.frame.size.height -  _eyedropperButton.frame.size.height - 10.0, _eyedropperButton.frame.size.width, _eyedropperButton.frame.size.height);
         _settingsButton.frame = CGRectMake(floor((self.frame.size.width - _settingsButton.frame.size.width) / 2.0f), 10.0f, _settingsButton.frame.size.width, _settingsButton.frame.size.height);
     }
 }

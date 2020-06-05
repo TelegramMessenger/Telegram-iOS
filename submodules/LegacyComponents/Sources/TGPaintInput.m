@@ -9,6 +9,7 @@
 #import "TGPaintPath.h"
 #import "TGPaintState.h"
 #import "TGPaintCanvas.h"
+#import "TGPaintBrush.h"
 #import <LegacyComponents/TGPaintUtils.h>
 
 @interface TGPaintInput ()
@@ -19,6 +20,8 @@
     
     CGPoint _lastLocation;
     CGFloat _lastRemainder;
+    CGFloat _lastPressureRemainder;
+    CGFloat _lastAngle;
     
     TGPaintPoint *_points[3];
     NSInteger _pointsCount;
@@ -48,7 +51,7 @@
     CGPoint midPoint1 = TGPaintMultiplyPoint(TGPaintAddPoints(prev1.CGPoint, prev2.CGPoint), 0.5f);
     CGFloat midPressure1 = (prev1.z + prev2.z) * 0.5f;
     CGPoint midPoint2 = TGPaintMultiplyPoint(TGPaintAddPoints(cur.CGPoint, prev1.CGPoint), 0.5f);
-    CGFloat midPressure2 = (cur.z + prev2.z) * 0.5f;
+    CGFloat midPressure2 = (cur.z + prev1.z) * 0.5f;
     
     NSInteger segmentDistance = 2;
     CGFloat distance = TGPaintDistance(midPoint1, midPoint2);
@@ -126,12 +129,15 @@
     if (_pointsCount != 0)
         pressure = (pressure + _points[_pointsCount - 1].z) / 2.0f;
     
-    pressure = 1.0f;
     TGPaintPoint *point = [TGPaintPoint pointWithX:location.x y:location.y z:pressure];
     _points[_pointsCount++] = point;
     
     if (_pointsCount == 3)
     {
+        CGPoint prev = _points[1].CGPoint;
+        CGPoint cur = _points[2].CGPoint;
+        _lastAngle = atan2(cur.y - prev.y, cur.x - prev.x);
+        
         [self smoothenAndPaintPoints:canvas ended:false];
         _moved = true;
     }
@@ -156,6 +162,22 @@
     else
     {
         [self smoothenAndPaintPoints:canvas ended:true];
+        
+        if (canvas.state.brush.arrow) {
+            CGFloat arrowLength = canvas.state.weight * 4.5;
+            CGFloat angle = _lastAngle;
+            
+            TGPaintPoint *tip = [TGPaintPoint pointWithX:location.x y:location.y z:0.8];
+            TGPaintPoint *leftTip = [TGPaintPoint pointWithX:location.x + cos(angle - M_PI_4 * 3) * arrowLength y:location.y + sin(angle - M_PI_4 * 3.2) * arrowLength z:1.0];
+            leftTip.edge = true;
+            TGPaintPath *left = [[TGPaintPath alloc] initWithPoints:@[tip, leftTip]];
+            [self paintPath:left inCanvas:canvas];
+            
+            TGPaintPoint *rightTip = [TGPaintPoint pointWithX:location.x + cos(angle + M_PI_4 * 3) * arrowLength y:location.y + sin(angle + M_PI_4 * 3.2) * arrowLength z:1.0];
+            rightTip.edge = true;
+            TGPaintPath *right = [[TGPaintPath alloc] initWithPoints:@[tip, rightTip]];
+            [self paintPath:right inCanvas:canvas];
+        }
     }
     
     _pointsCount = 0;
@@ -181,16 +203,20 @@
     path.brush = canvas.state.brush;
     path.baseWeight = canvas.state.weight;
     
-    if (_clearBuffer)
+    if (_clearBuffer) {
         _lastRemainder = 0.0f;
+        _lastPressureRemainder = 0.0f;
+    }
     
     path.remainder = _lastRemainder;
+    path.pressureRemainder = _lastPressureRemainder;
     
     [canvas.painting paintStroke:path clearBuffer:_clearBuffer completion:^
     {
         TGDispatchOnMainThread(^
         {
             _lastRemainder = path.remainder;
+            _lastPressureRemainder = path.pressureRemainder;
             _clearBuffer = false;
         });
     }];

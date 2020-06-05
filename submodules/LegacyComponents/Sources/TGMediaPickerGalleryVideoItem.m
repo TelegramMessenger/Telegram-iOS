@@ -25,7 +25,7 @@
     return CGSizeZero;
 }
 
-- (AVAsset *)avAsset
+- (SSignal *)avAsset
 {
     if ([self.asset isKindOfClass:[TGCameraCapturedVideo class]])
         return ((TGCameraCapturedVideo *)self.asset).avAsset;
@@ -70,10 +70,13 @@
 
 - (TGPhotoEditorTab)toolbarTabs
 {
-    if ([self.asset isKindOfClass:[TGMediaAsset class]] && ((TGMediaAsset *)self.asset).subtypes & TGMediaAssetSubtypePhotoLive)
-        return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab | TGPhotoEditorTimerTab;
-    else
+    if ([self.asset isKindOfClass:[TGMediaAsset class]] && ((TGMediaAsset *)self.asset).subtypes & TGMediaAssetSubtypePhotoLive) {
+        return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
+    } else if ([self.asset isKindOfClass:[TGCameraCapturedVideo class]] && ((TGCameraCapturedVideo *)self.asset).isAnimation) {
+        return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
+    } else {
         return TGPhotoEditorCropTab | TGPhotoEditorToolsTab | TGPhotoEditorPaintTab | TGPhotoEditorQualityTab;
+    }
 }
 
 - (Class)viewClass

@@ -14,6 +14,7 @@
 - (void)cancelProcessing;
 - (void)processMovieFrame:(CMSampleBufferRef)movieSampleBuffer; 
 
+- (void)process;
 - (void)reprocessCurrent;
 
 @end

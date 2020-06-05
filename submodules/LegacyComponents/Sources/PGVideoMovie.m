@@ -250,6 +250,11 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
     [self processPixelBufferAtTime:outputItemTime];
 }
 
+- (void)process {
+    _shouldReprocessCurrentFrame = true;
+    [self displayLinkCallback:displayLink];
+}
+
 - (void)processPixelBufferAtTime:(CMTime)outputItemTime
 {
     if ([playerItemOutput hasNewPixelBufferForItemTime:outputItemTime] || _shouldReprocessCurrentFrame)

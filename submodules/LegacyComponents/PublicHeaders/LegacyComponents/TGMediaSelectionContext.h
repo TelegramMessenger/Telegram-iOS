@@ -52,7 +52,7 @@
 
 @interface TGMediaSelectionChange : NSObject
 
-@property (nonatomic, readonly) id<TGMediaSelectableItem> item;
+@property (nonatomic, readonly) NSObject <TGMediaSelectableItem> *item;
 @property (nonatomic, readonly) bool selected;
 @property (nonatomic, readonly) bool animated;
 @property (nonatomic, readonly, strong) id sender;

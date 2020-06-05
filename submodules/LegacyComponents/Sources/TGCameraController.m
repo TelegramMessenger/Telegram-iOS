@@ -1772,7 +1772,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
                         return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
                     } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
-                        return [SSignal single:((TGCameraCapturedVideo *)editableItem).avAsset];
+                        return ((TGCameraCapturedVideo *)editableItem).avAsset;
                     } else {
                         return [editableItem originalImageSignal:position];
                     }
@@ -2467,7 +2467,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     else if ([item isKindOfClass:[TGCameraCapturedVideo class]])
                     {
                         TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)item;
-                        return [SSignal single:@{@"type": @"video", @"url": video.avAsset.URL}];
+                        return [[video avAsset] mapToSignal:^SSignal *(AVURLAsset *avAsset) {
+                            return [SSignal single:@{@"type": @"video", @"url": avAsset.URL}];
+                        }];
                     }
                     
                     return [SSignal complete];
@@ -2689,9 +2691,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             };
             
             CGSize imageSize = TGFillSize(asset.originalSize, CGSizeMake(512, 512));
-            SSignal *trimmedVideoThumbnailSignal = [[TGMediaAssetImageSignals videoThumbnailForAVAsset:video.avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
-            {
+            SSignal *trimmedVideoThumbnailSignal = [[video avAsset] mapToSignal:^SSignal *(AVURLAsset *avAsset) {
+                return [[TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
+                {
                     return cropVideoThumbnail(image, TGScaleToFill(asset.originalSize, CGSizeMake(512, 512)), asset.originalSize, true);
+                }];
             }];
             
             SSignal *videoThumbnailSignal = [inlineThumbnailSignal(asset) map:^UIImage *(UIImage *image)
@@ -2709,7 +2713,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             {
                 NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
                 dict[@"type"] = @"cameraVideo";
-                dict[@"url"] = video.avAsset.URL;
+//                dict[@"url"] = video.avAsset.URL;
                 dict[@"previewImage"] = image;
                 dict[@"adjustments"] = adjustments;
                 dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
