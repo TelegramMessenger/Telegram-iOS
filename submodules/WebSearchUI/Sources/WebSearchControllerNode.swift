@@ -348,8 +348,26 @@ class WebSearchControllerNode: ASDisplayNode {
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
             self.toolbarBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
             self.toolbarSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
-            
-            self.attributionNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Giphy"), color: self.theme.list.itemSecondaryTextColor)
+        }
+        
+        let gifProviderImage: UIImage?
+        if let gifProvider = self.webSearchInterfaceState.gifProvider {
+            switch gifProvider {
+                case "tenor":
+                    gifProviderImage = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Tenor"), color: self.theme.list.itemSecondaryTextColor)
+                case "giphy":
+                    gifProviderImage = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Giphy"), color: self.theme.list.itemSecondaryTextColor)
+                default:
+                    gifProviderImage = nil
+            }
+        } else {
+            gifProviderImage = nil
+        }
+        let previousGifProviderImage = self.attributionNode.image
+        self.attributionNode.image = gifProviderImage
+        
+        if previousGifProviderImage == nil, let validLayout = self.containerLayout {
+            self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
         }
     }
     
@@ -386,7 +404,7 @@ class WebSearchControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: toolbarY), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         if let image = self.attributionNode.image {
-            transition.updateFrame(node: self.attributionNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - image.size.width) / 2.0), y: toolbarY + floor((toolbarHeight - image.size.height) / 2.0)), size: image.size))
+            self.attributionNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - image.size.width) / 2.0), y: toolbarY + floor((toolbarHeight - image.size.height) / 2.0)), size: image.size)
             transition.updateAlpha(node: self.attributionNode, alpha: self.webSearchInterfaceState.state?.scope == .gifs ? 1.0 : 0.0)
         }
         
@@ -456,11 +474,16 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     func updateInterfaceState(_ interfaceState: WebSearchInterfaceState, animated: Bool) {
+        let previousGifProvider = self.webSearchInterfaceState.gifProvider
         self.webSearchInterfaceState = interfaceState
         self.webSearchInterfaceStatePromise.set(self.webSearchInterfaceState)
     
         if let state = interfaceState.state {
             self.segmentedControlNode.selectedIndex = Int(state.scope.rawValue)
+        }
+        
+        if previousGifProvider != interfaceState.gifProvider {
+            self.applyPresentationData(themeUpdated: false)
         }
         
         if let validLayout = self.containerLayout {
