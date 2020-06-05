@@ -450,7 +450,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
         }
         self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
         
-        if isVisible {
+        /*if isVisible {
             if let item = self.item?.0, let file = self.item?.1 as? TelegramMediaFile, !file.isAnimated {
                 if self.frameSequenceThumbnailNode == nil {
                     let frameSequenceThumbnailNode = FrameSequenceThumbnailNode(context: context, file: .message(message: MessageReference(item.message), media: file))
@@ -473,7 +473,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.frameSequenceThumbnailNode = nil
                 frameSequenceThumbnailNode.removeFromSupernode()
             }
-        }
+        }*/
         
         self.frameSequenceThumbnailNode?.updateIsPlaying(isVisible)
     }

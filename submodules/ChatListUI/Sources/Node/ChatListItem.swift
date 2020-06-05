@@ -361,7 +361,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = largest.dimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message), media: image), synchronousLoad: synchronousLoads)
+                    let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
@@ -370,7 +370,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = mediaDimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: .message(message: MessageReference(self.message), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true)
+                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: .message(message: MessageReference(self.message), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
@@ -984,6 +984,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if message.containsSecretMedia {
                             displayMediaPreviews = false
                         } else if let _ = message.peers[message.id.peerId] as? TelegramSecretChat {
+                            displayMediaPreviews = false
+                        }
+                        if !item.context.sharedContext.immediateExperimentalUISettings.chatListPhotos {
                             displayMediaPreviews = false
                         }
                         if displayMediaPreviews {
