@@ -5534,3 +5534,7 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.MessagePhotos_any" = "%@ Photos";
 "ChatList.MessageVideos_1" = "1 Videos";
 "ChatList.MessageVideos_any" = "%@ Videos";
+
+"Conversation.PrivateChannelTimeLimitedAlertTitle" = "Join Channel";
+"Conversation.PrivateChannelTimeLimitedAlertText" = "This channel is private. Please join it to continue viewing its content.";
+"Conversation.PrivateChannelTimeLimitedAlertJoin" = "Join";

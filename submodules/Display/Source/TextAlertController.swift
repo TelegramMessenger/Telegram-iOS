@@ -137,6 +137,11 @@ public final class TextAlertContentNode: AlertContentNode {
     
     private var validLayout: CGSize?
     
+    private let _dismissOnOutsideTap: Bool
+    override public var dismissOnOutsideTap: Bool {
+        return self._dismissOnOutsideTap
+    }
+    
     public var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
         didSet {
             if let (attribute, textAttributeAction) = self.textAttributeAction {
@@ -160,9 +165,10 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout) {
+    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool) {
         self.theme = theme
         self.actionLayout = actionLayout
+        self._dismissOnOutsideTap = dismissOnOutsideTap
         if let title = title {
             let titleNode = ImmediateTextNode()
             titleNode.attributedText = title
@@ -364,11 +370,11 @@ public final class TextAlertContentNode: AlertContentNode {
     }
 }
 
-public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
-    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout))
+public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, dismissOnOutsideTap: Bool = true) -> AlertController {
+    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap))
 }
 
-public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false) -> AlertController {
+public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true) -> AlertController {
     var dismissImpl: (() -> Void)?
     let attributedText: NSAttributedString
     if parseMarkdown {
@@ -385,7 +391,7 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
             dismissImpl?()
             action.action()
         })
-    }, actionLayout: actionLayout), allowInputInset: allowInputInset)
+    }, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap), allowInputInset: allowInputInset)
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }

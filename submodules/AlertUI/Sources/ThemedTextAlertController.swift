@@ -13,8 +13,8 @@ public final class AlertControllerContext {
     }
 }
 
-public func textAlertController(alertContext: AlertControllerContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true) -> AlertController {
-    let controller = standardTextAlertController(theme: alertContext.theme, title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset)
+public func textAlertController(alertContext: AlertControllerContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissOnOutsideTap: Bool = true) -> AlertController {
+    let controller = standardTextAlertController(theme: alertContext.theme, title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset, dismissOnOutsideTap: dismissOnOutsideTap)
     let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
         controller?.theme = theme
     })
@@ -36,7 +36,7 @@ public func richTextAlertController(alertContext: AlertControllerContext, title:
             }
             action.action()
         })
-    }, actionLayout: actionLayout), allowInputInset: allowInputInset)
+    }, actionLayout: actionLayout, dismissOnOutsideTap: true), allowInputInset: allowInputInset)
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }

@@ -67,7 +67,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart, peekData: params.peekData)
         }
         controller.purposefulAction = params.purposefulAction
         if params.activateMessageSearch {

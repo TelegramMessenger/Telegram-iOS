@@ -653,7 +653,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.eventLogContext.setFilter(self.filter)
     }
     
-    private func openPeer(peerId: PeerId, peer: Peer?) {
+    private func openPeer(peerId: PeerId, peer: Peer?, peekData: ChatPeekTimeout? = nil) {
         let peerSignal: Signal<Peer?, NoError>
         if let peer = peer {
             peerSignal = .single(peer)
@@ -663,7 +663,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), peekData: peekData, animated: true))
                 } else {
                     if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
@@ -796,9 +796,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
-                        strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peerId in
+                        strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peerId, peekData in
                             if let strongSelf = self {
-                                strongSelf.openPeer(peerId: peerId, peer: nil)
+                                strongSelf.openPeer(peerId: peerId, peer: nil, peekData: peekData)
                             }
                         }, parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .localization(identifier):

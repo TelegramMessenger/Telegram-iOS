@@ -671,7 +671,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     var navigate: ChatControllerInteractionNavigateToPeer
                     
                     if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                        navigate = .chat(textInputState: nil, subject: nil)
+                        navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
                     } else {
                         navigate = .info
                     }
@@ -679,7 +679,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     for attribute in item.content.firstMessage.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             openPeerId = attribute.messageId.peerId
-                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
+                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId), peekData: nil)
                         }
                     }
                     

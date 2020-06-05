@@ -192,6 +192,16 @@ public enum NavigateToChatKeepStack {
     case never
 }
 
+public final class ChatPeekTimeout {
+    public let deadline: Int32
+    public let linkData: String
+    
+    public init(deadline: Int32, linkData: String) {
+        self.deadline = deadline
+        self.linkData = linkData
+    }
+}
+
 public final class NavigateToChatControllerParams {
     public let navigationController: NavigationController
     public let chatController: ChatController?
@@ -206,12 +216,13 @@ public final class NavigateToChatControllerParams {
     public let purposefulAction: (() -> Void)?
     public let scrollToEndIfExists: Bool
     public let activateMessageSearch: Bool
+    public let peekData: ChatPeekTimeout?
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: Bool = false, peekData: ChatPeekTimeout? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.context = context
@@ -225,6 +236,7 @@ public final class NavigateToChatControllerParams {
         self.purposefulAction = purposefulAction
         self.scrollToEndIfExists = scrollToEndIfExists
         self.activateMessageSearch = activateMessageSearch
+        self.peekData = peekData
         self.animated = animated
         self.options = options
         self.parentGroupId = parentGroupId

@@ -3624,6 +3624,7 @@ public extension Api {
     public enum ChatInvite: TypeConstructorDescription {
         case chatInviteAlready(chat: Api.Chat)
         case chatInvite(flags: Int32, title: String, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?)
+        case chatInvitePeek(chat: Api.Chat, expires: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -3647,6 +3648,13 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+                case .chatInvitePeek(let chat, let expires):
+                    if boxed {
+                        buffer.appendInt32(1634294960)
+                    }
+                    chat.serialize(buffer, true)
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -3656,6 +3664,8 @@ public extension Api {
                 return ("chatInviteAlready", [("chat", chat)])
                 case .chatInvite(let flags, let title, let photo, let participantsCount, let participants):
                 return ("chatInvite", [("flags", flags), ("title", title), ("photo", photo), ("participantsCount", participantsCount), ("participants", participants)])
+                case .chatInvitePeek(let chat, let expires):
+                return ("chatInvitePeek", [("chat", chat), ("expires", expires)])
     }
     }
     
@@ -3694,6 +3704,22 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, photo: _3!, participantsCount: _4!, participants: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_chatInvitePeek(_ reader: BufferReader) -> ChatInvite? {
+            var _1: Api.Chat?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Chat
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChatInvite.chatInvitePeek(chat: _1!, expires: _2!)
             }
             else {
                 return nil

@@ -514,7 +514,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     }
     navigateToMessageImpl = { [weak controller] messageId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), keepStack: .always, useExisting: false, purposefulAction: {}))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
         }
     }
     return controller

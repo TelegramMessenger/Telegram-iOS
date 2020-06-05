@@ -21,14 +21,14 @@ public final class JoinLinkPreviewController: ViewController {
     
     private let context: AccountContext
     private let link: String
-    private let navigateToPeer: (PeerId) -> Void
+    private let navigateToPeer: (PeerId, ChatPeekTimeout?) -> Void
     private let parentNavigationController: NavigationController?
     private var resolvedState: ExternalJoiningChatState?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
         self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer
@@ -81,7 +81,10 @@ public final class JoinLinkPreviewController: ViewController {
                         let data = JoinLinkPreviewData(isGroup: participants != nil, isJoined: false)
                         strongSelf.controllerNode.setPeer(image: photoRepresentation, title: title, memberCount: participantsCount, members: participants ?? [], data: data)
                     case let .alreadyJoined(peerId):
-                        strongSelf.navigateToPeer(peerId)
+                        strongSelf.navigateToPeer(peerId, nil)
+                        strongSelf.dismiss()
+                    case let .peek(peerId, deadline):
+                        strongSelf.navigateToPeer(peerId, ChatPeekTimeout(deadline: deadline, linkData: strongSelf.link))
                         strongSelf.dismiss()
                     case .invalidHash:
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.GroupInfo_InvitationLinkDoesNotExist, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -119,7 +122,7 @@ public final class JoinLinkPreviewController: ViewController {
         self.disposable.set((joinChatInteractively(with: self.link, account: self.context.account) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
                 if let peerId = peerId {
-                    strongSelf.navigateToPeer(peerId)
+                    strongSelf.navigateToPeer(peerId, nil)
                     strongSelf.dismiss()
                 }
             }

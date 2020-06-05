@@ -25,6 +25,7 @@ public enum ExternalJoiningChatState {
     case invite(title: String, photoRepresentation: TelegramMediaImageRepresentation?, participantsCount: Int32, participants: [Peer]?)
     case alreadyJoined(PeerId)
     case invalidHash
+    case peek(PeerId, Int32)
 }
 
 public func joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, JoinLinkError> {
@@ -66,7 +67,7 @@ public func joinLinkInformation(_ hash: String, account: Account) -> Signal<Exte
                 case let .chatInvite(invite):
                     let photo = telegramMediaImageFromApiPhoto(invite.photo).flatMap({ smallestImageRepresentation($0.representations) })
                     return .single(.invite(title: invite.title, photoRepresentation: photo, participantsCount: invite.participantsCount, participants: invite.participants?.map({TelegramUser(user: $0)})))
-                case let .chatInviteAlready(chat: chat):
+                case let .chatInviteAlready(chat):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in
                             updatePeers(transaction: transaction, peers: [peer], update: { (previous, updated) -> Peer? in
@@ -74,6 +75,17 @@ public func joinLinkInformation(_ hash: String, account: Account) -> Signal<Exte
                             })
                             
                             return .alreadyJoined(peer.id)
+                        })
+                    }
+                    return .single(.invalidHash)
+                case let .chatInvitePeek(chat, expires):
+                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                        return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in
+                            updatePeers(transaction: transaction, peers: [peer], update: { (previous, updated) -> Peer? in
+                                return updated
+                            })
+                            
+                            return .peek(peer.id, expires)
                         })
                     }
                     return .single(.invalidHash)

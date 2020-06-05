@@ -324,7 +324,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                                     }).start()
                                                 })]), on: .root, blockInteraction: false, completion: {})
                                             })
-                                        ], actionLayout: .vertical)
+                                        ], actionLayout: .vertical, dismissOnOutsideTap: true)
                                         contentNode.textAttributeAction = (NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), { value in
                                             if let value = value as? String {
                                                 strongSelf.openUrl(value)
