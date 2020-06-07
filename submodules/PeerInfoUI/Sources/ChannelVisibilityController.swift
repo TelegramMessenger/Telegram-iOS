@@ -615,7 +615,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         }
     } else if let _ = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
-        case .privateLink, .generic:
+        case .privateLink:
                 let link = (view.cachedData as? CachedGroupData)?.exportedInvitation?.link
                 let text: String
                 if let link = link {
@@ -640,7 +640,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 if let current = state.selectedType {
                     selectedType = current
                 } else {
-                    selectedType = .publicChannel
+                    selectedType = .privateChannel
                 }
                 
                 let currentAddressName: String
