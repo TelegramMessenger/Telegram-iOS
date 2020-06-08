@@ -41,20 +41,12 @@ public:
     static std::map<message::NetworkType, MediaEngineWebrtc::NetworkParams> network_params;
     static MediaEngineWebrtc::NetworkParams default_network_params;
     static MediaEngineWebrtc::NetworkParams datasaving_network_params;
-    sigslot::signal2<int16_t *, size_t> SignalRecord;
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-    sigslot::signal2<const int16_t *, size_t> SignalPreprocessed;
-#endif
-    sigslot::signal2<const int16_t *, size_t> SignalPlay;
     sigslot::signal1<State> SignalNewState;
 
 private:
     std::unique_ptr<rtc::Thread> thread;
     std::unique_ptr<Connector> connector;
     std::unique_ptr<MediaEngineWebrtc> media;
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-    std::unique_ptr<MediaEngineWebrtc> preproc;
-#endif
     State state;
     webrtc::RepeatingTaskHandle repeatable;
     int64_t last_recv_time;
@@ -73,9 +65,6 @@ private:
     void SetFail();
     void Play(const int16_t *data, size_t size);
     void Record(int16_t *data, size_t size);
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-    void Preprocessed(const int16_t *data, size_t size);
-#endif
     void SendRtp(rtc::CopyOnWriteBuffer packet);
     void UpdateNetworkParams(const message::RtpStream& rtp);
 };

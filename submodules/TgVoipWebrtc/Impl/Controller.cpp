@@ -3,7 +3,7 @@
 #include "Layer92.h"
 
 #include "modules/rtp_rtcp/source/rtp_utility.h"
-#include "rtc_base/time_utils.cc"
+#include "rtc_base/time_utils.h"
 #include "rtc_base/message_handler.h"
 
 #include <memory>
@@ -89,13 +89,7 @@ void Controller::NewMessage(const message::Base& msg) {
         state = State::Established;
         SignalNewState(state);
         thread->PostTask(RTC_FROM_HERE, [this]() {
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-            preproc = std::make_unique<MediaEngineWebrtc>(not is_outgoing, false, true);
-            preproc->Play.connect(this, &Controller::Preprocessed);
-#endif
             media = std::make_unique<MediaEngineWebrtc>(is_outgoing);
-            media->Record.connect(this, &Controller::Record);
-            media->Play.connect(this, &Controller::Play);
             media->Send.connect(this, &Controller::SendRtp);
         });
         StartRepeating([this]() {
@@ -144,9 +138,6 @@ void Controller::StopRepeating() {
 void Controller::SetFail() {
     thread->PostTask(RTC_FROM_HERE, [this]() {
         media = nullptr;
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-        preproc = nullptr;
-#endif
     });
     if (state != State::Failed) {
         state = State::Failed;
@@ -155,29 +146,7 @@ void Controller::SetFail() {
     StopRepeating();
 }
 
-void Controller::Play(const int16_t *data, size_t size) {
-    SignalPlay(data, size);
-}
-
-void Controller::Record(int16_t *data, size_t size) {
-    SignalRecord(data, size);
-    last_send_time = rtc::TimeMillis();
-}
-
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-void Controller::Preprocessed(const int16_t *data, size_t size) {
-    if (rtc::TimeMillis() - last_send_time < 100)
-        SignalPreprocessed(data, size);
-}
-#endif
-
 void Controller::SendRtp(rtc::CopyOnWriteBuffer packet) {
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-    thread->PostTask(RTC_FROM_HERE, [this, packet]() {
-        if (preproc)
-            preproc->Receive(packet);
-    });
-#endif
     message::RtpStream msg;
     msg.data = packet;
     msg.network_type = local_network_type;

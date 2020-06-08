@@ -14,8 +14,6 @@ public:
 
     sigslot::signal1<rtc::CopyOnWriteBuffer> Send;
     virtual void Receive(rtc::CopyOnWriteBuffer) = 0;
-    sigslot::signal2<const int16_t *, size_t> Play;
-    sigslot::signal2<int16_t *, size_t> Record;
 };
 
 #endif //DEMO_MEDIAENGINEBASE_H
