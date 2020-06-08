@@ -21,6 +21,7 @@
 #import "TGModernGallerySelectableItem.h"
 #import "TGModernGalleryEditableItem.h"
 #import "TGMediaPickerGalleryPhotoItem.h"
+#import "TGMediaPickerGalleryVideoItem.h"
 #import "TGMediaPickerGalleryPhotoItemView.h"
 #import "TGMediaPickerGalleryVideoItemView.h"
 
@@ -150,6 +151,8 @@
             [strongSelf.window endEditing:true];
             if (strongSelf->_doneLongPressed != nil)
                 strongSelf->_doneLongPressed(strongSelf->_currentItem);
+            
+            [[NSUserDefaults standardUserDefaults] setObject:@(3) forKey:@"TG_displayedMediaTimerTooltip_v3"];
         };
         
         _muteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 39.0f, 39.0f)];
@@ -571,7 +574,15 @@
             [strongSelf->_portraitToolbarView setEditButtonsEnabled:available animated:true];
             [strongSelf->_landscapeToolbarView setEditButtonsEnabled:available animated:true];
             
+            
+            
             bool sendableAsGif = !strongSelf->_inhibitMute && [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
+            if ([strongSelf->_currentItem isKindOfClass:[TGMediaPickerGalleryVideoItem class]]) {
+                TGMediaPickerGalleryVideoItem *item = (TGMediaPickerGalleryVideoItem *)strongSelf->_currentItem;
+                if ([item.asset isKindOfClass:[TGCameraCapturedVideo class]] && ((TGCameraCapturedVideo *)item.asset).isAnimation) {
+                    sendableAsGif = false;
+                }
+            }
             strongSelf->_muteButton.hidden = !sendableAsGif;
         }
     }]];
@@ -911,7 +922,7 @@
 
 - (bool)shouldDisplayTooltip
 {
-    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v2"] boolValue];
+    return [[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v3"] intValue] < 3;
 }
 
 - (void)setupTooltip:(CGRect)rect
@@ -919,7 +930,7 @@
     if (_tooltipContainerView != nil || !_hasTimer)
         return;
     
-    _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:2.5 repeat:false];
+    _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:3.5 repeat:false];
     
     _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, self.frame.size.height)];
     [self addSubview:_tooltipContainerView];
@@ -934,7 +945,8 @@
     
     [_tooltipContainerView showMenuFromRect:rect animated:false];
     
-    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedMediaTimerTooltip_v2"];
+    int counter = [[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedMediaTimerTooltip_v3"] intValue];
+    [[NSUserDefaults standardUserDefaults] setObject:@(counter + 1) forKey:@"TG_displayedMediaTimerTooltip_v3"];
 }
 
 - (void)tooltipTimerTick

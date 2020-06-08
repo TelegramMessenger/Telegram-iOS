@@ -575,7 +575,7 @@
             if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
                 return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
             } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
-                return [SSignal single:((TGCameraCapturedVideo *)editableItem).avAsset];
+                return ((TGCameraCapturedVideo *)editableItem).avAsset;
             } else {
                 return [editableItem originalImageSignal:position];
             }

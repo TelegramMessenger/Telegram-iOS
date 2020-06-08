@@ -282,9 +282,9 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .peer(peer.id, .chat(textInputState: nil, subject: nil))
+                            return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
                         } else {
-                            return .peer(peer.id, .chat(textInputState: nil, subject: nil))
+                            return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
                         }
                     }
                 } else {
@@ -297,7 +297,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil)))
+                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                 } else {
                     return .single(.inaccessiblePeer)
                 }
@@ -308,12 +308,12 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: .message(messageId))))
+                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: .message(messageId), peekData: nil)))
                 } else {
                     return findChannelById(postbox: account.postbox, network: account.network, channelId: messageId.peerId.id)
                     |> map { foundPeer -> ResolvedUrl? in
                         if let foundPeer = foundPeer {
-                            return .peer(foundPeer.id, .chat(textInputState: nil, subject: .message(messageId)))
+                            return .peer(foundPeer.id, .chat(textInputState: nil, subject: .message(messageId), peekData: nil))
                         } else {
                             return .inaccessiblePeer
                         }

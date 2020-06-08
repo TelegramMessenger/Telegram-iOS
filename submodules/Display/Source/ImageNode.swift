@@ -127,6 +127,12 @@ public class ImageNode: ASDisplayNode {
     private var first = true
     private let enableEmpty: Bool
     
+    private let _contentReady = Promise<Bool>()
+    private var didSetReady: Bool = false
+    public var contentReady: Signal<Bool, NoError> {
+        return self._contentReady.get()
+    }
+    
     public var ready: Signal<Bool, NoError> {
         if let hasImage = self.hasImage {
             return hasImage.get()
@@ -170,6 +176,10 @@ public class ImageNode: ASDisplayNode {
                             reportedHasImage = true
                             hasImage.set(true)
                         }
+                    }
+                    if !strongSelf.didSetReady {
+                        strongSelf.didSetReady = true
+                        strongSelf._contentReady.set(.single(true))
                     }
                 }
             }

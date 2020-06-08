@@ -50,9 +50,7 @@
                     return;
                 
                 if (next.selected)
-                {
                     [strongSelf addSelectedItem:next.item];
-                }
                 else if (!strongSelf->_keepItems)
                     [strongSelf removeSelectedItem:next.item];
             }]];

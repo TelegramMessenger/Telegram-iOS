@@ -38,7 +38,7 @@
 
 - (TGPhotoEditorTab)toolbarTabs
 {
-    return TGPhotoEditorCropTab | TGPhotoEditorToolsTab | TGPhotoEditorPaintTab | TGPhotoEditorTimerTab;
+    return TGPhotoEditorCropTab | TGPhotoEditorToolsTab | TGPhotoEditorPaintTab;
 }
 
 

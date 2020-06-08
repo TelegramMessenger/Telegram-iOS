@@ -3006,7 +3006,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             return $0.0 < $1.0
         }).map({ $0.1 })
         for file in gifFiles {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+            if !file.hasLinkedStickers {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+            }
         }
     }
     

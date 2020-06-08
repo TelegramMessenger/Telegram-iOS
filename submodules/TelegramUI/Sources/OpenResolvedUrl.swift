@@ -25,9 +25,9 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     if case .default = navigation {
         if let peerId = peerId {
             if peerId.namespace == Namespaces.Peer.CloudUser {
-                return .chat(textInputState: nil, subject: nil)
+                return .chat(textInputState: nil, subject: nil, peekData: nil)
             } else {
-                return .chat(textInputState: nil, subject: nil)
+                return .chat(textInputState: nil, subject: nil, peekData: nil)
             }
         } else {
             return .info
@@ -88,7 +88,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             navigationController?.pushViewController(controller)
         case let .channelMessage(peerId, messageId):
-            openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
+            openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId), peekData: nil))
         case let .stickerPack(name):
             dismissInput()
             if false {
@@ -133,8 +133,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
         case let .join(link):
             dismissInput()
-            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
-                openPeer(peerId, .chat(textInputState: nil, subject: nil))
+            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId, peekData in
+                openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: peekData))
             }, parentNavigationController: navigationController), nil)
         case let .localization(identifier):
             dismissInput()

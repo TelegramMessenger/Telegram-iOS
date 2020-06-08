@@ -120,7 +120,11 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 
 - (bool)precisePointInside:(CGPoint)point
 {
-    return [_stickerView pointInside:[_stickerView convertPoint:point fromView:self] withEvent:nil];
+    CGPoint imagePoint = [_stickerView convertPoint:point fromView:self];
+    if (![_stickerView pointInside:[_stickerView convertPoint:point fromView:self] withEvent:nil])
+        return false;
+    
+    return [_stickerView isOpaqueAtPoint:imagePoint];
 }
 
 - (void)mirror

@@ -43,6 +43,7 @@ typedef enum
 @property (nonatomic, strong) TGPaintBrush *brush;
 
 @property (nonatomic, assign) CGFloat remainder;
+@property (nonatomic, assign) CGFloat pressureRemainder;
 
 - (instancetype)initWithPoint:(TGPaintPoint *)point;
 - (instancetype)initWithPoints:(NSArray *)points;

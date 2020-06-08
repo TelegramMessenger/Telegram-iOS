@@ -184,7 +184,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 {
     _style = style;
     switch (_style) {
-        case TGPhotoPaintTextEntityStyleClassic:
+        case TGPhotoPaintTextEntityStyleRegular:
             _textView.layer.shadowColor = [[UIColor blackColor] CGColor];
             _textView.layer.shadowOffset = CGSizeMake(0.0f, 4.0f);
             _textView.layer.shadowOpacity = 0.4f;
@@ -206,7 +206,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 - (void)updateColor
 {
     switch (_style) {
-        case TGPhotoPaintTextEntityStyleClassic:
+        case TGPhotoPaintTextEntityStyleRegular:
         {
             _textView.textColor = _swatch.color;
             _textView.strokeColor = nil;
@@ -214,7 +214,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         }
             break;
             
-        case TGPhotoPaintTextEntityStyleBorder:
+        case TGPhotoPaintTextEntityStyleOutlined:
         {
             _textView.textColor = [UIColor whiteColor];
             _textView.strokeColor = _swatch.color;
@@ -222,7 +222,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         }
             break;
             
-        case TGPhotoPaintTextEntityStyleFrame:
+        case TGPhotoPaintTextEntityStyleFramed:
         {
             CGFloat lightness = 0.0f;
             CGFloat r = 0.0f;
@@ -601,14 +601,34 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     [super showCGGlyphs:glyphs positions:positions count:glyphCount font:font matrix:textMatrix attributes:attributes inContext:context];
 }
 
+- (void)prepare {
+    _path = nil;
+    [self.rectArray removeAllObjects];
+    
+    [self enumerateLineFragmentsForGlyphRange:NSMakeRange(0, self.textStorage.string) usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
+        bool ignoreRange = false;
+        NSRange characterRange = [self characterRangeForGlyphRange:glyphRange actualGlyphRange:nil];
+        NSString *substring = [[self.textStorage string] substringWithRange:characterRange];
+        if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
+            ignoreRange = true;
+        }
+         
+         if (!ignoreRange) {
+             CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
+             NSValue *value = [NSValue valueWithCGRect:newRect];
+             [self.rectArray addObject:value];
+         }
+     }];
+    
+     [self preProccess];
+}
+
 - (void)drawBackgroundForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
-    [super drawBackgroundForGlyphRange:glyphsToShow atPoint:origin];
+//    [super drawBackgroundForGlyphRange:glyphsToShow atPoint:origin];
     
     if (self.frameColor != nil) {
         NSRange range = [self characterRangeForGlyphRange:glyphsToShow actualGlyphRange:NULL];
         NSRange glyphRange = [self glyphRangeForCharacterRange:range actualCharacterRange:NULL];
-        
-        
         
         CGContextRef context = UIGraphicsGetCurrentContext();
         CGContextSaveGState(context);
@@ -618,22 +638,23 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         CGContextSetFillColorWithColor(context, self.frameColor.CGColor);
         CGContextSetStrokeColorWithColor(context, self.frameColor.CGColor);
         
-        _path = nil;
-        [self.rectArray removeAllObjects];
-        
-        [self enumerateLineFragmentsForGlyphRange:glyphRange usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
-            bool ignoreRange = false;
-            NSString *substring = [[self.textStorage string] substringWithRange:glyphRange];
-            if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
-                ignoreRange = true;
-            }
-            
-            if (!ignoreRange) {
-                CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
-                NSValue *value = [NSValue valueWithCGRect:newRect];
-                [self.rectArray addObject:value];
-            }
-        }];
+        [self prepare];
+//        _path = nil;
+//        [self.rectArray removeAllObjects];
+//
+//        [self enumerateLineFragmentsForGlyphRange:glyphRange usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
+//            bool ignoreRange = false;
+//            NSString *substring = [[self.textStorage string] substringWithRange:glyphRange];
+//            if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
+//                ignoreRange = true;
+//            }
+//
+//            if (!ignoreRange) {
+//                CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
+//                NSValue *value = [NSValue valueWithCGRect:newRect];
+//                [self.rectArray addObject:value];
+//            }
+//        }];
        
         [self preProccess];
        
@@ -646,8 +667,6 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
             if (i == 0) {
                 last = cur;
             } else if (i > 0 && fabs(CGRectGetMaxY(last) - CGRectGetMinY(cur)) < 10.0) {
-                NSValue *lastValue = [self.rectArray objectAtIndex:i-1];
-                last = lastValue.CGRectValue;
                 CGPoint a = cur.origin;
                 CGPoint b = CGPointMake(CGRectGetMaxX(cur), cur.origin.y);
                 CGPoint c = CGPointMake(last.origin.x, CGRectGetMaxY(last));
@@ -690,6 +709,8 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
                     [addPath addLineToPoint:CGPointMake(d.x + _radius, d.y)];
                     [self.path appendPath:addPath];
                 }
+                
+                last = cur;
             }
         }
         [self.path fill];

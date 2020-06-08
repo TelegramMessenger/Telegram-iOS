@@ -14,6 +14,7 @@ const NSInteger TGPaintRenderStateDefaultSize = 256;
 }
 
 @property (nonatomic, assign) CGFloat brushWeight;
+@property (nonatomic, assign) CGFloat brushDynamic;
 @property (nonatomic, assign) CGFloat spacing;
 @property (nonatomic, assign) CGFloat alpha;
 @property (nonatomic, assign) CGFloat angle;
@@ -23,6 +24,7 @@ const NSInteger TGPaintRenderStateDefaultSize = 256;
 @property (nonatomic, readonly) NSUInteger count;
 
 @property (nonatomic, assign) CGFloat remainder;
+@property (nonatomic, assign) CGFloat pressureRemainder;
 
 - (void)reset;
 
@@ -103,6 +105,7 @@ const NSInteger TGPaintRenderStateDefaultSize = 256;
     }
     
     _remainder = 0;
+    _pressureRemainder = 0;
 }
 
 @end
@@ -120,18 +123,15 @@ typedef struct
 
 + (void)_paintStamp:(TGPaintPoint *)point state:(TGPaintRenderState *)state
 {
-    CGFloat weight = state.brushWeight;
-    
-    CGPoint start = point.CGPoint;
-    
-    CGFloat brushSize = weight;
-    CGFloat rotationalScatter = 0.0f;
+    CGFloat brushSize = state.brushWeight * state.scale;
     CGFloat angleOffset = fabs(state.angle) > FLT_EPSILON ? state.angle : 0.0f;
     CGFloat alpha = MIN(1.0f, state.alpha * 1.55f);
     
     [state prepare];
-    [state appendValuesCount:1];
-    [state addPoint:start size:brushSize angle:rotationalScatter + angleOffset alpha:alpha index:0];
+    [state appendValuesCount:4];
+    for (NSInteger i = 0; i < 4; i++) {
+        [state addPoint:point.CGPoint size:brushSize angle:angleOffset alpha:alpha index:i];
+    }
 }
 
 + (void)_paintFromPoint:(TGPaintPoint *)lastLocation toPoint:(TGPaintPoint *)location state:(TGPaintRenderState *)state
@@ -139,6 +139,7 @@ typedef struct
     CGFloat lastP = lastLocation.z;
     CGFloat p = location.z;
     CGFloat pDelta = p - lastP;
+    CGFloat pChange = 0.0f;
     
     CGFloat f, distance = TGPaintDistance(lastLocation.CGPoint, location.CGPoint);
     CGPoint vector = TGPaintSubtractPoints(location.CGPoint, lastLocation.CGPoint);
@@ -148,8 +149,8 @@ typedef struct
     CGFloat brushWeight = state.brushWeight * state.scale;
     CGFloat step = MAX(1.0f, state.spacing * brushWeight);
     
-    CGFloat pressure = lastP;
-    CGFloat pressureStep = 0.0f;
+    CGFloat pressure = lastP + state.pressureRemainder;
+    CGFloat pressureStep = pressureStep = pDelta / ((distance - state.remainder) / step);
     
     if (distance > 0.0f)
         unitVector = TGPaintMultiplyPoint(vector, 1.0f / distance);
@@ -168,27 +169,29 @@ typedef struct
     for (f = state.remainder; f <= distance; f += step, pressure += pressureStep)
     {
         CGFloat alpha = boldenFirst ? boldenedAlpha : state.alpha;
-        CGFloat brushSize = brushWeight;
-//        CGFloat brushSize = MIN(brushWeight, brushWeight - pressure * brushWeight * 0.55f);
+        CGFloat brushSize = MAX(1.0, brushWeight - state.brushDynamic * pressure * brushWeight);
+//        CGFloat brushSize = brushWeight;
         [state addPoint:start size:brushSize angle:vectorAngle alpha:alpha index:i];
         
         start = TGPaintAddPoints(start, TGPaintMultiplyPoint(unitVector, step));
-        
-        i++;
-        
+                
         boldenFirst = false;
         
-        pressureStep = pDelta / (distance / step);
+        pChange += pressureStep;
+        
+        i++;
     }
+//    NSLog(@"final pressure %f", pressure);
     
     if (boldenLast)
     {
         [state appendValuesCount:1];
-        CGFloat brushSize = MIN(brushWeight, brushWeight - pressure * brushWeight * 0.65f);
+        CGFloat brushSize = MAX(1.0, brushWeight - state.brushDynamic * pressure * brushWeight);
         [state addPoint:location.CGPoint size:brushSize angle:vectorAngle alpha:boldenedAlpha index:i];
     }
     
     state.remainder = f - distance;
+    state.pressureRemainder = pChange - pDelta;
 }
 
 + (CGRect)_drawWithState:(TGPaintRenderState *)state
@@ -292,6 +295,7 @@ typedef struct
 + (CGRect)renderPath:(TGPaintPath *)path renderState:(TGPaintRenderState *)renderState
 {
     renderState.brushWeight = path.baseWeight;
+    renderState.brushDynamic = path.brush.dynamic;
     renderState.spacing = path.brush.spacing;
     renderState.alpha = path.brush.alpha;
     renderState.angle = path.brush.angle;
@@ -313,6 +317,7 @@ typedef struct
     }
     
     path.remainder = renderState.remainder;
+    path.pressureRemainder = renderState.pressureRemainder;
     
     return [self _drawWithState:renderState];
 }

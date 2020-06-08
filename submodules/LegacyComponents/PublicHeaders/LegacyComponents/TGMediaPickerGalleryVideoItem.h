@@ -7,7 +7,7 @@
 
 @interface TGMediaPickerGalleryVideoItem : TGMediaPickerGalleryItem <TGModernGallerySelectableItem, TGModernGalleryEditableItem>
 
-@property (nonatomic, readonly) AVAsset *avAsset;
+@property (nonatomic, readonly) SSignal *avAsset;
 @property (nonatomic, readonly) CGSize dimensions;
 - (SSignal *)durationSignal;
 

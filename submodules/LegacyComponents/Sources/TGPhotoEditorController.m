@@ -1552,7 +1552,7 @@
                 if ([item isKindOfClass:[TGMediaAsset class]])
                     assetSignal = [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)item];
                 else if ([item isKindOfClass:[TGCameraCapturedVideo class]])
-                    assetSignal = [SSignal single:((TGCameraCapturedVideo *)item).avAsset];
+                    assetSignal = ((TGCameraCapturedVideo *)item).avAsset;
                 
                 [assetSignal startWithNext:^(AVAsset *asset)
                 {

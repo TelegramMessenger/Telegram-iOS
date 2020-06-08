@@ -313,9 +313,22 @@ private func galleryItems(account: Account, results: [ChatContextResult], curren
     return (galleryItems, focusItem)
 }
 
-func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, present: (ViewController, Any?) -> Void) {
+func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, present: (ViewController, Any?) -> Void) {
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
     legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
+    
+    let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.presentStickersController = { completion in
+        if let presentStickers = presentStickers {
+            return presentStickers({ file, animated, view, rect in
+                let coder = PostboxEncoder()
+                coder.encodeRootObject(file)
+                completion?(coder.makeData(), animated, view, rect)
+            })
+        } else {
+            return nil
+        }
+    }
     
     let controller = TGModernGalleryController(context: legacyController.context)!
     controller.asyncTransitionIn = true
@@ -324,6 +337,7 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, present
     let (items, focusItem) = galleryItems(account: context.account, results: results, current: current, selectionContext: selectionContext, editingContext: editingContext)
     
     let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))!
+    model.stickersContext = paintStickersContext
     if let peer = peer {
         model.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
     }

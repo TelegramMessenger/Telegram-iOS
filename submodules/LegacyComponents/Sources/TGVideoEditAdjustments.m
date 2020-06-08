@@ -91,7 +91,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
             } else if ([dict[@"type"] isEqualToString:@"text"]) {
                 UIImage *renderImage = [[UIImage alloc] initWithData:dict[@"data"]];
                 if (renderImage != nil) {
-                    TGPhotoPaintTextEntity *entity = [[TGPhotoPaintTextEntity alloc] initWithText:nil font:nil swatch:nil baseFontSize:0.0 maxWidth:0.0 style:TGPhotoPaintTextEntityStyleClassic];
+                    TGPhotoPaintTextEntity *entity = [[TGPhotoPaintTextEntity alloc] initWithText:nil font:nil swatch:nil baseFontSize:0.0 maxWidth:0.0 style:TGPhotoPaintTextEntityStyleRegular];
                     entity.uuid = [dict[@"uuid"] integerValue];
                     entity.position = [dict[@"position"] CGPointValue];
                     entity.scale = [dict[@"scale"] floatValue];

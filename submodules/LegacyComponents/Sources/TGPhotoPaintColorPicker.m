@@ -137,7 +137,7 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
 
 - (void)setSwatch:(TGPaintSwatch *)swatch
 {
-    [self setLocation:swatch.colorLocaton];
+    [self setLocation:swatch.colorLocation];
     [self setWeight:swatch.brushWeight];
 }
 

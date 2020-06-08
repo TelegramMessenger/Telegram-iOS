@@ -108,6 +108,18 @@ private func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> 
     }
 }
 
+public struct WebSearchConfiguration: Equatable {
+    public let gifProvider: String?
+    
+    public init(appConfiguration: AppConfiguration) {
+        var gifProvider: String? = nil
+        if let data = appConfiguration.data, let value = data["gif_search_branding"] as? String {
+            gifProvider = value
+        }
+        self.gifProvider = gifProvider
+    }
+}
+
 public final class WebSearchController: ViewController {
     private var validLayout: ContainerViewLayout?
     
@@ -136,6 +148,12 @@ public final class WebSearchController: ViewController {
     private var selectionDisposable: Disposable?
     
     private var navigationContentNode: WebSearchNavigationContentNode?
+    
+    var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)? {
+        didSet {
+            self.controllerNode.presentStickers = self.presentStickers
+        }
+    }
     
     public init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
@@ -169,9 +187,19 @@ public final class WebSearchController: ViewController {
                 return WebSearchSettings.defaultSettings
             }
         }
+        
+        let gifProvider = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> String? in
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+                return nil
+            }
+            let configuration = WebSearchConfiguration(appConfiguration: appConfiguration)
+            return configuration.gifProvider
+        }
+        |> distinctUntilChanged
 
-        self.disposable = ((combineLatest(settings, context.sharedContext.presentationData))
-        |> deliverOnMainQueue).start(next: { [weak self] settings, presentationData in
+        self.disposable = ((combineLatest(settings, context.sharedContext.presentationData, gifProvider))
+        |> deliverOnMainQueue).start(next: { [weak self] settings, presentationData, gifProvider in
             guard let strongSelf = self else {
                 return
             }
@@ -182,6 +210,9 @@ public final class WebSearchController: ViewController {
                 }
                 if current.presentationData !== presentationData {
                     updated = updated.withUpdatedPresentationData(presentationData)
+                }
+                if current.gifProvider != gifProvider {
+                    updated = updated.withUpdatedGifProvider(gifProvider)
                 }
                 return updated
             }
@@ -314,13 +345,14 @@ public final class WebSearchController: ViewController {
         let previousInterfaceState = self.interfaceState
         let previousTheme = self.interfaceState.presentationData.theme
         let previousStrings = self.interfaceState.presentationData.theme
+        let previousGifProvider = self.interfaceState.gifProvider
         
         let updatedInterfaceState = f(self.interfaceState)
         self.interfaceState = updatedInterfaceState
         self.interfaceStatePromise.set(updatedInterfaceState)
         
         if self.isNodeLoaded {
-            if previousTheme !== updatedInterfaceState.presentationData.theme || previousStrings !== updatedInterfaceState.presentationData.strings {
+            if previousTheme !== updatedInterfaceState.presentationData.theme || previousStrings !== updatedInterfaceState.presentationData.strings || previousGifProvider != updatedInterfaceState.gifProvider {
                 self.controllerNode.updatePresentationData(theme: updatedInterfaceState.presentationData.theme, strings: updatedInterfaceState.presentationData.strings)
             }
             if previousInterfaceState != self.interfaceState {

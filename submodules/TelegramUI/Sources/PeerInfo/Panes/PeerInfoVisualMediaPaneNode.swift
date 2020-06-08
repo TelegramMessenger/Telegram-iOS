@@ -11,6 +11,102 @@ import PhotoResources
 import RadialStatusNode
 import TelegramStringFormatting
 import GridMessageSelectionNode
+import UniversalMediaPlayer
+
+private final class FrameSequenceThumbnailNode: ASDisplayNode {
+    private let context: AccountContext
+    private let file: FileMediaReference
+    private let imageNode: ASImageNode
+    
+    private var isPlaying: Bool = false
+    private var isPlayingInternal: Bool = false
+    
+    private var frames: [Int: UIImage] = [:]
+    
+    private var frameTimes: [Double] = []
+    private var sources: [UniversalSoftwareVideoSource] = []
+    private var disposables: [Int: Disposable] = [:]
+    
+    private var currentFrameIndex: Int = 0
+    private var timer: SwiftSignalKit.Timer?
+    
+    init(
+        context: AccountContext,
+        file: FileMediaReference
+    ) {
+        self.context = context
+        self.file = file
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.isUserInteractionEnabled = false
+        self.imageNode.contentMode = .scaleAspectFill
+        self.imageNode.clipsToBounds = true
+        
+        if let duration = file.media.duration {
+            let frameCount = 5
+            let frameInterval: Double = Double(duration) / Double(frameCount)
+            for i in 0 ..< frameCount {
+                self.frameTimes.append(Double(i) * frameInterval)
+            }
+        }
+        
+        super.init()
+        
+        self.addSubnode(self.imageNode)
+        
+        for i in 0 ..< self.frameTimes.count {
+            let framePts = self.frameTimes[i]
+            let index = i
+            
+            let source = UniversalSoftwareVideoSource(
+                mediaBox: self.context.account.postbox.mediaBox,
+                fileReference: self.file,
+                automaticallyFetchHeader: true
+            )
+            self.sources.append(source)
+            self.disposables[index] = (source.takeFrame(at: framePts)
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                if case let .image(image) = result {
+                    if let image = image {
+                        strongSelf.frames[index] = image
+                    }
+                }
+            })
+        }
+    }
+    
+    deinit {
+        for (_, disposable) in self.disposables {
+            disposable.dispose()
+        }
+        self.timer?.invalidate()
+    }
+    
+    func updateIsPlaying(_ isPlaying: Bool) {
+        if self.isPlaying == isPlaying {
+            return
+        }
+        self.isPlaying = isPlaying
+    }
+    
+    func updateLayout(size: CGSize) {
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+    }
+    
+    func tick() {
+        let isPlayingInternal = self.isPlaying && self.frames.count == self.frameTimes.count
+        if isPlayingInternal {
+            self.currentFrameIndex = (self.currentFrameIndex + 1) % self.frames.count
+            
+            if self.currentFrameIndex < self.frames.count {
+                self.imageNode.image = self.frames[self.currentFrameIndex]
+            }
+        }
+    }
+}
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -42,6 +138,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private var sampleBufferLayer: SampleBufferLayer?
     private var displayLink: ConstantDisplayLinkAnimator?
     private var displayLinkTimestamp: Double = 0.0
+    
+    private var frameSequenceThumbnailNode: FrameSequenceThumbnailNode?
     
     private let containerNode: ContextControllerSourceNode
     private let imageNode: TransformImageNode
@@ -351,6 +449,37 @@ private final class VisualMediaItemNode: ASDisplayNode {
             }
         }
         self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
+        
+        /*if isVisible {
+            if let item = self.item?.0, let file = self.item?.1 as? TelegramMediaFile, !file.isAnimated {
+                if self.frameSequenceThumbnailNode == nil {
+                    let frameSequenceThumbnailNode = FrameSequenceThumbnailNode(context: context, file: .message(message: MessageReference(item.message), media: file))
+                    self.frameSequenceThumbnailNode = frameSequenceThumbnailNode
+                    self.imageNode.addSubnode(frameSequenceThumbnailNode)
+                }
+                if let frameSequenceThumbnailNode = self.frameSequenceThumbnailNode {
+                    let size = self.bounds.size
+                    frameSequenceThumbnailNode.frame = CGRect(origin: CGPoint(), size: size)
+                    frameSequenceThumbnailNode.updateLayout(size: size)
+                }
+            } else {
+                if let frameSequenceThumbnailNode = self.frameSequenceThumbnailNode {
+                    self.frameSequenceThumbnailNode = nil
+                    frameSequenceThumbnailNode.removeFromSupernode()
+                }
+            }
+        } else {
+            if let frameSequenceThumbnailNode = self.frameSequenceThumbnailNode {
+                self.frameSequenceThumbnailNode = nil
+                frameSequenceThumbnailNode.removeFromSupernode()
+            }
+        }*/
+        
+        self.frameSequenceThumbnailNode?.updateIsPlaying(isVisible)
+    }
+    
+    func tick() {
+        self.frameSequenceThumbnailNode?.tick()
     }
     
     func updateSelectionState(animated: Bool) {
@@ -666,6 +795,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     private var decelerationAnimator: ConstantDisplayLinkAnimator?
     
+    private var animationTimer: SwiftSignalKit.Timer?
+    
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
         self.peerId = peerId
@@ -720,11 +851,23 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 itemNode.updateHiddenMedia()
             }
         })
+        
+        let animationTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: true, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            for (_, itemNode) in strongSelf.visibleMediaItems {
+                itemNode.tick()
+            }
+        }, queue: .mainQueue())
+        self.animationTimer = animationTimer
+        animationTimer.start()
     }
     
     deinit {
         self.listDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
+        self.animationTimer?.invalidate()
     }
     
     private func requestHistoryAroundVisiblePosition() {

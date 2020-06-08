@@ -15,6 +15,8 @@
 
 - (void)updateVisibility:(bool)visible;
 
+- (UIColor *)colorAtPoint:(CGPoint)point;
+
 - (void)setupWithPaintingData:(TGPaintingData *)paintingData;
 - (TGPhotoPaintEntityView *)createEntityViewWithEntity:(TGPhotoPaintEntity *)entity;
 

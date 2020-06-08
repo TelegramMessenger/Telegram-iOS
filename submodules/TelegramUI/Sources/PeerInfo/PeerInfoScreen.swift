@@ -2176,9 +2176,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let navigationController = self.controller?.navigationController as? NavigationController {
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peerId), keepStack: .always))
             }
-        case let .chat(_, subject):
+        case let .chat(_, subject, peekData):
             if let navigationController = self.controller?.navigationController as? NavigationController {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData))
             }
         case .info:
             self.resolveUrlDisposable.set((self.context.account.postbox.loadedPeerWithId(peerId)

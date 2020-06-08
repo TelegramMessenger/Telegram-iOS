@@ -71,6 +71,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1202287072] = { return Api.StatsURL.parse_statsURL($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[-540871282] = { return Api.ChatInvite.parse_chatInvite($0) }
+    dict[1634294960] = { return Api.ChatInvite.parse_chatInvitePeek($0) }
     dict[-532532493] = { return Api.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }

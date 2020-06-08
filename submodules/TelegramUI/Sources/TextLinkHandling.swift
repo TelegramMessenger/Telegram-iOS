@@ -24,9 +24,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     let openResolvedPeerImpl: (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void = { [weak controller] peerId, navigation in
         context.sharedContext.openResolvedUrl(.peer(peerId, navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), openPeer: { (peerId, navigation) in
             switch navigation {
-                case let .chat(_, subject):
+                case let .chat(_, subject, peekData):
                     if let navigationController = controller?.navigationController as? NavigationController {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, keepStack: .always))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData))
                     }
                 case .info:
                     let peerSignal: Signal<Peer?, NoError>
@@ -64,8 +64,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     case let .instantView(webpage, anchor):
                         (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
                     case let .join(link):
-                        controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
-                            openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil))
+                        controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId, peekData in
+                            openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil, peekData: peekData))
                         }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     #if ENABLE_WALLET
                     case let .wallet(address, amount, comment):

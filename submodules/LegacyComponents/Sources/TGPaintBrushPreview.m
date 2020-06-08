@@ -283,10 +283,11 @@ const NSUInteger TGPaintBrushPreviewSegmentsCount = 100;
     [self _setupBrush];
     [_renderState reset];
     _path.remainder = 0.0f;
+    _path.pressureRemainder = 0.0f;
     _path.brush = brush;
     
     [TGPaintRender renderPath:_path renderState:_renderState];
-    
+        
     if (_brush.lightSaber)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, _lightFramebuffer);

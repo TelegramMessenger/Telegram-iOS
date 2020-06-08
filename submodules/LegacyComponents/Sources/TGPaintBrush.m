@@ -61,6 +61,11 @@ const CGSize TGPaintBrushPreviewTextureSize = { 64.0f, 64.0f };
     return 1.0f;
 }
 
+- (CGFloat)dynamic
+{
+    return 0.0f;
+}
+
 - (bool)lightSaber
 {
     return false;

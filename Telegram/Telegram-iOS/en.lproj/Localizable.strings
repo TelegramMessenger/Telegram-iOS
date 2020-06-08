@@ -5522,5 +5522,19 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.Timer.Title" = "Send With Timer";
 "Conversation.Timer.Send" = "Send With Timer";
 
+"Paint.Pen" = "Pen";
+"Paint.Marker" = "Marker";
+"Paint.Neon" = "Neon";
+"Paint.Arrow" = "Arrow";
+
 "Conversation.NoticeInvitedByInChannel" = "%@ invited you to this channel";
 "Conversation.NoticeInvitedByInGroup" = "%@ invited you to this group";
+
+"ChatList.MessagePhotos_1" = "1 Photo";
+"ChatList.MessagePhotos_any" = "%@ Photos";
+"ChatList.MessageVideos_1" = "1 Videos";
+"ChatList.MessageVideos_any" = "%@ Videos";
+
+"Conversation.PrivateChannelTimeLimitedAlertTitle" = "Join Channel";
+"Conversation.PrivateChannelTimeLimitedAlertText" = "This channel is private. Please join it to continue viewing its content.";
+"Conversation.PrivateChannelTimeLimitedAlertJoin" = "Join";

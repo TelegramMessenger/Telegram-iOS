@@ -2398,7 +2398,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             var navigate: ChatControllerInteractionNavigateToPeer
                             
                             if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                navigate = .chat(textInputState: nil, subject: nil)
+                                navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
                             } else {
                                 navigate = .info
                             }
@@ -2406,7 +2406,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             for attribute in item.content.firstMessage.attributes {
                                 if let attribute = attribute as? SourceReferenceMessageAttribute {
                                     openPeerId = attribute.messageId.peerId
-                                    navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
+                                    navigate = .chat(textInputState: nil, subject: .message(attribute.messageId), peekData: nil)
                                 }
                             }
                             
@@ -2513,7 +2513,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         })
                     case let .peerMention(peerId, _):
                         return .action({
-                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil), nil)
+                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil)
                         })
                     case let .textMention(name):
                         return .action({

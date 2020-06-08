@@ -1045,16 +1045,16 @@
     if (_videoView != nil)
     {
         SMetaDisposable *currentAudioSession = _currentAudioSession;
-//        if (currentAudioSession)
-//        {
+        if (currentAudioSession)
+        {
 //            _videoView.deallocBlock = ^
 //            {
-//                [[SQueue concurrentDefaultQueue] dispatch:^
-//                {
-//                    [currentAudioSession setDisposable:nil];
-//                }];
+                [[SQueue concurrentDefaultQueue] dispatch:^
+                {
+                    [currentAudioSession setDisposable:nil];
+                }];
 //            };
-//        }
+        }
 //        [_videoView cleanupPlayer];
         _photoEditor.previewOutput = nil;
         
@@ -1092,10 +1092,14 @@
     [self inhibitVolumeOverlay];
     
     SSignal *itemSignal = nil;
-    if ([self.item.asset isKindOfClass:[TGMediaAsset class]])
+    if ([self.item.asset isKindOfClass:[TGMediaAsset class]]) {
         itemSignal = [TGMediaAssetImageSignals playerItemForVideoAsset:(TGMediaAsset *)self.item.asset];
-    else if (self.item.avAsset != nil)
-        itemSignal = [SSignal single:[AVPlayerItem playerItemWithAsset:self.item.avAsset]];
+    }
+    else if (self.item.avAsset != nil) {
+        itemSignal = [self.item.avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
+            return [SSignal single:[AVPlayerItem playerItemWithAsset:avAsset]];
+        }];
+    }
     
     [_playerItemDisposable setDisposable:[[itemSignal deliverOn:[SQueue mainQueue]] startWithNext:^(AVPlayerItem *playerItem)
     {
@@ -1546,7 +1550,7 @@
     if (timestamps.count == 0)
         return;
     
-    AVAsset *avAsset = self.item.avAsset ?: _player.currentItem.asset;
+    SSignal *avAsset = self.item.avAsset ?: [SSignal single:_player.currentItem.asset];
     TGMediaEditingContext *editingContext = self.item.editingContext;
     id<TGMediaEditableItem> editableItem = self.item.editableMediaItem;
     
@@ -1554,7 +1558,9 @@
     if ([self.item.asset isKindOfClass:[TGMediaAsset class]] && ![self itemIsLivePhoto])
         thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:self.item.asset size:size timestamps:timestamps];
     else if (avAsset != nil)
-        thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
+        thumbnailsSignal = [avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
+            return [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
+        }];
 
     _requestingThumbnails = true;
     

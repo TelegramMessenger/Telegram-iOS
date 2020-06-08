@@ -178,7 +178,13 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 if (strongSelf == nil)
                     return;
                 
-                NSInteger index = [strongSelf->_fetchResult indexOfAsset:(TGMediaAsset *)change.item];
+                NSInteger index = 0;
+                if ([change.item isKindOfClass:[TGCameraCapturedVideo class]]) {
+                    index = [strongSelf->_fetchResult indexOfAsset:((TGCameraCapturedVideo *)change.item).originalAsset];
+                } else {
+                    index = [strongSelf->_fetchResult indexOfAsset:(TGMediaAsset *)change.item];
+                }
+                
                 [strongSelf updateSendButtonsFromIndex:index];
                 
                 [strongSelf updateSelectionIndexes];
@@ -917,7 +923,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
                     return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
                 } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
-                    return [SSignal single:((TGCameraCapturedVideo *)editableItem).avAsset];
+                    return ((TGCameraCapturedVideo *)editableItem).avAsset;
                 } else {
                     return [editableItem originalImageSignal:position];
                 }

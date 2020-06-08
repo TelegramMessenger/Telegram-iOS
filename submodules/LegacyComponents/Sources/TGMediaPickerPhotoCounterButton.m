@@ -68,7 +68,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
     
         _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, -0.5f, frame.size.width + 1.0, frame.size.height)];
         _countLabel.backgroundColor = [UIColor clearColor];
-        _countLabel.font = [TGFont roundedFontOfSize:17];
+        _countLabel.font = [TGFont roundedFontOfSize:18];
         _countLabel.text = [TGStringUtils stringWithLocalizedNumber:0];
         _countLabel.textColor = [UIColor whiteColor];
         [_wrapperView addSubview:_countLabel];
@@ -299,15 +299,15 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
     {
         labelOrigin = 12 + TGScreenPixel + (38 - labelWidth) / 2;
         
-        if ([_countLabel.text isEqualToString:@"1"] || [_countLabel.text isEqualToString:@"4"])
-            labelOrigin -= 2 * TGScreenPixel;
+//        if ([_countLabel.text isEqualToString:@"1"] || [_countLabel.text isEqualToString:@"4"])
+//            labelOrigin -= 2 * TGScreenPixel;
     }
     else
     {
         labelOrigin = (processingLabelWidth > 0) ? -processingLabelWidth + 19 + 13 - 4.5f: 64 - 38 + (38 - labelWidth) / 2.0f - 13;
     }
     
-    _countLabel.frame = CGRectMake(labelOrigin, 6.0f, labelWidth, _countLabel.frame.size.height);
+    _countLabel.frame = CGRectMake(labelOrigin, 5.0 + TGScreenPixel, labelWidth, _countLabel.frame.size.height);
     _countLabel.transform = transform;
 }
 

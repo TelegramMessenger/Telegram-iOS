@@ -4,9 +4,9 @@
 @class TGPhotoPaintFont;
 
 typedef enum {
-    TGPhotoPaintTextEntityStyleBorder,
-    TGPhotoPaintTextEntityStyleClassic,
-    TGPhotoPaintTextEntityStyleFrame
+    TGPhotoPaintTextEntityStyleOutlined,
+    TGPhotoPaintTextEntityStyleRegular,
+    TGPhotoPaintTextEntityStyleFramed
 } TGPhotoPaintTextEntityStyle;
 
 @interface TGPhotoPaintTextEntity : TGPhotoPaintEntity

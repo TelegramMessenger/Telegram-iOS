@@ -24,6 +24,7 @@ private enum RequestEditMessageInternalError {
 public enum RequestEditMessageError {
     case generic
     case restricted
+    case textTooLong
 }
 
 public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false, scheduleTime: Int32? = nil) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
@@ -173,6 +174,8 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
                 |> mapError { error -> RequestEditMessageInternalError in
                     if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
                         return .invalidReference
+                    } else if error.errorDescription.hasSuffix("_TOO_LONG") {
+                        return .error(.textTooLong)
                     } else if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
                         return .error(.restricted)
                     }

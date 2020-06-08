@@ -10,19 +10,20 @@
 #import "TGPaintBrush.h"
 #import "TGPaintBrushPreview.h"
 
-const CGFloat TGPhotoBrushSettingsViewMargin = 19.0f;
+const CGFloat TGPhotoBrushSettingsViewMargin = 10.0f;
 const CGFloat TGPhotoBrushSettingsItemHeight = 44.0f;
 
 @interface TGPhotoBrushSettingsView ()
 {
     NSArray *_brushes;
-    TGPaintBrushPreview *_preview;
     
-    UIImageView *_backgroundView;
+    UIView *_wrapperView;
+    UIView *_contentView;
+    UIVisualEffectView *_effectView;
     
     NSArray *_brushViews;
+    NSArray *_brushIconViews;
     NSArray *_brushSeparatorViews;
-    UIImageView *_selectedCheckView;
     
     UIImage *_landscapeLeftBackgroundImage;
     UIImage *_landscapeRightBackgroundImage;
@@ -40,80 +41,110 @@ const CGFloat TGPhotoBrushSettingsItemHeight = 44.0f;
     if (self != nil)
     {
         _brushes = brushes;
-        _preview = preview;
         
         _interfaceOrientation = UIInterfaceOrientationPortrait;
         
-        _backgroundView = [[UIImageView alloc] init];
-        //_backgroundView.alpha = 0.98f;
-        [self addSubview:_backgroundView];
+        _wrapperView = [[UIView alloc] init];
+        _wrapperView.clipsToBounds = true;
+        _wrapperView.layer.cornerRadius = 12.0;
+        [self addSubview:_wrapperView];
+        
+        _effectView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleDark]];
+        _effectView.alpha = 0.0f;
+        _effectView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [_wrapperView addSubview:_effectView];
+        
+        _contentView = [[UIView alloc] init];
+        _contentView.alpha = 0.0f;
+        _contentView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [_wrapperView addSubview:_contentView];
+        
+        UIFont *font = [UIFont systemFontOfSize:17];
         
         NSMutableArray *brushViews = [[NSMutableArray alloc] init];
+        NSMutableArray *brushIconViews = [[NSMutableArray alloc] init];
         NSMutableArray *separatorViews = [[NSMutableArray alloc] init];
         [brushes enumerateObjectsUsingBlock:^(__unused TGPaintBrush *brush, NSUInteger index, __unused BOOL *stop)
         {
-            TGModernButton *button = [[TGModernButton alloc] initWithFrame:CGRectMake(0, TGPhotoBrushSettingsViewMargin + index * TGPhotoBrushSettingsItemHeight, 0, 0)];
-            button.tag = index;
-            button.imageView.contentMode = UIViewContentModeCenter;
-            button.contentEdgeInsets = UIEdgeInsetsMake(0.0f, 30.0f, 0.0f, 0.0f);
-            [button addTarget:self action:@selector(brushButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-            [self addSubview:button];
+            NSString *title;
+            UIImage *icon;
+            switch (index) {
+                case 0:
+                    title = TGLocalized(@"Paint.Pen");
+                    icon = [UIImage imageNamed:@"Editor/BrushPen"];
+                    break;
+                case 1:
+                    title = TGLocalized(@"Paint.Marker");
+                    icon = [UIImage imageNamed:@"Editor/BrushMarker"];
+                    break;
+                case 2:
+                    title = TGLocalized(@"Paint.Neon");
+                    icon = [UIImage imageNamed:@"Editor/BrushNeon"];
+                    break;
+                case 3:
+                    title = TGLocalized(@"Paint.Arrow");
+                    icon = [UIImage imageNamed:@"Editor/BrushArrow"];
+                    break;
+                default:
+                    break;
+            }
             
+            TGModernButton *button = [[TGModernButton alloc] initWithFrame:CGRectMake(0, index * TGPhotoBrushSettingsItemHeight, 0, 0)];
+            button.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
+            button.titleLabel.font = font;
+            button.contentEdgeInsets = UIEdgeInsetsMake(0.0f, 16.0f, 0.0f, 0.0f);
+            button.tag = index;
+            [button setTitle:title forState:UIControlStateNormal];
+            [button setTitleColor:[UIColor whiteColor]];
+            [button addTarget:self action:@selector(brushButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+            [_contentView addSubview:button];
             [brushViews addObject:button];
+            
+            UIImageView *iconView = [[UIImageView alloc] initWithImage:TGTintedImage(icon, [UIColor whiteColor])];
+            [button addSubview:iconView];
+            [brushIconViews addObject:iconView];
             
             if (index != brushes.count - 1)
             {
                 UIView *separatorView = [[UIView alloc] init];
-                separatorView.backgroundColor = UIColorRGB(0xd6d6da);
-                [self addSubview:separatorView];
+                separatorView.backgroundColor = UIColorRGBA(0xffffff, 0.2);
+                [_contentView addSubview:separatorView];
                 
                 [separatorViews addObject:separatorView];
             }
         }];
         
         _brushViews = brushViews;
+        _brushIconViews = brushIconViews;
         _brushSeparatorViews = separatorViews;
-        
-        _selectedCheckView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PaintCheck")];
-        _selectedCheckView.frame = CGRectMake(15.0f, 16.0f, _selectedCheckView.frame.size.width, _selectedCheckView.frame.size.height);
     }
     return self;
 }
 
 - (void)brushButtonPressed:(TGModernButton *)sender
 {
-    [sender addSubview:_selectedCheckView];
-    
     if (self.brushChanged != nil)
         self.brushChanged(_brushes[sender.tag]);
 }
 
 - (void)present
 {
-    self.alpha = 0.0f;
-
-    self.layer.rasterizationScale = TGScreenScaling();
-    self.layer.shouldRasterize = true;
-    
-    [self _setupBrushPreviews];
-    
-    [UIView animateWithDuration:0.2 animations:^
+    [UIView animateWithDuration:0.25 animations:^
     {
-        self.alpha = 1.0f;
+        _effectView.alpha = 1.0f;
+        _contentView.alpha = 1.0f;
     } completion:^(__unused BOOL finished)
     {
-        //self.layer.shouldRasterize = false;
+        
     }];
 }
 
 - (void)dismissWithCompletion:(void (^)(void))completion
 {
-    self.layer.rasterizationScale = TGScreenScaling();
-    self.layer.shouldRasterize = true;
-    
-    [UIView animateWithDuration:0.15 animations:^
+    [UIView animateWithDuration:0.2 animations:^
     {
-        self.alpha = 0.0f;
+        _effectView.alpha = 0.0f;
+        _contentView.alpha = 0.0f;
     } completion:^(__unused BOOL finished)
     {
         if (completion != nil)
@@ -121,90 +152,38 @@ const CGFloat TGPhotoBrushSettingsItemHeight = 44.0f;
     }];
 }
 
-- (void)_setupBrushPreviews
-{
-    [_brushes enumerateObjectsUsingBlock:^(TGPaintBrush *aBrush, NSUInteger index, __unused BOOL *stop)
-    {
-        UIImage *image = aBrush.previewImage;
-        if (image == nil)
-        {
-            image = [_preview imageForBrush:aBrush size:CGSizeMake([self sizeThatFits:CGSizeZero].width - 85.0f, TGPhotoBrushSettingsItemHeight)];
-            aBrush.previewImage = image;
-        }
-        
-        [_brushViews[index] setImage:image forState:UIControlStateNormal];
-    }];
-}
-
-- (TGPaintBrush *)brush
-{
-    return _brushes[_selectedCheckView.superview.tag];
-}
-
-- (void)setBrush:(TGPaintBrush *)brush
-{
-    [_brushes enumerateObjectsUsingBlock:^(TGPaintBrush *aBrush, NSUInteger index, BOOL *stop)
-    {
-        if ([brush isEqual:aBrush])
-        {
-            [_brushViews[index] addSubview:_selectedCheckView];
-            *stop = true;
-        }
-    }];
-}
-
 - (CGSize)sizeThatFits:(CGSize)__unused size
 {
-    return CGSizeMake(256, _brushViews.count * TGPhotoBrushSettingsItemHeight + TGPhotoBrushSettingsViewMargin * 2);
+    return CGSizeMake(220, _brushViews.count * TGPhotoBrushSettingsItemHeight + TGPhotoBrushSettingsViewMargin * 2);
 }
 
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     _interfaceOrientation = interfaceOrientation;
     
-    switch (self.interfaceOrientation)
-    {
-        case UIInterfaceOrientationLandscapeLeft:
-        {
-            _backgroundView.image = [TGPhotoPaintSettingsView landscapeLeftBackgroundImage];
-        }
-            break;
-            
-        case UIInterfaceOrientationLandscapeRight:
-        {
-            _backgroundView.image = [TGPhotoPaintSettingsView landscapeRightBackgroundImage];
-        }
-            break;
-            
-        default:
-        {
-            _backgroundView.image = [TGPhotoPaintSettingsView portraitBackgroundImage];
-        }
-            break;
-    }
-    
     [self setNeedsLayout];
 }
 
 - (void)layoutSubviews
 {
+    CGFloat arrowSize = 0.0f;
     switch (self.interfaceOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
-            _backgroundView.frame = CGRectMake(TGPhotoBrushSettingsViewMargin - 13.0f, TGPhotoBrushSettingsViewMargin, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2 + 13.0f, self.frame.size.height - TGPhotoBrushSettingsViewMargin * 2);
+            _wrapperView.frame = CGRectMake(TGPhotoBrushSettingsViewMargin - arrowSize, TGPhotoBrushSettingsViewMargin, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2 + arrowSize, self.frame.size.height - TGPhotoBrushSettingsViewMargin * 2);
         }
             break;
             
         case UIInterfaceOrientationLandscapeRight:
         {
-            _backgroundView.frame = CGRectMake(TGPhotoBrushSettingsViewMargin, TGPhotoBrushSettingsViewMargin, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2 + 13.0f, self.frame.size.height - TGPhotoBrushSettingsViewMargin * 2);
+            _wrapperView.frame = CGRectMake(TGPhotoBrushSettingsViewMargin, TGPhotoBrushSettingsViewMargin, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2 + arrowSize, self.frame.size.height - TGPhotoBrushSettingsViewMargin * 2);
         }
             break;
             
         default:
         {
-            _backgroundView.frame = CGRectMake(TGPhotoBrushSettingsViewMargin, TGPhotoBrushSettingsViewMargin, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2, self.frame.size.height - TGPhotoBrushSettingsViewMargin * 2 + 13.0f);
+            _wrapperView.frame = CGRectMake(TGPhotoBrushSettingsViewMargin, TGPhotoBrushSettingsViewMargin, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2, self.frame.size.height - TGPhotoBrushSettingsViewMargin * 2 + arrowSize);
         }
             break;
     }
@@ -213,13 +192,17 @@ const CGFloat TGPhotoBrushSettingsItemHeight = 44.0f;
     
     [_brushViews enumerateObjectsUsingBlock:^(TGModernButton *view, NSUInteger index, __unused BOOL *stop)
     {
-        view.frame = CGRectMake(TGPhotoBrushSettingsViewMargin, TGPhotoBrushSettingsViewMargin + TGPhotoBrushSettingsItemHeight * index, self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2, TGPhotoBrushSettingsItemHeight);
-         
+        view.frame = CGRectMake(0.0f, TGPhotoBrushSettingsItemHeight * index, _contentView.frame.size.width, TGPhotoBrushSettingsItemHeight);
+    }];
+    
+    [_brushIconViews enumerateObjectsUsingBlock:^(UIImageView *view, NSUInteger index, __unused BOOL *stop)
+    {
+        view.frame = CGRectMake(_contentView.frame.size.width - 42.0f, (TGPhotoBrushSettingsItemHeight - view.frame.size.height) / 2.0, view.frame.size.width, view.frame.size.height);
     }];
     
     [_brushSeparatorViews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger index, __unused BOOL *stop)
     {
-        view.frame = CGRectMake(TGPhotoBrushSettingsViewMargin + 44.0f, TGPhotoBrushSettingsViewMargin + TGPhotoBrushSettingsItemHeight * (index + 1), self.frame.size.width - TGPhotoBrushSettingsViewMargin * 2 - 44.0f, thickness);
+        view.frame = CGRectMake(0.0f, TGPhotoBrushSettingsItemHeight * (index + 1), _contentView.frame.size.width, thickness);
     }];
 }
 
