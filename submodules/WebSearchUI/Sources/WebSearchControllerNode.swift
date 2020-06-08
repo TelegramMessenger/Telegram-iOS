@@ -178,6 +178,8 @@ class WebSearchControllerNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var dismissInput: (() -> Void)?
     
+    var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
+    
     init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
         self.context = context
         self.theme = presentationData.theme
@@ -703,7 +705,7 @@ class WebSearchControllerNode: ASDisplayNode {
                             strongSelf.controllerInteraction.sendSelected(results, result)
                             strongSelf.cancel?()
                         }
-                    }, present: present)
+                    }, presentStickers: self.presentStickers, present: present)
                 }
             } else {
                 if let results = self.currentProcessedResults?.results {

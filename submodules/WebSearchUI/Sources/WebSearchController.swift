@@ -149,6 +149,12 @@ public final class WebSearchController: ViewController {
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
+    var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)? {
+        didSet {
+            self.controllerNode.presentStickers = self.presentStickers
+        }
+    }
+    
     public init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode

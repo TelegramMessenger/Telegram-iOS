@@ -601,14 +601,34 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     [super showCGGlyphs:glyphs positions:positions count:glyphCount font:font matrix:textMatrix attributes:attributes inContext:context];
 }
 
+- (void)prepare {
+    _path = nil;
+    [self.rectArray removeAllObjects];
+    
+    [self enumerateLineFragmentsForGlyphRange:NSMakeRange(0, self.textStorage.string) usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
+        bool ignoreRange = false;
+        NSRange characterRange = [self characterRangeForGlyphRange:glyphRange actualGlyphRange:nil];
+        NSString *substring = [[self.textStorage string] substringWithRange:characterRange];
+        if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
+            ignoreRange = true;
+        }
+         
+         if (!ignoreRange) {
+             CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
+             NSValue *value = [NSValue valueWithCGRect:newRect];
+             [self.rectArray addObject:value];
+         }
+     }];
+    
+     [self preProccess];
+}
+
 - (void)drawBackgroundForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
-    [super drawBackgroundForGlyphRange:glyphsToShow atPoint:origin];
+//    [super drawBackgroundForGlyphRange:glyphsToShow atPoint:origin];
     
     if (self.frameColor != nil) {
         NSRange range = [self characterRangeForGlyphRange:glyphsToShow actualGlyphRange:NULL];
         NSRange glyphRange = [self glyphRangeForCharacterRange:range actualCharacterRange:NULL];
-        
-        
         
         CGContextRef context = UIGraphicsGetCurrentContext();
         CGContextSaveGState(context);
@@ -618,22 +638,23 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         CGContextSetFillColorWithColor(context, self.frameColor.CGColor);
         CGContextSetStrokeColorWithColor(context, self.frameColor.CGColor);
         
-        _path = nil;
-        [self.rectArray removeAllObjects];
-        
-        [self enumerateLineFragmentsForGlyphRange:glyphRange usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
-            bool ignoreRange = false;
-            NSString *substring = [[self.textStorage string] substringWithRange:glyphRange];
-            if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
-                ignoreRange = true;
-            }
-            
-            if (!ignoreRange) {
-                CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
-                NSValue *value = [NSValue valueWithCGRect:newRect];
-                [self.rectArray addObject:value];
-            }
-        }];
+        [self prepare];
+//        _path = nil;
+//        [self.rectArray removeAllObjects];
+//
+//        [self enumerateLineFragmentsForGlyphRange:glyphRange usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
+//            bool ignoreRange = false;
+//            NSString *substring = [[self.textStorage string] substringWithRange:glyphRange];
+//            if ([substring stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]].length == 0) {
+//                ignoreRange = true;
+//            }
+//
+//            if (!ignoreRange) {
+//                CGRect newRect = CGRectMake(usedRect.origin.x - self.frameWidthInset, usedRect.origin.y, usedRect.size.width + self.frameWidthInset * 2, usedRect.size.height);
+//                NSValue *value = [NSValue valueWithCGRect:newRect];
+//                [self.rectArray addObject:value];
+//            }
+//        }];
        
         [self preProccess];
        

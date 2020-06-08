@@ -543,7 +543,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (TGPhotoEditorTab)availableTabs
 {
     TGPhotoEditorTab result = TGPhotoEditorPaintTab | TGPhotoEditorEraserTab | TGPhotoEditorTextTab;
-    if (_enableStickers) {
+    if (_enableStickers && _stickersContext != nil) {
         result |= TGPhotoEditorStickerTab;
     }
     return result;

@@ -1923,8 +1923,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                            let signal = requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: time)
-                            strongSelf.editMessageDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
+                            strongSelf.editMessageDisposable.set((requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: time) |> deliverOnMainQueue).start(next: { result in
                             }, error: { error in
                             }))
                         }
@@ -4983,7 +4982,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let text: String
                 switch error {
-                case .generic:
+                case .generic, .textTooLong:
                     text = strongSelf.presentationData.strings.Channel_EditMessageErrorGeneric
                 case .restricted:
                     text = strongSelf.presentationData.strings.Group_ErrorSendRestrictedMedia
