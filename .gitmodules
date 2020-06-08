@@ -22,4 +22,4 @@ url=https://github.com/bazelbuild/rules_apple.git
 	url = https://chromium.googlesource.com/chromium/tools/depot_tools.git
 [submodule "third-party/webrtc/webrtc-ios"]
 	path = third-party/webrtc/webrtc-ios
-url=../webrtc-ios.git
+url=https://github.com/ali-fareed/webrtc-ios.git
