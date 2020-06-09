@@ -594,10 +594,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
-    #if DEBUG
-    // There was no time to un-merge the experimental branch. Nothing to see here yet.
     entries.append(.videoCalls(experimentalSettings.videoCalls))
-    #endif
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
