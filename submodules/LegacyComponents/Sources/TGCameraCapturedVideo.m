@@ -68,6 +68,9 @@
     return _originalAsset != nil;
 }
 
+- (AVAsset *)immediateAVAsset {
+    return _cachedAVAsset;
+}
 - (SSignal *)avAsset {
     if (_originalAsset != nil) {
         if (_cachedAVAsset != nil) {

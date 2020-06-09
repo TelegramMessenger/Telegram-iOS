@@ -1237,7 +1237,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 
                 if ([item.asset isKindOfClass:[TGCameraCapturedVideo class]])
                 {
-                    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:((TGCameraCapturedVideo *)item.asset).avAsset];
+                    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:((TGCameraCapturedVideo *)item.asset).immediateAVAsset];
                     generator.appliesPreferredTrackTransform = true;
                     generator.maximumSize = CGSizeMake(640.0f, 640.0f);
                     CGImageRef imageRef = [generator copyCGImageAtTime:kCMTimeZero actualTime:NULL error:NULL];
