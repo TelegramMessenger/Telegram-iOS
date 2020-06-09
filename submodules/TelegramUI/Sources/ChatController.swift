@@ -1223,7 +1223,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 switch action {
                     case let .url(url):
-                        var (cleanUrl, _) = parseUrl(url: url)
+                        var (cleanUrl, _) = parseUrl(url: url, wasConcealed: false)
                         var canAddToReadingList = true
                         var canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                         let mailtoString = "mailto:"
@@ -9272,7 +9272,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-func parseUrl(url: String) -> (string: String, concealed: Bool) {
+func parseUrl(url: String, wasConcealed: Bool) -> (string: String, concealed: Bool) {
     var parsedUrlValue: URL?
     if let parsed = URL(string: url) {
         parsedUrlValue = parsed
@@ -9300,7 +9300,7 @@ func parseUrl(url: String) -> (string: String, concealed: Bool) {
             hasNonLatin = true
         }
     }
-    var concealed = false
+    var concealed = wasConcealed
     if hasLatin && hasNonLatin {
         concealed = true
     }
@@ -9313,6 +9313,13 @@ func parseUrl(url: String) -> (string: String, concealed: Bool) {
     }
     
     if let parsedUrlValue = parsedUrlValue, isConcealedUrlWhitelisted(parsedUrlValue) {
+        concealed = false
+    }
+    
+    let whitelistedSchemes: [String] = [
+        "tel",
+    ]
+    if let parsedUrlValue = parsedUrlValue, let scheme = parsedUrlValue.scheme, whitelistedSchemes.contains(scheme) {
         concealed = false
     }
     
@@ -9356,10 +9363,8 @@ func openUserGeneratedUrl(context: AccountContext, url: String, concealed: Bool,
         }))
     }
     
-    let (parsedString, parsedConcealed) = parseUrl(url: url)
-    if parsedConcealed {
-        concealed = true
-    }
+    let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: concealed)
+    concealed = parsedConcealed
     
     if concealed {
         var rawDisplayUrl: String = parsedString

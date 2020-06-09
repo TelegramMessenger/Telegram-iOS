@@ -1726,11 +1726,8 @@ final class SharedApplicationContext {
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         if #available(iOS 10.0, *) {
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
-                guard let context = self.contextValue?.context else {
-                    return true
-                }
                 let startCall: (Int32) -> Void = { userId in
-                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -1776,6 +1773,9 @@ final class SharedApplicationContext {
                             case .phoneNumber:
                                 let phoneNumber = cleanPhoneNumber(value)
                                 if !phoneNumber.isEmpty {
+                                    guard let context = self.contextValue?.context else {
+                                        return true
+                                    }
                                     let _ = (context.account.postbox.transaction { transaction -> PeerId? in
                                         var result: PeerId?
                                         for peerId in transaction.getContactPeerIds() {
@@ -1907,11 +1907,33 @@ final class SharedApplicationContext {
     }
     
     private func openNotificationSettingsWhenReady() {
-        let signal = (self.authorizedContext()
+        let _ = (self.authorizedContext()
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             context.openNotificationSettings()
         })
+    }
+    
+    private func startCallWhenReady(accountId: AccountRecordId?, peerId: PeerId) {
+        let signal = self.sharedContextPromise.get()
+        |> take(1)
+        |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
+            if let accountId = accountId {
+                sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
+                return self.authorizedContext()
+                |> filter { context in
+                    context.context.account.id == accountId
+                }
+                |> take(1)
+            } else {
+                return self.authorizedContext()
+                |> take(1)
+            }
+        }
+        self.openChatWhenReadyDisposable.set((signal
+        |> deliverOnMainQueue).start(next: { context in
+            context.startCall(peerId: peerId)
+        }))
     }
     
     private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {

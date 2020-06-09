@@ -84,7 +84,8 @@ final class AuthorizedApplicationContext {
     let notificationController: NotificationContainerController
     
     private var scheduledOpenNotificationSettings: Bool = false
-    private var scheduledOperChatWithPeerId: (PeerId, MessageId?, Bool)?
+    private var scheduledOpenChatWithPeerId: (PeerId, MessageId?, Bool)?
+    private let scheduledCallPeerDisposable = MetaDisposable()
     private var scheduledOpenExternalUrl: URL?
         
     private let passcodeStatusDisposable = MetaDisposable()
@@ -738,6 +739,7 @@ final class AuthorizedApplicationContext {
         self.termsOfServiceProceedToBotDisposable.dispose()
         self.watchNavigateToMessageDisposable.dispose()
         self.permissionsDisposable.dispose()
+        self.scheduledCallPeerDisposable.dispose()
     }
     
     func openNotificationSettings() {
@@ -746,6 +748,23 @@ final class AuthorizedApplicationContext {
         } else {
             self.scheduledOpenNotificationSettings = true
         }
+    }
+    
+    func startCall(peerId: PeerId) {
+        guard let appLockContext = self.context.sharedContext.appLockContext as? AppLockContextImpl else {
+            return
+        }
+        self.scheduledCallPeerDisposable.set((appLockContext.isCurrentlyLocked
+        |> filter {
+            !$0
+        }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peerId, endCurrentIfAny: false)
+        }))
     }
     
     func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
@@ -758,7 +777,7 @@ final class AuthorizedApplicationContext {
             if self.rootController.rootTabController != nil {
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message($0) }, activateInput: activateInput))
             } else {
-                self.scheduledOperChatWithPeerId = (peerId, messageId, activateInput)
+                self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }
         }
     }
