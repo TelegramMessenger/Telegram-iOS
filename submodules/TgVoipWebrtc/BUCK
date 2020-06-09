@@ -6,6 +6,8 @@ static_library(
         "Sources/**/*.m",
         "Sources/**/*.mm",
         "Impl/*.cpp",
+        "Impl/*.mm",
+        "Impl/*.m",
     ]),
     has_cpp = True,
     headers = merge_maps([
