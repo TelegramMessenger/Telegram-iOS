@@ -773,25 +773,77 @@
                     SSignal *imageSignal = assetSignal;
                     if (adjustments.sendAsGif)
                     {
-                        [signals addObject:[inlineThumbnailSignal(asset) map:^NSDictionary *(UIImage *image)
+                        NSTimeInterval trimStartValue = 0.0;
+                        if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]]) {
+                            TGVideoEditAdjustments *videoAdjustments = (TGVideoEditAdjustments *)adjustments;
+                            trimStartValue = videoAdjustments.trimStartValue;
+                        }
+                        
+                        UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
                         {
-                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                            dict[@"type"] = @"cloudPhoto";
-                            dict[@"previewImage"] = image;
-                            dict[@"livePhoto"] = @true;
-                            dict[@"asset"] = asset;
-                            dict[@"adjustments"] = adjustments;
+                            if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                            {
+                                CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
+                                UIImage *paintingImage = adjustments.paintingData.stillImage;
+                                if (paintingImage == nil) {
+                                    paintingImage = adjustments.paintingData.image;
+                                }
+                                if (adjustments.toolsApplied) {
+                                    image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                                }
+                                return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
+                            }
                             
-                            if (adjustments.paintingData.stickers.count > 0)
-                                dict[@"stickers"] = adjustments.paintingData.stickers;
-                            
-                            if (timer != nil)
-                                dict[@"timer"] = timer;
-                            else if (groupedId != nil && !hasAnyTimers)
-                                dict[@"groupedId"] = groupedId;
-                            
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                            return generatedItem;
+                            return image;
+                        };
+                        
+                        SSignal *trimmedVideoThumbnailSignal = [[TGMediaAssetImageSignals avAssetForVideoAsset:asset allowNetworkAccess:false] mapToSignal:^SSignal *(AVAsset *avAsset)
+                        {
+                            CGSize imageSize = TGFillSize(asset.dimensions, CGSizeMake(512, 512));
+                            return [[TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
+                            {
+                                return cropVideoThumbnail(image, TGScaleToFill(asset.dimensions, CGSizeMake(512, 512)), asset.dimensions, true);
+                            }];
+                        }];
+                        
+                        SSignal *videoThumbnailSignal = [inlineThumbnailSignal(asset) map:^UIImage *(UIImage *image)
+                        {
+                            return cropVideoThumbnail(image, image.size, image.size, false);
+                        }];
+                        
+                        SSignal *thumbnailSignal = trimStartValue > FLT_EPSILON ? trimmedVideoThumbnailSignal : videoThumbnailSignal;
+                        
+                        TGMediaVideoConversionPreset preset = [TGMediaVideoConverter presetFromAdjustments:adjustments];
+                        CGSize dimensions = [TGMediaVideoConverter dimensionsFor:asset.originalSize adjustments:adjustments preset:preset];
+                        
+                        TGCameraCapturedVideo *videoAsset = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:true];
+                        [signals addObject:[thumbnailSignal mapToSignal:^SSignal *(UIImage *image)
+                        {
+                            return [videoAsset.avAsset map:^id(AVURLAsset *avAsset) {
+                                NSTimeInterval duration = CMTimeGetSeconds(avAsset.duration);
+                                if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]]) {
+                                    TGVideoEditAdjustments *videoAdjustments = (TGVideoEditAdjustments *)adjustments;
+                                    duration = videoAdjustments.trimApplied ? (videoAdjustments.trimEndValue - videoAdjustments.trimStartValue) : duration;
+                                }
+                                
+                                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                                dict[@"type"] = @"cameraVideo";
+                                dict[@"url"] = avAsset.URL;
+                                dict[@"previewImage"] = image;
+                                dict[@"duration"] = @(duration);
+                                dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                                dict[@"adjustments"] = adjustments;
+                                
+                                if (adjustments.paintingData.stickers.count > 0)
+                                    dict[@"stickers"] = adjustments.paintingData.stickers;
+                                if (timer != nil)
+                                    dict[@"timer"] = timer;
+                                else if (groupedId != nil && !hasAnyTimers)
+                                    dict[@"groupedId"] = groupedId;
+                                
+                                id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                                return generatedItem;
+                            }];
                         }]];
                     }
                     else

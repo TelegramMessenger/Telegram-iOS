@@ -20,6 +20,8 @@
 #import "TGMediaPickerGalleryItem.h"
 #import "TGMediaPickerGalleryVideoItem.h"
 
+#import "TGCameraCapturedVideo.h"
+
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
 
@@ -96,6 +98,8 @@
     SMetaDisposable *_downloadDisposable;
     SMetaDisposable *_currentAudioSession;
     
+    SVariable *_editableItemVariable;
+    
     UIEdgeInsets _safeAreaInset;
     
     bool _requestingThumbnails;
@@ -127,6 +131,8 @@
         _videoDurationDisposable = [[SMetaDisposable alloc] init];
         
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
+                
+        _editableItemVariable = [[SVariable alloc] init];
         
         _containerView = [[UIView alloc] initWithFrame:self.bounds];
         _containerView.clipsToBounds = true;
@@ -434,23 +440,27 @@
     
     [self.imageView setSignal:imageSignal];
     
+    [_editableItemVariable set:[SSignal single:[self editableMediaItem]]];
+    
     if (item.editingContext != nil)
     {
-        SSignal *adjustmentsSignal = [item.editingContext adjustmentsSignalForItem:item.editableMediaItem];
-        [_adjustmentsDisposable setDisposable:[[adjustmentsSignal deliverOn:[SQueue mainQueue]] startWithNext:^(__unused id next)
+        SSignal *adjustmentsSignal = [[self editableItemSignal] mapToSignal:^SSignal *(id<TGMediaEditableItem> editableItem) {
+            return [item.editingContext adjustmentsSignalForItem:editableItem];
+        }];
+        [_adjustmentsDisposable setDisposable:[[adjustmentsSignal deliverOn:[SQueue mainQueue]] startWithNext:^(id<TGMediaEditAdjustments> adjustments)
         {
             __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
             
             [strongSelf _layoutPlayerView];
-            TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
             strongSelf->_paintingImageView.image = adjustments.paintingData.image;
             
-            strongSelf->_sendAsGif = adjustments.sendAsGif;
-            [strongSelf _mutePlayer:adjustments.sendAsGif];
+            id<TGMediaEditAdjustments> baseAdjustments = [strongSelf.item.editingContext adjustmentsForItem:strongSelf.item.editableMediaItem];
+            strongSelf->_sendAsGif = baseAdjustments.sendAsGif;
+            [strongSelf _mutePlayer:baseAdjustments.sendAsGif];
             
-            if (adjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
+            if (baseAdjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
                 [strongSelf setPlayButtonHidden:true animated:false];
             
             [strongSelf->_entitiesContainerView setupWithPaintingData:adjustments.paintingData];
@@ -1370,6 +1380,23 @@
 
 #pragma mark - Edit Adjustments
 
+- (SSignal *)editableItemSignal {
+    return [_editableItemVariable signal];
+}
+
+- (id<TGMediaEditableItem>)editableMediaItem {
+    TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
+    if ([self itemIsLivePhoto]) {
+        if (adjustments.sendAsGif) {
+            return [[TGCameraCapturedVideo alloc] initWithAsset:self.item.editableMediaItem livePhoto:true];
+        } else {
+            return self.item.editableMediaItem;
+        }
+    } else {
+        return self.item.editableMediaItem;
+    }
+}
+
 - (void)toggleSendAsGif
 {
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
@@ -1388,42 +1415,44 @@
             trimEndValue = adjustments.trimEndValue;
         }
     }
-    NSTimeInterval trimDuration = trimEndValue - trimStartValue;
+//    NSTimeInterval trimDuration = trimEndValue - trimStartValue;
     
     bool sendAsGif = !adjustments.sendAsGif;
-    if (sendAsGif && _scrubberView.allowsTrimming)
-    {
-        if (trimDuration > TGVideoEditMaximumGifDuration)
-        {
-            trimEndValue = trimStartValue + TGVideoEditMaximumGifDuration;
-            
-            if (_scrubberView.value > trimEndValue)
-            {
-                [self stop];
-                [_scrubberView setValue:_scrubberView.trimStartValue resetPosition:true];
-                [self _seekToPosition:_scrubberView.value manual:true];
-            }
-            
-            _scrubberView.trimStartValue = trimStartValue;
-            _scrubberView.trimEndValue = trimEndValue;
-            [_scrubberView setTrimApplied:true];
-            [self updatePlayerRange:trimEndValue];
-        }
-    }
-    else if (_shouldResetScrubber)
-    {
-        trimStartValue = 0.0;
-        trimEndValue = _videoDuration;
-        
-        _scrubberView.trimStartValue = trimStartValue;
-        _scrubberView.trimEndValue = trimEndValue;
-        
-        [_scrubberView setTrimApplied:false];
-        [self updatePlayerRange:trimEndValue];
-    }
+//    if (sendAsGif && _scrubberView.allowsTrimming)
+//    {
+//        if (trimDuration > TGVideoEditMaximumGifDuration)
+//        {
+//            trimEndValue = trimStartValue + TGVideoEditMaximumGifDuration;
+//
+//            if (_scrubberView.value > trimEndValue)
+//            {
+//                [self stop];
+//                [_scrubberView setValue:_scrubberView.trimStartValue resetPosition:true];
+//                [self _seekToPosition:_scrubberView.value manual:true];
+//            }
+//
+//            _scrubberView.trimStartValue = trimStartValue;
+//            _scrubberView.trimEndValue = trimEndValue;
+//            [_scrubberView setTrimApplied:true];
+//            [self updatePlayerRange:trimEndValue];
+//        }
+//    }
+//    else if (_shouldResetScrubber)
+//    {
+//        trimStartValue = 0.0;
+//        trimEndValue = _videoDuration;
+//
+//        _scrubberView.trimStartValue = trimStartValue;
+//        _scrubberView.trimEndValue = trimEndValue;
+//
+//        [_scrubberView setTrimApplied:false];
+//        [self updatePlayerRange:trimEndValue];
+//    }
     
     TGVideoEditAdjustments *updatedAdjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:_videoDimensions cropRect:cropRect cropOrientation:adjustments.cropOrientation cropRotation:adjustments.cropRotation cropLockedAspectRatio:adjustments.cropLockedAspectRatio cropMirrored:adjustments.cropMirrored trimStartValue:trimStartValue trimEndValue:trimEndValue toolValues:adjustments.toolValues paintingData:adjustments.paintingData sendAsGif:sendAsGif preset:adjustments.preset];
     [self.item.editingContext setAdjustments:updatedAdjustments forItem:self.item.editableMediaItem];
+    
+    [_editableItemVariable set:[SSignal single:[self editableMediaItem]]];
     
     if (sendAsGif)
     {
@@ -1552,7 +1581,7 @@
     
     SSignal *avAsset = self.item.avAsset ?: [SSignal single:_player.currentItem.asset];
     TGMediaEditingContext *editingContext = self.item.editingContext;
-    id<TGMediaEditableItem> editableItem = self.item.editableMediaItem;
+    id<TGMediaEditableItem> editableItem = self.editableMediaItem;
     
     SSignal *thumbnailsSignal = nil;
     if ([self.item.asset isKindOfClass:[TGMediaAsset class]] && ![self itemIsLivePhoto])

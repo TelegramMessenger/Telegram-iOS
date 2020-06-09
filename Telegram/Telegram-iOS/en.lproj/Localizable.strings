@@ -5538,3 +5538,5 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.PrivateChannelTimeLimitedAlertTitle" = "Join Channel";
 "Conversation.PrivateChannelTimeLimitedAlertText" = "This channel is private. Please join it to continue viewing its content.";
 "Conversation.PrivateChannelTimeLimitedAlertJoin" = "Join";
+
+"KeyCommand.SearchInChat" = "Search in Chat";

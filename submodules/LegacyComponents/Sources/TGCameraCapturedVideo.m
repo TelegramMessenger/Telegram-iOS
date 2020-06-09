@@ -16,15 +16,22 @@
     NSTimeInterval _cachedDuration;
     
     AVURLAsset *_cachedAVAsset;
+    bool _livePhoto;
 }
 @end
 
 @implementation TGCameraCapturedVideo
 
 + (NSURL *)videoURLForAsset:(TGMediaAsset *)asset {
-    NSURL *convertedGifsUrl = [NSURL fileURLWithPath:[[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:@"convertedGifs"]];
-    [[NSFileManager defaultManager] createDirectoryAtPath:convertedGifsUrl.path withIntermediateDirectories:true attributes:nil error:nil];
-    return [convertedGifsUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", [TGStringUtils md5:asset.identifier]]];
+    if (asset.type == TGMediaAssetGifType) {
+        NSURL *convertedGifsUrl = [NSURL fileURLWithPath:[[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:@"convertedGifs"]];
+        [[NSFileManager defaultManager] createDirectoryAtPath:convertedGifsUrl.path withIntermediateDirectories:true attributes:nil error:nil];
+        return [convertedGifsUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", [TGStringUtils md5:asset.identifier]]];
+    } else {
+        NSURL *convertedLivePhotosUrl = [NSURL fileURLWithPath:[[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:@"convertedLivePhotos"]];
+        [[NSFileManager defaultManager] createDirectoryAtPath:convertedLivePhotosUrl.path withIntermediateDirectories:true attributes:nil error:nil];
+        return [convertedLivePhotosUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", [TGStringUtils md5:asset.identifier]]];
+    }
 }
 
 - (instancetype)initWithURL:(NSURL *)url
@@ -39,12 +46,13 @@
     return self;
 }
 
-- (instancetype)initWithAsset:(TGMediaAsset *)asset
+- (instancetype)initWithAsset:(TGMediaAsset *)asset livePhoto:(bool)livePhoto
 {
     self = [super init];
     if (self != nil)
     {
         _originalAsset = asset;
+        _livePhoto = livePhoto;
         
         _cachedSize = CGSizeZero;
         _cachedDuration = 0.0;
@@ -71,30 +79,46 @@
 - (AVAsset *)immediateAVAsset {
     return _cachedAVAsset;
 }
+
 - (SSignal *)avAsset {
     if (_originalAsset != nil) {
         if (_cachedAVAsset != nil) {
              return [SSignal single:_cachedAVAsset];
         } else {
             NSURL *videoUrl = [TGCameraCapturedVideo videoURLForAsset:_originalAsset];
-            return [[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
-                NSData *data = assetData.imageData;
-                
-                const char *gif87Header = "GIF87";
-                const char *gif89Header = "GIF89";
-                if (data.length >= 5 && (!memcmp(data.bytes, gif87Header, 5) || !memcmp(data.bytes, gif89Header, 5)))
-                {
-                    return [[TGGifConverter convertGifToMp4:data] map:^id(NSDictionary *result)
-                    {
-                        NSString *filePath = result[@"path"];
-                        [[NSFileManager defaultManager] moveItemAtPath:filePath toPath:videoUrl.path error:nil];
+            if ([[NSFileManager defaultManager] fileExistsAtPath:videoUrl.path isDirectory:nil]) {
+                _cachedAVAsset = [AVURLAsset assetWithURL:videoUrl];
+                return [SSignal single:_cachedAVAsset];
+            } else {
+                if (_originalAsset.type == TGMediaAssetGifType) {
+                    return [[[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
+                        NSData *data = assetData.imageData;
                         
-                        return [AVURLAsset assetWithURL:videoUrl];
+                        const char *gif87Header = "GIF87";
+                        const char *gif89Header = "GIF89";
+                        if (data.length >= 5 && (!memcmp(data.bytes, gif87Header, 5) || !memcmp(data.bytes, gif89Header, 5)))
+                        {
+                            return [[TGGifConverter convertGifToMp4:data] map:^id(NSDictionary *result)
+                            {
+                                NSString *filePath = result[@"path"];
+                                [[NSFileManager defaultManager] moveItemAtPath:filePath toPath:videoUrl.path error:nil];
+                                
+                                return [AVURLAsset assetWithURL:videoUrl];
+                            }];
+                        } else {
+                            return [SSignal complete];
+                        }
+                    }] onNext:^(id next) {
+                        _cachedAVAsset = next;
                     }];
                 } else {
-                    return [SSignal complete];
+                    return [[[TGMediaAssetImageSignals avAssetForVideoAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(AVURLAsset *asset) {
+                        return [SSignal single:asset];
+                    }] onNext:^(id next) {
+                        _cachedAVAsset = next;
+                    }];
                 }
-            }];
+            }
         }
     } else {
         return [SSignal single:_cachedAVAsset];

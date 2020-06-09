@@ -401,6 +401,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 strongSelf.footerContentNode.setFramePreviewImage(image: nil)
             }
         })
+        
+        self.alternativeDismiss = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            
+            strongSelf.pictureInPictureButtonPressed()
+            return true
+        }
     }
     
     deinit {

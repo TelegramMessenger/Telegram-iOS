@@ -159,9 +159,9 @@
         _muteButton.hidden = true;
         _muteButton.adjustsImageWhenHighlighted = false;
         [_muteButton setBackgroundImage:[TGPhotoEditorInterfaceAssets gifBackgroundImage] forState:UIControlStateNormal];
-        [_muteButton setImage:[TGPhotoEditorInterfaceAssets gifIcon] forState:UIControlStateNormal];
-        [_muteButton setImage:[TGPhotoEditorInterfaceAssets gifActiveIcon] forState:UIControlStateSelected];
-        [_muteButton setImage:[TGPhotoEditorInterfaceAssets gifActiveIcon]  forState:UIControlStateSelected | UIControlStateHighlighted];
+        [_muteButton setImage:[TGPhotoEditorInterfaceAssets muteIcon] forState:UIControlStateNormal];
+        [_muteButton setImage:[TGPhotoEditorInterfaceAssets muteActiveIcon] forState:UIControlStateSelected];
+        [_muteButton setImage:[TGPhotoEditorInterfaceAssets muteActiveIcon]  forState:UIControlStateSelected | UIControlStateHighlighted];
         [_muteButton addTarget:self action:@selector(toggleSendAsGif) forControlEvents:UIControlEventTouchUpInside];
         [_wrapperView addSubview:_muteButton];
         
@@ -574,8 +574,6 @@
             [strongSelf->_portraitToolbarView setEditButtonsEnabled:available animated:true];
             [strongSelf->_landscapeToolbarView setEditButtonsEnabled:available animated:true];
             
-            
-            
             bool sendableAsGif = !strongSelf->_inhibitMute && [strongItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
             if ([strongSelf->_currentItem isKindOfClass:[TGMediaPickerGalleryVideoItem class]]) {
                 TGMediaPickerGalleryVideoItem *item = (TGMediaPickerGalleryVideoItem *)strongSelf->_currentItem;
@@ -586,6 +584,22 @@
             strongSelf->_muteButton.hidden = !sendableAsGif;
         }
     }]];
+    
+    UIImage *muteIcon = [TGPhotoEditorInterfaceAssets muteIcon];
+    UIImage *muteActiveIcon = [TGPhotoEditorInterfaceAssets muteActiveIcon];
+    if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]]) {
+        TGMediaPickerGalleryVideoItem *videoGalleryItem = (TGMediaPickerGalleryVideoItem *)item;
+        if ([videoGalleryItem.editableMediaItem isKindOfClass:[TGMediaAsset class]]) {
+            TGMediaAsset *asset = (TGMediaAsset *)videoGalleryItem.editableMediaItem;
+            if (asset.type == TGMediaAssetPhotoType) {
+                muteIcon = [TGPhotoEditorInterfaceAssets gifIcon];
+                muteActiveIcon = [TGPhotoEditorInterfaceAssets gifActiveIcon];
+            }
+        }
+    }
+    [_muteButton setImage:muteIcon forState:UIControlStateNormal];
+    [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected];
+    [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected | UIControlStateHighlighted];
 }
 
 - (TGPhotoEditorTab)currentTabs
@@ -1264,7 +1278,7 @@
         return;
     
     TGModernGalleryItemView *currentItemView = _currentItemView;
-    bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]]; // || ([currentItemView.item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]];  && ((TGMediaPickerGalleryPhotoItem *)currentItemView.item).asset.subtypes & TGMediaAssetSubtypePhotoLive);
+    bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
     if (sendableAsGif)
         [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif];
 }

@@ -370,17 +370,17 @@
                 
             case TGMediaAssetGifType:
             {
-//                TGCameraCapturedVideo *convertedAsset = [[TGCameraCapturedVideo alloc] initWithAsset:asset];
-//                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:convertedAsset];
-                galleryItem = [[TGMediaPickerGalleryGifItem alloc] initWithAsset:asset];
+                TGCameraCapturedVideo *convertedAsset = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
+                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:convertedAsset];
+//                galleryItem = [[TGMediaPickerGalleryGifItem alloc] initWithAsset:asset];
             }
                 break;
                 
             default:
             {
-//                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
-//                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
-//                else
+                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
+                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
+                else
                     galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
             }
                 break;

@@ -101,6 +101,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 case let .Audio(isVoice, _, title, performer, _):
                                     if !message.text.isEmpty {
                                         messageText = "🎤 \(messageText)"
+                                        processed = true
                                     } else if isVoice {
                                         if message.text.isEmpty {
                                             messageText = strings.Message_Audio

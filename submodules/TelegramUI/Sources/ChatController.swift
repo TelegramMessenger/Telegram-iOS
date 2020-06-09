@@ -9069,7 +9069,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }
             }),
-            KeyShortcut(input: "F", modifiers: [.command], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_SearchInChat, input: "F", modifiers: [.command], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.beginMessageSearch("")
                 }

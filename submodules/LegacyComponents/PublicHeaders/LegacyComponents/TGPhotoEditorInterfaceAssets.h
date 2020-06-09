@@ -27,6 +27,8 @@
 + (UIImage *)gifBackgroundImage;
 + (UIImage *)gifIcon;
 + (UIImage *)gifActiveIcon;
++ (UIImage *)muteIcon;
++ (UIImage *)muteActiveIcon;
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset;
 + (UIImage *)timerIconForValue:(NSInteger)value;
 + (UIImage *)eraserIcon;
