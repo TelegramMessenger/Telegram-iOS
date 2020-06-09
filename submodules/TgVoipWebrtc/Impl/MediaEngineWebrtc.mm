@@ -18,6 +18,8 @@
 
 #include "sdk/objc/components/video_codec/RTCVideoEncoderFactoryH264.h"
 #include "sdk/objc/components/video_codec/RTCVideoDecoderFactoryH264.h"
+#include "sdk/objc/components/video_codec/RTCDefaultVideoEncoderFactory.h"
+#include "sdk/objc/components/video_codec/RTCDefaultVideoDecoderFactory.h"
 #include "sdk/objc/native/api/video_encoder_factory.h"
 #include "sdk/objc/native/api/video_decoder_factory.h"
 
@@ -67,7 +69,7 @@ static void AddDefaultFeedbackParams(cricket::VideoCodec* codec) {
   }
 }
 
-static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::vector<webrtc::SdpVideoFormat> input_formats) {
+static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::vector<webrtc::SdpVideoFormat> input_formats, int32_t &outCodecId) {
   if (input_formats.empty())
     return std::vector<cricket::VideoCodec>();
   static const int kFirstDynamicPayloadType = 96;
@@ -94,6 +96,13 @@ static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::
     codec.id = payload_type;
     AddDefaultFeedbackParams(&codec);
     output_codecs.push_back(codec);
+      
+      if (codec.name == cricket::kVp9CodecName) {
+          //outCodecId = codec.id;
+      }
+      if (codec.name == cricket::kH264CodecName) {
+          outCodecId = codec.id;
+      }
 
     // Increment payload type.
     ++payload_type;
@@ -143,11 +152,13 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
     media_deps.audio_encoder_factory = webrtc::CreateAudioEncoderFactory<webrtc::AudioEncoderOpus>();
     media_deps.audio_decoder_factory = webrtc::CreateAudioDecoderFactory<webrtc::AudioDecoderOpus>();
     
-    auto video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCVideoEncoderFactoryH264 alloc] init]);
-    std::vector<cricket::VideoCodec> videoCodecs = AssignPayloadTypesAndDefaultCodecs(video_encoder_factory->GetSupportedFormats());
+    //auto video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCVideoEncoderFactoryH264 alloc] init]);
+    auto video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCDefaultVideoEncoderFactory alloc] init]);
+    int32_t outCodecId = 96;
+    std::vector<cricket::VideoCodec> videoCodecs = AssignPayloadTypesAndDefaultCodecs(video_encoder_factory->GetSupportedFormats(), outCodecId);
     
-    media_deps.video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCVideoEncoderFactoryH264 alloc] init]);
-    media_deps.video_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory([[RTCVideoDecoderFactoryH264 alloc] init]);
+    media_deps.video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCDefaultVideoEncoderFactory alloc] init]);
+    media_deps.video_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory([[RTCDefaultVideoDecoderFactory alloc] init]);
     
     media_deps.audio_processing = webrtc::AudioProcessingBuilder().Create();
     media_engine = cricket::CreateMediaEngine(std::move(media_deps));
@@ -169,17 +180,18 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
         voice_channel->OnReadyToSend(true);
         voice_channel->SetSend(true);
     }
+    
     if (send) {
         video_channel->AddSendStream(cricket::StreamParams::CreateLegacy(ssrc_send_video));
         
         for (auto codec : videoCodecs) {
-            if (codec.id == 96 && codec.name == cricket::kH264CodecName) {
+            if (codec.id == outCodecId) {
                 rtc::scoped_refptr<webrtc::ObjCVideoTrackSource> objCVideoTrackSource(new rtc::RefCountedObject<webrtc::ObjCVideoTrackSource>());
                 _nativeVideoSource = webrtc::VideoTrackSourceProxy::Create(signaling_thread.get(), worker_thread.get(), objCVideoTrackSource);
                 
                 codec.SetParam(cricket::kCodecParamMinBitrate, 32);
-                codec.SetParam(cricket::kCodecParamStartBitrate, 300);
-                codec.SetParam(cricket::kCodecParamMaxBitrate, 1000);
+                codec.SetParam(cricket::kCodecParamStartBitrate, 100);
+                codec.SetParam(cricket::kCodecParamMaxBitrate, 1500);
                 
 #if TARGET_IPHONE_SIMULATOR
 #else
@@ -244,7 +256,7 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
                 //send_parameters.options.typing_detection = false;
                 //send_parameters.max_bandwidth_bps = 800000;
                 //send_parameters.rtcp.reduced_size = true;
-                //send_parameters.rtcp.remote_estimate = true;
+                send_parameters.rtcp.remote_estimate = true;
                 video_channel->SetSendParameters(send_parameters);
                 
                 video_channel->SetVideoSend(ssrc_send_video, NULL, _nativeVideoSource.get());
@@ -269,7 +281,7 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
     }
     if (recv) {
         for (auto codec : videoCodecs) {
-            if (codec.id == 96 && codec.name == cricket::kH264CodecName) {
+            if (codec.id == outCodecId) {
                 codec.SetParam(cricket::kCodecParamMinBitrate, 32);
                 codec.SetParam(cricket::kCodecParamStartBitrate, 300);
                 codec.SetParam(cricket::kCodecParamMaxBitrate, 1000);
@@ -278,7 +290,7 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
                 recv_parameters.codecs.emplace_back(codec);
                 recv_parameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extension_sequence);
                 //recv_parameters.rtcp.reduced_size = true;
-                //recv_parameters.rtcp.remote_estimate = true;
+                recv_parameters.rtcp.remote_estimate = true;
                 video_channel->AddRecvStream(cricket::StreamParams::CreateLegacy(ssrc_recv_video));
                 video_channel->SetRecvParameters(recv_parameters);
                 
