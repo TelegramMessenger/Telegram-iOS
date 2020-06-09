@@ -91,7 +91,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
         case .tap:
             switch itemLink {
                 case .url(let url, var concealed):
-                    let (parsedString, parsedConcealed) = parseUrl(url: url)
+                    let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: false)
                     if parsedConcealed {
                         concealed = true
                     }
@@ -128,7 +128,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url)).count > 1
                     let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
                     let actionSheet = ActionSheetController(presentationData: presentationData)
-                    let (displayUrl, _) = parseUrl(url: url)
+                    let (displayUrl, _) = parseUrl(url: url, wasConcealed: false)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                         ActionSheetTextItem(title: displayUrl),
                         ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in

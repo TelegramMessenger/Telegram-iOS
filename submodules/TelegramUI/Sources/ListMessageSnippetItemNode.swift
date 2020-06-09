@@ -244,7 +244,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                             isInstantView = true
                         }
                         
-                        let (parsedUrl, _) = parseUrl(url: content.url)
+                        let (parsedUrl, _) = parseUrl(url: content.url, wasConcealed: false)
                         
                         primaryUrl = parsedUrl
                         
@@ -316,7 +316,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                 }
                                 let tempUrlString = nsString.substring(with: range)
                                 
-                                var (urlString, concealed) = parseUrl(url: tempUrlString)
+                                var (urlString, concealed) = parseUrl(url: tempUrlString, wasConcealed: false)
                                 
                                 let rawUrlString = urlString
                                 var parsedUrl = URL(string: urlString)
@@ -338,7 +338,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     }
                                     let mutableDescriptionText = NSMutableAttributedString()
                                     
-                                    let (messageTextUrl, _) = parseUrl(url: item.message.text)
+                                    let (messageTextUrl, _) = parseUrl(url: item.message.text, wasConcealed: false)
                                     
                                     if messageTextUrl != rawUrlString {
                                        mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor))
