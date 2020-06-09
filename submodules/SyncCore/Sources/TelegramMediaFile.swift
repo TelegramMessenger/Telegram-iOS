@@ -404,7 +404,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     public var isStaticSticker: Bool {
         for attribute in self.attributes {
             if case .Sticker = attribute {
-                if let s = self.size, s < 200 * 1024 {
+                if let s = self.size, s < 300 * 1024 {
                     return !isAnimatedSticker
                 }
             }
