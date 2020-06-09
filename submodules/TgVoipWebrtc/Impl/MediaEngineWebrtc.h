@@ -12,6 +12,9 @@
 
 #include <memory>
 
+#import "VideoCameraCapturer.h"
+#import "VideoMetalView.h"
+
 class MediaEngineWebrtc : public MediaEngineBase {
 public:
     struct NetworkParams {
@@ -30,6 +33,7 @@ public:
     void OnSentPacket(const rtc::SentPacket& sent_packet);
     void SetNetworkParams(const NetworkParams& params);
     void SetMute(bool mute);
+    void AttachVideoView(VideoMetalView *videoView);
 
 private:
     class Sender final : public cricket::MediaChannel::NetworkInterface {
@@ -73,6 +77,10 @@ private:
     std::unique_ptr<cricket::VoiceMediaChannel> voice_channel;
     std::unique_ptr<cricket::VideoMediaChannel> video_channel;
     std::unique_ptr<webrtc::VideoBitrateAllocatorFactory> video_bitrate_allocator_factory;
+    std::unique_ptr<rtc::Thread> signaling_thread;
+    std::unique_ptr<rtc::Thread> worker_thread;
+    rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> _nativeVideoSource;
+    VideoCameraCapturer *_videoCapturer;
 };
 
 

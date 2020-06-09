@@ -11,6 +11,8 @@
 #include "rtc_base/task_utils/repeating_task.h"
 #include "rtc_base/third_party/sigslot/sigslot.h"
 
+#import "VideoMetalView.h"
+
 class Controller : public sigslot::has_slots<> {
 public:
     enum EndpointType {
@@ -35,6 +37,7 @@ public:
     void SetNetworkType(message::NetworkType network_type);
     void SetDataSaving(bool data_saving);
     void SetMute(bool mute);
+    void AttachVideoView(VideoMetalView *videoView);
     void SetProxy(rtc::ProxyType type, const rtc::SocketAddress& addr, const std::string& username,
                   const std::string& password);
 

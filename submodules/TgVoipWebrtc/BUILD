@@ -14,6 +14,8 @@ objc_library(
         "Sources/**/*.h",
         "Impl/*.h",
         "Impl/*.cpp",
+        "Impl/*.mm",
+        "Impl/*.m",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -22,6 +24,9 @@ objc_library(
         "-I{}/Impl".format(package_name()),
         "-Ithird-party/webrtc/webrtc-ios/src",
         "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/base",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/metal",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",

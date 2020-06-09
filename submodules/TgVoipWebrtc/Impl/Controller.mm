@@ -68,8 +68,8 @@ void Controller::NewMessage(const message::Base& msg) {
             msg.minVer = ProtocolBase::minimal_version;
             msg.ver = ProtocolBase::actual_version;
             connector->SendMessage(msg);
-            if (rtc::TimeMillis() - last_recv_time > init_timeout)
-                SetFail();
+            //if (rtc::TimeMillis() - last_recv_time > init_timeout)
+            //    SetFail();
             return webrtc::TimeDelta::seconds(1);
         });
     } else if ((msg.ID == message::tInit || msg.ID == message::tInitAck) && state == State::WaitInit) {
@@ -81,8 +81,8 @@ void Controller::NewMessage(const message::Base& msg) {
             msg.minVer = ProtocolBase::minimal_version;
             msg.ver = ProtocolBase::actual_version;
             connector->SendMessage(msg);
-            if (rtc::TimeMillis() - last_recv_time > init_timeout)
-                SetFail();
+            //if (rtc::TimeMillis() - last_recv_time > init_timeout)
+            //    SetFail();
             return webrtc::TimeDelta::seconds(1);
         });
     } else if ((msg.ID == message::tInitAck || msg.ID == message::tRtpStream) && state == State::WaitInitAck) {
@@ -97,8 +97,9 @@ void Controller::NewMessage(const message::Base& msg) {
                 connector->ResetActiveEndpoint();
                 state = State::Reconnecting;
                 SignalNewState(state);
-            } else if (state == State::Reconnecting && rtc::TimeMillis() - last_recv_time > reconnect_timeout)
-                SetFail();
+            } else if (state == State::Reconnecting && rtc::TimeMillis() - last_recv_time > reconnect_timeout) {
+                //SetFail();
+            }
             return webrtc::TimeDelta::seconds(1);
         });
     } if ((msg.ID == message::tRtpStream) && (state == State::Established || state == State::Reconnecting)) {
@@ -125,7 +126,7 @@ void Controller::NewMessage(const message::Base& msg) {
 
 template<class Closure>
 void Controller::StartRepeating(Closure&& closure) {
-    StopRepeating();
+    //StopRepeating();
     repeatable = webrtc::RepeatingTaskHandle::Start(thread.get(), std::forward<Closure>(closure));
 }
 
@@ -171,6 +172,12 @@ void Controller::UpdateNetworkParams(const message::RtpStream& rtp) {
         final_datasaving = true;
         media->SetNetworkParams(datasaving_network_params);
     }
+}
+
+void Controller::AttachVideoView(VideoMetalView *videoView) {
+    thread->PostTask(RTC_FROM_HERE, [this, videoView]() {
+        media->AttachVideoView(videoView);
+    });
 }
 
 void Controller::SetNetworkType(message::NetworkType network_type) {

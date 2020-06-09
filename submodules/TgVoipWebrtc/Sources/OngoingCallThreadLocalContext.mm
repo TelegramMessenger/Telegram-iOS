@@ -322,5 +322,18 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion {
+    if (_tgVoip) {
+        VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 240.0f)];
+        remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+        
+        _tgVoip->AttachVideoView(remoteRenderer);
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(remoteRenderer);
+        });
+    }
+}
+
 @end
 

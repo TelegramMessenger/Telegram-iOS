@@ -232,6 +232,10 @@ public:
     void setMuteMicrophone(bool muteMicrophone) override {
         controller_->SetMute(muteMicrophone);
     }
+    
+    void AttachVideoView(VideoMetalView *videoView) override {
+        controller_->AttachVideoView(videoView);
+    }
 
     void setAudioOutputGainControlEnabled(bool enabled) override {
     }
