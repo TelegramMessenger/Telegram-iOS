@@ -177,9 +177,9 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
                 rtc::scoped_refptr<webrtc::ObjCVideoTrackSource> objCVideoTrackSource(new rtc::RefCountedObject<webrtc::ObjCVideoTrackSource>());
                 _nativeVideoSource = webrtc::VideoTrackSourceProxy::Create(signaling_thread.get(), worker_thread.get(), objCVideoTrackSource);
                 
-                codec.SetParam(cricket::kCodecParamMinBitrate, 300000);
-                codec.SetParam(cricket::kCodecParamStartBitrate, 300000);
-                codec.SetParam(cricket::kCodecParamMaxBitrate, 600000);
+                codec.SetParam(cricket::kCodecParamMinBitrate, 32);
+                codec.SetParam(cricket::kCodecParamStartBitrate, 300);
+                codec.SetParam(cricket::kCodecParamMaxBitrate, 1000);
                 
 #if TARGET_IPHONE_SIMULATOR
 #else
@@ -242,9 +242,9 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
                 //send_parameters.options.auto_gain_control = params.auto_gain_control;
                 //send_parameters.options.highpass_filter = false;
                 //send_parameters.options.typing_detection = false;
-                send_parameters.max_bandwidth_bps = 300000;
-                send_parameters.rtcp.reduced_size = true;
-                send_parameters.rtcp.remote_estimate = true;
+                //send_parameters.max_bandwidth_bps = 800000;
+                //send_parameters.rtcp.reduced_size = true;
+                //send_parameters.rtcp.remote_estimate = true;
                 video_channel->SetSendParameters(send_parameters);
                 
                 video_channel->SetVideoSend(ssrc_send_video, NULL, _nativeVideoSource.get());
@@ -270,15 +270,15 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing, bool send, bool recv)
     if (recv) {
         for (auto codec : videoCodecs) {
             if (codec.id == 96 && codec.name == cricket::kH264CodecName) {
-                codec.SetParam(cricket::kCodecParamMinBitrate, 300000);
-                codec.SetParam(cricket::kCodecParamStartBitrate, 300000);
-                codec.SetParam(cricket::kCodecParamMaxBitrate, 600000);
+                codec.SetParam(cricket::kCodecParamMinBitrate, 32);
+                codec.SetParam(cricket::kCodecParamStartBitrate, 300);
+                codec.SetParam(cricket::kCodecParamMaxBitrate, 1000);
                 
                 cricket::VideoRecvParameters recv_parameters;
                 recv_parameters.codecs.emplace_back(codec);
                 recv_parameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extension_sequence);
-                recv_parameters.rtcp.reduced_size = true;
-                recv_parameters.rtcp.remote_estimate = true;
+                //recv_parameters.rtcp.reduced_size = true;
+                //recv_parameters.rtcp.remote_estimate = true;
                 video_channel->AddRecvStream(cricket::StreamParams::CreateLegacy(ssrc_recv_video));
                 video_channel->SetRecvParameters(recv_parameters);
                 
@@ -324,11 +324,11 @@ void MediaEngineWebrtc::SetNetworkParams(const MediaEngineWebrtc::NetworkParams&
 //        send_parameters.max_bandwidth_bps = 16000;
     send_parameters.rtcp.reduced_size = true;
     send_parameters.rtcp.remote_estimate = true;
-    voice_channel->SetSendParameters(send_parameters);
+    //voice_channel->SetSendParameters(send_parameters);
 }
 
 void MediaEngineWebrtc::SetMute(bool mute) {
-    voice_channel->SetAudioSend(ssrc_send, !mute, nullptr, &audio_source);
+    //voice_channel->SetAudioSend(ssrc_send, !mute, nullptr, &audio_source);
 }
 
 void MediaEngineWebrtc::AttachVideoView(VideoMetalView *videoView) {

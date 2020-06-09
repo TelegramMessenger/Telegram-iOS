@@ -151,6 +151,9 @@ public:
             }
             controller_->AddEndpoint(addr, endpoint.peerTag, type);
         }
+        /*rtc::SocketAddress addr("192.168.8.118", 7325);
+        unsigned char peerTag[16];
+        controller_->AddEndpoint(addr, peerTag, Controller::EndpointType::P2P);*/
 
         setNetworkType(initialNetworkType);
 

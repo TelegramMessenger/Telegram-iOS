@@ -20,9 +20,9 @@ Controller::Controller(bool is_outgoing, const EncryptionKey& encryption_key, si
 : thread(rtc::Thread::Create())
 , connector(std::make_unique<Connector>(std::make_unique<Layer92>(encryption_key, is_outgoing)))
 , state(State::Starting)
-, is_outgoing(is_outgoing)
 , last_recv_time(rtc::TimeMillis())
 , last_send_time(rtc::TimeMillis())
+, is_outgoing(is_outgoing)
 , init_timeout(init_timeout * 1000)
 , reconnect_timeout(reconnect_timeout * 1000)
 , local_datasaving(false)
@@ -37,9 +37,6 @@ Controller::Controller(bool is_outgoing, const EncryptionKey& encryption_key, si
 Controller::~Controller() {
     thread->Invoke<void>(RTC_FROM_HERE, [this]() {
         media = nullptr;
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-        preproc = nullptr;
-#endif
         connector = nullptr;
     });
 }
@@ -111,11 +108,14 @@ void Controller::NewMessage(const message::Base& msg) {
             }
         });
         if (!webrtc::RtpUtility::RtpHeaderParser(msg_rtp.data.data(), msg_rtp.data.size()).RTCP()) {
+            //printf("rtp received size %d\n", (int)(msg_rtp.data.size()));
             last_recv_time = rtc::TimeMillis();
             if (state == State::Reconnecting) {
                 state = State::Established;
                 SignalNewState(state);
             }
+        } else {
+            //printf("rtcp received size %d\n", (int)(msg_rtp.data.size()));
         }
     } else if (msg.ID == message::tBufferOverflow ||
                msg.ID == message::tPacketIncorrect ||
