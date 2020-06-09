@@ -8,6 +8,8 @@
 #include <string>
 #include <memory>
 
+#import "VideoMetalView.h"
+
 #ifdef TGVOIP_NAMESPACE
 namespace TGVOIP_NAMESPACE {
 #endif
@@ -159,6 +161,8 @@ public:
     virtual void setMuteMicrophone(bool muteMicrophone) = 0;
     virtual void setAudioOutputGainControlEnabled(bool enabled) = 0;
     virtual void setEchoCancellationStrength(int strength) = 0;
+    
+    virtual void AttachVideoView(VideoMetalView *videoView) = 0;
 
     virtual std::string getLastError() = 0;
     virtual std::string getDebugInfo() = 0;

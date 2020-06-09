@@ -91,6 +91,7 @@ void EndpointRelayObfuscatedTcp::Close(rtc::AsyncPacketSocket *, int) {
 void EndpointRelayObfuscatedTcp::RecvPacket(rtc::AsyncPacketSocket *socket, const char *data, size_t packet_len,
         const rtc::SocketAddress& remote_addr, const int64_t& packet_time_us) {
     EndpointBase::RecvPacket(socket, data, packet_len, remote_addr, packet_time_us);
+    
     do {
         if (in_remains > in_buffer->Length())
             break;

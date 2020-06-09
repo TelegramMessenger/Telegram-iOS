@@ -2,6 +2,7 @@
 #define OngoingCallContext_h
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 @interface OngoingCallConnectionDescriptionWebrtc : NSObject
 
@@ -75,6 +76,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (void)setIsMuted:(bool)isMuted;
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
+- (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion;
 
 @end
 

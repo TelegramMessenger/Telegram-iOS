@@ -41,6 +41,23 @@ replace_symbols = [
     "WebRtcAgc_CalculateGainTable",
     "WebRtcAgc_InitVad",
     "WebRtcAgc_ProcessVad",
+    "TimeDiff",
+    "TimeAfter",
+    "TimeMicros",
+    "TimeUTCMicros",
+    "SystemTimeNanos",
+    "TimeNanos",
+    "SystemTimeMillis",
+    "TimeMillis",
+    "TimeUTCMillis",
+    "GetClockForTesting",
+    "TimestampWrapAroundHandler",
+    "Time32",
+    "TmToSeconds",
+    "TimeDiff32",
+    "TimestampWrapAroundHandler",
+    "g_clock",
+    "SetClockForTesting",
 ]
 
 objc_library(
