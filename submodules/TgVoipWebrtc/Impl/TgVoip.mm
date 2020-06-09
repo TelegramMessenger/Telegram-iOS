@@ -151,6 +151,9 @@ public:
             }
             controller_->AddEndpoint(addr, endpoint.peerTag, type);
         }
+        /*rtc::SocketAddress addr("192.168.8.118", 7325);
+        unsigned char peerTag[16];
+        controller_->AddEndpoint(addr, peerTag, Controller::EndpointType::P2P);*/
 
         setNetworkType(initialNetworkType);
 
@@ -231,6 +234,10 @@ public:
 
     void setMuteMicrophone(bool muteMicrophone) override {
         controller_->SetMute(muteMicrophone);
+    }
+    
+    void AttachVideoView(VideoMetalView *videoView) override {
+        controller_->AttachVideoView(videoView);
     }
 
     void setAudioOutputGainControlEnabled(bool enabled) override {

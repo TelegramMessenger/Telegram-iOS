@@ -6,6 +6,8 @@ static_library(
         "Sources/**/*.m",
         "Sources/**/*.mm",
         "Impl/*.cpp",
+        "Impl/*.mm",
+        "Impl/*.m",
     ]),
     has_cpp = True,
     headers = merge_maps([
@@ -22,6 +24,9 @@ static_library(
     compiler_flags = [
         "-Ithird-party/webrtc/webrtc-ios/src",
         "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/base",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/metal",
         "-Ithird-party/submodules/TgVoipWebrtc/PublicHeaders",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",

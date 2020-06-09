@@ -4,8 +4,9 @@
 
 #include <memory>
 #include "api/scoped_refptr.h"
+#include "api/proxy.h"
+#include "api/peer_connection_factory_proxy.h"
 #include "rtc_base/thread.h"
-#include "api/peer_connection_interface.h"
 #include "api/task_queue/default_task_queue_factory.h"
 #include "media/engine/webrtc_media_engine.h"
 #include "sdk/objc/native/api/audio_device_module.h"
@@ -22,6 +23,9 @@
 #include "api/video_track_source_proxy.h"
 #include "sdk/objc/api/RTCVideoRendererAdapter.h"
 #include "sdk/objc/native/api/video_frame.h"
+
+#include "tg_peer_connection.h"
+#include "tg_peer_connection_factory.h"
 
 #include "VideoCameraCapturer.h"
 
@@ -179,10 +183,10 @@ public:
     std::unique_ptr<rtc::Thread> _networkThread;
     std::unique_ptr<rtc::Thread> _workerThread;
     std::unique_ptr<rtc::Thread> _signalingThread;
-    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> _nativeFactory;
+    rtc::scoped_refptr<webrtc::TgPeerConnectionFactoryInterface> _nativeFactory;
     
     std::unique_ptr<PeerConnectionObserverImpl> _observer;
-    rtc::scoped_refptr<webrtc::PeerConnectionInterface> _peerConnection;
+    rtc::scoped_refptr<webrtc::TgPeerConnectionInterface> _peerConnection;
     std::unique_ptr<webrtc::MediaConstraints> _nativeConstraints;
     bool _hasStartedRtcEventLog;
     
@@ -207,7 +211,7 @@ public:
         
         _networkThread = rtc::Thread::CreateWithSocketServer();
         _networkThread->SetName("network_thread", _networkThread.get());
-        BOOL result = _networkThread->Start();
+        bool result = _networkThread->Start();
         assert(result);
 
         _workerThread = rtc::Thread::Create();
@@ -239,7 +243,19 @@ public:
             std::make_unique<webrtc::RtcEventLogFactory>(dependencies.task_queue_factory.get());
         dependencies.network_controller_factory = nil;
         dependencies.media_transport_factory = nil;
-        _nativeFactory = webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
+        
+        rtc::scoped_refptr<webrtc::TgPeerConnectionFactory> pc_factory(
+            new rtc::RefCountedObject<webrtc::TgPeerConnectionFactory>(
+                std::move(dependencies)));
+        // Call Initialize synchronously but make sure it is executed on
+        // |signaling_thread|.
+        webrtc::MethodCall<webrtc::TgPeerConnectionFactory, bool> call(pc_factory.get(), &webrtc::TgPeerConnectionFactory::Initialize);
+        result = call.Marshal(RTC_FROM_HERE, pc_factory->signaling_thread());
+
+        if (!result) {
+            return nil;
+        }
+        _nativeFactory = webrtc::TgPeerConnectionFactoryProxy::Create(pc_factory->signaling_thread(), pc_factory);
         
         webrtc::PeerConnectionInterface::RTCConfiguration config;
         config.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
@@ -263,6 +279,7 @@ public:
         //config.type = webrtc::PeerConnectionInterface::kRelay;
         
         _observer.reset(new PeerConnectionObserverImpl(_discoveredIceCandidate, _connectionStateChanged));
+        
         _peerConnection = _nativeFactory->CreatePeerConnection(config, nullptr, nullptr, _observer.get());
         assert(_peerConnection != nullptr);
         
@@ -320,7 +337,7 @@ public:
     AVCaptureDeviceFormat *bestFormat = nil;
     for (AVCaptureDeviceFormat *format in sortedFormats) {
         CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
-        if (dimensions.width >= 600 || dimensions.height >= 600) {
+        if (dimensions.width >= 1000 || dimensions.height >= 1000) {
             bestFormat = format;
             break;
         }

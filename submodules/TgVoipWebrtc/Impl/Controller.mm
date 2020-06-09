@@ -3,7 +3,7 @@
 #include "Layer92.h"
 
 #include "modules/rtp_rtcp/source/rtp_utility.h"
-#include "rtc_base/time_utils.cc"
+#include "rtc_base/time_utils.h"
 #include "rtc_base/message_handler.h"
 
 #include <memory>
@@ -20,9 +20,9 @@ Controller::Controller(bool is_outgoing, const EncryptionKey& encryption_key, si
 : thread(rtc::Thread::Create())
 , connector(std::make_unique<Connector>(std::make_unique<Layer92>(encryption_key, is_outgoing)))
 , state(State::Starting)
-, is_outgoing(is_outgoing)
 , last_recv_time(rtc::TimeMillis())
 , last_send_time(rtc::TimeMillis())
+, is_outgoing(is_outgoing)
 , init_timeout(init_timeout * 1000)
 , reconnect_timeout(reconnect_timeout * 1000)
 , local_datasaving(false)
@@ -37,9 +37,6 @@ Controller::Controller(bool is_outgoing, const EncryptionKey& encryption_key, si
 Controller::~Controller() {
     thread->Invoke<void>(RTC_FROM_HERE, [this]() {
         media = nullptr;
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-        preproc = nullptr;
-#endif
         connector = nullptr;
     });
 }
@@ -68,8 +65,8 @@ void Controller::NewMessage(const message::Base& msg) {
             msg.minVer = ProtocolBase::minimal_version;
             msg.ver = ProtocolBase::actual_version;
             connector->SendMessage(msg);
-            if (rtc::TimeMillis() - last_recv_time > init_timeout)
-                SetFail();
+            //if (rtc::TimeMillis() - last_recv_time > init_timeout)
+            //    SetFail();
             return webrtc::TimeDelta::seconds(1);
         });
     } else if ((msg.ID == message::tInit || msg.ID == message::tInitAck) && state == State::WaitInit) {
@@ -81,21 +78,15 @@ void Controller::NewMessage(const message::Base& msg) {
             msg.minVer = ProtocolBase::minimal_version;
             msg.ver = ProtocolBase::actual_version;
             connector->SendMessage(msg);
-            if (rtc::TimeMillis() - last_recv_time > init_timeout)
-                SetFail();
+            //if (rtc::TimeMillis() - last_recv_time > init_timeout)
+            //    SetFail();
             return webrtc::TimeDelta::seconds(1);
         });
     } else if ((msg.ID == message::tInitAck || msg.ID == message::tRtpStream) && state == State::WaitInitAck) {
         state = State::Established;
         SignalNewState(state);
         thread->PostTask(RTC_FROM_HERE, [this]() {
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-            preproc = std::make_unique<MediaEngineWebrtc>(not is_outgoing, false, true);
-            preproc->Play.connect(this, &Controller::Preprocessed);
-#endif
             media = std::make_unique<MediaEngineWebrtc>(is_outgoing);
-            media->Record.connect(this, &Controller::Record);
-            media->Play.connect(this, &Controller::Play);
             media->Send.connect(this, &Controller::SendRtp);
         });
         StartRepeating([this]() {
@@ -103,8 +94,9 @@ void Controller::NewMessage(const message::Base& msg) {
                 connector->ResetActiveEndpoint();
                 state = State::Reconnecting;
                 SignalNewState(state);
-            } else if (state == State::Reconnecting && rtc::TimeMillis() - last_recv_time > reconnect_timeout)
-                SetFail();
+            } else if (state == State::Reconnecting && rtc::TimeMillis() - last_recv_time > reconnect_timeout) {
+                //SetFail();
+            }
             return webrtc::TimeDelta::seconds(1);
         });
     } if ((msg.ID == message::tRtpStream) && (state == State::Established || state == State::Reconnecting)) {
@@ -116,11 +108,14 @@ void Controller::NewMessage(const message::Base& msg) {
             }
         });
         if (!webrtc::RtpUtility::RtpHeaderParser(msg_rtp.data.data(), msg_rtp.data.size()).RTCP()) {
+            //printf("rtp received size %d\n", (int)(msg_rtp.data.size()));
             last_recv_time = rtc::TimeMillis();
             if (state == State::Reconnecting) {
                 state = State::Established;
                 SignalNewState(state);
             }
+        } else {
+            //printf("rtcp received size %d\n", (int)(msg_rtp.data.size()));
         }
     } else if (msg.ID == message::tBufferOverflow ||
                msg.ID == message::tPacketIncorrect ||
@@ -131,7 +126,7 @@ void Controller::NewMessage(const message::Base& msg) {
 
 template<class Closure>
 void Controller::StartRepeating(Closure&& closure) {
-    StopRepeating();
+    //StopRepeating();
     repeatable = webrtc::RepeatingTaskHandle::Start(thread.get(), std::forward<Closure>(closure));
 }
 
@@ -144,9 +139,6 @@ void Controller::StopRepeating() {
 void Controller::SetFail() {
     thread->PostTask(RTC_FROM_HERE, [this]() {
         media = nullptr;
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-        preproc = nullptr;
-#endif
     });
     if (state != State::Failed) {
         state = State::Failed;
@@ -155,29 +147,7 @@ void Controller::SetFail() {
     StopRepeating();
 }
 
-void Controller::Play(const int16_t *data, size_t size) {
-    SignalPlay(data, size);
-}
-
-void Controller::Record(int16_t *data, size_t size) {
-    SignalRecord(data, size);
-    last_send_time = rtc::TimeMillis();
-}
-
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-void Controller::Preprocessed(const int16_t *data, size_t size) {
-    if (rtc::TimeMillis() - last_send_time < 100)
-        SignalPreprocessed(data, size);
-}
-#endif
-
 void Controller::SendRtp(rtc::CopyOnWriteBuffer packet) {
-#ifdef TGVOIP_PREPROCESSED_OUTPUT
-    thread->PostTask(RTC_FROM_HERE, [this, packet]() {
-        if (preproc)
-            preproc->Receive(packet);
-    });
-#endif
     message::RtpStream msg;
     msg.data = packet;
     msg.network_type = local_network_type;
@@ -202,6 +172,12 @@ void Controller::UpdateNetworkParams(const message::RtpStream& rtp) {
         final_datasaving = true;
         media->SetNetworkParams(datasaving_network_params);
     }
+}
+
+void Controller::AttachVideoView(VideoMetalView *videoView) {
+    thread->PostTask(RTC_FROM_HERE, [this, videoView]() {
+        media->AttachVideoView(videoView);
+    });
 }
 
 void Controller::SetNetworkType(message::NetworkType network_type) {
