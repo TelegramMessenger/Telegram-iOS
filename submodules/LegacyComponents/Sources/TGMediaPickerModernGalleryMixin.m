@@ -378,9 +378,9 @@
                 
             default:
             {
-                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
-                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
-                else
+//                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
+//                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
+//                else
                     galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
             }
                 break;
