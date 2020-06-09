@@ -2709,25 +2709,27 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             CGSize dimensions = [TGMediaVideoConverter dimensionsFor:asset.originalSize adjustments:adjustments preset:preset];
             NSTimeInterval duration = adjustments.trimApplied ? (adjustments.trimEndValue - adjustments.trimStartValue) : video.videoDuration;
             
-            [signals addObject:[thumbnailSignal map:^id(UIImage *image)
+            [signals addObject:[thumbnailSignal mapToSignal:^id(UIImage *image)
             {
-                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                dict[@"type"] = @"cameraVideo";
-//                dict[@"url"] = video.avAsset.URL;
-                dict[@"previewImage"] = image;
-                dict[@"adjustments"] = adjustments;
-                dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
-                dict[@"duration"] = @(duration);
-                
-                if (adjustments.paintingData.stickers.count > 0)
-                    dict[@"stickers"] = adjustments.paintingData.stickers;
-                if (timer != nil)
-                    dict[@"timer"] = timer;
-                else if (groupedId != nil && !hasAnyTimers)
-                    dict[@"groupedId"] = groupedId;
-                
-                id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                return generatedItem;
+                return [video.avAsset map:^id(AVURLAsset *avAsset) {
+                    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                    dict[@"type"] = @"cameraVideo";
+                    dict[@"url"] = avAsset.URL;
+                    dict[@"previewImage"] = image;
+                    dict[@"adjustments"] = adjustments;
+                    dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                    dict[@"duration"] = @(duration);
+                    
+                    if (adjustments.paintingData.stickers.count > 0)
+                        dict[@"stickers"] = adjustments.paintingData.stickers;
+                    if (timer != nil)
+                        dict[@"timer"] = timer;
+                    else if (groupedId != nil && !hasAnyTimers)
+                        dict[@"groupedId"] = groupedId;
+                    
+                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    return generatedItem;
+                }];
             }]];
             
             i++;
