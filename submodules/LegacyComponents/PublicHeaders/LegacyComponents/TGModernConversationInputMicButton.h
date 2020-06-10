@@ -2,6 +2,12 @@
 
 @class TGModernConversationInputMicButton;
 
+@protocol TGModernConversationInputMicButtonLock <NSObject>
+
+- (void)updateLockness:(CGFloat)lockness;
+
+@end
+
 @protocol TGModernConversationInputMicButtonDecoration <NSObject>
 
 - (void)updateLevel:(CGFloat)level;
@@ -29,11 +35,13 @@
 - (void)micButtonInteractionLocked;
 - (void)micButtonInteractionRequestedLockedAction;
 - (void)micButtonInteractionStopped;
+- (void)micButtonInteractionUpdateCancelTranslation:(CGFloat)translation;
 
 - (bool)micButtonShouldLock;
 
 - (id<TGModernConversationInputMicButtonPresentation>)micButtonPresenter;
 - (UIView<TGModernConversationInputMicButtonDecoration> *)micButtonDecoration;
+- (UIView<TGModernConversationInputMicButtonLock> *)micButtonLock;
 
 @end
 

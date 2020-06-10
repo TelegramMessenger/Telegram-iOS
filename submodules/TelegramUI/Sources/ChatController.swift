@@ -7231,6 +7231,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             switch updatedAction {
                 case .dismiss:
+                    self.chatDisplayNode.updateRecordedMediaDeleted(true)
                     break
                 case .preview:
                     let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
@@ -7251,6 +7252,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                 case .send:
+                    self.chatDisplayNode.updateRecordedMediaDeleted(false)
                     let _ = (audioRecorderValue.takenRecordedData()
                     |> deliverOnMainQueue).start(next: { [weak self] data in
                         if let strongSelf = self, let data = data {

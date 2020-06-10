@@ -1772,6 +1772,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return self.textInputPanelNode?.textInputNode
     }
     
+    func updateRecordedMediaDeleted(_ isDeleted: Bool) {
+        self.textInputPanelNode?.isMediaDeleted = isDeleted
+    }
+    
     func frameForVisibleArea() -> CGRect {
         let rect = CGRect(origin: CGPoint(x: self.visibleAreaInset.left, y: self.visibleAreaInset.top), size: CGSize(width: self.bounds.size.width - self.visibleAreaInset.left - self.visibleAreaInset.right, height: self.bounds.size.height - self.visibleAreaInset.top - self.visibleAreaInset.bottom))
         if let containerNode = self.containerNode {

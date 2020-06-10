@@ -166,6 +166,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     var offsetRecordingControls: () -> Void = { }
     var switchMode: () -> Void = { }
     var updateLocked: (Bool) -> Void = { _ in }
+    var updateCancelTranslation: () -> Void = { }
     
     private var modeTimeoutTimer: SwiftSignalKit.Timer?
     
@@ -174,6 +175,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private var recordingOverlay: ChatTextInputAudioRecordingOverlay?
     private var startTouchLocation: CGPoint?
     private(set) var controlsOffset: CGFloat = 0.0
+    private(set) var cancelTranslation: CGFloat = 0.0
     
     private var micLevelDisposable: MetaDisposable?
     
@@ -368,6 +370,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.offsetRecordingControls()
     }
     
+    func micButtonInteractionUpdateCancelTranslation(_ translation: CGFloat) {
+        self.cancelTranslation = translation
+        self.updateCancelTranslation()
+    }
+    
     func micButtonInteractionLocked() {
         self.updateLocked(true)
     }
@@ -389,6 +396,30 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
         return CombinedWaveView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 640.0, height: 640.0)), color: self.theme.chat.inputPanel.actionControlFillColor)
+    }
+    
+    func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {
+        let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme)
+        lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
+        return lockView
+    }
+    
+    @objc private func handleStopTap() {
+        micButtonInteractionStopped()
+    }
+    
+    override func animateIn() {
+        super.animateIn()
+
+        innerIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        innerIconView.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
+    }
+
+    override func animateOut() {
+        super.animateOut()
+
+        innerIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+        innerIconView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, removeOnCompletion: false)
     }
     
     private var previousSize = CGSize()
