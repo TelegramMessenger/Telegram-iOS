@@ -964,7 +964,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     audioRecordingCancelIndicator.updateIsDisplayingCancel(isLocked, animated: !animateCancelSlideIn)
                     
                     if isLocked || self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
+                        var deltaOffset: CGFloat = 0.0
+                        if audioRecordingCancelIndicator.layer.animation(forKey: "slide_juggle") != nil, let presentationLayer = audioRecordingCancelIndicator.layer.presentation() {
+                            let translation = CGPoint(x: presentationLayer.transform.m41, y: presentationLayer.transform.m42)
+                            deltaOffset = translation.x
+                        }
                         audioRecordingCancelIndicator.layer.removeAnimation(forKey: "slide_juggle")
+                        if !deltaOffset.isZero {
+                            audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: deltaOffset, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
+                        }
                     } else if audioRecordingCancelIndicator.layer.animation(forKey: "slide_juggle") == nil {
                         let slideJuggleAnimation = CABasicAnimation(keyPath: "transform")
                         slideJuggleAnimation.toValue = CATransform3DMakeTranslation(-6, 0, 0)
@@ -1019,13 +1027,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         audioRecordingDotNode.speed = 2.0
                         self.audioRecordingDotNode = audioRecordingDotNode
                         self.addSubnode(audioRecordingDotNode)
+                        
+                        animateDotAppearing = transition.isAnimated
                     }
                     
-                    animateDotAppearing = transition.isAnimated
-                    
-                    audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44), size: CGSize(width: 40.0, height: 40))
+                    audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))
                     if animateDotAppearing {
-                        audioRecordingDotNode.layer.animateAlpha(from: 0, to: 1, duration: 0.25, delay: 0, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak audioRecordingDotNode] finished in
+                        audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
+                        audioRecordingDotNode.layer.animateAlpha(from: 0, to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
                             if finished {
                                 let animation = CAKeyframeAnimation(keyPath: "opacity")
                                 animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
@@ -1063,8 +1072,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if let audioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
                 self.audioRecordingInfoContainerNode = nil
-                transition.updateTransformScale(node: audioRecordingInfoContainerNode, scale: 0)
-                transition.updatePosition(node: audioRecordingInfoContainerNode, position: CGPoint(x: audioRecordingInfoContainerNode.position.x - 10, y: audioRecordingInfoContainerNode.position.y))
+                //transition.updateTransformScale(node: audioRecordingInfoContainerNode, scale: 0)
+                //transition.updatePosition(node: audioRecordingInfoContainerNode, position: CGPoint(x: audioRecordingInfoContainerNode.position.x - 10, y: audioRecordingInfoContainerNode.position.y))
                 transition.updateAlpha(node: audioRecordingInfoContainerNode, alpha: 0) { [weak audioRecordingInfoContainerNode] _ in
                     audioRecordingInfoContainerNode?.removeFromSupernode()
                 }
@@ -1097,14 +1106,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
             
-            if let _ = self.audioRecordingTimeNode {
+            if let audioRecordingTimeNode = self.audioRecordingTimeNode {
                 self.audioRecordingTimeNode = nil
+                
+                let timePosition = audioRecordingTimeNode.position
+                transition.updatePosition(node: audioRecordingTimeNode, position: CGPoint(x: timePosition.x - audioRecordingTimeNode.bounds.width / 2.0, y: timePosition.y))
+                transition.updateTransformScale(node: audioRecordingTimeNode, scale: 0.1)
             }
             
             if let audioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
                 self.audioRecordingCancelIndicator = nil
                 if transition.isAnimated {
-                    audioRecordingCancelIndicator.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { [weak audioRecordingCancelIndicator] _ in
+                    audioRecordingCancelIndicator.layer.animateAlpha(from: audioRecordingCancelIndicator.alpha, to: 0.0, duration: 0.25, completion: { [weak audioRecordingCancelIndicator] _ in
                         audioRecordingCancelIndicator?.removeFromSupernode()
                     })
                 } else {
