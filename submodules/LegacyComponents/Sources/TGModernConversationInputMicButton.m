@@ -501,6 +501,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _targetTranslation = 0.0f;
     _currentScale = 1.0f;
     [UIView animateWithDuration:0.18 animations:^{
+        _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _innerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _outerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
