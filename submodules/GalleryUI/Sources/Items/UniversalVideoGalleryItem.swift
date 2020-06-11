@@ -271,6 +271,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var isPaused = true
     private var dismissOnOrientationChange = false
     private var keepSoundOnDismiss = false
+    private var hasPictureInPicture = false
     
     private var requiresDownload = false
     
@@ -403,10 +404,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.alternativeDismiss = { [weak self] in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.hasPictureInPicture else {
                 return false
             }
-            
             strongSelf.pictureInPictureButtonPressed()
             return true
         }
@@ -695,6 +695,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 barButtonItems.append(rightBarButtonItem)
+                hasPictureInPicture = true
+            } else {
+                hasPictureInPicture = false
             }
             self._rightBarButtonItems.set(.single(barButtonItems))
         
