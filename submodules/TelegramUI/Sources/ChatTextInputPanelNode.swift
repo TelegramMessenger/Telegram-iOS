@@ -1021,12 +1021,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     audioRecordingTimeNode.audioRecorder = recorder
                     
                     var animateDotAppearing = false
+                    let audioRecordingDotNode: AnimationNode
+                    if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.played {
+                        audioRecordingDotNode = currentAudioRecordingDotNode
+                    } else {
+                        self.audioRecordingDotNode?.removeFromSupernode()
+                        audioRecordingDotNode = AnimationNode(animation: "voicebin")
+                        self.audioRecordingDotNode = audioRecordingDotNode
+                        self.addSubnode(audioRecordingDotNode)
+                    }
                     
-                    self.audioRecordingDotNode?.removeFromSupernode()
-                    let audioRecordingDotNode = AnimationNode(animation: "voicebin")
-                    self.audioRecordingDotNode = audioRecordingDotNode
-                    self.addSubnode(audioRecordingDotNode)
-                        
                     animateDotAppearing = transition.isAnimated
                     
                     audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))

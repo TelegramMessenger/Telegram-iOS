@@ -14,25 +14,31 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         pointsCount: 8,
         minRandomness: 0.1,
         maxRandomness: 1,
-        idleSize: 1,
         minSpeed: 0.2,
-        maxSpeed: 1
+        maxSpeed: 1,
+        minScale: 0.56,
+        maxScale: 0.56,
+        scaleSpeed: 0
     )
     private let mediumBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 2,
-        idleSize: 0.667,
-        minSpeed: 1,
-        maxSpeed: 8
+        minSpeed: 3,
+        maxSpeed: 8,
+        minScale: 0.67,
+        maxScale: 0.9,
+        scaleSpeed: 0.1
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 2,
-        idleSize: 0.667,
-        minSpeed: 1,
-        maxSpeed: 8
+        minSpeed: 3,
+        maxSpeed: 8,
+        minScale: 0.67,
+        maxScale: 1,
+        scaleSpeed: 0.1
     )
     
     override init(frame: CGRect) {
@@ -66,27 +72,16 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        func frameForBlobSize(_ blobSize: CGFloat) -> CGRect {
-            let blobWidth = bounds.width * blobSize
-            let blobHeight = bounds.height * blobSize
-            return CGRect(
-                x: (bounds.width - blobWidth) / 2,
-                y: (bounds.height - blobHeight) / 2,
-                width: blobWidth,
-                height: blobHeight
-            )
-        }
-        
         let isInitial = smallBlob.frame == .zero
         
-        smallBlob.frame = frameForBlobSize(0.56)
-        mediumBlob.frame = frameForBlobSize(0.9)
-        bigBlob.frame = frameForBlobSize(1)
+        smallBlob.frame = bounds
+        mediumBlob.frame = bounds
+        bigBlob.frame = bounds
         
         if isInitial {
-            smallBlob.animateToNewShape()
-            mediumBlob.animateToNewShape()
-            bigBlob.animateToNewShape()
+            smallBlob.startAnimating()
+            mediumBlob.startAnimating()
+            bigBlob.startAnimating()
         }
     }
 }
@@ -94,7 +89,6 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
 final class BlobView: UIView {
     
     let pointsCount: Int
-    let idleSize: CGFloat
     let smoothness: CGFloat
     
     let minRandomness: CGFloat
@@ -103,19 +97,19 @@ final class BlobView: UIView {
     let minSpeed: CGFloat
     let maxSpeed: CGFloat
     
+    let minScale: CGFloat
+    let maxScale: CGFloat
+    let scaleSpeed: CGFloat
+    
     var level: CGFloat = 0 {
         didSet {
-            let shouldInterruptAnimation = abs(level - oldValue) > 0.3
-            
-            debouncedLevel = max(level, debouncedLevel)
-            
-            if shouldInterruptAnimation {
-                animateToNewShape()
-            }
+            speedLevel = max(level, speedLevel)
+            scaleLevel = max(level, scaleLevel)
         }
     }
     
-    private var debouncedLevel: CGFloat = 0
+    private var speedLevel: CGFloat = 0
+    private var scaleLevel: CGFloat = 0
     
     private let shapeLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
@@ -150,16 +144,20 @@ final class BlobView: UIView {
         pointsCount: Int,
         minRandomness: CGFloat,
         maxRandomness: CGFloat,
-        idleSize: CGFloat,
         minSpeed: CGFloat,
-        maxSpeed: CGFloat
+        maxSpeed: CGFloat,
+        minScale: CGFloat,
+        maxScale: CGFloat,
+        scaleSpeed: CGFloat
     ) {
         self.pointsCount = pointsCount
         self.minRandomness = minRandomness
         self.maxRandomness = maxRandomness
-        self.idleSize = idleSize
         self.minSpeed = minSpeed
         self.maxSpeed = maxSpeed
+        self.minScale = minScale
+        self.maxScale = maxScale
+        self.scaleSpeed = scaleSpeed
         
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
@@ -167,6 +165,8 @@ final class BlobView: UIView {
         super.init(frame: .zero)
         
         layer.addSublayer(shapeLayer)
+        
+        shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
     }
     
     required init?(coder: NSCoder) {
@@ -177,16 +177,29 @@ final class BlobView: UIView {
         shapeLayer.fillColor = color.cgColor
     }
     
-    func animateToNewShape() {
-        let minSize = CGSize(
-            width: bounds.size.width * idleSize,
-            height: bounds.size.height * idleSize
-        )
-        let currentSize = CGSize(
-            width: minSize.width + (bounds.size.width - minSize.width) * debouncedLevel,
-            height: minSize.height + (bounds.size.height - minSize.height) * debouncedLevel
-        )
+    func startAnimating() {
+        animateToNewShape()
+        animateToNewScale()
+    }
+    
+    func animateToNewScale() {
+        shapeLayer.pop_removeAnimation(forKey: "scale")
         
+        let currentScale = minScale + (maxScale - minScale) * scaleLevel
+        let scaleAnimation = POPBasicAnimation(propertyNamed: kPOPLayerScaleXY)!
+        scaleAnimation.toValue = CGPoint(x: currentScale, y: currentScale)
+        scaleAnimation.duration = CFTimeInterval(scaleSpeed)
+        scaleAnimation.completionBlock = { [weak self] animation, finished in
+            if finished {
+                self?.animateToNewScale()
+            }
+        }
+        shapeLayer.pop_add(scaleAnimation, forKey: "scale")
+        
+        scaleLevel = 0
+    }
+    
+    func animateToNewShape() {
         if pop_animation(forKey: "blob") != nil {
             fromPoints = currentPoints
             toPoints = nil
@@ -194,10 +207,10 @@ final class BlobView: UIView {
         }
         
         if fromPoints == nil {
-            fromPoints = generateNextBlob(for: currentSize)
+            fromPoints = generateNextBlob(for: bounds.size)
         }
         if toPoints == nil {
-            toPoints = generateNextBlob(for: currentSize)
+            toPoints = generateNextBlob(for: bounds.size)
         }
         
         let animation = POPBasicAnimation()
@@ -220,19 +233,19 @@ final class BlobView: UIView {
                 self?.animateToNewShape()
             }
         }
-        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * debouncedLevel))
+        animation.duration = CFTimeInterval(1 / (minSpeed + (maxSpeed - minSpeed) * speedLevel))
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.fromValue = 0
         animation.toValue = 1
         pop_add(animation, forKey: "blob")
         
-        debouncedLevel = 0
+        speedLevel = 0
     }
     
     // MARK: Helpers
     
     private func generateNextBlob(for size: CGSize) -> [CGPoint] {
-        let randomness = minRandomness + (maxRandomness - minRandomness) * debouncedLevel
+        let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
         return blob(pointsCount: pointsCount, randomness: randomness)
             .map {
                 return CGPoint(
