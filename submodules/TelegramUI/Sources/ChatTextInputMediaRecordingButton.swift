@@ -155,6 +155,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
 
 final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
     private var theme: PresentationTheme
+    private let strings: PresentationStrings
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
     var account: Account?
@@ -236,8 +237,9 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.theme = theme
+        self.strings = strings
         self.innerIconView = UIImageView()
         self.presentController = presentController
          
@@ -399,7 +401,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {
-        let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme)
+        let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, strings: self.strings)
         lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
         return lockView
     }

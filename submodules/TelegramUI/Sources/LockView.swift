@@ -32,8 +32,10 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         return view
     }()
     
-    init(frame: CGRect, theme: PresentationTheme) {
+    init(frame: CGRect, theme: PresentationTheme, strings: PresentationStrings) {
         super.init(frame: frame)
+        
+        accessibilityLabel = strings.VoiceOver_Recording_StopAndPreview
         
         addSubview(idleView)
         idleView.frame = bounds

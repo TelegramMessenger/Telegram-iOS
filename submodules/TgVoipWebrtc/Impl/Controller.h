@@ -4,7 +4,6 @@
 
 #include "Connector.h"
 #include "MediaEngineWebrtc.h"
-#include "Layer92.h"
 
 #include "rtc_base/copy_on_write_buffer.h"
 #include "rtc_base/socket_address.h"
@@ -30,21 +29,21 @@ public:
         Reconnecting,
     };
 
-    explicit Controller(bool is_outgoing, const EncryptionKey& encryption_key, size_t init_timeout, size_t reconnect_timeout);
+    explicit Controller(bool is_outgoing, size_t init_timeout, size_t reconnect_timeout);
     ~Controller() override;
-    void AddEndpoint(const rtc::SocketAddress& address, const Relay::PeerTag& peer_tag, EndpointType type);
     void Start();
-    void SetNetworkType(message::NetworkType network_type);
+    //void SetNetworkType(message::NetworkType network_type);
     void SetDataSaving(bool data_saving);
     void SetMute(bool mute);
-    void AttachVideoView(VideoMetalView *videoView);
-    void SetProxy(rtc::ProxyType type, const rtc::SocketAddress& addr, const std::string& username,
-                  const std::string& password);
+    void AttachVideoView(rtc::VideoSinkInterface<webrtc::VideoFrame> *sink);
+    void SetProxy(rtc::ProxyType type, const rtc::SocketAddress& addr, const std::string& username, const std::string& password);
+    void AddRemoteCandidates(const std::vector<std::string> &candidates);
 
-    static std::map<message::NetworkType, MediaEngineWebrtc::NetworkParams> network_params;
+    //static std::map<message::NetworkType, MediaEngineWebrtc::NetworkParams> network_params;
     static MediaEngineWebrtc::NetworkParams default_network_params;
     static MediaEngineWebrtc::NetworkParams datasaving_network_params;
     sigslot::signal1<State> SignalNewState;
+    sigslot::signal1<const std::vector<std::string>&> SignalCandidatesGathered;
 
 private:
     std::unique_ptr<rtc::Thread> thread;
@@ -59,17 +58,17 @@ private:
     const size_t reconnect_timeout;
     bool local_datasaving;
     bool final_datasaving;
-    message::NetworkType local_network_type;
-    message::NetworkType final_network_type;
+    //message::NetworkType local_network_type;
+    //message::NetworkType final_network_type;
 
-    template <class Closure> void StartRepeating(Closure&& closure);
-    void StopRepeating();
-    void NewMessage(const message::Base& msg);
+    void PacketReceived(const rtc::CopyOnWriteBuffer &);
+    void WriteableStateChanged(bool);
+    void CandidatesGathered(const std::vector<std::string> &);
     void SetFail();
     void Play(const int16_t *data, size_t size);
     void Record(int16_t *data, size_t size);
     void SendRtp(rtc::CopyOnWriteBuffer packet);
-    void UpdateNetworkParams(const message::RtpStream& rtp);
+    //void UpdateNetworkParams(const message::RtpStream& rtp);
 };
 
 

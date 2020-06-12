@@ -1,8 +1,8 @@
 #ifndef DEMO_MEDIAENGINEWEBRTC_H
 #define DEMO_MEDIAENGINEWEBRTC_H
 
-
-#include "MediaEngineBase.h"
+#include "rtc_base/copy_on_write_buffer.h"
+#include "rtc_base/third_party/sigslot/sigslot.h"
 
 #include "api/transport/field_trial_based_config.h"
 #include "call/call.h"
@@ -15,7 +15,7 @@
 #import "VideoCameraCapturer.h"
 #import "VideoMetalView.h"
 
-class MediaEngineWebrtc : public MediaEngineBase {
+class MediaEngineWebrtc : public sigslot::has_slots<> {
 public:
     struct NetworkParams {
         uint8_t min_bitrate_kbps;
@@ -27,40 +27,28 @@ public:
         bool noise_suppression;
     };
 
-    explicit MediaEngineWebrtc(bool outgoing, bool send = true, bool recv = true);
-    ~MediaEngineWebrtc() override;
-    void Receive(rtc::CopyOnWriteBuffer) override;
+    explicit MediaEngineWebrtc(bool outgoing);
+    ~MediaEngineWebrtc();
+    void Receive(rtc::CopyOnWriteBuffer);
     void OnSentPacket(const rtc::SentPacket& sent_packet);
     void SetNetworkParams(const NetworkParams& params);
     void SetMute(bool mute);
-    void AttachVideoView(VideoMetalView *videoView);
+    void SetCanSendPackets(bool);
+    void AttachVideoView(rtc::VideoSinkInterface<webrtc::VideoFrame> *sink);
+    
+    sigslot::signal1<rtc::CopyOnWriteBuffer> Send;
 
 private:
     class Sender final : public cricket::MediaChannel::NetworkInterface {
     public:
-        explicit Sender(MediaEngineWebrtc&);
+        explicit Sender(MediaEngineWebrtc &engine, bool isVideo);
         bool SendPacket(rtc::CopyOnWriteBuffer *packet, const rtc::PacketOptions& options) override;
         bool SendRtcp(rtc::CopyOnWriteBuffer *packet, const rtc::PacketOptions& options) override;
         int SetOption(SocketType type, rtc::Socket::Option opt, int option) override;
+        
     private:
-        MediaEngineWebrtc& engine;
-    };
-
-    class AudioProcessor {
-    public:
-        AudioProcessor(webrtc::AudioTransport *transport, webrtc::TaskQueueFactory *task_queue_factory,
-                MediaEngineBase& engine, bool send, bool recv);
-        ~AudioProcessor();
-    private:
-        bool send;
-        bool recv;
-        webrtc::AudioTransport *transport;
-        size_t delay_us;
-        int16_t *buf_send;
-        int16_t *buf_recv;
-        MediaEngineBase& engine;
-        std::unique_ptr<rtc::TaskQueue> task_queue_send;
-        std::unique_ptr<rtc::TaskQueue> task_queue_recv;
+        MediaEngineWebrtc &engine;
+        bool isVideo;
     };
 
     const uint32_t ssrc_send;
@@ -73,7 +61,8 @@ private:
     std::unique_ptr<webrtc::TaskQueueFactory> task_queue_factory;
     webrtc::FieldTrialBasedConfig field_trials;
     webrtc::LocalAudioSinkAdapter audio_source;
-    Sender data_sender;
+    Sender audio_sender;
+    Sender video_sender;
     std::unique_ptr<cricket::VoiceMediaChannel> voice_channel;
     std::unique_ptr<cricket::VideoMediaChannel> video_channel;
     std::unique_ptr<webrtc::VideoBitrateAllocatorFactory> video_bitrate_allocator_factory;
