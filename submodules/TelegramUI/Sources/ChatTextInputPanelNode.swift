@@ -954,6 +954,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     if self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
                         let progress = 1 - (self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold) / 80
                         audioRecordingCancelIndicator.alpha = progress
+                    } else {
+                        audioRecordingCancelIndicator.alpha = 1
                     }
                     
                     if animateCancelSlideIn {
@@ -1024,7 +1026,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         audioRecordingDotNode = currentAudioRecordingDotNode
                     } else {
                         audioRecordingDotNode = AnimationNode(animation: "voicebin")
-                        audioRecordingDotNode.speed = 2.0
                         self.audioRecordingDotNode = audioRecordingDotNode
                         self.addSubnode(audioRecordingDotNode)
                         
@@ -1081,11 +1082,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if let audioRecordingDotNode = self.audioRecordingDotNode {
                 let dismissDotNode = { [weak audioRecordingDotNode, weak attachmentButton, weak self] in
-                    guard let audioRecordingDotNode = audioRecordingDotNode else { return }
-                    
-                    if audioRecordingDotNode === self?.audioRecordingDotNode {
-                        self?.audioRecordingDotNode = nil
-                    }
+                    guard let audioRecordingDotNode = audioRecordingDotNode, audioRecordingDotNode === self?.audioRecordingDotNode else { return }
                     
                     audioRecordingDotNode.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
                     audioRecordingDotNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0, removeOnCompletion: false) { [weak audioRecordingDotNode] _ in

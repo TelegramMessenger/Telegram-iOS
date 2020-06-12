@@ -397,7 +397,9 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
-        return CombinedWaveView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 640.0, height: 640.0)), color: self.theme.chat.inputPanel.actionControlFillColor)
+        let blobView = VoiceBlobView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 180.0, height: 180.0)))
+        blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        return blobView
     }
     
     func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {

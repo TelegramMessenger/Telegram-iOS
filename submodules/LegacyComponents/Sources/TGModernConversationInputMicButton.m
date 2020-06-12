@@ -448,7 +448,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
     _innerCircleView.alpha = 0.2f;
     _outerCircleView.alpha = 0.2f;
-    _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+    _decoration.alpha = 0.2;
     
     _lockPanelWrapperView.transform = CGAffineTransformMakeTranslation(0.0f, 100.0f);
     _lockPanelWrapperView.alpha = 0.0f;
@@ -554,11 +554,17 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _previousIcon = _innerIconView.image;
     [self setIcon:TGTintedImage(TGComponentsImageNamed(@"RecordSendIcon"), _pallete != nil ? _pallete.iconColor : [UIColor whiteColor])];
     
+    _cancelTranslation = 0;
+    id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
+    if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
+        [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTranslation];
+    
     _innerIconView.transform = CGAffineTransformMakeScale(0.3f, 0.3f);
     _innerIconView.alpha = 0.0f;
     [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^
     {
         _innerIconView.transform = CGAffineTransformIdentity;
+        _decoration.transform = CGAffineTransformIdentity;
         snapshotView.transform = CGAffineTransformMakeScale(0.001f, 0.001f);
     } completion:^(__unused BOOL finished) {
         [snapshotView removeFromSuperview];
@@ -667,27 +673,12 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         {
             CGFloat distanceX = MIN(0.0f, [touch locationInView:self].x - _touchLocation.x);
             CGFloat distanceY = MIN(0.0f, [touch locationInView:self].y - _touchLocation.y);
-            
-            if (fabs(distanceX) > fabs(distanceY))
-                distanceY = 0.0f;
-            else
-                distanceX = 0.0f;
-            
-            if (fabs(distanceY) < 5.0f)
-            {
-                distanceY = 0.0f;
-                _targetTranslation = 0.0f;
-            }
-            else
-            {
-                distanceY += 5.0f;
-            }
                 
             CGPoint value = CGPointMake(MAX(0.0f, MIN(1.0f, (-distanceX) / 300.0f)), MAX(0.0f, MIN(1.0f, (-distanceY) / 300.0f)));
             
             CGPoint velocity = [_panRecognizer velocityInView:self];
 
-            if (CACurrentMediaTime() > _animationStartTime + 0.50) {
+            if (CACurrentMediaTime() > _animationStartTime) {
                 CGFloat scale = MAX(0.4f, MIN(1.0f, 1.0f - value.x));
                 
                 _currentScale = scale;
@@ -840,9 +831,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 - (void)displayLinkUpdate {
     if (_decoration != NULL) {
         _outerCircleView.image = nil;
+        _innerCircleView.image = nil;
     }
     NSTimeInterval t = CACurrentMediaTime();
-    if (t > _animationStartTime + 0.5) {
+    if (t > _animationStartTime) {
         _currentLevel = _currentLevel * 0.8f + _inputLevel * 0.2f;
         
         _currentTranslation = MIN(0.0, _currentTranslation * 0.7f + _targetTranslation * 0.3f);
