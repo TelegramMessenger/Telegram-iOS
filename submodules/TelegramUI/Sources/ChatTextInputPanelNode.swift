@@ -1031,7 +1031,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         self.addSubnode(audioRecordingDotNode)
                     }
                     
-                    animateDotAppearing = transition.isAnimated
+                    animateDotAppearing = transition.isAnimated && !isLocked
                     
                     audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))
                     if animateDotAppearing {
@@ -1084,6 +1084,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let audioRecordingDotNode = self.audioRecordingDotNode {
                 let dismissDotNode = { [weak audioRecordingDotNode, weak attachmentButton, weak self] in
                     guard let audioRecordingDotNode = audioRecordingDotNode, audioRecordingDotNode === self?.audioRecordingDotNode else { return }
+                    
+                    self?.audioRecordingDotNode = nil
                     
                     audioRecordingDotNode.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
                     audioRecordingDotNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0, removeOnCompletion: false) { [weak audioRecordingDotNode] _ in

@@ -406,6 +406,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             [[_presentation view] addSubview:_outerCircleView];
             
             [_outerCircleView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(outerCircleTapGesture:)]];
+        } else {
+            _decoration.userInteractionEnabled = true;
+            [_decoration addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(outerCircleTapGesture:)]];
         }
         
         _innerIconView = [[UIImageView alloc] initWithImage:_icon];
