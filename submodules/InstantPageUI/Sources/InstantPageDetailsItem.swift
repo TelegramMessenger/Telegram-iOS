@@ -13,7 +13,13 @@ final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let separatesTiles: Bool = true
-    let medias: [InstantPageMedia] = []
+    var medias: [InstantPageMedia] {
+        var result: [InstantPageMedia] = []
+        for item in self.items {
+            result.append(contentsOf: item.medias)
+        }
+        return result
+    }
 
     let titleItems: [InstantPageItem]
     let titleHeight: CGFloat
