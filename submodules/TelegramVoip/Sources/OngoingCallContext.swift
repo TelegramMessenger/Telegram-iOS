@@ -464,7 +464,9 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
+                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                        callSessionManager?.sendSignalingData(internalId: internalId, data: data)
+                    })
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
@@ -513,9 +515,9 @@ public final class OngoingCallContext {
         self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)
         |> deliverOn(self.queue)).start(next: { [weak self] data in
             self?.withContext { context in
-                /*if let context = context as? OngoingCallThreadLocalContextWebrtcCustom {
-                    context.receiveSignaling(data)
-                }*/
+                if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                    context.addSignaling(data)
+                }
             }
         })
     }

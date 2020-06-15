@@ -66,19 +66,6 @@ struct TgVoipPersistentState {
     std::vector<uint8_t> value;
 };
 
-#ifdef TGVOIP_USE_CUSTOM_CRYPTO
-struct TgVoipCrypto {
-    void (*rand_bytes)(uint8_t* buffer, size_t length);
-    void (*sha1)(uint8_t* msg, size_t length, uint8_t* output);
-    void (*sha256)(uint8_t* msg, size_t length, uint8_t* output);
-    void (*aes_ige_encrypt)(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv);
-    void (*aes_ige_decrypt)(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv);
-    void (*aes_ctr_encrypt)(uint8_t* inout, size_t length, uint8_t* key, uint8_t* iv, uint8_t* ecount, uint32_t* num);
-    void (*aes_cbc_encrypt)(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv);
-    void (*aes_cbc_decrypt)(uint8_t* in, uint8_t* out, size_t length, uint8_t* key, uint8_t* iv);
-};
-#endif
-
 struct TgVoipConfig {
     double initializationTimeout;
     double receiveTimeout;
@@ -145,14 +132,6 @@ public:
             std::unique_ptr<TgVoipProxy> const &proxy,
             TgVoipNetworkType initialNetworkType,
             TgVoipEncryptionKey const &encryptionKey
-#ifdef TGVOIP_USE_CUSTOM_CRYPTO
-    ,
-        TgVoipCrypto const &crypto
-#endif
-#ifdef TGVOIP_USE_CALLBACK_AUDIO_IO
-            ,
-            TgVoipAudioDataCallbacks const &audioDataCallbacks
-#endif
     );
 
     virtual ~TgVoip();
@@ -172,6 +151,9 @@ public:
 
     virtual void setOnStateUpdated(std::function<void(TgVoipState)> onStateUpdated) = 0;
     virtual void setOnSignalBarsUpdated(std::function<void(int)> onSignalBarsUpdated) = 0;
+    virtual void setOnCandidatesGathered(std::function<void(const std::vector<std::string> &)> onCandidatesGathered) = 0;
+    
+    virtual void addRemoteCandidates(const std::vector<std::string> &candidates) = 0;
 
     virtual TgVoipFinalState stop() = 0;
 };

@@ -1,232 +1,158 @@
 #include "Connector.h"
 
-#include "Endpoint.h"
-#include "Layer92.h"
 #include "MediaEngineWebrtc.h"
-#include "Protocol10.h"
 
 #include "api/packet_socket_factory.h"
 #include "rtc_base/task_utils/to_queued_task.h"
+#include "p2p/base/ice_credentials_iterator.h"
+#include "api/jsep_ice_candidate.h"
 
 #include <memory>
 
-const int64_t Connector::tcp_reconnect_delay = 5000;
-const int64_t Connector::ping_interval_ms = 10000;
-const int64_t Connector::endpoint_ping_diff_ms = 20;
-const std::set<message::Type> Connector::multicast_types = {
-        message::Type::tInit, message::Type::tInitAck, message::Type::tPing
-};
-const size_t Connector::PingHistory::history_length = 5;
-const int64_t Connector::PingHistory::unavailable_ms = 100000;
-
-Connector::PingHistory::PingHistory()
-: ping_sum(0)
-, sent_id(0)
-, sent_time(0) {
-    for (size_t i = 0; i < history_length; ++i)
-        AppendPing(unavailable_ms);
+Connector::Connector(bool isOutgoing) {
+    networkThread = rtc::Thread::CreateWithSocketServer();
+    
+    this->isOutgoing = isOutgoing;
 }
 
-void Connector::PingHistory::AppendPing(int64_t ms) {
-    if (history.size() >= history_length) {
-        ping_sum -= history.front();
-        history.pop();
-    }
-    if (history.size() < history_length) {
-        ping_sum += ms;
-        history.emplace(ms);
-    }
-}
-
-void Connector::PingHistory::UpdatePing(int64_t ms) {
-    if (!history.empty()) {
-        ping_sum = ping_sum - history.back() + ms;
-        history.back() = ms;
-    } else
-        AppendPing(ms);
-}
-
-void Connector::PingHistory::Ping(uint32_t id) {
-    sent_id = id;
-    sent_time = rtc::TimeMillis();
-}
-
-void Connector::PingHistory::Pong(uint32_t id) {
-    if (id != sent_id)
-        return;
-    sent_id = 0;
-    UpdatePing(std::min(rtc::TimeMillis() - sent_time, unavailable_ms));
-    sent_time = 0;
-}
-
-double Connector::PingHistory::Average() {
-    return static_cast<double>(ping_sum) / history.size();
-}
-
-Connector::Connector(std::unique_ptr<LayerBase> layer)
-: active_endpoint(nullptr)
-, thread(rtc::Thread::CreateWithSocketServer())
-, socket_factory(thread.get())
-, layer(std::move(layer))
-, ping_seq(0) {
-    pinger = webrtc::RepeatingTaskHandle::Start(thread.get(), [this]() {
-        Connector::UpdateActiveEndpoint();
-        return webrtc::TimeDelta::ms(ping_interval_ms);
+Connector::~Connector() {
+    networkThread->Invoke<void>(RTC_FROM_HERE, [this]() {
+        transportChannel = nullptr;
+        asyncResolverFactory = nullptr;
+        portAllocator = nullptr;
+        networkManager = nullptr;
+        socketFactory = nullptr;
     });
 }
 
 void Connector::Start() {
-    thread->Start();
-    thread->Invoke<void>(RTC_FROM_HERE, [this]() {
-        socket.reset(socket_factory.CreateUdpSocket(
-                rtc::SocketAddress(rtc::GetAnyIP(AF_INET), 0), 0, 0));
-        socket->SignalReadPacket.connect(this, &Connector::RecvPacket);
-        socket->SignalReadyToSend.connect(this, &Connector::Ready);
+    NSLog(@"Started %d", (int)[[NSDate date] timeIntervalSince1970]);
+    networkThread->Start();
+    
+    networkThread->Invoke<void>(RTC_FROM_HERE, [this] {
+        socketFactory.reset(new rtc::BasicPacketSocketFactory(networkThread.get()));
+        
+        networkManager = std::make_unique<rtc::BasicNetworkManager>();
+        portAllocator.reset(new cricket::BasicPortAllocator(networkManager.get(), socketFactory.get(), /*turn_customizer=*/ nullptr, /*relay_port_factory=*/ nullptr));
+        uint32_t flags = cricket::PORTALLOCATOR_DISABLE_TCP;
+        //flags |= cricket::PORTALLOCATOR_DISABLE_UDP;
+        portAllocator->set_flags(portAllocator->flags() | flags);
+        portAllocator->Initialize();
+        
+        rtc::SocketAddress defaultStunAddress = rtc::SocketAddress("hlgkfjdrtjfykgulhijkljhulyo.uksouth.cloudapp.azure.com", 3478);
+        cricket::ServerAddresses stunServers;
+        stunServers.insert(defaultStunAddress);
+        std::vector<cricket::RelayServerConfig> turnServers;
+        turnServers.push_back(cricket::RelayServerConfig(
+            rtc::SocketAddress("hlgkfjdrtjfykgulhijkljhulyo.uksouth.cloudapp.azure.com", 3478),
+            "user",
+            "root",
+            cricket::PROTO_UDP
+        ));
+        portAllocator->SetConfiguration(stunServers, turnServers, 2, webrtc::NO_PRUNE);
+        
+        asyncResolverFactory = std::make_unique<webrtc::BasicAsyncResolverFactory>();
+        transportChannel.reset(new cricket::P2PTransportChannel("transport", 0, portAllocator.get(), asyncResolverFactory.get(), /*event_log=*/ nullptr));
+        
+        cricket::IceConfig iceConfig;
+        iceConfig.continual_gathering_policy = cricket::GATHER_CONTINUALLY;
+        transportChannel->SetIceConfig(iceConfig);
+        
+        cricket::IceParameters localIceParameters(
+            "gcp3",
+            "zWDKozH8/3JWt8he3M/CMj5R",
+            false
+        );
+        cricket::IceParameters remoteIceParameters(
+            "acp3",
+            "aWDKozH8/3JWt8he3M/CMj5R",
+            false
+        );
+        
+        transportChannel->SetIceParameters(isOutgoing ? localIceParameters : remoteIceParameters);
+        transportChannel->SetIceRole(isOutgoing ? cricket::ICEROLE_CONTROLLING : cricket::ICEROLE_CONTROLLED);
+        
+        transportChannel->SignalCandidateGathered.connect(this, &Connector::CandidateGathered);
+        transportChannel->SignalGatheringState.connect(this, &Connector::CandidateGatheringState);
+        transportChannel->SignalIceTransportStateChanged.connect(this, &Connector::TransportStateChanged);
+        transportChannel->SignalRoleConflict.connect(this, &Connector::TransportRoleConflict);
+        transportChannel->SignalReadPacket.connect(this, &Connector::TransportPacketReceived);
+        
+        transportChannel->MaybeStartGathering();
+        
+        transportChannel->SetRemoteIceMode(cricket::ICEMODE_FULL);
+        transportChannel->SetRemoteIceParameters((!isOutgoing) ? localIceParameters : remoteIceParameters);
     });
 }
 
-void Connector::RecvPacket(rtc::AsyncPacketSocket *sock, const char *data, size_t len,
-                           const rtc::SocketAddress& remote_addr, const int64_t& packet_time_us) {
-    for (const auto& ep : endpoints) {
-        auto ep_udp = dynamic_cast<EndpointUdp *>(ep.first);
-        if (ep_udp && ep_udp->address == remote_addr) {
-            ep_udp->RecvPacket(sock, data, len, remote_addr, packet_time_us);
+void Connector::AddRemoteCandidates(const std::vector<std::string> &candidates) {
+    networkThread->Invoke<void>(RTC_FROM_HERE, [this, candidates] {
+        for (auto &serializedCandidate : candidates) {
+            webrtc::JsepIceCandidate parseCandidate("", 0);
+            if (parseCandidate.Initialize(serializedCandidate, nullptr)) {
+                auto candidate = parseCandidate.candidate();
+                printf("Add remote candidate %s\n", serializedCandidate.c_str());
+                transportChannel->AddRemoteCandidate(candidate);
+            }
+        }
+    });
+}
+
+void Connector::CandidateGathered(cricket::IceTransportInternal *transport, const cricket::Candidate &candidate) {
+    assert(networkThread->IsCurrent());
+    
+    webrtc::JsepIceCandidate iceCandidate("", 0);
+    iceCandidate.SetCandidate(candidate);
+    std::string serializedCandidate;
+    if (iceCandidate.ToString(&serializedCandidate)) {
+        std::vector<std::string> arrayOfOne;
+        arrayOfOne.push_back(serializedCandidate);
+        SignalCandidatesGathered(arrayOfOne);
+        
+        webrtc::JsepIceCandidate parseCandidate("", 0);
+        if (parseCandidate.Initialize(serializedCandidate, nullptr)) {
+            auto candidate = parseCandidate.candidate();
+            
+        }
+    }
+}
+
+void Connector::CandidateGatheringState(cricket::IceTransportInternal *transport) {
+    if (transport->gathering_state() == cricket::IceGatheringState::kIceGatheringComplete) {
+        /*if (collectedLocalCandidates.size() != 0) {
+            SignalCandidatesGathered(collectedLocalCandidates);
+        }*/
+    }
+}
+
+void Connector::TransportStateChanged(cricket::IceTransportInternal *transport) {
+    auto state = transport->GetIceTransportState();
+    switch (state) {
+        case webrtc::IceTransportState::kConnected:
+        case webrtc::IceTransportState::kCompleted:
+            SignalReadyToSendStateChanged(true);
+            printf("===== State: Connected\n");
             break;
-        }
+        default:
+            SignalReadyToSendStateChanged(false);
+            printf("===== State: Disconnected\n");
+            break;
     }
 }
 
-void Connector::Ready(rtc::AsyncPacketSocket *) {
-    SignalMessage(message::Ready());
+void Connector::TransportRoleConflict(cricket::IceTransportInternal *transport) {
+    printf("===== Role conflict\n");
 }
 
-void Connector::AddEndpointRelayTcpObfuscated(const rtc::SocketAddress& addr, const Relay::PeerTag& peer_tag) {
-    thread->Invoke<void>(RTC_FROM_HERE, [this, addr, peer_tag]() {
-        std::unique_ptr<rtc::AsyncPacketSocket> sock(socket_factory.CreateClientTcpSocket(
-                rtc::SocketAddress(rtc::GetAnyIP(AF_INET), 0),
-                addr, proxy_info, "", rtc::PacketSocketTcpOptions()));
-        AddEndpoint(std::make_unique<EndpointRelayObfuscatedTcp>(std::move(sock), peer_tag, layer.get()));
+void Connector::TransportPacketReceived(rtc::PacketTransportInternal *transport, const char *bytes, size_t size, const int64_t &timestamp, __unused int unused) {
+    rtc::CopyOnWriteBuffer data;
+    data.AppendData(bytes, size);
+    SignalPacketReceived(data);
+}
+
+void Connector::SendPacket(const rtc::CopyOnWriteBuffer& data) {
+    networkThread->Invoke<void>(RTC_FROM_HERE, [this, data] {
+        rtc::PacketOptions options;
+        transportChannel->SendPacket((const char *)data.data(), data.size(), options, 0);
     });
-}
-
-void Connector::AddEndpointRelayUdp(const rtc::SocketAddress& addr, const Relay::PeerTag& peer_tag) {
-    thread->Invoke<void>(RTC_FROM_HERE, [this, addr, peer_tag]() {
-        assert(socket);
-        AddEndpoint(std::make_unique<EndpointRelayUdp>(addr, peer_tag, socket.get(), layer.get()));
-    });
-}
-
-void Connector::SetEndpointP2p(const rtc::SocketAddress& addr) {
-    thread->Invoke<void>(RTC_FROM_HERE, [this, addr]() {
-        assert(socket);
-        if (auto ep = GetP2pEndpoint())
-            DeleteEndpoint(ep);
-        AddEndpoint(std::make_unique<EndpointP2p>(addr, socket.get(), layer.get()));
-    });
-}
-
-Connector::~Connector() {
-    thread->Invoke<void>(RTC_FROM_HERE, [this]() {
-        pinger.Stop();
-        active_endpoint = nullptr;
-        endpoints.clear();
-        ping_history.clear();
-    });
-}
-
-void Connector::RecvMessage(const message::Base& msg, EndpointBase *endpoint) {
-    if (msg.ID == message::tDisconnected && endpoint->type == EndpointBase::Type::RelayObfuscatedTcp) {
-        thread->PostDelayedTask(webrtc::ToQueuedTask([this, endpoint]() {
-            if (endpoints.find(endpoint) == endpoints.end())
-                return;
-            auto final_ep = dynamic_cast<EndpointRelayObfuscatedTcp *>(endpoint);
-            if (!final_ep)
-                return;
-            std::unique_ptr<rtc::AsyncPacketSocket> sock(socket_factory.CreateClientTcpSocket(
-                    rtc::SocketAddress(rtc::GetAnyIP(AF_INET), 0),
-                    final_ep->address, proxy_info, "", rtc::PacketSocketTcpOptions()));
-            final_ep->Reconnect(std::move(sock));
-        }), tcp_reconnect_delay);
-        if (active_endpoint == endpoint)
-            ResetActiveEndpoint();
-        return;
-    }
-    if (auto msg_ping = dynamic_cast<const message::Ping *>(&msg)) {
-        message::Pong msg_pong;
-        msg_pong.id = msg_ping->id;
-        endpoint->SendMessage(msg_pong);
-        return;
-    }
-    if (auto msg_pong = dynamic_cast<const message::Pong *>(&msg)) {
-        ping_history[endpoint].Pong(msg_pong->id);
-        return;
-    }
-    // fallback if no active endpoint set
-    if (!active_endpoint)
-        active_endpoint = endpoint;
-    SignalMessage(msg);
-}
-
-void Connector::SendMessage(const message::Base& msg) {
-    if (!active_endpoint || multicast_types.find(msg.ID) != multicast_types.end()) {
-        for (const auto& ep : endpoints) {
-            ep.first->SendMessage(msg);
-            if (auto msg_ping = dynamic_cast<const message::Ping *>(&msg))
-                ping_history[ep.first].Ping(msg_ping->id);
-        }
-        return;
-    }
-    active_endpoint->SendMessage(msg);
-}
-
-EndpointP2p *Connector::GetP2pEndpoint() const {
-    for (const auto& ep : endpoints)
-        if (auto ep_p2p = dynamic_cast<EndpointP2p *>(ep.first))
-            return ep_p2p;
-    return nullptr;
-}
-
-void Connector::AddEndpoint(std::unique_ptr<EndpointBase> endpoint) {
-    EndpointBase *ep = endpoint.get();
-    ep->SignalMessage.connect(this, &Connector::RecvMessage);
-    endpoints[ep] = std::move(endpoint);
-    ping_history[ep] = PingHistory();
-}
-
-void Connector::DeleteEndpoint(EndpointBase *ep) {
-    // TODO: must be invoked to thread when become public
-    endpoints.erase(ep);
-    ping_history.erase(ep);
-}
-
-void Connector::ResetActiveEndpoint() {
-    active_endpoint = nullptr;
-}
-
-void Connector::UpdateActiveEndpoint() {
-    if (ping_history.empty())
-        return;
-    if (ping_history.size() == 1) {
-        active_endpoint = ping_history.begin()->first;
-        return;
-    }
-    std::vector<std::pair<double, EndpointBase*>> times;
-    for (auto ping : ping_history)
-        times.emplace_back(ping.second.Average(), ping.first);
-    std::sort(times.begin(), times.end());
-    EndpointBase *candidate = times.front().second;
-    if (!active_endpoint || (active_endpoint != candidate &&
-            ping_history[active_endpoint].Average() - times.front().first > endpoint_ping_diff_ms))
-        active_endpoint = candidate;
-    message::Ping msg;
-    msg.id = ++ping_seq;
-    SendMessage(msg);
-}
-
-void Connector::SetProxy(rtc::ProxyType type, const rtc::SocketAddress& addr, const std::string& username,
-                         const std::string& password) {
-    proxy_info.type = type;
-    proxy_info.address = addr;
-    proxy_info.username = username;
-    proxy_info.password = rtc::CryptString();
 }

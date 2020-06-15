@@ -12,7 +12,7 @@ public:
     MediaEngineBase() = default;
     virtual ~MediaEngineBase() = default;
 
-    sigslot::signal1<rtc::CopyOnWriteBuffer> Send;
+    
     virtual void Receive(rtc::CopyOnWriteBuffer) = 0;
 };
 

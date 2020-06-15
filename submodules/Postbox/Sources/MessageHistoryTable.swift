@@ -1003,7 +1003,14 @@ final class MessageHistoryTable: Table {
         }
         
         if self.seedConfiguration.peerNamespacesRequiringMessageTextIndex.contains(message.id.peerId.namespace) {
-            self.textIndexTable.add(messageId: message.id, text: message.text, tags: message.tags)
+            var indexableText = message.text
+            for media in message.media {
+                if let mediaText = media.indexableText {
+                    indexableText.append(" ")
+                    indexableText.append(mediaText)
+                }
+            }
+            self.textIndexTable.add(messageId: message.id, text: indexableText, tags: message.tags)
         }
         
         var flags = MessageFlags(message.flags)
@@ -1493,7 +1500,16 @@ final class MessageHistoryTable: Table {
             if self.seedConfiguration.peerNamespacesRequiringMessageTextIndex.contains(message.id.peerId.namespace) {
                 if previousMessage.id != message.id || previousMessage.text != message.text || previousMessage.tags != message.tags {
                     self.textIndexTable.remove(messageId: previousMessage.id)
-                    self.textIndexTable.add(messageId: message.id, text: message.text, tags: message.tags)
+                    
+                    var indexableText = message.text
+                    for media in message.media {
+                        if let mediaText = media.indexableText {
+                            indexableText.append(" ")
+                            indexableText.append(mediaText)
+                        }
+                    }
+                    
+                    self.textIndexTable.add(messageId: message.id, text: indexableText, tags: message.tags)
                 }
             }
             

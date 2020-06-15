@@ -29,7 +29,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.strings = strings
         
-        self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
+        self.micButton = ChatTextInputMediaRecordingButton(theme: theme, strings: strings, presentController: presentController)
         self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
         //self.sendButton.adjustsImageWhenHighlighted = false
         //self.sendButton.adjustsImageWhenDisabled = false

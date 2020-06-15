@@ -155,6 +155,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
 
 final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
     private var theme: PresentationTheme
+    private let strings: PresentationStrings
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
     var account: Account?
@@ -236,8 +237,9 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.theme = theme
+        self.strings = strings
         self.innerIconView = UIImageView()
         self.presentController = presentController
          
@@ -395,11 +397,13 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
-        return CombinedWaveView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 640.0, height: 640.0)), color: self.theme.chat.inputPanel.actionControlFillColor)
+        let blobView = VoiceBlobView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 180.0, height: 180.0)))
+        blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        return blobView
     }
     
     func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {
-        let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme)
+        let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, strings: self.strings)
         lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
         return lockView
     }

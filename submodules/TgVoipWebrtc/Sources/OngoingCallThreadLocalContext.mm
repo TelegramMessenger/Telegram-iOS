@@ -35,6 +35,8 @@ using namespace TGVOIP_NAMESPACE;
     OngoingCallStateWebrtc _state;
     int32_t _signalBars;
     NSData *_lastDerivedState;
+    
+    void (^_sendSignalingData)(NSData *);
 }
 
 - (void)controllerStateChanged:(TgVoipState)state;
@@ -112,7 +114,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return @"2.7.7";
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData; {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -123,6 +125,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
         _networkType = networkType;
+        _sendSignalingData = [sendSignalingData copy];
         
         std::vector<uint8_t> derivedStateValue;
         derivedStateValue.resize(derivedState.length);
@@ -209,6 +212,16 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
             if (strongSelf) {
                 [strongSelf signalBarsChanged:signalBars];
+            }
+        });
+        _tgVoip->setOnCandidatesGathered([weakSelf](const std::vector<std::string> &candidates) {
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+            if (strongSelf) {
+                NSMutableArray *mappedCandidates = [[NSMutableArray alloc] init];
+                for (auto &candidate : candidates) {
+                    [mappedCandidates addObject:[[NSString alloc] initWithCString:candidate.c_str() encoding:NSUTF8StringEncoding]];
+                }
+                [strongSelf candidatesGathered:mappedCandidates];
             }
         });
     }
@@ -307,6 +320,30 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)candidatesGathered:(NSArray<NSString *> *)candidates {
+    if (_sendSignalingData) {
+        NSData *data = [NSKeyedArchiver archivedDataWithRootObject:@{
+            @"type": @"candidates",
+            @"data": candidates
+        }];
+        _sendSignalingData(data);
+    }
+}
+
+- (void)addSignalingData:(NSData *)data {
+    NSDictionary *dict = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+    NSString *type = dict[@"type"];
+    if ([type isEqualToString:@"candidates"]) {
+        if (_tgVoip) {
+            std::vector<std::string> candidates;
+            for (NSString *string in dict[@"data"]) {
+                candidates.push_back([string UTF8String]);
+            }
+            _tgVoip->addRemoteCandidates(candidates);
+        }
+    }
+}
+
 - (void)setIsMuted:(bool)isMuted {
     if (_tgVoip) {
         _tgVoip->setMuteMicrophone(isMuted);
@@ -324,13 +361,15 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 - (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion {
     if (_tgVoip) {
-        VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 240.0f)];
-        remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-        
-        _tgVoip->AttachVideoView(remoteRenderer);
-        
         dispatch_async(dispatch_get_main_queue(), ^{
-            completion(remoteRenderer);
+            VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+            
+            _tgVoip->AttachVideoView(remoteRenderer);
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(remoteRenderer);
+            });
         });
     }
 }
