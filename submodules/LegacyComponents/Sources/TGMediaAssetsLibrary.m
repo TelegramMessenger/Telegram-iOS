@@ -3,7 +3,6 @@
 #import "LegacyComponentsInternal.h"
 
 #import "TGMediaAssetsModernLibrary.h"
-#import "TGMediaAssetsLegacyLibrary.h"
 
 @implementation TGMediaAssetsLibrary
 
@@ -11,10 +10,7 @@ static Class TGMediaAssetsLibraryClass = nil;
 
 + (void)load
 {
-    if ([self usesPhotoFramework])
-        TGMediaAssetsLibraryClass = [TGMediaAssetsModernLibrary class];
-    else
-        TGMediaAssetsLibraryClass = [TGMediaAssetsLegacyLibrary class];
+    TGMediaAssetsLibraryClass = [TGMediaAssetsModernLibrary class];
 
     [TGMediaAssetsLibraryClass authorizationStatus];
 }
@@ -75,30 +71,6 @@ NSInteger TGMediaAssetGroupComparator(TGMediaAssetGroup *group1, TGMediaAssetGro
 - (SSignal *)assetsOfAssetGroup:(TGMediaAssetGroup *)__unused assetGroup reversed:(bool)__unused reversed
 {
     return nil;
-}
-
-- (SSignal *)_legacyAssetsOfAssetGroup:(TGMediaAssetGroup *)assetGroup reversed:(bool)reversed
-{
-    NSParameterAssert(assetGroup);
-    return [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
-    {
-        TGMediaAssetFetchResult *mediaFetchResult = [[TGMediaAssetFetchResult alloc] init];
-        
-        NSEnumerationOptions options = kNilOptions;
-        if (reversed)
-            options = NSEnumerationReverse;
-        
-        [assetGroup.backingAssetsGroup enumerateAssetsWithOptions:options usingBlock:^(ALAsset *asset, __unused NSUInteger index, __unused BOOL *stop)
-        {
-            if (asset != nil)
-                [mediaFetchResult _appendALAsset:asset];
-        }];
-        
-        [subscriber putNext:mediaFetchResult];
-        [subscriber putCompletion];
-        
-        return nil;
-    }] startOn:_queue];
 }
 
 #pragma mark - 

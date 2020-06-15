@@ -54,6 +54,7 @@ typedef enum {
 @property (nonatomic, assign) bool skipInitialTransition;
 @property (nonatomic, assign) bool dontHideStatusBar;
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
+@property (nonatomic, strong) NSArray *faces;
 
 @property (nonatomic, strong) TGPhotoEntitiesContainerView *entitiesView;
 

@@ -174,7 +174,16 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if self.entry != entry {
             self.entry = entry
             
-            self.footerContentNode.setEntry(entry)
+            var footerContent: AvatarGalleryItemFooterContent
+            if self.peer.id == self.context.account.peerId {
+                footerContent = .own(true)
+            } else {
+                footerContent = .info
+            }
+            
+            self.peer.largeProfileImage
+            
+            self.footerContentNode.setEntry(entry, content: footerContent)
             
             if let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })) {
                 let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor

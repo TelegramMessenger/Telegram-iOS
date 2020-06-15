@@ -16,6 +16,7 @@ typedef NS_OPTIONS(NSUInteger, TGPhotoEditorTab) {
     TGPhotoEditorTintTab        = 1 << 11,
     TGPhotoEditorBlurTab        = 1 << 12,
     TGPhotoEditorCurvesTab      = 1 << 13,
+    TGPhotoEditorPreviewTab     = 1 << 14
 };
 
 typedef enum

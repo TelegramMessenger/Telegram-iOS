@@ -8,6 +8,4 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 
-- (void)updateValues;
-
 @end

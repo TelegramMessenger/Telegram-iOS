@@ -68,7 +68,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     UIView *_scrollContentView;
     
     UIButton *_containerView;
-    TGPhotoPaintSparseView *_wrapperView;
+    TGPhotoEditorSparseView *_wrapperView;
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     
@@ -120,10 +120,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     UIImage *_stillImage;
         
     TGPaintingWrapperView *_paintingWrapperView;
-    
-    SMetaDisposable *_faceDetectorDisposable;
-    NSArray *_faces;
-    
+        
     bool _enableStickers;
     
     NSData *_eyedropperBackgroundData;
@@ -183,7 +180,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)dealloc
 {
     [_actionHandle reset];
-    [_faceDetectorDisposable dispose];
 }
 
 - (void)loadView
@@ -299,7 +295,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _eyedropperView.hidden = true;
     [_selectionContainerView addSubview:_eyedropperView];
     
-    _wrapperView = [[TGPhotoPaintSparseView alloc] initWithFrame:CGRectZero];
+    _wrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_wrapperView];
     
     _portraitToolsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
@@ -527,8 +523,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     };
     
     [self updateActionsView];
-    
-    [self performFaceDetection];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -2478,13 +2472,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (TGPaintFace *)_randomFaceWithVacantAnchor:(TGPhotoMaskAnchor)anchor documentId:(int64_t)documentId
 {
-    NSInteger randomIndex = (NSInteger)arc4random_uniform((uint32_t)_faces.count);
-    NSInteger count = _faces.count;
-    NSInteger remaining = _faces.count;
+    NSInteger randomIndex = (NSInteger)arc4random_uniform((uint32_t)self.faces.count);
+    NSInteger count = self.faces.count;
+    NSInteger remaining = self.faces.count;
     
     for (NSInteger i = randomIndex; remaining > 0; (i = (i + 1) % count), remaining--)
     {
-        TGPaintFace *face = _faces[i];
+        TGPaintFace *face = self.faces[i];
         if (![self _isFaceAnchorOccupied:face anchor:anchor documentId:documentId])
             return face;
     }
@@ -2543,68 +2537,20 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         if ([TGPhotoMaskPosition anchorOfMask:mask] != anchor)
             continue;
         
-        if ((documentId == maskDocumentId || _faces.count > 1) && TGPaintDistance(entity.position, anchorPoint) < minDistance)
+        if ((documentId == maskDocumentId || self.faces.count > 1) && TGPaintDistance(entity.position, anchorPoint) < minDistance)
             return true;
     }
     
     return false;
 }
 
-- (void)performFaceDetection
+- (NSArray *)faces
 {
     TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
-    if (![editorController isKindOfClass:[TGPhotoEditorController class]])
-        return;
-    
-    if (self.intent == TGPhotoEditorControllerVideoIntent)
-        return;
-
-    if (_faceDetectorDisposable == nil)
-        _faceDetectorDisposable = [[SMetaDisposable alloc] init];
-    
-    id<TGMediaEditableItem> item = self.item;
-    CGSize originalSize = _photoEditor.originalSize;
-    
-    if (editorController.requestOriginalScreenSizeImage == nil)
-        return;
-    
-    SSignal *cachedSignal = [[editorController.editingContext facesForItem:item] mapToSignal:^SSignal *(id result)
-    {
-        if (result == nil)
-            return [SSignal fail:nil];
-        return [SSignal single:result];
-    }];
-    SSignal *imageSignal = [editorController.requestOriginalScreenSizeImage(item, 0) take:1];
-    SSignal *detectSignal = [[imageSignal filter:^bool(UIImage *image)
-    {
-        if (![image isKindOfClass:[UIImage class]])
-            return false;
-        
-        if (image.degraded)
-            return false;
-        
-        return true;
-    }] mapToSignal:^SSignal *(UIImage *image) {
-        return [[TGPaintFaceDetector detectFacesInImage:image originalSize:originalSize] startOn:[SQueue concurrentDefaultQueue]];
-    }];
-    
-    __weak TGPhotoPaintController *weakSelf = self;
-    [_faceDetectorDisposable setDisposable:[[[cachedSignal catch:^SSignal *(__unused id error)
-    {
-        return detectSignal;
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *next)
-    {
-        [editorController.editingContext setFaces:next forItem:item];
-     
-        if (next.count == 0)
-            return;
-        
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        strongSelf->_faces = next;
-    }]];
+    if ([editorController isKindOfClass:[TGPhotoEditorController class]])
+        return editorController.faces;
+    else
+        return @[];
 }
 
 - (UIRectEdge)preferredScreenEdgesDeferringSystemGestures

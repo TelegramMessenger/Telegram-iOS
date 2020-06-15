@@ -110,7 +110,7 @@ const NSInteger PGCameraFrameRate = 30;
         TGLegacyLog(@"ERROR: camera can't create video device");
     }
     
-    if (_currentMode == PGCameraModePhoto || _currentMode == PGCameraModeSquare)
+    if (_currentMode == PGCameraModePhoto || _currentMode == PGCameraModeSquarePhoto)
     {
 #if !TARGET_IPHONE_SIMULATOR
         self.sessionPreset = AVCaptureSessionPresetPhoto;
@@ -188,7 +188,7 @@ const NSInteger PGCameraFrameRate = 30;
     if (self.currentCameraPosition != _preferredCameraPosition)
         return true;
     
-    if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeClip)
+    if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo)
         return true;
     
     if (self.zoomLevel > FLT_EPSILON)
@@ -224,7 +224,7 @@ const NSInteger PGCameraFrameRate = 30;
     
     if (self.currentMode != PGCameraModePhoto)
     {
-        if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeClip)
+        if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo)
             self.sessionPreset = AVCaptureSessionPresetPhoto;
         
         _currentMode = PGCameraModePhoto;
@@ -260,7 +260,7 @@ const NSInteger PGCameraFrameRate = 30;
     switch (mode)
     {
         case PGCameraModePhoto:
-        case PGCameraModeSquare:
+        case PGCameraModeSquarePhoto:
         {
             [self _removeAudioInputEndAudioSession:true];
             self.sessionPreset = AVCaptureSessionPresetPhoto;
@@ -269,7 +269,7 @@ const NSInteger PGCameraFrameRate = 30;
             break;
             
         case PGCameraModeVideo:
-        case PGCameraModeClip:
+        case PGCameraModeSquareVideo:
         {
             self.sessionPreset = AVCaptureSessionPresetInputPriority;
             [self switchToBestVideoFormatForDevice:_videoDevice];
@@ -528,7 +528,7 @@ const NSInteger PGCameraFrameRate = 30;
     switch (self.currentMode)
     {
         case PGCameraModeVideo:
-        case PGCameraModeClip:
+        case PGCameraModeSquareVideo:
             return _videoFlashMode;
             
         default:
@@ -543,7 +543,7 @@ const NSInteger PGCameraFrameRate = 30;
         switch (self.currentMode)
         {
             case PGCameraModeVideo:
-            case PGCameraModeClip:
+            case PGCameraModeSquareVideo:
             {
                 AVCaptureTorchMode torchMode = [PGCameraCaptureSession _deviceTorchModeForCameraFlashMode:mode];
                 if (device.hasTorch && [device isTorchModeSupported:torchMode])
@@ -660,7 +660,7 @@ const NSInteger PGCameraFrameRate = 30;
         
         [self commitConfiguration];
         
-        if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeClip)
+        if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo)
             [self setFrameRate:PGCameraFrameRate forDevice:deviceForTargetPosition];
         else
             [self setFrameRate:0 forDevice:deviceForTargetPosition];

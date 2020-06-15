@@ -1,7 +1,6 @@
 #import <Foundation/Foundation.h>
 
 #import <Photos/Photos.h>
-#import <AssetsLibrary/AssetsLibrary.h>
 
 #import <LegacyComponents/TGMediaSelectionContext.h>
 #import <LegacyComponents/TGMediaEditingContext.h>
@@ -30,7 +29,6 @@ typedef enum
 @interface TGMediaAsset : NSObject <TGMediaSelectableItem>
 
 @property (nonatomic, readonly) NSString *identifier;
-@property (nonatomic, readonly) NSURL *url;
 @property (nonatomic, readonly) CGSize dimensions;
 @property (nonatomic, readonly) NSDate *date;
 @property (nonatomic, readonly) bool isVideo;
@@ -44,10 +42,8 @@ typedef enum
 @property (nonatomic, readonly) TGMediaAssetSubtype subtypes;
 
 - (instancetype)initWithPHAsset:(PHAsset *)asset;
-- (instancetype)initWithALAsset:(ALAsset *)asset;
 
 @property (nonatomic, readonly) PHAsset *backingAsset;
-@property (nonatomic, readonly) ALAsset *backingLegacyAsset;
 
 + (PHAssetMediaType)assetMediaTypeForAssetType:(TGMediaAssetType)assetType;
 

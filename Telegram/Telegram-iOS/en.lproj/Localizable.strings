@@ -5540,3 +5540,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.PrivateChannelTimeLimitedAlertJoin" = "Join";
 
 "KeyCommand.SearchInChat" = "Search in Chat";
+
+"PhotoEditor.SkinTool" = "Soften Skin";
+"PhotoEditor.BlurToolPortrait" = "Portrait";
+"PhotoEditor.SelectCoverFrame" = "Choose a cover for your profile video";

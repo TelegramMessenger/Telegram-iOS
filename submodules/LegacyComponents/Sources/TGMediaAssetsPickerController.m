@@ -260,7 +260,7 @@
                 return TGMediaAssetsVideoCellKind;
                 
             case TGMediaAssetGifType:
-                if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || _intent == TGMediaAssetsControllerPassportIntent || _intent == TGMediaAssetsControllerPassportMultipleIntent)
+                if (_intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || _intent == TGMediaAssetsControllerPassportIntent || _intent == TGMediaAssetsControllerPassportMultipleIntent)
                     return TGMediaAssetsPhotoCellKind;
                 else
                     return TGMediaAssetsGifCellKind;

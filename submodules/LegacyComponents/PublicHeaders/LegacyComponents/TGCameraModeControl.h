@@ -10,4 +10,6 @@
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
 
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar;
+
 @end

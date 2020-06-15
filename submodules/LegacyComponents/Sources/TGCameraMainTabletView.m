@@ -42,7 +42,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
 @synthesize shutterReleased;
 @synthesize cancelPressed;
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar
 {
     self = [super initWithFrame:frame];
     if (self != nil)
@@ -83,7 +83,7 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
         [_shutterButton addTarget:self action:@selector(shutterButtonReleased) forControlEvents:UIControlEventTouchUpInside];
         [_panelView addSubview:_shutterButton];
         
-        _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, _panelView.frame.size.width, 260)];
+        _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, _panelView.frame.size.width, 260) avatar:avatar];
         [_panelView addSubview:_modeControl];
         
         __weak TGCameraMainTabletView *weakSelf = self;

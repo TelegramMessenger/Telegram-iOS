@@ -2,6 +2,7 @@
 
 @class PGPhotoEditor;
 @class TGPhotoEditorPreviewView;
+@class AVPlayer;
 
 @interface TGPhotoAvatarCropController : TGPhotoEditorTabController
 
@@ -16,6 +17,7 @@
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 
 - (void)setImage:(UIImage *)image;
+- (void)setPlayer:(AVPlayer *)player;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;
 - (void)setSnapshotView:(UIView *)snapshotView;
 

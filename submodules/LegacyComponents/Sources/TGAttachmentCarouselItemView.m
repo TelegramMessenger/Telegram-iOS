@@ -1000,10 +1000,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             break;
             
         case TGMediaAssetGifType:
-            if (_forProfilePhoto)
-                cellIdentifier = TGAttachmentPhotoCellIdentifier;
-            else
-                cellIdentifier = TGAttachmentGifCellIdentifier;
+            cellIdentifier = TGAttachmentGifCellIdentifier;
             break;
             
         default:

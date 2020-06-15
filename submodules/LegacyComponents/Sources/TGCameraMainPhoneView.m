@@ -100,7 +100,7 @@
 @synthesize cancelPressed;
 @synthesize actionHandle = _actionHandle;
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar
 {
     self = [super initWithFrame:frame];
     if (self != nil)
@@ -216,7 +216,7 @@
         [_shutterButton addTarget:self action:@selector(shutterButtonPressed) forControlEvents:UIControlEventTouchDown];
         [_bottomPanelView addSubview:_shutterButton];
         
-        _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, _modeControlHeight)];
+        _modeControl = [[TGCameraModeControl alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, _modeControlHeight) avatar:avatar];
         [_bottomPanelView addSubview:_modeControl];
         
         _flipButton = [[TGCameraFlipButton alloc] initWithFrame:CGRectMake(0, 0, 56, 56) large:true];
@@ -443,7 +443,7 @@
     UIInterfaceOrientation orientation = _interfaceOrientation;
     PGCameraMode cameraMode = _modeControl.cameraMode;
     
-    if (UIInterfaceOrientationIsLandscape(orientation) && !((cameraMode == PGCameraModePhoto && previousMode == PGCameraModeSquare) || (cameraMode == PGCameraModeSquare && previousMode == PGCameraModePhoto)))
+    if (UIInterfaceOrientationIsLandscape(orientation) && !((cameraMode == PGCameraModePhoto && previousMode == PGCameraModeSquarePhoto) || (cameraMode == PGCameraModeSquarePhoto && previousMode == PGCameraModePhoto)))
     {
         if (cameraMode == PGCameraModeVideo)
             _timecodeView.hidden = true;
