@@ -238,7 +238,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     private lazy var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) = {
-        let blobView = VoiceBlobView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 180.0, height: 180.0)))
+        let blobView = VoiceBlobView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)))
         blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
         return blobView
     }()

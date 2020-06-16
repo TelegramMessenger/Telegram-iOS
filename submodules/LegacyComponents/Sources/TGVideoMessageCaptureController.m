@@ -683,6 +683,9 @@ typedef enum
     if (!_capturePipeline.isRecording)
         return false;
     
+    if (_capturePipeline.videoDuration < 0.33)
+        return false;
+    
     if ([self.view.window isKindOfClass:[TGVideoMessageCaptureControllerWindow class]]) {
         ((TGVideoMessageCaptureControllerWindow *)self.view.window).locked = false;
     }
@@ -1045,6 +1048,7 @@ typedef enum
 {
     [_controlsView recordingStarted];
     [_controlsView setDurationString:@"0:00,00"];
+    self.onDuration(0);
     
     _audioRecordingDurationSeconds = 0;
     _audioRecordingDurationMilliseconds = 0.0;
@@ -1078,6 +1082,7 @@ typedef enum
     }
     else
     {
+        self.onDuration(recordingDuration);
         _audioRecordingDurationSeconds = currentDurationSeconds;
         _audioRecordingDurationMilliseconds = currentDurationMilliseconds;
         [_controlsView setDurationString:[[NSString alloc] initWithFormat:@"%d:%02d,%02d", (int)_audioRecordingDurationSeconds / 60, (int)_audioRecordingDurationSeconds % 60, (int)_audioRecordingDurationMilliseconds]];
