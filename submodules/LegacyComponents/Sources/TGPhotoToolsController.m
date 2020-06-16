@@ -21,13 +21,10 @@
 #import "TGPhotoEditorController.h"
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoEditorHUDView.h"
+#import "TGPhotoEditorSparseView.h"
 
 const CGFloat TGPhotoEditorToolsPanelSize = 180.0f;
 const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize + 40.0f;
-
-@interface TGPhotoToolsWrapperView : UIView
-
-@end
 
 @interface TGPhotoToolsController () <TGPhotoEditorCollectionViewToolsDataSource>
 {
@@ -38,7 +35,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     NSArray *_allTools;
     NSArray *_simpleTools;
     
-    TGPhotoToolsWrapperView *_wrapperView;
+    TGPhotoEditorSparseView *_wrapperView;
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     UIView *_portraitWrapperBackgroundView;
@@ -73,21 +70,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
-        
-        NSMutableArray *tools = [[NSMutableArray alloc] init];
-        NSMutableArray *simpleTools = [[NSMutableArray alloc] init];
-        for (PGPhotoTool *tool in photoEditor.tools)
-        {
-            if (!tool.isHidden)
-            {
-                [tools addObject:tool];
-                if (tool.isSimple)
-                    [simpleTools addObject:tool];
-            }
-        }
-        _allTools = tools;
-        _simpleTools = simpleTools;
-        
+                
          __weak TGPhotoToolsController *weakSelf = self;
         _changeBlock = ^(PGPhotoTool *tool, __unused id newValue, bool animated)
         {
@@ -119,6 +102,29 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 {
     [super loadView];
     self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    
+    TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
+    NSArray *faces;
+    if ([editorController isKindOfClass:[TGPhotoEditorController class]]) {
+        faces = editorController.faces;
+    }
+    
+    NSMutableArray *tools = [[NSMutableArray alloc] init];
+    NSMutableArray *simpleTools = [[NSMutableArray alloc] init];
+    for (PGPhotoTool *tool in self.photoEditor.tools)
+    {
+        if (tool.requiresFaces && faces.count < 1) {
+            continue;
+        }
+        if (!tool.isHidden)
+        {
+            [tools addObject:tool];
+            if (tool.isSimple)
+                [simpleTools addObject:tool];
+        }
+    }
+    _allTools = tools;
+    _simpleTools = simpleTools;
     
     __weak TGPhotoToolsController *weakSelf = self;
     _interactionBegan = ^
@@ -177,7 +183,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     previewView.customTouchDownHandling = forVideo;
     [self.view addSubview:_previewView];
     
-    _wrapperView = [[TGPhotoToolsWrapperView alloc] initWithFrame:CGRectZero];
+    _wrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_wrapperView];
     
     _portraitToolsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
@@ -662,12 +668,6 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     return _interactionEnded;
 }
 
-- (void)updateValues
-{
-    [_portraitCollectionView reloadData];
-    [_landscapeCollectionView reloadData];
-}
-
 #pragma mark - Layout
 
 - (void)_prepareCollectionViewsForTransitionFromOrientation:(UIInterfaceOrientation)fromOrientation toOrientation:(UIInterfaceOrientation)toOrientation
@@ -1066,20 +1066,6 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         tabs |= TGPhotoEditorTintTab;
     
     return tabs;
-}
-
-@end
-
-
-@implementation TGPhotoToolsWrapperView
-
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
-{
-    UIView *result = [super hitTest:point withEvent:event];
-    if (result == self)
-        return nil;
-    
-    return result;
 }
 
 @end

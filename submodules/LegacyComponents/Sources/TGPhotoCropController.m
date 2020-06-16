@@ -107,7 +107,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     [self.view addSubview:_wrapperView];
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    _cropView = [[TGPhotoCropView alloc] initWithOriginalSize:photoEditor.originalSize hasArbitraryRotation:!_forVideo];
+    _cropView = [[TGPhotoCropView alloc] initWithOriginalSize:photoEditor.originalSize hasArbitraryRotation:true];
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];
     [_cropView setRotation:photoEditor.cropRotation];

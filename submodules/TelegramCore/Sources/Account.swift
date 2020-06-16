@@ -1113,6 +1113,7 @@ public class Account {
         if !self.supplementary {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
         }
+        self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
         
         let mediaBox = postbox.mediaBox
         self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in

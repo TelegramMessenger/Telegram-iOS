@@ -19,6 +19,7 @@
 
 #import "PGPhotoEditor.h"
 #import "PGEnhanceTool.h"
+#import "TGPaintFaceDetector.h"
 
 #import <LegacyComponents/PGPhotoEditorValues.h>
 #import <LegacyComponents/TGVideoEditAdjustments.h>
@@ -33,12 +34,12 @@
 #import <LegacyComponents/TGMediaAssetsLibrary.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 
-#import "TGPhotoCaptionController.h"
 #import "TGPhotoCropController.h"
-#import "TGPhotoAvatarCropController.h"
 #import "TGPhotoToolsController.h"
 #import "TGPhotoPaintController.h"
 #import "TGPhotoQualityController.h"
+#import "TGPhotoAvatarCropController.h"
+#import "TGPhotoAvatarPreviewController.h"
 
 #import "TGMessageImageViewOverlayView.h"
 
@@ -75,6 +76,7 @@
     SMetaDisposable *_playerItemDisposable;
     id _playerStartedObserver;
     id _playerReachedEndObserver;
+    NSTimer *_positionTimer;
     
     id<TGMediaEditAdjustments> _initialAdjustments;
     NSString *_caption;
@@ -91,6 +93,8 @@
     
     bool _progressVisible;
     TGMessageImageViewOverlayView *_progressView;
+    
+    SMetaDisposable *_faceDetectorDisposable;
     
     id<LegacyComponentsContext> _context;
 }
@@ -126,7 +130,7 @@
         _screenImage = screenImage;
         
         _queue = [[SQueue alloc] init];
-        _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_item.originalSize adjustments:adjustments forVideo:(intent == TGPhotoEditorControllerVideoIntent) enableStickers:(intent & TGPhotoEditorControllerSignupAvatarIntent) == 0];
+        _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_item.originalSize adjustments:adjustments forVideo:(intent == TGPhotoEditorControllerVideoIntent || intent == TGPhotoEditorControllerAvatarIntent) enableStickers:(intent & TGPhotoEditorControllerSignupAvatarIntent) == 0];
         if ([self presentedForAvatarCreation])
         {
             CGFloat shortSide = MIN(_item.originalSize.width, _item.originalSize.height);
@@ -147,7 +151,9 @@
 
 - (void)dealloc
 {
+    [_positionTimer invalidate];
     [_actionHandle reset];
+    [_faceDetectorDisposable dispose];
 }
 
 - (void)loadView
@@ -245,7 +251,7 @@
             case TGPhotoEditorRotateTab:
             case TGPhotoEditorMirrorTab:
             case TGPhotoEditorAspectRatioTab:
-                if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoCropController class]])
+                if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoCropController class]] || [strongSelf->_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]])
                     [strongSelf->_currentTabController handleTabAction:tab];
                 break;
         }
@@ -301,6 +307,8 @@
     [_previewView setSnapshotImage:_screenImage];
     [_photoEditor setPreviewOutput:_previewView];
     [self updatePreviewView];
+    
+    [self detectFaces];
     
     [self presentEditorTab:_currentTab];
 }
@@ -364,7 +372,7 @@
 {
     [super viewDidLoad];
     
-    if ([_currentTabController isKindOfClass:[TGPhotoCropController class]] || [_currentTabController isKindOfClass:[TGPhotoCaptionController class]] || [_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]])
+    if ([_currentTabController isKindOfClass:[TGPhotoCropController class]])
         return;
     
     NSTimeInterval position = 0;
@@ -407,9 +415,12 @@
             _player.muted = true;
             
             [_photoEditor setPlayerItem:_playerItem forCropRect:_photoEditor.cropRect cropRotation:0.0 cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored];
-                        
+                                    
             TGDispatchOnMainThread(^
             {
+                if ([_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]])
+                    [(TGPhotoAvatarCropController *)_currentTabController setPlayer:_player];
+                
                 [_previewView performTransitionInWithCompletion:^
                 {
                 }];
@@ -465,41 +476,87 @@
 
 - (void)_setupPlaybackReachedEndObserver
 {
+    PGPhotoEditor *photoEditor = _photoEditor;
     CMTime endTime = CMTimeSubtract(_player.currentItem.duration, CMTimeMake(10, 100));
-    if (_photoEditor.trimEndValue > DBL_EPSILON && _photoEditor.trimEndValue < CMTimeGetSeconds(_player.currentItem.duration))
-        endTime = CMTimeMakeWithSeconds(_photoEditor.trimEndValue - 0.1, NSEC_PER_SEC);
+    if (photoEditor.trimEndValue > DBL_EPSILON && photoEditor.trimEndValue < CMTimeGetSeconds(_player.currentItem.duration))
+        endTime = CMTimeMakeWithSeconds(photoEditor.trimEndValue - 0.1, NSEC_PER_SEC);
     
     CMTime startTime = CMTimeMake(5, 100);
-    if (_photoEditor.trimStartValue > DBL_EPSILON)
-        startTime = CMTimeMakeWithSeconds(_photoEditor.trimStartValue + 0.05, NSEC_PER_SEC);
+    if (photoEditor.trimStartValue > DBL_EPSILON)
+        startTime = CMTimeMakeWithSeconds(photoEditor.trimStartValue + 0.05, NSEC_PER_SEC);
     
     __weak TGPhotoEditorController *weakSelf = self;
     _playerReachedEndObserver = [_player addBoundaryTimeObserverForTimes:@[[NSValue valueWithCMTime:endTime]] queue:NULL usingBlock:^
     {
         __strong TGPhotoEditorController *strongSelf = weakSelf;
-        if (strongSelf != nil)
+        if (strongSelf != nil) {
             [strongSelf->_player seekToTime:startTime];
+            if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
+                [(TGPhotoAvatarPreviewController *)strongSelf->_currentTabController setScrubberPosition:photoEditor.trimStartValue reset:true];
+            }
+        }
     }];
 }
 
-- (void)startVideoPlayback {
-    NSTimeInterval startPosition = 0.0f;
-    if (_photoEditor.trimStartValue > DBL_EPSILON)
-        startPosition = _photoEditor.trimStartValue;
+- (void)startVideoPlayback:(bool)reset {
+    if (reset) {
+        NSTimeInterval startPosition = 0.0f;
+        if (_photoEditor.trimStartValue > DBL_EPSILON)
+            startPosition = _photoEditor.trimStartValue;
+        
+        CMTime targetTime = CMTimeMakeWithSeconds(startPosition, NSEC_PER_SEC);
+        [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+        
+        [self _setupPlaybackStartedObserver];
+        
+        [_player addObserver:self forKeyPath:@"rate" options:NSKeyValueObservingOptionNew context:nil];
+    }
     
-    CMTime targetTime = CMTimeMakeWithSeconds(startPosition, NSEC_PER_SEC);
-    [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
-    
-    [self _setupPlaybackStartedObserver];
     [_player play];
+    
+    _positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(positionTimerEvent) interval:0.25 repeat:true];
+    [self positionTimerEvent];
 }
 
-- (void)stopVideoPlayback {
-    if (_playerStartedObserver != nil)
-        [_player removeTimeObserver:_playerStartedObserver];
-    if (_playerReachedEndObserver != nil)
-        [_player removeTimeObserver:_playerReachedEndObserver];
+- (void)stopVideoPlayback:(bool)reset {
+    if (reset) {
+        if (_playerStartedObserver != nil)
+            [_player removeTimeObserver:_playerStartedObserver];
+        if (_playerReachedEndObserver != nil)
+            [_player removeTimeObserver:_playerReachedEndObserver];
+        
+        [_player removeObserver:self forKeyPath:@"rate" context:nil];
+    }
     [_player pause];
+    
+    [_positionTimer invalidate];
+    _positionTimer = nil;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)__unused change context:(void *)__unused context
+{
+    if (object == _player && [keyPath isEqualToString:@"rate"])
+    {
+        if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
+            [(TGPhotoAvatarPreviewController *)_currentTabController setScrubberPlaying:_player.rate > FLT_EPSILON];
+        }
+    }
+}
+
+- (void)positionTimerEvent
+{
+    if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
+        [(TGPhotoAvatarPreviewController *)_currentTabController setScrubberPosition:CMTimeGetSeconds(_player.currentItem.currentTime) reset:false];
+    }
+}
+
+- (void)seekVideo:(NSTimeInterval)position {
+    CMTime targetTime = CMTimeMakeWithSeconds(position, NSEC_PER_SEC);
+    [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+}
+
+- (void)setVideoEndTime:(NSTimeInterval)endTime {
+    _player.currentItem.forwardPlaybackEndTime = CMTimeMakeWithSeconds(endTime, NSEC_PER_SEC);
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -927,9 +984,9 @@
                 if (strongSelf == nil)
                     return;
                 if (play) {
-                    [strongSelf->_player play];
+                    [strongSelf startVideoPlayback:false];
                 } else {
-                    [strongSelf->_player pause];
+                    [strongSelf stopVideoPlayback:false];
                 }
             };
             paintController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
@@ -954,7 +1011,7 @@
                     strongSelf.finishedTransitionIn();
                 
                 strongSelf->_switchingTab = false;
-                [strongSelf startVideoPlayback];
+                [strongSelf startVideoPlayback:true];
             };
             
             controller = paintController;
@@ -977,6 +1034,16 @@
                 else if (snapshotImage != nil)
                     [cropController setSnapshotImage:snapshotImage];
                 cropController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
+                cropController.controlVideoPlayback = ^(bool play) {
+                    __strong TGPhotoEditorController *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    if (play) {
+                        [strongSelf startVideoPlayback:false];
+                    } else {
+                        [strongSelf stopVideoPlayback:false];
+                    }
+                };
                 cropController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
                 {
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
@@ -1030,6 +1097,7 @@
                     }
                     
                     strongSelf->_switchingTab = false;
+                    [strongSelf startVideoPlayback:true];
                 };
                 cropController.finishedTransitionOut = ^
                 {
@@ -1205,7 +1273,7 @@
                 
                 strongSelf->_switchingTab = false;
                 
-                [strongSelf startVideoPlayback];
+                [strongSelf startVideoPlayback:true];
             };
             
             controller = toolsController;
@@ -1241,6 +1309,55 @@
             };
 
             controller = qualityController;
+        }
+            break;
+            
+        case TGPhotoEditorPreviewTab:
+        {
+            TGPhotoAvatarPreviewController *previewController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            previewController.item = _item;
+            previewController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
+            previewController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
+            {
+                *referenceFrame = transitionReferenceFrame;
+                *parentView = transitionParentView;
+                *noTransitionView = transitionNoTransitionView;
+                
+                return transitionReferenceView;
+            };
+            previewController.finishedTransitionIn = ^
+            {
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if (isInitialAppearance && strongSelf.finishedTransitionIn != nil)
+                    strongSelf.finishedTransitionIn();
+                
+                strongSelf->_switchingTab = false;
+                [strongSelf startVideoPlayback:true];
+            };
+            previewController.controlVideoPlayback = ^(bool play) {
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                if (play) {
+                    [strongSelf startVideoPlayback:false];
+                } else {
+                    [strongSelf stopVideoPlayback:false];
+                }
+            };
+            previewController.controlVideoSeek = ^(NSTimeInterval position) {
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                    [strongSelf seekVideo:position];
+            };
+            previewController.controlVideoEndTime = ^(NSTimeInterval endTime) {
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                    [strongSelf setVideoEndTime:endTime];
+            };
+            controller = previewController;
         }
             break;
             
@@ -1396,6 +1513,11 @@
 
 - (void)dismissEditor
 {
+    if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
+        [self presentEditorTab:TGPhotoEditorCropTab];
+        return;
+    }
+    
     if (![_currentTabController isDismissAllowed])
         return;
  
@@ -1484,7 +1606,11 @@
 
 - (void)doneButtonPressed
 {
-    [self applyEditor];
+    if ([_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]]) {
+        [self presentEditorTab:TGPhotoEditorPreviewTab];
+    } else {
+        [self applyEditor];
+    }
 }
 
 - (void)applyEditor
@@ -1906,6 +2032,56 @@
 {
     [_portraitToolbarView setInfoString:string];
     [_landscapeToolbarView setInfoString:string];
+}
+
+- (void)detectFaces
+{
+    if (_faceDetectorDisposable == nil)
+        _faceDetectorDisposable = [[SMetaDisposable alloc] init];
+    
+    id<TGMediaEditableItem> item = _item;
+    CGSize originalSize = _photoEditor.originalSize;
+    
+    if (self.requestOriginalScreenSizeImage == nil)
+        return;
+    
+    SSignal *cachedSignal = [[self.editingContext facesForItem:item] mapToSignal:^SSignal *(id result)
+    {
+        if (result == nil)
+            return [SSignal fail:nil];
+        return [SSignal single:result];
+    }];
+    SSignal *imageSignal = [self.requestOriginalScreenSizeImage(item, 0) take:1];
+    SSignal *detectSignal = [[imageSignal filter:^bool(UIImage *image)
+    {
+        if (![image isKindOfClass:[UIImage class]])
+            return false;
+        
+        if (image.degraded)
+            return false;
+        
+        return true;
+    }] mapToSignal:^SSignal *(UIImage *image) {
+        return [[TGPaintFaceDetector detectFacesInImage:image originalSize:originalSize] startOn:[SQueue concurrentDefaultQueue]];
+    }];
+    
+    __weak TGPhotoEditorController *weakSelf = self;
+    [_faceDetectorDisposable setDisposable:[[[cachedSignal catch:^SSignal *(__unused id error)
+    {
+        return detectSignal;
+    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *next)
+    {
+        __strong TGPhotoEditorController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [strongSelf.editingContext setFaces:next forItem:item];
+     
+        if (next.count == 0)
+            return;
+        
+        strongSelf->_faces = next;
+    }]];
 }
 
 + (TGPhotoEditorTab)defaultTabsForAvatarIntent

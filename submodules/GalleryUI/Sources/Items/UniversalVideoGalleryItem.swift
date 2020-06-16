@@ -695,9 +695,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 barButtonItems.append(rightBarButtonItem)
-                hasPictureInPicture = true
+                self.hasPictureInPicture = true
             } else {
-                hasPictureInPicture = false
+                self.hasPictureInPicture = false
             }
             self._rightBarButtonItems.set(.single(barButtonItems))
         

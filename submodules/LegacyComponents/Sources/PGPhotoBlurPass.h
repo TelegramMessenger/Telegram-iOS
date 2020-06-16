@@ -4,7 +4,8 @@ typedef enum
 {
     PGBlurToolTypeNone,
     PGBlurToolTypeRadial,
-    PGBlurToolTypeLinear
+    PGBlurToolTypeLinear,
+    PGBlurToolTypePortrait
 } PGBlurToolType;
 
 @interface PGPhotoBlurPass : PGPhotoProcessPass

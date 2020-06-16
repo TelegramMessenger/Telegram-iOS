@@ -32,13 +32,32 @@ func telegramMediaImageRepresentationsFromApiSizes(datacenterId: Int32, photoId:
 
 func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
-        case let .photo(flags, id, accessHash, fileReference, _, sizes, dcId):
+        case let .photo(flags, id, accessHash, fileReference, _, sizes, videoSizes, dcId):
             let (immediateThumbnailData, representations) = telegramMediaImageRepresentationsFromApiSizes(datacenterId: dcId, photoId: id, accessHash: accessHash, fileReference: fileReference.makeData(), sizes: sizes)
             var imageFlags: TelegramMediaImageFlags = []
             let hasStickers = (flags & (1 << 0)) != 0
             if hasStickers {
                 imageFlags.insert(.hasStickers)
             }
+            
+            var videoRepresentations: [TelegramMediaImage.VideoRepresentation] = []
+            if let videoSizes = videoSizes {
+                for size in videoSizes {
+                    switch size {
+                        case let .videoSize(type, location, w, h, _):
+                            let resource: TelegramMediaResource
+                            switch location {
+                                case let .fileLocationToBeDeprecated(volumeId, localId):
+                                    resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
+                            }
+                            
+                            videoRepresentations.append(TelegramMediaImage.VideoRepresentation(
+                                dimensions: PixelDimensions(width: w, height: h),
+                                resource: resource))
+                    }
+                }
+            }
+            
             return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil, flags: imageFlags)
         case .photoEmpty:
             return nil

@@ -39,6 +39,8 @@ typedef enum
     UIView *_rightCurtainView;
     UIControl *_scrubberHandle;
     
+    UIImageView *_dotView;
+    
     UIPanGestureRecognizer *_panGestureRecognizer;
     UILongPressGestureRecognizer *_pressGestureRecognizer;
     
@@ -46,7 +48,6 @@ typedef enum
     bool _endedInteraction;
     
     bool _scrubbing;
-    CGFloat _scrubbingPosition;
     
     NSTimeInterval _duration;
 
@@ -124,6 +125,11 @@ typedef enum
         _rightCurtainView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
         _rightCurtainView.backgroundColor = [[TGPhotoEditorInterfaceAssets toolbarBackgroundColor] colorWithAlphaComponent:0.8f];
         [_wrapperView addSubview:_rightCurtainView];
+        
+        _dotView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 8, 8)];
+        _dotView.image = TGCircleImage(8.0, [TGPhotoEditorInterfaceAssets accentColor]);
+        _dotView.hidden = true;
+        [self addSubview:_dotView];
         
         __weak TGMediaPickerGalleryVideoScrubber *weakSelf = self;
         _trimView = [[TGMediaPickerGalleryVideoTrimView alloc] initWithFrame:CGRectZero];
@@ -396,7 +402,7 @@ typedef enum
 
 - (bool)zoomAvailable
 {
-    if (_zoomedIn || _preparingToZoomIn || _summaryTimestamps.count == 0)
+    if (_disableZoom || _zoomedIn || _preparingToZoomIn || _summaryTimestamps.count == 0)
         return false;
     
     return _duration > 1.0f;
@@ -854,7 +860,7 @@ typedef enum
 
 - (void)setValue:(NSTimeInterval)value resetPosition:(bool)resetPosition
 {
-    if (_duration < FLT_EPSILON)
+    if (_duration < FLT_EPSILON || _scrubbing)
         return;
     
     if (value > _duration)
@@ -952,7 +958,7 @@ typedef enum
     
     NSString *text = [NSString stringWithFormat:@"%@ / %@", [TGMediaPickerGalleryVideoScrubber _stringFromTotalSeconds:(NSInteger)self.value], [TGMediaPickerGalleryVideoScrubber _stringFromTotalSeconds:(NSInteger)self.duration]];
     
-    _inverseTimeLabel.text = text;
+    _inverseTimeLabel.text = self.disableTimeDisplay ? @"" : text;
 }
 
 #pragma mark - Scrubber Handle
@@ -1099,6 +1105,8 @@ typedef enum
             
             _scrubbing = false;
             
+            [self setDotValue:_value];
+            
             id<TGMediaPickerGalleryVideoScrubberDelegate> delegate = self.delegate;
             if ([delegate respondsToSelector:@selector(videoScrubberDidEndScrubbing:)])
                 [delegate videoScrubberDidEndScrubbing:self];
@@ -1190,6 +1198,29 @@ typedef enum
     }
     
     return CGRectMake(origin, 24, width, 40);
+}
+
+#pragma mark - Dot
+
+- (void)setDotValue:(NSTimeInterval)dotValue
+{
+    _dotValue = dotValue;
+    
+    if (dotValue > FLT_EPSILON) {
+        _dotView.hidden = false;
+        
+        CGPoint point = [self _scrubberPositionForPosition:dotValue duration:_duration zoomedIn:false];
+        _dotView.frame = CGRectMake(_wrapperView.frame.origin.x + point.x - _dotView.frame.size.width / 2.0, 8.0f, _dotView.frame.size.width, _dotView.frame.size.height);
+        
+        _dotView.alpha = 0.0f;
+        _dotView.transform = CGAffineTransformMakeScale(0.25, 0.25);
+        [UIView animateWithDuration:0.2 animations:^{
+            _dotView.alpha = 1.0;
+            _dotView.transform = CGAffineTransformIdentity;
+        }];
+    } else {
+        _dotView.hidden = true;
+    }
 }
 
 #pragma mark - Trimming

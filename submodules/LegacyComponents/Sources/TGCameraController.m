@@ -292,7 +292,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds];
+        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
     }
     else
@@ -420,7 +420,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     };
     
-    if (_intent != TGCameraControllerGenericIntent)
+    if (_intent != TGCameraControllerGenericIntent && _intent != TGCameraControllerAvatarIntent)
         [_interfaceView setHasModeControl:false];
 
     if (iosMajorVersion() >= 11)
@@ -510,9 +510,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         strongSelf.view.userInteractionEnabled = false;
         
         PGCameraMode currentMode = strongSelf->_camera.cameraMode;
-        bool generalModeNotChanged = (mode == PGCameraModePhoto && currentMode == PGCameraModeSquare) || (mode == PGCameraModeSquare && currentMode == PGCameraModePhoto) || (mode == PGCameraModeVideo && currentMode == PGCameraModeClip) || (mode == PGCameraModeClip && currentMode == PGCameraModeVideo);
+        bool generalModeNotChanged = (mode == PGCameraModePhoto && currentMode == PGCameraModeSquarePhoto) || (mode == PGCameraModeSquarePhoto && currentMode == PGCameraModePhoto) || (mode == PGCameraModeVideo && currentMode == PGCameraModeSquareVideo) || (mode == PGCameraModeSquareVideo && currentMode == PGCameraModeVideo);
         
-        if ((mode == PGCameraModeVideo || mode == PGCameraModeClip) && !generalModeNotChanged)
+        if ((mode == PGCameraModeVideo || mode == PGCameraModeSquareVideo) && !generalModeNotChanged)
         {
             [[LegacyComponentsGlobals provider] pauseMusicPlayback];
         }
@@ -920,6 +920,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             break;
     
         case PGCameraModeVideo:
+        case PGCameraModeSquareVideo:
         {
             if (!_camera.isRecordingVideo)
             {
@@ -929,11 +930,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             {
                 _stopRecordingOnRelease = true;
             }
-        }
-            break;
-            
-        case PGCameraModeClip:
-        {
         }
             break;
             
@@ -955,7 +951,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     __weak TGCameraController *weakSelf = self;
     PGCameraMode cameraMode = _camera.cameraMode;
-    if (cameraMode == PGCameraModePhoto || cameraMode == PGCameraModeSquare)
+    if (cameraMode == PGCameraModePhoto || cameraMode == PGCameraModeSquarePhoto)
     {
         _camera.disabled = true;
 
@@ -2377,8 +2373,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             }
                 break;
             
-            case PGCameraModeSquare:
-            case PGCameraModeClip:
+            case PGCameraModeSquarePhoto:
+            case PGCameraModeSquareVideo:
             {
                 CGRect rect = [self _cameraPreviewFrameForScreenSize:screenSize mode:PGCameraModePhoto];
                 CGFloat topOffset = CGRectGetMidY(rect) - rect.size.width / 2;
@@ -2410,7 +2406,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
     else
     {
-        if (mode == PGCameraModeSquare)
+        if (mode == PGCameraModeSquarePhoto || mode == PGCameraModeSquareVideo)
             return CGRectMake(0, (screenSize.height - screenSize.width) / 2, screenSize.width, screenSize.width);
         
         return CGRectMake(0, 0, screenSize.width, screenSize.height);

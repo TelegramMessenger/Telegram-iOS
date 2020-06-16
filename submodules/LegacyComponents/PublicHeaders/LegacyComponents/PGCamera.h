@@ -24,8 +24,8 @@ typedef enum
     PGCameraModeUndefined,
     PGCameraModePhoto,
     PGCameraModeVideo,
-    PGCameraModeSquare,
-    PGCameraModeClip
+    PGCameraModeSquarePhoto,
+    PGCameraModeSquareVideo
 } PGCameraMode;
 
 typedef enum

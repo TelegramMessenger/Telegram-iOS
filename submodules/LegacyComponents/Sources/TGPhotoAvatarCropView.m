@@ -1,4 +1,5 @@
 #import "TGPhotoAvatarCropView.h"
+#import <AVFoundation/AVFoundation.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 
@@ -6,6 +7,8 @@
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 #import "TGPhotoEditorInterfaceAssets.h"
+
+#import "TGModernGalleryVideoView.h"
 
 const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 
@@ -18,6 +21,7 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     UIScrollView *_scrollView;
     UIView *_wrapperView;
     UIImageView *_imageView;
+    TGModernGalleryVideoView *_videoView;
     UIView *_snapshotView;
     CGSize _snapshotSize;
     
@@ -133,6 +137,23 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
         return;
     
     [self reloadImageIfNeeded];
+}
+
+- (void)setPlayer:(AVPlayer *)player
+{
+    _player = player;
+    
+    _videoView = [[TGModernGalleryVideoView alloc] initWithFrame:_imageView.bounds player:player];
+    _videoView.frame = _imageView.frame;
+    _videoView.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    _videoView.playerLayer.opaque = false;
+    _videoView.playerLayer.backgroundColor = nil;
+    [_imageView.superview insertSubview:_videoView aboveSubview:_imageView];
+}
+
+- (void)invalidateVideoView
+{
+    _videoView.player = nil;
 }
 
 - (void)reloadImageIfNeeded
@@ -283,6 +304,18 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 
 #pragma mark - Scroll View
 
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    if (self.interactionBegan != nil)
+        self.interactionBegan();
+}
+
+- (void)scrollViewWillBeginZooming:(UIScrollView *)scrollView withView:(UIView *)view
+{
+    if (self.interactionBegan != nil)
+        self.interactionBegan();
+}
+
 - (void)scrollViewDidZoom:(UIScrollView *)__unused scrollView
 {
     [self adjustScrollView];
@@ -382,6 +415,7 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 {
     _cropMirrored = cropMirrored;
     _imageView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0f : 1.0f, 1.0f);
+    _videoView.transform = _imageView.transform;
 }
 
 - (void)invalidateCropRect
@@ -438,27 +472,36 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     _leftOverlayView.alpha = 0.0f;
     _rightOverlayView.alpha = 0.0f;
     _bottomOverlayView.alpha = 0.0f;
-}
-
-- (void)transitionInFinishedFromCamera:(bool)fromCamera
-{
-    if (fromCamera)
-    {
-        [UIView animateWithDuration:0.3f animations:^
-        {
-            _topOverlayView.alpha = 1.0f;
-            _leftOverlayView.alpha = 1.0f;
-            _rightOverlayView.alpha = 1.0f;
-            _bottomOverlayView.alpha = 1.0f;
-        }];
-    }
-    else
+    
+    [UIView animateWithDuration:0.3f animations:^
     {
         _topOverlayView.alpha = 1.0f;
         _leftOverlayView.alpha = 1.0f;
         _rightOverlayView.alpha = 1.0f;
         _bottomOverlayView.alpha = 1.0f;
-    }
+        _areaMaskView.alpha = 1.0f;
+    }];
+}
+
+- (void)transitionInFinishedFromCamera:(bool)fromCamera
+{
+//    if (fromCamera)
+//    {
+//        [UIView animateWithDuration:0.3f animations:^
+//        {
+//            _topOverlayView.alpha = 1.0f;
+//            _leftOverlayView.alpha = 1.0f;
+//            _rightOverlayView.alpha = 1.0f;
+//            _bottomOverlayView.alpha = 1.0f;
+//        }];
+//    }
+//    else
+//    {
+//        _topOverlayView.alpha = 1.0f;
+//        _leftOverlayView.alpha = 1.0f;
+//        _rightOverlayView.alpha = 1.0f;
+//        _bottomOverlayView.alpha = 1.0f;
+//    }
     
     _scrollView.hidden = false;
     _scrollView.backgroundColor = [UIColor clearColor];

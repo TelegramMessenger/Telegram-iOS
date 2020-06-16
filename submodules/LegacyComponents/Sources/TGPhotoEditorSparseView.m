@@ -1,6 +1,6 @@
-#import "TGPhotoPaintSparseView.h"
+#import "TGPhotoEditorSparseView.h"
 
-@implementation TGPhotoPaintSparseView
+@implementation TGPhotoEditorSparseView
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
 {

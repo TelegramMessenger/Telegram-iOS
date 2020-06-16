@@ -218,7 +218,7 @@
         scrubberBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
         [_scrubberPanelView addSubview:scrubberBackgroundView];
         
-        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, _headerView.frame.size.height - 44.0f, _headerView.frame.size.width, 44.0f)];
+        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, _headerView.frame.size.height - 44.0f, _headerView.frame.size.width, 68.0f)];
         _scrubberView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         _scrubberView.dataSource = self;
         _scrubberView.delegate = self;
@@ -738,7 +738,7 @@
         mirrored = adjustments.cropMirrored;
     }
     
-    _scrubberView.maximumLength = adjustments.sendAsGif ? TGVideoEditMaximumGifDuration : 0.0;
+//    _scrubberView.maximumLength = adjustments.sendAsGif ? TGVideoEditMaximumGifDuration : 0.0;
     
     [self _layoutPlayerViewWithCropRect:cropRect videoFrameSize:videoFrameSize orientation:orientation mirrored:mirrored];
 }
@@ -1274,13 +1274,7 @@
 
 - (void)positionTimerEvent
 {
-    [self updatePositionAndForceStartTime:false];
-}
-
-- (void)updatePositionAndForceStartTime:(bool)forceStartTime
-{
-    NSTimeInterval value = forceStartTime ? _scrubberView.trimStartValue : CMTimeGetSeconds(_player.currentItem.currentTime);
-    [_scrubberView setValue:value];
+    [_scrubberView setValue:CMTimeGetSeconds(_player.currentItem.currentTime)];
 }
 
 - (void)_seekToPosition:(NSTimeInterval)position manual:(bool)__unused manual

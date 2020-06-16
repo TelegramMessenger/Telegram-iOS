@@ -204,7 +204,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                         attributes.append(NotificationInfoMessageAttribute(flags: .muted))
                     }
                     if let scheduleTime = scheduleTime {
-                         attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
+                        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
                     }
                     return attributes
                 }

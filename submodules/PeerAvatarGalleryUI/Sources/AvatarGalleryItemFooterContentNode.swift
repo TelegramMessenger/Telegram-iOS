@@ -20,6 +20,11 @@ private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "C
 private let nameFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
+enum AvatarGalleryItemFooterContent {
+    case info
+    case own(Bool)
+}
+
 final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -30,6 +35,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     private let actionButton: UIButton
     private let nameNode: ASTextNode
     private let dateNode: ASTextNode
+    private let mainNode: ASTextNode
+    private let setMainButton: HighlightableButtonNode
     
     private var currentNameText: String?
     private var currentDateText: String?
@@ -42,6 +49,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     var share: ((GalleryControllerInteraction) -> Void)?
     
+    var setMain: (() -> Void)? {
+        didSet {
+            self.setMainButton.isHidden = self.setMain == nil
+        }
+    }
+    
     init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
         self.presentationData = presentationData
@@ -50,6 +63,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.deleteButton = UIButton()
         self.deleteButton.isHidden = true
+        
         self.actionButton = UIButton()
         
         self.deleteButton.setImage(deleteImage, for: [.normal])
@@ -65,6 +79,16 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
         
+        self.setMainButton = HighlightableButtonNode()
+        self.setMainButton.isHidden = true
+        self.setMainButton.setAttributedTitle(NSAttributedString(string: "Set as Main Photo", font: Font.regular(17.0), textColor: .white), for: .normal)
+        
+        self.mainNode = ASTextNode()
+        self.mainNode.maximumNumberOfLines = 1
+        self.mainNode.isUserInteractionEnabled = false
+        self.mainNode.displaysAsynchronously = false
+        self.mainNode.attributedText = NSAttributedString(string: "Main Photo", font: Font.regular(17.0), textColor: UIColor(rgb: 0x808080))
+        
         super.init()
         
         self.view.addSubview(self.deleteButton)
@@ -72,15 +96,18 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.addSubnode(self.nameNode)
         self.addSubnode(self.dateNode)
+        self.addSubnode(self.setMainButton)
+        self.addSubnode(self.mainNode)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
+        self.setMainButton.addTarget(self, action: #selector(self.setMainButtonPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
     }
     
-    func setEntry(_ entry: AvatarGalleryEntry) {
+    func setEntry(_ entry: AvatarGalleryEntry, content: AvatarGalleryItemFooterContent) {
         var nameText: String?
         var dateText: String?
         switch entry {
@@ -107,6 +134,19 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
                 self.dateNode.attributedText = nil
             }
         }
+        
+        switch content {
+            case .info:
+                self.nameNode.isHidden = false
+                self.dateNode.isHidden = false
+                self.mainNode.isHidden = true
+                self.setMainButton.isHidden = true
+            case let .own(isMainPhoto):
+                self.nameNode.isHidden = true
+                self.dateNode.isHidden = true
+                self.mainNode.isHidden = !isMainPhoto
+                self.setMainButton.isHidden = isMainPhoto
+        }
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -117,8 +157,9 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
-        let nameSize = self.nameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
-        let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let constrainedSize = CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude)
+        let nameSize = self.nameNode.measure(constrainedSize)
+        let dateSize = self.dateNode.measure(constrainedSize)
         
         if nameSize.height.isZero {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize)
@@ -128,6 +169,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - nameSize.height - labelsSpacing) / 2.0) + nameSize.height + labelsSpacing), size: dateSize)
         }
         
+        let mainSize = self.mainNode.measure(constrainedSize)
+        self.mainNode.frame = CGRect(origin: CGPoint(x: floor((width - mainSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - mainSize.height) / 2.0)), size: mainSize)
+        
+        let mainButtonSize = self.setMainButton.measure(constrainedSize)
+        self.setMainButton.frame = CGRect(origin: CGPoint(x: floor((width - mainButtonSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - mainButtonSize.height) / 2.0)), size: mainButtonSize)
+        
         return panelHeight
     }
     
@@ -136,6 +183,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.alpha = 1.0
         self.nameNode.alpha = 1.0
         self.dateNode.alpha = 1.0
+        self.setMainButton.alpha = 1.0
     }
     
     override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -143,6 +191,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.alpha = 0.0
         self.nameNode.alpha = 0.0
         self.dateNode.alpha = 0.0
+        self.setMainButton.alpha = 0.0
         completion()
     }
     
@@ -170,5 +219,9 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         if let controllerInteraction = self.controllerInteraction {
             self.share?(controllerInteraction)
         }
+    }
+    
+    @objc private func setMainButtonPressed() {
+        
     }
 }

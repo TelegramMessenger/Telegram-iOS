@@ -453,7 +453,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
         if isEmpty && self.emptyNode == nil {
-            let emptyNode = ChatEmptyNode(accountPeerId: self.context.account.peerId)
+            let emptyNode = ChatEmptyNode(account: self.context.account, interaction: self.interfaceInteraction)
             if let (size, insets) = self.validEmptyNodeLayout {
                 emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: size, insets: insets, transition: .immediate)
             }

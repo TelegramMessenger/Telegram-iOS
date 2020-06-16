@@ -1,5 +1,4 @@
 #import <Photos/Photos.h>
-#import <AssetsLibrary/AssetsLibrary.h>
 
 #import <LegacyComponents/TGMediaAsset.h>
 
@@ -33,12 +32,9 @@ typedef enum
 
 @property (nonatomic, readonly) PHFetchResult *backingFetchResult;
 @property (nonatomic, readonly) PHAssetCollection *backingAssetCollection;
-@property (nonatomic, readonly) ALAssetsGroup *backingAssetsGroup;
 
 - (instancetype)initWithPHFetchResult:(PHFetchResult *)fetchResult;
 - (instancetype)initWithPHAssetCollection:(PHAssetCollection *)collection fetchResult:(PHFetchResult *)fetchResult;
-- (instancetype)initWithALAssetsGroup:(ALAssetsGroup *)assetsGroup;
-- (instancetype)initWithALAssetsGroup:(ALAssetsGroup *)assetsGroup subtype:(TGMediaAssetGroupSubtype)subtype;
 
 - (NSArray *)latestAssets;
 

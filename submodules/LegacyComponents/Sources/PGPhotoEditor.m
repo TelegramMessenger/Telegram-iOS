@@ -21,6 +21,7 @@
 
 #import "PGPhotoToolComposer.h"
 #import "PGEnhanceTool.h"
+#import "PGSkinTool.h"
 #import "PGExposureTool.h"
 #import "PGContrastTool.h"
 #import "PGWarmthTool.h"
@@ -263,7 +264,7 @@
     if (self.previewOutput == nil && !self.standalone)
         return;
     
-    if (self.forVideo) {
+    if (![_currentInput isKindOfClass:[PGPhotoEditorPicture class]]) {
         [_queue dispatch:^
         {
             [self updateProcessChain];
@@ -536,7 +537,8 @@
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
     {
-        tools = @[ [PGEnhanceTool class],
+        tools = @[ [PGSkinTool class],
+                   [PGEnhanceTool class],
                    [PGExposureTool class],
                    [PGContrastTool class],
                    [PGSaturationTool class],

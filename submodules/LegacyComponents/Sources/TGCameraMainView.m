@@ -42,7 +42,7 @@
     switch (_modeControl.cameraMode)
     {
         case PGCameraModePhoto:
-        case PGCameraModeSquare:
+        case PGCameraModeSquarePhoto:
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonNormalMode animated:true];
             [_timecodeView setHidden:true animated:true];
@@ -56,7 +56,7 @@
         }
             break;
             
-        case PGCameraModeClip:
+        case PGCameraModeSquareVideo:
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonVideoMode animated:true];
             [_timecodeView setHidden:true animated:true];

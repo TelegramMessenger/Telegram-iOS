@@ -93,7 +93,7 @@
     
     NSMutableArray *itemViews = [[NSMutableArray alloc] init];
     
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:TGMediaAssetPhotoType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:_signup ? TGMediaAssetPhotoType : TGMediaAssetAnyType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
     carouselItem.stickersContext = _stickersContext;
     carouselItem.parentController = _parentController;
     carouselItem.openEditor = true;

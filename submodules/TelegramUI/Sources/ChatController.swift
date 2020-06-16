@@ -327,7 +327,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var purposefulAction: (() -> Void)?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil) {
+    public init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -360,7 +360,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             isScheduledMessages = true
         }
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, isScheduledMessages: isScheduledMessages)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, isScheduledMessages: isScheduledMessages, peerNearbyData: peerNearbyData)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -2381,7 +2381,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             var didDisplayActionsPanel = false
                             if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
-                                if !peerStatusSettings.isEmpty {
+                                if !peerStatusSettings.flags.isEmpty {
                                     if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                                         didDisplayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
@@ -2396,7 +2396,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             var displayActionsPanel = false
                             if let contactStatus = contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
-                                if !peerStatusSettings.isEmpty {
+                                if !peerStatusSettings.flags.isEmpty {
                                     if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                                         displayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {

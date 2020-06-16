@@ -21,6 +21,7 @@
     TGPhotoEditorBlurTypeButton *_offButton;
     TGPhotoEditorBlurTypeButton *_radialButton;
     TGPhotoEditorBlurTypeButton *_linearButton;
+    TGPhotoEditorBlurTypeButton *_portraitButton;
     
     TGPhotoEditorSliderView *_sliderView;
     
@@ -59,27 +60,34 @@
         _titleLabel.textColor = [TGPhotoEditorInterfaceAssets editorItemTitleColor];
         _titleLabel.userInteractionEnabled = false;
         [self addSubview:_titleLabel];
-        
+               
         _offButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _offButton.tag = PGBlurToolTypeNone;
         [_offButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_offButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurOff")];
+        [_offButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurOff"], [UIColor whiteColor])];
         [_offButton setTitle:TGLocalized(@"PhotoEditor.BlurToolOff")];
         [_buttonsWrapper addSubview:_offButton];
         
         _radialButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _radialButton.tag = PGBlurToolTypeRadial;
         [_radialButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_radialButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurRadial")];
+        [_radialButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurRadial"], [UIColor whiteColor])];
         [_radialButton setTitle:TGLocalized(@"PhotoEditor.BlurToolRadial")];
         [_buttonsWrapper addSubview:_radialButton];
 
         _linearButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _linearButton.tag = PGBlurToolTypeLinear;
         [_linearButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_linearButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurLinear")];
+        [_linearButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurLinear"], [UIColor whiteColor])];
         [_linearButton setTitle:TGLocalized(@"PhotoEditor.BlurToolLinear")];
         [_buttonsWrapper addSubview:_linearButton];
+        
+        _portraitButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
+        _portraitButton.tag = PGBlurToolTypePortrait;
+        [_portraitButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        [_portraitButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurPortrait"], [UIColor whiteColor])];
+        [_portraitButton setTitle:TGLocalized(@"PhotoEditor.BlurToolPortrait")];
+        [_buttonsWrapper addSubview:_portraitButton];
         
         _sliderView = [[TGPhotoEditorSliderView alloc] initWithFrame:CGRectZero];
         _sliderView.alpha = 0.0f;
@@ -258,9 +266,28 @@
     {
         _titleLabel.frame = CGRectMake((self.frame.size.width - _titleLabel.frame.size.width) / 2, 10, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
         
-        _offButton.frame = CGRectMake(CGFloor(self.frame.size.width / 4 - 50), self.frame.size.height / 2 - 42, 100, 100);
-        _radialButton.frame = CGRectMake(self.frame.size.width / 2 - 50, self.frame.size.height / 2 - 42, 100, 100);
-        _linearButton.frame = CGRectMake(CGCeil(self.frame.size.width / 2 + self.frame.size.width / 4 - 50), self.frame.size.height / 2 - 42, 100, 100);
+//        _offButton.frame = CGRectMake(CGFloor(self.frame.size.width / 4 - 50), self.frame.size.height / 2 - 42, 100, 100);
+//        _radialButton.frame = CGRectMake(self.frame.size.width / 2 - 75, self.frame.size.height / 2 - 42, 100, 100);
+//        _linearButton.frame = CGRectMake(CGCeil(self.frame.size.width / 2 - 50), self.frame.size.height / 2 - 42, 100, 100);
+//        _portraitButton.frame = CGRectMake(CGCeil(self.frame.size.width / 2 + self.frame.size.width / 4 - 50), self.frame.size.height / 2 - 42, 100, 100);
+        
+        NSArray *buttons = @[_offButton, _radialButton, _linearButton, _portraitButton];
+        
+        UIView *leftButton = buttons.firstObject;
+        UIView *centerLeftButton = [buttons objectAtIndex:1];
+        UIView *centerRightButton = [buttons objectAtIndex:2];
+        UIView *rightButton = buttons.lastObject;
+        
+        CGFloat offset = self.frame.size.height / 2 - 42;
+        CGSize buttonSize = CGSizeMake(100.0, 100.0);
+        
+        leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 8 * 1.5 - 3 - buttonSize.width / 2), offset, buttonSize.width, buttonSize.height);
+        
+        centerLeftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 10 * 3.75 + 5 - buttonSize.width / 2), offset, buttonSize.width, buttonSize.height);
+        
+        centerRightButton.frame = CGRectMake(CGCeil(self.frame.size.width - centerLeftButton.frame.origin.x - buttonSize.width), offset, buttonSize.width, buttonSize.height);
+        
+        rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - buttonSize.width), offset, buttonSize.width, buttonSize.height);
 
         _sliderView.frame = CGRectMake(TGPhotoEditorSliderViewMargin, (self.frame.size.height - 32) / 2, self.frame.size.width - 2 * TGPhotoEditorSliderViewMargin, 32);
     }

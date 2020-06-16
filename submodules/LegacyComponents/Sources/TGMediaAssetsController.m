@@ -1250,14 +1250,14 @@
     
     switch (intent)
     {
-        case TGMediaAssetsControllerSetProfilePhotoIntent:
         case TGMediaAssetsControllerSetSignupProfilePhotoIntent:
         case TGMediaAssetsControllerSetCustomWallpaperIntent:
         case TGMediaAssetsControllerPassportIntent:
         case TGMediaAssetsControllerPassportMultipleIntent:
             assetType = TGMediaAssetPhotoType;
             break;
-            
+     
+        case TGMediaAssetsControllerSetProfilePhotoIntent:
         case TGMediaAssetsControllerSendMediaIntent:
             assetType = TGMediaAssetAnyType;
             break;

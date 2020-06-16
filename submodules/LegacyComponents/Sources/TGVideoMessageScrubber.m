@@ -41,7 +41,6 @@ typedef enum
     bool _endedInteraction;
     
     bool _scrubbing;
-    CGFloat _scrubbingPosition;
     
     NSTimeInterval _duration;
     NSTimeInterval _trimStartValue;

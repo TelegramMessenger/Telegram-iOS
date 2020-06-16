@@ -32,6 +32,8 @@
 @property (nonatomic, copy) void (^tabsChanged)(void);
 
 @property (nonatomic, copy) void (^controlVideoPlayback)(bool);
+@property (nonatomic, copy) void (^controlVideoSeek)(NSTimeInterval);
+@property (nonatomic, copy) void (^controlVideoEndTime)(NSTimeInterval);
 
 @property (nonatomic, assign) TGPhotoEditorTab availableTabs;
 

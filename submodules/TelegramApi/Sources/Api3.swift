@@ -6299,20 +6299,6 @@ public extension Api {
                     })
                 }
             
-                public static func uploadProfilePhoto(file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1328726168)
-                    file.serialize(buffer, true)
-                    return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.photos.Photo?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
-                        }
-                        return result
-                    })
-                }
-            
                 public static func deletePhotos(id: [Api.InputPhoto]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2016444625)
@@ -6343,6 +6329,22 @@ public extension Api {
                         var result: Api.photos.Photos?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.photos.Photos
+                        }
+                        return result
+                    })
+                }
+            
+                public static func uploadProfilePhoto(flags: Int32, file: Api.InputFile, video: Api.InputFile?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(770436592)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    file.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {video!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("flags", flags), ("file", file), ("video", video)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.photos.Photo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
                         }
                         return result
                     })
