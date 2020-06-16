@@ -266,6 +266,18 @@ public final class MediaBox {
         }
     }
     
+    public func copyResourceData(from: MediaResourceId, to: MediaResourceId) {
+        if from.isEqual(to: to) {
+            return
+        }
+        self.dataQueue.async {
+            let pathsFrom = self.storePathsForId(from)
+            let pathsTo = self.storePathsForId(to)
+            let _ = try? FileManager.default.copyItem(atPath: pathsFrom.partial, toPath: pathsTo.partial)
+            let _ = try? FileManager.default.copyItem(atPath: pathsFrom.complete, toPath: pathsTo.complete)
+        }
+    }
+    
     private func maybeCopiedPreFetchedResource(completePath: String, resource: MediaResource) {
         if let path = self.preFetchedResourcePath(resource) {
             let _ = try? FileManager.default.copyItem(atPath: path, toPath: completePath)
