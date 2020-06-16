@@ -157,7 +157,6 @@ MediaEngineWebrtc::MediaEngineWebrtc(bool outgoing)
     media_deps.audio_encoder_factory = webrtc::CreateAudioEncoderFactory<webrtc::AudioEncoderOpus>();
     media_deps.audio_decoder_factory = webrtc::CreateAudioDecoderFactory<webrtc::AudioDecoderOpus>();
     
-    //auto video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCVideoEncoderFactoryH264 alloc] init]);
     auto video_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory([[RTCDefaultVideoEncoderFactory alloc] init]);
     int32_t outCodecId = 96;
     std::vector<cricket::VideoCodec> videoCodecs = AssignPayloadTypesAndDefaultCodecs(video_encoder_factory->GetSupportedFormats(), outCodecId);

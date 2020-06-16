@@ -31,8 +31,9 @@ final class CallControllerNode: ASDisplayNode {
     
     private let imageNode: TransformImageNode
     private let dimNode: ASDisplayNode
-    private var videoView: UIView?
-    private var videoViewRequested: Bool = false
+    private var incomingVideoView: UIView?
+    private var outgoingVideoView: UIView?
+    private var videoViewsRequested: Bool = false
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
     private let statusNode: CallControllerStatusNode
@@ -265,16 +266,34 @@ final class CallControllerNode: ASDisplayNode {
                     }
                 }
                 statusReception = reception
-                if !self.videoViewRequested {
-                    self.videoViewRequested = true
-                    self.call.getVideoView(completion: { [weak self] videoView in
+                if !self.videoViewsRequested {
+                    self.videoViewsRequested = true
+                    self.call.makeIncomingVideoView(completion: { [weak self] incomingVideoView in
                         guard let strongSelf = self else {
                             return
                         }
-                        if let videoView = videoView {
+                        if let incomingVideoView = incomingVideoView {
                             strongSelf.setCurrentAudioOutput?(.speaker)
-                            strongSelf.videoView = videoView
-                            strongSelf.containerNode.view.insertSubview(videoView, aboveSubview: strongSelf.dimNode.view)
+                            strongSelf.incomingVideoView = incomingVideoView
+                            strongSelf.containerNode.view.insertSubview(incomingVideoView, aboveSubview: strongSelf.dimNode.view)
+                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                            }
+                        }
+                    })
+                    
+                    self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let outgoingVideoView = outgoingVideoView {
+                            strongSelf.setCurrentAudioOutput?(.speaker)
+                            strongSelf.outgoingVideoView = outgoingVideoView
+                            if let incomingVideoView = strongSelf.incomingVideoView {
+                                strongSelf.containerNode.view.insertSubview(outgoingVideoView, aboveSubview: incomingVideoView)
+                            } else {
+                                strongSelf.containerNode.view.insertSubview(outgoingVideoView, aboveSubview: strongSelf.dimNode.view)
+                            }
                             if let (layout, navigationBarHeight) = strongSelf.validLayout {
                                 strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                             }
@@ -388,8 +407,12 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        if let videoView = self.videoView {
-            videoView.frame = CGRect(origin: CGPoint(), size: layout.size)
+        if let incomingVideoView = self.incomingVideoView {
+            incomingVideoView.frame = CGRect(origin: CGPoint(), size: layout.size)
+        }
+        if let outgoingVideoView = self.outgoingVideoView {
+            let outgoingSize = layout.size.aspectFitted(CGSize(width: 320.0, height: 320.0))
+            outgoingVideoView.frame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - outgoingSize.width, y: layout.size.height - 16.0 - outgoingSize.height), size: outgoingSize)
         }
         
         if let keyPreviewNode = self.keyPreviewNode {

@@ -1,14 +1,19 @@
 #ifndef __TGVOIP_H
 #define __TGVOIP_H
 
-#define TGVOIP_NAMESPACE tgvoip_webrtc
-
 #include <functional>
 #include <vector>
 #include <string>
 #include <memory>
 
-#import "VideoMetalView.h"
+namespace rtc {
+template <typename VideoFrameT>
+class VideoSinkInterface;
+}
+
+namespace webrtc {
+class VideoFrame;
+}
 
 #ifdef TGVOIP_NAMESPACE
 namespace TGVOIP_NAMESPACE {
@@ -131,7 +136,9 @@ public:
             std::vector<TgVoipEndpoint> const &endpoints,
             std::unique_ptr<TgVoipProxy> const &proxy,
             TgVoipNetworkType initialNetworkType,
-            TgVoipEncryptionKey const &encryptionKey
+            TgVoipEncryptionKey const &encryptionKey,
+            std::function<void(TgVoipState)> stateUpdated,
+            std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     );
 
     virtual ~TgVoip();
@@ -141,19 +148,16 @@ public:
     virtual void setAudioOutputGainControlEnabled(bool enabled) = 0;
     virtual void setEchoCancellationStrength(int strength) = 0;
     
-    virtual void AttachVideoView(VideoMetalView *videoView) = 0;
+    virtual void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
+    virtual void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
 
     virtual std::string getLastError() = 0;
     virtual std::string getDebugInfo() = 0;
     virtual int64_t getPreferredRelayId() = 0;
     virtual TgVoipTrafficStats getTrafficStats() = 0;
     virtual TgVoipPersistentState getPersistentState() = 0;
-
-    virtual void setOnStateUpdated(std::function<void(TgVoipState)> onStateUpdated) = 0;
-    virtual void setOnSignalBarsUpdated(std::function<void(int)> onSignalBarsUpdated) = 0;
-    virtual void setOnCandidatesGathered(std::function<void(const std::vector<std::string> &)> onCandidatesGathered) = 0;
     
-    virtual void addRemoteCandidates(const std::vector<std::string> &candidates) = 0;
+    virtual void receiveSignalingData(const std::vector<uint8_t> &data) = 0;
 
     virtual TgVoipFinalState stop() = 0;
 };

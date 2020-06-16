@@ -1,18 +1,8 @@
 #include "Controller.h"
 
 #include "modules/rtp_rtcp/source/rtp_utility.h"
-#include "rtc_base/time_utils.h"
-#include "rtc_base/message_handler.h"
 
 #include <memory>
-
-/*std::map<message::NetworkType, MediaEngineWebrtc::NetworkParams> Controller::network_params = {
-        {message::NetworkType::nGprs, {6, 8, 6, 120, false, false, false}},
-        {message::NetworkType::nEdge, {6, 16, 6, 120, false, false, false}},
-        {message::NetworkType::n3gOrAbove, {6, 32, 16, 60, false, false, false}},
-};
-MediaEngineWebrtc::NetworkParams Controller::default_network_params = {6, 32, 16, 30, false, false, false};
-MediaEngineWebrtc::NetworkParams Controller::datasaving_network_params = {6, 8, 6, 120, false, false, true};*/
 
 Controller::Controller(bool is_outgoing, size_t init_timeout, size_t reconnect_timeout)
 : thread(rtc::Thread::Create())
@@ -20,11 +10,7 @@ Controller::Controller(bool is_outgoing, size_t init_timeout, size_t reconnect_t
 , state(State::Starting)
 , last_recv_time(rtc::TimeMillis())
 , last_send_time(rtc::TimeMillis())
-, is_outgoing(is_outgoing)
-, init_timeout(init_timeout * 1000)
-, reconnect_timeout(reconnect_timeout * 1000)
-, local_datasaving(false)
-, final_datasaving(false)
+, isOutgoing(is_outgoing)
 {
     connector->SignalReadyToSendStateChanged.connect(this, &Controller::WriteableStateChanged);
     connector->SignalPacketReceived.connect(this, &Controller::PacketReceived);
@@ -104,7 +90,6 @@ void Controller::AttachVideoView(rtc::VideoSinkInterface<webrtc::VideoFrame> *si
 }*/
 
 void Controller::SetDataSaving(bool data_saving) {
-    local_datasaving = data_saving;
 }
 
 void Controller::SetMute(bool mute) {

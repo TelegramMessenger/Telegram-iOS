@@ -585,12 +585,23 @@ public final class OngoingCallContext {
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
     
-    public func getVideoView(completion: @escaping (UIView?) -> Void) {
+    public func makeIncomingVideoView(completion: @escaping (UIView?) -> Void) {
         self.withContext { context in
             if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                context.getRemoteCameraView(completion)
+                context.makeIncomingVideoView(completion)
+            } else {
+                completion(nil)
             }
-            completion(nil)
+        }
+    }
+    
+    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
+        self.withContext { context in
+            if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                context.makeOutgoingVideoView(completion)
+            } else {
+                completion(nil)
+            }
         }
     }
 }

@@ -53,13 +53,7 @@ private:
     webrtc::RepeatingTaskHandle repeatable;
     int64_t last_recv_time;
     int64_t last_send_time;
-    const bool is_outgoing;
-    const size_t init_timeout;
-    const size_t reconnect_timeout;
-    bool local_datasaving;
-    bool final_datasaving;
-    //message::NetworkType local_network_type;
-    //message::NetworkType final_network_type;
+    const bool isOutgoing;
 
     void PacketReceived(const rtc::CopyOnWriteBuffer &);
     void WriteableStateChanged(bool);
