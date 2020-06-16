@@ -5,9 +5,9 @@ static_library(
     srcs = glob([
         "Sources/**/*.m",
         "Sources/**/*.mm",
-        "Impl/*.cpp",
-        "Impl/*.mm",
-        "Impl/*.m",
+        "Impl/**/*.cpp",
+        "Impl/**/*.mm",
+        "Impl/**/*.m",
     ]),
     has_cpp = True,
     headers = merge_maps([
@@ -15,7 +15,7 @@ static_library(
             "PublicHeaders/**/*.h",
         ]),
         glob_sub_map("Impl/", [
-            "Impl/*.h",
+            "Impl/**/*.h",
         ]),
     ]),
     exported_headers = glob([
@@ -31,6 +31,8 @@ static_library(
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
+        "-DRTC_ENABLE_VP9",
+        "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
     ],
     deps = [
         "//submodules/MtProtoKit:MtProtoKit#shared",

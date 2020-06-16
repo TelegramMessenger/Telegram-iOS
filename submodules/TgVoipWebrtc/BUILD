@@ -12,10 +12,10 @@ objc_library(
         "Sources/**/*.m",
         "Sources/**/*.mm",
         "Sources/**/*.h",
-        "Impl/*.h",
-        "Impl/*.cpp",
-        "Impl/*.mm",
-        "Impl/*.m",
+        "Impl/**/*.h",
+        "Impl/**/*.cpp",
+        "Impl/**/*.mm",
+        "Impl/**/*.m",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -30,6 +30,8 @@ objc_library(
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
+        "-DRTC_ENABLE_VP9",
+        "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
         "-std=c++14",
     ],
     includes = [

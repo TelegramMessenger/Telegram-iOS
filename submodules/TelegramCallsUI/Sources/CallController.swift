@@ -45,6 +45,8 @@ public final class CallController: ViewController {
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
+    private let idleTimerExtensionDisposable = MetaDisposable()
+    
     public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
         self.account = account
@@ -97,6 +99,7 @@ public final class CallController: ViewController {
         self.disposable?.dispose()
         self.callMutedDisposable?.dispose()
         self.audioOutputStateDisposable?.dispose()
+        self.idleTimerExtensionDisposable.dispose()
     }
     
     private func callStateUpdated(_ callState: PresentationCallState) {
@@ -260,6 +263,14 @@ public final class CallController: ViewController {
             
             self.controllerNode.animateIn()
         }
+        
+        self.idleTimerExtensionDisposable.set(self.sharedContext.applicationBindings.pushIdleTimerExtension())
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.idleTimerExtensionDisposable.set(nil)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

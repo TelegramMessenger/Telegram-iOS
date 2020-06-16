@@ -43,6 +43,29 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         addSubview(lockingView)
         lockingView.frame = bounds
         
+        updateTheme(theme)
+        updateLockness(0)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func updateLockness(_ lockness: CGFloat) {
+        idleView.isHidden = lockness > 0
+        if lockness > 0 && idleView.isAnimationPlaying {
+            idleView.stop()
+        } else if lockness == 0 && !idleView.isAnimationPlaying {
+            idleView.play()
+        }
+        lockingView.isHidden = !idleView.isHidden
+        
+        lockingView.animationProgress = lockness
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        colorCallbacks.removeAll()
+        
         [
             "Rectangle.Заливка 1": theme.chat.inputPanel.panelBackgroundColor,
             "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
@@ -65,24 +88,6 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
             self.colorCallbacks.append(colorCallback)
             lockingView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
         }
-        
-        updateLockness(0)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func updateLockness(_ lockness: CGFloat) {
-        idleView.isHidden = lockness > 0
-        if lockness > 0 && idleView.isAnimationPlaying {
-            idleView.stop()
-        } else if lockness == 0 && !idleView.isAnimationPlaying {
-            idleView.play()
-        }
-        lockingView.isHidden = !idleView.isHidden
-        
-        lockingView.animationProgress = lockness
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
