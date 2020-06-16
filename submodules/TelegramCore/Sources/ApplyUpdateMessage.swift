@@ -6,7 +6,7 @@ import SwiftSignalKit
 import SyncCore
 
 private func copyOrMoveResourceData(from fromResource: MediaResource, to toResource: MediaResource, mediaBox: MediaBox) {
-    if fromResource is CloudFileMediaResource || fromResource is CloudDocumentMediaResource {
+    if fromResource is CloudFileMediaResource || fromResource is CloudDocumentMediaResource || fromResource is SecretFileMediaResource {
         mediaBox.copyResourceData(from: fromResource.id, to: toResource.id)
     } else {
         mediaBox.moveResourceData(from: fromResource.id, to: toResource.id)
