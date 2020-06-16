@@ -13,9 +13,9 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
     private let smallBlob = BlobView(
         pointsCount: 8,
         minRandomness: 0.1,
-        maxRandomness: 1,
+        maxRandomness: 0.5,
         minSpeed: 0.2,
-        maxSpeed: 1,
+        maxSpeed: 0.6,
         minScale: 0.56,
         maxScale: 0.56,
         scaleSpeed: 0
@@ -27,8 +27,8 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         minSpeed: 3,
         maxSpeed: 8,
         minScale: 0.67,
-        maxScale: 0.9,
-        scaleSpeed: 0.1
+        maxScale: 0.8,
+        scaleSpeed: 0.2
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
@@ -38,7 +38,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         maxSpeed: 8,
         minScale: 0.67,
         maxScale: 1,
-        scaleSpeed: 0.1
+        scaleSpeed: 0.2
     )
     
     override init(frame: CGRect) {
