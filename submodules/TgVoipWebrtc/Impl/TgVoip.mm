@@ -11,6 +11,8 @@
 
 #import <Foundation/Foundation.h>
 
+#include <sys/time.h>
+
 #ifndef TGVOIP_USE_CUSTOM_CRYPTO
 /*extern "C" {
 #include <openssl/sha.h>
@@ -79,6 +81,58 @@ CryptoFunctions Layer92::crypto={
 namespace TGVOIP_NAMESPACE {
 #endif
 
+class LogSinkImpl : public rtc::LogSink {
+public:
+    LogSinkImpl() {
+    }
+    virtual ~LogSinkImpl() {
+    }
+    
+    virtual void OnLogMessage(const std::string &msg, rtc::LoggingSeverity severity, const char *tag) override {
+        OnLogMessage(std::string(tag) + ": " + msg);
+    }
+    
+    virtual void OnLogMessage(const std::string &message, rtc::LoggingSeverity severity) override {
+        OnLogMessage(message);
+    }
+    
+    virtual void OnLogMessage(const std::string &message) override {
+        time_t rawTime;
+        time(&rawTime);
+        struct tm timeinfo;
+        localtime_r(&rawTime, &timeinfo);
+        
+        timeval curTime;
+        gettimeofday(&curTime, nullptr);
+        int32_t milliseconds = curTime.tv_usec / 1000;
+        
+        _data << (timeinfo.tm_year + 1900);
+        _data << "-" << (timeinfo.tm_mon + 1);
+        _data << "-" << (timeinfo.tm_mday);
+        _data << " " << timeinfo.tm_hour;
+        _data << ":" << timeinfo.tm_min;
+        _data << ":" << timeinfo.tm_sec;
+        _data << ":" << milliseconds;
+        _data << " " << message;
+    }
+    
+public:
+    std::ostringstream _data;
+};
+
+static rtc::Thread *makeManagerThread() {
+    static std::unique_ptr<rtc::Thread> value = rtc::Thread::Create();
+    value->SetName("WebRTC-Manager", nullptr);
+    value->Start();
+    return value.get();
+}
+
+
+static rtc::Thread *getManagerThread() {
+    static rtc::Thread *value = makeManagerThread();
+    return value;
+}
+
 class TgVoipImpl : public TgVoip, public sigslot::has_slots<> {
 public:
     TgVoipImpl(
@@ -98,13 +152,15 @@ public:
             rtc::LogMessage::LogToDebug(rtc::LS_INFO);
             rtc::LogMessage::SetLogToStderr(true);
         });
+        rtc::LogMessage::AddLogToStream(&_logSink, rtc::LS_INFO);
         
-        _managerThread = rtc::Thread::Create();
-        _managerThread->Start();
-        _manager.reset(new ThreadLocalObject<Manager>(_managerThread.get(), [managerThreadPtr = _managerThread.get(), encryptionKey = encryptionKey, stateUpdated, signalingDataEmitted](){
+        bool enableP2P = config.enableP2P;
+        
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, signalingDataEmitted](){
             return new Manager(
-                managerThreadPtr,
+                getManagerThread(),
                 encryptionKey,
+                enableP2P,
                 [stateUpdated](const TgVoipState &state) {
                     stateUpdated(state);
                 },
@@ -119,6 +175,7 @@ public:
     }
 
     ~TgVoipImpl() override {
+        rtc::LogMessage::RemoveLogToStream(&_logSink);
     }
     
     void receiveSignalingData(const std::vector<uint8_t> &data) override {
@@ -179,13 +236,13 @@ public:
         //controller_->SetMute(muteMicrophone);
     }
     
-    void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
+    void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
         _manager->perform([sink](Manager *manager) {
             manager->setIncomingVideoOutput(sink);
         });
     }
     
-    void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
+    void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
         _manager->perform([sink](Manager *manager) {
             manager->setOutgoingVideoOutput(sink);
         });
@@ -218,8 +275,9 @@ public:
     }
 
     TgVoipFinalState stop() override {
-        TgVoipFinalState finalState = {
-        };
+        TgVoipFinalState finalState;
+        finalState.debugLog = _logSink._data.str();
+        finalState.isRatingSuggested = false;
 
         return finalState;
     }
@@ -253,10 +311,11 @@ public:
     }*/
 
 private:
-    std::unique_ptr<rtc::Thread> _managerThread;
     std::unique_ptr<ThreadLocalObject<Manager>> _manager;
     std::function<void(TgVoipState)> _stateUpdated;
     std::function<void(const std::vector<uint8_t> &)> _signalingDataEmitted;
+    
+    LogSinkImpl _logSink;
 };
 
 std::function<void(std::string const &)> globalLoggingFunction;

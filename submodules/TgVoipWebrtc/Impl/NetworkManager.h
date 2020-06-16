@@ -40,6 +40,7 @@ public:
     NetworkManager(
         rtc::Thread *thread,
         TgVoipEncryptionKey encryptionKey,
+        bool enableP2P,
         std::function<void (const NetworkManager::State &)> stateUpdated,
         std::function<void (const rtc::CopyOnWriteBuffer &)> packetReceived,
         std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted

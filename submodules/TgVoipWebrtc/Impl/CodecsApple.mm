@@ -98,6 +98,8 @@
 
 - (void)dealloc {
     assert([NSThread isMainThread]);
+    
+    [_videoCapturer stopCapture];
 }
 
 @end

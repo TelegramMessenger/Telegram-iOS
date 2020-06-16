@@ -137,6 +137,19 @@ static absl::optional<cricket::VideoCodec> selectVideoCodec(std::vector<cricket:
     return absl::optional<cricket::VideoCodec>();
 }
 
+static rtc::Thread *makeWorkerThread() {
+    static std::unique_ptr<rtc::Thread> value = rtc::Thread::Create();
+    value->SetName("WebRTC-Worker", nullptr);
+    value->Start();
+    return value.get();
+}
+
+
+static rtc::Thread *getWorkerThread() {
+    static rtc::Thread *value = makeWorkerThread();
+    return value;
+}
+
 MediaManager::MediaManager(
     rtc::Thread *thread,
     bool isOutgoing,
@@ -145,8 +158,7 @@ MediaManager::MediaManager(
 _packetEmitted(packetEmitted),
 _thread(thread),
 _eventLog(std::make_unique<webrtc::RtcEventLogNull>()),
-_taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()),
-_workerThread(rtc::Thread::Create()) {
+_taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _ssrcAudio.incoming = isOutgoing ? ssrcAudioIncoming : ssrcAudioOutgoing;
     _ssrcAudio.outgoing = (!isOutgoing) ? ssrcAudioIncoming : ssrcAudioOutgoing;
     _ssrcVideo.incoming = isOutgoing ? ssrcVideoIncoming : ssrcVideoOutgoing;
@@ -154,8 +166,6 @@ _workerThread(rtc::Thread::Create()) {
     
     _audioNetworkInterface = std::unique_ptr<MediaManager::NetworkInterfaceImpl>(new MediaManager::NetworkInterfaceImpl(this, false));
     _videoNetworkInterface = std::unique_ptr<MediaManager::NetworkInterfaceImpl>(new MediaManager::NetworkInterfaceImpl(this, true));
-    
-    _workerThread->Start();
     
     webrtc::field_trial::InitFieldTrialsFromString(
         "WebRTC-Audio-SendSideBwe/Enabled/"
@@ -238,7 +248,7 @@ _workerThread(rtc::Thread::Create()) {
     
     auto videoCodec = selectVideoCodec(videoCodecs);
     if (videoCodec.has_value()) {
-        _nativeVideoSource = makeVideoSource(_thread, _workerThread.get());
+        _nativeVideoSource = makeVideoSource(_thread, getWorkerThread());
         
         auto codec = videoCodec.value();
         
@@ -285,6 +295,14 @@ MediaManager::~MediaManager() {
     
     _audioChannel->RemoveRecvStream(_ssrcAudio.incoming);
     _audioChannel->RemoveSendStream(_ssrcAudio.outgoing);
+    
+    _audioChannel->SetInterface(nullptr, webrtc::MediaTransportConfig());
+    
+    _videoChannel->RemoveRecvStream(_ssrcVideo.incoming);
+    _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
+    
+    _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, nullptr);
+    _videoChannel->SetInterface(nullptr, webrtc::MediaTransportConfig());
 }
 
 void MediaManager::setIsConnected(bool isConnected) {

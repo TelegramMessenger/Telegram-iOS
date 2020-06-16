@@ -52,6 +52,14 @@ public:
         });
     }
     
+    template <class FunctorT>
+    void performSync(FunctorT&& functor) {
+        _thread->Invoke<void>(RTC_FROM_HERE, [this, f = std::forward<FunctorT>(functor)](){
+            assert(_valueHolder->_value != nullptr);
+            f(_valueHolder->_value.get());
+        });
+    }
+    
 private:
     rtc::Thread *_thread;
     ValueHolder<T> *_valueHolder;

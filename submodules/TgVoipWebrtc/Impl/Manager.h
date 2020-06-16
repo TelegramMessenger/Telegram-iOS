@@ -15,6 +15,7 @@ public:
     Manager(
         rtc::Thread *thread,
         TgVoipEncryptionKey encryptionKey,
+        bool enableP2P,
         std::function<void (const TgVoipState &)> stateUpdated,
         std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted
     );
@@ -28,8 +29,7 @@ public:
 private:
     rtc::Thread *_thread;
     TgVoipEncryptionKey _encryptionKey;
-    std::unique_ptr<rtc::Thread> _networkThread;
-    std::unique_ptr<rtc::Thread> _mediaThread;
+    bool _enableP2P;
     std::function<void (const TgVoipState &)> _stateUpdated;
     std::function<void (const std::vector<uint8_t> &)> _signalingDataEmitted;
     std::unique_ptr<ThreadLocalObject<NetworkManager>> _networkManager;

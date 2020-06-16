@@ -72,7 +72,6 @@ private:
     rtc::Thread *_thread;
     std::unique_ptr<webrtc::RtcEventLogNull> _eventLog;
     std::unique_ptr<webrtc::TaskQueueFactory> _taskQueueFactory;
-    std::unique_ptr<rtc::Thread> _workerThread;
     
     SSRC _ssrcAudio;
     SSRC _ssrcVideo;

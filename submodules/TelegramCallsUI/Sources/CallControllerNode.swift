@@ -287,6 +287,9 @@ final class CallControllerNode: ASDisplayNode {
                             return
                         }
                         if let outgoingVideoView = outgoingVideoView {
+                            outgoingVideoView.backgroundColor = .black
+                            outgoingVideoView.clipsToBounds = true
+                            outgoingVideoView.layer.cornerRadius = 16.0
                             strongSelf.setCurrentAudioOutput?(.speaker)
                             strongSelf.outgoingVideoView = outgoingVideoView
                             if let incomingVideoView = strongSelf.incomingVideoView {
@@ -407,14 +410,6 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        if let incomingVideoView = self.incomingVideoView {
-            incomingVideoView.frame = CGRect(origin: CGPoint(), size: layout.size)
-        }
-        if let outgoingVideoView = self.outgoingVideoView {
-            let outgoingSize = layout.size.aspectFitted(CGSize(width: 320.0, height: 320.0))
-            outgoingVideoView.frame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - outgoingSize.width, y: layout.size.height - 16.0 - outgoingSize.height), size: outgoingSize)
-        }
-        
         if let keyPreviewNode = self.keyPreviewNode {
             transition.updateFrame(node: keyPreviewNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             keyPreviewNode.updateLayout(size: layout.size, transition: .immediate)
@@ -468,7 +463,16 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
-        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        let buttonsOriginY: CGFloat = layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom
+        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        
+        if let incomingVideoView = self.incomingVideoView {
+            incomingVideoView.frame = CGRect(origin: CGPoint(), size: layout.size)
+        }
+        if let outgoingVideoView = self.outgoingVideoView {
+            let outgoingSize = layout.size.aspectFitted(CGSize(width: 200.0, height: 200.0))
+            outgoingVideoView.frame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - outgoingSize.width, y: buttonsOriginY - 32.0 - outgoingSize.height), size: outgoingSize)
+        }
         
         let keyTextSize = self.keyButtonNode.frame.size
         transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))
@@ -485,7 +489,8 @@ final class CallControllerNode: ASDisplayNode {
                     self?.backPressed()
                 }
             })
-            self.containerNode.insertSubnode(keyPreviewNode, aboveSubnode: self.dimNode)
+            
+            self.containerNode.insertSubnode(keyPreviewNode, belowSubnode: self.statusNode)
             self.keyPreviewNode = keyPreviewNode
             
             if let (validLayout, _) = self.validLayout {

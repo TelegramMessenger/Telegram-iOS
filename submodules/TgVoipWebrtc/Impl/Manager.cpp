@@ -4,22 +4,45 @@
 namespace TGVOIP_NAMESPACE {
 #endif
 
+static rtc::Thread *makeNetworkThread() {
+    static std::unique_ptr<rtc::Thread> value = rtc::Thread::CreateWithSocketServer();
+    value->SetName("WebRTC-Network", nullptr);
+    value->Start();
+    return value.get();
+}
+
+
+static rtc::Thread *getNetworkThread() {
+    static rtc::Thread *value = makeNetworkThread();
+    return value;
+}
+
+static rtc::Thread *makeMediaThread() {
+    static std::unique_ptr<rtc::Thread> value = rtc::Thread::Create();
+    value->SetName("WebRTC-Media", nullptr);
+    value->Start();
+    return value.get();
+}
+
+
+static rtc::Thread *getMediaThread() {
+    static rtc::Thread *value = makeMediaThread();
+    return value;
+}
+
 Manager::Manager(
     rtc::Thread *thread,
     TgVoipEncryptionKey encryptionKey,
+    bool enableP2P,
     std::function<void (const TgVoipState &)> stateUpdated,
     std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted
 ) :
 _thread(thread),
 _encryptionKey(encryptionKey),
-_networkThread(rtc::Thread::CreateWithSocketServer()),
-_mediaThread(rtc::Thread::Create()),
+_enableP2P(enableP2P),
 _stateUpdated(stateUpdated),
 _signalingDataEmitted(signalingDataEmitted) {
     assert(_thread->IsCurrent());
-    
-    _networkThread->Start();
-    _mediaThread->Start();
 }
 
 Manager::~Manager() {
@@ -28,10 +51,11 @@ Manager::~Manager() {
 
 void Manager::start() {
     auto weakThis = std::weak_ptr<Manager>(shared_from_this());
-    _networkManager.reset(new ThreadLocalObject<NetworkManager>(_networkThread.get(), [networkThreadPtr = _networkThread.get(), encryptionKey = _encryptionKey, thread = _thread, weakThis]() {
+    _networkManager.reset(new ThreadLocalObject<NetworkManager>(getNetworkThread(), [encryptionKey = _encryptionKey, enableP2P = _enableP2P, thread = _thread, weakThis]() {
         return new NetworkManager(
-            networkThreadPtr,
+            getNetworkThread(),
             encryptionKey,
+            enableP2P,
             [thread, weakThis](const NetworkManager::State &state) {
                 thread->Invoke<void>(RTC_FROM_HERE, [weakThis, state]() {
                     auto strongThis = weakThis.lock();
@@ -74,9 +98,9 @@ void Manager::start() {
         );
     }));
     bool isOutgoing = _encryptionKey.isOutgoing;
-    _mediaManager.reset(new ThreadLocalObject<MediaManager>(_mediaThread.get(), [mediaThreadPtr = _mediaThread.get(), isOutgoing, thread = _thread, weakThis]() {
+    _mediaManager.reset(new ThreadLocalObject<MediaManager>(getMediaThread(), [isOutgoing, thread = _thread, weakThis]() {
         return new MediaManager(
-            mediaThreadPtr,
+            getMediaThread(),
             isOutgoing,
             [thread, weakThis](const rtc::CopyOnWriteBuffer &packet) {
                 thread->PostTask(RTC_FROM_HERE, [weakThis, packet]() {
