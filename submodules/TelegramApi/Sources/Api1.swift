@@ -3265,7 +3265,7 @@ public extension Api {
     }
     public enum Photo: TypeConstructorDescription {
         case photoEmpty(id: Int64)
-        case photo(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, sizes: [Api.PhotoSize], dcId: Int32)
+        case photo(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, sizes: [Api.PhotoSize], videoSizes: [Api.VideoSize]?, dcId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -3275,9 +3275,9 @@ public extension Api {
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     break
-                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let dcId):
+                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let videoSizes, let dcId):
                     if boxed {
-                        buffer.appendInt32(-797637467)
+                        buffer.appendInt32(-82216347)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -3289,6 +3289,11 @@ public extension Api {
                     for item in sizes {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(videoSizes!.count))
+                    for item in videoSizes! {
+                        item.serialize(buffer, true)
+                    }}
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     break
     }
@@ -3298,8 +3303,8 @@ public extension Api {
         switch self {
                 case .photoEmpty(let id):
                 return ("photoEmpty", [("id", id)])
-                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let dcId):
-                return ("photo", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("sizes", sizes), ("dcId", dcId)])
+                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let videoSizes, let dcId):
+                return ("photo", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("sizes", sizes), ("videoSizes", videoSizes), ("dcId", dcId)])
     }
     }
     
@@ -3329,17 +3334,22 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
             }
-            var _7: Int32?
-            _7 = reader.readInt32()
+            var _7: [Api.VideoSize]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.VideoSize.self)
+            } }
+            var _8: Int32?
+            _8 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.Photo.photo(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, sizes: _6!, dcId: _7!)
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Photo.photo(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, sizes: _6!, videoSizes: _7, dcId: _8!)
             }
             else {
                 return nil
@@ -15070,32 +15080,36 @@ public extension Api {
     
     }
     public enum PeerSettings: TypeConstructorDescription {
-        case peerSettings(flags: Int32)
+        case peerSettings(flags: Int32, geoDistance: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerSettings(let flags):
+                case .peerSettings(let flags, let geoDistance):
                     if boxed {
-                        buffer.appendInt32(-2122045747)
+                        buffer.appendInt32(1933519201)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(geoDistance!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerSettings(let flags):
-                return ("peerSettings", [("flags", flags)])
+                case .peerSettings(let flags, let geoDistance):
+                return ("peerSettings", [("flags", flags), ("geoDistance", geoDistance)])
     }
     }
     
         public static func parse_peerSettings(_ reader: BufferReader) -> PeerSettings? {
             var _1: Int32?
             _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 6) != 0 {_2 = reader.readInt32() }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PeerSettings.peerSettings(flags: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2)
             }
             else {
                 return nil

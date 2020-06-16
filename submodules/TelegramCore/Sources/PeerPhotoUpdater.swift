@@ -15,8 +15,8 @@ public enum UploadPeerPhotoError {
     case generic
 }
 
-public func updateAccountPhoto(account: Account, resource: MediaResource?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: account.peerId, photo: resource.flatMap({ uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: $0) }), mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+public func updateAccountPhoto(account: Account, resource: MediaResource?, videoResource: MediaResource?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+    return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: account.peerId, photo: resource.flatMap({ uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: $0) }), video: videoResource.flatMap({ uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: $0) |> map(Optional.init) }), mapResourceToAvatarSizes: mapResourceToAvatarSizes)
 }
 
 public struct UploadedPeerPhotoData {
@@ -39,16 +39,26 @@ public func uploadedPeerPhoto(postbox: Postbox, network: Network, resource: Medi
     }
 }
 
-public func updatePeerPhoto(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peerId: PeerId, photo: Signal<UploadedPeerPhotoData, NoError>?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-    return updatePeerPhotoInternal(postbox: postbox, network: network, stateManager: stateManager, accountPeerId: accountPeerId, peer: postbox.loadedPeerWithId(peerId), photo: photo, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+public func uploadedPeerVideo(postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
+    return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false)
+    |> map { result -> UploadedPeerPhotoData in
+        return UploadedPeerPhotoData(resource: resource, content: .result(result))
+    }
+    |> `catch` { _ -> Signal<UploadedPeerPhotoData, NoError> in
+        return .single(UploadedPeerPhotoData(resource: resource, content: .error))
+    }
+}
+
+public func updatePeerPhoto(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peerId: PeerId, photo: Signal<UploadedPeerPhotoData, NoError>?, video: Signal<UploadedPeerPhotoData?, NoError>? = nil, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+    return updatePeerPhotoInternal(postbox: postbox, network: network, stateManager: stateManager, accountPeerId: accountPeerId, peer: postbox.loadedPeerWithId(peerId), photo: photo, video: video, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
 }
     
-public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peer: Signal<Peer, NoError>, photo: Signal<UploadedPeerPhotoData, NoError>?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peer: Signal<Peer, NoError>, photo: Signal<UploadedPeerPhotoData, NoError>?, video: Signal<UploadedPeerPhotoData?, NoError>?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
     return peer
     |> mapError { _ in return .generic }
     |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
         if let photo = photo {
-            return photo
+            let mappedPhoto = photo
             |> take(until: { value in
                 if case let .result(resultData) = value.content, case .inputFile = resultData {
                     return SignalTakeAction(passthrough: true, complete: true)
@@ -56,18 +66,62 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                     return SignalTakeAction(passthrough: true, complete: false)
                 }
             })
+            
+            let mappedVideo: Signal<UploadedPeerPhotoData?, NoError>
+            if let video = video {
+                mappedVideo = video
+                |> take(until: { value in
+                    if case let .result(resultData) = value?.content, case .inputFile = resultData {
+                        return SignalTakeAction(passthrough: true, complete: true)
+                    } else {
+                        return SignalTakeAction(passthrough: true, complete: false)
+                    }
+                })
+            } else {
+                mappedVideo = .single(nil)
+            }
+            
+            return combineLatest(mappedPhoto, mappedVideo)
             |> mapError { _ -> UploadPeerPhotoError in return .generic }
-            |> mapToSignal { result -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
-                switch result.content {
+            |> mapToSignal { photoResult, videoResult -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
+                switch photoResult.content {
                     case .error:
                         return .fail(.generic)
                     case let .result(resultData):
                         switch resultData {
                             case let .progress(progress):
-                                return .single((.progress(progress), result.resource))
+                                var mappedProgress = progress
+                                if let _ = videoResult {
+                                    mappedProgress *= 0.2
+                                }
+                                return .single((.progress(mappedProgress), photoResult.resource))
                             case let .inputFile(file):
                                 if peer is TelegramUser {
-                                    return network.request(Api.functions.photos.uploadProfilePhoto(file: file))
+                                    var videoFile: Api.InputFile?
+                                    if let videoResult = videoResult {
+                                        switch videoResult.content {
+                                            case .error:
+                                                return .fail(.generic)
+                                            case let .result(resultData):
+                                                switch resultData {
+                                                    case let .progress(progress):
+                                                        let mappedProgress = 0.2 + progress * 0.8
+                                                        return .single((.progress(mappedProgress), photoResult.resource))
+                                                    case let .inputFile(file):
+                                                        videoFile = file
+                                                        break
+                                                    default:
+                                                        return .fail(.generic)
+                                                }
+                                        }
+                                    }
+                                    
+                                    var flags: Int32 = 0
+                                    if let _ = videoFile {
+                                        flags |= (1 << 0)
+                                    }
+                                    
+                                    return network.request(Api.functions.photos.uploadProfilePhoto(flags: flags, file: file, video: videoFile))
                                     |> mapError { _ in return UploadPeerPhotoError.generic }
                                     |> mapToSignal { photo -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                                         var representations: [TelegramMediaImageRepresentation] = []
@@ -76,7 +130,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                             switch apiPhoto {
                                                 case .photoEmpty:
                                                     break
-                                                case let .photo(_, _, _, _, _, sizes, dcId):
+                                                case let .photo(_, _, _, _, _, sizes, videoSizes, dcId):
                                                     var sizes = sizes
                                                     if sizes.count == 3 {
                                                         sizes.remove(at: 1)
@@ -93,7 +147,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                         }
                                                     }
                                                     
-                                                    if let resource = result.resource as? LocalFileReferenceMediaResource {
+                                                    if let resource = photoResult.resource as? LocalFileReferenceMediaResource {
                                                         if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
                                                             for representation in representations {
                                                                 postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
@@ -113,8 +167,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                     }
                                                 })
                                             }
-                                            return (.complete(representations), result.resource)
-                                            
+                                            return (.complete(representations), photoResult.resource)
                                         } |> mapError {_ in return UploadPeerPhotoError.generic}
                                     }
                                 } else {
@@ -136,7 +189,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                             return .fail(.generic)
                                         }
                                         
-                                        return mapResourceToAvatarSizes(result.resource, groupOrChannel.profileImageRepresentations)
+                                        return mapResourceToAvatarSizes(photoResult.resource, groupOrChannel.profileImageRepresentations)
                                         |> castError(UploadPeerPhotoError.self)
                                         |> mapToSignal { generatedData -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                                             stateManager?.addUpdates(updates)
@@ -153,7 +206,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                 updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                                     return updated
                                                 })
-                                                return (.complete(groupOrChannel.profileImageRepresentations), result.resource)
+                                                return (.complete(groupOrChannel.profileImageRepresentations), photoResult.resource)
                                             }
                                             |> mapError { _ in return .generic }
                                         }

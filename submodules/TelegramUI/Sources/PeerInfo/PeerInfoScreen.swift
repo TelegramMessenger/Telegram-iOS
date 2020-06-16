@@ -429,7 +429,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
-        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), isScheduledMessages: false)
+        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), isScheduledMessages: false, peerNearbyData: nil)
         let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -560,7 +560,7 @@ private final class PeerInfoInteraction {
 
 private let enabledBioEntities: EnabledEntityTypes = [.url, .mention, .hashtag]
 
-private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeer: Bool, callMessages: [Message]) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, callMessages: [Message]) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -619,7 +619,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }))
             }
         }
-        if nearbyPeer {
+        if let nearbyPeerDistance = nearbyPeerDistance {
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
                 interaction.openChat()
             }))
@@ -1071,7 +1071,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         selectedMessageIds: nil,
         updatingAvatar: nil
     )
-    private let nearbyPeer: Bool
+    private let nearbyPeerDistance: Int32?
     private var dataDisposable: Disposable?
     
     private let activeActionDisposable = MetaDisposable()
@@ -1091,13 +1091,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message], ignoreGroupInCommon: PeerId?) {
+    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], ignoreGroupInCommon: PeerId?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.nearbyPeer = nearbyPeer
+        self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
         self.isMediaOnly = context.account.peerId == peerId
         
@@ -2714,7 +2714,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChat() {
         if let navigationController = self.controller?.navigationController as? NavigationController {
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId)))
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
         }
     }
     
@@ -3828,7 +3828,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var validRegularSections: [AnyHashable] = []
         if !self.isMediaOnly {
-            for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages) {
+            for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages) {
                 validRegularSections.append(sectionId)
                 
                 let sectionNode: PeerInfoScreenItemSectionContainerNode
@@ -4275,7 +4275,7 @@ public final class PeerInfoScreen: ViewController {
     private let peerId: PeerId
     private let avatarInitiallyExpanded: Bool
     private let isOpenedFromChat: Bool
-    private let nearbyPeer: Bool
+    private let nearbyPeerDistance: Int32?
     private let callMessages: [Message]
     private let ignoreGroupInCommon: PeerId?
     
@@ -4293,12 +4293,12 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message], ignoreGroupInCommon: PeerId? = nil) {
+    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], ignoreGroupInCommon: PeerId? = nil) {
         self.context = context
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
-        self.nearbyPeer = nearbyPeer
+        self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
         self.ignoreGroupInCommon = ignoreGroupInCommon
         
@@ -4371,7 +4371,7 @@ public final class PeerInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages, ignoreGroupInCommon: self.ignoreGroupInCommon)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, ignoreGroupInCommon: self.ignoreGroupInCommon)
         
         self._ready.set(self.controllerNode.ready.get())
         

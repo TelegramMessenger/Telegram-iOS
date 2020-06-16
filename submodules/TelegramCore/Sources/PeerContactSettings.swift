@@ -7,8 +7,8 @@ import SyncCore
 extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {
         switch apiSettings {
-            case let .peerSettings(flags):
-                var result = PeerStatusSettings()
+            case let .peerSettings(flags, geoDistance):
+                var result = PeerStatusSettings.Flags()
                 if (flags & (1 << 1)) != 0 {
                     result.insert(.canAddContact)
                 }
@@ -27,7 +27,7 @@ extension PeerStatusSettings {
                 if (flags & (1 << 5)) != 0 {
                     result.insert(.canReportIrrelevantGeoLocation)
                 }
-                self = result
+                self = PeerStatusSettings(flags: result, geoDistance: geoDistance)
         }
     }
 }

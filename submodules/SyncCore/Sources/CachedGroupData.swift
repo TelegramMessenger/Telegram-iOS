@@ -105,8 +105,10 @@ public final class CachedGroupData: CachedPeerData {
         self.participants = participants
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
-        if let value = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerStatusSettings = PeerStatusSettings(rawValue: value)
+        if let legacyValue = decoder.decodeOptionalInt32ForKey("pcs") {
+            self.peerStatusSettings = PeerStatusSettings(flags: PeerStatusSettings.Flags(rawValue: legacyValue), geoDistance: nil)
+        } else if let peerStatusSettings = decoder.decodeObjectForKey("pss", decoder: { PeerStatusSettings(decoder: $0) }) as? PeerStatusSettings {
+            self.peerStatusSettings = peerStatusSettings
         } else {
             self.peerStatusSettings = nil
         }
@@ -153,9 +155,9 @@ public final class CachedGroupData: CachedPeerData {
         }
         encoder.encodeObjectArray(self.botInfos, forKey: "b")
         if let peerStatusSettings = self.peerStatusSettings {
-            encoder.encodeInt32(peerStatusSettings.rawValue, forKey: "pcs")
+            encoder.encodeObject(peerStatusSettings, forKey: "pss")
         } else {
-            encoder.encodeNil(forKey: "pcs")
+            encoder.encodeNil(forKey: "pss")
         }
         if let pinnedMessageId = self.pinnedMessageId {
             encoder.encodeInt64(pinnedMessageId.peerId.toInt64(), forKey: "pm.p")

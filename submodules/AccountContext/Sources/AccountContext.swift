@@ -202,6 +202,18 @@ public final class ChatPeekTimeout {
     }
 }
 
+public final class ChatPeerNearbyData: Equatable {
+    public static func == (lhs: ChatPeerNearbyData, rhs: ChatPeerNearbyData) -> Bool {
+        return lhs.distance == rhs.distance
+    }
+    
+    public let distance: Int32
+    
+    public init(distance: Int32) {
+        self.distance = distance
+    }
+}
+
 public final class NavigateToChatControllerParams {
     public let navigationController: NavigationController
     public let chatController: ChatController?
@@ -217,12 +229,13 @@ public final class NavigateToChatControllerParams {
     public let scrollToEndIfExists: Bool
     public let activateMessageSearch: Bool
     public let peekData: ChatPeekTimeout?
+    public let peerNearbyData: ChatPeerNearbyData?
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: Bool = false, peekData: ChatPeekTimeout? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: Bool = false, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.context = context
@@ -237,6 +250,7 @@ public final class NavigateToChatControllerParams {
         self.scrollToEndIfExists = scrollToEndIfExists
         self.activateMessageSearch = activateMessageSearch
         self.peekData = peekData
+        self.peerNearbyData = peerNearbyData
         self.animated = animated
         self.options = options
         self.parentGroupId = parentGroupId
@@ -275,7 +289,7 @@ public enum DeviceContactInfoSubject {
 public enum PeerInfoControllerMode {
     case generic
     case calls(messages: [Message])
-    case nearbyPeer
+    case nearbyPeer(distance: Int32)
     case group(PeerId)
 }
 
