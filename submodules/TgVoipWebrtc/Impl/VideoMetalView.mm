@@ -23,26 +23,22 @@
 
 class VideoRendererAdapterImpl : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
  public:
-    VideoRendererAdapterImpl(VideoMetalView *adapter) {
-        adapter_ = adapter;
-        size_ = CGSizeZero;
+    VideoRendererAdapterImpl(void (^frameReceived)(CGSize, RTCVideoFrame *)) {
+        _frameReceived = [frameReceived copy];
     }
     
     void OnFrame(const webrtc::VideoFrame& nativeVideoFrame) override {
         RTCVideoFrame* videoFrame = NativeToObjCVideoFrame(nativeVideoFrame);
         
-        CGSize current_size = (videoFrame.rotation % 180 == 0) ? CGSizeMake(videoFrame.width, videoFrame.height) : CGSizeMake(videoFrame.height, videoFrame.width);
+        CGSize currentSize = (videoFrame.rotation % 180 == 0) ? CGSizeMake(videoFrame.width, videoFrame.height) : CGSizeMake(videoFrame.height, videoFrame.width);
         
-        if (!CGSizeEqualToSize(size_, current_size)) {
-            size_ = current_size;
-            [adapter_ setSize:size_];
+        if (_frameReceived) {
+            _frameReceived(currentSize, videoFrame);
         }
-        [adapter_ renderFrame:videoFrame];
     }
     
 private:
-    __weak VideoMetalView *adapter_;
-    CGSize size_;
+    void (^_frameReceived)(CGSize, RTCVideoFrame *);
 };
 
 @interface VideoMetalView () <MTKViewDelegate> {
@@ -54,7 +50,8 @@ private:
     CGSize _videoFrameSize;
     int64_t _lastFrameTimeNs;
     
-    std::unique_ptr<VideoRendererAdapterImpl> _sink;
+    CGSize _currentSize;
+    std::shared_ptr<VideoRendererAdapterImpl> _sink;
 }
 
 @end
@@ -66,7 +63,23 @@ private:
     if (self) {
         [self configure];
         
-        _sink.reset(new VideoRendererAdapterImpl(self));
+        _currentSize = CGSizeZero;
+        
+        __weak VideoMetalView *weakSelf = self;
+        _sink.reset(new VideoRendererAdapterImpl(^(CGSize size, RTCVideoFrame *videoFrame) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                __strong VideoMetalView *strongSelf = weakSelf;
+                if (strongSelf == nil) {
+                    return;
+                }
+                if (!CGSizeEqualToSize(size, strongSelf->_currentSize)) {
+                    strongSelf->_currentSize = size;
+                    [strongSelf setSize:size];
+                }
+                
+                [strongSelf renderFrame:videoFrame];
+            });
+        }));
     }
     return self;
 }
@@ -239,23 +252,19 @@ private:
 #pragma mark - RTCVideoRenderer
 
 - (void)setSize:(CGSize)size {
-    __weak VideoMetalView *weakSelf = self;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        __strong VideoMetalView *strongSelf = weakSelf;
-        if (strongSelf == nil) {
-            return;
-        }
-        
-        strongSelf->_videoFrameSize = size;
-        CGSize drawableSize = [strongSelf drawableSize];
-        
-        strongSelf->_metalView.drawableSize = drawableSize;
-        [strongSelf setNeedsLayout];
-        //[strongSelf.delegate videoView:self didChangeVideoSize:size];
-    });
+    assert([NSThread isMainThread]);
+           
+   _videoFrameSize = size;
+   CGSize drawableSize = [self drawableSize];
+   
+   _metalView.drawableSize = drawableSize;
+   [self setNeedsLayout];
+   //[strongSelf.delegate videoView:self didChangeVideoSize:size];
 }
 
 - (void)renderFrame:(nullable RTCVideoFrame *)frame {
+    assert([NSThread isMainThread]);
+               
     if (!self.isEnabled) {
         return;
     }
@@ -267,12 +276,10 @@ private:
     _videoFrame = frame;
 }
 
-- (void)addToTrack:(rtc::scoped_refptr<webrtc::VideoTrackInterface>)track {
-    track->AddOrUpdateSink(_sink.get(), rtc::VideoSinkWants());
-}
-
-- (rtc::VideoSinkInterface<webrtc::VideoFrame> *)getSink {
-    return _sink.get();
+- (std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>>)getSink {
+    assert([NSThread isMainThread]);
+    
+    return _sink;
 }
 
 @end

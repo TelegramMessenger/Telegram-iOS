@@ -76,7 +76,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (void)setIsMuted:(bool)isMuted;
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
-- (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion;
+- (void)makeIncomingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion;
+- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion;
 - (void)addSignalingData:(NSData * _Nonnull)data;
 
 @end

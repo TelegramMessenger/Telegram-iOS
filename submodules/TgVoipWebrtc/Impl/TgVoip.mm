@@ -2,10 +2,16 @@
 
 #include "TgVoip.h"
 
-#include "Controller.h"
+#include "rtc_base/logging.h"
+
+#include "Manager.h"
 
 #include <stdarg.h>
 #include <iostream>
+
+#import <Foundation/Foundation.h>
+
+#include <sys/time.h>
 
 #ifndef TGVOIP_USE_CUSTOM_CRYPTO
 /*extern "C" {
@@ -75,10 +81,59 @@ CryptoFunctions Layer92::crypto={
 namespace TGVOIP_NAMESPACE {
 #endif
 
+class LogSinkImpl : public rtc::LogSink {
+public:
+    LogSinkImpl() {
+    }
+    virtual ~LogSinkImpl() {
+    }
+    
+    virtual void OnLogMessage(const std::string &msg, rtc::LoggingSeverity severity, const char *tag) override {
+        OnLogMessage(std::string(tag) + ": " + msg);
+    }
+    
+    virtual void OnLogMessage(const std::string &message, rtc::LoggingSeverity severity) override {
+        OnLogMessage(message);
+    }
+    
+    virtual void OnLogMessage(const std::string &message) override {
+        time_t rawTime;
+        time(&rawTime);
+        struct tm timeinfo;
+        localtime_r(&rawTime, &timeinfo);
+        
+        timeval curTime;
+        gettimeofday(&curTime, nullptr);
+        int32_t milliseconds = curTime.tv_usec / 1000;
+        
+        _data << (timeinfo.tm_year + 1900);
+        _data << "-" << (timeinfo.tm_mon + 1);
+        _data << "-" << (timeinfo.tm_mday);
+        _data << " " << timeinfo.tm_hour;
+        _data << ":" << timeinfo.tm_min;
+        _data << ":" << timeinfo.tm_sec;
+        _data << ":" << milliseconds;
+        _data << " " << message;
+    }
+    
+public:
+    std::ostringstream _data;
+};
+
+static rtc::Thread *makeManagerThread() {
+    static std::unique_ptr<rtc::Thread> value = rtc::Thread::Create();
+    value->SetName("WebRTC-Manager", nullptr);
+    value->Start();
+    return value.get();
+}
+
+
+static rtc::Thread *getManagerThread() {
+    static rtc::Thread *value = makeManagerThread();
+    return value;
+}
+
 class TgVoipImpl : public TgVoip, public sigslot::has_slots<> {
-private:
-    
-    
 public:
     TgVoipImpl(
             std::vector<TgVoipEndpoint> const &endpoints,
@@ -86,88 +141,48 @@ public:
             std::unique_ptr<TgVoipProxy> const &proxy,
             TgVoipConfig const &config,
             TgVoipEncryptionKey const &encryptionKey,
-            TgVoipNetworkType initialNetworkType
-    ) {
-        
+            TgVoipNetworkType initialNetworkType,
+            std::function<void(TgVoipState)> stateUpdated,
+            std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
+    ) :
+    _stateUpdated(stateUpdated),
+    _signalingDataEmitted(signalingDataEmitted) {
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             rtc::LogMessage::LogToDebug(rtc::LS_INFO);
             rtc::LogMessage::SetLogToStderr(true);
         });
-
-        /*EncryptionKey encryptionKeyValue;
-        memcpy(encryptionKeyValue, encryptionKey.value.data(), 256);*/
-        controller_ = new Controller(encryptionKey.isOutgoing, 5, 3);
-
-        if (proxy != nullptr) {
-            controller_->SetProxy(rtc::ProxyType::PROXY_SOCKS5, rtc::SocketAddress(proxy->host, proxy->port),
-                    proxy->login, proxy->password);
-        }
-
-        controller_->SignalNewState.connect(this, &TgVoipImpl::controllerStateCallback);
-        controller_->SignalCandidatesGathered.connect(this, &TgVoipImpl::candidatesGathered);
-        controller_->Start();
-
-        for (const auto &endpoint : endpoints) {
-            rtc::SocketAddress addr(endpoint.host.ipv4, endpoint.port);
-            Controller::EndpointType type;
-            switch (endpoint.type) {
-                case TgVoipEndpointType::UdpRelay:
-                    type = Controller::EndpointType::UDP;
-                    break;
-                case TgVoipEndpointType::Lan:
-                case TgVoipEndpointType::Inet:
-                    type = Controller::EndpointType::P2P;
-                    break;
-                case TgVoipEndpointType::TcpRelay:
-                    type = Controller::EndpointType::TCP;
-                    break;
-                default:
-                    type = Controller::EndpointType::UDP;
-                    break;
-            }
-            //controller_->AddEndpoint(addr, endpoint.peerTag, type);
-        }
-        /*rtc::SocketAddress addr("192.168.8.118", 7325);
-        unsigned char peerTag[16];
-        controller_->AddEndpoint(addr, peerTag, Controller::EndpointType::P2P);*/
-
-        setNetworkType(initialNetworkType);
-
-        switch (config.dataSaving) {
-            case TgVoipDataSaving::Mobile:
-                controller_->SetDataSaving(true);
-                break;
-            case TgVoipDataSaving::Always:
-                controller_->SetDataSaving(true);
-                break;
-            default:
-                controller_->SetDataSaving(false);
-                break;
-        }
+        rtc::LogMessage::AddLogToStream(&_logSink, rtc::LS_INFO);
+        
+        bool enableP2P = config.enableP2P;
+        
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, signalingDataEmitted](){
+            return new Manager(
+                getManagerThread(),
+                encryptionKey,
+                enableP2P,
+                [stateUpdated](const TgVoipState &state) {
+                    stateUpdated(state);
+                },
+                [signalingDataEmitted](const std::vector<uint8_t> &data) {
+                    signalingDataEmitted(data);
+                }
+            );
+        }));
+        _manager->perform([](Manager *manager) {
+            manager->start();
+        });
     }
 
     ~TgVoipImpl() override {
-        stop();
-    }
-
-    void setOnStateUpdated(std::function<void(TgVoipState)> onStateUpdated) override {
-        std::lock_guard<std::mutex> lock(m_onStateUpdated);
-        onStateUpdated_ = onStateUpdated;
-    }
-
-    void setOnSignalBarsUpdated(std::function<void(int)> onSignalBarsUpdated) override {
-        std::lock_guard<std::mutex> lock(m_onSignalBarsUpdated);
-        onSignalBarsUpdated_ = onSignalBarsUpdated;
+        rtc::LogMessage::RemoveLogToStream(&_logSink);
     }
     
-    void setOnCandidatesGathered(std::function<void(const std::vector<std::string> &)> onCandidatesGathered) override {
-        onCandidatesGathered_ = onCandidatesGathered;
-    }
-    
-    void addRemoteCandidates(const std::vector<std::string> &candidates) override {
-        controller_->AddRemoteCandidates(candidates);
-    }
+    void receiveSignalingData(const std::vector<uint8_t> &data) override {
+        _manager->perform([data](Manager *manager) {
+            manager->receiveSignalingData(data);
+        });
+    };
 
     void setNetworkType(TgVoipNetworkType networkType) override {
         /*message::NetworkType mappedType;
@@ -218,11 +233,19 @@ public:
     }
 
     void setMuteMicrophone(bool muteMicrophone) override {
-        controller_->SetMute(muteMicrophone);
+        //controller_->SetMute(muteMicrophone);
     }
     
-    void AttachVideoView(VideoMetalView *videoView) override {
-        controller_->AttachVideoView([videoView getSink]);
+    void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
+        _manager->perform([sink](Manager *manager) {
+            manager->setIncomingVideoOutput(sink);
+        });
+    }
+    
+    void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
+        _manager->perform([sink](Manager *manager) {
+            manager->setOutgoingVideoOutput(sink);
+        });
     }
 
     void setAudioOutputGainControlEnabled(bool enabled) override {
@@ -252,16 +275,14 @@ public:
     }
 
     TgVoipFinalState stop() override {
-        TgVoipFinalState finalState = {
-        };
-
-        delete controller_;
-        controller_ = nullptr;
+        TgVoipFinalState finalState;
+        finalState.debugLog = _logSink._data.str();
+        finalState.isRatingSuggested = false;
 
         return finalState;
     }
 
-    void controllerStateCallback(Controller::State state) {
+    /*void controllerStateCallback(Controller::State state) {
         if (onStateUpdated_) {
             TgVoipState mappedState;
             switch (state) {
@@ -287,44 +308,14 @@ public:
 
             onStateUpdated_(mappedState);
         }
-    }
+    }*/
+
+private:
+    std::unique_ptr<ThreadLocalObject<Manager>> _manager;
+    std::function<void(TgVoipState)> _stateUpdated;
+    std::function<void(const std::vector<uint8_t> &)> _signalingDataEmitted;
     
-    void candidatesGathered(const std::vector<std::string> &candidates) {
-        onCandidatesGathered_(candidates);
-    }
-
-private:
-#ifdef TGVOIP_USE_CALLBACK_AUDIO_IO
-    TgVoipAudioDataCallbacks audioCallbacks;
-
-    void play(const int16_t *data, size_t size) {
-        if (!audioCallbacks.output)
-            return;
-        int16_t buf[size];
-        memcpy(buf, data, size * 2);
-        audioCallbacks.output(buf, size);
-    }
-
-    void record(int16_t *data, size_t size) {
-        if (audioCallbacks.input)
-            audioCallbacks.input(data, size);
-    }
-
-    void preprocessed(const int16_t *data, size_t size) {
-        if (!audioCallbacks.preprocessed)
-            return;
-        int16_t buf[size];
-        memcpy(buf, data, size * 2);
-        audioCallbacks.preprocessed(buf, size);
-    }
-#endif
-
-private:
-    Controller *controller_;
-    std::function<void(TgVoipState)> onStateUpdated_;
-    std::function<void(int)> onSignalBarsUpdated_;
-    std::function<void(const std::vector<std::string> &)> onCandidatesGathered_;
-    std::mutex m_onStateUpdated, m_onSignalBarsUpdated;
+    LogSinkImpl _logSink;
 };
 
 std::function<void(std::string const &)> globalLoggingFunction;
@@ -368,7 +359,9 @@ TgVoip *TgVoip::makeInstance(
         std::vector<TgVoipEndpoint> const &endpoints,
         std::unique_ptr<TgVoipProxy> const &proxy,
         TgVoipNetworkType initialNetworkType,
-        TgVoipEncryptionKey const &encryptionKey
+        TgVoipEncryptionKey const &encryptionKey,
+        std::function<void(TgVoipState)> stateUpdated,
+        std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
 ) {
     return new TgVoipImpl(
             endpoints,
@@ -376,7 +369,9 @@ TgVoip *TgVoip::makeInstance(
             proxy,
             config,
             encryptionKey,
-            initialNetworkType
+            initialNetworkType,
+            stateUpdated,
+            signalingDataEmitted
     );
 }
 

@@ -47,7 +47,8 @@ public protocol PresentationCall: class {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     
-    func getVideoView(completion: @escaping (UIView?) -> Void)
+    func makeIncomingVideoView(completion: @escaping (UIView?) -> Void)
+    func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void)
 }
 
 public protocol PresentationCallManager: class {

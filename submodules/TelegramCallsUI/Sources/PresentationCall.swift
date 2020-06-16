@@ -673,7 +673,11 @@ public final class PresentationCallImpl: PresentationCall {
         return self.debugInfoValue.get()
     }
     
-    public func getVideoView(completion: @escaping (UIView?) -> Void) {
-        self.ongoingContext?.getVideoView(completion: completion)
+    public func makeIncomingVideoView(completion: @escaping (UIView?) -> Void) {
+        self.ongoingContext?.makeIncomingVideoView(completion: completion)
+    }
+    
+    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
+        self.ongoingContext?.makeOutgoingVideoView(completion: completion)
     }
 }
