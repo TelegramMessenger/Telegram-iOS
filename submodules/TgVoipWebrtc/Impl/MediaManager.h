@@ -35,6 +35,8 @@ private:
     struct SSRC {
         uint32_t incoming;
         uint32_t outgoing;
+        uint32_t fecIncoming;
+        uint32_t fecOutgoing;
     };
     
     class NetworkInterfaceImpl : public cricket::MediaChannel::NetworkInterface {

@@ -15,6 +15,7 @@ public:
     virtual ~VideoCapturerInterface();
 };
 
+void configurePlatformAudio();
 std::unique_ptr<webrtc::VideoEncoderFactory> makeVideoEncoderFactory();
 std::unique_ptr<webrtc::VideoDecoderFactory> makeVideoDecoderFactory();
 rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> makeVideoSource(rtc::Thread *signalingThread, rtc::Thread *workerThread);

@@ -27,6 +27,7 @@
 #include "api/video_track_source_proxy.h"
 #include "sdk/objc/api/RTCVideoRendererAdapter.h"
 #include "sdk/objc/native/api/video_frame.h"
+#include "sdk/objc/components/audio/RTCAudioSession.h"
 #include "api/media_types.h"
 
 #import "VideoCameraCapturer.h"
@@ -147,6 +148,11 @@ private:
 };
 
 VideoCapturerInterface::~VideoCapturerInterface() {
+}
+
+void configurePlatformAudio() {
+    //[RTCAudioSession sharedInstance].useManualAudio = true;
+    //[RTCAudioSession sharedInstance].isAudioEnabled = true;
 }
 
 std::unique_ptr<webrtc::VideoEncoderFactory> makeVideoEncoderFactory() {

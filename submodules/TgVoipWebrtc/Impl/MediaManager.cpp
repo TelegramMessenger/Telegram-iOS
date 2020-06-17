@@ -31,8 +31,12 @@ namespace TGVOIP_NAMESPACE {
 
 static const uint32_t ssrcAudioIncoming = 1;
 static const uint32_t ssrcAudioOutgoing = 2;
+static const uint32_t ssrcAudioFecIncoming = 5;
+static const uint32_t ssrcAudioFecOutgoing = 6;
 static const uint32_t ssrcVideoIncoming = 3;
 static const uint32_t ssrcVideoOutgoing = 4;
+static const uint32_t ssrcVideoFecIncoming = 7;
+static const uint32_t ssrcVideoFecOutgoing = 8;
 
 static void AddDefaultFeedbackParams(cricket::VideoCodec *codec) {
     // Don't add any feedback params for RED and ULPFEC.
@@ -53,7 +57,7 @@ static void AddDefaultFeedbackParams(cricket::VideoCodec *codec) {
     }
 }
 
-static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::vector<webrtc::SdpVideoFormat> input_formats, int32_t &outCodecId) {
+static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::vector<webrtc::SdpVideoFormat> input_formats) {
     if (input_formats.empty())
         return std::vector<cricket::VideoCodec>();
     static const int kFirstDynamicPayloadType = 96;
@@ -63,15 +67,15 @@ static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::
     input_formats.push_back(webrtc::SdpVideoFormat(cricket::kRedCodecName));
     input_formats.push_back(webrtc::SdpVideoFormat(cricket::kUlpfecCodecName));
     
-    /*if (IsFlexfecAdvertisedFieldTrialEnabled()) {
-     webrtc::SdpVideoFormat flexfec_format(kFlexfecCodecName);
-     // This value is currently arbitrarily set to 10 seconds. (The unit
-     // is microseconds.) This parameter MUST be present in the SDP, but
-     // we never use the actual value anywhere in our code however.
-     // TODO(brandtr): Consider honouring this value in the sender and receiver.
-     flexfec_format.parameters = {{kFlexfecFmtpRepairWindow, "10000000"}};
-     input_formats.push_back(flexfec_format);
-     }*/
+    if (true) {
+        webrtc::SdpVideoFormat flexfec_format(cricket::kFlexfecCodecName);
+        // This value is currently arbitrarily set to 10 seconds. (The unit
+        // is microseconds.) This parameter MUST be present in the SDP, but
+        // we never use the actual value anywhere in our code however.
+        // TODO(brandtr): Consider honouring this value in the sender and receiver.
+        flexfec_format.parameters = {{cricket::kFlexfecFmtpRepairWindow, "10000000"}};
+        input_formats.push_back(flexfec_format);
+    }
     
     std::vector<cricket::VideoCodec> output_codecs;
     for (const webrtc::SdpVideoFormat& format : input_formats) {
@@ -151,8 +155,12 @@ _eventLog(std::make_unique<webrtc::RtcEventLogNull>()),
 _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _ssrcAudio.incoming = isOutgoing ? ssrcAudioIncoming : ssrcAudioOutgoing;
     _ssrcAudio.outgoing = (!isOutgoing) ? ssrcAudioIncoming : ssrcAudioOutgoing;
+    _ssrcAudio.fecIncoming = isOutgoing ? ssrcAudioFecIncoming : ssrcAudioFecOutgoing;
+    _ssrcAudio.fecOutgoing = (!isOutgoing) ? ssrcAudioFecIncoming : ssrcAudioFecOutgoing;
     _ssrcVideo.incoming = isOutgoing ? ssrcVideoIncoming : ssrcVideoOutgoing;
     _ssrcVideo.outgoing = (!isOutgoing) ? ssrcVideoIncoming : ssrcVideoOutgoing;
+    _ssrcVideo.fecIncoming = isOutgoing ? ssrcVideoFecIncoming : ssrcVideoFecOutgoing;
+    _ssrcVideo.fecOutgoing = (!isOutgoing) ? ssrcVideoFecIncoming : ssrcVideoFecOutgoing;
     
     _audioNetworkInterface = std::unique_ptr<MediaManager::NetworkInterfaceImpl>(new MediaManager::NetworkInterfaceImpl(this, false));
     _videoNetworkInterface = std::unique_ptr<MediaManager::NetworkInterfaceImpl>(new MediaManager::NetworkInterfaceImpl(this, true));
@@ -161,7 +169,11 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
         "WebRTC-Audio-SendSideBwe/Enabled/"
         "WebRTC-Audio-Allocation/min:6kbps,max:32kbps/"
         "WebRTC-Audio-OpusMinPacketLossRate/Enabled-1/"
+        "WebRTC-FlexFEC-03/Enabled/"
+        "WebRTC-FlexFEC-03-Advertised/Enabled/"
     );
+    
+    configurePlatformAudio();
     
     _videoBitrateAllocatorFactory = webrtc::CreateBuiltinVideoBitrateAllocatorFactory();
     
@@ -171,8 +183,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     mediaDeps.audio_decoder_factory = webrtc::CreateAudioDecoderFactory<webrtc::AudioDecoderOpus>();
     
     auto videoEncoderFactory = makeVideoEncoderFactory();
-    int32_t outCodecId = 96;
-    std::vector<cricket::VideoCodec> videoCodecs = AssignPayloadTypesAndDefaultCodecs(videoEncoderFactory->GetSupportedFormats(), outCodecId);
+    std::vector<cricket::VideoCodec> videoCodecs = AssignPayloadTypesAndDefaultCodecs(videoEncoderFactory->GetSupportedFormats());
     
     mediaDeps.video_encoder_factory = makeVideoEncoderFactory();
     mediaDeps.video_decoder_factory = makeVideoDecoderFactory();
@@ -230,11 +241,18 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     audioRecvParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
     audioRecvParameters.rtcp.reduced_size = true;
     audioRecvParameters.rtcp.remote_estimate = true;
-    _audioChannel->AddRecvStream(cricket::StreamParams::CreateLegacy(_ssrcAudio.incoming));
+    
     _audioChannel->SetRecvParameters(audioRecvParameters);
+    _audioChannel->AddRecvStream(cricket::StreamParams::CreateLegacy(_ssrcAudio.incoming));
     _audioChannel->SetPlayout(true);
     
-    _videoChannel->AddSendStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.outgoing));
+    cricket::StreamParams sp;
+    cricket::SsrcGroup sg(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
+    sp.ssrcs = {_ssrcVideo.outgoing};
+    sp.ssrc_groups.push_back(sg);
+    sp.cname = "cname";
+    
+    _videoChannel->AddSendStream(sp);
     
     auto videoCodec = selectVideoCodec(videoCodecs);
     if (videoCodec.has_value()) {
@@ -250,23 +268,53 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
         
         cricket::VideoSendParameters videoSendParameters;
         videoSendParameters.codecs.push_back(codec);
+        
+        for (auto &c : videoCodecs) {
+            if (c.name == cricket::kFlexfecCodecName) {
+                videoSendParameters.codecs.push_back(c);
+                break;
+            }
+        }
+        
         videoSendParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
         //send_parameters.max_bandwidth_bps = 800000;
         //send_parameters.rtcp.reduced_size = true;
-        videoSendParameters.rtcp.remote_estimate = true;
+        //videoSendParameters.rtcp.remote_estimate = true;
         _videoChannel->SetSendParameters(videoSendParameters);
         
         _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+        _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
         
         _videoChannel->SetInterface(_videoNetworkInterface.get(), webrtc::MediaTransportConfig());
         
         cricket::VideoRecvParameters videoRecvParameters;
         videoRecvParameters.codecs.emplace_back(codec);
+        
+        for (auto &c : videoCodecs) {
+            if (c.name == cricket::kFlexfecCodecName) {
+                videoRecvParameters.codecs.push_back(c);
+                break;
+            }
+        }
+        
         videoRecvParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
         //recv_parameters.rtcp.reduced_size = true;
         videoRecvParameters.rtcp.remote_estimate = true;
-        _videoChannel->AddRecvStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.incoming));
+        
+        cricket::StreamParams videoRecvStreamParams;
+        cricket::SsrcGroup videoRecvSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.incoming, _ssrcVideo.fecIncoming});
+        videoRecvStreamParams.ssrcs = {_ssrcVideo.incoming};
+        videoRecvStreamParams.ssrc_groups.push_back(videoRecvSsrcGroup);
+        videoRecvStreamParams.cname = "cname";
+        
+        _videoChannel->AddRecvStream(videoRecvStreamParams);
         _videoChannel->SetRecvParameters(videoRecvParameters);
+        
+        /*webrtc::FlexfecReceiveStream::Config config(_videoNetworkInterface.get());
+        config.payload_type = 118;
+        config.protected_media_ssrcs = {1324234};
+        webrtc::FlexfecReceiveStream* stream;
+        std::list<webrtc::FlexfecReceiveStream *> streams;*/
     }
 }
 
@@ -288,9 +336,12 @@ MediaManager::~MediaManager() {
     _audioChannel->SetInterface(nullptr, webrtc::MediaTransportConfig());
     
     _videoChannel->RemoveRecvStream(_ssrcVideo.incoming);
+    _videoChannel->RemoveRecvStream(_ssrcVideo.fecIncoming);
     _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
+    _videoChannel->RemoveSendStream(_ssrcVideo.fecOutgoing);
     
     _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, nullptr);
+    _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
     _videoChannel->SetInterface(nullptr, webrtc::MediaTransportConfig());
 }
 
