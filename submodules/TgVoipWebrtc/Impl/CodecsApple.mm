@@ -91,7 +91,7 @@
             return nil;
         }
         
-        [_videoCapturer startCaptureWithDevice:frontCamera format:bestFormat fps:27];
+        [_videoCapturer startCaptureWithDevice:frontCamera format:bestFormat fps:30];
     }
     return self;
 }

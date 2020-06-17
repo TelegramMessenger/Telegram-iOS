@@ -51,13 +51,13 @@ Manager::~Manager() {
 
 void Manager::start() {
     auto weakThis = std::weak_ptr<Manager>(shared_from_this());
-    _networkManager.reset(new ThreadLocalObject<NetworkManager>(getNetworkThread(), [encryptionKey = _encryptionKey, enableP2P = _enableP2P, thread = _thread, weakThis]() {
+    _networkManager.reset(new ThreadLocalObject<NetworkManager>(getNetworkThread(), [encryptionKey = _encryptionKey, enableP2P = _enableP2P, thread = _thread, weakThis, signalingDataEmitted = _signalingDataEmitted]() {
         return new NetworkManager(
             getNetworkThread(),
             encryptionKey,
             enableP2P,
             [thread, weakThis](const NetworkManager::State &state) {
-                thread->Invoke<void>(RTC_FROM_HERE, [weakThis, state]() {
+                thread->PostTask(RTC_FROM_HERE, [weakThis, state]() {
                     auto strongThis = weakThis.lock();
                     if (strongThis == nullptr) {
                         return;
@@ -86,14 +86,8 @@ void Manager::start() {
                     });
                 });
             },
-            [thread, weakThis](const std::vector<uint8_t> &data) {
-                thread->PostTask(RTC_FROM_HERE, [weakThis, data]() {
-                    auto strongThis = weakThis.lock();
-                    if (strongThis == nullptr) {
-                        return;
-                    }
-                    strongThis->_signalingDataEmitted(data);
-                });
+            [signalingDataEmitted](const std::vector<uint8_t> &data) {
+                signalingDataEmitted(data);
             }
         );
     }));

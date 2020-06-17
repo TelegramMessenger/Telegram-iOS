@@ -73,28 +73,12 @@ static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::
      input_formats.push_back(flexfec_format);
      }*/
     
-    bool found = false;
-    bool useVP9 = true;
-    
     std::vector<cricket::VideoCodec> output_codecs;
     for (const webrtc::SdpVideoFormat& format : input_formats) {
         cricket::VideoCodec codec(format);
         codec.id = payload_type;
         AddDefaultFeedbackParams(&codec);
         output_codecs.push_back(codec);
-        
-        if (useVP9 && codec.name == cricket::kVp9CodecName) {
-            if (!found) {
-                outCodecId = codec.id;
-                found = true;
-            }
-        }
-        if (!useVP9 && codec.name == cricket::kH264CodecName) {
-            if (!found) {
-                outCodecId = codec.id;
-                found = true;
-            }
-        }
         
         // Increment payload type.
         ++payload_type;
@@ -122,10 +106,15 @@ static std::vector<cricket::VideoCodec> AssignPayloadTypesAndDefaultCodecs(std::
 
 static absl::optional<cricket::VideoCodec> selectVideoCodec(std::vector<cricket::VideoCodec> &codecs) {
     bool useVP9 = false;
+    bool useH265 = true;
     
     for (auto &codec : codecs) {
         if (useVP9) {
             if (codec.name == cricket::kVp9CodecName) {
+                return absl::optional<cricket::VideoCodec>(codec);
+            }
+        } else if (useH265) {
+            if (codec.name == cricket::kH265CodecName) {
                 return absl::optional<cricket::VideoCodec>(codec);
             }
         } else {
@@ -134,6 +123,7 @@ static absl::optional<cricket::VideoCodec> selectVideoCodec(std::vector<cricket:
             }
         }
     }
+    
     return absl::optional<cricket::VideoCodec>();
 }
 
@@ -210,7 +200,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     const uint8_t opusMaxBitrateKbps = 32;
     const uint8_t opusStartBitrateKbps = 6;
     const uint8_t opusPTimeMs = 120;
-    const int opusExtensionSequence = 1;
+    const int extensionSequenceOne = 1;
     
     cricket::AudioCodec opusCodec(opusSdpPayload, opusSdpName, opusClockrate, opusSdpBitrate, opusSdpChannels);
     opusCodec.AddFeedbackParam(cricket::FeedbackParam(cricket::kRtcpFbParamTransportCc));
@@ -222,7 +212,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
 
     cricket::AudioSendParameters audioSendPrameters;
     audioSendPrameters.codecs.push_back(opusCodec);
-    audioSendPrameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, opusExtensionSequence);
+    audioSendPrameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
     audioSendPrameters.options.echo_cancellation = false;
     //audioSendPrameters.options.experimental_ns = false;
     audioSendPrameters.options.noise_suppression = false;
@@ -237,7 +227,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     
     cricket::AudioRecvParameters audioRecvParameters;
     audioRecvParameters.codecs.emplace_back(opusSdpPayload, opusSdpName, opusClockrate, opusSdpBitrate, opusSdpChannels);
-    audioRecvParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, opusExtensionSequence);
+    audioRecvParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
     audioRecvParameters.rtcp.reduced_size = true;
     audioRecvParameters.rtcp.remote_estimate = true;
     _audioChannel->AddRecvStream(cricket::StreamParams::CreateLegacy(_ssrcAudio.incoming));
@@ -253,15 +243,14 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
         auto codec = videoCodec.value();
         
         codec.SetParam(cricket::kCodecParamMinBitrate, 64);
-        codec.SetParam(cricket::kCodecParamStartBitrate, 256);
+        codec.SetParam(cricket::kCodecParamStartBitrate, 512);
         codec.SetParam(cricket::kCodecParamMaxBitrate, 2500);
         
         _videoCapturer = makeVideoCapturer(_nativeVideoSource);
         
         cricket::VideoSendParameters videoSendParameters;
         videoSendParameters.codecs.push_back(codec);
-        const int videoExtensionSequence = 1;
-        videoSendParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, videoExtensionSequence);
+        videoSendParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
         //send_parameters.max_bandwidth_bps = 800000;
         //send_parameters.rtcp.reduced_size = true;
         videoSendParameters.rtcp.remote_estimate = true;
@@ -273,7 +262,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
         
         cricket::VideoRecvParameters videoRecvParameters;
         videoRecvParameters.codecs.emplace_back(codec);
-        videoRecvParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, videoExtensionSequence);
+        videoRecvParameters.extensions.emplace_back(webrtc::RtpExtension::kTransportSequenceNumberUri, extensionSequenceOne);
         //recv_parameters.rtcp.reduced_size = true;
         videoRecvParameters.rtcp.remote_estimate = true;
         _videoChannel->AddRecvStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.incoming));

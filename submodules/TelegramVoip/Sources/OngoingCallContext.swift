@@ -514,11 +514,13 @@ public final class OngoingCallContext {
             }
         }))
         
-        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)
-        |> deliverOn(self.queue)).start(next: { [weak self] data in
-            self?.withContext { context in
-                if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                    context.addSignaling(data)
+        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)).start(next: { [weak self] data in
+            print("data received")
+            queue.async {
+                self?.withContext { context in
+                    if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                        context.addSignaling(data)
+                    }
                 }
             }
         })
