@@ -9,7 +9,6 @@ genrule(
     srcs = [
         "build-webrtc-buck.sh",
         "webrtc-ios",
-        "patch.sh",
     ],
     bash =
 """
@@ -32,8 +31,6 @@ genrule(
 
     rm -rf "$BUILD_DIR/depot_tools"
     cp -R "$DEPOT_TOOLS_PATH" "$BUILD_DIR/"
-
-    cp "$SRCDIR/patch.sh" "$BUILD_DIR/"
 
     rm -rf "$BUILD_DIR/openssl"
     cp -R "$(location //submodules/openssl:openssl_build_merged)" "$BUILD_DIR/openssl/"

@@ -15,7 +15,6 @@ genrule(
     name = "webrtc_build",
     srcs = [
         "build-webrtc-bazel.sh",
-        "patch.sh",
         ":webrtc_sources",
         "//third-party:depot_tools_sources",
         "//submodules/openssl:openssl_include",
@@ -36,7 +35,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
         BUILD_DIR="$(RULEDIR)/$$BUILD_ARCH"
-        #rm -rf "$$BUILD_DIR"
+        rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
 
         SOURCE_PATH="third-party/webrtc/webrtc-ios/src"
@@ -61,9 +60,6 @@ genrule(
 
         rm -f "$$BUILD_DIR/build-webrtc-bazel.sh"
         cp $(location build-webrtc-bazel.sh) "$$BUILD_DIR/"
-
-        rm -f "$$BUILD_DIR/patch.sh"
-        cp $(location patch.sh) "$$BUILD_DIR/"
 
         sh $$BUILD_DIR/build-webrtc-bazel.sh "$$BUILD_DIR" $$BUILD_ARCH
     """ + "\n".join([

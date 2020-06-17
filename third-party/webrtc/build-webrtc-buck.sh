@@ -20,8 +20,6 @@ pushd "$BUILD_DIR/webrtc-ios/src"
 mv openssl/lib/libcrypto.a openssl/
 mv libssl/lib/libssl.a openssl/
 
-sh "../../patch.sh" || true
-
 OUT_DIR="ios"
 if [ "$ARCH" == "x64" ]; then
   OUT_DIR="ios_sim"
