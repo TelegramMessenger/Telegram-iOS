@@ -246,13 +246,12 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _audioChannel->AddRecvStream(cricket::StreamParams::CreateLegacy(_ssrcAudio.incoming));
     _audioChannel->SetPlayout(true);
     
-    cricket::StreamParams sp;
-    cricket::SsrcGroup sg(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
-    sp.ssrcs = {_ssrcVideo.outgoing};
-    sp.ssrc_groups.push_back(sg);
-    sp.cname = "cname";
-    
-    _videoChannel->AddSendStream(sp);
+    cricket::StreamParams videoSendStreamParams;
+    cricket::SsrcGroup videoSendSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
+    videoSendStreamParams.ssrcs = {_ssrcVideo.outgoing};
+    videoSendStreamParams.ssrc_groups.push_back(videoSendSsrcGroup);
+    videoSendStreamParams.cname = "cname";
+    _videoChannel->AddSendStream(videoSendStreamParams);
     
     auto videoCodec = selectVideoCodec(videoCodecs);
     if (videoCodec.has_value()) {
