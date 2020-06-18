@@ -496,13 +496,17 @@ public class LocalFileMediaResource: TelegramMediaResource {
     public let fileId: Int64
     public let size: Int?
     
-    public init(fileId: Int64, size: Int? = nil) {
+    public let isSecretRelated: Bool
+    
+    public init(fileId: Int64, size: Int? = nil, isSecretRelated: Bool = false) {
         self.fileId = fileId
         self.size = size
+        self.isSecretRelated = isSecretRelated
     }
     
     public required init(decoder: PostboxDecoder) {
         self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
+        self.isSecretRelated = decoder.decodeBoolForKey("sr", orElse: false)
         if let size = decoder.decodeOptionalInt32ForKey("s") {
             self.size = Int(size)
         } else {
@@ -512,6 +516,7 @@ public class LocalFileMediaResource: TelegramMediaResource {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "f")
+        encoder.encodeBool(self.isSecretRelated, forKey: "sr")
         if let size = self.size {
             encoder.encodeInt32(Int32(size), forKey: "s")
         } else {
@@ -525,7 +530,7 @@ public class LocalFileMediaResource: TelegramMediaResource {
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileMediaResource {
-            return self.fileId == to.fileId && self.size == to.size
+            return self.fileId == to.fileId && self.size == to.size && self.isSecretRelated == to.isSecretRelated
         } else {
             return false
         }
