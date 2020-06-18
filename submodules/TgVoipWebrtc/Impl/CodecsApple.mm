@@ -16,10 +16,8 @@
 #include "api/video/builtin_video_bitrate_allocator_factory.h"
 #include "api/video/video_bitrate_allocation.h"
 
-#include "sdk/objc/components/video_codec/RTCVideoEncoderFactoryH264.h"
-#include "sdk/objc/components/video_codec/RTCVideoDecoderFactoryH264.h"
-#include "sdk/objc/components/video_codec/RTCDefaultVideoEncoderFactory.h"
-#include "sdk/objc/components/video_codec/RTCDefaultVideoDecoderFactory.h"
+#include "Apple/TGRTCDefaultVideoEncoderFactory.h"
+#include "Apple/TGRTCDefaultVideoDecoderFactory.h"
 #include "sdk/objc/native/api/video_encoder_factory.h"
 #include "sdk/objc/native/api/video_decoder_factory.h"
 
@@ -156,11 +154,11 @@ void configurePlatformAudio() {
 }
 
 std::unique_ptr<webrtc::VideoEncoderFactory> makeVideoEncoderFactory() {
-    return webrtc::ObjCToNativeVideoEncoderFactory([[RTCDefaultVideoEncoderFactory alloc] init]);
+    return webrtc::ObjCToNativeVideoEncoderFactory([[TGRTCDefaultVideoEncoderFactory alloc] init]);
 }
 
 std::unique_ptr<webrtc::VideoDecoderFactory> makeVideoDecoderFactory() {
-    return webrtc::ObjCToNativeVideoDecoderFactory([[RTCDefaultVideoDecoderFactory alloc] init]);
+    return webrtc::ObjCToNativeVideoDecoderFactory([[TGRTCDefaultVideoDecoderFactory alloc] init]);
 }
 
 rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> makeVideoSource(rtc::Thread *signalingThread, rtc::Thread *workerThread) {

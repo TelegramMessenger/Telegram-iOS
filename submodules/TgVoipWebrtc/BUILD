@@ -27,6 +27,8 @@ objc_library(
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/base",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/metal",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/video_codec",
+        "-Ithird-party/webrtc/webrtc-ios/src/third_party/libyuv/include",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
