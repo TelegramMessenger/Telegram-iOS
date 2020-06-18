@@ -12,6 +12,7 @@
 
 - (void)updateLevel:(CGFloat)level;
 - (void)tick:(CGFloat)level;
+- (void)setColor:(UIColor *)color;
 
 @end
 

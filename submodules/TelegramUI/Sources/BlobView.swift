@@ -13,32 +13,32 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
     private let smallBlob = BlobView(
         pointsCount: 8,
         minRandomness: 0.1,
-        maxRandomness: 1,
+        maxRandomness: 0.5,
         minSpeed: 0.2,
-        maxSpeed: 1,
-        minScale: 0.56,
-        maxScale: 0.56,
-        scaleSpeed: 0
+        maxSpeed: 0.6,
+        minScale: 0.45,
+        maxScale: 0.55,
+        scaleSpeed: 0.2
     )
     private let mediumBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
-        maxRandomness: 2,
+        maxRandomness: 1,
         minSpeed: 3,
-        maxSpeed: 8,
-        minScale: 0.67,
+        maxSpeed: 7,
+        minScale: 0.55,
         maxScale: 0.9,
-        scaleSpeed: 0.1
+        scaleSpeed: 0.2
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
-        maxRandomness: 2,
+        maxRandomness: 1,
         minSpeed: 3,
-        maxSpeed: 8,
-        minScale: 0.67,
+        maxSpeed: 7,
+        minScale: 0.55,
         maxScale: 1,
-        scaleSpeed: 0.1
+        scaleSpeed: 0.2
     )
     
     override init(frame: CGRect) {
@@ -105,11 +105,16 @@ final class BlobView: UIView {
         didSet {
             speedLevel = max(level, speedLevel)
             scaleLevel = max(level, scaleLevel)
+            
+            if abs(scaleLevel - lastScaleLevel) > 0.4 {
+                animateToNewScale()
+            }
         }
     }
     
     private var speedLevel: CGFloat = 0
     private var scaleLevel: CGFloat = 0
+    private var lastScaleLevel: CGFloat = 0
     
     private let shapeLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
@@ -183,12 +188,15 @@ final class BlobView: UIView {
     }
     
     func animateToNewScale() {
+        let isDownscale = lastScaleLevel > scaleLevel
+        lastScaleLevel = scaleLevel
+        
         shapeLayer.pop_removeAnimation(forKey: "scale")
         
         let currentScale = minScale + (maxScale - minScale) * scaleLevel
         let scaleAnimation = POPBasicAnimation(propertyNamed: kPOPLayerScaleXY)!
         scaleAnimation.toValue = CGPoint(x: currentScale, y: currentScale)
-        scaleAnimation.duration = CFTimeInterval(scaleSpeed)
+        scaleAnimation.duration = isDownscale ? 0.45 : CFTimeInterval(scaleSpeed)
         scaleAnimation.completionBlock = { [weak self] animation, finished in
             if finished {
                 self?.animateToNewScale()

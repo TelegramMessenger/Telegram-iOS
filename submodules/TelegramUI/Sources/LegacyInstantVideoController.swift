@@ -18,9 +18,11 @@ import LegacyMediaPickerUI
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>
+    let duration: Signal<TimeInterval, NoError>
     
-    init(micLevel: Signal<Float, NoError>) {
+    init(micLevel: Signal<Float, NoError>, duration: Signal<TimeInterval, NoError>) {
         self.micLevel = micLevel
+        self.duration = duration
     }
 }
 
@@ -31,12 +33,13 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
     var onStop: (() -> Void)?
     
     private let micLevelValue = ValuePromise<Float>(0.0)
+    private let durationValue = ValuePromise<TimeInterval>(0.0)
     let audioStatus: InstantVideoControllerRecordingStatus
     
     private var dismissedVideo = false
     
     override init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
-        self.audioStatus = InstantVideoControllerRecordingStatus(micLevel: self.micLevelValue.get())
+        self.audioStatus = InstantVideoControllerRecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())
         
         super.init(presentation: presentation, theme: theme, initialLayout: initialLayout)
         
@@ -52,6 +55,9 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
         if let captureController = captureController {
             captureController.micLevel = { [weak self] (level: CGFloat) -> Void in
                 self?.micLevelValue.set(Float(level))
+            }
+            captureController.onDuration = { [weak self] duration in
+                self?.durationValue.set(duration)
             }
             captureController.onDismiss = { [weak self] _ in
                 self?.onDismiss?()

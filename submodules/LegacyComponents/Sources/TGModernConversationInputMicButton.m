@@ -343,6 +343,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         [_lock updateLockness:0.0];
     }
     
+    _currentScale = 1.0;
     _animatedIn = true;
     _animationStartTime = CACurrentMediaTime();
     
@@ -557,6 +558,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _previousIcon = _innerIconView.image;
     [self setIcon:TGTintedImage(TGComponentsImageNamed(@"RecordSendIcon"), _pallete != nil ? _pallete.iconColor : [UIColor whiteColor])];
     
+    _currentScale = 1;
     _cancelTranslation = 0;
     id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
     if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])

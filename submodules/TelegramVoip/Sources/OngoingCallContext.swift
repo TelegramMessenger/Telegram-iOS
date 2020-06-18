@@ -375,6 +375,7 @@ public final class OngoingCallContext {
     private let queue = Queue()
     private let account: Account
     private let callSessionManager: CallSessionManager
+    private let logPath: String
     
     private var contextRef: Unmanaged<OngoingCallThreadLocalContextHolder>?
     
@@ -415,12 +416,13 @@ public final class OngoingCallContext {
         self.internalId = internalId
         self.account = account
         self.callSessionManager = callSessionManager
+        self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
+        let logPath = self.logPath
         
         let queue = self.queue
         
         cleanupCallLogs(account: account)
         
-        let logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         self.audioSessionDisposable.set((audioSessionActive
         |> filter { $0 }
         |> take(1)
@@ -512,11 +514,13 @@ public final class OngoingCallContext {
             }
         }))
         
-        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)
-        |> deliverOn(self.queue)).start(next: { [weak self] data in
-            self?.withContext { context in
-                if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                    context.addSignaling(data)
+        self.signalingDataDisposable = (callSessionManager.callSignalingData(internalId: internalId)).start(next: { [weak self] data in
+            print("data received")
+            queue.async {
+                self?.withContext { context in
+                    if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                        context.addSignaling(data)
+                    }
                 }
             }
         })
@@ -542,6 +546,9 @@ public final class OngoingCallContext {
     }
     
     public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
+        let account = self.account
+        let logPath = self.logPath
+        
         self.withContext { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 debugLogValue.set(.single(debugLog))
@@ -554,8 +561,18 @@ public final class OngoingCallContext {
                         outgoing: bytesSentWifi))
                 updateAccountNetworkUsageStats(account: self.account, category: .call, delta: delta)
                 
-                if let callId = callId, let debugLog = debugLog, sendDebugLogs {
-                    let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: debugLog).start()
+                if !logPath.isEmpty, let debugLog = debugLog {
+                    let logsPath = callLogsPath(account: account)
+                    let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+                    if let data = debugLog.data(using: .utf8) {
+                        let _ = try? data.write(to: URL(fileURLWithPath: logPath))
+                    }
+                }
+                
+                if let callId = callId, let debugLog = debugLog {
+                    if sendDebugLogs {
+                        let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: debugLog).start()
+                    }
                 }
             }
             let derivedState = context.nativeGetDerivedState()
@@ -585,12 +602,23 @@ public final class OngoingCallContext {
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
     
-    public func getVideoView(completion: @escaping (UIView?) -> Void) {
+    public func makeIncomingVideoView(completion: @escaping (UIView?) -> Void) {
         self.withContext { context in
             if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                context.getRemoteCameraView(completion)
+                context.makeIncomingVideoView(completion)
+            } else {
+                completion(nil)
             }
-            completion(nil)
+        }
+    }
+    
+    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
+        self.withContext { context in
+            if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                context.makeOutgoingVideoView(completion)
+            } else {
+                completion(nil)
+            }
         }
     }
 }

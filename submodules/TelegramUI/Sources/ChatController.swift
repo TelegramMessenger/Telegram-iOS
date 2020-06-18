@@ -2564,6 +2564,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         videoRecorder.onDismiss = {
                             if let strongSelf = self {
+                                strongSelf.beginMediaRecordingRequestId += 1
+                                strongSelf.lockMediaRecordingRequestId = nil
                                 strongSelf.videoRecorder.set(.single(nil))
                             }
                         }
@@ -7296,9 +7298,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.audioRecorder.set(.single(nil))
         } else if let videoRecorderValue = self.videoRecorderValue {
             if case .send = updatedAction {
+                self.chatDisplayNode.updateRecordedMediaDeleted(false)
                 videoRecorderValue.completeVideo()
                 self.videoRecorder.set(.single(nil))
             } else {
+                if case .dismiss = updatedAction {
+                    self.chatDisplayNode.updateRecordedMediaDeleted(true)
+                }
                 if case .preview = updatedAction, videoRecorderValue.stopVideo() {
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in

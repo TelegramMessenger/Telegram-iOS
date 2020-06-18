@@ -908,6 +908,68 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var audioRecordingItemsAlpha: CGFloat = 1
         if let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState {
             audioRecordingItemsAlpha = 0
+        
+            let audioRecordingInfoContainerNode: ASDisplayNode
+            if let currentAudioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
+                audioRecordingInfoContainerNode = currentAudioRecordingInfoContainerNode
+            } else {
+                audioRecordingInfoContainerNode = ASDisplayNode()
+                self.audioRecordingInfoContainerNode = audioRecordingInfoContainerNode
+                self.insertSubnode(audioRecordingInfoContainerNode, at: 0)
+            }
+            
+            var animateTimeSlideIn = false
+            let audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode
+            if let currentAudioRecordingTimeNode = self.audioRecordingTimeNode {
+                audioRecordingTimeNode = currentAudioRecordingTimeNode
+            } else {
+                audioRecordingTimeNode = ChatTextInputAudioRecordingTimeNode(theme: interfaceState.theme)
+                self.audioRecordingTimeNode = audioRecordingTimeNode
+                audioRecordingInfoContainerNode.addSubnode(audioRecordingTimeNode)
+                
+                if transition.isAnimated {
+                    animateTimeSlideIn = true
+                }
+            }
+            
+            
+            var animateCancelSlideIn = false
+            let audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator
+            if let currentAudioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
+                audioRecordingCancelIndicator = currentAudioRecordingCancelIndicator
+            } else {
+                animateCancelSlideIn = transition.isAnimated
+                
+                audioRecordingCancelIndicator = ChatTextInputAudioRecordingCancelIndicator(theme: interfaceState.theme, strings: interfaceState.strings, cancel: { [weak self] in
+                    self?.interfaceInteraction?.finishMediaRecording(.dismiss)
+                })
+                self.audioRecordingCancelIndicator = audioRecordingCancelIndicator
+                self.insertSubnode(audioRecordingCancelIndicator, at: 0)
+            }
+            
+            let isLocked = mediaRecordingState.isLocked
+            var hideInfo = false
+            
+            switch mediaRecordingState {
+            case let .audio(recorder, _):
+                self.actionButtons.micButton.audioRecorder = recorder
+                audioRecordingTimeNode.audioRecorder = recorder
+            case let .video(status, _):
+                switch status {
+                    case let .recording(recordingStatus):
+                        audioRecordingTimeNode.videoRecordingStatus = recordingStatus
+                        self.actionButtons.micButton.videoRecordingStatus = recordingStatus
+                        if isLocked {
+                            audioRecordingCancelIndicator.layer.animateAlpha(from: audioRecordingCancelIndicator.alpha, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                        }
+                    case .editing:
+                        audioRecordingTimeNode.videoRecordingStatus = nil
+                        self.actionButtons.micButton.videoRecordingStatus = nil
+                        hideMicButton = true
+                        hideInfo = true
+                }
+            }
+            
             transition.updateAlpha(layer: self.textInputBackgroundNode.layer, alpha: 0.0)
             if let textInputNode = self.textInputNode {
                 transition.updateAlpha(node: textInputNode, alpha: 0.0)
@@ -916,150 +978,105 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 transition.updateAlpha(layer: button.layer, alpha: 0.0)
             }
             
-            switch mediaRecordingState {
-                case let .audio(recorder, isLocked):
-                    self.actionButtons.micButton.audioRecorder = recorder
-                    let audioRecordingInfoContainerNode: ASDisplayNode
-                    if let currentAudioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
-                        audioRecordingInfoContainerNode = currentAudioRecordingInfoContainerNode
-                    } else {
-                        audioRecordingInfoContainerNode = ASDisplayNode()
-                        self.audioRecordingInfoContainerNode = audioRecordingInfoContainerNode
-                        self.insertSubnode(audioRecordingInfoContainerNode, at: 0)
-                    }
-                    
-                    var animateCancelSlideIn = false
-                    let audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator
-                    if let currentAudioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
-                        audioRecordingCancelIndicator = currentAudioRecordingCancelIndicator
-                    } else {
-                        animateCancelSlideIn = transition.isAnimated
+            let cancelTransformThreshold: CGFloat = 8.0
+            
+            let indicatorTranslation = max(0.0, self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold)
+            
+            audioRecordingCancelIndicator.frame = CGRect(
+                origin: CGPoint(
+                    x: leftInset + floor((baseWidth - audioRecordingCancelIndicator.bounds.size.width - indicatorTranslation) / 2.0),
+                    y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingCancelIndicator.bounds.size.height) / 2.0)),
+                size: audioRecordingCancelIndicator.bounds.size)
+            if self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
+                let progress = 1 - (self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold) / 80
+                audioRecordingCancelIndicator.alpha = progress
+            } else {
+                audioRecordingCancelIndicator.alpha = 1
+            }
+            
+            if animateCancelSlideIn {
+                let position = audioRecordingCancelIndicator.layer.position
+                audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: width + audioRecordingCancelIndicator.bounds.size.width, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            
+            audioRecordingCancelIndicator.updateIsDisplayingCancel(isLocked, animated: !animateCancelSlideIn)
+            
+            if isLocked || self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
+                var deltaOffset: CGFloat = 0.0
+                if audioRecordingCancelIndicator.layer.animation(forKey: "slide_juggle") != nil, let presentationLayer = audioRecordingCancelIndicator.layer.presentation() {
+                    let translation = CGPoint(x: presentationLayer.transform.m41, y: presentationLayer.transform.m42)
+                    deltaOffset = translation.x
+                }
+                audioRecordingCancelIndicator.layer.removeAnimation(forKey: "slide_juggle")
+                if !deltaOffset.isZero {
+                    audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: deltaOffset, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
+                }
+            } else if audioRecordingCancelIndicator.layer.animation(forKey: "slide_juggle") == nil {
+                let slideJuggleAnimation = CABasicAnimation(keyPath: "transform")
+                slideJuggleAnimation.toValue = CATransform3DMakeTranslation(-6, 0, 0)
+                slideJuggleAnimation.duration = 1
+                slideJuggleAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+                slideJuggleAnimation.autoreverses = true
+                slideJuggleAnimation.repeatCount = Float.infinity
+                audioRecordingCancelIndicator.layer.add(slideJuggleAnimation, forKey: "slide_juggle")
+            }
+            
+            let audioRecordingTimeSize = audioRecordingTimeNode.measure(CGSize(width: 200.0, height: 100.0))
+            
+            let cancelMinX = audioRecordingCancelIndicator.alpha > 0.5 ? audioRecordingCancelIndicator.frame.minX : width
+            
+            audioRecordingInfoContainerNode.frame = CGRect(
+                origin: CGPoint(
+                    x: min(leftInset, cancelMinX - audioRecordingTimeSize.width - 8.0 - 28.0),
+                    y: 0.0
+                ),
+                size: CGSize(width: baseWidth, height: panelHeight)
+            )
+            
+            audioRecordingTimeNode.frame = CGRect(origin: CGPoint(x: 40.0, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingTimeSize.height) / 2.0)), size: audioRecordingTimeSize)
+            if animateTimeSlideIn {
+                let position = audioRecordingTimeNode.layer.position
+                audioRecordingTimeNode.layer.animatePosition(from: CGPoint(x: position.x - 10.0, y: position.y), to: position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                audioRecordingTimeNode.layer.animateAlpha(from: 0, to: 1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            
+            var animateDotAppearing = false
+            let audioRecordingDotNode: AnimationNode
+            if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.played {
+                audioRecordingDotNode = currentAudioRecordingDotNode
+            } else {
+                self.audioRecordingDotNode?.removeFromSupernode()
+                audioRecordingDotNode = AnimationNode(animation: "voicebin")
+                self.audioRecordingDotNode = audioRecordingDotNode
+                self.addSubnode(audioRecordingDotNode)
+            }
+            
+            animateDotAppearing = transition.isAnimated && !isLocked && !hideInfo
+            
+            audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))
+            if animateDotAppearing {
+                audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
+                audioRecordingDotNode.layer.animateAlpha(from: 0, to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
+                    if finished {
+                        let animation = CAKeyframeAnimation(keyPath: "opacity")
+                        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+                        animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                        animation.duration = 0.5
+                        animation.autoreverses = true
+                        animation.repeatCount = Float.infinity
                         
-                        audioRecordingCancelIndicator = ChatTextInputAudioRecordingCancelIndicator(theme: interfaceState.theme, strings: interfaceState.strings, cancel: { [weak self] in
-                            self?.interfaceInteraction?.finishMediaRecording(.dismiss)
-                        })
-                        self.audioRecordingCancelIndicator = audioRecordingCancelIndicator
-                        self.insertSubnode(audioRecordingCancelIndicator, at: 0)
+                        audioRecordingDotNode?.layer.add(animation, forKey: "recording")
                     }
-                    
-                    let cancelTransformThreshold: CGFloat = 8.0
-                    
-                    let indicatorTranslation = max(0.0, self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold)
-                    
-                    audioRecordingCancelIndicator.frame = CGRect(
-                        origin: CGPoint(
-                            x: leftInset + floor((baseWidth - audioRecordingCancelIndicator.bounds.size.width - indicatorTranslation) / 2.0),
-                            y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingCancelIndicator.bounds.size.height) / 2.0)),
-                        size: audioRecordingCancelIndicator.bounds.size)
-                    if self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
-                        let progress = 1 - (self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold) / 80
-                        audioRecordingCancelIndicator.alpha = progress
-                    } else {
-                        audioRecordingCancelIndicator.alpha = 1
-                    }
-                    
-                    if animateCancelSlideIn {
-                        let position = audioRecordingCancelIndicator.layer.position
-                        audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: width + audioRecordingCancelIndicator.bounds.size.width, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                    
-                    audioRecordingCancelIndicator.updateIsDisplayingCancel(isLocked, animated: !animateCancelSlideIn)
-                    
-                    if isLocked || self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
-                        var deltaOffset: CGFloat = 0.0
-                        if audioRecordingCancelIndicator.layer.animation(forKey: "slide_juggle") != nil, let presentationLayer = audioRecordingCancelIndicator.layer.presentation() {
-                            let translation = CGPoint(x: presentationLayer.transform.m41, y: presentationLayer.transform.m42)
-                            deltaOffset = translation.x
-                        }
-                        audioRecordingCancelIndicator.layer.removeAnimation(forKey: "slide_juggle")
-                        if !deltaOffset.isZero {
-                            audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: deltaOffset, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
-                        }
-                    } else if audioRecordingCancelIndicator.layer.animation(forKey: "slide_juggle") == nil {
-                        let slideJuggleAnimation = CABasicAnimation(keyPath: "transform")
-                        slideJuggleAnimation.toValue = CATransform3DMakeTranslation(-6, 0, 0)
-                        slideJuggleAnimation.duration = 1
-                        slideJuggleAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
-                        slideJuggleAnimation.autoreverses = true
-                        slideJuggleAnimation.repeatCount = Float.infinity
-                        audioRecordingCancelIndicator.layer.add(slideJuggleAnimation, forKey: "slide_juggle")
-                    }
-                    
-                    var animateTimeSlideIn = false
-                    let audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode
-                    if let currentAudioRecordingTimeNode = self.audioRecordingTimeNode {
-                        audioRecordingTimeNode = currentAudioRecordingTimeNode
-                    } else {
-                        audioRecordingTimeNode = ChatTextInputAudioRecordingTimeNode(theme: interfaceState.theme)
-                        self.audioRecordingTimeNode = audioRecordingTimeNode
-                        audioRecordingInfoContainerNode.addSubnode(audioRecordingTimeNode)
-                        
-                        if transition.isAnimated {
-                            animateTimeSlideIn = true
-                        }
-                    }
-                    
-                    let audioRecordingTimeSize = audioRecordingTimeNode.measure(CGSize(width: 200.0, height: 100.0))
-                    
-                    let cancelMinX = audioRecordingCancelIndicator.alpha > 0.5 ? audioRecordingCancelIndicator.frame.minX : width
-                    
-                    audioRecordingInfoContainerNode.frame = CGRect(
-                        origin: CGPoint(
-                            x: min(leftInset, cancelMinX - audioRecordingTimeSize.width - 8.0 - 28.0),
-                            y: 0.0
-                        ),
-                        size: CGSize(width: baseWidth, height: panelHeight)
-                    )
-                    
-                    audioRecordingTimeNode.frame = CGRect(origin: CGPoint(x: 40.0, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingTimeSize.height) / 2.0)), size: audioRecordingTimeSize)
-                    if animateTimeSlideIn {
-                        let position = audioRecordingTimeNode.layer.position
-                        audioRecordingTimeNode.layer.animatePosition(from: CGPoint(x: position.x - 10.0, y: position.y), to: position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                        audioRecordingTimeNode.layer.animateAlpha(from: 0, to: 1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                    
-                    audioRecordingTimeNode.audioRecorder = recorder
-                    
-                    var animateDotAppearing = false
-                    let audioRecordingDotNode: AnimationNode
-                    if let currentAudioRecordingDotNode = self.audioRecordingDotNode, !currentAudioRecordingDotNode.played {
-                        audioRecordingDotNode = currentAudioRecordingDotNode
-                    } else {
-                        self.audioRecordingDotNode?.removeFromSupernode()
-                        audioRecordingDotNode = AnimationNode(animation: "voicebin")
-                        self.audioRecordingDotNode = audioRecordingDotNode
-                        self.addSubnode(audioRecordingDotNode)
-                    }
-                    
-                    animateDotAppearing = transition.isAnimated && !isLocked
-                    
-                    audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))
-                    if animateDotAppearing {
-                        audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
-                        audioRecordingDotNode.layer.animateAlpha(from: 0, to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
-                            if finished {
-                                let animation = CAKeyframeAnimation(keyPath: "opacity")
-                                animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
-                                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-                                animation.duration = 0.5
-                                animation.autoreverses = true
-                                animation.repeatCount = Float.infinity
-                                
-                                audioRecordingDotNode?.layer.add(animation, forKey: "recording")
-                            }
-                        })
-                        
-                        self.attachmentButton.layer.animateAlpha(from: 1, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                        self.attachmentButton.layer.animateScale(from: 1, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
-                    }
-                case let .video(status, _):
-                    switch status {
-                        case let .recording(recordingStatus):
-                            self.actionButtons.micButton.videoRecordingStatus = recordingStatus
-                        case .editing:
-                            self.actionButtons.micButton.videoRecordingStatus = nil
-                            hideMicButton = true
-                    }
+                })
+                
+                self.attachmentButton.layer.animateAlpha(from: 1, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                self.attachmentButton.layer.animateScale(from: 1, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
+            }
+            
+            if hideInfo {
+                audioRecordingDotNode.layer.animateAlpha(from: audioRecordingDotNode.alpha, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                audioRecordingTimeNode.layer.animateAlpha(from: audioRecordingTimeNode.alpha, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                audioRecordingCancelIndicator.layer.animateAlpha(from: audioRecordingCancelIndicator.alpha, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
             }
         } else {
             self.actionButtons.micButton.audioRecorder = nil

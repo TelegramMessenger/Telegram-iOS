@@ -12,6 +12,7 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
     private let arrowNode: ASImageNode
     private let labelNode: TextNode
     private let cancelButton: HighlightableButtonNode
+    private let strings: PresentationStrings
     
     private(set) var isDisplayingCancel = false
     
@@ -31,6 +32,8 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(strings.Common_Cancel, with: cancelFont, with: theme.chat.inputPanel.panelControlAccentColor, for: [])
         self.cancelButton.alpha = 0.0
+        
+        self.strings = strings
         
         super.init()
         
@@ -56,6 +59,10 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
     
     func updateTheme(theme: PresentationTheme) {
         self.arrowNode.image = PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)
+        self.cancelButton.setTitle(self.strings.Common_Cancel, with: cancelFont, with: theme.chat.inputPanel.panelControlAccentColor, for: [])
+                let makeLayout = TextNode.asyncLayout(self.labelNode)
+        let (_, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Conversation_SlideToCancel, font: Font.regular(14.0), textColor: theme.chat.inputPanel.panelControlColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 200.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = labelApply()
     }
     
     func updateIsDisplayingCancel(_ isDisplayingCancel: Bool, animated: Bool) {

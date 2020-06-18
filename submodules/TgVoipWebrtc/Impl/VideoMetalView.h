@@ -6,6 +6,8 @@
 
 #import "api/media_stream_interface.h"
 
+#include <memory>
+
 @class RTCVideoFrame;
 
 @interface VideoMetalView : UIView
@@ -17,9 +19,7 @@
 - (void)setSize:(CGSize)size;
 - (void)renderFrame:(nullable RTCVideoFrame *)frame;
 
-- (void)addToTrack:(rtc::scoped_refptr<webrtc::VideoTrackInterface>)track;
-
-- (rtc::VideoSinkInterface<webrtc::VideoFrame> *)getSink;
+- (std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>>)getSink;
 
 @end
 

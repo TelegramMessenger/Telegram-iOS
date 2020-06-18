@@ -71,7 +71,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
             if let video = video {
                 mappedVideo = video
                 |> take(until: { value in
-                    if case let .result(resultData) = value?.content, case .inputFile = resultData {
+                    if case let .result(resultData)? = value?.content, case .inputFile = resultData {
                         return SignalTakeAction(passthrough: true, complete: true)
                     } else {
                         return SignalTakeAction(passthrough: true, complete: false)

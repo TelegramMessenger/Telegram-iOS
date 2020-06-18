@@ -1,6 +1,7 @@
 #import <TgVoip/OngoingCallThreadLocalContext.h>
 
 #import "TgVoip.h"
+#import "VideoMetalView.h"
 
 using namespace TGVOIP_NAMESPACE;
 
@@ -189,41 +190,35 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .isOutgoing = isOutgoing,
         };
         
+        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         _tgVoip = TgVoip::makeInstance(
             config,
             { derivedStateValue },
             endpoints,
             proxyValue,
             callControllerNetworkTypeForType(networkType),
-            encryptionKey
+            encryptionKey,
+            [weakSelf, queue](TgVoipState state) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        [strongSelf controllerStateChanged:state];
+                    }
+                }];
+            },
+            [weakSelf, queue](const std::vector<uint8_t> &data) {
+            NSData *mappedData = [[NSData alloc] initWithBytes:data.data() length:data.size()];
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        [strongSelf signalingDataEmitted:mappedData];
+                    }
+                }];
+            }
         );
         
         _state = OngoingCallStateInitializing;
         _signalBars = -1;
-        
-        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
-        _tgVoip->setOnStateUpdated([weakSelf](TgVoipState state) {
-            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
-            if (strongSelf) {
-                [strongSelf controllerStateChanged:state];
-            }
-        });
-        _tgVoip->setOnSignalBarsUpdated([weakSelf](int signalBars) {
-            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
-            if (strongSelf) {
-                [strongSelf signalBarsChanged:signalBars];
-            }
-        });
-        _tgVoip->setOnCandidatesGathered([weakSelf](const std::vector<std::string> &candidates) {
-            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
-            if (strongSelf) {
-                NSMutableArray *mappedCandidates = [[NSMutableArray alloc] init];
-                for (auto &candidate : candidates) {
-                    [mappedCandidates addObject:[[NSString alloc] initWithCString:candidate.c_str() encoding:NSUTF8StringEncoding]];
-                }
-                [strongSelf candidatesGathered:mappedCandidates];
-            }
-        });
     }
     return self;
 }
@@ -320,27 +315,18 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)candidatesGathered:(NSArray<NSString *> *)candidates {
+- (void)signalingDataEmitted:(NSData *)data {
     if (_sendSignalingData) {
-        NSData *data = [NSKeyedArchiver archivedDataWithRootObject:@{
-            @"type": @"candidates",
-            @"data": candidates
-        }];
         _sendSignalingData(data);
     }
 }
 
 - (void)addSignalingData:(NSData *)data {
-    NSDictionary *dict = [NSKeyedUnarchiver unarchiveObjectWithData:data];
-    NSString *type = dict[@"type"];
-    if ([type isEqualToString:@"candidates"]) {
-        if (_tgVoip) {
-            std::vector<std::string> candidates;
-            for (NSString *string in dict[@"data"]) {
-                candidates.push_back([string UTF8String]);
-            }
-            _tgVoip->addRemoteCandidates(candidates);
-        }
+    if (_tgVoip) {
+        std::vector<uint8_t> mappedData;
+        mappedData.resize(data.length);
+        [data getBytes:mappedData.data() length:data.length];
+        _tgVoip->receiveSignalingData(mappedData);
     }
 }
 
@@ -359,17 +345,38 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)getRemoteCameraView:(void (^_Nonnull)(UIView * _Nullable))completion {
+- (void)makeIncomingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion {
     if (_tgVoip) {
+        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
             VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
             remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
             
-            _tgVoip->AttachVideoView(remoteRenderer);
+            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+            if (strongSelf) {
+                strongSelf->_tgVoip->setIncomingVideoOutput(sink);
+            }
             
-            dispatch_async(dispatch_get_main_queue(), ^{
-                completion(remoteRenderer);
-            });
+            completion(remoteRenderer);
+        });
+    }
+}
+
+- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion {
+    if (_tgVoip) {
+        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+            
+            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+            if (strongSelf) {
+                strongSelf->_tgVoip->setOutgoingVideoOutput(sink);
+            }
+            
+            completion(remoteRenderer);
         });
     }
 }
