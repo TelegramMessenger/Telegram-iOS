@@ -407,7 +407,7 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
                 entries.append(.topPostersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopPostersTitle))
                 var index: Int32 = 0
                 for topPoster in data.topPosters {
-                    if let peer = peers[topPoster.peerId] {
+                    if let peer = peers[topPoster.peerId], topPoster.messageCount > 0 {
                         entries.append(.topPoster(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topPoster))
                         index += 1
                     }
@@ -417,7 +417,7 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
                 entries.append(.topAdminsTitle(presentationData.theme, presentationData.strings.Stats_GroupTopAdminsTitle))
                 var index: Int32 = 0
                 for topAdmin in data.topAdmins {
-                    if let peer = peers[topAdmin.peerId] {
+                    if let peer = peers[topAdmin.peerId], (topAdmin.deletedCount + topAdmin.kickedCount + topAdmin.bannedCount) > 0 {
                         entries.append(.topAdmin(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topAdmin))
                         index += 1
                     }
@@ -427,7 +427,7 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
                 entries.append(.topInvitersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopInvitersTitle))
                 var index: Int32 = 0
                 for topInviter in data.topInviters {
-                    if let peer = peers[topInviter.peerId] {
+                    if let peer = peers[topInviter.peerId], topInviter.inviteCount > 0 {
                         entries.append(.topInviter(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topInviter))
                         index += 1
                     }
