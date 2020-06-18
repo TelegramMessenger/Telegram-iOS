@@ -411,9 +411,6 @@
             CGRect iconViewFrame = CGRectMake(12, 188 + _safeAreaInset.top, 40, 40);
             [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
         }
-        
-        if (self.item.selectionContext != nil)
-            [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
     }
 }
 

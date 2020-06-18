@@ -82,6 +82,17 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     }
 }
 
+- (UIInterfaceOrientation)effectiveOrientation {
+    return [self effectiveOrientation:self.interfaceOrientation];
+}
+
+- (UIInterfaceOrientation)effectiveOrientation:(UIInterfaceOrientation)orientation {
+    bool isPad = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad;
+    if ([self inFormSheet] || isPad)
+        orientation = UIInterfaceOrientationPortrait;
+    return orientation;
+}
+
 - (void)transitionInWithDuration:(CGFloat)__unused duration
 {
     
@@ -89,6 +100,8 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
 
 - (void)prepareTransitionInWithReferenceView:(UIView *)referenceView referenceFrame:(CGRect)referenceFrame parentView:(UIView *)parentView noTransitionView:(bool)noTransitionView
 {
+    _dismissing = false;
+    
     CGRect targetFrame = [self _targetFrameForTransitionInFromFrame:referenceFrame];
     
     if (_CGRectEqualToRectWithEpsilon(targetFrame, referenceFrame, FLT_EPSILON))
@@ -128,6 +141,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     else
     {
         _transitionView = [referenceView snapshotViewAfterScreenUpdates:false];
+        if (_transitionView == nil) {
+            _transitionView = referenceView;
+        }
         transitionViewSuperview = parentView;
     }
     
@@ -324,10 +340,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
+    UIInterfaceOrientation orientation = self.effectiveOrientation;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
@@ -345,7 +358,11 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
 
 - (void)_finishedTransitionInWithView:(UIView *)transitionView
 {
-    [transitionView removeFromSuperview];
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+        [self.view insertSubview:transitionView atIndex:0];
+    } else {
+        [transitionView removeFromSuperview];
+    }
 }
 
 - (bool)inFormSheet

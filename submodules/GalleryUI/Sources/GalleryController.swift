@@ -1072,7 +1072,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments, let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true
                     if presentationArguments.animated {
-                        centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                        centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                     }
                     
                     self._hiddenMedia.set(.single((message.id, media)))

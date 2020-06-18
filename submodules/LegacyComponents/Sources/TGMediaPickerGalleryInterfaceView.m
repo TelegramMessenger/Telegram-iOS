@@ -84,7 +84,6 @@
     NSTimer *_tooltipTimer;
     TGMenuContainerView *_tooltipContainerView;
     
-    TGTooltipContainerView *_groupingTooltipContainerView;
     SMetaDisposable *_tooltipDismissDisposable;
     
     void (^_closePressed)();
@@ -236,9 +235,7 @@
                 if (selectableItem != nil)
                     [strongSelf->_checkButton setNumber:[strongSelf->_selectionContext indexOfItem:selectableItem]];
                 
-                bool groupingButtonVisible = [strongSelf updateGroupingButtonVisibility];
-                if (!strongSelf->_groupButton.hidden && groupingButtonVisible && [strongSelf shouldDisplayGroupingTooltip] && strongSelf->_selectionContext.grouping)
-                    [strongSelf setupGroupingTooltip:[strongSelf->_groupButton.superview convertRect:strongSelf->_groupButton.frame toView:strongSelf]];
+                [strongSelf updateGroupingButtonVisibility];
             }];
             
             if (_selectionContext.allowGrouping)
@@ -510,8 +507,7 @@
     
     [_currentItemView setSafeAreaInset:[self localSafeAreaInset]];
     
-    CGFloat screenSide = MAX(TGScreenSize().width, TGScreenSize().height);
-    UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - self.frame.size.height) / 2, (screenSide - self.frame.size.width) / 2, (screenSide + self.frame.size.height) / 2, (screenSide + self.frame.size.width) / 2);
+    UIEdgeInsets screenEdges = [self screenEdges];
   
     __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
     
@@ -714,7 +710,6 @@
     [_photoCounterButton setSelected:!_photoCounterButton.selected animated:true];
     [_selectedPhotosView setHidden:!_photoCounterButton.selected animated:true];
     [_groupButton setHidden:!_photoCounterButton.selected animated:true];
-    //[_cameraButton setHidden:!_photoCounterButton.selected animated:true];
     
     void (^changeBlock)(void) = ^
     {
@@ -725,14 +720,7 @@
     else
         [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:changeBlock completion:nil];
     
-    bool groupingButtonVisible = [self updateGroupingButtonVisibility];
-    if (selected && _groupButton != nil && groupingButtonVisible && _selectionContext.grouping && [self shouldDisplayGroupingTooltip])
-    {
-        TGDispatchAfter(0.5, dispatch_get_main_queue(), ^
-        {
-            [self setupGroupingTooltip:[_groupButton.superview convertRect:_groupButton.frame toView:self]];
-        });
-    }
+    [self updateGroupingButtonVisibility];
 }
 
 - (void)updateEditorButtonsForItem:(id<TGModernGalleryItem>)item animated:(bool)animated
@@ -973,35 +961,6 @@
 
 #pragma mark - Grouping Tooltip
 
-- (bool)shouldDisplayGroupingTooltip
-{
-    return ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_displayedGroupTooltip_v0"] boolValue];
-}
-
-- (void)setupGroupingTooltip:(CGRect)rect
-{
-    if (_tooltipContainerView != nil)
-        return;
-    
-    rect = CGRectOffset(rect, 0.0f, 3.0f);
-    
-    _tooltipTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(tooltipTimerTick) interval:3.0 repeat:false];
-    
-    _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, self.frame.size.height)];
-    [self addSubview:_tooltipContainerView];
-    
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:[[NSDictionary alloc] initWithObjectsAndKeys:TGLocalized(@"MediaPicker.TapToUngroupDescription"), @"title", nil]];
-    
-    [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:_actionHandle];
-    [_tooltipContainerView.menuView sizeToFit];
-    _tooltipContainerView.menuView.buttonHighlightDisabled = true;
-    
-    [_tooltipContainerView showMenuFromRect:rect animated:false];
-    
-    [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"TG_displayedGroupTooltip_v0"];
-}
-
 - (void)actionStageActionRequested:(NSString *)action options:(id)__unused options
 {
     if ([action isEqualToString:@"menuAction"])
@@ -1011,41 +970,6 @@
         
         [_tooltipContainerView hideMenu];
     }
-}
-
-- (void)showGroupingTooltip:(bool)grouped duration:(NSTimeInterval)duration
-{
-    NSString *tooltipText = TGLocalized(grouped ? @"MediaPicker.GroupDescription" : @"MediaPicker.UngroupDescription");
-    
-    if (_groupingTooltipContainerView.isShowingTooltip && _groupingTooltipContainerView.tooltipView.sourceView == _groupButton)
-    {
-        [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:true];
-    }
-    else
-    {
-        [_tooltipContainerView removeFromSuperview];
-        [_groupingTooltipContainerView removeFromSuperview];
-        
-        _groupingTooltipContainerView = [[TGTooltipContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, self.frame.size.height)];
-        [self addSubview:_groupingTooltipContainerView];
-        
-        [_groupingTooltipContainerView.tooltipView setText:tooltipText animated:false];
-        _groupingTooltipContainerView.tooltipView.sourceView = _groupButton;
-        
-        CGRect recordButtonFrame = [_groupButton.superview convertRect:_groupButton.frame toView:_groupingTooltipContainerView];
-        recordButtonFrame.origin.y += 3.0f;
-        [_groupingTooltipContainerView showTooltipFromRect:recordButtonFrame animated:false];
-    }
-    
-    if (_tooltipDismissDisposable == nil)
-        _tooltipDismissDisposable = [[SMetaDisposable alloc] init];
-    
-    __weak TGTooltipContainerView *weakContainerView = _groupingTooltipContainerView;
-    [_tooltipDismissDisposable setDisposable:[[[SSignal complete] delay:duration onQueue:[SQueue mainQueue]] startWithNext:nil completed:^{
-        __strong TGTooltipContainerView *strongContainerView = weakContainerView;
-        if (strongContainerView != nil)
-            [strongContainerView hideTooltip];
-    }]];
 }
 
 #pragma mark -
@@ -1286,8 +1210,6 @@
 - (void)toggleGrouping
 {
     [_selectionContext toggleGrouping];
-    
-    [self showGroupingTooltip:_selectionContext.grouping duration:2.5];
 }
 
 - (CGRect)itemFooterViewFrameForSize:(CGSize)size

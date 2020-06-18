@@ -332,6 +332,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         for i in 0 ..< items.count {
             insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: previousIndexById[items[i].id]))
         }
+
         self.transaction(GalleryPagerTransaction(deleteItems: deleteItems, insertItems: insertItems, updateItems: updateItems, focusOnItem: centralItemIndex))
     }
     
@@ -394,7 +395,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 self.centralItemIndex = focusOnItem
             }
             
-            self.updateItemNodes(transition: .immediate)
+            self.updateItemNodes(transition: .immediate, notify: transaction.focusOnItem != nil)
             
             //print("visible indices after update \(self.itemNodes.map { $0.index })")
         }
@@ -474,7 +475,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         self.itemNodes.remove(at: internalIndex)
     }
     
-    private func updateItemNodes(transition: ContainedViewLayoutTransition, forceOffsetReset: Bool = false, forceLoad: Bool = false) {
+    private func updateItemNodes(transition: ContainedViewLayoutTransition, forceOffsetReset: Bool = false, notify: Bool = false, forceLoad: Bool = false) {
         if self.items.isEmpty || self.containerLayout == nil {
             return
         }
@@ -496,7 +497,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             resetOffsetToCentralItem = true
         }
         
-        var notifyCentralItemUpdated = forceOffsetReset
+        var notifyCentralItemUpdated = forceOffsetReset || notify
         
         if let centralItemIndex = self.centralItemIndex, let centralItemNode = self.visibleItemNode(at: centralItemIndex) {
             if centralItemIndex != 0 {

@@ -16,12 +16,12 @@ import PresentationDataUtils
 import AppBundle
 import GraphUI
 
-private final class StatsControllerArguments {
+private final class ChannelStatsControllerArguments {
     let context: AccountContext
-    let loadDetailedGraph: (ChannelStatsGraph, Int64) -> Signal<ChannelStatsGraph?, NoError>
+    let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openMessage: (MessageId) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (ChannelStatsGraph, Int64) -> Signal<ChannelStatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessage = openMessage
@@ -47,34 +47,34 @@ private enum StatsEntry: ItemListNodeEntry {
     case overview(PresentationTheme, ChannelStats)
     
     case growthTitle(PresentationTheme, String)
-    case growthGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case growthGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case followersTitle(PresentationTheme, String)
-    case followersGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case followersGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
      
     case notificationsTitle(PresentationTheme, String)
-    case notificationsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case notificationsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case viewsByHourTitle(PresentationTheme, String)
-    case viewsByHourGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case viewsByHourGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
         
     case viewsBySourceTitle(PresentationTheme, String)
-    case viewsBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case viewsBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case followersBySourceTitle(PresentationTheme, String)
-    case followersBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case followersBySourceGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case languagesTitle(PresentationTheme, String)
-    case languagesGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case languagesGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case postInteractionsTitle(PresentationTheme, String)
-    case postInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case postInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case postsTitle(PresentationTheme, String)
     case post(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Message, ChannelStatsMessageInteractions)
     
     case instantPageInteractionsTitle(PresentationTheme, String)
-    case instantPageInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, ChannelStatsGraph, ChartType)
+    case instantPageInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     var section: ItemListSectionId {
         switch self {
@@ -294,7 +294,7 @@ private enum StatsEntry: ItemListNodeEntry {
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
-        let arguments = arguments as! StatsControllerArguments
+        let arguments = arguments as! ChannelStatsControllerArguments
         switch self {
             case let .overviewHeader(_, text, dates):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
@@ -311,29 +311,16 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
-            case let .growthGraph(_, _, _, graph, type):
+            case let .growthGraph(_, _, _, graph, type),
+                 let .followersGraph(_, _, _, graph, type),
+                 let .notificationsGraph(_, _, _, graph, type),
+                 let .viewsByHourGraph(_, _, _, graph, type),
+                 let .viewsBySourceGraph(_, _, _, graph, type),
+                 let .followersBySourceGraph(_, _, _, graph, type),
+                 let .languagesGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .followersGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .notificationsGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .viewsByHourGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .viewsBySourceGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .followersBySourceGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .languagesGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
-            case let .postInteractionsGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
-                    let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
-                        if let graph = graph, case let .Loaded(_, data) = graph {
-                            completion(data)
-                        }
-                    })
-                }, sectionId: self.section, style: .blocks)
-            case let .instantPageInteractionsGraph(_, _, _, graph, type):
+            case let .postInteractionsGraph(_, _, _, graph, type),
+                 let .instantPageInteractionsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
@@ -349,7 +336,7 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, interactions: [MessageId: ChannelStatsMessageInteractions]?, presentationData: PresentationData) -> [StatsEntry] {
+private func channelStatsControllerEntries(data: ChannelStats?, messages: [Message]?, interactions: [MessageId: ChannelStatsMessageInteractions]?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
@@ -422,10 +409,7 @@ private func statsControllerEntries(data: ChannelStats?, messages: [Message]?, i
 public func channelStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
     var navigateToMessageImpl: ((MessageId) -> Void)?
     
-    let actionsDisposable = DisposableSet()
-    let checkCreationAvailabilityDisposable = MetaDisposable()
-    actionsDisposable.add(checkCreationAvailabilityDisposable)
-    
+    let actionsDisposable = DisposableSet()    
     let dataPromise = Promise<ChannelStats?>(nil)
     let messagesPromise = Promise<MessageHistoryView?>(nil)
     
@@ -453,7 +437,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     })
     dataPromise.set(.single(nil) |> then(dataSignal))
     
-    let arguments = StatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<ChannelStatsGraph?, NoError> in
+    let arguments = ChannelStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return statsContext.loadDetailedGraph(graph, x: x)
     }, openMessage: { messageId in
         navigateToMessageImpl?(messageId)
@@ -492,7 +476,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelInfo_Stats), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: statsControllerEntries(data: data, messages: messages, interactions: interactions, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(data: data, messages: messages, interactions: interactions, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

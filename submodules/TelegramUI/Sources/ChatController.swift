@@ -2125,7 +2125,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return
                                 }
                                 strongSelf.view.endEditing(true)
-                                strongSelf.push(channelStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData))
+                                
+                                let statsController: ViewController
+                                if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                    statsController = groupStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData)
+                                } else {
+                                    statsController = channelStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData)
+                                }
+                                strongSelf.push(statsController)
                             })))
                         }
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_Search, icon: { theme in

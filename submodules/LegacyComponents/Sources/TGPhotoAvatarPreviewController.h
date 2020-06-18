@@ -11,4 +11,6 @@
 - (void)setScrubberPosition:(NSTimeInterval)position reset:(bool)reset;
 - (void)setScrubberPlaying:(bool)value;
 
+- (NSTimeInterval)coverPosition;
+
 @end

@@ -324,7 +324,7 @@ class WebSearchGalleryController: ViewController {
                 centralItemNode.activateAsInitial()
                 
                 if presentationArguments.animated {
-                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                 }
                 
                 if let checkNode = self.checkNode, let controllerInteraction = self.controllerInteraction, let selectionState = controllerInteraction.selectionState {

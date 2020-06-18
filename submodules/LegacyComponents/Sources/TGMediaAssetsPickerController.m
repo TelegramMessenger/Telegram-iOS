@@ -417,7 +417,16 @@
             
             [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
         };
-        
+        controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+            if (!hasChanges)
+                return;
+            
+            __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:url adjustments:adjustments image:resultImage];
+        };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {
             return [editableItem thumbnailImageSignal];

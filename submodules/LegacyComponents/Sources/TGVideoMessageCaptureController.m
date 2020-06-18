@@ -252,7 +252,11 @@ typedef enum
     
     self.view.backgroundColor = [UIColor clearColor];
     
-    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame)): CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
+    CGFloat bottomOffset = self.view.frame.size.height - CGRectGetMaxY(_controlsFrame);
+    if (bottomOffset > 44.0) {
+        bottomOffset = 0.0f;
+    }
+    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame) + bottomOffset): CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
     
     _wrapperView = [[UIView alloc] initWithFrame:wrapperFrame];
     _wrapperView.clipsToBounds = true;
@@ -340,7 +344,7 @@ typedef enum
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
-    controlsFrame.size.width = _wrapperView.frame.size.width;
+//    controlsFrame.size.width = _wrapperView.frame.size.width;
     
     _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets slowmodeTimestamp:_slowmodeTimestamp slowmodeView:_slowmodeView];
     _controlsView.pallete = self.pallete;

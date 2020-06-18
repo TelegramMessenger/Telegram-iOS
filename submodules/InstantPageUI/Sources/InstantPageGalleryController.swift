@@ -407,7 +407,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
                 centralItemNode.activateAsInitial()
-                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                 
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }

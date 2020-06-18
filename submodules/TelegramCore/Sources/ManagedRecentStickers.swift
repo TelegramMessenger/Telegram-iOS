@@ -123,7 +123,7 @@ func managedSavedStickers(postbox: Postbox, network: Network) -> Signal<Void, No
 
 func managedGreetingStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudGreetingStickers, reverseHashOrder: false, forceFetch: false, fetch: { hash in
-        return network.request(Api.functions.messages.getStickers(emoticon: "👋⭐️", hash: hash))
+        return network.request(Api.functions.messages.getStickers(emoticon: "👋⭐️", hash: 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
             switch result {

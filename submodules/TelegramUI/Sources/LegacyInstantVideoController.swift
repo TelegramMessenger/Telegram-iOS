@@ -14,6 +14,7 @@ import LegacyUI
 import ImageCompression
 import LocalMediaResources
 import AppBundle
+import LegacyMediaPickerUI
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>

@@ -311,7 +311,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
         return self._title.get()
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.webView)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.webView.superview)
         

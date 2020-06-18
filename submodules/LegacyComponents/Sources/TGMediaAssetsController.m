@@ -566,6 +566,12 @@
         self.avatarCompletionBlock(image);
 }
 
+- (void)completeWithAvatarVideo:(NSURL *)url adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
+{
+    if (self.avatarVideoCompletionBlock != nil)
+        self.avatarVideoCompletionBlock(image, url, adjustments);
+}
+
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime
 {
     if (self.completionBlock != nil)
