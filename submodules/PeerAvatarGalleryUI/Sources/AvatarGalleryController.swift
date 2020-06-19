@@ -317,6 +317,8 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     }
     
     private func dismiss(forceAway: Bool) {
+        self.animatedIn.set(false)
+        
         var animatedOutNode = true
         var animatedOutInterface = false
         

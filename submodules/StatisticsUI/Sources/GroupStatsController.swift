@@ -44,7 +44,7 @@ private enum StatsSection: Int32 {
 }
 
 private enum StatsEntry: ItemListNodeEntry {
-    case overviewHeader(PresentationTheme, String, String)
+    case overviewTitle(PresentationTheme, String, String)
     case overview(PresentationTheme, GroupStats)
     
     case growthTitle(PresentationTheme, String)
@@ -68,18 +68,18 @@ private enum StatsEntry: ItemListNodeEntry {
     case topHoursTitle(PresentationTheme, String)
     case topHoursGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
-    case topPostersTitle(PresentationTheme, String)
+    case topPostersTitle(PresentationTheme, String, String)
     case topPoster(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopPoster)
     
-    case topAdminsTitle(PresentationTheme, String)
+    case topAdminsTitle(PresentationTheme, String, String)
     case topAdmin(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopAdmin)
     
-    case topInvitersTitle(PresentationTheme, String)
+    case topInvitersTitle(PresentationTheme, String, String)
     case topInviter(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopInviter)
         
     var section: ItemListSectionId {
         switch self {
-            case .overviewHeader, .overview:
+            case .overviewTitle, .overview:
                 return StatsSection.overview.rawValue
             case .growthTitle, .growthGraph:
                 return StatsSection.growth.rawValue
@@ -106,7 +106,7 @@ private enum StatsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .overviewHeader:
+            case .overviewTitle:
                 return 0
             case .overview:
                 return 1
@@ -155,8 +155,8 @@ private enum StatsEntry: ItemListNodeEntry {
     
     static func ==(lhs: StatsEntry, rhs: StatsEntry) -> Bool {
         switch lhs {
-            case let .overviewHeader(lhsTheme, lhsText, lhsDates):
-                if case let .overviewHeader(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
+            case let .overviewTitle(lhsTheme, lhsText, lhsDates):
+                if case let .overviewTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
                 } else {
                     return false
@@ -251,8 +251,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .topPostersTitle(lhsTheme, lhsText):
-                if case let .topPostersTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .topPostersTitle(lhsTheme, lhsText, lhsDates):
+                if case let .topPostersTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
                 } else {
                     return false
@@ -263,8 +263,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .topAdminsTitle(lhsTheme, lhsText):
-                if case let .topAdminsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .topAdminsTitle(lhsTheme, lhsText, lhsDates):
+                if case let .topAdminsTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
                 } else {
                     return false
@@ -275,8 +275,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .topInvitersTitle(lhsTheme, lhsText):
-                if case let .topInvitersTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .topInvitersTitle(lhsTheme, lhsText, lhsDates):
+                if case let .topInvitersTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
                 } else {
                     return false
@@ -297,7 +297,7 @@ private enum StatsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupStatsControllerArguments
         switch self {
-            case let .overviewHeader(_, text, dates):
+            case let .overviewTitle(_, text, dates):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
             case let .growthTitle(_, text),
                  let .membersTitle(_, text),
@@ -305,11 +305,12 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .languagesTitle(_, text),
                  let .messagesTitle(_, text),
                  let .actionsTitle(_, text),
-                 let .topHoursTitle(_, text),
-                 let .topPostersTitle(_, text),
-                 let .topAdminsTitle(_, text),
-                 let .topInvitersTitle(_, text):
+                 let .topHoursTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .topPostersTitle(_, text, dates),
+                 let .topAdminsTitle(_, text, dates),
+                 let .topInvitersTitle(_, text, dates):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
             case let .overview(_, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
             case let .growthGraph(_, _, _, graph, type),
@@ -363,8 +364,9 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
     if let data = data {
         let minDate = stringForDate(timestamp: data.period.minDate, strings: presentationData.strings)
         let maxDate = stringForDate(timestamp: data.period.maxDate, strings: presentationData.strings)
+        let dates = "\(minDate) – \(maxDate)"
         
-        entries.append(.overviewHeader(presentationData.theme, presentationData.strings.Stats_Overview, "\(minDate) – \(maxDate)"))
+        entries.append(.overviewTitle(presentationData.theme, presentationData.strings.Stats_Overview, dates))
         entries.append(.overview(presentationData.theme, data))
     
         if !data.growthGraph.isEmpty {
@@ -399,12 +401,12 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
 
         if !data.topHoursGraph.isEmpty {
             entries.append(.topHoursTitle(presentationData.theme, presentationData.strings.Stats_GroupTopHoursTitle))
-            entries.append(.topHoursGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .lines))
+            entries.append(.topHoursGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .hourlyStep))
         }
         
         if let peers = peers {
             if !data.topPosters.isEmpty {
-                entries.append(.topPostersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopPostersTitle))
+                entries.append(.topPostersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopPostersTitle, dates))
                 var index: Int32 = 0
                 for topPoster in data.topPosters {
                     if let peer = peers[topPoster.peerId], topPoster.messageCount > 0 {
@@ -414,7 +416,7 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
                 }
             }
             if !data.topAdmins.isEmpty {
-                entries.append(.topAdminsTitle(presentationData.theme, presentationData.strings.Stats_GroupTopAdminsTitle))
+                entries.append(.topAdminsTitle(presentationData.theme, presentationData.strings.Stats_GroupTopAdminsTitle, dates))
                 var index: Int32 = 0
                 for topAdmin in data.topAdmins {
                     if let peer = peers[topAdmin.peerId], (topAdmin.deletedCount + topAdmin.kickedCount + topAdmin.bannedCount) > 0 {
@@ -424,7 +426,7 @@ private func groupStatsControllerEntries(data: GroupStats?, peers: [PeerId: Peer
                 }
             }
             if !data.topInviters.isEmpty {
-                entries.append(.topInvitersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopInvitersTitle))
+                entries.append(.topInvitersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopInvitersTitle, dates))
                 var index: Int32 = 0
                 for topInviter in data.topInviters {
                     if let peer = peers[topInviter.peerId], topInviter.inviteCount > 0 {

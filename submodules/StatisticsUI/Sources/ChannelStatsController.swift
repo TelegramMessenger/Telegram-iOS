@@ -43,7 +43,7 @@ private enum StatsSection: Int32 {
 }
 
 private enum StatsEntry: ItemListNodeEntry {
-    case overviewHeader(PresentationTheme, String, String)
+    case overviewTitle(PresentationTheme, String, String)
     case overview(PresentationTheme, ChannelStats)
     
     case growthTitle(PresentationTheme, String)
@@ -78,7 +78,7 @@ private enum StatsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .overviewHeader, .overview:
+            case .overviewTitle, .overview:
                 return StatsSection.overview.rawValue
             case .growthTitle, .growthGraph:
                 return StatsSection.growth.rawValue
@@ -105,7 +105,7 @@ private enum StatsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .overviewHeader:
+            case .overviewTitle:
                 return 0
             case .overview:
                 return 1
@@ -154,8 +154,8 @@ private enum StatsEntry: ItemListNodeEntry {
     
     static func ==(lhs: StatsEntry, rhs: StatsEntry) -> Bool {
         switch lhs {
-            case let .overviewHeader(lhsTheme, lhsText, lhsDates):
-                if case let .overviewHeader(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
+            case let .overviewTitle(lhsTheme, lhsText, lhsDates):
+                if case let .overviewTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
                 } else {
                     return false
@@ -296,7 +296,7 @@ private enum StatsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelStatsControllerArguments
         switch self {
-            case let .overviewHeader(_, text, dates):
+            case let .overviewTitle(_, text, dates):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
             case let .growthTitle(_, text),
                  let .followersTitle(_, text),
@@ -343,7 +343,7 @@ private func channelStatsControllerEntries(data: ChannelStats?, messages: [Messa
         let minDate = stringForDate(timestamp: data.period.minDate, strings: presentationData.strings)
         let maxDate = stringForDate(timestamp: data.period.maxDate, strings: presentationData.strings)
         
-        entries.append(.overviewHeader(presentationData.theme, presentationData.strings.Stats_Overview, "\(minDate) – \(maxDate)"))
+        entries.append(.overviewTitle(presentationData.theme, presentationData.strings.Stats_Overview, "\(minDate) – \(maxDate)"))
         entries.append(.overview(presentationData.theme, data))
     
         if !data.growthGraph.isEmpty {
