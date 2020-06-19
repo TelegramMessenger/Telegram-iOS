@@ -11,15 +11,31 @@ public enum RequestCallResult {
     case alreadyInProgress(PeerId)
 }
 
-public enum PresentationCallState: Equatable {
-    case waiting
-    case ringing
-    case requesting(Bool)
-    case connecting(Data?)
-    case active(Double, Int32?, Data)
-    case reconnecting(Double, Int32?, Data)
-    case terminating
-    case terminated(CallId?, CallSessionTerminationReason?, Bool)
+public struct PresentationCallState: Equatable {
+    public enum State: Equatable {
+        case waiting
+        case ringing
+        case requesting(Bool)
+        case connecting(Data?)
+        case active(Double, Int32?, Data)
+        case reconnecting(Double, Int32?, Data)
+        case terminating
+        case terminated(CallId?, CallSessionTerminationReason?, Bool)
+    }
+    
+    public enum VideoState: Equatable {
+        case notAvailable
+        case available(Bool)
+        case active
+    }
+    
+    public var state: State
+    public var videoState: VideoState
+    
+    public init(state: State, videoState: VideoState) {
+        self.state = state
+        self.videoState = videoState
+    }
 }
 
 public protocol PresentationCall: class {
@@ -44,6 +60,8 @@ public protocol PresentationCall: class {
     
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
+    func setEnableVideo(_ value: Bool)
+    func switchVideoCamera()
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     

@@ -30,6 +30,8 @@
 
 #import "VideoCameraCapturer.h"
 
+#import <AVFoundation/AVFoundation.h>
+
 @interface VideoCapturerInterfaceImplReference : NSObject {
     VideoCameraCapturer *_videoCapturer;
 }
@@ -38,7 +40,7 @@
 
 @implementation VideoCapturerInterfaceImplReference
 
-- (instancetype)initWithSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source {
+- (instancetype)initWithSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source useFrontCamera:(bool)useFrontCamera {
     self = [super init];
     if (self != nil) {
         assert([NSThread isMainThread]);
@@ -46,18 +48,27 @@
         _videoCapturer = [[VideoCameraCapturer alloc] initWithSource:source];
         
         AVCaptureDevice *frontCamera = nil;
+        AVCaptureDevice *backCamera = nil;
         for (AVCaptureDevice *device in [VideoCameraCapturer captureDevices]) {
             if (device.position == AVCaptureDevicePositionFront) {
                 frontCamera = device;
-                break;
+            } else if (device.position == AVCaptureDevicePositionBack) {
+                backCamera = device;
             }
         }
         
-        if (frontCamera == nil) {
+        AVCaptureDevice *selectedCamera = nil;
+        if (useFrontCamera && frontCamera != nil) {
+            selectedCamera = frontCamera;
+        } else {
+            selectedCamera = backCamera;
+        }
+        
+        if (selectedCamera == nil) {
             return nil;
         }
         
-        NSArray<AVCaptureDeviceFormat *> *sortedFormats = [[VideoCameraCapturer supportedFormatsForDevice:frontCamera] sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDeviceFormat* lhs, AVCaptureDeviceFormat *rhs) {
+        NSArray<AVCaptureDeviceFormat *> *sortedFormats = [[VideoCameraCapturer supportedFormatsForDevice:selectedCamera] sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDeviceFormat* lhs, AVCaptureDeviceFormat *rhs) {
             int32_t width1 = CMVideoFormatDescriptionGetDimensions(lhs.formatDescription).width;
             int32_t width2 = CMVideoFormatDescriptionGetDimensions(rhs.formatDescription).width;
             return width1 < width2 ? NSOrderedAscending : NSOrderedDescending;
@@ -90,7 +101,7 @@
             return nil;
         }
         
-        [_videoCapturer startCaptureWithDevice:frontCamera format:bestFormat fps:30];
+        [_videoCapturer startCaptureWithDevice:selectedCamera format:bestFormat fps:30];
     }
     return self;
 }
@@ -119,12 +130,12 @@ namespace TGVOIP_NAMESPACE {
 
 class VideoCapturerInterfaceImpl: public VideoCapturerInterface {
 public:
-    VideoCapturerInterfaceImpl(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source) :
+    VideoCapturerInterfaceImpl(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera) :
     _source(source) {
         _implReference = [[VideoCapturerInterfaceImplHolder alloc] init];
         VideoCapturerInterfaceImplHolder *implReference = _implReference;
         dispatch_async(dispatch_get_main_queue(), ^{
-            VideoCapturerInterfaceImplReference *value = [[VideoCapturerInterfaceImplReference alloc] initWithSource:source];
+            VideoCapturerInterfaceImplReference *value = [[VideoCapturerInterfaceImplReference alloc] initWithSource:source useFrontCamera:useFrontCamera];
             if (value != nil) {
                 implReference.reference = (void *)CFBridgingRetain(value);
             }
@@ -161,13 +172,21 @@ std::unique_ptr<webrtc::VideoDecoderFactory> makeVideoDecoderFactory() {
     return webrtc::ObjCToNativeVideoDecoderFactory([[TGRTCDefaultVideoDecoderFactory alloc] init]);
 }
 
+bool supportsH265Encoding() {
+    if (@available(iOS 11.0, *)) {
+        return [[AVAssetExportSession allExportPresets] containsObject:AVAssetExportPresetHEVCHighestQuality];
+    } else {
+        return false;
+    }
+}
+
 rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> makeVideoSource(rtc::Thread *signalingThread, rtc::Thread *workerThread) {
     rtc::scoped_refptr<webrtc::ObjCVideoTrackSource> objCVideoTrackSource(new rtc::RefCountedObject<webrtc::ObjCVideoTrackSource>());
     return webrtc::VideoTrackSourceProxy::Create(signalingThread, workerThread, objCVideoTrackSource);
 }
 
-std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source) {
-    return std::make_unique<VideoCapturerInterfaceImpl>(source);
+std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera) {
+    return std::make_unique<VideoCapturerInterfaceImpl>(source, useFrontCamera);
 }
 
 #ifdef TGVOIP_NAMESPACE

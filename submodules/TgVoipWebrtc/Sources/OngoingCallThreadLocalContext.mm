@@ -34,6 +34,8 @@ using namespace TGVOIP_NAMESPACE;
     TgVoip *_tgVoip;
     
     OngoingCallStateWebrtc _state;
+    OngoingCallVideoStateWebrtc _videoState;
+    
     int32_t _signalBars;
     NSData *_lastDerivedState;
     
@@ -127,6 +129,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _callPacketTimeout = 10.0;
         _networkType = networkType;
         _sendSignalingData = [sendSignalingData copy];
+        _videoState = OngoingCallVideoStateInactive;
         
         std::vector<uint8_t> derivedStateValue;
         derivedStateValue.resize(derivedState.length);
@@ -172,7 +175,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .initializationTimeout = _callConnectTimeout,
             .receiveTimeout = _callPacketTimeout,
             .dataSaving = callControllerDataSavingForType(dataSaving),
-            .enableP2P = allowP2P,
+            .enableP2P = (bool)allowP2P,
             .enableAEC = false,
             .enableNS = true,
             .enableAGC = true,
@@ -203,6 +206,25 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                     if (strongSelf) {
                         [strongSelf controllerStateChanged:state];
+                    }
+                }];
+            },
+            [weakSelf, queue](bool isActive) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        OngoingCallVideoStateWebrtc videoState;
+                        if (isActive) {
+                            videoState = OngoingCallVideoStateActive;
+                        } else {
+                            videoState = OngoingCallVideoStateInactive;
+                        }
+                        if (strongSelf->_videoState != videoState) {
+                            strongSelf->_videoState = videoState;
+                            if (strongSelf->_stateChanged) {
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState);
+                            }
+                        }
                     }
                 }];
             },
@@ -300,7 +322,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _state = callState;
         
         if (_stateChanged) {
-            _stateChanged(callState);
+            _stateChanged(_state, _videoState);
         }
     }
 }
@@ -333,6 +355,18 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)setIsMuted:(bool)isMuted {
     if (_tgVoip) {
         _tgVoip->setMuteMicrophone(isMuted);
+    }
+}
+
+- (void)setVideoEnabled:(bool)videoEnabled {
+    if (_tgVoip) {
+        _tgVoip->setSendVideo(videoEnabled);
+    }
+}
+
+- (void)switchVideoCamera {
+    if (_tgVoip) {
+        _tgVoip->switchVideoCamera();
     }
 }
 

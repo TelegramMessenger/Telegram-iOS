@@ -21,7 +21,9 @@ mv openssl/lib/libcrypto.a openssl/
 mv libssl/lib/libssl.a openssl/
 
 OUT_DIR="ios"
-if [ "$ARCH" == "x64" ]; then
+if [ "$ARCH" == "arm64" ]; then
+  OUT_DIR="ios_64"
+elif [ "$ARCH" == "x64" ]; then
   OUT_DIR="ios_sim"
 fi
 

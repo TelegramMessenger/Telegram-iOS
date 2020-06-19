@@ -1,5 +1,7 @@
 #include "Manager.h"
 
+#include "rtc_base/byte_buffer.h"
+
 #ifdef TGVOIP_NAMESPACE
 namespace TGVOIP_NAMESPACE {
 #endif
@@ -35,13 +37,16 @@ Manager::Manager(
     TgVoipEncryptionKey encryptionKey,
     bool enableP2P,
     std::function<void (const TgVoipState &)> stateUpdated,
+    std::function<void (bool)> videoStateUpdated,
     std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted
 ) :
 _thread(thread),
 _encryptionKey(encryptionKey),
 _enableP2P(enableP2P),
 _stateUpdated(stateUpdated),
-_signalingDataEmitted(signalingDataEmitted) {
+_videoStateUpdated(videoStateUpdated),
+_signalingDataEmitted(signalingDataEmitted),
+_isVideoRequested(false) {
     assert(_thread->IsCurrent());
 }
 
@@ -87,7 +92,14 @@ void Manager::start() {
                 });
             },
             [signalingDataEmitted](const std::vector<uint8_t> &data) {
-                signalingDataEmitted(data);
+                rtc::CopyOnWriteBuffer buffer;
+                uint8_t mode = 3;
+                buffer.AppendData(&mode, 1);
+                buffer.AppendData(data.data(), data.size());
+                std::vector<uint8_t> augmentedData;
+                augmentedData.resize(buffer.size());
+                memcpy(augmentedData.data(), buffer.data(), buffer.size());
+                signalingDataEmitted(augmentedData);
             }
         );
     }));
@@ -112,8 +124,59 @@ void Manager::start() {
 }
 
 void Manager::receiveSignalingData(const std::vector<uint8_t> &data) {
-    _networkManager->perform([data](NetworkManager *networkManager) {
-        networkManager->receiveSignalingData(data);
+    rtc::CopyOnWriteBuffer buffer;
+    buffer.AppendData(data.data(), data.size());
+    
+    if (buffer.size() < 1) {
+        return;
+    }
+    
+    rtc::ByteBufferReader reader((const char *)buffer.data(), buffer.size());
+    uint8_t mode = 0;
+    if (!reader.ReadUInt8(&mode)) {
+        return;
+    }
+    
+    if (mode == 1) {
+        _mediaManager->perform([](MediaManager *mediaManager) {
+            mediaManager->setSendVideo(true);
+        });
+        _videoStateUpdated(true);
+    } else if (mode == 2) {
+    } else if (mode == 3) {
+        auto candidatesData = buffer.Slice(1, buffer.size() - 1);
+        _networkManager->perform([candidatesData](NetworkManager *networkManager) {
+            networkManager->receiveSignalingData(candidatesData);
+        });
+    }
+}
+
+void Manager::setSendVideo(bool sendVideo) {
+    if (sendVideo) {
+        if (!_isVideoRequested) {
+            _isVideoRequested = true;
+            
+            rtc::CopyOnWriteBuffer buffer;
+            uint8_t mode = 1;
+            buffer.AppendData(&mode, 1);
+            std::vector<uint8_t> data;
+            data.resize(buffer.size());
+            memcpy(data.data(), buffer.data(), buffer.size());
+            
+            _signalingDataEmitted(data);
+            
+            _mediaManager->perform([](MediaManager *mediaManager) {
+                mediaManager->setSendVideo(true);
+            });
+            
+            _videoStateUpdated(true);
+        }
+    }
+}
+
+void Manager::switchVideoCamera() {
+    _mediaManager->perform([](MediaManager *mediaManager) {
+        mediaManager->switchVideoCamera();
     });
 }
 

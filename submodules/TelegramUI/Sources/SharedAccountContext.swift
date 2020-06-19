@@ -597,7 +597,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if let strongSelf = self {
                     let resolvedText: CallStatusText
                     if let state = state {
-                        switch state {
+                        switch state.state {
                             case .connecting, .requesting, .terminating, .ringing, .waiting:
                                 resolvedText = .inProgress(nil)
                             case .terminated:
@@ -1011,6 +1011,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool) -> ViewController? {
         let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: fromChat)
         controller?.navigationPresentation = .modalInLargeLayout
+        return controller
+    }
+    
+    public func makeChannelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant) -> ViewController? {
+        let controller = channelAdminController(context: context, peerId: peerId, adminId: adminId, initialParticipant: initialParticipant, updated: { _ in }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
         return controller
     }
     

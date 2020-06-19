@@ -35,7 +35,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
         BUILD_DIR="$(RULEDIR)/$$BUILD_ARCH"
-        rm -rf "$$BUILD_DIR"
+        #rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
 
         SOURCE_PATH="third-party/webrtc/webrtc-ios/src"

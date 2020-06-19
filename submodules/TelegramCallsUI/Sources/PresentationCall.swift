@@ -188,7 +188,7 @@ public final class PresentationCallImpl: PresentationCall {
     
     private var sessionStateDisposable: Disposable?
     
-    private let statePromise = ValuePromise<PresentationCallState>(.waiting, ignoreRepeated: true)
+    private let statePromise = ValuePromise<PresentationCallState>(PresentationCallState(state: .waiting, videoState: .notAvailable), ignoreRepeated: true)
     public var state: Signal<PresentationCallState, NoError> {
         return self.statePromise.get()
     }
@@ -402,7 +402,7 @@ public final class PresentationCallImpl: PresentationCall {
         
         switch sessionState.state {
             case .ringing:
-                presentationState = .ringing
+                presentationState = PresentationCallState(state: .ringing, videoState: .notAvailable)
                 if previous == nil || previousControl == nil {
                     if !self.reportedIncomingCall {
                         self.reportedIncomingCall = true
@@ -429,19 +429,28 @@ public final class PresentationCallImpl: PresentationCall {
                 }
             case .accepting:
                 self.callWasActive = true
-                presentationState = .connecting(nil)
+                presentationState = PresentationCallState(state: .connecting(nil), videoState: .notAvailable)
             case .dropping:
-                presentationState = .terminating
+                presentationState = PresentationCallState(state: .terminating, videoState: .notAvailable)
             case let .terminated(id, reason, options):
-                presentationState = .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating))
+                presentationState = PresentationCallState(state: .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating)), videoState: .notAvailable)
             case let .requesting(ringing):
-                presentationState = .requesting(ringing)
+                presentationState = PresentationCallState(state: .requesting(ringing), videoState: .notAvailable)
             case let .active(_, _, keyVisualHash, _, _, _, _):
                 self.callWasActive = true
                 if let callContextState = callContextState {
-                    switch callContextState {
+                    let mappedVideoState: PresentationCallState.VideoState
+                    switch callContextState.videoState {
+                    case .notAvailable:
+                        mappedVideoState = .notAvailable
+                    case let .available(enabled):
+                        mappedVideoState = .available(enabled)
+                    case .active:
+                        mappedVideoState = .active
+                    }
+                    switch callContextState.state {
                         case .initializing:
-                            presentationState = .connecting(keyVisualHash)
+                            presentationState = PresentationCallState(state: .connecting(keyVisualHash), videoState: mappedVideoState)
                         case .failed:
                             presentationState = nil
                             self.callSessionManager.drop(internalId: self.internalId, reason: .disconnect, debugLog: .single(nil))
@@ -453,7 +462,7 @@ public final class PresentationCallImpl: PresentationCall {
                                 timestamp = CFAbsoluteTimeGetCurrent()
                                 self.activeTimestamp = timestamp
                             }
-                            presentationState = .active(timestamp, reception, keyVisualHash)
+                            presentationState = PresentationCallState(state: .active(timestamp, reception, keyVisualHash), videoState: mappedVideoState)
                         case .reconnecting:
                             let timestamp: Double
                             if let activeTimestamp = self.activeTimestamp {
@@ -462,10 +471,10 @@ public final class PresentationCallImpl: PresentationCall {
                                 timestamp = CFAbsoluteTimeGetCurrent()
                                 self.activeTimestamp = timestamp
                             }
-                            presentationState = .reconnecting(timestamp, reception, keyVisualHash)
+                            presentationState = PresentationCallState(state: .reconnecting(timestamp, reception, keyVisualHash), videoState: mappedVideoState)
                     }
                 } else {
-                    presentationState = .connecting(keyVisualHash)
+                    presentationState = PresentationCallState(state: .connecting(keyVisualHash), videoState: .notAvailable)
                 }
         }
         
@@ -555,12 +564,12 @@ public final class PresentationCallImpl: PresentationCall {
     
     private func updateTone(_ state: PresentationCallState, callContextState: OngoingCallContextState?, previous: CallSession?) {
         var tone: PresentationCallTone?
-        if let callContextState = callContextState, case .reconnecting = callContextState {
+        if let callContextState = callContextState, case .reconnecting = callContextState.state {
             tone = .connecting
         } else if let previous = previous {
             switch previous.state {
                 case .accepting, .active, .dropping, .requesting:
-                    switch state {
+                    switch state.state {
                         case .connecting:
                             if case .requesting = previous.state {
                                 tone = .ringing
@@ -650,6 +659,14 @@ public final class PresentationCallImpl: PresentationCall {
         self.isMutedValue = value
         self.isMutedPromise.set(self.isMutedValue)
         self.ongoingContext?.setIsMuted(self.isMutedValue)
+    }
+    
+    public func setEnableVideo(_ value: Bool) {
+        self.ongoingContext?.setEnableVideo(value)
+    }
+    
+    public func switchVideoCamera() {
+        self.ongoingContext?.switchVideoCamera()
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {

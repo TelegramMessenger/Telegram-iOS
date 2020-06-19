@@ -93,11 +93,20 @@ private let setupLogs: Bool = {
     return true
 }()
 
-public enum OngoingCallContextState {
-    case initializing
-    case connected
-    case reconnecting
-    case failed
+public struct OngoingCallContextState: Equatable {
+    public enum State {
+        case initializing
+        case connected
+        case reconnecting
+        case failed
+    }
+    public enum VideoState: Equatable {
+        case notAvailable
+        case available(Bool)
+        case active
+    }
+    public let state: State
+    public let videoState: VideoState
 }
 
 private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc /*, OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
@@ -226,6 +235,8 @@ private func ongoingDataSavingForTypeWebrtc(_ type: VoiceCallDataSaving) -> Ongo
 private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
+    func nativeSetVideoEnabled(_ value: Bool)
+    func nativeSwitchVideoCamera()
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
@@ -253,6 +264,12 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
         self.setIsMuted(value)
     }
     
+    func nativeSetVideoEnabled(_ value: Bool) {
+    }
+    
+    func nativeSwitchVideoCamera() {
+    }
+    
     func nativeDebugInfo() -> String {
         return self.debugInfo() ?? ""
     }
@@ -277,6 +294,14 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeSetIsMuted(_ value: Bool) {
         self.setIsMuted(value)
+    }
+    
+    func nativeSetVideoEnabled(_ value: Bool) {
+        self.setVideoEnabled(value)
+    }
+    
+    func nativeSwitchVideoCamera() {
+        self.switchVideoCamera()
     }
     
     func nativeDebugInfo() -> String {
@@ -318,7 +343,7 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     }
 }*/
 
-private extension OngoingCallContextState {
+private extension OngoingCallContextState.State {
     init(_ state: OngoingCallState) {
         switch state {
         case .initializing:
@@ -335,7 +360,7 @@ private extension OngoingCallContextState {
     }
 }
 
-private extension OngoingCallContextState {
+private extension OngoingCallContextState.State {
     init(_ state: OngoingCallStateWebrtc) {
         switch state {
         case .initializing:
@@ -471,8 +496,25 @@ public final class OngoingCallContext {
                     })
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { state in
-                        self?.contextState.set(.single(OngoingCallContextState(state)))
+                    context.stateChanged = { state, videoState in
+                        queue.async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let mappedState = OngoingCallContextState.State(state)
+                            let mappedVideoState: OngoingCallContextState.VideoState
+                            switch videoState {
+                            case .inactive:
+                                mappedVideoState = .available(true)
+                            case .active:
+                                mappedVideoState = .active
+                            case .invited, .requesting:
+                                mappedVideoState = .available(false)
+                            @unknown default:
+                                mappedVideoState = .available(false)
+                            }
+                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState)))
+                        }
                     }
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))
@@ -498,7 +540,7 @@ public final class OngoingCallContext {
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
-                        self?.contextState.set(.single(OngoingCallContextState(state)))
+                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable)))
                     }
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))
@@ -585,6 +627,18 @@ public final class OngoingCallContext {
     public func setIsMuted(_ value: Bool) {
         self.withContext { context in
             context.nativeSetIsMuted(value)
+        }
+    }
+    
+    public func setEnableVideo(_ value: Bool) {
+        self.withContext { context in
+            context.nativeSetVideoEnabled(value)
+        }
+    }
+    
+    public func switchVideoCamera() {
+        self.withContext { context in
+            context.nativeSwitchVideoCamera()
         }
     }
     

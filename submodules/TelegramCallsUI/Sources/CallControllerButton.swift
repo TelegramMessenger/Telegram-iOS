@@ -11,6 +11,7 @@ enum CallControllerButtonType {
     case accept
     case speaker
     case bluetooth
+    case video
 }
 
 private let buttonSize = CGSize(width: 75.0, height: 75.0)
@@ -123,6 +124,11 @@ final class CallControllerButtonNode: HighlightTrackingButtonNode {
                 regularImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: emptyStroke, fillColor: .clear)
                 highlightedImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
                 filledImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: nil, fillColor: invertedFill, knockout: true)
+            case .video:
+                let patternImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconVideo"), color: .white)
+                regularImage = generateEmptyButtonImage(icon: patternImage, strokeColor: emptyStroke, fillColor: .clear)
+                highlightedImage = generateEmptyButtonImage(icon: patternImage, strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
+                filledImage = generateEmptyButtonImage(icon: patternImage, strokeColor: nil, fillColor: invertedFill, knockout: true)
         }
         
         self.regularImage = regularImage
@@ -209,6 +215,11 @@ final class CallControllerButtonNode: HighlightTrackingButtonNode {
                 regularImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: emptyStroke, fillColor: .clear)
                 highlightedImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
                 filledImage = generateEmptyButtonImage(icon: UIImage(bundleImageName: "Call/CallBluetoothButton"), strokeColor: nil, fillColor: invertedFill, knockout: true)
+            case .video:
+                let patternImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconVideo"), color: .white)
+                regularImage = generateEmptyButtonImage(icon: patternImage, strokeColor: emptyStroke, fillColor: .clear)
+                highlightedImage = generateEmptyButtonImage(icon: patternImage, strokeColor: emptyStroke, fillColor: emptyHighlightedFill)
+                filledImage = generateEmptyButtonImage(icon: patternImage, strokeColor: nil, fillColor: invertedFill, knockout: true)
         }
         
         self.regularImage = regularImage
