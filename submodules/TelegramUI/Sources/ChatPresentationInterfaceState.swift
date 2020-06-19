@@ -128,35 +128,6 @@ struct ChatSearchResultsState: Equatable {
     let totalCount: Int32
     let completed: Bool
 }
-
-enum ChatSearchDomain: Equatable {
-    case everything
-    case members
-    case member(Peer)
-    
-    static func ==(lhs: ChatSearchDomain, rhs: ChatSearchDomain) -> Bool {
-        switch lhs {
-            case .everything:
-                if case .everything = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .members:
-                if case .members = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .member(lhsPeer):
-                if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
     
 enum ChatSearchDomainSuggestionContext: Equatable {
     case none

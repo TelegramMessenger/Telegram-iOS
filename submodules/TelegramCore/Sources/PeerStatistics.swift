@@ -553,11 +553,12 @@ public final class GroupStats: Equatable {
     public let messagesGraph: StatsGraph
     public let actionsGraph: StatsGraph
     public let topHoursGraph: StatsGraph
+    public let topWeekdaysGraph: StatsGraph
     public let topPosters: [GroupStatsTopPoster]
     public let topAdmins: [GroupStatsTopAdmin]
     public let topInviters: [GroupStatsTopInviter]
     
-    init(period: StatsDateRange, members: StatsValue, messages: StatsValue, viewers: StatsValue, posters: StatsValue, growthGraph: StatsGraph, membersGraph: StatsGraph, newMembersBySourceGraph: StatsGraph, languagesGraph: StatsGraph, messagesGraph: StatsGraph, actionsGraph: StatsGraph, topHoursGraph: StatsGraph, topPosters: [GroupStatsTopPoster], topAdmins: [GroupStatsTopAdmin], topInviters: [GroupStatsTopInviter]) {
+    init(period: StatsDateRange, members: StatsValue, messages: StatsValue, viewers: StatsValue, posters: StatsValue, growthGraph: StatsGraph, membersGraph: StatsGraph, newMembersBySourceGraph: StatsGraph, languagesGraph: StatsGraph, messagesGraph: StatsGraph, actionsGraph: StatsGraph, topHoursGraph: StatsGraph, topWeekdaysGraph: StatsGraph, topPosters: [GroupStatsTopPoster], topAdmins: [GroupStatsTopAdmin], topInviters: [GroupStatsTopInviter]) {
         self.period = period
         self.members = members
         self.messages = messages
@@ -570,6 +571,7 @@ public final class GroupStats: Equatable {
         self.messagesGraph = messagesGraph
         self.actionsGraph = actionsGraph
         self.topHoursGraph = topHoursGraph
+        self.topWeekdaysGraph = topWeekdaysGraph
         self.topPosters = topPosters
         self.topAdmins = topAdmins
         self.topInviters = topInviters
@@ -612,6 +614,9 @@ public final class GroupStats: Equatable {
         if lhs.topHoursGraph != rhs.topHoursGraph {
             return false
         }
+        if lhs.topWeekdaysGraph != rhs.topWeekdaysGraph {
+            return false
+        }
         if lhs.topPosters != rhs.topPosters {
             return false
         }
@@ -625,31 +630,35 @@ public final class GroupStats: Equatable {
     }
     
     public func withUpdatedGrowthGraph(_ growthGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
     
     public func withUpdatedMembersGraph(_ membersGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
 
     public func withUpdatedNewMembersBySourceGraph(_ newMembersBySourceGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
     
     public func withUpdatedLanguagesGraph(_ languagesGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
     
     public func withUpdatedMessagesGraph(_ messagesGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
     
     public func withUpdatedActionsGraph(_ actionsGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: actionsGraph, topHoursGraph: self.topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
     
     public func withUpdatedTopHoursGraph(_ topHoursGraph: StatsGraph) -> GroupStats {
-        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: topHoursGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: topHoursGraph, topWeekdaysGraph: self.topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
+    }
+    
+    public func withUpdatedTopWeekdaysGraph(_ topWeekdaysGraph: StatsGraph) -> GroupStats {
+        return GroupStats(period: self.period, members: self.members, messages: self.messages, viewers: self.viewers, posters: self.posters, growthGraph: self.growthGraph, membersGraph: self.membersGraph, newMembersBySourceGraph: self.newMembersBySourceGraph, languagesGraph: self.languagesGraph, messagesGraph: self.messagesGraph, actionsGraph: self.actionsGraph, topHoursGraph: self.topHoursGraph, topWeekdaysGraph: topWeekdaysGraph, topPosters: self.topPosters, topAdmins: self.topAdmins, topInviters: self.topInviters)
     }
 }
 
@@ -684,7 +693,7 @@ private func requestGroupStats(postbox: Postbox, network: Network, datacenterId:
         return signal
         |> mapToSignal { result -> Signal<GroupStats?, MTRpcError> in
             return postbox.transaction { transaction -> GroupStats? in
-                if case let .megagroupStats(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, users) = result {
+                if case let .megagroupStats(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, users) = result {
                     var parsedUsers: [Peer] = []
                     for user in users {
                         parsedUsers.append(TelegramUser(user: user))
@@ -858,6 +867,21 @@ private final class GroupStatsContextImpl {
         }
     }
     
+    func loadTopWeekdaysGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.topWeekdaysGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+            |> deliverOnMainQueue).start(next: { [weak self] graph in
+                if let strongSelf = self, let graph = graph {
+                    strongSelf._state = GroupStatsContextState(stats: strongSelf._state.stats?.withUpdatedTopWeekdaysGraph(graph))
+                    strongSelf._statePromise.set(.single(strongSelf._state))
+                }
+            }), forKey: token)
+        }
+    }
+    
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
             return requestGraph(network: self.network, datacenterId: self.datacenterId, token: token, x: x)
@@ -930,6 +954,12 @@ public final class GroupStatsContext {
         }
     }
     
+    public func loadTopWeekdaysGraph() {
+        self.impl.with { impl in
+            impl.loadTopWeekdaysGraph()
+        }
+    }
+    
     public func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -973,7 +1003,11 @@ extension StatsGraph {
             case let .statsGraphError(error):
                 self = .Failed(error: error)
             case let .statsGraphAsync(token):
-                self = .OnDemand(token: token)
+                if !token.isEmpty {
+                    self = .OnDemand(token: token)
+                } else {
+                    self = .Failed(error: "An error occured. Please try again later.")
+                }
         }
     }
 }
@@ -1056,11 +1090,11 @@ extension GroupStatsTopInviter {
 extension GroupStats {
     convenience init(apiMegagroupStats: Api.stats.MegagroupStats) {
         switch apiMegagroupStats {
-            case let .megagroupStats(period, members, messages, viewers, posters, apiGrowthGraph, apiMembersGraph, apiNewMembersBySourceGraph, apiLanguagesGraph, apiMessagesGraph, apiActionsGraph, apiTopHoursGraph, topPosters, topAdmins, topInviters, users):
+            case let .megagroupStats(period, members, messages, viewers, posters, apiGrowthGraph, apiMembersGraph, apiNewMembersBySourceGraph, apiLanguagesGraph, apiMessagesGraph, apiActionsGraph, apiTopHoursGraph, apiTopWeekdaysGraph, topPosters, topAdmins, topInviters, users):
                 let growthGraph = StatsGraph(apiStatsGraph: apiGrowthGraph)
                 let isEmpty = growthGraph.isEmpty
                 
-                self.init(period: StatsDateRange(apiStatsDateRangeDays: period), members: StatsValue(apiStatsAbsValueAndPrev: members), messages: StatsValue(apiStatsAbsValueAndPrev: messages), viewers: StatsValue(apiStatsAbsValueAndPrev: viewers), posters: StatsValue(apiStatsAbsValueAndPrev: posters), growthGraph: growthGraph, membersGraph: StatsGraph(apiStatsGraph: apiMembersGraph), newMembersBySourceGraph: StatsGraph(apiStatsGraph: apiNewMembersBySourceGraph), languagesGraph: StatsGraph(apiStatsGraph: apiLanguagesGraph), messagesGraph: StatsGraph(apiStatsGraph: apiMessagesGraph), actionsGraph: StatsGraph(apiStatsGraph: apiActionsGraph), topHoursGraph: StatsGraph(apiStatsGraph: apiTopHoursGraph), topPosters: topPosters.map { GroupStatsTopPoster(apiStatsGroupTopPoster: $0) }, topAdmins: topAdmins.map { GroupStatsTopAdmin(apiStatsGroupTopAdmin: $0) }, topInviters: topInviters.map { GroupStatsTopInviter(apiStatsGroupTopInviter: $0) })
+                self.init(period: StatsDateRange(apiStatsDateRangeDays: period), members: StatsValue(apiStatsAbsValueAndPrev: members), messages: StatsValue(apiStatsAbsValueAndPrev: messages), viewers: StatsValue(apiStatsAbsValueAndPrev: viewers), posters: StatsValue(apiStatsAbsValueAndPrev: posters), growthGraph: growthGraph, membersGraph: StatsGraph(apiStatsGraph: apiMembersGraph), newMembersBySourceGraph: StatsGraph(apiStatsGraph: apiNewMembersBySourceGraph), languagesGraph: StatsGraph(apiStatsGraph: apiLanguagesGraph), messagesGraph: StatsGraph(apiStatsGraph: apiMessagesGraph), actionsGraph: StatsGraph(apiStatsGraph: apiActionsGraph), topHoursGraph: StatsGraph(apiStatsGraph: apiTopHoursGraph), topWeekdaysGraph: StatsGraph(apiStatsGraph: apiTopWeekdaysGraph), topPosters: topPosters.map { GroupStatsTopPoster(apiStatsGroupTopPoster: $0) }, topAdmins: topAdmins.map { GroupStatsTopAdmin(apiStatsGroupTopAdmin: $0) }, topInviters: topInviters.map { GroupStatsTopInviter(apiStatsGroupTopInviter: $0) })
         }
     }
 }

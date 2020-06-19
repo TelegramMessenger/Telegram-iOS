@@ -5565,6 +5565,7 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.GroupMessagesTitle" = "MESSAGES";
 "Stats.GroupActionsTitle" = "ACTIONS";
 "Stats.GroupTopHoursTitle" = "TOP HOURS";
+"Stats.GroupTopWeekdaysTitle" = "TOP DAYS OF WEEK";
 "Stats.GroupTopPostersTitle" = "TOP MEMBERS";
 "Stats.GroupTopAdminsTitle" = "TOP ADMINS";
 "Stats.GroupTopInvitersTitle" = "TOP INVITERS";
@@ -5582,6 +5583,9 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.GroupTopPosterChars_3_10" = "%@ symbols per message";
 "Stats.GroupTopPosterChars_many" = "%@ symbols per message";
 "Stats.GroupTopPosterChars_any" = "%@ symbols per message";
+
+"Stats.GroupTopPoster.History" = "History";
+"Stats.GroupTopPoster.Promote" = "Promote";
 
 "Stats.GroupTopAdminDeletions_0" = "%@ deletions";
 "Stats.GroupTopAdminDeletions_1" = "%@ deletion";
@@ -5604,9 +5608,15 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.GroupTopAdminBans_many" = "%@ bans";
 "Stats.GroupTopAdminBans_any" = "%@ bans";
 
+"Stats.GroupTopAdmin.Actions" = "Actions";
+"Stats.GroupTopAdmin.Promote" = "Promote";
+
 "Stats.GroupTopInviterInvites_0" = "%@ invitations";
 "Stats.GroupTopInviterInvites_1" = "%@ invitation";
 "Stats.GroupTopInviterInvites_2" = "%@ invitations";
 "Stats.GroupTopInviterInvites_3_10" = "%@ invitations";
 "Stats.GroupTopInviterInvites_many" = "%@ invitations";
 "Stats.GroupTopInviterInvites_any" = "%@ invitations";
+
+"Stats.GroupTopInviter.History" = "History";
+"Stats.GroupTopInviter.Promote" = "Promote";
