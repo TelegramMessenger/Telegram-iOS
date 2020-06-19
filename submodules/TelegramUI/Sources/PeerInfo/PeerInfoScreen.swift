@@ -2204,7 +2204,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         switch key {
         case .message:
             if let navigationController = controller.navigationController as? NavigationController {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId)))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
             }
         case .discussion:
             if let cachedData = self.data?.cachedData as? CachedChannelData, let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
@@ -2410,7 +2410,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChatWithMessageSearch() {
         if let navigationController = (self.controller?.navigationController as? NavigationController) {
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: (.everything, "")))
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: (.everything, ""), peerNearbyData:  self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
         }
     }
     
