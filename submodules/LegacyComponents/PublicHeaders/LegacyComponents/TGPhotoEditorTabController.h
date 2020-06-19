@@ -24,9 +24,6 @@
 @property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView);
 @property (nonatomic, copy) void(^finishedTransitionOut)(void);
 
-@property (nonatomic, copy) void (^beginItemTransitionIn)(void);
-@property (nonatomic, copy) void (^beginItemTransitionOut)(void);
-
 @property (nonatomic, copy) void (^valuesChanged)(void);
 
 @property (nonatomic, copy) void (^tabsChanged)(void);
@@ -65,6 +62,9 @@
 - (void)handleTabAction:(TGPhotoEditorTab)tab;
 
 - (bool)isDismissAllowed;
+
+- (UIInterfaceOrientation)effectiveOrientation;
+- (UIInterfaceOrientation)effectiveOrientation:(UIInterfaceOrientation)orientation;
 
 - (void)_updateTabs;
 - (TGPhotoEditorTab)activeTab;

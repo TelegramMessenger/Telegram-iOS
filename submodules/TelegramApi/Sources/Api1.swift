@@ -4897,6 +4897,52 @@ public extension Api {
         }
     
     }
+    public enum StatsGroupTopAdmin: TypeConstructorDescription {
+        case statsGroupTopAdmin(userId: Int32, deleted: Int32, kicked: Int32, banned: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
+                    if boxed {
+                        buffer.appendInt32(1611985938)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeInt32(deleted, buffer: buffer, boxed: false)
+                    serializeInt32(kicked, buffer: buffer, boxed: false)
+                    serializeInt32(banned, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
+                return ("statsGroupTopAdmin", [("userId", userId), ("deleted", deleted), ("kicked", kicked), ("banned", banned)])
+    }
+    }
+    
+        public static func parse_statsGroupTopAdmin(_ reader: BufferReader) -> StatsGroupTopAdmin? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StatsGroupTopAdmin.statsGroupTopAdmin(userId: _1!, deleted: _2!, kicked: _3!, banned: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InputCheckPasswordSRP: TypeConstructorDescription {
         case inputCheckPasswordEmpty
         case inputCheckPasswordSRP(srpId: Int64, A: Buffer, M1: Buffer)
@@ -12823,6 +12869,48 @@ public extension Api {
         }
     
     }
+    public enum StatsGroupTopPoster: TypeConstructorDescription {
+        case statsGroupTopPoster(userId: Int32, messages: Int32, avgChars: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGroupTopPoster(let userId, let messages, let avgChars):
+                    if boxed {
+                        buffer.appendInt32(418631927)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeInt32(messages, buffer: buffer, boxed: false)
+                    serializeInt32(avgChars, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGroupTopPoster(let userId, let messages, let avgChars):
+                return ("statsGroupTopPoster", [("userId", userId), ("messages", messages), ("avgChars", avgChars)])
+    }
+    }
+    
+        public static func parse_statsGroupTopPoster(_ reader: BufferReader) -> StatsGroupTopPoster? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StatsGroupTopPoster.statsGroupTopPoster(userId: _1!, messages: _2!, avgChars: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum EncryptedFile: TypeConstructorDescription {
         case encryptedFileEmpty
         case encryptedFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, keyFingerprint: Int32)
@@ -17022,6 +17110,44 @@ public extension Api {
             let _c17 = (Int(_1!) & Int(1 << 22) == 0) || _17 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
                 return Api.Message.message(flags: _1!, id: _2!, fromId: _3, toId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, date: _8!, message: _9!, media: _10, replyMarkup: _11, entities: _12, views: _13, editDate: _14, postAuthor: _15, groupedId: _16, restrictionReason: _17)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum StatsGroupTopInviter: TypeConstructorDescription {
+        case statsGroupTopInviter(userId: Int32, invitations: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGroupTopInviter(let userId, let invitations):
+                    if boxed {
+                        buffer.appendInt32(831924812)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeInt32(invitations, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGroupTopInviter(let userId, let invitations):
+                return ("statsGroupTopInviter", [("userId", userId), ("invitations", invitations)])
+    }
+    }
+    
+        public static func parse_statsGroupTopInviter(_ reader: BufferReader) -> StatsGroupTopInviter? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StatsGroupTopInviter.statsGroupTopInviter(userId: _1!, invitations: _2!)
             }
             else {
                 return nil

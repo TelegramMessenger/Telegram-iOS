@@ -18,6 +18,8 @@ import WebSearchUI
 import PeerAvatarGalleryUI
 import MapResourceToAvatarSizes
 import PhoneNumberFormat
+import LegacyMediaPickerUI
+import LocalMediaResources
 
 private struct EditSettingsItemArguments {
     let context: AccountContext
@@ -505,7 +507,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 hasPhotos = true
             }
             
-            let completedImpl: (UIImage) -> Void = { image in
+            let completedPhotoImpl: (UIImage) -> Void = { image in
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
@@ -528,18 +530,96 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
             
+            let completedVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
+                if let data = image.jpegData(compressionQuality: 0.6) {
+                    let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
+                        var filteredPath = url.path
+                        if filteredPath.hasPrefix("file://") {
+                            filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
+                        }
+                        
+                        let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
+                        let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                            if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                                return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
+                            } else {
+                                return nil
+                            }
+                        }
+                        let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                        let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                        
+                        let signalDisposable = signal.start(next: { next in
+                            if let result = next as? TGMediaVideoConversionResult {
+                                var value = stat()
+                                if stat(result.fileURL.path, &value) == 0 {
+                                    if let data = try? Data(contentsOf: result.fileURL) {
+                                        let resource: TelegramMediaResource
+                                        if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                            resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                        } else {
+                                            resource = LocalFileMediaResource(fileId: arc4random64())
+                                        }
+                                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                        subscriber.putNext(resource)
+                                    }
+                                }
+                                subscriber.putCompletion()
+                            }
+                        }, error: { _ in
+                        }, completed: nil)
+                        
+                        let disposable = ActionDisposable {
+                            signalDisposable?.dispose()
+                        }
+                        
+                        return ActionDisposable {
+                            disposable.dispose()
+                        }
+                    }
+                    
+                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
+                    updateState {
+                        $0.withUpdatedUpdatingAvatar(.image(representation, true))
+                    }
+                    
+                    updateAvatarDisposable.set((signal
+                    |> mapToSignal { videoResource in
+                        return updateAccountPhoto(account: context.account, resource: resource, videoResource: videoResource, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                        })
+                    } |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                            case .complete:
+                                updateState {
+                                    $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                            case .progress:
+                                break
+                        }
+                    }))
+                }
+            }
+            
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
                     assetsController?.dismiss()
-                    completedImpl(result)
+                    completedPhotoImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             mixin.didFinishWithImage = { image in
                 if let image = image {
-                    completedImpl(image)
+                    completedPhotoImpl(image)
+                }
+            }
+            mixin.didFinishWithVideo = { image, url, adjustments in
+                if let image = image, let url = url {
+                    completedVideoImpl(image, url, adjustments)
                 }
             }
             mixin.didFinishWithDelete = {

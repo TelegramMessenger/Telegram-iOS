@@ -4,6 +4,7 @@
 @class TGViewController;
 @class TGMenuSheetController;
 @class TGMediaAssetsController;
+@class TGVideoEditAdjustments;
 
 @protocol TGPhotoPaintStickersContext;
 
@@ -12,6 +13,7 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 @interface TGMediaAvatarMenuMixin : NSObject
 
 @property (nonatomic, copy) void (^didFinishWithImage)(UIImage *image);
+@property (nonatomic, copy) void (^didFinishWithVideo)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments);
 @property (nonatomic, copy) void (^didFinishWithDelete)(void);
 @property (nonatomic, copy) void (^didFinishWithView)(void);
 @property (nonatomic, copy) void (^didDismiss)(void);

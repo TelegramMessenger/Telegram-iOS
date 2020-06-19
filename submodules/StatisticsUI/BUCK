@@ -25,6 +25,7 @@ static_library(
         "//submodules/GraphCore:GraphCore",
         "//submodules/GraphUI:GraphUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/ItemListPeerItem:ItemListPeerItem",        
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

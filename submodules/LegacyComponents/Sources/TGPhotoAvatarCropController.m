@@ -254,7 +254,11 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (void)_finishedTransitionInWithView:(UIView *)transitionView
 {
-    [transitionView removeFromSuperview];
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+        
+    } else {
+        [transitionView removeFromSuperview];
+    }
     
     _buttonsWrapperView.alpha = 1.0f;
     [_cropView transitionInFinishedFromCamera:(self.fromCamera && self.initialAppearance)];
@@ -313,7 +317,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
                     return;
                 }
                 
-
                 UIImage *croppedImage = [_cropView croppedImageWithMaxSize:TGPhotoEditorScreenImageMaxSize()];
                 [photoEditor setImage:croppedImage forCropRect:_cropView.cropRect cropRotation:0.0f cropOrientation:_cropView.cropOrientation cropMirrored:_cropView.cropMirrored fullSize:false];
                 
@@ -335,9 +338,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
             });
         }
         
-        UIInterfaceOrientation orientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
-        if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-            orientation = UIInterfaceOrientationPortrait;
+        UIInterfaceOrientation orientation = self.effectiveOrientation;
         
         bool hasOnScreenNavigation = false;
         if (iosMajorVersion() >= 11)
@@ -466,15 +467,12 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
+    UIInterfaceOrientation orientation = self.effectiveOrientation;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     
-    if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-
     CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:hasOnScreenNavigation];
 
     CGRect targetFrame = CGRectZero;
@@ -548,9 +546,10 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 {
     if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
     {
-        orientation = UIInterfaceOrientationPortrait;
         _resetButton.hidden = true;
     }
+    
+    orientation = [self effectiveOrientation:orientation];
     
     CGSize referenceSize = [self referenceViewSize];
     

@@ -6,8 +6,35 @@ import SyncCore
 import LegacyComponents
 import SwiftSignalKit
 
-final class LegacyLiveUploadInterfaceResult: NSObject {
-    let id: Int64
+public class VideoConversionWatcher: TGMediaVideoFileWatcher {
+    private let update: (String, Int) -> Void
+    private var path: String?
+    
+    public init(update: @escaping (String, Int) -> Void) {
+        self.update = update
+        
+        super.init()
+    }
+    
+    override public func setup(withFileURL fileURL: URL!) {
+        self.path = fileURL?.path
+        super.setup(withFileURL: fileURL)
+    }
+    
+    override public func fileUpdated(_ completed: Bool) -> Any! {
+        if let path = self.path {
+            var value = stat()
+            if stat(path, &value) == 0 {
+                self.update(path, Int(value.st_size))
+            }
+        }
+        
+        return super.fileUpdated(completed)
+    }
+}
+
+public final class LegacyLiveUploadInterfaceResult: NSObject {
+    public let id: Int64
     
     init(id: Int64) {
         self.id = id
@@ -16,7 +43,7 @@ final class LegacyLiveUploadInterfaceResult: NSObject {
     }
 }
 
-final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInterface {
+public final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInterface {
     private let account: Account
     private let id: Int64
     private var path: String?
@@ -25,7 +52,7 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
     private let data = Promise<MediaResourceData>()
     private let dataValue = Atomic<MediaResourceData?>(value: nil)
     
-    init(account: Account) {
+    public init(account: Account) {
         self.account = account
         self.id = arc4random64()
         
@@ -60,7 +87,7 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
     deinit {
     }
     
-    override func fileUpdated(_ completed: Bool) -> Any! {
+    override public func fileUpdated(_ completed: Bool) -> Any! {
         let _ = super.fileUpdated(completed)
         print("**fileUpdated \(completed)")
         if completed {

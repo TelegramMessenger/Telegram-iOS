@@ -168,6 +168,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
                         clearRecentlyUsedStickers: {
                         }
                     )
+                    inputNodeInteraction.displayStickerPlaceholder = false
                     
                     let index = ItemCollectionItemIndex(index: 0, id: 0)
                     let collectionId = ItemCollectionId(namespace: 0, id: 0)

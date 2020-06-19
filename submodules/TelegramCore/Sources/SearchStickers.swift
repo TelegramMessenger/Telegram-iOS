@@ -64,7 +64,6 @@ public func randomGreetingSticker(account: Account) -> Signal<FoundStickerItem?,
         for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudGreetingStickers) {
             if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
                 stickerItems.append(FoundStickerItem(file: file, stringRepresentations: []))
-                break
             }
         }
         return stickerItems.randomElement()

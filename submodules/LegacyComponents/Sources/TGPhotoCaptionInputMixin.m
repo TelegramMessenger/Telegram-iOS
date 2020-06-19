@@ -345,6 +345,10 @@
     CGFloat keyboardHeight = (keyboardFrame.size.height <= FLT_EPSILON || keyboardFrame.size.width <= FLT_EPSILON) ? 0.0f : (parentView.frame.size.height - keyboardFrame.origin.y);
     keyboardHeight = MAX(keyboardHeight, 0.0f);
     
+    if (CGRectGetMaxY(keyboardFrame) < [UIScreen mainScreen].bounds.size.height || keyboardHeight < 20.0f) {
+        keyboardHeight = 0.0f;
+    }
+    
     _keyboardHeight = keyboardHeight;
     
     if (!UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]) && !TGIsPad())

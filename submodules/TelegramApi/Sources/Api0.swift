@@ -112,6 +112,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
     dict[84438264] = { return Api.WallPaperSettings.parse_wallPaperSettings($0) }
     dict[1152191385] = { return Api.EmojiURL.parse_EmojiURL($0) }
+    dict[1611985938] = { return Api.StatsGroupTopAdmin.parse_statsGroupTopAdmin($0) }
     dict[-791039645] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
     dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
@@ -443,6 +444,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-524237339] = { return Api.PageTableRow.parse_pageTableRow($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
     dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
+    dict[418631927] = { return Api.StatsGroupTopPoster.parse_statsGroupTopPoster($0) }
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[1248893260] = { return Api.EncryptedFile.parse_encryptedFile($0) }
@@ -542,6 +544,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1918567619] = { return Api.Updates.parse_updatesCombined($0) }
     dict[1957577280] = { return Api.Updates.parse_updates($0) }
     dict[301019932] = { return Api.Updates.parse_updateShortSentMessage($0) }
+    dict[447818040] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[-884757282] = { return Api.StatsAbsValueAndPrev.parse_statsAbsValueAndPrev($0) }
     dict[1038967584] = { return Api.MessageMedia.parse_messageMediaEmpty($0) }
     dict[1457575028] = { return Api.MessageMedia.parse_messageMediaGeo($0) }
@@ -593,6 +596,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
     dict[1160515173] = { return Api.Message.parse_message($0) }
+    dict[831924812] = { return Api.StatsGroupTopInviter.parse_statsGroupTopInviter($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
     dict[-182231723] = { return Api.InputFileLocation.parse_inputEncryptedFileLocation($0) }
@@ -954,6 +958,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiURL:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.StatsGroupTopAdmin:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputCheckPasswordSRP:
@@ -1136,6 +1142,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DraftMessage:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.StatsGroupTopPoster:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.SentEmailCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedFile:
@@ -1240,6 +1248,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Updates:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.stats.MegagroupStats:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StatsAbsValueAndPrev:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageMedia:
@@ -1279,6 +1289,8 @@ public struct Api {
             case let _1 as Api.User:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Message:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StatsGroupTopInviter:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.RecentStickers:
                 _1.serialize(buffer, boxed)

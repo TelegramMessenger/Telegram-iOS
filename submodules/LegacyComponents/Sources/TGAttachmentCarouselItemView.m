@@ -906,7 +906,23 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             
             [strongController dismissAnimated:true];
         };
-        
+        controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+            if (!hasChanges)
+                return;
+            
+            __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGPhotoEditorController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            if (strongSelf.avatarVideoCompletionBlock != nil)
+                strongSelf.avatarVideoCompletionBlock(resultImage, url, adjustments);
+            
+            [strongController dismissAnimated:true];
+        };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {
             return [editableItem thumbnailImageSignal];

@@ -161,6 +161,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaFile.VideoThumbnail.self, f: { TelegramMediaFile.VideoThumbnail(decoder: $0) })
     declareEncodable(CachedChatContextResult.self, f: { CachedChatContextResult(decoder: $0) })
     declareEncodable(PeerAccessRestrictionInfo.self, f: { PeerAccessRestrictionInfo(decoder: $0) })
+    declareEncodable(TelegramMediaImage.VideoRepresentation.self, f: { TelegramMediaImage.VideoRepresentation(decoder: $0) })
     
     return
 }()

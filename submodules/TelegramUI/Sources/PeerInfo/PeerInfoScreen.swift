@@ -2806,7 +2806,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.view.endEditing(true)
         
-        controller.push(channelStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData))
+        let statsController: ViewController
+        if let channel = peer as? TelegramChannel, case .group = channel.info {
+            statsController = groupStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData)
+        } else {
+            statsController = channelStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData)
+        }
+        controller.push(statsController)
     }
     
     private func openReport(user: Bool) {

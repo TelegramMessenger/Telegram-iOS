@@ -1470,9 +1470,6 @@
             [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
         }
         
-        if (self.item.selectionContext != nil)
-            [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
-        
         if (!self.isPlaying)
             [self play];
     }

@@ -424,7 +424,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }))
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         let contentNode = self.tilingNode ?? self.imageNode
         
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view)

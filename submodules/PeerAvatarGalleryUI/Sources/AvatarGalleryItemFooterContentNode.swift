@@ -49,11 +49,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     var share: ((GalleryControllerInteraction) -> Void)?
     
-    var setMain: (() -> Void)? {
-        didSet {
-            self.setMainButton.isHidden = self.setMain == nil
-        }
-    }
+    var setMain: (() -> Void)?
     
     init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
@@ -81,13 +77,13 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.setMainButton = HighlightableButtonNode()
         self.setMainButton.isHidden = true
-        self.setMainButton.setAttributedTitle(NSAttributedString(string: "Set as Main Photo", font: Font.regular(17.0), textColor: .white), for: .normal)
+        self.setMainButton.setAttributedTitle(NSAttributedString(string: self.strings.ProfilePhoto_SetMain, font: Font.regular(17.0), textColor: .white), for: .normal)
         
         self.mainNode = ASTextNode()
         self.mainNode.maximumNumberOfLines = 1
         self.mainNode.isUserInteractionEnabled = false
         self.mainNode.displaysAsynchronously = false
-        self.mainNode.attributedText = NSAttributedString(string: "Main Photo", font: Font.regular(17.0), textColor: UIColor(rgb: 0x808080))
+        self.mainNode.attributedText = NSAttributedString(string: self.strings.ProfilePhoto_MainPhoto, font: Font.regular(17.0), textColor: UIColor(rgb: 0x808080))
         
         super.init()
         
@@ -103,15 +99,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
         self.setMainButton.addTarget(self, action: #selector(self.setMainButtonPressed), forControlEvents: .touchUpInside)
     }
-    
-    deinit {
-    }
-    
+        
     func setEntry(_ entry: AvatarGalleryEntry, content: AvatarGalleryItemFooterContent) {
         var nameText: String?
         var dateText: String?
         switch entry {
-            case let .image(_, _, _, peer, date, _, _):
+            case let .image(_, _, _, _, peer, date, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
             default:
@@ -222,6 +215,6 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     }
     
     @objc private func setMainButtonPressed() {
-        
+        self.setMain?()
     }
 }
