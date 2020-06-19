@@ -79,6 +79,7 @@ private:
     
     SSRC _ssrcAudio;
     SSRC _ssrcVideo;
+    bool _enableFlexfec;
     
     bool _isConnected;
     

@@ -267,6 +267,7 @@ final class CallControllerNode: ASDisplayNode {
                         let incomingVideoNode = IncomingVideoNode(videoView: incomingVideoView)
                         strongSelf.incomingVideoNode = incomingVideoNode
                         strongSelf.containerNode.insertSubnode(incomingVideoNode, aboveSubnode: strongSelf.dimNode)
+                        strongSelf.statusNode.isHidden = true
                         if let (layout, navigationBarHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                         }

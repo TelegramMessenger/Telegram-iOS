@@ -187,6 +187,8 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _ssrcVideo.fecIncoming = isOutgoing ? ssrcVideoFecIncoming : ssrcVideoFecOutgoing;
     _ssrcVideo.fecOutgoing = (!isOutgoing) ? ssrcVideoFecIncoming : ssrcVideoFecOutgoing;
     
+    _enableFlexfec = true;
+    
     _isConnected = false;
     
     auto videoEncoderFactory = makeVideoEncoderFactory();
@@ -239,7 +241,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     
     const uint8_t opusMinBitrateKbps = 6;
     const uint8_t opusMaxBitrateKbps = 32;
-    const uint8_t opusStartBitrateKbps = 6;
+    const uint8_t opusStartBitrateKbps = 8;
     const uint8_t opusPTimeMs = 120;
     
     cricket::AudioCodec opusCodec(opusSdpPayload, opusSdpName, opusClockrate, opusSdpBitrate, opusSdpChannels);
@@ -367,10 +369,12 @@ void MediaManager::setSendVideo(bool sendVideo) {
             cricket::VideoSendParameters videoSendParameters;
             videoSendParameters.codecs.push_back(codec);
             
-            for (auto &c : _videoCodecs) {
-                if (c.name == cricket::kFlexfecCodecName) {
-                    videoSendParameters.codecs.push_back(c);
-                    break;
+            if (_enableFlexfec) {
+                for (auto &c : _videoCodecs) {
+                    if (c.name == cricket::kFlexfecCodecName) {
+                        videoSendParameters.codecs.push_back(c);
+                        break;
+                    }
                 }
             }
             
@@ -380,15 +384,20 @@ void MediaManager::setSendVideo(bool sendVideo) {
             //videoSendParameters.rtcp.remote_estimate = true;
             _videoChannel->SetSendParameters(videoSendParameters);
             
-            cricket::StreamParams videoSendStreamParams;
-            cricket::SsrcGroup videoSendSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
-            videoSendStreamParams.ssrcs = {_ssrcVideo.outgoing};
-            videoSendStreamParams.ssrc_groups.push_back(videoSendSsrcGroup);
-            videoSendStreamParams.cname = "cname";
-            _videoChannel->AddSendStream(videoSendStreamParams);
-            
-            _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
-            _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
+            if (_enableFlexfec) {
+                cricket::StreamParams videoSendStreamParams;
+                cricket::SsrcGroup videoSendSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
+                videoSendStreamParams.ssrcs = {_ssrcVideo.outgoing};
+                videoSendStreamParams.ssrc_groups.push_back(videoSendSsrcGroup);
+                videoSendStreamParams.cname = "cname";
+                _videoChannel->AddSendStream(videoSendStreamParams);
+                
+                _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+                _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
+            } else {
+                _videoChannel->AddSendStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.outgoing));
+                _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+            }
             
             cricket::VideoRecvParameters videoRecvParameters;
             
@@ -435,7 +444,9 @@ void MediaManager::setSendVideo(bool sendVideo) {
         _videoChannel->RemoveRecvStream(_ssrcVideo.incoming);
         _videoChannel->RemoveRecvStream(_ssrcVideo.fecIncoming);
         _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
-        _videoChannel->RemoveSendStream(_ssrcVideo.fecOutgoing);
+        if (_enableFlexfec) {
+            _videoChannel->RemoveSendStream(_ssrcVideo.fecOutgoing);
+        }
     }
 }
 
