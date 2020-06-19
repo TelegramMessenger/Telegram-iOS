@@ -2550,7 +2550,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         $0.updatedInputTextPanelState { panelState in
                             if let videoRecorder = videoRecorder {
                                 if panelState.mediaRecordingState == nil {
-                                    return panelState.withUpdatedMediaRecordingState(.video(status: .recording(videoRecorder.audioStatus), isLocked: false))
+                                    return panelState.withUpdatedMediaRecordingState(.video(status: .recording(videoRecorder.audioStatus), isLocked: strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId))
                                 }
                             } else {
                                 return panelState.withUpdatedMediaRecordingState(nil)
@@ -2562,12 +2562,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let videoRecorder = videoRecorder {
                         strongSelf.recorderFeedback?.impact(.light)
                         
-                        videoRecorder.onDismiss = {
-                            if let strongSelf = self {
-                                strongSelf.beginMediaRecordingRequestId += 1
-                                strongSelf.lockMediaRecordingRequestId = nil
-                                strongSelf.videoRecorder.set(.single(nil))
-                            }
+                        videoRecorder.onDismiss = { [weak self] isCancelled in
+                            self?.chatDisplayNode.updateRecordedMediaDeleted(isCancelled)
+                            self?.beginMediaRecordingRequestId += 1
+                            self?.lockMediaRecordingRequestId = nil
+                            self?.videoRecorder.set(.single(nil))
                         }
                         videoRecorder.onStop = {
                             if let strongSelf = self {

@@ -29,7 +29,7 @@ final class InstantVideoControllerRecordingStatus {
 final class InstantVideoController: LegacyController, StandalonePresentableController {
     private var captureController: TGVideoMessageCaptureController?
     
-    var onDismiss: (() -> Void)?
+    var onDismiss: ((Bool) -> Void)?
     var onStop: (() -> Void)?
     
     private let micLevelValue = ValuePromise<Float>(0.0)
@@ -59,8 +59,8 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
             captureController.onDuration = { [weak self] duration in
                 self?.durationValue.set(duration)
             }
-            captureController.onDismiss = { [weak self] _ in
-                self?.onDismiss?()
+            captureController.onDismiss = { [weak self] _, isCancelled in
+                self?.onDismiss?(isCancelled)
             }
             captureController.onStop = { [weak self] in
                 self?.onStop?()
