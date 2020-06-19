@@ -143,6 +143,7 @@ public:
             TgVoipEncryptionKey const &encryptionKey,
             TgVoipNetworkType initialNetworkType,
             std::function<void(TgVoipState)> stateUpdated,
+            std::function<void(bool)> videoStateUpdated,
             std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     ) :
     _stateUpdated(stateUpdated),
@@ -156,13 +157,16 @@ public:
         
         bool enableP2P = config.enableP2P;
         
-        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, signalingDataEmitted](){
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, videoStateUpdated, signalingDataEmitted](){
             return new Manager(
                 getManagerThread(),
                 encryptionKey,
                 enableP2P,
                 [stateUpdated](const TgVoipState &state) {
                     stateUpdated(state);
+                },
+                [videoStateUpdated](bool isActive) {
+                    videoStateUpdated(isActive);
                 },
                 [signalingDataEmitted](const std::vector<uint8_t> &data) {
                     signalingDataEmitted(data);
@@ -183,6 +187,18 @@ public:
             manager->receiveSignalingData(data);
         });
     };
+    
+    void setSendVideo(bool sendVideo) override {
+        _manager->perform([sendVideo](Manager *manager) {
+            manager->setSendVideo(sendVideo);
+        });
+    };
+    
+    void switchVideoCamera() override {
+        _manager->perform([](Manager *manager) {
+            manager->switchVideoCamera();
+        });
+    }
 
     void setNetworkType(TgVoipNetworkType networkType) override {
         /*message::NetworkType mappedType;
@@ -361,6 +377,7 @@ TgVoip *TgVoip::makeInstance(
         TgVoipNetworkType initialNetworkType,
         TgVoipEncryptionKey const &encryptionKey,
         std::function<void(TgVoipState)> stateUpdated,
+        std::function<void(bool)> videoStateUpdated,
         std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
 ) {
     return new TgVoipImpl(
@@ -371,6 +388,7 @@ TgVoip *TgVoip::makeInstance(
             encryptionKey,
             initialNetworkType,
             stateUpdated,
+            videoStateUpdated,
             signalingDataEmitted
     );
 }

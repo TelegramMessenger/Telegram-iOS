@@ -47,7 +47,7 @@ public:
     );
     ~NetworkManager();
     
-    void receiveSignalingData(const std::vector<uint8_t> &data);
+    void receiveSignalingData(const rtc::CopyOnWriteBuffer &data);
     void sendPacket(const rtc::CopyOnWriteBuffer &packet);
     
 private:

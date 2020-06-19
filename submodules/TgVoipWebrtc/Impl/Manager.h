@@ -17,12 +17,15 @@ public:
         TgVoipEncryptionKey encryptionKey,
         bool enableP2P,
         std::function<void (const TgVoipState &)> stateUpdated,
+        std::function<void (bool)> videoStateUpdated,
         std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted
     );
     ~Manager();
     
     void start();
     void receiveSignalingData(const std::vector<uint8_t> &data);
+    void setSendVideo(bool sendVideo);
+    void switchVideoCamera();
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     
@@ -31,9 +34,11 @@ private:
     TgVoipEncryptionKey _encryptionKey;
     bool _enableP2P;
     std::function<void (const TgVoipState &)> _stateUpdated;
+    std::function<void (bool)> _videoStateUpdated;
     std::function<void (const std::vector<uint8_t> &)> _signalingDataEmitted;
     std::unique_ptr<ThreadLocalObject<NetworkManager>> _networkManager;
     std::unique_ptr<ThreadLocalObject<MediaManager>> _mediaManager;
+    bool _isVideoRequested;
     
 private:
 };
