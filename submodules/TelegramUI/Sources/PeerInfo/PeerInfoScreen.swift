@@ -2410,7 +2410,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChatWithMessageSearch() {
         if let navigationController = (self.controller?.navigationController as? NavigationController) {
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: true))
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: (.everything, "")))
         }
     }
     
@@ -2806,7 +2806,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         self.view.endEditing(true)
         
-        controller.push(channelStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData))
+        let statsController: ViewController
+        if let channel = peer as? TelegramChannel, case .group = channel.info {
+            statsController = groupStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData)
+        } else {
+            statsController = channelStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData)
+        }
+        controller.push(statsController)
     }
     
     private func openReport(user: Bool) {

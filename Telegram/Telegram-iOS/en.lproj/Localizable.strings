@@ -5545,6 +5545,78 @@ Any member of this group will be able to see messages in the channel.";
 "PhotoEditor.BlurToolPortrait" = "Portrait";
 "PhotoEditor.SelectCoverFrame" = "Choose a cover for your profile video";
 
-"Conversation.PeerNearbyTitle" = "%@ is %@\naway from you";
+"Conversation.PeerNearbyTitle" = "%@ is %@ away";
 "Conversation.PeerNearbyText" = "Send a message or tap on the greeting below to show that you are ready to chat.";
-"Conversation.PeerNearbyDistance" = "%@ is %@ away from you";
+"Conversation.PeerNearbyDistance" = "%@ is %@ away";
+
+"ProfilePhoto.MainPhoto" = "Main Photo";
+"ProfilePhoto.SetMain" = "Set as Main Photo";
+
+"Stats.GroupOverview" = "OVERVIEW";
+"Stats.GroupMembers" = "Members";
+"Stats.GroupMessages" = "Messages";
+"Stats.GroupViewers" = "Viewing Members";
+"Stats.GroupPosters" = "Posting Members";
+
+"Stats.GroupGrowthTitle" = "GROWTH";
+"Stats.GroupMembersTitle" = "GROUP MEMBERS";
+"Stats.GroupNewMembersBySourceTitle" = "NEW MEMBERS BY SOURCE";
+"Stats.GroupLanguagesTitle" = "MEMBERS' PRIMARY LANGUAGE";
+"Stats.GroupMessagesTitle" = "MESSAGES";
+"Stats.GroupActionsTitle" = "ACTIONS";
+"Stats.GroupTopHoursTitle" = "TOP HOURS";
+"Stats.GroupTopWeekdaysTitle" = "TOP DAYS OF WEEK";
+"Stats.GroupTopPostersTitle" = "TOP MEMBERS";
+"Stats.GroupTopAdminsTitle" = "TOP ADMINS";
+"Stats.GroupTopInvitersTitle" = "TOP INVITERS";
+
+"Stats.GroupTopPosterMessages_0" = "%@ messages";
+"Stats.GroupTopPosterMessages_1" = "%@ message";
+"Stats.GroupTopPosterMessages_2" = "%@ messages";
+"Stats.GroupTopPosterMessages_3_10" = "%@ messages";
+"Stats.GroupTopPosterMessages_many" = "%@ messages";
+"Stats.GroupTopPosterMessages_any" = "%@ messages";
+
+"Stats.GroupTopPosterChars_0" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_1" = "%@ symbol per message";
+"Stats.GroupTopPosterChars_2" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_3_10" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_many" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_any" = "%@ symbols per message";
+
+"Stats.GroupTopPoster.History" = "History";
+"Stats.GroupTopPoster.Promote" = "Promote";
+
+"Stats.GroupTopAdminDeletions_0" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_1" = "%@ deletion";
+"Stats.GroupTopAdminDeletions_2" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_3_10" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_many" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_any" = "%@ deletions";
+
+"Stats.GroupTopAdminKicks_0" = "%@ kicks";
+"Stats.GroupTopAdminKicks_1" = "%@ kick";
+"Stats.GroupTopAdminKicks_2" = "%@ kicks";
+"Stats.GroupTopAdminKicks_3_10" = "%@ kicks";
+"Stats.GroupTopAdminKicks_many" = "%@ kicks";
+"Stats.GroupTopAdminKicks_any" = "%@ kicks";
+
+"Stats.GroupTopAdminBans_0" = "%@ bans";
+"Stats.GroupTopAdminBans_1" = "%@ ban";
+"Stats.GroupTopAdminBans_2" = "%@ bans";
+"Stats.GroupTopAdminBans_3_10" = "%@ bans";
+"Stats.GroupTopAdminBans_many" = "%@ bans";
+"Stats.GroupTopAdminBans_any" = "%@ bans";
+
+"Stats.GroupTopAdmin.Actions" = "Actions";
+"Stats.GroupTopAdmin.Promote" = "Promote";
+
+"Stats.GroupTopInviterInvites_0" = "%@ invitations";
+"Stats.GroupTopInviterInvites_1" = "%@ invitation";
+"Stats.GroupTopInviterInvites_2" = "%@ invitations";
+"Stats.GroupTopInviterInvites_3_10" = "%@ invitations";
+"Stats.GroupTopInviterInvites_many" = "%@ invitations";
+"Stats.GroupTopInviterInvites_any" = "%@ invitations";
+
+"Stats.GroupTopInviter.History" = "History";
+"Stats.GroupTopInviter.Promote" = "Promote";

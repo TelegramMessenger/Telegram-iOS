@@ -106,7 +106,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
             itemContext.canPlayMedia = true
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)

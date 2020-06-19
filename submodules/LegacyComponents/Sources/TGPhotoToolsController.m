@@ -461,7 +461,11 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 {
     _appeared = true;
     
-    [transitionView removeFromSuperview];
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+        [self.view insertSubview:transitionView atIndex:0];
+    } else {
+        [transitionView removeFromSuperview];
+    }
     
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.hidden = false;

@@ -274,6 +274,7 @@ public enum ItemListPeerItemRevealOptionType {
     case neutral
     case warning
     case destructive
+    case accent
 }
 
 public struct ItemListPeerItemRevealOption {
@@ -624,6 +625,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             case .destructive:
                                 color = item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor
                                 textColor = item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor
+                            case .accent:
+                                color = item.presentationData.theme.list.itemDisclosureActions.accent.fillColor
+                                textColor = item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor
                         }
                         mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, textColor: textColor))
                         index += 1

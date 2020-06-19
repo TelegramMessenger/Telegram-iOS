@@ -48,7 +48,7 @@ func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
                             let resource: TelegramMediaResource
                             switch location {
                                 case let .fileLocationToBeDeprecated(volumeId, localId):
-                                    resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
+                                    resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
                             }
                             
                             videoRepresentations.append(TelegramMediaImage.VideoRepresentation(
@@ -58,7 +58,7 @@ func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
                 }
             }
             
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil, flags: imageFlags)
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, videoRepresentations: videoRepresentations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil, flags: imageFlags)
         case .photoEmpty:
             return nil
     }

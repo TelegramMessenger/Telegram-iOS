@@ -1851,8 +1851,12 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 {
     _appeared = true;
     
-    [transitionView removeFromSuperview];
- 
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+        [_containerView insertSubview:transitionView belowSubview:_paintingWrapperView];
+    } else {
+        [transitionView removeFromSuperview];
+    }
+    
     [self setupCanvas];
     
     TGPhotoEditorPreviewView *previewView = _previewView;

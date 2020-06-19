@@ -314,7 +314,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var isDismissed = false
     
-    private var focusOnSearchAfterAppearance: Bool = false
+    private var focusOnSearchAfterAppearance: (ChatSearchDomain, String)?
     
     private let keepPeerInfoScreenDataHotDisposable = MetaDisposable()
     
@@ -2125,7 +2125,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return
                                 }
                                 strongSelf.view.endEditing(true)
-                                strongSelf.push(channelStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData))
+                                
+                                let statsController: ViewController
+                                if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                    statsController = groupStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData)
+                                } else {
+                                    statsController = channelStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData)
+                                }
+                                strongSelf.push(statsController)
                             })))
                         }
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_Search, icon: { theme in
@@ -4731,9 +4738,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.interfaceInteraction = interfaceInteraction
         
-        if self.focusOnSearchAfterAppearance {
-            self.focusOnSearchAfterAppearance = false
-            self.interfaceInteraction?.beginMessageSearch(.everything, "")
+        if let search = self.focusOnSearchAfterAppearance {
+            self.focusOnSearchAfterAppearance = nil
+            self.interfaceInteraction?.beginMessageSearch(search.0, search.1)
         }
         
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction
@@ -4998,8 +5005,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if self.focusOnSearchAfterAppearance {
-            self.focusOnSearchAfterAppearance = false
+        if let _ = self.focusOnSearchAfterAppearance {
+            self.focusOnSearchAfterAppearance = nil
             if let searchNode = self.navigationBar?.contentNode as? ChatSearchNavigationContentNode {
                 searchNode.activate()
             }
@@ -9246,9 +9253,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func activateSearch() {
-        self.focusOnSearchAfterAppearance = true
-        self.interfaceInteraction?.beginMessageSearch(.everything, "")
+    func activateSearch(domain: ChatSearchDomain = .everything, query: String = "") {
+        self.focusOnSearchAfterAppearance = (domain, query)
+        self.interfaceInteraction?.beginMessageSearch(domain, query)
     }
 }
 

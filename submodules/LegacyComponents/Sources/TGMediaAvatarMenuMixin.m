@@ -127,9 +127,23 @@
         
         [strongController dismissAnimated:false];
     };
+    carouselItem.avatarVideoCompletionBlock = ^(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments) {
+        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        __strong TGMenuSheetController *strongController = weakController;
+        if (strongController == nil)
+            return;
+        
+        if (strongSelf.didFinishWithVideo != nil)
+            strongSelf.didFinishWithVideo(image, url, adjustments);
+        
+        [strongController dismissAnimated:false];
+    };
     [itemViews addObject:carouselItem];
     
-    TGMenuSheetButtonItemView *galleryItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.ChoosePhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+    TGMenuSheetButtonItemView *galleryItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"AttachmentMenu.PhotoOrVideo") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
     {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -459,6 +473,18 @@
                 
                 if (strongSelf.didFinishWithImage != nil)
                     strongSelf.didFinishWithImage(resultImage);
+                
+                __strong TGMediaAssetsController *strongController = weakController;
+                if (strongController != nil && strongController.dismissalBlock != nil)
+                    strongController.dismissalBlock();
+            };
+            controller.avatarVideoCompletionBlock = ^(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments) {
+                __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if (strongSelf.didFinishWithVideo != nil)
+                    strongSelf.didFinishWithVideo(image, url, adjustments);
                 
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil && strongController.dismissalBlock != nil)

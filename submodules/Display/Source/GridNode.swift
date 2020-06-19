@@ -523,9 +523,11 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         }
                         previousSection = section
                         
-                        if let height = item.fillsRowWithHeight {
-                            nextItemOrigin.x = 0.0
-                            itemSize.width = gridLayout.size.width
+                        if let (height, fillWidth) = item.fillsRowWithHeight {
+                            if fillWidth {
+                                nextItemOrigin.x = 0.0
+                                itemSize.width = gridLayout.size.width
+                            }
                             itemSize.height = height
                         } else if let fillsRowWithDynamicHeight = item.fillsRowWithDynamicHeight {
                             let height = fillsRowWithDynamicHeight(gridLayout.size.width)

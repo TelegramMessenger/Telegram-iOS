@@ -238,7 +238,7 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
             
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
-                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                 
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }

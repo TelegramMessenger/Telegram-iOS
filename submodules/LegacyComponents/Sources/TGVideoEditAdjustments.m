@@ -269,9 +269,14 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return (_paintingData != nil);
 }
 
-- (bool)cropAppliedForAvatar:(bool)__unused forAvatar 
+- (bool)cropAppliedForAvatar:(bool)forAvatar
 {
     CGRect defaultCropRect = CGRectMake(0, 0, _originalSize.width, _originalSize.height);
+    if (forAvatar)
+    {
+        CGFloat shortSide = MIN(_originalSize.width, _originalSize.height);
+        defaultCropRect = CGRectMake((_originalSize.width - shortSide) / 2, (_originalSize.height - shortSide) / 2, shortSide, shortSide);
+    }
     
     if (_CGRectEqualToRectWithEpsilon(self.cropRect, CGRectZero, [self _cropRectEpsilon]))
         return false;

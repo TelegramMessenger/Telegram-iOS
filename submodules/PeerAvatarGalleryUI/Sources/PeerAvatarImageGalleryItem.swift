@@ -12,6 +12,7 @@ import RadialStatusNode
 import ShareController
 import PhotoResources
 import GalleryUI
+import TelegramUniversalVideoContent
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -52,14 +53,16 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     let entry: AvatarGalleryEntry
     let sourceHasRoundCorners: Bool
     let delete: (() -> Void)?
+    let setMain: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceHasRoundCorners: Bool, delete: (() -> Void)?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceHasRoundCorners: Bool, delete: (() -> Void)?, setMain: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
         self.entry = entry
         self.sourceHasRoundCorners = sourceHasRoundCorners
         self.delete = delete
+        self.setMain = setMain
     }
     
     func node() -> GalleryItemNode {
@@ -71,6 +74,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         
         node.setEntry(self.entry)
         node.footerContentNode.delete = self.delete
+        node.footerContentNode.setMain = self.setMain
         
         return node
     }
@@ -83,6 +87,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
             
             node.setEntry(self.entry)
             node.footerContentNode.delete = self.delete
+            node.footerContentNode.setMain = self.setMain
         }
     }
     
@@ -91,7 +96,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         switch self.entry {
             case let .topImage(representations, _):
                 content = representations
-            case let .image(_, _, representations, _, _, _, _):
+            case let .image(_, _, representations, _, _, _, _, _):
                 content = representations
         }
         
@@ -107,6 +112,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var entry: AvatarGalleryEntry?
     
     private let imageNode: TransformImageNode
+    private var videoNode: UniversalVideoNode?
+    private var videoContent: NativeVideoContent?
+    
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     private let statusNodeContainer: HighlightableButtonNode
@@ -176,13 +184,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             
             var footerContent: AvatarGalleryItemFooterContent
             if self.peer.id == self.context.account.peerId {
-                footerContent = .own(true)
+                footerContent = .own((entry.indexData?.position ?? 0) == 0)
             } else {
                 footerContent = .info
             }
-            
-            self.peer.largeProfileImage
-            
+                        
             self.footerContentNode.setEntry(entry, content: footerContent)
             
             if let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })) {
@@ -192,7 +198,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch entry {
                     case let .topImage(topRepresentations, _):
                         representations = topRepresentations
-                    case let .image(_, _, imageRepresentations, _, _, _, _):
+                    case let .image(_, _, imageRepresentations, _, _, _, _, _):
                         representations = imageRepresentations
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
@@ -247,7 +253,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
@@ -300,7 +306,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         
-        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            completion()
+        })
         self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
         
         transformedFrame.origin = CGPoint()
@@ -427,7 +435,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     switch entry {
                         case let .topImage(topRepresentations, _):
                             representations = topRepresentations
-                        case let .image(_, _, imageRepresentations, _, _, _, _):
+                        case let .image(_, _, imageRepresentations, _, _, _, _, _):
                             representations = imageRepresentations
                     }
                     

@@ -13,6 +13,8 @@ import PhotoResources
 import PeerAvatarGalleryUI
 import TelegramStringFormatting
 import ActivityIndicator
+import TelegramUniversalVideoContent
+import GalleryUI
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -149,14 +151,14 @@ final class PeerInfoHeaderNavigationTransition {
 
 enum PeerInfoAvatarListItem: Equatable {
     case topImage([ImageRepresentationWithReference])
-    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference])
+    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [TelegramMediaImage.VideoRepresentation])
     
     var id: WrappedMediaResourceId {
         switch self {
         case let .topImage(representations):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return WrappedMediaResourceId(representation.resource.id)
-        case let .image(_, representations):
+        case let .image(_, representations, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return WrappedMediaResourceId(representation.resource.id)
         }
@@ -166,6 +168,8 @@ enum PeerInfoAvatarListItem: Equatable {
 final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let context: AccountContext
     let imageNode: TransformImageNode
+    private var videoNode: UniversalVideoNode?
+    private var videoContent: NativeVideoContent?
     
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -192,13 +196,38 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     
     func setup(item: PeerInfoAvatarListItem, synchronous: Bool) {
         let representations: [ImageRepresentationWithReference]
+        let videoRepresentations: [TelegramMediaImage.VideoRepresentation]
+        var id: Int64?
         switch item {
         case let .topImage(topRepresentations):
             representations = topRepresentations
-        case let .image(_, imageRepresentations):
+            videoRepresentations = []
+        case let .image(reference, imageRepresentations, videoRepresentationsValue):
             representations = imageRepresentations
+            videoRepresentations = videoRepresentationsValue
+            
+            if case let .cloud(imageId, _, _) = reference {
+                id = imageId
+            }
         }
         self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, autoFetchFullSize: true, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+        
+        if let video = videoRepresentations.last, let id = id {
+            let mediaManager = self.context.sharedContext.mediaManager
+            let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+            let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black)
+            let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
+            videoNode.isUserInteractionEnabled = false
+            videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                if let strongSelf = self {
+                    strongSelf.videoNode?.isHidden = !owns
+                }
+            }
+            self.videoContent = videoContent
+            self.videoNode = videoNode
+            
+            self.addSubnode(videoNode)
+        }
     }
     
     func update(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -206,7 +235,18 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         let makeLayout = self.imageNode.asyncLayout()
         let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
         let _ = applyLayout()
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
+        let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize)
+        transition.updateFrame(node: self.imageNode, frame: imageFrame)
+        
+        if let videoNode = self.videoNode {
+            videoNode.updateLayout(size: imageSize, transition: .immediate)
+            videoNode.frame = imageFrame
+            
+            videoNode.canAttachContent = true
+            if videoNode.hasAttachedContext {
+                videoNode.play()
+            }
+        }
     }
 }
 
@@ -537,8 +577,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     switch entry {
                     case let .topImage(representations, _):
                         items.append(.topImage(representations))
-                    case let .image(_, reference, representations, _, _, _, _):
-                        items.append(.image(reference, representations))
+                    case let .image(_, reference, representations, videoRepresentations, _, _, _, _):
+                        items.append(.image(reference, representations, videoRepresentations))
                     }
                 }
                 strongSelf.galleryEntries = entries

@@ -662,6 +662,154 @@ public struct stats {
         }
     
     }
+    public enum MegagroupStats: TypeConstructorDescription {
+        case megagroupStats(period: Api.StatsDateRangeDays, members: Api.StatsAbsValueAndPrev, messages: Api.StatsAbsValueAndPrev, viewers: Api.StatsAbsValueAndPrev, posters: Api.StatsAbsValueAndPrev, growthGraph: Api.StatsGraph, membersGraph: Api.StatsGraph, newMembersBySourceGraph: Api.StatsGraph, languagesGraph: Api.StatsGraph, messagesGraph: Api.StatsGraph, actionsGraph: Api.StatsGraph, topHoursGraph: Api.StatsGraph, weekdaysGraph: Api.StatsGraph, topPosters: [Api.StatsGroupTopPoster], topAdmins: [Api.StatsGroupTopAdmin], topInviters: [Api.StatsGroupTopInviter], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .megagroupStats(let period, let members, let messages, let viewers, let posters, let growthGraph, let membersGraph, let newMembersBySourceGraph, let languagesGraph, let messagesGraph, let actionsGraph, let topHoursGraph, let weekdaysGraph, let topPosters, let topAdmins, let topInviters, let users):
+                    if boxed {
+                        buffer.appendInt32(-276825834)
+                    }
+                    period.serialize(buffer, true)
+                    members.serialize(buffer, true)
+                    messages.serialize(buffer, true)
+                    viewers.serialize(buffer, true)
+                    posters.serialize(buffer, true)
+                    growthGraph.serialize(buffer, true)
+                    membersGraph.serialize(buffer, true)
+                    newMembersBySourceGraph.serialize(buffer, true)
+                    languagesGraph.serialize(buffer, true)
+                    messagesGraph.serialize(buffer, true)
+                    actionsGraph.serialize(buffer, true)
+                    topHoursGraph.serialize(buffer, true)
+                    weekdaysGraph.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(topPosters.count))
+                    for item in topPosters {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(topAdmins.count))
+                    for item in topAdmins {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(topInviters.count))
+                    for item in topInviters {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .megagroupStats(let period, let members, let messages, let viewers, let posters, let growthGraph, let membersGraph, let newMembersBySourceGraph, let languagesGraph, let messagesGraph, let actionsGraph, let topHoursGraph, let weekdaysGraph, let topPosters, let topAdmins, let topInviters, let users):
+                return ("megagroupStats", [("period", period), ("members", members), ("messages", messages), ("viewers", viewers), ("posters", posters), ("growthGraph", growthGraph), ("membersGraph", membersGraph), ("newMembersBySourceGraph", newMembersBySourceGraph), ("languagesGraph", languagesGraph), ("messagesGraph", messagesGraph), ("actionsGraph", actionsGraph), ("topHoursGraph", topHoursGraph), ("weekdaysGraph", weekdaysGraph), ("topPosters", topPosters), ("topAdmins", topAdmins), ("topInviters", topInviters), ("users", users)])
+    }
+    }
+    
+        public static func parse_megagroupStats(_ reader: BufferReader) -> MegagroupStats? {
+            var _1: Api.StatsDateRangeDays?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StatsDateRangeDays
+            }
+            var _2: Api.StatsAbsValueAndPrev?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
+            }
+            var _3: Api.StatsAbsValueAndPrev?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
+            }
+            var _4: Api.StatsAbsValueAndPrev?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
+            }
+            var _5: Api.StatsAbsValueAndPrev?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
+            }
+            var _6: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _7: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _8: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _9: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _10: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _11: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _11 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _12: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _12 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _13: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _13 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _14: [Api.StatsGroupTopPoster]?
+            if let _ = reader.readInt32() {
+                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopPoster.self)
+            }
+            var _15: [Api.StatsGroupTopAdmin]?
+            if let _ = reader.readInt32() {
+                _15 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopAdmin.self)
+            }
+            var _16: [Api.StatsGroupTopInviter]?
+            if let _ = reader.readInt32() {
+                _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopInviter.self)
+            }
+            var _17: [Api.User]?
+            if let _ = reader.readInt32() {
+                _17 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            let _c12 = _12 != nil
+            let _c13 = _13 != nil
+            let _c14 = _14 != nil
+            let _c15 = _15 != nil
+            let _c16 = _16 != nil
+            let _c17 = _17 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
+                return Api.stats.MegagroupStats.megagroupStats(period: _1!, members: _2!, messages: _3!, viewers: _4!, posters: _5!, growthGraph: _6!, membersGraph: _7!, newMembersBySourceGraph: _8!, languagesGraph: _9!, messagesGraph: _10!, actionsGraph: _11!, topHoursGraph: _12!, weekdaysGraph: _13!, topPosters: _14!, topAdmins: _15!, topInviters: _16!, users: _17!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
 }
 }
 public extension Api {
@@ -2161,432 +2309,6 @@ public struct help {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.help.TermsOfServiceUpdate.termsOfServiceUpdate(expires: _1!, termsOfService: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-}
-public extension Api {
-public struct updates {
-    public enum Difference: TypeConstructorDescription {
-        case differenceEmpty(date: Int32, seq: Int32)
-        case difference(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
-        case differenceSlice(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], intermediateState: Api.updates.State)
-        case differenceTooLong(pts: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .differenceEmpty(let date, let seq):
-                    if boxed {
-                        buffer.appendInt32(1567990072)
-                    }
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(seq, buffer: buffer, boxed: false)
-                    break
-                case .difference(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let state):
-                    if boxed {
-                        buffer.appendInt32(16030880)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newMessages.count))
-                    for item in newMessages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newEncryptedMessages.count))
-                    for item in newEncryptedMessages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(otherUpdates.count))
-                    for item in otherUpdates {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    state.serialize(buffer, true)
-                    break
-                case .differenceSlice(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let intermediateState):
-                    if boxed {
-                        buffer.appendInt32(-1459938943)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newMessages.count))
-                    for item in newMessages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newEncryptedMessages.count))
-                    for item in newEncryptedMessages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(otherUpdates.count))
-                    for item in otherUpdates {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    intermediateState.serialize(buffer, true)
-                    break
-                case .differenceTooLong(let pts):
-                    if boxed {
-                        buffer.appendInt32(1258196845)
-                    }
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .differenceEmpty(let date, let seq):
-                return ("differenceEmpty", [("date", date), ("seq", seq)])
-                case .difference(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let state):
-                return ("difference", [("newMessages", newMessages), ("newEncryptedMessages", newEncryptedMessages), ("otherUpdates", otherUpdates), ("chats", chats), ("users", users), ("state", state)])
-                case .differenceSlice(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let intermediateState):
-                return ("differenceSlice", [("newMessages", newMessages), ("newEncryptedMessages", newEncryptedMessages), ("otherUpdates", otherUpdates), ("chats", chats), ("users", users), ("intermediateState", intermediateState)])
-                case .differenceTooLong(let pts):
-                return ("differenceTooLong", [("pts", pts)])
-    }
-    }
-    
-        public static func parse_differenceEmpty(_ reader: BufferReader) -> Difference? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.updates.Difference.differenceEmpty(date: _1!, seq: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_difference(_ reader: BufferReader) -> Difference? {
-            var _1: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _2: [Api.EncryptedMessage]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EncryptedMessage.self)
-            }
-            var _3: [Api.Update]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            var _6: Api.updates.State?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.updates.State
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.updates.Difference.difference(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, state: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_differenceSlice(_ reader: BufferReader) -> Difference? {
-            var _1: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _2: [Api.EncryptedMessage]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EncryptedMessage.self)
-            }
-            var _3: [Api.Update]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            var _6: Api.updates.State?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.updates.State
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.updates.Difference.differenceSlice(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, intermediateState: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_differenceTooLong(_ reader: BufferReader) -> Difference? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.updates.Difference.differenceTooLong(pts: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum State: TypeConstructorDescription {
-        case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .state(let pts, let qts, let date, let seq, let unreadCount):
-                    if boxed {
-                        buffer.appendInt32(-1519637954)
-                    }
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    serializeInt32(qts, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(seq, buffer: buffer, boxed: false)
-                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .state(let pts, let qts, let date, let seq, let unreadCount):
-                return ("state", [("pts", pts), ("qts", qts), ("date", date), ("seq", seq), ("unreadCount", unreadCount)])
-    }
-    }
-    
-        public static func parse_state(_ reader: BufferReader) -> State? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.updates.State.state(pts: _1!, qts: _2!, date: _3!, seq: _4!, unreadCount: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum ChannelDifference: TypeConstructorDescription {
-        case channelDifferenceEmpty(flags: Int32, pts: Int32, timeout: Int32?)
-        case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])
-        case channelDifferenceTooLong(flags: Int32, timeout: Int32?, dialog: Api.Dialog, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .channelDifferenceEmpty(let flags, let pts, let timeout):
-                    if boxed {
-                        buffer.appendInt32(1041346555)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
-                    break
-                case .channelDifference(let flags, let pts, let timeout, let newMessages, let otherUpdates, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(543450958)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newMessages.count))
-                    for item in newMessages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(otherUpdates.count))
-                    for item in otherUpdates {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .channelDifferenceTooLong(let flags, let timeout, let dialog, let messages, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(-1531132162)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
-                    dialog.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .channelDifferenceEmpty(let flags, let pts, let timeout):
-                return ("channelDifferenceEmpty", [("flags", flags), ("pts", pts), ("timeout", timeout)])
-                case .channelDifference(let flags, let pts, let timeout, let newMessages, let otherUpdates, let chats, let users):
-                return ("channelDifference", [("flags", flags), ("pts", pts), ("timeout", timeout), ("newMessages", newMessages), ("otherUpdates", otherUpdates), ("chats", chats), ("users", users)])
-                case .channelDifferenceTooLong(let flags, let timeout, let dialog, let messages, let chats, let users):
-                return ("channelDifferenceTooLong", [("flags", flags), ("timeout", timeout), ("dialog", dialog), ("messages", messages), ("chats", chats), ("users", users)])
-    }
-    }
-    
-        public static func parse_channelDifferenceEmpty(_ reader: BufferReader) -> ChannelDifference? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.updates.ChannelDifference.channelDifferenceEmpty(flags: _1!, pts: _2!, timeout: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_channelDifference(_ reader: BufferReader) -> ChannelDifference? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
-            var _4: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _5: [Api.Update]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
-            }
-            var _6: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _7: [Api.User]?
-            if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.updates.ChannelDifference.channelDifference(flags: _1!, pts: _2!, timeout: _3, newMessages: _4!, otherUpdates: _5!, chats: _6!, users: _7!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_channelDifferenceTooLong(_ reader: BufferReader) -> ChannelDifference? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
-            var _3: Api.Dialog?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Dialog
-            }
-            var _4: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _5: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _6: [Api.User]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.updates.ChannelDifference.channelDifferenceTooLong(flags: _1!, timeout: _2, dialog: _3!, messages: _4!, chats: _5!, users: _6!)
             }
             else {
                 return nil
