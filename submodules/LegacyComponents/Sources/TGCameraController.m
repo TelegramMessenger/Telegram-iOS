@@ -297,7 +297,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
     else
     {
-        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds];
+        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
         
         CGSize referenceSize = [self referenceViewSizeForOrientation:interfaceOrientation];
