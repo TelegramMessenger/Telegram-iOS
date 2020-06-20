@@ -24,8 +24,8 @@ public enum AvatarGalleryEntry: Equatable {
         switch self {
         case .topImage:
             return .topImage
-        case let .image(image):
-            return .image(image.0)
+        case let .image(id, _, _, _, _, _, indexData, _):
+            return .image(id)
         }
     }
     
@@ -40,7 +40,7 @@ public enum AvatarGalleryEntry: Equatable {
     
     public var videoRepresentations: [TelegramMediaImage.VideoRepresentation] {
         switch self {
-            case let .topImage(representations, _):
+            case .topImage:
                 return []
             case let .image(_, _, _, videoRepresentations, _, _, _, _):
                 return videoRepresentations
@@ -106,7 +106,7 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 var index: Int32 = 0
                 for photo in photos {
                     let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                    if result.isEmpty, let first = initialEntries.first {
+                    if result.isEmpty, let first = initialEntries.first, photo.image.videoRepresentations.isEmpty {
                         result.append(.image(photo.image.imageId, photo.image.reference, first.representations, first.videoRepresentations, peer, photo.date, indexData, photo.messageId))
                     } else {
                         result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId))

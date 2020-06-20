@@ -15,6 +15,7 @@ import TelegramStringFormatting
 import ActivityIndicator
 import TelegramUniversalVideoContent
 import GalleryUI
+import UniversalMediaPlayer
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -174,6 +175,13 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
     
+    private var statusPromise = Promise<MediaPlayerStatus?>()
+    var mediaStatus: Signal<MediaPlayerStatus?, NoError> {
+        get {
+            return self.statusPromise.get()
+        }
+    }
+    
     init(context: AccountContext) {
         self.context = context
         self.imageNode = TransformImageNode()
@@ -227,6 +235,15 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             self.videoNode = videoNode
             
             self.addSubnode(videoNode)
+            
+            self.statusPromise.set(videoNode.status)
+        } else if let videoNode = self.videoNode {
+            self.videoContent = nil
+            self.videoNode = nil
+            
+            videoNode.removeFromSupernode()
+            
+            self.statusPromise.set(.single(nil))
         }
     }
     
@@ -268,6 +285,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var items: [PeerInfoAvatarListItem] = []
     private var itemNodes: [WrappedMediaResourceId: PeerInfoAvatarListItemNode] = [:]
     private var stripNodes: [ASImageNode] = []
+    private var stripWidth: CGFloat = 0.0
     private let activeStripImage: UIImage
     private var appliedStripNodeCurrentIndex: Int?
     private var currentIndex: Int = 0
@@ -276,6 +294,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var validLayout: CGSize?
     
     private let disposable = MetaDisposable()
+    private let positionDisposable = MetaDisposable()
     private var initializedList = false
     
     let isReady = Promise<Bool>()
@@ -295,6 +314,55 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         } else {
             return nil
         }
+    }
+    
+    private var playerUpdateTimer: SwiftSignalKit.Timer?
+    private var playerStatus: MediaPlayerStatus? {
+        didSet {
+            if self.playerStatus != oldValue {
+                if let playerStatus = playerStatus, case .playing = playerStatus.status {
+                    self.ensureHasTimer()
+                } else {
+                    self.stopTimer()
+                }
+                self.updateStatus()
+            }
+        }
+    }
+    
+    private func ensureHasTimer() {
+        if self.playerUpdateTimer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 0.016, repeat: true, completion: { [weak self] in
+                self?.updateStatus()
+                }, queue: Queue.mainQueue())
+            self.playerUpdateTimer = timer
+            timer.start()
+        }
+    }
+    
+    private func updateStatus() {
+        var position: CGFloat = 1.0
+        if let playerStatus = self.playerStatus {
+            var playerPosition: Double
+            if !playerStatus.generationTimestamp.isZero, case .playing = playerStatus.status {
+                playerPosition = playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp)
+            } else {
+                playerPosition = playerStatus.timestamp
+            }
+            
+            position = CGFloat(playerPosition / playerStatus.duration)
+        }
+        
+        if let appliedStripNodeCurrentIndex = self.appliedStripNodeCurrentIndex {
+            var frame = self.stripNodes[appliedStripNodeCurrentIndex].frame
+            frame.size.width = self.stripWidth * position
+            self.stripNodes[appliedStripNodeCurrentIndex].frame = frame
+        }
+    }
+    
+    private func stopTimer() {
+        self.playerUpdateTimer?.invalidate()
+        self.playerUpdateTimer = nil
     }
     
     init(context: AccountContext) {
@@ -469,6 +537,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     
     deinit {
         self.disposable.dispose()
+        self.positionDisposable.dispose()
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -679,6 +748,17 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             if self.currentIndex >= 0 && self.currentIndex < self.stripNodes.count {
                 self.stripNodes[self.currentIndex].alpha = 1.0
             }
+            
+            if let currentItemNode = self.currentItemNode {
+                self.positionDisposable.set((currentItemNode.mediaStatus
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let strongSelf = self {
+                        strongSelf.playerStatus = status
+                    }
+                }))
+            } else {
+                self.positionDisposable.set(nil)
+            }
         }
         if hadOneStripNode && self.stripNodes.count > 1 {
             self.stripContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -686,6 +766,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         let stripInset: CGFloat = 8.0
         let stripSpacing: CGFloat = 4.0
         let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
+        self.stripWidth = stripWidth
         let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
         let currentStripMidX = floor(currentStripMinX + stripWidth / 2.0)
         let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth

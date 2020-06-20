@@ -104,6 +104,18 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     }
 }
 
+private class PeerAvatarImageGalleryContentNode: ASDisplayNode {
+    override func layout() {
+        super.layout()
+        
+        if let subnodes = self.subnodes {
+            for node in subnodes {
+                node.frame = self.bounds
+            }
+        }
+    }
+}
+
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private let peer: Peer
@@ -111,6 +123,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var entry: AvatarGalleryEntry?
     
+    private let contentNode: PeerAvatarImageGalleryContentNode
     private let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
@@ -130,6 +143,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.peer = peer
         self.sourceHasRoundCorners = sourceHasRoundCorners
         
+        self.contentNode = PeerAvatarImageGalleryContentNode()
         self.imageNode = TransformImageNode()
         self.footerContentNode = AvatarGalleryItemFooterContentNode(context: context, presentationData: presentationData)
         
@@ -138,6 +152,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNode.isHidden = true
         
         super.init()
+        
+        self.contentNode.addSubnode(self.imageNode)
         
         self.imageNode.imageUpdated = { [weak self] _ in
             self?._ready.set(.single(Void()))
@@ -155,7 +171,14 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
-                let shareController = ShareController(context: strongSelf.context, subject: .image(entry.representations), preferredAction: .saveToCameraRoll)
+                let subject: ShareControllerSubject
+                if let video = entry.videoRepresentations.last {
+                    let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                    subject = .media(videoFileReference.abstract)
+                } else {
+                    subject = .image(entry.representations)
+                }
+                let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll)
                 interaction.presentController(shareController, nil)
             }
         }
@@ -202,51 +225,88 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         representations = imageRepresentations
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
-                self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
+                self.zoomableContent = (largestSize.dimensions.cgSize, self.contentNode)
+
                 if let largestIndex = representations.firstIndex(where: { $0.representation == largestSize }) {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
-                self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
-                |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
-                        let previousStatus = strongSelf.status
-                        strongSelf.status = status
-                        switch status {
-                            case .Remote:
-                                strongSelf.statusNode.isHidden = false
-                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                                strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                            case let .Fetching(_, progress):
-                                strongSelf.statusNode.isHidden = false
-                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                                let adjustedProgress = max(progress, 0.027)
-                                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true), completion: {})
-                            case .Local:
-                                if let previousStatus = previousStatus, case .Fetching = previousStatus {
-                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
-                                        if let strongSelf = self {
-                                            strongSelf.statusNode.alpha = 0.0
-                                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                                if let strongSelf = self {
-                                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                                }
-                                            })
-                                        }
-                                    })
-                                } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
-                                    strongSelf.statusNode.alpha = 0.0
-                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                        if let strongSelf = self {
-                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                        }
-                                    })
-                                }
+//                self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
+//                |> deliverOnMainQueue).start(next: { [weak self] status in
+//                    if let strongSelf = self {
+//                        let previousStatus = strongSelf.status
+//                        strongSelf.status = status
+//                        switch status {
+//                            case .Remote:
+//                                strongSelf.statusNode.isHidden = false
+//                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+//                                strongSelf.statusNode.transitionToState(.download(.white), completion: {})
+//                            case let .Fetching(_, progress):
+//                                strongSelf.statusNode.isHidden = false
+//                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+//                                let adjustedProgress = max(progress, 0.027)
+//                                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true), completion: {})
+//                            case .Local:
+//                                if let previousStatus = previousStatus, case .Fetching = previousStatus {
+//                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
+//                                        if let strongSelf = self {
+//                                            strongSelf.statusNode.alpha = 0.0
+//                                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+//                                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+//                                                if let strongSelf = self {
+//                                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+//                                                }
+//                                            })
+//                                        }
+//                                    })
+//                                } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
+//                                    strongSelf.statusNode.alpha = 0.0
+//                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+//                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+//                                        if let strongSelf = self {
+//                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+//                                        }
+//                                    })
+//                                }
+//                        }
+//                    }
+//                }))
+                
+                var id: Int64?
+                if case let .image(image) = entry {
+                    id = image.0.id
+                }
+                if let video = entry.videoRepresentations.last, let id = id {
+                    let mediaManager = self.context.sharedContext.mediaManager
+                    let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                    let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black)
+                    let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
+                    videoNode.isUserInteractionEnabled = false
+                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                        if let strongSelf = self {
+                            strongSelf.videoNode?.isHidden = !owns
                         }
                     }
-                }))
+                    videoNode.canAttachContent = true
+                    if videoNode.hasAttachedContext {
+                        videoNode.play()
+                    }
+                    
+                    self.videoContent = videoContent
+                    self.videoNode = videoNode
+                    
+                    videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
+                    
+                    self.contentNode.addSubnode(videoNode)
+                } else if let videoNode = self.videoNode {
+                    self.videoContent = nil
+                    self.videoNode = nil
+                    
+                    videoNode.removeFromSupernode()
+                }
+                
+                self.imageNode.frame = self.contentNode.bounds
+                self.videoNode?.frame = self.contentNode.bounds
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -254,11 +314,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
-        let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
-        let scaledLocalImageViewBounds = self.imageNode.view.bounds
+        let transformedCopyViewFinalFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: self.view)
+        let scaledLocalImageViewBounds = self.contentNode.view.bounds
         
         let copyViewContents = node.2().0!
         let copyView = UIView()
@@ -276,7 +336,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceFinalFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
+            transformedSurfaceFinalFrame = self.contentNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
         }
         
         if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceFinalFrame = transformedSurfaceFinalFrame {
@@ -306,22 +366,22 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         
-        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+        self.contentNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.contentNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
             completion()
         })
-        self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
+        self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
         
         transformedFrame.origin = CGPoint()
         //self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         
-        let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
-        self.imageNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.imageNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        let transform = CATransform3DScale(self.contentNode.layer.transform, transformedFrame.size.width / self.contentNode.layer.bounds.size.width, transformedFrame.size.height / self.contentNode.layer.bounds.size.height, 1.0)
+        self.contentNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.contentNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
-        self.imageNode.clipsToBounds = true
+        self.contentNode.clipsToBounds = true
         if self.sourceHasRoundCorners {
-            self.imageNode.layer.animate(from: (self.imageNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+            self.contentNode.layer.animate(from: (self.contentNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
-                    self?.imageNode.clipsToBounds = false
+                    self?.contentNode.clipsToBounds = false
                 }
             })
         }
@@ -332,10 +392,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
-        let transformedCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
+        let transformedCopyViewInitialFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: self.view)
         
         var positionCompleted = false
         var boundsCompleted = false
@@ -358,7 +418,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceCopyViewInitialFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
+            transformedSurfaceCopyViewInitialFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: contentSurface)
         }
         
         let durationFactor = 1.0
@@ -393,24 +453,24 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
-        self.imageNode.layer.animatePosition(from: self.imageNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        self.contentNode.layer.animatePosition(from: self.contentNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             positionCompleted = true
             intermediateCompletion()
         })
         
-        self.imageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25 * durationFactor, removeOnCompletion: false)
+        self.contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25 * durationFactor, removeOnCompletion: false)
         
         transformedFrame.origin = CGPoint()
         
-        let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
-        self.imageNode.layer.animate(from: NSValue(caTransform3D: self.imageNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
+        let transform = CATransform3DScale(self.contentNode.layer.transform, transformedFrame.size.width / self.contentNode.layer.bounds.size.width, transformedFrame.size.height / self.contentNode.layer.bounds.size.height, 1.0)
+        self.contentNode.layer.animate(from: NSValue(caTransform3D: self.contentNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
             intermediateCompletion()
         })
         
-        self.imageNode.clipsToBounds = true
+        self.contentNode.clipsToBounds = true
         if self.sourceHasRoundCorners {
-            self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (self.contentNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         }
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
