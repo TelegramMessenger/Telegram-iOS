@@ -1641,7 +1641,6 @@
                 }
                 
                 UIImage *fullImage = nil;
-                UIImage *thumbnailImage = nil;
                 if (adjustments.toolsApplied) {
                     image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
                     
@@ -1662,7 +1661,7 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:TGMediaVideoConversionPresetAnimation maxDuration:0.0], fullImage, nil, true);
+                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:TGMediaVideoConversionPresetProfile maxDuration:0.0 videoStartValue:coverPosition], fullImage, nil, true);
                     
                     [self transitionOutSaving:true completion:^
                     {
