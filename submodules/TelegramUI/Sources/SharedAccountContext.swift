@@ -597,7 +597,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if let strongSelf = self {
                     let resolvedText: CallStatusText
                     if let state = state {
-                        switch state {
+                        switch state.state {
                             case .connecting, .requesting, .terminating, .ringing, .waiting:
                                 resolvedText = .inProgress(nil)
                             case .terminated:

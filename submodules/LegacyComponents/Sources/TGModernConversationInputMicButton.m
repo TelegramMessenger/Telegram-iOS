@@ -457,6 +457,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _lockPanelWrapperView.transform = CGAffineTransformMakeTranslation(0.0f, 100.0f);
     _lockPanelWrapperView.alpha = 0.0f;
     
+    _lock.transform = CGAffineTransformIdentity;
+    
     if (iosMajorVersion() >= 8) {
         [UIView animateWithDuration:0.50 delay:0.0 usingSpringWithDamping:0.55f initialSpringVelocity:0.0f options:UIViewAnimationOptionBeginFromCurrentState animations:^{
             _innerCircleView.transform = CGAffineTransformIdentity;
@@ -548,6 +550,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 }
 
 - (void)animateLock {
+    if (!_animatedIn) {
+        return;
+    }
+    
     _lockView.lockness = 1.0f;
     [_lock updateLockness:1.0];
     
@@ -718,10 +724,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
                 
                 return false;
             } else if (distanceX < -100.0 && !_xFeedbackOccured) {
-                if (iosMajorVersion() >= 10) {
-                    UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-                    [generator impactOccurred];
-                }
                 _xFeedbackOccured = true;
             } else if (distanceX > -100.0) {
                 _xFeedbackOccured = false;
@@ -732,10 +734,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
 
                 return false;
             } else if (distanceY < -60.0 && !_yFeedbackOccured) {
-                if (iosMajorVersion() >= 10) {
-                    UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-                    [generator impactOccurred];
-                }
                 _yFeedbackOccured = true;
             } else if (distanceY > -60.0) {
                 _yFeedbackOccured = false;

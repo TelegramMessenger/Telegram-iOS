@@ -175,18 +175,17 @@ _signalingDataEmitted(signalingDataEmitted) {
         flags |= cricket::PORTALLOCATOR_DISABLE_UDP;
         flags |= cricket::PORTALLOCATOR_DISABLE_STUN;
     }
-    //flags |= cricket::PORTALLOCATOR_DISABLE_UDP;
     _portAllocator->set_flags(_portAllocator->flags() | flags);
     _portAllocator->Initialize();
     
-    rtc::SocketAddress defaultStunAddress = rtc::SocketAddress("hlgkfjdrtjfykgulhijkljhulyo.uksouth.cloudapp.azure.com", 3478);
+    rtc::SocketAddress defaultStunAddress = rtc::SocketAddress("134.122.52.178", 3478);
     cricket::ServerAddresses stunServers;
     stunServers.insert(defaultStunAddress);
     std::vector<cricket::RelayServerConfig> turnServers;
     turnServers.push_back(cricket::RelayServerConfig(
-        rtc::SocketAddress("hlgkfjdrtjfykgulhijkljhulyo.uksouth.cloudapp.azure.com", 3478),
-        "user",
-        "root",
+        rtc::SocketAddress("134.122.52.178", 3478),
+        "openrelay",
+        "openrelay",
         cricket::PROTO_UDP
     ));
     _portAllocator->SetConfiguration(stunServers, turnServers, 2, webrtc::NO_PRUNE);
@@ -233,7 +232,7 @@ NetworkManager::~NetworkManager() {
     _socketFactory.reset();
 }
 
-void NetworkManager::receiveSignalingData(const std::vector<uint8_t> &data) {
+void NetworkManager::receiveSignalingData(const rtc::CopyOnWriteBuffer &data) {
     rtc::ByteBufferReader reader((const char *)data.data(), data.size());
     uint32_t candidateCount = 0;
     if (!reader.ReadUInt32(&candidateCount)) {

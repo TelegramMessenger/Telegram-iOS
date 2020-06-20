@@ -178,6 +178,10 @@ public final class CallController: ViewController {
             let _ = self?.call.hangUp()
         }
         
+        self.controllerNode.toggleVideo = { [weak self] in
+            let _ = self?.call.setEnableVideo(true)
+        }
+        
         self.controllerNode.back = { [weak self] in
             let _ = self?.dismiss()
         }

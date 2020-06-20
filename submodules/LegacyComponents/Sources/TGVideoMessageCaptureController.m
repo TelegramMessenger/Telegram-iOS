@@ -628,7 +628,7 @@ typedef enum
     _dismissed = cancelled;
     
     if (self.onDismiss != nil)
-        self.onDismiss(_automaticDismiss);
+        self.onDismiss(_automaticDismiss, cancelled);
     
     if (_player != nil)
         [_player pause];

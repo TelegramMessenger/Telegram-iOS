@@ -74,6 +74,12 @@ final class CallControllerStatusNode: ASDisplayNode {
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
                     transition.updateAlpha(node: self.receptionNode, alpha: 0.0)
                 }
+                
+                if (oldValue == nil) != (self.reception != nil) {
+                    if let validLayoutWidth = self.validLayoutWidth {
+                        let _ = self.updateLayout(constrainedWidth: validLayoutWidth, transition: .immediate)
+                    }
+                }
             }
         }
     }
@@ -136,7 +142,9 @@ final class CallControllerStatusNode: ASDisplayNode {
                 }
                 statusText = format(durationString)
                 statusMeasureText = format(measureDurationString)
-                statusOffset += 8.0
+                if self.reception != nil {
+                    statusOffset += 8.0
+                }
         }
         
         let spacing: CGFloat = 4.0

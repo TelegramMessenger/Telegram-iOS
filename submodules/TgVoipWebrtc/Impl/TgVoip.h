@@ -138,6 +138,7 @@ public:
             TgVoipNetworkType initialNetworkType,
             TgVoipEncryptionKey const &encryptionKey,
             std::function<void(TgVoipState)> stateUpdated,
+            std::function<void(bool)> videoStateUpdated,
             std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     );
 
@@ -158,6 +159,8 @@ public:
     virtual TgVoipPersistentState getPersistentState() = 0;
     
     virtual void receiveSignalingData(const std::vector<uint8_t> &data) = 0;
+    virtual void setSendVideo(bool sendVideo) = 0;
+    virtual void switchVideoCamera() = 0;
 
     virtual TgVoipFinalState stop() = 0;
 };
