@@ -4421,12 +4421,13 @@ public extension Api {
                     })
                 }
             
-                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
+                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel, tzOffset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1421720550)
+                    buffer.appendInt32(-433058374)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     channel.serialize(buffer, true)
-                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
+                    serializeInt32(tzOffset, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel), ("tzOffset", tzOffset)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
                         let reader = BufferReader(buffer)
                         var result: Api.stats.BroadcastStats?
                         if let signature = reader.readInt32() {
@@ -6610,6 +6611,34 @@ public extension Api {
                         var result: [Api.WallPaper]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.WallPaper.self)
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getGlobalPrivacySettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.GlobalPrivacySettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-349483786)
+                    
+                    return (FunctionDescription(name: "account.getGlobalPrivacySettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.GlobalPrivacySettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.GlobalPrivacySettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.GlobalPrivacySettings
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setGlobalPrivacySettings(settings: Api.GlobalPrivacySettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.GlobalPrivacySettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(517647042)
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.setGlobalPrivacySettings", parameters: [("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.GlobalPrivacySettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.GlobalPrivacySettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.GlobalPrivacySettings
                         }
                         return result
                     })

@@ -9211,6 +9211,46 @@ public extension Api {
         }
     
     }
+    public enum GlobalPrivacySettings: TypeConstructorDescription {
+        case globalPrivacySettings(flags: Int32, archiveAndMuteNewNoncontactPeers: Api.Bool?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .globalPrivacySettings(let flags, let archiveAndMuteNewNoncontactPeers):
+                    if boxed {
+                        buffer.appendInt32(-1096616924)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {archiveAndMuteNewNoncontactPeers!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .globalPrivacySettings(let flags, let archiveAndMuteNewNoncontactPeers):
+                return ("globalPrivacySettings", [("flags", flags), ("archiveAndMuteNewNoncontactPeers", archiveAndMuteNewNoncontactPeers)])
+    }
+    }
+    
+        public static func parse_globalPrivacySettings(_ reader: BufferReader) -> GlobalPrivacySettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, archiveAndMuteNewNoncontactPeers: _2)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InlineBotSwitchPM: TypeConstructorDescription {
         case inlineBotSwitchPM(text: String, startParam: String)
     

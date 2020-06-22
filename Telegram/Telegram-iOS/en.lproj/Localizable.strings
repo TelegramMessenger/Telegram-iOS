@@ -5623,3 +5623,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Stats.GroupTopInviter.History" = "History";
 "Stats.GroupTopInviter.Promote" = "Promote";
+
+"PrivacySettings.AutoArchiveTitle" = "NEW CHATS FROM UNKNOWN USERS";
+"PrivacySettings.AutoArchive" = "Archive and Mute";
+"PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";

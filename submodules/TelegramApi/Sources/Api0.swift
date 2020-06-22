@@ -292,6 +292,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-525288402] = { return Api.PhotoSize.parse_photoStrippedSize($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
     dict[-463889475] = { return Api.messages.Stickers.parse_stickers($0) }
+    dict[-1096616924] = { return Api.GlobalPrivacySettings.parse_globalPrivacySettings($0) }
     dict[1008755359] = { return Api.InlineBotSwitchPM.parse_inlineBotSwitchPM($0) }
     dict[223655517] = { return Api.messages.FoundStickerSets.parse_foundStickerSetsNotModified($0) }
     dict[1359533640] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
@@ -1023,6 +1024,8 @@ public struct Api {
             case let _1 as Api.PhotoSize:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Stickers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.GlobalPrivacySettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InlineBotSwitchPM:
                 _1.serialize(buffer, boxed)
