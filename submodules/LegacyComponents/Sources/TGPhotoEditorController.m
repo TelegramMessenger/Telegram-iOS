@@ -76,6 +76,7 @@
     SMetaDisposable *_playerItemDisposable;
     id _playerStartedObserver;
     id _playerReachedEndObserver;
+    bool _registeredKeypathObserver;
     NSTimer *_positionTimer;
     
     id<TGMediaEditAdjustments> _initialAdjustments;
@@ -505,7 +506,10 @@
         
         [self _setupPlaybackStartedObserver];
         
-        [_player addObserver:self forKeyPath:@"rate" options:NSKeyValueObservingOptionNew context:nil];
+        if (!_registeredKeypathObserver) {
+            [_player addObserver:self forKeyPath:@"rate" options:NSKeyValueObservingOptionNew context:nil];
+            _registeredKeypathObserver = true;
+        }
     }
     
     [_player play];
@@ -521,7 +525,10 @@
         if (_playerReachedEndObserver != nil)
             [_player removeTimeObserver:_playerReachedEndObserver];
         
-        [_player removeObserver:self forKeyPath:@"rate" context:nil];
+        if (_registeredKeypathObserver) {
+            [_player removeObserver:self forKeyPath:@"rate" context:nil];
+            _registeredKeypathObserver = false;
+        }
     }
     [_player pause];
     
