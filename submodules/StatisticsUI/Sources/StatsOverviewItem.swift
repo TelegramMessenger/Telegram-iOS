@@ -212,7 +212,7 @@ class StatsOverviewItemNode: ListViewItemNode {
             
             var twoColumnLayout = true
             
-            func deltaText(_ value: StatsValue) -> (String, Bool) {
+            func deltaText(_ value: StatsValue) -> (String, Bool, Bool) {
                 let deltaValue = value.current - value.previous
                 let deltaCompact = compactNumericCountString(abs(Int(deltaValue)))
                 let delta = deltaValue > 0 ? "+\(deltaCompact)" : "-\(deltaCompact)"
@@ -221,11 +221,14 @@ class StatsOverviewItemNode: ListViewItemNode {
                     deltaPercentage = abs(deltaValue / value.previous)
                 }
                 
-                return (abs(deltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", delta, deltaPercentage * 100.0) : "", deltaValue > 0.0)
+                return (abs(deltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", delta, deltaPercentage * 100.0) : "", deltaValue > 0.0, abs(deltaValue) > 0.0)
             }
             
             if let stats = item.stats as? ChannelStats {
-                let displayBottomRow = stats.sharesPerPost.current > 0 || stats.viewsPerPost.current > 0
+                let viewsPerPostDelta = deltaText(stats.viewsPerPost)
+                let sharesPerPostDelta = deltaText(stats.sharesPerPost)
+                
+                let displayBottomRow = stats.sharesPerPost.current > 0 || viewsPerPostDelta.2 || stats.viewsPerPost.current > 0 || sharesPerPostDelta.2
                 
                 topLeftValueLabelLayoutAndApply = makeTopLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(stats.followers.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                                  
@@ -253,10 +256,8 @@ class StatsOverviewItemNode: ListViewItemNode {
                 
                 topRightDeltaLabelLayoutAndApply = nil
                 
-                let viewsPerPostDelta = deltaText(stats.viewsPerPost)
                 bottomLeftDeltaLabelLayoutAndApply = makeBottomLeftDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewsPerPostDelta.0, font: deltaFont, textColor: viewsPerPostDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                let sharesPerPostDelta = deltaText(stats.sharesPerPost)
                 bottomRightDeltaLabelLayoutAndApply = makeBottomRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: sharesPerPostDelta.0, font: deltaFont, textColor: sharesPerPostDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 
@@ -267,24 +268,26 @@ class StatsOverviewItemNode: ListViewItemNode {
                 }
                 
                 if twoColumnLayout {
-                    if !stats.viewsPerPost.current.isZero || !stats.sharesPerPost.current.isZero {
+                    if displayBottomRow {
                         height += verticalSpacing
                         height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
                     }
                 } else {
                     height += verticalSpacing
                     height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                    if !stats.viewsPerPost.current.isZero {
+                    if !stats.viewsPerPost.current.isZero || viewsPerPostDelta.2 {
                         height += verticalSpacing
                         height += bottomLeftValueLabelLayoutAndApply!.0.size.height + bottomLeftTitleLabelLayoutAndApply!.0.size.height
                     }
-                    if !stats.sharesPerPost.current.isZero {
+                    if !stats.sharesPerPost.current.isZero || sharesPerPostDelta.2 {
                         height += verticalSpacing
                         height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
                     }
                 }
             } else if let stats = item.stats as? GroupStats {
-                let displayBottomRow = stats.viewers.current > 0 || stats.posters.current > 0
+                let viewersDelta = deltaText(stats.viewers)
+                let postersDelta = deltaText(stats.posters)
+                let displayBottomRow = stats.viewers.current > 0 || viewersDelta.2 || stats.posters.current > 0 || postersDelta.2
                    
                 topLeftValueLabelLayoutAndApply = makeTopLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(stats.members.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
@@ -308,10 +311,8 @@ class StatsOverviewItemNode: ListViewItemNode {
                 let messagesDelta = deltaText(stats.messages)
                 topRightDeltaLabelLayoutAndApply = makeTopRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: messagesDelta.0, font: deltaFont, textColor: messagesDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                let viewersDelta = deltaText(stats.viewers)
                 bottomLeftDeltaLabelLayoutAndApply = makeBottomLeftDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewersDelta.0, font: deltaFont, textColor: viewersDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                let postersDelta = deltaText(stats.posters)
                 bottomRightDeltaLabelLayoutAndApply = makeBottomRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: postersDelta.0, font: deltaFont, textColor: postersDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 
@@ -322,18 +323,18 @@ class StatsOverviewItemNode: ListViewItemNode {
                 }
                 
                 if twoColumnLayout {
-                    if !stats.viewers.current.isZero || !stats.posters.current.isZero {
+                    if !stats.viewers.current.isZero || viewersDelta.2 || !stats.posters.current.isZero || postersDelta.2 {
                         height += verticalSpacing
                         height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
                     }
                 } else {
                     height += verticalSpacing
                     height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                    if !stats.viewers.current.isZero {
+                    if !stats.viewers.current.isZero || viewersDelta.2 {
                         height += verticalSpacing
                         height += bottomLeftValueLabelLayoutAndApply!.0.size.height + bottomLeftTitleLabelLayoutAndApply!.0.size.height
                     }
-                    if !stats.posters.current.isZero {
+                    if !stats.posters.current.isZero || postersDelta.2 {
                         height += verticalSpacing
                         height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
                     }
