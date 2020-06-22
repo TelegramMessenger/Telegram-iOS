@@ -37,7 +37,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
             }, addToTransitionSurface: { _ in
             }, openUrl: { _ in
             }, openPeer: { peer, navigation in
-            }, callPeer: { _ in
+            }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil,
             setupTemporaryHiddenMedia: { _, _, _ in

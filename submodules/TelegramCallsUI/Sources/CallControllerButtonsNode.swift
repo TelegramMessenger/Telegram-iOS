@@ -33,8 +33,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
     private let endButton: CallControllerButtonNode
     private let speakerButton: CallControllerButtonNode
     
-    private let videoButton: CallControllerButtonNode
-    
     private var mode: CallControllerButtonsMode?
     
     private var validLayout: CGFloat?
@@ -64,9 +62,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
         self.speakerButton = CallControllerButtonNode(type: .speaker, label: nil)
         self.speakerButton.alpha = 0.0
         
-        self.videoButton = CallControllerButtonNode(type: .video, label: nil)
-        self.videoButton.alpha = 0.0
-        
         super.init()
         
         self.addSubnode(self.acceptButton)
@@ -74,14 +69,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
         self.addSubnode(self.muteButton)
         self.addSubnode(self.endButton)
         self.addSubnode(self.speakerButton)
-        self.addSubnode(self.videoButton)
         
         self.acceptButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.declineButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.muteButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.endButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.speakerButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
-        self.videoButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
     }
     
     func updateLayout(constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -122,10 +115,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
         for button in [self.muteButton, self.endButton, self.speakerButton] {
             transition.updateFrame(node: button, frame: CGRect(origin: origin, size: buttonSize))
             
-            if button === self.endButton {
-                transition.updateFrame(node: self.videoButton, frame: CGRect(origin: CGPoint(x: origin.x, y: origin.y - buttonSize.height - 20.0), size: buttonSize))
-            }
-            
             origin.x += buttonSize.width + threeButtonSpacing
         }
         
@@ -140,7 +129,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 for button in [self.declineButton, self.acceptButton] {
                     button.alpha = 1.0
                 }
-                for button in [self.muteButton, self.endButton, self.speakerButton, self.videoButton] {
+                for button in [self.muteButton, self.endButton, self.speakerButton] {
                     button.alpha = 0.0
                 }
             case let .active(speakerMode, videoState):
@@ -171,7 +160,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     self.endButton.alpha = 1.0
                 }
                 
-                switch videoState {
+                /*switch videoState {
                 case .notAvailable:
                     self.videoButton.alpha = 0.0
                 case let .available(isEnabled):
@@ -185,8 +174,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 case .active:
                     self.videoButton.isUserInteractionEnabled = true
                     self.videoButton.alpha = 0.0
-                }
-                
+                }*/
                 
                 if !self.declineButton.alpha.isZero {
                     if animated {
@@ -223,9 +211,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
             self.speaker?()
         } else if button === self.acceptButton {
             self.accept?()
-        } else if button === self.videoButton {
+        }/* else if button === self.videoButton {
             self.toggleVideo?()
-        }
+        }*/
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -235,7 +223,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
             self.muteButton,
             self.endButton,
             self.speakerButton,
-            self.videoButton
+            //self.videoButton
         ]
         for button in buttons {
             if let result = button.view.hitTest(self.view.convert(point, to: button.view), with: event) {

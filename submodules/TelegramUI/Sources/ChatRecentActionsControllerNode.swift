@@ -180,8 +180,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     self?.openUrl(url)
                 }, openPeer: { peer, navigation in
                     self?.openPeer(peerId: peer.id, peer: peer)
-                }, callPeer: { peerId in
-                    self?.controllerInteraction?.callPeer(peerId)
+                }, callPeer: { peerId, isVideo in
+                    self?.controllerInteraction?.callPeer(peerId, isVideo)
                 }, enqueueMessage: { _ in
                 }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
@@ -242,7 +242,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return self
         }, reactionContainerNode: {
             return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, message in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {
                     case let .url(url):

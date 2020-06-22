@@ -40,12 +40,12 @@
 
 @implementation VideoCapturerInterfaceImplReference
 
-- (instancetype)initWithSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source useFrontCamera:(bool)useFrontCamera {
+- (instancetype)initWithSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source useFrontCamera:(bool)useFrontCamera isActiveUpdated:(void (^)(bool))isActiveUpdated {
     self = [super init];
     if (self != nil) {
         assert([NSThread isMainThread]);
         
-        _videoCapturer = [[VideoCameraCapturer alloc] initWithSource:source];
+        _videoCapturer = [[VideoCameraCapturer alloc] initWithSource:source isActiveUpdated:isActiveUpdated];
         
         AVCaptureDevice *frontCamera = nil;
         AVCaptureDevice *backCamera = nil;
@@ -130,12 +130,14 @@ namespace TGVOIP_NAMESPACE {
 
 class VideoCapturerInterfaceImpl: public VideoCapturerInterface {
 public:
-    VideoCapturerInterfaceImpl(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera) :
+    VideoCapturerInterfaceImpl(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera, std::function<void(bool)> isActiveUpdated) :
     _source(source) {
         _implReference = [[VideoCapturerInterfaceImplHolder alloc] init];
         VideoCapturerInterfaceImplHolder *implReference = _implReference;
         dispatch_async(dispatch_get_main_queue(), ^{
-            VideoCapturerInterfaceImplReference *value = [[VideoCapturerInterfaceImplReference alloc] initWithSource:source useFrontCamera:useFrontCamera];
+            VideoCapturerInterfaceImplReference *value = [[VideoCapturerInterfaceImplReference alloc] initWithSource:source useFrontCamera:useFrontCamera isActiveUpdated:^(bool isActive) {
+                isActiveUpdated(isActive);
+            }];
             if (value != nil) {
                 implReference.reference = (void *)CFBridgingRetain(value);
             }
@@ -185,8 +187,8 @@ rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> makeVideoSource(rtc::Threa
     return webrtc::VideoTrackSourceProxy::Create(signalingThread, workerThread, objCVideoTrackSource);
 }
 
-std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera) {
-    return std::make_unique<VideoCapturerInterfaceImpl>(source, useFrontCamera);
+std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera, std::function<void(bool)> isActiveUpdated) {
+    return std::make_unique<VideoCapturerInterfaceImpl>(source, useFrontCamera, isActiveUpdated);
 }
 
 #ifdef TGVOIP_NAMESPACE

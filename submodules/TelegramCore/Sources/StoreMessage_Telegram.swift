@@ -75,7 +75,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             tags.insert(.webPage)
         } else if let action = attachment as? TelegramMediaAction {
             switch action.action {
-                case let .phoneCall(_, discardReason, _):
+                case let .phoneCall(_, discardReason, _, _):
                     globalTags.insert(.Calls)
                     if incoming, let discardReason = discardReason, case .missed = discardReason {
                         globalTags.insert(.MissedCalls)

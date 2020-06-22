@@ -537,7 +537,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         if let mainWindow = mainWindow, applicationBindings.isMainApp {
-            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, getDeviceAccessData: {
+            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, enableVideoCalls: self.immediateExperimentalUISettings.videoCalls, getDeviceAccessData: {
                 return (self.currentPresentationData.with { $0 }, { [weak self] c, a in
                     self?.presentGlobalController(c, a)
                 }, {
@@ -1120,7 +1120,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return nil
             }, reactionContainerNode: {
                 return nil
-            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
             }, canSetupReply: { _ in
                 return .none
             }, navigateToFirstDateMessage: { _ in

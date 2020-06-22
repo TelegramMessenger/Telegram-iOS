@@ -189,7 +189,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = invoice.title
                     case let action as TelegramMediaAction:
                         switch action.action {
-                            case let .phoneCall(_, discardReason, _):
+                            case let .phoneCall(_, discardReason, _, _):
                                 hideAuthor = !isPeerGroup
                                 let incoming = message.flags.contains(.Incoming)
                                 if let discardReason = discardReason {
