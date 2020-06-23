@@ -320,6 +320,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private let peekData: ChatPeekTimeout?
     private let peekTimerDisposable = MetaDisposable()
+    
+    private var hasEmbeddedTitleContent = false
 
     public override var customData: Any? {
         return self.chatLocation
@@ -373,7 +375,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .inline:
                 navigationBarPresentationData = nil
             default:
-                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
+                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true)
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
@@ -2779,8 +2781,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .inline:
             self.statusBar.statusBarStyle = .Ignore
         }
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
-        self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.updateNavigationBarPresentation()
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
             var state = state
             state = state.updatedTheme(self.presentationData.theme)
@@ -2792,6 +2793,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         self.currentContextController?.updateTheme(presentationData: self.presentationData)
+    }
+    
+    private func updateNavigationBarPresentation() {
+        let navigationBarTheme: NavigationBarTheme
+            
+        if self.hasEmbeddedTitleContent {
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: true)
+        } else {
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: true)
+        }
+        
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        
+        self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, hasEmbeddedTitleContent: self.hasEmbeddedTitleContent)
     }
     
     override public func loadDisplayNode() {
@@ -4735,6 +4750,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }))
         }
         
+        self.chatDisplayNode.updateHasEmbeddedTitleContent = { [weak self] hasEmbeddedTitleContent in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.hasEmbeddedTitleContent != hasEmbeddedTitleContent {
+                strongSelf.hasEmbeddedTitleContent = hasEmbeddedTitleContent
+                
+                if strongSelf.hasEmbeddedTitleContent {
+                    strongSelf.statusBar.statusBarStyle = .White
+                } else {
+                    strongSelf.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
+                }
+                
+                if let navigationBar = strongSelf.navigationBar {
+                    if let navigationBarCopy = navigationBar.view.snapshotContentTree() {
+                        navigationBar.view.superview?.insertSubview(navigationBarCopy, aboveSubview: navigationBar.view)
+                        navigationBarCopy.alpha = 0.0
+                        navigationBarCopy.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak navigationBarCopy] _ in
+                            navigationBarCopy?.removeFromSuperview()
+                        })
+                    }
+                }
+                strongSelf.updateNavigationBarPresentation()
+            }
+        }
+        
         self.interfaceInteraction = interfaceInteraction
         
         if let search = self.focusOnSearchAfterAppearance {
@@ -5143,7 +5184,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch self.presentationInterfaceState.mode {
         case .standard, .inline:
-                break
+            break
         case .overlay:
             if case .Ignore = self.statusBar.statusBarStyle {
             } else if layout.safeInsets.top.isZero {
@@ -5503,7 +5544,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch updatedChatPresentationInterfaceState.mode {
             case .standard:
-                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+                if self.hasEmbeddedTitleContent {
+                    self.statusBar.statusBarStyle = .White
+                } else {
+                    self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+                }
                 self.deferScreenEdgeGestures = []
             case .overlay:
                 self.deferScreenEdgeGestures = [.top]
@@ -9255,6 +9300,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func activateSearch(domain: ChatSearchDomain = .everything, query: String = "") {
         self.focusOnSearchAfterAppearance = (domain, query)
         self.interfaceInteraction?.beginMessageSearch(domain, query)
+    }
+    
+    override public func updatePossibleControllerDropContent(content: NavigationControllerDropContent?) {
+        self.chatDisplayNode.updateEmbeddedTitlePeekContent(content: content)
+    }
+    
+    override public func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
+        return self.chatDisplayNode.acceptEmbeddedTitlePeekContent(content: content)
     }
 }
 

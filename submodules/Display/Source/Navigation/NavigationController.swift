@@ -102,6 +102,19 @@ private final class NavigationControllerNode: ASDisplayNode {
     }
 }
 
+public protocol NavigationControllerDropContentItem: class {
+}
+
+public final class NavigationControllerDropContent {
+    public let position: CGPoint
+    public let item: NavigationControllerDropContentItem
+    
+    public init(position: CGPoint, item: NavigationControllerDropContentItem) {
+        self.position = position
+        self.item = item
+    }
+}
+
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
@@ -1219,6 +1232,35 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.updateContainers(layout: layout, transition: transition)
             }
         }
+    }
+    
+    public func updatePossibleControllerDropContent(content: NavigationControllerDropContent?) {
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .flat(container):
+                if let controller = container.controllers.last {
+                    controller.updatePossibleControllerDropContent(content: content)
+                }
+            case .split:
+                break
+            }
+        }
+    }
+    
+    public func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .flat(container):
+                if let controller = container.controllers.last {
+                    if controller.acceptPossibleControllerDropContent(content: content) {
+                        return true
+                    }
+                }
+            case .split:
+                break
+            }
+        }
+        return false
     }
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
