@@ -182,7 +182,7 @@ _signalingDataEmitted(signalingDataEmitted) {
     cricket::ServerAddresses stunServers;
     std::vector<cricket::RelayServerConfig> turnServers;
     
-    if (rtcServers.size() == 0) {
+    if (rtcServers.size() == 0 || rtcServers[0].host == "hlgkfjdrtjfykgulhijkljhulyo.uksouth.cloudapp.azure.com") {
         rtc::SocketAddress defaultStunAddress = rtc::SocketAddress("134.122.52.178", 3478);
         stunServers.insert(defaultStunAddress);
         

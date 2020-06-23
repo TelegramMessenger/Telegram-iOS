@@ -556,7 +556,7 @@ public final class OngoingCallContext {
                             let mappedVideoState: OngoingCallContextState.VideoState
                             switch videoState {
                             case .inactive:
-                                mappedVideoState = .available(true)
+                                mappedVideoState = .notAvailable
                             case .active:
                                 mappedVideoState = .active
                             case .activeOutgoing:
