@@ -2281,14 +2281,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if buttonKeys.count > 3 {
                 if self.isOpenedFromChat {
                     switch buttonKey {
-                    case .message, .search:
+                    case .message, .search, .videoCall:
                         hiddenWhileExpanded = true
                     default:
                         hiddenWhileExpanded = false
                     }
                 } else {
                     switch buttonKey {
-                    case .mute, .search:
+                    case .mute, .search, .videoCall:
                         hiddenWhileExpanded = true
                     default:
                         hiddenWhileExpanded = false
