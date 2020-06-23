@@ -156,7 +156,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
     
     var duration: Int32?
     for media in telegramMessage.media {
-        if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, callDuration) = action.action {
+        if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, callDuration, _) = action.action {
             duration = callDuration
         }
     }
