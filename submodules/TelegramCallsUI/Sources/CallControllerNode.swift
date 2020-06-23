@@ -107,6 +107,7 @@ final class CallControllerNode: ASDisplayNode {
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
     private let statusNode: CallControllerStatusNode
+    private let videoPausedNode: ImmediateTextNode
     private let buttonsNode: CallControllerButtonsNode
     private var keyPreviewNode: CallControllerKeyPreviewNode?
     
@@ -167,6 +168,10 @@ final class CallControllerNode: ASDisplayNode {
         self.backButtonNode = HighlightableButtonNode()
         
         self.statusNode = CallControllerStatusNode()
+        
+        self.videoPausedNode = ImmediateTextNode()
+        self.videoPausedNode.alpha = 0.0
+        
         self.buttonsNode = CallControllerButtonsNode(strings: self.presentationData.strings)
         self.keyButtonNode = HighlightableButtonNode()
         
@@ -201,6 +206,7 @@ final class CallControllerNode: ASDisplayNode {
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.dimNode)
         self.containerNode.addSubnode(self.statusNode)
+        self.containerNode.addSubnode(self.videoPausedNode)
         self.containerNode.addSubnode(self.buttonsNode)
         self.containerNode.addSubnode(self.keyButtonNode)
         self.containerNode.addSubnode(self.backButtonArrowNode)
@@ -224,6 +230,10 @@ final class CallControllerNode: ASDisplayNode {
         
         self.buttonsNode.toggleVideo = { [weak self] in
             self?.toggleVideo?()
+        }
+        
+        self.buttonsNode.rotateCamera = { [weak self] in
+            self?.call.switchVideoCamera()
         }
         
         self.keyButtonNode.addTarget(self, action: #selector(self.keyPressed), forControlEvents: .touchUpInside)
@@ -261,6 +271,8 @@ final class CallControllerNode: ASDisplayNode {
                     self.updateCallState(callState)
                 }
             }
+            
+            self.videoPausedNode.attributedText = NSAttributedString(string: self.presentationData.strings.Call_RemoteVideoPaused(peer.compactDisplayTitle).0, font: Font.regular(17.0), textColor: .white)
             
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -372,6 +384,15 @@ final class CallControllerNode: ASDisplayNode {
                 isActive = true
             }
             incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
+            if isActive != self.videoPausedNode.alpha.isZero {
+                if isActive {
+                    self.videoPausedNode.alpha = 0.0
+                    self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                } else {
+                    self.videoPausedNode.alpha = 1.0
+                    self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                }
+            }
         }
         
         switch callState.state {
@@ -604,6 +625,9 @@ final class CallControllerNode: ASDisplayNode {
         
         let statusHeight = self.statusNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
+        
+        let videoPausedSize = self.videoPausedNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: 100.0))
+        transition.updateFrame(node: self.videoPausedNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - videoPausedSize.width) / 2.0), y: floor((layout.size.height - videoPausedSize.height) / 2.0)), size: videoPausedSize))
         
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
         let buttonsOriginY: CGFloat = layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom

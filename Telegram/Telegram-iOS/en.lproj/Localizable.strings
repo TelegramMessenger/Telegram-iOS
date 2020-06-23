@@ -5627,3 +5627,5 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.AutoArchiveTitle" = "NEW CHATS FROM UNKNOWN USERS";
 "PrivacySettings.AutoArchive" = "Archive and Mute";
 "PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
+
+"Call.RemoteVideoPaused" = "%@'s video paused";

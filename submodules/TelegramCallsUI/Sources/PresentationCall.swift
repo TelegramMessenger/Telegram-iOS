@@ -473,13 +473,13 @@ public final class PresentationCallImpl: PresentationCall {
                 }
             case .accepting:
                 self.callWasActive = true
-                presentationState = PresentationCallState(state: .connecting(nil), videoState: .notAvailable, remoteVideoState: mappedRemoteVideoState)
+                presentationState = PresentationCallState(state: .connecting(nil), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
             case .dropping:
-                presentationState = PresentationCallState(state: .terminating, videoState: .notAvailable, remoteVideoState: mappedRemoteVideoState)
+                presentationState = PresentationCallState(state: .terminating, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
             case let .terminated(id, reason, options):
-                presentationState = PresentationCallState(state: .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating)), videoState: .notAvailable, remoteVideoState: mappedRemoteVideoState)
+                presentationState = PresentationCallState(state: .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating)), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
             case let .requesting(ringing):
-                presentationState = PresentationCallState(state: .requesting(ringing), videoState: .notAvailable, remoteVideoState: mappedRemoteVideoState)
+                presentationState = PresentationCallState(state: .requesting(ringing), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
             case let .active(_, _, keyVisualHash, _, _, _, _):
                 self.callWasActive = true
                 if let callContextState = callContextState {

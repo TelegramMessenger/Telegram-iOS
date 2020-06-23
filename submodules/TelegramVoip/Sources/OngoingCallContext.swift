@@ -538,7 +538,7 @@ public final class OngoingCallContext {
                                 port: Int32(clamping: server.port),
                                 username: username,
                                 password: password,
-                                isTurn: false
+                                isTurn: true
                             ))
                         }
                     }

@@ -120,6 +120,7 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
 }
 
 - (void)stopCapture {
+  _isActiveUpdated = nil;
   [self stopCaptureWithCompletionHandler:nil];
 }
 

@@ -32,6 +32,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
     private let muteButton: CallControllerButtonNode
     private let endButton: CallControllerButtonNode
     private let speakerButton: CallControllerButtonNode
+    private let swichCameraButton: CallControllerButtonNode
     
     private var mode: CallControllerButtonsMode?
     
@@ -48,6 +49,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
     var end: (() -> Void)?
     var speaker: (() -> Void)?
     var toggleVideo: (() -> Void)?
+    var rotateCamera: (() -> Void)?
     
     init(strings: PresentationStrings) {
         self.acceptButton = CallControllerButtonNode(type: .accept, label: strings.Call_Accept)
@@ -61,6 +63,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
         self.endButton.alpha = 0.0
         self.speakerButton = CallControllerButtonNode(type: .speaker, label: nil)
         self.speakerButton.alpha = 0.0
+        self.swichCameraButton = CallControllerButtonNode(type: .switchCamera, label: nil)
+        self.swichCameraButton.alpha = 0.0
         
         super.init()
         
@@ -69,12 +73,14 @@ final class CallControllerButtonsNode: ASDisplayNode {
         self.addSubnode(self.muteButton)
         self.addSubnode(self.endButton)
         self.addSubnode(self.speakerButton)
+        self.addSubnode(self.swichCameraButton)
         
         self.acceptButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.declineButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.muteButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.endButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
         self.speakerButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
+        self.swichCameraButton.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)
     }
     
     func updateLayout(constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -112,8 +118,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
         let twoButtonsWidth = 2.0 * buttonSize.width + 1.0 * twoButtonSpacing
         
         var origin = CGPoint(x: floor((width - threeButtonsWidth) / 2.0), y: 0.0)
+        
         for button in [self.muteButton, self.endButton, self.speakerButton] {
             transition.updateFrame(node: button, frame: CGRect(origin: origin, size: buttonSize))
+            if button === self.speakerButton {
+                transition.updateFrame(node: self.swichCameraButton, frame: CGRect(origin: origin, size: buttonSize))
+            }
             
             origin.x += buttonSize.width + threeButtonSpacing
         }
@@ -129,15 +139,43 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 for button in [self.declineButton, self.acceptButton] {
                     button.alpha = 1.0
                 }
-                for button in [self.muteButton, self.endButton, self.speakerButton] {
+                for button in [self.muteButton, self.endButton, self.speakerButton, self.swichCameraButton] {
                     button.alpha = 0.0
                 }
             case let .active(speakerMode, videoState):
-                for button in [self.muteButton, self.speakerButton] {
+                for button in [self.muteButton] {
                     if animated && button.alpha.isZero {
                         button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     }
                     button.alpha = 1.0
+                }
+                switch videoState {
+                case .active, .available:
+                    for button in [self.speakerButton] {
+                        if animated && !button.alpha.isZero {
+                            button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                        }
+                        button.alpha = 0.0
+                    }
+                    for button in [self.swichCameraButton] {
+                        if animated && button.alpha.isZero {
+                            button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                        }
+                        button.alpha = 1.0
+                    }
+                case .notAvailable:
+                    for button in [self.swichCameraButton] {
+                        if animated && !button.alpha.isZero {
+                            button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                        }
+                        button.alpha = 0.0
+                    }
+                    for button in [self.speakerButton] {
+                        if animated && button.alpha.isZero {
+                            button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                        }
+                        button.alpha = 1.0
+                    }
                 }
                 var animatingAcceptButton = false
                 if self.endButton.alpha.isZero {
@@ -159,22 +197,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     }
                     self.endButton.alpha = 1.0
                 }
-                
-                /*switch videoState {
-                case .notAvailable:
-                    self.videoButton.alpha = 0.0
-                case let .available(isEnabled):
-                    self.videoButton.isUserInteractionEnabled = isEnabled
-                    if animated {
-                        self.videoButton.alpha = isEnabled ? 1.0 : 0.5
-                        self.videoButton.layer.animateAlpha(from: 0.0, to: self.videoButton.alpha, duration: 0.2)
-                    } else {
-                        self.videoButton.alpha = isEnabled ? 1.0 : 0.5
-                    }
-                case .active:
-                    self.videoButton.isUserInteractionEnabled = true
-                    self.videoButton.alpha = 0.0
-                }*/
                 
                 if !self.declineButton.alpha.isZero {
                     if animated {
@@ -211,9 +233,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
             self.speaker?()
         } else if button === self.acceptButton {
             self.accept?()
-        }/* else if button === self.videoButton {
-            self.toggleVideo?()
-        }*/
+        } else if button === self.swichCameraButton {
+            self.rotateCamera?()
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -223,9 +245,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
             self.muteButton,
             self.endButton,
             self.speakerButton,
-            //self.videoButton
+            self.swichCameraButton
         ]
         for button in buttons {
+            if button.isHidden || button.alpha.isZero {
+                continue
+            }
             if let result = button.view.hitTest(self.view.convert(point, to: button.view), with: event) {
                 return result
             }

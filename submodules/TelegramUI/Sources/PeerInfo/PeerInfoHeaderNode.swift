@@ -106,7 +106,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 case .call:
                     imageName = "Peer Info/ButtonCall"
                 case .videoCall:
-                    imageName = "Chat/Input/Text/IconVideo"
+                    imageName = "Peer Info/ButtonVideo"
                 case .mute:
                     imageName = "Peer Info/ButtonMute"
                 case .unmute:
