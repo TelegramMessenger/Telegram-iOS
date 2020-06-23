@@ -11,6 +11,27 @@ public enum RequestCallResult {
     case alreadyInProgress(PeerId)
 }
 
+public struct CallAuxiliaryServer {
+    public enum Connection {
+        case stun
+        case turn(username: String, password: String)
+    }
+    
+    public let host: String
+    public let port: Int
+    public let connection: Connection
+    
+    public init(
+        host: String,
+        port: Int,
+        connection: Connection
+    ) {
+        self.host = host
+        self.port = port
+        self.connection = connection
+    }
+}
+
 public struct PresentationCallState: Equatable {
     public enum State: Equatable {
         case waiting
@@ -27,14 +48,22 @@ public struct PresentationCallState: Equatable {
         case notAvailable
         case available(Bool)
         case active
+        case activeOutgoing
+    }
+    
+    public enum RemoteVideoState: Equatable {
+        case inactive
+        case active
     }
     
     public var state: State
     public var videoState: VideoState
+    public var remoteVideoState: RemoteVideoState
     
-    public init(state: State, videoState: VideoState) {
+    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState) {
         self.state = state
         self.videoState = videoState
+        self.remoteVideoState = remoteVideoState
     }
 }
 
@@ -72,5 +101,5 @@ public protocol PresentationCall: class {
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     
-    func requestCall(account: Account, peerId: PeerId, endCurrentIfAny: Bool) -> RequestCallResult
+    func requestCall(account: Account, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
 }

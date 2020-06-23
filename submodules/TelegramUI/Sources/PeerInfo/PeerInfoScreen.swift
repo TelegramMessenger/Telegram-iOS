@@ -395,7 +395,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, presentPeerContact: {
         }, dismissReportPeer: {
         }, deleteChat: {
-        }, beginCall: {
+        }, beginCall: { _ in
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
         }, getNavigationController: {
@@ -1035,6 +1035,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let context: AccountContext
     private let peerId: PeerId
     private let isOpenedFromChat: Bool
+    private let videoCallsEnabled: Bool
     private let callMessages: [Message]
     
     private let isMediaOnly: Bool
@@ -1096,6 +1097,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.context = context
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
+        self.videoCallsEnabled = context.sharedContext.immediateExperimentalUISettings.videoCalls
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
@@ -1529,7 +1531,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return nil
         }, reactionContainerNode: {
             return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in
         }, longTap: { [weak self] content, _ in
             guard let strongSelf = self else {
                 return
@@ -2133,7 +2135,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self?.openUrl(url: url, concealed: false, external: false)
         }, openPeer: { [weak self] peer, navigation in
             self?.openPeer(peerId: peer.id, navigation: navigation)
-        }, callPeer: { peerId in
+        }, callPeer: { peerId, isVideo in
             //self?.controllerInteraction?.callPeer(peerId)
         }, enqueueMessage: { _ in
         }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
@@ -2204,7 +2206,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         switch key {
         case .message:
             if let navigationController = controller.navigationController as? NavigationController {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId)))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
             }
         case .discussion:
             if let cachedData = self.data?.cachedData as? CachedChannelData, let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
@@ -2213,7 +2215,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
             }
         case .call:
-            self.requestCall()
+            self.requestCall(isVideo: false)
+        case .videoCall:
+            self.requestCall(isVideo: true)
         case .mute:
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
                 let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: nil).start()
@@ -2259,7 +2263,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 actionSheet?.dismissAnimated()
             }
             var items: [ActionSheetItem] = []
-            if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat).contains(.search) || self.headerNode.isAvatarExpanded {
+            if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled).contains(.search) || self.headerNode.isAvatarExpanded {
                 items.append(ActionSheetButtonItem(title: presentationData.strings.ChatSearch_SearchPlaceholder, color: .accent, action: { [weak self] in
                     dismissAction()
                     self?.openChatWithMessageSearch()
@@ -2361,7 +2365,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             self?.openDeletePeer()
                         }))
                     } else {
-                        if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat).contains(.leave) {
+                        if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled).contains(.leave) {
                             if case .member = channel.participationStatus {
                                 items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: { [weak self] in
                                     dismissAction()
@@ -2410,7 +2414,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChatWithMessageSearch() {
         if let navigationController = (self.controller?.navigationController as? NavigationController) {
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: (.everything, "")))
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: (.everything, ""), peerNearbyData:  self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
         }
     }
     
@@ -2510,7 +2514,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(shareController, in: .window(.root))
     }
     
-    private func requestCall() {
+    private func requestCall(isVideo: Bool) {
         guard let peer = self.data?.peer as? TelegramUser, let cachedUserData = self.data?.cachedData as? CachedUserData else {
             return
         }
@@ -2519,7 +2523,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
             
-        let callResult = self.context.sharedContext.callManager?.requestCall(account: self.context.account, peerId: peer.id, endCurrentIfAny: false)
+        let callResult = self.context.sharedContext.callManager?.requestCall(account: self.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peer.id {
                 self.context.sharedContext.navigateToCurrentCall()
@@ -2536,7 +2540,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             guard let strongSelf = self else {
                                 return
                             }
-                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peer.id, endCurrentIfAny: true)
+                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                         })]), in: .window(.root))
                     }
                 })
@@ -2559,7 +2563,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_TelegramCall, action: {
                             dismissAction()
-                            self?.requestCall()
+                            self?.requestCall(isVideo: false)
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()

@@ -704,7 +704,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer, member: 
     return result
 }
 
-func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, videoCallsEnabled: Bool) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
         if !isOpenedFromChat {
@@ -719,6 +719,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         }
         if callsAvailable {
             result.append(.call)
+            if videoCallsEnabled {
+                result.append(.videoCall)
+            }
         }
         result.append(.mute)
         if isOpenedFromChat {

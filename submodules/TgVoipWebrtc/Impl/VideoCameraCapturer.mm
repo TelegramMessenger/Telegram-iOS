@@ -37,16 +37,20 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
     FourCharCode _outputPixelFormat;
     RTCVideoRotation _rotation;
     UIDeviceOrientation _orientation;
+    
+    void (^_isActiveUpdated)(bool);
 }
 
 @end
 
 @implementation VideoCameraCapturer
 
-- (instancetype)initWithSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source {
+- (instancetype)initWithSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source isActiveUpdated:(void (^)(bool))isActiveUpdated {
     self = [super init];
     if (self != nil) {
         _source = source;
+        _isActiveUpdated = [isActiveUpdated copy];
+        
         if (![self setupCaptureSession:[[AVCaptureSession alloc] init]]) {
             return nil;
         }
@@ -116,6 +120,7 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
 }
 
 - (void)stopCapture {
+  _isActiveUpdated = nil;
   [self stopCaptureWithCompletionHandler:nil];
 }
 
@@ -310,10 +315,17 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
         // allow future retries on fatal errors.
         _hasRetriedOnFatalError = NO;
     }];
+    
+    if (_isActiveUpdated) {
+        _isActiveUpdated(true);
+    }
 }
 
 - (void)handleCaptureSessionDidStopRunning:(NSNotification *)notification {
   RTCLog(@"Capture session stopped.");
+    if (_isActiveUpdated) {
+        _isActiveUpdated(false);
+    }
 }
 
 - (void)handleFatalError {

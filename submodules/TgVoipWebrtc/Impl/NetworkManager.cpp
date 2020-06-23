@@ -154,6 +154,7 @@ NetworkManager::NetworkManager(
     rtc::Thread *thread,
     TgVoipEncryptionKey encryptionKey,
     bool enableP2P,
+    std::vector<TgVoipRtcServer> const &rtcServers,
     std::function<void (const NetworkManager::State &)> stateUpdated,
     std::function<void (const rtc::CopyOnWriteBuffer &)> packetReceived,
     std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted
@@ -178,16 +179,35 @@ _signalingDataEmitted(signalingDataEmitted) {
     _portAllocator->set_flags(_portAllocator->flags() | flags);
     _portAllocator->Initialize();
     
-    rtc::SocketAddress defaultStunAddress = rtc::SocketAddress("134.122.52.178", 3478);
     cricket::ServerAddresses stunServers;
-    stunServers.insert(defaultStunAddress);
     std::vector<cricket::RelayServerConfig> turnServers;
-    turnServers.push_back(cricket::RelayServerConfig(
-        rtc::SocketAddress("134.122.52.178", 3478),
-        "openrelay",
-        "openrelay",
-        cricket::PROTO_UDP
-    ));
+    
+    if (rtcServers.size() == 0) {
+        rtc::SocketAddress defaultStunAddress = rtc::SocketAddress("134.122.52.178", 3478);
+        stunServers.insert(defaultStunAddress);
+        
+        turnServers.push_back(cricket::RelayServerConfig(
+            rtc::SocketAddress("134.122.52.178", 3478),
+            "openrelay",
+            "openrelay",
+            cricket::PROTO_UDP
+        ));
+    } else {
+        for (auto &server : rtcServers) {
+            if (server.isTurn) {
+                turnServers.push_back(cricket::RelayServerConfig(
+                    rtc::SocketAddress(server.host, server.port),
+                    server.login,
+                    server.password,
+                    cricket::PROTO_UDP
+                ));
+            } else {
+                rtc::SocketAddress stunAddress = rtc::SocketAddress(server.host, server.port);
+                stunServers.insert(stunAddress);
+            }
+        }
+    }
+    
     _portAllocator->SetConfiguration(stunServers, turnServers, 2, webrtc::NO_PRUNE);
     
     _asyncResolverFactory = std::make_unique<webrtc::BasicAsyncResolverFactory>();

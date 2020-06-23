@@ -467,7 +467,7 @@ private func groupStatsControllerEntries(state: GroupStatsState, data: GroupStat
         
         if !data.topWeekdaysGraph.isEmpty {
             entries.append(.topWeekdaysTitle(presentationData.theme, presentationData.strings.Stats_GroupTopWeekdaysTitle))
-            entries.append(.topWeekdaysGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topWeekdaysGraph, .area))
+            entries.append(.topWeekdaysGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topWeekdaysGraph, .pie))
         }
         
         if let peers = peers {

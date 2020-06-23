@@ -469,8 +469,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.openUrl(url, concealed: false, message: nil)
             }, openPeer: { peer, navigation in
                 self?.openPeer(peerId: peer.id, navigation: navigation, fromMessage: nil)
-            }, callPeer: { peerId in
-                self?.controllerInteraction?.callPeer(peerId)
+            }, callPeer: { peerId, isVideo in
+                self?.controllerInteraction?.callPeer(peerId, isVideo)
             }, enqueueMessage: { message in
                 self?.sendMessages([message])
             }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
@@ -1178,7 +1178,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return self?.chatDisplayNode.reactionContainerNode
         }, presentGlobalOverlayController: { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
-        }, callPeer: { [weak self] peerId in
+        }, callPeer: { [weak self] peerId, isVideo in
             if let strongSelf = self {
                 strongSelf.commitPurposefulAction()
                 
@@ -1199,7 +1199,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: false)
+                    let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
                     if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peer.id {
                             context.sharedContext.navigateToCurrentCall()
@@ -1211,7 +1211,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> deliverOnMainQueue).start(next: { peer, current in
                                 if let peer = peer, let current = current {
                                     strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
+                                        let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                                     })]), in: .window(.root))
                                 }
                             })
@@ -4254,9 +4254,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.dismissPeerContactOptions()
         }, deleteChat: { [weak self] in
             self?.deleteChat(reportChatSpam: false)
-        }, beginCall: { [weak self] in
+        }, beginCall: { [weak self] isVideo in
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
-                strongSelf.controllerInteraction?.callPeer(peerId)
+                strongSelf.controllerInteraction?.callPeer(peerId, isVideo)
             }
         }, toggleMessageStickerStarred: { [weak self] messageId in
             if let strongSelf = self, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {

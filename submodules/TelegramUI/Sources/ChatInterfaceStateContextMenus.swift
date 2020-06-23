@@ -406,7 +406,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if data.messageActions.options.contains(.rateCall) {
             var callId: CallId?
             for media in message.media {
-                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _) = action.action {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _, _) = action.action {
                     if discardReason != .busy && discardReason != .missed {
                         if let logName = callLogNameForId(id: id, account: context.account) {
                             let logsPath = callLogsPath(account: context.account)

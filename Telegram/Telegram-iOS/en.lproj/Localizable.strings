@@ -2289,7 +2289,9 @@ Unused sets are archived when you add more.";
 
 "Notification.CallTimeFormat" = "%1$@ (%2$@)"; // 1 - type, 2 - duration
 "Notification.CallOutgoing" = "Outgoing Call";
+"Notification.VideoCallOutgoing" = "Outgoing Video Call";
 "Notification.CallIncoming" = "Incoming Call";
+"Notification.VideoCallIncoming" = "Incoming Video Call";
 "Notification.CallMissed" = "Missed Call";
 "Notification.CallCanceled" = "Cancelled Call";
 "Notification.CallOutgoingShort" = "Outgoing";
@@ -5328,6 +5330,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.ButtonMessage" = "Message";
 "PeerInfo.ButtonDiscuss" = "Discuss";
 "PeerInfo.ButtonCall" = "Call";
+"PeerInfo.ButtonVideoCall" = "Video Call";
 "PeerInfo.ButtonMute" = "Mute";
 "PeerInfo.ButtonUnmute" = "Unmute";
 "PeerInfo.ButtonMore" = "More";
@@ -5620,3 +5623,9 @@ Any member of this group will be able to see messages in the channel.";
 
 "Stats.GroupTopInviter.History" = "History";
 "Stats.GroupTopInviter.Promote" = "Promote";
+
+"PrivacySettings.AutoArchiveTitle" = "NEW CHATS FROM UNKNOWN USERS";
+"PrivacySettings.AutoArchive" = "Archive and Mute";
+"PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
+
+"Call.RemoteVideoPaused" = "%@'s video paused";

@@ -1322,7 +1322,7 @@ public final class AccountViewTracker {
                 var lhsOther = false
                 inner: for media in lhs.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, _) = action.action {
+                        if case let .phoneCall(_, discardReason, _, _) = action.action {
                             if lhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
                                 lhsMissed = true
                             } else {
@@ -1336,7 +1336,7 @@ public final class AccountViewTracker {
                 var rhsOther = false
                 inner: for media in rhs.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, _) = action.action {
+                        if case let .phoneCall(_, discardReason, _, _) = action.action {
                             if rhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
                                 rhsMissed = true
                             } else {

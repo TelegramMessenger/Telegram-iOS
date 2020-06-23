@@ -26,6 +26,14 @@ struct TgVoipProxy {
     std::string password;
 };
 
+struct TgVoipRtcServer {
+    std::string host;
+    uint16_t port;
+    std::string login;
+    std::string password;
+    bool isTurn;
+};
+
 enum class TgVoipEndpointType {
     Inet,
     Lan,
@@ -135,10 +143,13 @@ public:
             TgVoipPersistentState const &persistentState,
             std::vector<TgVoipEndpoint> const &endpoints,
             std::unique_ptr<TgVoipProxy> const &proxy,
+            std::vector<TgVoipRtcServer> const &rtcServers,
             TgVoipNetworkType initialNetworkType,
             TgVoipEncryptionKey const &encryptionKey,
+            bool isVideo,
             std::function<void(TgVoipState)> stateUpdated,
             std::function<void(bool)> videoStateUpdated,
+            std::function<void(bool)> remoteVideoIsActiveUpdated,
             std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     );
 

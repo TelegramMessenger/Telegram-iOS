@@ -20,7 +20,7 @@ std::unique_ptr<webrtc::VideoEncoderFactory> makeVideoEncoderFactory();
 std::unique_ptr<webrtc::VideoDecoderFactory> makeVideoDecoderFactory();
 bool supportsH265Encoding();
 rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> makeVideoSource(rtc::Thread *signalingThread, rtc::Thread *workerThread);
-std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera);
+std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, bool useFrontCamera, std::function<void(bool)> isActiveUpdated);
 
 #ifdef TGVOIP_NAMESPACE
 }

@@ -223,7 +223,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .search:
                         self.interfaceInteraction?.beginMessageSearch(.everything, "")
                     case .call:
-                        self.interfaceInteraction?.beginCall()
+                        self.interfaceInteraction?.beginCall(false)
                     case .report:
                         self.interfaceInteraction?.reportPeer()
                     case .unarchive:

@@ -172,9 +172,12 @@ static rtc::Thread *getWorkerThread() {
 MediaManager::MediaManager(
     rtc::Thread *thread,
     bool isOutgoing,
-    std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted
+    bool startWithVideo,
+    std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted,
+    std::function<void (bool)> localVideoCaptureActiveUpdated
 ) :
 _packetEmitted(packetEmitted),
+_localVideoCaptureActiveUpdated(localVideoCaptureActiveUpdated),
 _thread(thread),
 _eventLog(std::make_unique<webrtc::RtcEventLogNull>()),
 _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
@@ -187,7 +190,10 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _ssrcVideo.fecIncoming = isOutgoing ? ssrcVideoFecIncoming : ssrcVideoFecOutgoing;
     _ssrcVideo.fecOutgoing = (!isOutgoing) ? ssrcVideoFecIncoming : ssrcVideoFecOutgoing;
     
+    _enableFlexfec = true;
+    
     _isConnected = false;
+    _muteOutgoingAudio = false;
     
     auto videoEncoderFactory = makeVideoEncoderFactory();
     _videoCodecs = AssignPayloadTypesAndDefaultCodecs(videoEncoderFactory->GetSupportedFormats());
@@ -239,7 +245,7 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     
     const uint8_t opusMinBitrateKbps = 6;
     const uint8_t opusMaxBitrateKbps = 32;
-    const uint8_t opusStartBitrateKbps = 6;
+    const uint8_t opusStartBitrateKbps = 8;
     const uint8_t opusPTimeMs = 120;
     
     cricket::AudioCodec opusCodec(opusSdpPayload, opusSdpName, opusClockrate, opusSdpBitrate, opusSdpChannels);
@@ -278,6 +284,10 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _videoChannel->SetInterface(_videoNetworkInterface.get(), webrtc::MediaTransportConfig());
     
     _nativeVideoSource = makeVideoSource(_thread, getWorkerThread());
+    
+    if (startWithVideo) {
+        setSendVideo(true);
+    }
 }
 
 MediaManager::~MediaManager() {
@@ -316,7 +326,7 @@ void MediaManager::setIsConnected(bool isConnected) {
     if (_audioChannel) {
         _audioChannel->OnReadyToSend(_isConnected);
         _audioChannel->SetSend(_isConnected);
-        _audioChannel->SetAudioSend(_ssrcAudio.outgoing, _isConnected, nullptr, &_audioSource);
+        _audioChannel->SetAudioSend(_ssrcAudio.outgoing, _isConnected && !_muteOutgoingAudio, nullptr, &_audioSource);
     }
     if (_isSendingVideo && _videoChannel) {
         _videoChannel->OnReadyToSend(_isConnected);
@@ -362,15 +372,19 @@ void MediaManager::setSendVideo(bool sendVideo) {
             codec.SetParam(cricket::kCodecParamStartBitrate, 512);
             codec.SetParam(cricket::kCodecParamMaxBitrate, 2500);
             
-            _videoCapturer = makeVideoCapturer(_nativeVideoSource, _useFrontCamera);
+            _videoCapturer = makeVideoCapturer(_nativeVideoSource, _useFrontCamera, [localVideoCaptureActiveUpdated = _localVideoCaptureActiveUpdated](bool isActive) {
+                localVideoCaptureActiveUpdated(isActive);
+            });
             
             cricket::VideoSendParameters videoSendParameters;
             videoSendParameters.codecs.push_back(codec);
             
-            for (auto &c : _videoCodecs) {
-                if (c.name == cricket::kFlexfecCodecName) {
-                    videoSendParameters.codecs.push_back(c);
-                    break;
+            if (_enableFlexfec) {
+                for (auto &c : _videoCodecs) {
+                    if (c.name == cricket::kFlexfecCodecName) {
+                        videoSendParameters.codecs.push_back(c);
+                        break;
+                    }
                 }
             }
             
@@ -380,15 +394,20 @@ void MediaManager::setSendVideo(bool sendVideo) {
             //videoSendParameters.rtcp.remote_estimate = true;
             _videoChannel->SetSendParameters(videoSendParameters);
             
-            cricket::StreamParams videoSendStreamParams;
-            cricket::SsrcGroup videoSendSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
-            videoSendStreamParams.ssrcs = {_ssrcVideo.outgoing};
-            videoSendStreamParams.ssrc_groups.push_back(videoSendSsrcGroup);
-            videoSendStreamParams.cname = "cname";
-            _videoChannel->AddSendStream(videoSendStreamParams);
-            
-            _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
-            _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
+            if (_enableFlexfec) {
+                cricket::StreamParams videoSendStreamParams;
+                cricket::SsrcGroup videoSendSsrcGroup(cricket::kFecFrSsrcGroupSemantics, {_ssrcVideo.outgoing, _ssrcVideo.fecOutgoing});
+                videoSendStreamParams.ssrcs = {_ssrcVideo.outgoing};
+                videoSendStreamParams.ssrc_groups.push_back(videoSendSsrcGroup);
+                videoSendStreamParams.cname = "cname";
+                _videoChannel->AddSendStream(videoSendStreamParams);
+                
+                _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+                _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
+            } else {
+                _videoChannel->AddSendStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.outgoing));
+                _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+            }
             
             cricket::VideoRecvParameters videoRecvParameters;
             
@@ -435,14 +454,24 @@ void MediaManager::setSendVideo(bool sendVideo) {
         _videoChannel->RemoveRecvStream(_ssrcVideo.incoming);
         _videoChannel->RemoveRecvStream(_ssrcVideo.fecIncoming);
         _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
-        _videoChannel->RemoveSendStream(_ssrcVideo.fecOutgoing);
+        if (_enableFlexfec) {
+            _videoChannel->RemoveSendStream(_ssrcVideo.fecOutgoing);
+        }
     }
+}
+
+void MediaManager::setMuteOutgoingAudio(bool mute) {
+    _muteOutgoingAudio = mute;
+    
+    _audioChannel->SetAudioSend(_ssrcAudio.outgoing, _isConnected && !_muteOutgoingAudio, nullptr, &_audioSource);
 }
 
 void MediaManager::switchVideoCamera() {
     if (_isSendingVideo) {
         _useFrontCamera = !_useFrontCamera;
-        _videoCapturer = makeVideoCapturer(_nativeVideoSource, _useFrontCamera);
+        _videoCapturer = makeVideoCapturer(_nativeVideoSource, _useFrontCamera, [localVideoCaptureActiveUpdated = _localVideoCaptureActiveUpdated](bool isActive) {
+            localVideoCaptureActiveUpdated(isActive);
+        });
     }
 }
 

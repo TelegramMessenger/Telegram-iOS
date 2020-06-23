@@ -57,7 +57,9 @@ public:
     MediaManager(
         rtc::Thread *thread,
         bool isOutgoing,
-        std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted
+        bool startWithVideo,
+        std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted,
+        std::function<void (bool)> localVideoCaptureActiveUpdated
     );
     ~MediaManager();
     
@@ -65,12 +67,14 @@ public:
     void receivePacket(const rtc::CopyOnWriteBuffer &packet);
     void notifyPacketSent(const rtc::SentPacket &sentPacket);
     void setSendVideo(bool sendVideo);
+    void setMuteOutgoingAudio(bool mute);
     void switchVideoCamera();
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     
 protected:
     std::function<void (const rtc::CopyOnWriteBuffer &)> _packetEmitted;
+    std::function<void (bool)> _localVideoCaptureActiveUpdated;
     
 private:
     rtc::Thread *_thread;
@@ -79,8 +83,10 @@ private:
     
     SSRC _ssrcAudio;
     SSRC _ssrcVideo;
+    bool _enableFlexfec;
     
     bool _isConnected;
+    bool _muteOutgoingAudio;
     
     std::vector<cricket::VideoCodec> _videoCodecs;
     bool _isSendingVideo;

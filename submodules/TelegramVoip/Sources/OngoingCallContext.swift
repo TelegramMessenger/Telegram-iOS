@@ -100,13 +100,22 @@ public struct OngoingCallContextState: Equatable {
         case reconnecting
         case failed
     }
+    
     public enum VideoState: Equatable {
         case notAvailable
         case available(Bool)
         case active
+        case activeOutgoing
     }
+    
+    public enum RemoteVideoState: Equatable {
+        case inactive
+        case active
+    }
+    
     public let state: State
     public let videoState: VideoState
+    public let remoteVideoState: RemoteVideoState
 }
 
 private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc /*, OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
@@ -395,6 +404,27 @@ private extension OngoingCallContextState.State {
 }*/
 
 public final class OngoingCallContext {
+    public struct AuxiliaryServer {
+        public enum Connection {
+            case stun
+            case turn(username: String, password: String)
+        }
+        
+        public let host: String
+        public let port: Int
+        public let connection: Connection
+        
+        public init(
+            host: String,
+            port: Int,
+            connection: Connection
+        ) {
+            self.host = host
+            self.port = port
+            self.connection = connection
+        }
+    }
+    
     public let internalId: CallSessionInternalId
     
     private let queue = Queue()
@@ -433,7 +463,7 @@ public final class OngoingCallContext {
         return result
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
+    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, auxiliaryServers: [AuxiliaryServer], initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, isVideo: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         //OngoingCallThreadLocalContextWebrtc.applyServerConfig(serializedData)
@@ -491,12 +521,33 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                    var rtcServers: [VoipRtcServerWebrtc] = []
+                    for server in auxiliaryServers {
+                        switch server.connection {
+                        case .stun:
+                            rtcServers.append(VoipRtcServerWebrtc(
+                                host: server.host,
+                                port: Int32(clamping: server.port),
+                                username: "",
+                                password: "",
+                                isTurn: false
+                            ))
+                        case let .turn(username, password):
+                            rtcServers.append(VoipRtcServerWebrtc(
+                                host: server.host,
+                                port: Int32(clamping: server.port),
+                                username: username,
+                                password: password,
+                                isTurn: true
+                            ))
+                        }
+                    }
+                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, isVideo: isVideo, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
                     })
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { state, videoState in
+                    context.stateChanged = { state, videoState, remoteVideoState in
                         queue.async {
                             guard let strongSelf = self else {
                                 return
@@ -508,12 +559,21 @@ public final class OngoingCallContext {
                                 mappedVideoState = .available(true)
                             case .active:
                                 mappedVideoState = .active
-                            case .invited, .requesting:
-                                mappedVideoState = .available(false)
+                            case .activeOutgoing:
+                                mappedVideoState = .activeOutgoing
                             @unknown default:
                                 mappedVideoState = .available(false)
                             }
-                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState)))
+                            let mappedRemoteVideoState: OngoingCallContextState.RemoteVideoState
+                            switch remoteVideoState {
+                            case .inactive:
+                                mappedRemoteVideoState = .inactive
+                            case .active:
+                                mappedRemoteVideoState = .active
+                            @unknown default:
+                                mappedRemoteVideoState = .inactive
+                            }
+                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)))
                         }
                     }
                     context.signalBarsChanged = { signalBars in
@@ -540,7 +600,7 @@ public final class OngoingCallContext {
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
-                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable)))
+                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive)))
                     }
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))

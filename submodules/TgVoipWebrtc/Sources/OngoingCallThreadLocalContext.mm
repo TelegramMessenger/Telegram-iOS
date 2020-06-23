@@ -35,6 +35,7 @@ using namespace TGVOIP_NAMESPACE;
     
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
+    OngoingCallRemoteVideoStateWebrtc _remoteVideoState;
     
     int32_t _signalBars;
     NSData *_lastDerivedState;
@@ -56,6 +57,22 @@ using namespace TGVOIP_NAMESPACE;
         _port = port;
         _username = username;
         _password = password;
+    }
+    return self;
+}
+
+@end
+
+@implementation VoipRtcServerWebrtc
+
+- (instancetype _Nonnull)initWithHost:(NSString * _Nonnull)host port:(int32_t)port username:(NSString * _Nullable)username password:(NSString * _Nullable)password isTurn:(bool)isTurn {
+    self = [super init];
+    if (self != nil) {
+        _host = host;
+        _port = port;
+        _username = username;
+        _password = password;
+        _isTurn = isTurn;
     }
     return self;
 }
@@ -117,7 +134,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return @"2.7.7";
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData; {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing isVideo:(bool)isVideo primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData; {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -129,7 +146,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _callPacketTimeout = 10.0;
         _networkType = networkType;
         _sendSignalingData = [sendSignalingData copy];
-        _videoState = OngoingCallVideoStateInactive;
+        if (isVideo) {
+            _videoState = OngoingCallVideoStateActiveOutgoing;
+            _remoteVideoState = OngoingCallRemoteVideoStateActive;
+        } else {
+            _videoState = OngoingCallVideoStateInactive;
+            _remoteVideoState = OngoingCallRemoteVideoStateInactive;
+        }
         
         std::vector<uint8_t> derivedStateValue;
         derivedStateValue.resize(derivedState.length);
@@ -143,6 +166,17 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             proxyObject->login = proxy.username.UTF8String ?: "";
             proxyObject->password = proxy.password.UTF8String ?: "";
             proxyValue = std::unique_ptr<TgVoipProxy>(proxyObject);
+        }
+        
+        std::vector<TgVoipRtcServer> parsedRtcServers;
+        for (VoipRtcServerWebrtc *server in rtcServers) {
+            parsedRtcServers.push_back((TgVoipRtcServer){
+                .host = server.host.UTF8String,
+                .port = (uint16_t)server.port,
+                .login = server.username.UTF8String,
+                .password = server.password.UTF8String,
+                .isTurn = server.isTurn
+            });
         }
         
         /*TgVoipCrypto crypto;
@@ -199,8 +233,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             { derivedStateValue },
             endpoints,
             proxyValue,
+            parsedRtcServers,
             callControllerNetworkTypeForType(networkType),
             encryptionKey,
+            isVideo,
             [weakSelf, queue](TgVoipState state) {
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
@@ -222,7 +258,26 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         if (strongSelf->_videoState != videoState) {
                             strongSelf->_videoState = videoState;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState);
+                            }
+                        }
+                    }
+                }];
+            },
+            [weakSelf, queue](bool isActive) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        OngoingCallRemoteVideoStateWebrtc remoteVideoState;
+                        if (isActive) {
+                            remoteVideoState = OngoingCallRemoteVideoStateActive;
+                        } else {
+                            remoteVideoState = OngoingCallRemoteVideoStateInactive;
+                        }
+                        if (strongSelf->_remoteVideoState != remoteVideoState) {
+                            strongSelf->_remoteVideoState = remoteVideoState;
+                            if (strongSelf->_stateChanged) {
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState);
                             }
                         }
                     }
@@ -322,7 +377,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _state = callState;
         
         if (_stateChanged) {
-            _stateChanged(_state, _videoState);
+            if (_videoState == OngoingCallVideoStateActiveOutgoing) {
+                if (_state == OngoingCallStateConnected) {
+                    _videoState = OngoingCallVideoStateActive;
+                }
+            }
+            _stateChanged(_state, _videoState, _remoteVideoState);
         }
     }
 }
