@@ -72,12 +72,12 @@
     UIImage *_thumbnailImage;
     
     AVPlayerItem *_playerItem;
-    AVPlayer *_player;
     SMetaDisposable *_playerItemDisposable;
     id _playerStartedObserver;
     id _playerReachedEndObserver;
     bool _registeredKeypathObserver;
     NSTimer *_positionTimer;
+    bool _scheduledVideoPlayback;
     
     id<TGMediaEditAdjustments> _initialAdjustments;
     NSString *_caption;
@@ -260,14 +260,6 @@
     
     
     TGPhotoEditorBackButton backButton = TGPhotoEditorBackButtonCancel;
-    if ([self presentedForAvatarCreation])
-    {
-        if ([self presentedFromCamera])
-            backButton = TGPhotoEditorBackButtonCancel;
-        else
-            backButton = TGPhotoEditorBackButtonCancel;
-    }
-
     TGPhotoEditorDoneButton doneButton = TGPhotoEditorDoneButtonCheck;
     _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
     [_portraitToolbarView setToolbarTabs:_availableTabs animated:false];
@@ -403,8 +395,11 @@
     
     [signal startWithNext:^(id next)
     {
+        CGFloat progress = 0.0;
+        bool progressVisible = false;
         if ([next isKindOfClass:[UIImage class]]) {
             [_photoEditor setImage:(UIImage *)next forCropRect:_photoEditor.cropRect cropRotation:_photoEditor.cropRotation cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored fullSize:false];
+            progress = 1.0f;
         } else if ([next isKindOfClass:[AVAsset class]]) {
             _playerItem = [AVPlayerItem playerItemWithAsset:(AVAsset *)next];
             _player = [AVPlayer playerWithPlayerItem:_playerItem];
@@ -421,8 +416,21 @@
                 [_previewView performTransitionInWithCompletion:^
                 {
                 }];
+                
+                if (_scheduledVideoPlayback) {
+                    _scheduledVideoPlayback = false;
+                    [self startVideoPlayback:true];
+                }
             });
+            progress = 1.0f;
+        } else if ([next isKindOfClass:[NSNumber class]]) {
+            progress = [next floatValue];
+            progressVisible = true;
         }
+        
+        TGDispatchOnMainThread(^{
+           [self setProgressVisible:progressVisible value:progress animated:true];
+        });
         
         if (_ignoreDefaultPreviewViewTransitionIn)
         {
@@ -496,6 +504,11 @@
 }
 
 - (void)startVideoPlayback:(bool)reset {
+    if (reset && _player == nil) {
+        _scheduledVideoPlayback = true;
+        return;
+    }
+    
     if (reset) {
         NSTimeInterval startPosition = 0.0f;
         if (_photoEditor.trimStartValue > DBL_EPSILON)
@@ -973,6 +986,9 @@
     
     _switchingTab = true;
     
+    TGPhotoEditorBackButton backButtonType = TGPhotoEditorBackButtonCancel;
+    TGPhotoEditorDoneButton doneButtonType = TGPhotoEditorDoneButtonCheck;
+    
     __weak TGPhotoEditorController *weakSelf = self;
     TGPhotoEditorTabController *controller = nil;
     switch (tab)
@@ -1016,7 +1032,7 @@
                 strongSelf->_switchingTab = false;
                 [strongSelf startVideoPlayback:true];
             };
-            
+                        
             controller = paintController;
         }
             break;
@@ -1358,11 +1374,17 @@
                     [strongSelf setVideoEndTime:endTime];
             };
             controller = previewController;
+            
+            doneButtonType = TGPhotoEditorDoneButtonDone;
         }
             break;
             
         default:
             break;
+    }
+    
+    if (_intent == TGPhotoEditorControllerAvatarIntent && !isInitialAppearance && tab != TGPhotoEditorPreviewTab) {
+        backButtonType = TGPhotoEditorBackButtonBack;
     }
     
     _currentTabController = controller;
@@ -1381,11 +1403,11 @@
     
     if (currentController != nil)
         [_currentTabController viewWillAppear:true];
+        
+    _currentTabController.view.frame = _containerView.bounds;
     
     if (currentController != nil)
         [_currentTabController viewDidAppear:true];
-    
-    _currentTabController.view.frame = _containerView.bounds;
     
     _currentTabController.valuesChanged = ^
     {
@@ -1404,6 +1426,12 @@
     
     [_portraitToolbarView setToolbarTabs:[_currentTabController availableTabs] animated:true];
     [_landscapeToolbarView setToolbarTabs:[_currentTabController availableTabs] animated:true];
+    
+    [_portraitToolbarView setBackButtonType:backButtonType];
+    [_landscapeToolbarView setBackButtonType:backButtonType];
+    
+    [_portraitToolbarView setDoneButtonType:doneButtonType];
+    [_landscapeToolbarView setDoneButtonType:doneButtonType];
     
     [self updateEditorButtons];
     
@@ -1474,10 +1502,7 @@
 
 - (void)dismissEditor
 {
-    if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
-        [self presentEditorTab:TGPhotoEditorCropTab];
-        return;
-    } else if (![_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]] && _intent == TGPhotoEditorControllerAvatarIntent) {
+    if ((![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]] && ![_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]]) && _intent == TGPhotoEditorControllerAvatarIntent) {
         [self presentEditorTab:TGPhotoEditorPreviewTab];
         return;
     }
@@ -1570,9 +1595,7 @@
 
 - (void)doneButtonPressed
 {
-    if ([_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]]) {
-        [self presentEditorTab:TGPhotoEditorPreviewTab];
-    } else if (_intent == TGPhotoEditorControllerAvatarIntent && ![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
+    if (_intent == TGPhotoEditorControllerAvatarIntent && ![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
         [self presentEditorTab:TGPhotoEditorPreviewTab];
     } else {
         [self applyEditor];
@@ -1895,7 +1918,7 @@
 
 - (void)dismiss
 {
-    if (self.overlayWindow != nil)
+    if (self.overlayWindow != nil || self.customDismissBlock != nil)
     {
         [super dismiss];
     }

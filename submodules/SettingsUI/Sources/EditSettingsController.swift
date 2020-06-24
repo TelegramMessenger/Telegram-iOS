@@ -628,7 +628,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     if let profileImage = peer?.smallProfileImage {
                         return $0.withUpdatedUpdatingAvatar(.image(profileImage, false))
                     } else {
-                        return $0.withUpdatedUpdatingAvatar(.none)
+                        return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                     }
                 }
                 updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in

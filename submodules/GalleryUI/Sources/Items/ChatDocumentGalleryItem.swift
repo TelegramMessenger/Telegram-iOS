@@ -28,7 +28,7 @@ class ChatDocumentGalleryItem: GalleryItem {
         self.location = location
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatDocumentGalleryItemNode(context: self.context, presentationData: self.presentationData)
         
         for media in self.message.media {
@@ -51,7 +51,7 @@ class ChatDocumentGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatDocumentGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
             node.setMessage(self.message)

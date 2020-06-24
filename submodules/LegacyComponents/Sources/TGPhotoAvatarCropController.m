@@ -277,6 +277,8 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 {
     [_cropView hideImageForCustomTransition];
     [_cropView animateTransitionOutSwitching:false];
+    [_cropView invalidateVideoView];
+    
     [UIView animateWithDuration:0.3f animations:^
     {
      _buttonsWrapperView.alpha = 0.0f;
@@ -321,9 +323,9 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
                 [photoEditor setImage:croppedImage forCropRect:_cropView.cropRect cropRotation:0.0f cropOrientation:_cropView.cropOrientation cropMirrored:_cropView.cropMirrored fullSize:false];
                 
                 [photoEditor processAnimated:false completion:^
-                 {
+                {
                     TGDispatchOnMainThread(^
-                                           {
+                    {
                         [previewView setSnapshotImage:croppedImage];
                         
                         if (!previewView.hidden)

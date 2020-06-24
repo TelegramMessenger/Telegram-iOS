@@ -774,7 +774,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         if let profileImage = peer?.smallProfileImage {
                             return $0.withUpdatedUpdatingAvatar(.image(profileImage, false))
                         } else {
-                            return $0.withUpdatedUpdatingAvatar(.none)
+                            return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                         }
                     }
                     updateAvatarDisposable.set((updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in

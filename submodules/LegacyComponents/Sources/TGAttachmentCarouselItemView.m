@@ -937,7 +937,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             if (editableItem.isVideo) {
                 if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
                 } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
                     return ((TGCameraCapturedVideo *)editableItem).avAsset;
                 } else {
@@ -951,7 +951,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
         controllerWindow.hidden = false;
         controller.view.clipsToBounds = true;
-        
+    
         transition.referenceFrame = ^CGRect
         {
             UIView *referenceView = referenceViewForAsset(asset);
@@ -972,14 +972,14 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
-            
+
             transition.outReferenceFrame = outReferenceFrame;
             transition.repView = repView;
             [transition dismissAnimated:true completion:^
             {
                 strongSelf->_hiddenItem = nil;
                 [strongSelf updateHiddenCellAnimated:false];
-                
+
                 dispatch_async(dispatch_get_main_queue(), ^
                 {
                     if (completion != nil)

@@ -1,6 +1,7 @@
 #import "PGPhotoBlurPass.h"
 
 #import "GPUImageTwoInputFilter.h"
+#import "GPUImageThreeInputFilter.h"
 #import "PGPhotoGaussianBlurFilter.h"
 
 NSString *const PGPhotoRadialBlurShaderString = PGShaderString
@@ -54,12 +55,33 @@ NSString *const PGPhotoLinearBlurShaderString = PGShaderString
  }
 );
 
+NSString *const PGPhotoMaskedBlurShaderString = PGShaderString
+(
+ varying highp vec2 texCoord;
+ varying highp vec2 texCoord2;
+ varying highp vec2 texCoord3;
+ 
+ uniform sampler2D sourceImage;
+ uniform sampler2D inputImageTexture2;
+ uniform sampler2D inputImageTexture3;
+ 
+ void main()
+ {
+     lowp vec4 sharpImageColor = texture2D(sourceImage, texCoord);
+     lowp vec4 blurredImageColor = texture2D(inputImageTexture2, texCoord2);
+     lowp vec4 maskImageColor = texture2D(inputImageTexture3, texCoord3);
+     
+     gl_FragColor = mix(blurredImageColor, sharpImageColor, maskImageColor.r);
+ }
+);
+
 @interface PGPhotoBlurFilter : GPUImageOutput <GPUImageInput>
 {
     PGPhotoGaussianBlurFilter *_blurFilter;
     
     GPUImageTwoInputFilter *_radialFocusFilter;
     GPUImageTwoInputFilter *_linearFocusFilter;
+    GPUImageThreeInputFilter *_maskedFilter;
     
     GPUImageOutput <GPUImageInput> *_currentFocusFilter;
     
@@ -104,6 +126,10 @@ NSString *const PGPhotoLinearBlurShaderString = PGShaderString
         }
             break;
             
+        case PGBlurToolTypePortrait:
+        {
+            _currentFocusFilter = _maskedFilter;
+        }
         default:
             break;
     }
@@ -192,6 +218,7 @@ NSString *const PGPhotoLinearBlurShaderString = PGShaderString
     [_blurFilter setInputSize:newSize atIndex:textureIndex];
     [_radialFocusFilter setInputSize:newSize atIndex:textureIndex];
     [_linearFocusFilter setInputSize:newSize atIndex:textureIndex];
+    [_maskedFilter setInputSize:newSize atIndex:textureIndex];
     
     CGFloat aspectRatio = newSize.height / newSize.width;
     [_radialFocusFilter setFloat:(float)aspectRatio forUniformName:@"aspectRatio"];
@@ -203,6 +230,7 @@ NSString *const PGPhotoLinearBlurShaderString = PGShaderString
     [_blurFilter setInputRotation:newInputRotation  atIndex:textureIndex];
     [_radialFocusFilter setInputRotation:newInputRotation atIndex:textureIndex];
     [_linearFocusFilter setInputRotation:newInputRotation atIndex:textureIndex];
+    [_maskedFilter setInputRotation:newInputRotation atIndex:textureIndex];
 }
 
 - (CGSize)maximumOutputSize

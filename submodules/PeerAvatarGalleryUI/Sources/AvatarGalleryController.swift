@@ -223,6 +223,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.disposable.set(combineLatest(entriesSignal, self.animatedIn.get()).start(next: { [weak self] entries, animatedIn in
             let f: () -> Void = {
                 if let strongSelf = self, animatedIn {
+                    let isFirstTime = strongSelf.entries.isEmpty
                     strongSelf.entries = entries
                     if strongSelf.centralEntryIndex == nil {
                         strongSelf.centralEntryIndex = 0
@@ -248,7 +249,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             } : nil, setMain: { [weak self] in
                                 self?.setMainEntry(entry)
                             })
-                        }), centralItemIndex: 0, keepFirst: false)
+                        }), centralItemIndex: 0, synchronous: !isFirstTime)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                             strongSelf?.didSetReady = true
@@ -597,7 +598,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if let index = self.entries.firstIndex(of: entry) {
                             self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
                         }
                     }
                 }
@@ -611,7 +612,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if let index = self.entries.firstIndex(of: entry) {
                             self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
                         }
                     }
                 } else {
@@ -625,7 +626,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if let index = self.entries.firstIndex(of: entry) {
                             self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
                         }
                     }
                 }

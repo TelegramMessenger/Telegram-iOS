@@ -122,19 +122,21 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
     public let sizeSpec: String
     public let volumeId: Int64
     public let localId: Int32
+    public let size: Int?
     public let fileReference: Data?
     
     public var id: MediaResourceId {
         return CloudPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec)
     }
     
-    public init(datacenterId: Int32, photoId: Int64, accessHash: Int64, sizeSpec: String, volumeId: Int64, localId: Int32, fileReference: Data?) {
+    public init(datacenterId: Int32, photoId: Int64, accessHash: Int64, sizeSpec: String, volumeId: Int64, localId: Int32, size: Int?, fileReference: Data?) {
         self.datacenterId = Int(datacenterId)
         self.photoId = photoId
         self.accessHash = accessHash
         self.sizeSpec = sizeSpec
         self.volumeId = volumeId
         self.localId = localId
+        self.size = size
         self.fileReference = fileReference
     }
     
@@ -145,6 +147,11 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
         self.sizeSpec = decoder.decodeStringForKey("s", orElse: "")
         self.volumeId = decoder.decodeInt64ForKey("v", orElse: 0)
         self.localId = decoder.decodeInt32ForKey("l", orElse: 0)
+        if let size = decoder.decodeOptionalInt32ForKey("n") {
+            self.size = Int(size)
+        } else {
+            self.size = nil
+        }
         self.fileReference = decoder.decodeBytesForKey("fr")?.makeData()
     }
     
@@ -155,6 +162,11 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
         encoder.encodeString(self.sizeSpec, forKey: "s")
         encoder.encodeInt64(self.volumeId, forKey: "v")
         encoder.encodeInt32(self.localId, forKey: "l")
+        if let size = self.size {
+            encoder.encodeInt32(Int32(size), forKey: "n")
+        } else {
+            encoder.encodeNil(forKey: "n")
+        }
         if let fileReference = self.fileReference {
             encoder.encodeBytes(MemoryBuffer(data: fileReference), forKey: "fr")
         } else {
@@ -164,7 +176,7 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudPhotoSizeMediaResource {
-            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.accessHash == to.accessHash && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId && self.fileReference == to.fileReference
+            return self.datacenterId == to.datacenterId && self.photoId == to.photoId && self.accessHash == to.accessHash && self.sizeSpec == to.sizeSpec && self.volumeId == to.volumeId && self.localId == to.localId && self.size == to.size && self.fileReference == to.fileReference
         } else {
             return false
         }

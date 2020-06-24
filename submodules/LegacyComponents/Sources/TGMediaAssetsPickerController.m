@@ -441,7 +441,7 @@
         {
             if (editableItem.isVideo) {
                 if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
                 } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
                     return ((TGCameraCapturedVideo *)editableItem).avAsset;
                 } else {

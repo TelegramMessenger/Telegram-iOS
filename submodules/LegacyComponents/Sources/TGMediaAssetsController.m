@@ -1374,7 +1374,7 @@
 
 @implementation TGMediaAssetsPallete
 
-+ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor sendIconImage:(UIImage *)sendIconImage maybeAccentColor:(UIColor *)maybeAccentColor
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor sendIconImage:(UIImage *)sendIconImage doneIconImage:(UIImage *)doneIconImage maybeAccentColor:(UIColor *)maybeAccentColor
 {
     TGMediaAssetsPallete *pallete = [[TGMediaAssetsPallete alloc] init];
     pallete->_isDark = dark;
@@ -1390,6 +1390,7 @@
     pallete->_badge = badge;
     pallete->_badgeTextColor = badgeTextColor;
     pallete->_sendIconImage = sendIconImage;
+    pallete->_doneIconImage = doneIconImage;
     pallete->_maybeAccentColor = maybeAccentColor;
     return pallete;
 }

@@ -221,7 +221,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
                         $0.item(context: context, webPage: webPage, message: message, presentationData: strongSelf.presentationData, fromPlayingVideo: fromPlayingVideo, landscape: landscape, openUrl: strongSelf.innerOpenUrl, openUrlOptions: strongSelf.openUrlOptions)
-                    }), centralItemIndex: centralIndex, keepFirst: false)
+                    }), centralItemIndex: centralIndex)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true

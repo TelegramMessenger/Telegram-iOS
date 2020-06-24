@@ -62,7 +62,7 @@ class InstantImageGalleryItem: GalleryItem {
         self.openUrlOptions = openUrlOptions
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = InstantImageGalleryItemNode(context: self.context, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
         
         node.setImage(imageReference: self.imageReference)
@@ -76,7 +76,7 @@ class InstantImageGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? InstantImageGalleryItemNode {
             if let location = self.location {
                 node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.position + 1)", "\(location.totalCount)").0))

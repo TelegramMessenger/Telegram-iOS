@@ -64,28 +64,28 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         self.delete = delete
         self.setMain = setMain
     }
-    
-    func node() -> GalleryItemNode {
+        
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceHasRoundCorners: self.sourceHasRoundCorners)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
         }
         
-        node.setEntry(self.entry)
+        node.setEntry(self.entry, synchronous: synchronous)
         node.footerContentNode.delete = self.delete
         node.footerContentNode.setMain = self.setMain
         
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
             if let indexData = self.entry.indexData {
                 node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
             }
             
-            node.setEntry(self.entry)
+            node.setEntry(self.entry, synchronous: synchronous)
             node.footerContentNode.delete = self.delete
             node.footerContentNode.setMain = self.setMain
         }
@@ -201,7 +201,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
-    fileprivate func setEntry(_ entry: AvatarGalleryEntry) {
+    fileprivate func setEntry(_ entry: AvatarGalleryEntry, synchronous: Bool) {
         if self.entry != entry {
             self.entry = entry
             
@@ -224,7 +224,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     case let .image(_, _, imageRepresentations, _, _, _, _, _):
                         representations = imageRepresentations
                 }
-                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions.cgSize, self.contentNode)
 
                 if let largestIndex = representations.firstIndex(where: { $0.representation == largestSize }) {
@@ -278,8 +278,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 if let video = entry.videoRepresentations.last, let id = id {
                     let mediaManager = self.context.sharedContext.mediaManager
-                    let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                    let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black)
+                    let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                    let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                     let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
                     videoNode.isUserInteractionEnabled = false
                     videoNode.ownsContentNodeUpdated = { [weak self] owns in

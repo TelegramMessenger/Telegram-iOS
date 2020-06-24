@@ -12,7 +12,7 @@ private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource,
                     case let .photoCachedSize(type, location, _, _, bytes):
                         switch location {
                             case let .fileLocationToBeDeprecated(volumeId, localId):
-                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
+                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: nil, fileReference: fileReference.makeData())
                                 let data = bytes.makeData()
                                 return [(resource, data)]
                         }

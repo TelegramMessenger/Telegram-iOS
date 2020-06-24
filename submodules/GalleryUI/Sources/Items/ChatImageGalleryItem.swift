@@ -101,7 +101,7 @@ class ChatImageGalleryItem: GalleryItem {
         self.present = present
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
         for media in self.message.media {
@@ -131,7 +131,7 @@ class ChatImageGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
             

@@ -184,7 +184,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                             node?.itemChanged = { [weak self] index in
                                 if let strongSelf = self {
                                     let pagerIndex = indexes[index]
-                                    strongSelf.pager.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: pagerIndex))
+                                    strongSelf.pager.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: pagerIndex, synchronous: false))
                                 }
                             }
                         }
