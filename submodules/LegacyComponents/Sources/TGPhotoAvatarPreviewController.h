@@ -12,5 +12,7 @@
 - (void)setScrubberPlaying:(bool)value;
 
 - (NSTimeInterval)coverPosition;
+- (NSTimeInterval)trimStartValue;
+- (NSTimeInterval)trimEndValue;
 
 @end

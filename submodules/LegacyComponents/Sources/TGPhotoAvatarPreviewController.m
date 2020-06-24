@@ -146,8 +146,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     _scrubberView.disableZoom = true;
     _scrubberView.disableTimeDisplay = true;
     _scrubberView.trimStartValue = 0.0;
-    _scrubberView.trimEndValue = MIN(10.0, self.item.originalDuration);
-    _scrubberView.maximumLength = 10.0;
+    _scrubberView.trimEndValue = MIN(9.9, self.item.originalDuration);
+    [_scrubberView setTrimApplied:self.item.originalDuration > 9.9];
+    _scrubberView.maximumLength = 9.9;
     [_scrubberView reloadData];
     [_scrubberView resetToStart];
 }
@@ -269,7 +270,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     UIView *snapshotView = nil;
     POPSpringAnimation *snapshotAnimation = nil;
     
-    if (saving && CGRectIsNull(targetFrame) && parentView != nil)
+    if (saving && CGRectIsNull(targetFrame))
     {
         snapshotView = [previewView snapshotViewAfterScreenUpdates:false];
         snapshotView.frame = previewView.frame;
@@ -277,7 +278,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         CGSize fittedSize = TGScaleToSize(previewView.frame.size, self.view.frame.size);
         targetFrame = CGRectMake((self.view.frame.size.width - fittedSize.width) / 2, (self.view.frame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
         
-        [parentView addSubview:snapshotView];
+        if (parentView != nil)
+            [parentView addSubview:snapshotView];
         
         snapshotAnimation = [TGPhotoEditorAnimation prepareTransitionAnimationForPropertyNamed:kPOPViewFrame];
         snapshotAnimation.fromValue = [NSValue valueWithCGRect:snapshotView.frame];
@@ -685,6 +687,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _flashView.alpha = 0.0f;
         } completion:^(BOOL finished) {
             TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
+                if (_scrubberView.isScrubbing) {
+                    return;
+                }
                 [UIView animateWithDuration:0.2 animations:^{
                     _areaMaskView.alpha = 0.0f;
                     _coverLabel.alpha = 0.7f;
@@ -880,6 +885,14 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (NSTimeInterval)coverPosition {
     return _scrubberView.value;
+}
+
+- (NSTimeInterval)trimStartValue {
+    return _scrubberView.trimStartValue;
+}
+
+- (NSTimeInterval)trimEndValue {
+    return _scrubberView.trimEndValue;
 }
 
 @end

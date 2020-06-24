@@ -1613,7 +1613,10 @@
     TGPaintingData *paintingData = _photoEditor.paintingData;
 
     bool saving = true;
-    NSTimeInterval coverPosition = 0.0;
+    NSTimeInterval videoStartValue = 0.0;
+    NSTimeInterval trimStartValue = 0.0;
+    NSTimeInterval trimEndValue = 0.0;
+    
     if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
     {
         TGPhotoPaintController *paintController = (TGPhotoPaintController *)_currentTabController;
@@ -1633,7 +1636,9 @@
     } else if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]])
     {
         TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
-        coverPosition = previewController.coverPosition;
+        videoStartValue = previewController.coverPosition;
+        trimStartValue = previewController.trimStartValue;
+        trimEndValue = previewController.trimEndValue;
     }
     
     TGVideoEditAdjustments *adjustments = [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
@@ -1657,11 +1662,10 @@
                 
                 AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
                 generator.appliesPreferredTrackTransform = true;
-                generator.maximumSize = TGFitSize(videoDimensions, CGSizeMake(1280.0f, 1280.0f));
                 generator.requestedTimeToleranceAfter = kCMTimeZero;
                 generator.requestedTimeToleranceBefore = kCMTimeZero;
                 
-                CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(coverPosition, NSEC_PER_SEC) actualTime:nil error:NULL];
+                CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(videoStartValue, NSEC_PER_SEC) actualTime:nil error:NULL];
                 UIImage *image = [UIImage imageWithCGImage:imageRef];
                 CGImageRelease(imageRef);
                 
@@ -1691,7 +1695,7 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:TGMediaVideoConversionPresetProfile maxDuration:0.0 videoStartValue:coverPosition], fullImage, nil, true);
+                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:TGMediaVideoConversionPresetProfile videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
                     
                     [self transitionOutSaving:true completion:^
                     {

@@ -24,6 +24,7 @@
 @property (nonatomic, assign) bool disableZoom;
 @property (nonatomic, assign) bool disableTimeDisplay;
 
+@property (nonatomic, readonly) bool isScrubbing;
 @property (nonatomic, assign) bool isPlaying;
 @property (nonatomic, assign) NSTimeInterval value;
 - (void)setValue:(NSTimeInterval)value resetPosition:(bool)resetPosition;

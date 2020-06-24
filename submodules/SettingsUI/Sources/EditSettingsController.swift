@@ -27,6 +27,7 @@ private struct EditSettingsItemArguments {
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
     let avatarTapAction: () -> Void
+    let setProfilePhoto: () -> Void
     
     let pushController: (ViewController) -> Void
     let presentController: (ViewController) -> Void
@@ -60,6 +61,7 @@ public enum EditSettingsEntryTag: ItemListItemTag {
 
 private enum SettingsEntry: ItemListNodeEntry {
     case userInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
+    case setProfilePhoto(PresentationTheme, String)
     case userInfoNotice(PresentationTheme, String)
     
     case bioText(PresentationTheme, String, String)
@@ -73,7 +75,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .userInfo, .userInfoNotice:
+            case .userInfo, .setProfilePhoto, .userInfoNotice:
                 return SettingsSection.info.rawValue
             case .bioText, .bioInfo:
                 return SettingsSection.bio.rawValue
@@ -90,20 +92,22 @@ private enum SettingsEntry: ItemListNodeEntry {
         switch self {
             case .userInfo:
                 return 0
-            case .userInfoNotice:
+            case .setProfilePhoto:
                 return 1
-            case .bioText:
+            case .userInfoNotice:
                 return 2
-            case .bioInfo:
+            case .bioText:
                 return 3
-            case .phoneNumber:
+            case .bioInfo:
                 return 4
-            case .username:
+            case .phoneNumber:
                 return 5
-            case .addAccount:
+            case .username:
                 return 6
-            case .logOut:
+            case .addAccount:
                 return 7
+            case .logOut:
+                return 8
         }
     }
     
@@ -140,6 +144,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                     if lhsUpdatingImage != rhsUpdatingImage {
                         return false
                     }
+                    return true
+                } else {
+                    return false
+                }
+            case let .setProfilePhoto(lhsTheme, lhsText):
+                if case let .setProfilePhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -196,33 +206,37 @@ private enum SettingsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! EditSettingsItemArguments
         switch self {
-            case let .userInfo(theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
+            case let .userInfo(_, _, dateTimeFormat, peer, cachedData, state, updatingImage):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage)
-            case let .userInfoNotice(theme, text):
+            case let .setProfilePhoto(_, text):
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.setProfilePhoto()
+                })
+            case let .userInfoNotice(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .bioText(theme, currentText, placeholder):
+            case let .bioText(_, currentText, placeholder):
                 return ItemListMultilineInputItem(presentationData: presentationData, text: currentText, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 70, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateBioText(currentText, updatedText)
                 }, tag: EditSettingsEntryTag.bio)
-            case let .bioInfo(theme, text):
+            case let .bioInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .phoneNumber(theme, text, number):
+            case let .phoneNumber(_, text, number):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(ChangePhoneNumberIntroController(context: arguments.context, phoneNumber: number))
                 })
-            case let .username(theme, text, address):
+            case let .username(_, text, address):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(usernameSetupController(context: arguments.context))
                 })
-            case let .addAccount(theme, text):
+            case let .addAccount(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.addAccount()
                 })
-            case let .logOut(theme, text):
+            case let .logOut(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.logout()
                 })
@@ -291,6 +305,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     if let peer = peerViewMainPeer(view) as? TelegramUser {
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: state.updatingName)
         entries.append(.userInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, view.cachedData, userInfoState, state.updatingAvatar))
+        entries.append(.setProfilePhoto(presentationData.theme, peer.photo.isEmpty ? presentationData.strings.Settings_SetProfilePhotoOrVideo : presentationData.strings.Settings_SetNewProfilePhotoOrVideo))
         entries.append(.userInfoNotice(presentationData.theme, presentationData.strings.EditProfile_NameAndPhotoHelp))
         
         entries.append(.bioText(presentationData.theme, state.editingBioText, presentationData.strings.UserInfo_About_Placeholder))
@@ -357,6 +372,8 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             return
         }
         
+        changeProfilePhotoImpl?()
+    }, setProfilePhoto: {
         changeProfilePhotoImpl?()
     }, pushController: { controller in
         pushControllerImpl?(controller)

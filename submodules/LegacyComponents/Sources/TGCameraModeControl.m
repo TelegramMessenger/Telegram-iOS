@@ -45,8 +45,8 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
             _buttons = @
             [
              [self _createButtonForMode:PGCameraModeSquareVideo title:TGLocalized(@"Camera.VideoMode")],
-             [self _createButtonForMode:PGCameraModePhoto title:TGLocalized(@"Camera.PhotoMode")],
-             [self _createButtonForMode:PGCameraModeSquareSwing title:@"SWING"]
+             [self _createButtonForMode:PGCameraModePhoto title:TGLocalized(@"Camera.PhotoMode")]
+//             [self _createButtonForMode:PGCameraModeSquareSwing title:@"SWING"]
             ];
         } else {
             _buttons = @

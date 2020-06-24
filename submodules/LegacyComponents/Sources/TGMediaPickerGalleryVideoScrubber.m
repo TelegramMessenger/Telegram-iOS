@@ -1043,6 +1043,10 @@ typedef enum
     return true;
 }
 
+- (bool)isScrubbing {
+    return _scrubbing;
+}
+
 - (void)handlePress:(UILongPressGestureRecognizer *)gestureRecognizer
 {
     switch (gestureRecognizer.state)

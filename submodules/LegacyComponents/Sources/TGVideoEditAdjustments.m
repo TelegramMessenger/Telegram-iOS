@@ -153,7 +153,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return adjustments;
 }
 
-- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration videoStartValue:(NSTimeInterval)videoStartValue
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration
 {
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
     adjustments->_originalSize = _originalSize;
@@ -168,7 +168,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_sendAsGif = _sendAsGif;
     adjustments->_preset = preset;
     adjustments->_toolValues = _toolValues;
-    adjustments->_videoStartValue = videoStartValue;
+    adjustments->_videoStartValue = _videoStartValue;
     
     if (maxDuration > DBL_EPSILON)
     {
@@ -183,6 +183,26 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
         }
     }
         
+    return adjustments;
+}
+
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset videoStartValue:(NSTimeInterval)videoStartValue trimStartValue:(NSTimeInterval)trimStartValue trimEndValue:(NSTimeInterval)trimEndValue
+{
+    TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
+    adjustments->_originalSize = _originalSize;
+    adjustments->_cropRect = _cropRect;
+    adjustments->_cropOrientation = _cropOrientation;
+    adjustments->_cropRotation = _cropRotation;
+    adjustments->_cropLockedAspectRatio = _cropLockedAspectRatio;
+    adjustments->_cropMirrored = _cropMirrored;
+    adjustments->_trimStartValue = trimStartValue;
+    adjustments->_trimEndValue = trimEndValue;
+    adjustments->_paintingData = _paintingData;
+    adjustments->_sendAsGif = _sendAsGif;
+    adjustments->_preset = preset;
+    adjustments->_toolValues = _toolValues;
+    adjustments->_videoStartValue = videoStartValue;
+  
     return adjustments;
 }
 

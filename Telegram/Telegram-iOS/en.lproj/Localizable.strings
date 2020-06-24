@@ -5629,3 +5629,6 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
 
 "Call.RemoteVideoPaused" = "%@'s video paused";
+
+"Settings.SetProfilePhotoOrVideo" = "Set Profile Photo or Video";
+"Settings.SetNewProfilePhotoOrVideo" = "Set New Profile Photo or Video";

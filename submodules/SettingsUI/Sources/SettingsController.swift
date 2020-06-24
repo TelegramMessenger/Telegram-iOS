@@ -660,7 +660,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: nil, updatingName: nil)
         entries.append(.userInfo(account, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, view.cachedData, userInfoState, state.updatingAvatar))
         if peer.photo.isEmpty {
-            entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhoto))
+            entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhotoOrVideo))
         }
         if peer.addressName == nil {
             entries.append(.setUsername(presentationData.theme, presentationData.strings.Settings_SetUsername))

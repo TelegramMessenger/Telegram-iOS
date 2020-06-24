@@ -1261,7 +1261,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
 
 + (bool)keepAudioForPreset:(TGMediaVideoConversionPreset)preset
 {
-    return preset != TGMediaVideoConversionPresetAnimation;
+    return preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetProfile;
 }
 
 + (NSDictionary *)audioSettingsForPreset:(TGMediaVideoConversionPreset)preset
@@ -1338,7 +1338,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 300;
             
         case TGMediaVideoConversionPresetProfile:
-            return 1800;
+            return 1400;
             
         default:
             return 900;
@@ -1369,7 +1369,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:
-            return 32;
+            return 0;
             
         default:
             return 32;
