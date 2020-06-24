@@ -14,6 +14,7 @@ private let locationDistanceUpdateThreshold: Double = 1000
 final class PeersNearbyManagerImpl: PeersNearbyManager {
     private let account: Account
     private let locationManager: DeviceLocationManager
+    private let inForeground: Signal<Bool, NoError>
     
     private var preferencesDisposable: Disposable?
     private var locationDisposable = MetaDisposable()
@@ -21,9 +22,10 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
     
     private var previousLocation: CLLocation?
     
-    init(account: Account, locationManager: DeviceLocationManager)  {
+    init(account: Account, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>)  {
         self.account = account
         self.locationManager = locationManager
+        self.inForeground = inForeground
         
         self.preferencesDisposable = (account.postbox.preferencesView(keys: [PreferencesKeys.peersNearby])
         |> map { view -> Int32? in
@@ -45,8 +47,14 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
     
     private func visibilityUpdated(visible: Bool) {
         if visible {
-            let account = self.account
-            let poll = currentLocationManagerCoordinate(manager: self.locationManager, timeout: 5.0)
+            let poll = self.inForeground
+            |> take(until: { value in
+                return SignalTakeAction(passthrough: value, complete: value)
+            })
+            |> mapToSignal { _ in
+                return currentLocationManagerCoordinate(manager: self.locationManager, timeout: 5.0)
+            }
+                   
             let signal = (poll |> then(.complete() |> suspendAwareDelay(locationUpdateTimePeriod, queue: Queue.concurrentDefaultQueue()))) |> restart
             self.locationDisposable.set(signal.start(next: { [weak self] coordinate in
                 if let strongSelf = self, let coordinate = coordinate {
