@@ -11,6 +11,9 @@ public final class OverlayMediaControllerImpl: ViewController, OverlayMediaContr
         return self.displayNode as! OverlayMediaControllerNode
     }
     
+    public var updatePossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem?) -> Void)?
+    public var embedPossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem) -> Bool)?
+    
     public init() {
         super.init(navigationBarPresentationData: nil)
         
@@ -22,7 +25,11 @@ public final class OverlayMediaControllerImpl: ViewController, OverlayMediaContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = OverlayMediaControllerNode()
+        self.displayNode = OverlayMediaControllerNode(updatePossibleEmbeddingItem: { [weak self] item in
+            self?.updatePossibleEmbeddingItem?(item)
+        }, embedPossibleEmbeddingItem: { [weak self] item in
+            return self?.embedPossibleEmbeddingItem?(item) ?? false
+        })
         self.displayNodeDidLoad()
     }
     

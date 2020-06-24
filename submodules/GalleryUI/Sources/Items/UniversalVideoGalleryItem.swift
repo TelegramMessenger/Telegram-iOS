@@ -1287,7 +1287,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 mediaManager?.setOverlayVideoNode(nil)
             })
             expandImpl = { [weak overlayNode] in
-                guard let contentInfo = item.contentInfo else {
+                guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
                     return
                 }
                 
@@ -1302,7 +1302,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
                         baseNavigationController?.view.endEditing(true)
                         
-                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { id, media in
+                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak overlayNode] id, media in
                             if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
                                 return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
                                     return (overlayNode?.view.snapshotContentTree(), nil)

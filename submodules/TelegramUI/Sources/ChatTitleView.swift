@@ -23,61 +23,6 @@ enum ChatTitleContent {
     case custom(String)
 }
 
-private final class ChatTitleNetworkStatusNode: ASDisplayNode {
-    private var theme: PresentationTheme
-    
-    private let titleNode: ImmediateTextNode
-    private let activityIndicator: ActivityIndicator
-    
-    var title: String = "" {
-        didSet {
-            if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-            }
-        }
-    }
-    
-    init(theme: PresentationTheme) {
-        self.theme = theme
-        
-        self.titleNode = ImmediateTextNode()
-        self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.displaysAsynchronously = false
-        self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.isOpaque = false
-        self.titleNode.isUserInteractionEnabled = false
-        
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false), speed: .slow)
-        let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-        self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
-        
-        super.init()
-        
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.activityIndicator)
-    }
-    
-    func updateTheme(theme: PresentationTheme) {
-        self.theme = theme
-        
-        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.medium(24.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-        self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
-    }
-    
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        let indicatorSize = self.activityIndicator.bounds.size
-        let indicatorPadding = indicatorSize.width + 6.0
-        
-        let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width - indicatorPadding), height: size.height))
-        let combinedHeight = titleSize.height
-        
-        let titleFrame = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - titleSize.width - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
-        transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize))
-    }
-}
-
 private enum ChatTitleIcon {
     case none
     case lock
@@ -88,6 +33,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private let account: Account
     
     private var theme: PresentationTheme
+    private var hasEmbeddedTitleContent: Bool = false
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     private var nameDisplayOrder: PresentationPersonNameOrder
@@ -120,43 +66,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     private func updateNetworkStatusNode(networkState: AccountNetworkState, layout: ContainerViewLayout?) {
-        var isOnline = false
-        if case .online = networkState {
-            isOnline = true
-        }
-        
-        /*if isOnline || layout?.metrics.widthClass == .regular {
-            self.contentContainer.isHidden = false
-            if let networkStatusNode = self.networkStatusNode {
-                self.networkStatusNode = nil
-                networkStatusNode.removeFromSupernode()
-            }
-        } else {
-            self.contentContainer.isHidden = true
-            let statusNode: ChatTitleNetworkStatusNode
-            if let current = self.networkStatusNode {
-                statusNode = current
-            } else {
-                statusNode = ChatTitleNetworkStatusNode(theme: self.theme)
-                self.networkStatusNode = statusNode
-                self.insertSubview(statusNode.view, aboveSubview: self.contentContainer.view)
-            }
-            switch self.networkState {
-                case .waitingForNetwork:
-                    statusNode.title = self.strings.State_WaitingForNetwork
-                case let .connecting(proxy):
-                    if let layout = layout, proxy != nil && layout.size.width > 320.0 {
-                        statusNode.title = self.strings.State_ConnectingToProxy
-                    } else {
-                        statusNode.title = self.strings.State_Connecting
-                    }
-                case .updating:
-                    statusNode.title = self.strings.State_Updating
-                case .online:
-                    break
-            }
-        }*/
-        
         self.setNeedsLayout()
     }
     
@@ -183,6 +92,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     var titleContent: ChatTitleContent? {
         didSet {
             if let titleContent = self.titleContent {
+                let titleTheme = self.hasEmbeddedTitleContent ? defaultDarkPresentationTheme : self.theme
+                
                 var string: NSAttributedString?
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
@@ -192,20 +103,20 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     case let .peer(peerView, _, isScheduledMessages):
                         if isScheduledMessages {
                             if peerView.peerId == self.account.peerId {
-                                 string = NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                 string = NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                             } else {
-                                string = NSAttributedString(string: self.strings.ScheduledMessages_Title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                string = NSAttributedString(string: self.strings.ScheduledMessages_Title, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                             }
                             isEnabled = false
                         } else {
                             if let peer = peerViewMainPeer(peerView) {
                                 if peerView.peerId == self.account.peerId {
-                                    string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                    string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                                 } else {
                                     if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
-                                        string = NSAttributedString(string: formatPhoneNumber(phone), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                        string = NSAttributedString(string: formatPhoneNumber(phone), font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                                     } else {
-                                        string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                        string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                                     }
                                 }
                                 titleScamIcon = peer.isScam
@@ -220,9 +131,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             }
                         }
                     case .group:
-                        string = NSAttributedString(string: "Feed", font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                        string = NSAttributedString(string: "Feed", font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                     case let .custom(text):
-                        string = NSAttributedString(string: text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                        string = NSAttributedString(string: text, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                 }
                 
                 if let string = string, self.titleNode.attributedText == nil || !self.titleNode.attributedText!.isEqual(to: string) {
@@ -234,7 +145,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     self.titleLeftIcon = titleLeftIcon
                     switch titleLeftIcon {
                         case .lock:
-                            self.titleLeftIconNode.image = PresentationResourcesChat.chatTitleLockIcon(self.theme)
+                            self.titleLeftIconNode.image = PresentationResourcesChat.chatTitleLockIcon(titleTheme)
                         default:
                             self.titleLeftIconNode.image = nil
                     }
@@ -243,7 +154,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 
                 if titleScamIcon != self.titleScamIcon {
                     self.titleScamIcon = titleScamIcon
-                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(self.theme, type: .regular) : nil
+                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, type: .regular) : nil
                     self.setNeedsLayout()
                 }
                 
@@ -251,7 +162,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     self.titleRightIcon = titleRightIcon
                     switch titleRightIcon {
                         case .mute:
-                            self.titleRightIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(self.theme)
+                            self.titleRightIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(titleTheme)
                         default:
                             self.titleRightIconNode.image = nil
                     }
@@ -278,6 +189,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             }
         }
         
+        let titleTheme = self.hasEmbeddedTitleContent ? defaultDarkPresentationTheme : self.theme
+        
         var state = ChatTitleActivityNodeState.none
         switch self.networkState {
         case .waitingForNetwork, .connecting, .updating:
@@ -285,14 +198,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             switch self.networkState {
             case .waitingForNetwork:
                 infoText = self.strings.ChatState_WaitingForNetwork
-            case let .connecting(proxy):
+            case .connecting:
                 infoText = self.strings.ChatState_Connecting
             case .updating:
                 infoText = self.strings.ChatState_Updating
             case .online:
                 infoText = ""
             }
-            state = .info(NSAttributedString(string: infoText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor), .generic)
+            state = .info(NSAttributedString(string: infoText, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor), .generic)
         case .online:
             if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty, inputActivitiesAllowed {
                 var stringValue = ""
@@ -336,7 +249,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         }
                     }
                 }
-                let color = self.theme.rootController.navigationBar.accentTextColor
+                let color = titleTheme.rootController.navigationBar.accentTextColor
                 let string = NSAttributedString(string: stringValue, font: Font.regular(13.0), textColor: color)
                 switch mergedActivity {
                     case .typingText:
@@ -357,21 +270,21 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
                                 if peer.id == self.account.peerId || isScheduledMessages {
-                                    let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {
                                     if servicePeer {
-                                        let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                        let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if user.flags.contains(.isSupport) {
                                         let statusText = self.strings.Bot_GenericSupportStatus
                                         
-                                        let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                        let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if let _ = user.botInfo {
                                         let statusText = self.strings.Bot_GenericBotStatus
                                         
-                                        let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                        let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if let peer = peerViewMainPeer(peerView) {
                                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
@@ -383,10 +296,10 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                             userPresence = TelegramUserPresence(status: .none, lastActivity: 0)
                                         }
                                         let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
-                                        let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
+                                        let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? titleTheme.rootController.navigationBar.accentTextColor : titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(attributedString, activity ? .online : .lastSeenTime)
                                     } else {
-                                        let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                        let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     }
                                 } else if let group = peer as? TelegramGroup {
@@ -408,11 +321,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     if onlineCount > 1 {
                                         let string = NSMutableAttributedString()
                                         
-                                        string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                        string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                        string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor))
+                                        string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineCount)), font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor))
                                         state = .info(string, .generic)
                                     } else {
-                                        let string = NSAttributedString(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                        let string = NSAttributedString(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     }
                                 } else if let channel = peer as? TelegramChannel {
@@ -420,17 +333,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         if memberCount == 0 {
                                             let string: NSAttributedString
                                             if case .group = channel.info {
-                                                string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                                string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                             } else {
-                                                string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                                string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                             }
                                             state = .info(string, .generic)
                                         } else {
                                             if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
                                                 let string = NSMutableAttributedString()
                                                 
-                                                string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                                string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                                string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor))
+                                                string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor))
                                                 state = .info(string, .generic)
                                             } else {
                                                 let membersString: String
@@ -439,17 +352,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                                 } else {
                                                     membersString = strings.Conversation_StatusSubscribers(memberCount)
                                                 }
-                                                let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                                let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                                 state = .info(string, .generic)
                                             }
                                         }
                                     } else {
                                         switch channel.info {
                                             case .group:
-                                                let string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                                let string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                                 state = .info(string, .generic)
                                             case .broadcast:
-                                                let string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                                let string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                                 state = .info(string, .generic)
                                         }
                                     }
@@ -551,11 +464,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, hasEmbeddedTitleContent: Bool) {
         self.theme = theme
+        self.hasEmbeddedTitleContent = hasEmbeddedTitleContent
         self.strings = strings
         
-        //self.networkStatusNode?.updateTheme(theme: theme)
         let titleContent = self.titleContent
         self.titleContent = titleContent
         self.updateStatus()
@@ -567,8 +480,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, clearBounds)
-        
-        let transition: ContainedViewLayoutTransition = .immediate
         
         self.button.frame = clearBounds
         self.contentContainer.frame = clearBounds

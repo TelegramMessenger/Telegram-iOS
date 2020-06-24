@@ -21,6 +21,7 @@ enum PeerInfoHeaderButtonKey: Hashable {
     case message
     case discussion
     case call
+    case videoCall
     case mute
     case more
     case addMember
@@ -31,6 +32,7 @@ enum PeerInfoHeaderButtonKey: Hashable {
 enum PeerInfoHeaderButtonIcon {
     case message
     case call
+    case videoCall
     case mute
     case unmute
     case more
@@ -103,6 +105,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     imageName = "Peer Info/ButtonMessage"
                 case .call:
                     imageName = "Peer Info/ButtonCall"
+                case .videoCall:
+                    imageName = "Peer Info/ButtonVideo"
                 case .mute:
                     imageName = "Peer Info/ButtonMute"
                 case .unmute:
@@ -116,7 +120,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 case .leave:
                     imageName = "Peer Info/ButtonLeave"
                 }
-                if let image = UIImage(bundleImageName: imageName) {
+                if let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
                     let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
                     context.clip(to: imageRect, mask: image.cgImage!)
                     context.fill(imageRect)
@@ -1657,6 +1661,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var presentationData: PresentationData?
     
     private let isOpenedFromChat: Bool
+    private let videoCallsEnabled: Bool
     
     private(set) var isAvatarExpanded: Bool
     
@@ -1689,6 +1694,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
+        self.videoCallsEnabled = context.sharedContext.immediateExperimentalUISettings.videoCalls
         
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded)
         
@@ -1875,7 +1881,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
         
-        let buttonKeys: [PeerInfoHeaderButtonKey] = peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat)
+        let buttonKeys: [PeerInfoHeaderButtonKey] = peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, videoCallsEnabled: self.videoCallsEnabled)
         
         var isVerified = false
         let titleString: NSAttributedString
@@ -2246,6 +2252,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case .call:
                 buttonText = presentationData.strings.PeerInfo_ButtonCall
                 buttonIcon = .call
+            case .videoCall:
+                buttonText = presentationData.strings.PeerInfo_ButtonVideoCall
+                buttonIcon = .videoCall
             case .mute:
                 if let notificationSettings = notificationSettings, case .muted = notificationSettings.muteState {
                     buttonText = presentationData.strings.PeerInfo_ButtonUnmute
@@ -2279,14 +2288,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if buttonKeys.count > 3 {
                 if self.isOpenedFromChat {
                     switch buttonKey {
-                    case .message, .search:
+                    case .message, .search, .videoCall:
                         hiddenWhileExpanded = true
                     default:
                         hiddenWhileExpanded = false
                     }
                 } else {
                     switch buttonKey {
-                    case .mute, .search:
+                    case .mute, .search, .videoCall:
                         hiddenWhileExpanded = true
                     default:
                         hiddenWhileExpanded = false

@@ -42,6 +42,7 @@ private enum DebugControllerSection: Int32 {
     case logs
     case logging
     case experiments
+    case videoExperiments
     case info
 }
 
@@ -70,6 +71,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case knockoutWallpaper(PresentationTheme, Bool)
     case alternativeFolderTabs(Bool)
     case videoCalls(Bool)
+    case videoCallsInfo(PresentationTheme, String)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -83,8 +85,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .videoCalls:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs:
             return DebugControllerSection.experiments.rawValue
+        case .videoCalls, .videoCallsInfo:
+            return DebugControllerSection.videoExperiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
         }
@@ -140,10 +144,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 23
         case .videoCalls:
             return 24
-        case .hostInfo:
+        case .videoCallsInfo:
             return 25
-        case .versionInfo:
+        case .hostInfo:
             return 26
+        case .versionInfo:
+            return 27
         }
     }
     
@@ -542,7 +548,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }).start()
             })
         case let .videoCalls(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Video", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Feature", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
@@ -551,6 +557,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .videoCallsInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .hostInfo(theme, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
@@ -595,6 +603,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.videoCalls(experimentalSettings.videoCalls))
+    entries.append(.videoCallsInfo(presentationData.theme, "Enables experimental transmission of electromagnetic radiation synchronized with pressure waves. Needs to be enabled on both sides."))
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))

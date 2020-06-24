@@ -115,7 +115,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             return nil
         }, reactionContainerNode: {
             return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
         }, navigateToFirstDateMessage: { _ in

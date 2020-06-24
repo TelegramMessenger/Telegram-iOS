@@ -371,7 +371,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = NSAttributedString(string: strings.Message_PaymentSent(formatCurrencyAmount(totalAmount, currency: currency)).0, font: titleFont, textColor: primaryTextColor)
                 }
-            case let .phoneCall(_, discardReason, _):
+            case let .phoneCall(_, discardReason, _, _):
                 var titleString: String
                 let incoming: Bool
                 if message.flags.contains(.Incoming) {

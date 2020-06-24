@@ -139,11 +139,14 @@ public:
             std::vector<TgVoipEndpoint> const &endpoints,
             TgVoipPersistentState const &persistentState,
             std::unique_ptr<TgVoipProxy> const &proxy,
+            std::vector<TgVoipRtcServer> const &rtcServers,
             TgVoipConfig const &config,
             TgVoipEncryptionKey const &encryptionKey,
+            bool isVideo,
             TgVoipNetworkType initialNetworkType,
             std::function<void(TgVoipState)> stateUpdated,
             std::function<void(bool)> videoStateUpdated,
+            std::function<void(bool)> remoteVideoIsActiveUpdated,
             std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     ) :
     _stateUpdated(stateUpdated),
@@ -157,16 +160,21 @@ public:
         
         bool enableP2P = config.enableP2P;
         
-        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, videoStateUpdated, signalingDataEmitted](){
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, isVideo, stateUpdated, videoStateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers](){
             return new Manager(
                 getManagerThread(),
                 encryptionKey,
                 enableP2P,
+                rtcServers,
+                isVideo,
                 [stateUpdated](const TgVoipState &state) {
                     stateUpdated(state);
                 },
                 [videoStateUpdated](bool isActive) {
                     videoStateUpdated(isActive);
+                },
+                [remoteVideoIsActiveUpdated](bool isActive) {
+                    remoteVideoIsActiveUpdated(isActive);
                 },
                 [signalingDataEmitted](const std::vector<uint8_t> &data) {
                     signalingDataEmitted(data);
@@ -249,7 +257,9 @@ public:
     }
 
     void setMuteMicrophone(bool muteMicrophone) override {
-        //controller_->SetMute(muteMicrophone);
+        _manager->perform([muteMicrophone](Manager *manager) {
+            manager->setMuteOutgoingAudio(muteMicrophone);
+        });
     }
     
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
@@ -374,21 +384,27 @@ TgVoip *TgVoip::makeInstance(
         TgVoipPersistentState const &persistentState,
         std::vector<TgVoipEndpoint> const &endpoints,
         std::unique_ptr<TgVoipProxy> const &proxy,
+        std::vector<TgVoipRtcServer> const &rtcServers,
         TgVoipNetworkType initialNetworkType,
         TgVoipEncryptionKey const &encryptionKey,
+        bool isVideo,
         std::function<void(TgVoipState)> stateUpdated,
         std::function<void(bool)> videoStateUpdated,
+        std::function<void(bool)> remoteVideoIsActiveUpdated,
         std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
 ) {
     return new TgVoipImpl(
             endpoints,
             persistentState,
             proxy,
+            rtcServers,
             config,
             encryptionKey,
+            isVideo,
             initialNetworkType,
             stateUpdated,
             videoStateUpdated,
+            remoteVideoIsActiveUpdated,
             signalingDataEmitted
     );
 }

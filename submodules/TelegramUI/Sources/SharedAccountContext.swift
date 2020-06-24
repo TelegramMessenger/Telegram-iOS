@@ -207,6 +207,43 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground, presentationData: presentationData)
         
+        self.mediaManager.overlayMediaManager.updatePossibleEmbeddingItem = { [weak self] item in
+            guard let strongSelf = self else {
+                return
+            }
+            guard let navigationController = strongSelf.mainWindow?.viewController as? NavigationController else {
+                return
+            }
+            var content: NavigationControllerDropContent?
+            if let item = item {
+                content = NavigationControllerDropContent(
+                    position: item.position,
+                    item: VideoNavigationControllerDropContentItem(
+                        itemNode: item.itemNode
+                    )
+                )
+            }
+            
+            navigationController.updatePossibleControllerDropContent(content: content)
+        }
+        
+        self.mediaManager.overlayMediaManager.embedPossibleEmbeddingItem = { [weak self] item in
+            guard let strongSelf = self else {
+                return false
+            }
+            guard let navigationController = strongSelf.mainWindow?.viewController as? NavigationController else {
+                return false
+            }
+            let content = NavigationControllerDropContent(
+                position: item.position,
+                item: VideoNavigationControllerDropContentItem(
+                    itemNode: item.itemNode
+                )
+            )
+            
+            return navigationController.acceptPossibleControllerDropContent(content: content)
+        }
+        
         self._autodownloadSettings.set(.single(initialPresentationDataAndSettings.autodownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings])
             |> map { sharedData in
@@ -537,7 +574,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         if let mainWindow = mainWindow, applicationBindings.isMainApp {
-            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, getDeviceAccessData: {
+            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, enableVideoCalls: self.immediateExperimentalUISettings.videoCalls, getDeviceAccessData: {
                 return (self.currentPresentationData.with { $0 }, { [weak self] c, a in
                     self?.presentGlobalController(c, a)
                 }, {
@@ -1120,7 +1157,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return nil
             }, reactionContainerNode: {
                 return nil
-            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
             }, canSetupReply: { _ in
                 return .none
             }, navigateToFirstDateMessage: { _ in
