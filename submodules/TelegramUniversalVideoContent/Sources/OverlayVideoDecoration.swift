@@ -148,6 +148,13 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         }
     }
     
+    func showControls() {
+        if self.controlsNode.alpha.isZero {
+            self.controlsNode.alpha = 1.0
+            self.controlsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
+    }
+    
     func setStatus(_ status: Signal<MediaPlayerStatus?, NoError>) {
         self.controlsNode.status = status |> map { value -> MediaPlayerStatus in
             if let value = value {

@@ -45,9 +45,9 @@ public extension TabBarControllerTheme {
 }
 
 public extension NavigationBarTheme {
-    convenience init(rootControllerTheme: PresentationTheme) {
+    convenience init(rootControllerTheme: PresentationTheme, hideBackground: Bool = false) {
         let theme = rootControllerTheme.rootController.navigationBar
-        self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor, badgeBackgroundColor: theme.badgeBackgroundColor, badgeStrokeColor: theme.badgeStrokeColor, badgeTextColor: theme.badgeTextColor)
+        self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.backgroundColor, separatorColor: hideBackground ? .clear : theme.separatorColor, badgeBackgroundColor: theme.badgeBackgroundColor, badgeStrokeColor: hideBackground ? .clear : theme.badgeStrokeColor, badgeTextColor: theme.badgeTextColor)
     }
 }
 
@@ -60,6 +60,10 @@ public extension NavigationBarStrings {
 public extension NavigationBarPresentationData {
     convenience init(presentationData: PresentationData) {
         self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
+    }
+    
+    convenience init(presentationData: PresentationData, hideBackground: Bool) {
+        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, hideBackground: hideBackground), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
     }
     
     convenience init(presentationTheme: PresentationTheme, presentationStrings: PresentationStrings) {

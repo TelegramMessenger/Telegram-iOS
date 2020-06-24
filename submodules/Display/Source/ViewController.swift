@@ -644,6 +644,13 @@ public enum TabBarItemContextActionType {
     
     open func tabBarItemSwipeAction(direction: TabBarItemSwipeDirection) {
     }
+    
+    open func updatePossibleControllerDropContent(content: NavigationControllerDropContent?) {
+    }
+    
+    open func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
+        return false
+    }
 }
 
 func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {

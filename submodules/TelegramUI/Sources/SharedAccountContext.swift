@@ -207,6 +207,43 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground, presentationData: presentationData)
         
+        self.mediaManager.overlayMediaManager.updatePossibleEmbeddingItem = { [weak self] item in
+            guard let strongSelf = self else {
+                return
+            }
+            guard let navigationController = strongSelf.mainWindow?.viewController as? NavigationController else {
+                return
+            }
+            var content: NavigationControllerDropContent?
+            if let item = item {
+                content = NavigationControllerDropContent(
+                    position: item.position,
+                    item: VideoNavigationControllerDropContentItem(
+                        itemNode: item.itemNode
+                    )
+                )
+            }
+            
+            navigationController.updatePossibleControllerDropContent(content: content)
+        }
+        
+        self.mediaManager.overlayMediaManager.embedPossibleEmbeddingItem = { [weak self] item in
+            guard let strongSelf = self else {
+                return false
+            }
+            guard let navigationController = strongSelf.mainWindow?.viewController as? NavigationController else {
+                return false
+            }
+            let content = NavigationControllerDropContent(
+                position: item.position,
+                item: VideoNavigationControllerDropContentItem(
+                    itemNode: item.itemNode
+                )
+            )
+            
+            return navigationController.acceptPossibleControllerDropContent(content: content)
+        }
+        
         self._autodownloadSettings.set(.single(initialPresentationDataAndSettings.autodownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings])
             |> map { sharedData in
