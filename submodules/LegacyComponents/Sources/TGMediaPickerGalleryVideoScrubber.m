@@ -468,7 +468,7 @@ typedef enum
 
 - (void)setDotVideoView:(UIView *)dotVideoView {
     _dotVideoView = dotVideoView;
-    _dotVideoView.frame = _dotImageView.bounds;
+    _dotVideoView.frame = _dotImageView.frame;
     [_dotContentView addSubview:_dotVideoView];
 }
 
@@ -690,7 +690,7 @@ typedef enum
     
     if (_hasDotPicker) {
         CGSize videoSize = TGFillSize([self _thumbnailSize], _dotImageView.frame.size);
-        _dotImageView.frame = CGRectMake(TGScreenPixelFloor((_dotImageView.frame.size.width - videoSize.width) / 2.0), 0.0, videoSize.width, videoSize.height);
+        _dotImageView.frame = CGRectMake(TGScreenPixelFloor((_dotContentView.frame.size.width - videoSize.width) / 2.0), 0.0, videoSize.width, videoSize.height);
     }
     
     NSInteger thumbnailCount = (NSInteger)CGCeil(_summaryThumbnailWrapperView.frame.size.width / [self _thumbnailSizeWithAspectRatio:frameAspectRatio orientation:_cropOrientation].width);
@@ -752,7 +752,7 @@ typedef enum
     
     if (!reset && _summaryThumbnailViews.count > 0 && _summaryThumbnailSnapshotView == nil)
     {
-        _summaryThumbnailSnapshotView = [_summaryThumbnailWrapperView snapshotViewAfterScreenUpdates:false];
+        _summaryThumbnailSnapshotView = [_summaryThumbnailWrapperView snapshotViewAfterScreenUpdates:true];
         _summaryThumbnailSnapshotView.frame = _summaryThumbnailWrapperView.frame;
         [_summaryThumbnailWrapperView.superview insertSubview:_summaryThumbnailSnapshotView aboveSubview:_summaryThumbnailWrapperView];
     }

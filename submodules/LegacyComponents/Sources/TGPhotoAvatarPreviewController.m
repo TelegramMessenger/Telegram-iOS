@@ -138,10 +138,15 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (void)transitionIn
 {
+    _scrubberView.layer.rasterizationScale = [UIScreen mainScreen].scale;
+    _scrubberView.layer.shouldRasterize = true;
+    
     [UIView animateWithDuration:0.3f animations:^
     {
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
+    } completion:^(BOOL finished) {
+        _scrubberView.layer.shouldRasterize = false;
     }];
         
     switch (self.effectiveOrientation)
