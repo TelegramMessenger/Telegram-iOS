@@ -311,6 +311,12 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
             if (self.finishedPhotoProcessing != nil)
                 self.finishedPhotoProcessing();
         } else {
+            UIImage *image = _cropView.currentImage;
+            CGRect cropRect = _cropView.cropRect;
+            UIImageOrientation cropOrientation = _cropView.cropOrientation;
+            bool cropMirrored = _cropView.cropMirrored;
+            CGSize originalSize = _cropView.originalSize;
+            
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
             {
                 if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC))))
@@ -319,8 +325,8 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
                     return;
                 }
                 
-                UIImage *croppedImage = [_cropView croppedImageWithMaxSize:TGPhotoEditorScreenImageMaxSize()];
-                [photoEditor setImage:croppedImage forCropRect:_cropView.cropRect cropRotation:0.0f cropOrientation:_cropView.cropOrientation cropMirrored:_cropView.cropMirrored fullSize:false];
+                UIImage *croppedImage = TGPhotoEditorCrop(image, nil, cropOrientation, 0.0f, cropRect, false, TGPhotoEditorScreenImageMaxSize(), originalSize, true);
+                [photoEditor setImage:croppedImage forCropRect:cropRect cropRotation:0.0f cropOrientation:cropOrientation cropMirrored:cropMirrored fullSize:false];
                 
                 [photoEditor processAnimated:false completion:^
                 {

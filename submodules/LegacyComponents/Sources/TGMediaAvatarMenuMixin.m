@@ -405,14 +405,14 @@
             {
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil) {
-                    [strongController dismissViewControllerAnimated:true completion:nil];
+                    [strongController dismissViewControllerAnimated:false completion:nil];
                 }
                 
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
-                [strongSelf->_parentController dismissViewControllerAnimated:true completion:nil];
+                [strongSelf->_parentController dismissViewControllerAnimated:false completion:nil];
                 
                 if (strongSelf.didDismiss != nil)
                     strongSelf.didDismiss();

@@ -440,6 +440,10 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     return snapshotView;
 }
 
+- (UIImage *)currentImage {
+    return _imageView.image;
+}
+
 - (UIImage *)croppedImageWithMaxSize:(CGSize)maxSize
 {
     return TGPhotoEditorCrop(_imageView.image, nil, self.cropOrientation, 0.0f, self.cropRect, false, maxSize, _originalSize, true);

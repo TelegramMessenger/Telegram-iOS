@@ -1333,7 +1333,8 @@
         case TGPhotoEditorPreviewTab:
         {
             if ([_currentTabController isKindOfClass:[TGPhotoToolsController class]]) {
-                [_scrubberView reloadThumbnails];
+                [_scrubberView reloadDataAndReset:false];
+                [self updateDotImage];
             }
             
             TGPhotoAvatarPreviewController *previewController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView scrubberView:_scrubberView];
