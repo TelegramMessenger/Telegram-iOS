@@ -361,6 +361,17 @@
         
         [menuController dismissAnimated:false];
     };
+    
+    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *videoURL, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
+        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        if (strongSelf.didFinishWithVideo != nil)
+            strongSelf.didFinishWithVideo(previewImage, videoURL, adjustments);
+        
+        [menuController dismissAnimated:false];
+    };
 }
 
 - (void)_displayLegacyCamera

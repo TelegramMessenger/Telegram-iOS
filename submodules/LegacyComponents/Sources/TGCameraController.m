@@ -1766,6 +1766,28 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         });
     };
     
+    controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        if (!hasChanges)
+            return;
+        
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        TGDispatchOnMainThread(^
+        {
+            if (strongSelf.finishedWithVideo != nil)
+                strongSelf.finishedWithVideo(nil, url, resultImage, 0, CGSizeZero, adjustments, nil, nil, nil, nil);
+        
+            __strong TGPhotoEditorController *strongController = weakController;
+            if (strongController != nil)
+            {
+                [strongController updateStatusBarAppearanceForDismiss];
+                [strongSelf _dismissTransitionForResultController:(TGOverlayController *)strongController];
+            }
+        });
+    };
+    
     controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
     {
         return [editableItem thumbnailImageSignal];

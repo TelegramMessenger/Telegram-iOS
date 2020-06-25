@@ -307,7 +307,7 @@
     [_photoEditor setPreviewOutput:_previewView];
     [self updatePreviewView];
     
-    if (_intent == TGPhotoEditorControllerAvatarIntent && _item.isVideo) {
+    if ([self presentedForAvatarCreation] && _item.isVideo) {
         _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolbarView.frame.size.width, 68.0f)];
         _scrubberView.dataSource = self;
         _scrubberView.delegate = self;
@@ -380,16 +380,18 @@
     if ([_currentTabController isKindOfClass:[TGPhotoCropController class]])
         return;
     
-    _scrubberView.allowsTrimming = self.item.originalDuration >= TGVideoEditMinimumTrimmableDuration;
-    _scrubberView.hasDotPicker = true;
-    _scrubberView.disableZoom = true;
-    _scrubberView.disableTimeDisplay = true;
-    _scrubberView.trimStartValue = 0.0;
-    _scrubberView.trimEndValue = MIN(9.9, self.item.originalDuration);
-    [_scrubberView setTrimApplied:self.item.originalDuration > 9.9];
-    _scrubberView.maximumLength = 9.9;
-    
-    [self setVideoEndTime:_scrubberView.trimEndValue];
+    if (self.item.isVideo) {
+        _scrubberView.allowsTrimming = self.item.originalDuration >= TGVideoEditMinimumTrimmableDuration;
+        _scrubberView.hasDotPicker = true;
+        _scrubberView.disableZoom = true;
+        _scrubberView.disableTimeDisplay = true;
+        _scrubberView.trimStartValue = 0.0;
+        _scrubberView.trimEndValue = MIN(9.9, self.item.originalDuration);
+        [_scrubberView setTrimApplied:self.item.originalDuration > 9.9];
+        _scrubberView.maximumLength = 9.9;
+        
+        [self setVideoEndTime:_scrubberView.trimEndValue];
+    }
     
     NSTimeInterval position = 0;
     TGMediaVideoEditAdjustments *adjustments = [_photoEditor exportAdjustments];
@@ -1385,7 +1387,7 @@
             break;
     }
     
-    if (_intent == TGPhotoEditorControllerAvatarIntent && !isInitialAppearance && tab != TGPhotoEditorPreviewTab) {
+    if ([self presentedForAvatarCreation] && !isInitialAppearance && tab != TGPhotoEditorPreviewTab) {
         backButtonType = TGPhotoEditorBackButtonBack;
     }
     
@@ -1504,7 +1506,7 @@
 
 - (void)dismissEditor
 {
-    if ((![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]] && ![_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]]) && _intent == TGPhotoEditorControllerAvatarIntent) {
+    if ((![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]] && ![_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]]) && [self presentedForAvatarCreation]) {
         [self presentEditorTab:TGPhotoEditorPreviewTab];
         return;
     }
@@ -1597,7 +1599,7 @@
 
 - (void)doneButtonPressed
 {
-    if (_intent == TGPhotoEditorControllerAvatarIntent && ![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
+    if ([self presentedForAvatarCreation] && ![_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
         [self presentEditorTab:TGPhotoEditorPreviewTab];
     } else {
         [self applyEditor];
@@ -1643,7 +1645,7 @@
     }
     
     TGVideoEditAdjustments *adjustments = [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
-    if (_intent == TGPhotoEditorControllerAvatarIntent && _item.isVideo) {
+    if ([self presentedForAvatarCreation] && _item.isVideo) {
         [[SQueue concurrentDefaultQueue] dispatch:^
          {
             id<TGMediaEditableItem> item = _item;
