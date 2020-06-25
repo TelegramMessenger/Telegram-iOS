@@ -164,6 +164,11 @@ typedef enum {
     }
 }
 
+- (void)appendVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer
+{
+    [self appendSampleBuffer:sampleBuffer ofMediaType:AVMediaTypeVideo];
+}
+
 - (void)appendAudioSampleBuffer:(CMSampleBufferRef)sampleBuffer
 {
 	[self appendSampleBuffer:sampleBuffer ofMediaType:AVMediaTypeAudio];

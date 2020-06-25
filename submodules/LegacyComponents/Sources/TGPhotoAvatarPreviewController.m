@@ -6,6 +6,7 @@
 #import "TGPhotoEditorInterfaceAssets.h"
 
 #import "PGPhotoEditor.h"
+#import "PGPhotoEditorView.h"
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 #import <LegacyComponents/TGPaintUtils.h>
 
@@ -19,11 +20,12 @@
 const CGFloat TGPhotoAvatarPreviewPanelSize = 96.0f;
 const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanelSize + 40.0f;
 
-@interface TGPhotoAvatarPreviewController () <TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate>
+@interface TGPhotoAvatarPreviewController ()
 {
     bool _appeared;
     
     TGPhotoEditorSparseView *_wrapperView;
+    TGMediaPickerGalleryVideoScrubber *_scrubberView;
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     UIView *_portraitWrapperBackgroundView;
@@ -35,13 +37,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     UIView *_landscapeToolControlView;
     UIImageView *_areaMaskView;
     CGFloat _currentDiameter;
-    
-    TGMediaPickerGalleryVideoScrubber *_scrubberView;
-    TGModernGalleryVideoView *_dotVideoView;
     UILabel *_coverLabel;
-    bool _wasPlayingBeforeScrubbing;
-    bool _requestingThumbnails;
-    SMetaDisposable *_thumbnailsDisposable;
 }
 
 @property (nonatomic, weak) PGPhotoEditor *photoEditor;
@@ -51,22 +47,16 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView
 {
     self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
-        
-        _thumbnailsDisposable = [[SMetaDisposable alloc] init];
+        _scrubberView = scrubberView;
     }
     return self;
-}
-
-- (void)dealloc
-{
-    [_thumbnailsDisposable dispose];
 }
 
 - (void)loadView
@@ -114,10 +104,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     _areaMaskView.alpha = 0.0f;
     [self.view insertSubview:_areaMaskView aboveSubview:_videoAreaView];
     
-    _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolsWrapperView.frame.size.width, 68.0f)];
-    _scrubberView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    _scrubberView.dataSource = self;
-    _scrubberView.delegate = self;
     [_portraitToolsWrapperView addSubview:_scrubberView];
     
     _coverLabel = [[UILabel alloc] init];
@@ -135,22 +121,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     [super viewDidAppear:animated];
 
     [self transitionIn];
-}
-
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-    
-    _scrubberView.allowsTrimming = self.item.originalDuration >= TGVideoEditMinimumTrimmableDuration;
-    _scrubberView.hasDotPicker = true;
-    _scrubberView.disableZoom = true;
-    _scrubberView.disableTimeDisplay = true;
-    _scrubberView.trimStartValue = 0.0;
-    _scrubberView.trimEndValue = MIN(9.9, self.item.originalDuration);
-    [_scrubberView setTrimApplied:self.item.originalDuration > 9.9];
-    _scrubberView.maximumLength = 9.9;
-    [_scrubberView reloadData];
-    [_scrubberView resetToStart];
 }
 
 - (BOOL)shouldAutorotate
@@ -263,6 +233,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 - (void)_animatePreviewViewTransitionOutToFrame:(CGRect)targetFrame saving:(bool)saving parentView:(UIView *)parentView completion:(void (^)(void))completion
 {
     _dismissing = true;
+    
+    self.photoEditor.additionalOutputs = @[];
     
     TGPhotoEditorPreviewView *previewView = self.previewView;
     [previewView prepareForTransitionOut];
@@ -488,7 +460,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             
             _portraitToolsWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.bottom - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
             
-            _scrubberView.frame = CGRectMake(0.0, 0.0, _portraitToolsWrapperView.frame.size.width, _scrubberView.frame.size.height);
             _coverLabel.frame = CGRectMake(floor((_portraitToolsWrapperView.frame.size.width - _coverLabel.frame.size.width) / 2.0), CGRectGetMaxY(_scrubberView.frame) + 6.0, _coverLabel.frame.size.width, _coverLabel.frame.size.height);
 //            _portraitCollectionView.frame = CGRectMake(0, 0, _portraitToolsWrapperView.frame.size.width, panelSize);
         }
@@ -551,11 +522,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     if (!_dismissing)
         [self updateToolViews];
-    
-    dispatch_async(dispatch_get_main_queue(), ^{
-       [_scrubberView reloadThumbnails];
-    });
-        
+            
     [self updatePreviewView];
 }
 
@@ -571,42 +538,13 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (TGPhotoEditorTab)highlightedTabs
 {
-    bool hasSimpleValue = false;
-    bool hasBlur = false;
-    bool hasCurves = false;
-    bool hasTint = false;
-    
-//    for (PGPhotoTool *tool in _allTools)
-//    {
-//        if (tool.isSimple)
-//        {
-//            if (tool.stringValue != nil)
-//                hasSimpleValue = true;
-//        }
-//        else if ([tool isKindOfClass:[PGBlurTool class]] && tool.stringValue != nil)
-//        {
-//            hasBlur = true;
-//        }
-//        else if ([tool isKindOfClass:[PGCurvesTool class]] && tool.stringValue != nil)
-//        {
-//            hasCurves = true;
-//        }
-//        else if ([tool isKindOfClass:[PGTintTool class]] && tool.stringValue != nil)
-//        {
-//            hasTint = true;
-//        }
-//    }
-//
+    id<TGMediaEditAdjustments> adjustments = [self.photoEditor exportAdjustments];
     TGPhotoEditorTab tabs = TGPhotoEditorNoneTab;
     
-    if (hasSimpleValue)
+    if (adjustments.toolsApplied)
         tabs |= TGPhotoEditorToolsTab;
-    if (hasBlur)
-        tabs |= TGPhotoEditorBlurTab;
-    if (hasCurves)
-        tabs |= TGPhotoEditorCurvesTab;
-    if (hasTint)
-        tabs |= TGPhotoEditorTintTab;
+    if (adjustments.hasPainting)
+        tabs |= TGPhotoEditorPaintTab;
     
     return tabs;
 }
@@ -632,30 +570,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 //    }
 }
 
-#pragma mark - Video Scrubber Data Source & Delegate
-
-#pragma mark Scrubbing
-
-- (NSTimeInterval)videoScrubberDuration:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+- (void)beginScrubbing
 {
-    return self.item.originalDuration;
-}
-
-- (CGFloat)videoScrubberThumbnailAspectRatio:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
-{
-    if (CGSizeEqualToSize(self.item.originalSize, CGSizeZero))
-        return 1.0f;
-    
-    return self.item.originalSize.width / self.item.originalSize.height;
-}
-
-- (void)videoScrubberDidBeginScrubbing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
-{
-    _wasPlayingBeforeScrubbing = true;
-    self.controlVideoPlayback(false);
-        
-    _dotVideoView.hidden = false;
-    
     _coverLabel.alpha = 1.0f;
     
     [self setPlayButtonHidden:true animated:false];
@@ -665,21 +581,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     }];
 }
 
-- (void)videoScrubberDidEndScrubbing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+- (void)endScrubbing:(bool (^)(void))completion
 {
-    AVPlayer *player = ((TGPhotoEditorController *)self.parentViewController).player;
-    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:player.currentItem.asset];
-    generator.appliesPreferredTrackTransform = true;
-    generator.maximumSize = CGSizeMake(128.0f, 128.0f);
-    generator.requestedTimeToleranceAfter = kCMTimeZero;
-    generator.requestedTimeToleranceBefore = kCMTimeZero;
-    CGImageRef imageRef = [generator copyCGImageAtTime:player.currentItem.currentTime actualTime:NULL error:NULL];
-    UIImage *thumbnailImage = [[UIImage alloc] initWithCGImage:imageRef];
-    CGImageRelease(imageRef);
-    
-    [_scrubberView setDotImage:thumbnailImage];
-    _dotVideoView.hidden = true;
-    
     [UIView animateWithDuration:0.12 animations:^{
         _flashView.alpha = 1.0f;
     } completion:^(BOOL finished) {
@@ -687,212 +590,17 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _flashView.alpha = 0.0f;
         } completion:^(BOOL finished) {
             TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
-                if (_scrubberView.isScrubbing) {
-                    return;
+                if (completion()) {
+                    [UIView animateWithDuration:0.2 animations:^{
+                        _areaMaskView.alpha = 0.0f;
+                        _coverLabel.alpha = 0.7f;
+                    }];
+                    
+                    self.controlVideoPlayback(true);
                 }
-                [UIView animateWithDuration:0.2 animations:^{
-                    _areaMaskView.alpha = 0.0f;
-                    _coverLabel.alpha = 0.7f;
-                }];
-            
-                self.controlVideoPlayback(true);
             });
         }];
     }];
-}
-
-- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber valueDidChange:(NSTimeInterval)position
-{
-    self.controlVideoSeek(position);
-}
-
-#pragma mark Trimming
-
-- (bool)hasTrimming
-{
-    return _scrubberView.hasTrimming;
-}
-
-- (CMTimeRange)trimRange
-{
-    return CMTimeRangeMake(CMTimeMakeWithSeconds(_scrubberView.trimStartValue , NSEC_PER_SEC), CMTimeMakeWithSeconds((_scrubberView.trimEndValue - _scrubberView.trimStartValue), NSEC_PER_SEC));
-}
-
-- (void)videoScrubberDidBeginEditing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
-{
-    self.controlVideoPlayback(false);
-    
-    [self setPlayButtonHidden:true animated:false];
-}
-
-- (void)videoScrubberDidEndEditing:(TGMediaPickerGalleryVideoScrubber *)videoScrubber
-{
-    [self updatePlayerRange:videoScrubber.trimEndValue];
-    
-    self.controlVideoSeek(videoScrubber.trimStartValue);
-    self.controlVideoPlayback(true);
-    
-    [self setPlayButtonHidden:false animated:true];
-}
-
-- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingStartValueDidChange:(NSTimeInterval)startValue
-{
-    self.controlVideoSeek(startValue);
-}
-
-- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingEndValueDidChange:(NSTimeInterval)endValue
-{
-    self.controlVideoSeek(endValue);
-}
-
-- (void)updatePlayerRange:(NSTimeInterval)trimEndValue
-{
-    self.controlVideoEndTime(trimEndValue);
-}
-
-#pragma mark Thumbnails
-
-- (NSArray *)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)videoScrubber evenlySpacedTimestamps:(NSInteger)count startingAt:(NSTimeInterval)startTimestamp endingAt:(NSTimeInterval)endTimestamp
-{
-    if (endTimestamp < startTimestamp)
-        return nil;
-    
-    if (count == 0)
-        return nil;
-
-    NSTimeInterval duration = [self videoScrubberDuration:videoScrubber];
-    if (endTimestamp > duration)
-        endTimestamp = duration;
-    
-    NSTimeInterval interval = (endTimestamp - startTimestamp) / count;
-    
-    NSMutableArray *timestamps = [[NSMutableArray alloc] init];
-    for (NSInteger i = 0; i < count; i++)
-        [timestamps addObject:@(startTimestamp + i * interval)];
-    
-    return timestamps;
-}
-
-- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber requestThumbnailImagesForTimestamps:(NSArray *)timestamps size:(CGSize)size isSummaryThumbnails:(bool)isSummaryThumbnails
-{
-    if (timestamps.count == 0)
-        return;
-    
-    id<TGMediaEditAdjustments> adjustments = [self.photoEditor exportAdjustments];
-    
-    NSArray *cachedThumbnails = ((TGPhotoEditorController *)self.parentViewController).cachedVideoThumbnails;
-    
-    SSignal *thumbnailsSignal = nil;
-    if (cachedThumbnails.count > 0) {
-        thumbnailsSignal = [SSignal single:cachedThumbnails];
-    } else if ([self.item isKindOfClass:[TGMediaAsset class]]) {
-        thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item size:size timestamps:timestamps];
-    } else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]]) {
-        thumbnailsSignal = [((TGCameraCapturedVideo *)self.item).avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
-            return [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
-        }];
-    }
-        
-    _requestingThumbnails = true;
-    
-    __weak TGPhotoAvatarPreviewController *weakSelf = self;
-    [_thumbnailsDisposable setDisposable:[[[[thumbnailsSignal onNext:^(NSArray *images) {
-        __strong TGPhotoAvatarPreviewController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        TGDispatchOnMainThread(^{
-            ((TGPhotoEditorController *)strongSelf.parentViewController).cachedVideoThumbnails = images;
-        });
-    }] map:^NSArray *(NSArray *images) {
-        if (adjustments.toolsApplied) {
-            NSMutableArray *editedImages = [[NSMutableArray alloc] init];
-            PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];
-            editor.standalone = true;
-            for (UIImage *image in images) {
-                [editor setImage:image forCropRect:adjustments.cropRect cropRotation:0.0 cropOrientation:adjustments.cropOrientation cropMirrored:adjustments.cropMirrored fullSize:false];
-                UIImage *resultImage = editor.currentResultImage;
-                if (resultImage != nil) {
-                    [editedImages addObject:resultImage];
-                } else {
-                    [editedImages addObject:image];
-                }
-            }
-            return editedImages;
-        } else {
-            return images;
-        }
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *images)
-    {
-        __strong TGPhotoAvatarPreviewController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        [images enumerateObjectsUsingBlock:^(UIImage *image, NSUInteger index, __unused BOOL *stop)
-        {
-            if (index < timestamps.count)
-                [strongSelf->_scrubberView setThumbnailImage:image forTimestamp:[timestamps[index] doubleValue] isSummaryThubmnail:isSummaryThumbnails];
-        }];
-    } completed:^
-    {
-        __strong TGPhotoAvatarPreviewController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-            strongSelf->_requestingThumbnails = false;
-    }]];
-}
-
-- (void)videoScrubberDidFinishRequestingThumbnails:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
-{
-    _requestingThumbnails = false;
-    
-//    [self setScrubbingPanelHidden:false animated:true];
-}
-
-- (void)videoScrubberDidCancelRequestingThumbnails:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
-{
-    _requestingThumbnails = false;
-}
-
-- (CGSize)videoScrubberOriginalSize:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber cropRect:(CGRect *)cropRect cropOrientation:(UIImageOrientation *)cropOrientation cropMirrored:(bool *)cropMirrored
-{
-    id<TGMediaEditAdjustments> adjustments = [self.photoEditor exportAdjustments];
-    if (cropRect != NULL)
-        *cropRect = (adjustments != nil) ? adjustments.cropRect : CGRectMake(0, 0, self.item.originalSize.width, self.item.originalSize.height);
-    
-    if (cropOrientation != NULL)
-        *cropOrientation = (adjustments != nil) ? adjustments.cropOrientation : UIImageOrientationUp;
-    
-    if (cropMirrored != NULL)
-        *cropMirrored = adjustments.cropMirrored;
-    
-    return self.item.originalSize;
-}
-
-- (void)setScrubberPosition:(NSTimeInterval)position reset:(bool)reset
-{
-     
-}
-
-- (void)setScrubberPlaying:(bool)value
-{
-    if (_dotVideoView == nil) {
-        AVPlayer *player = ((TGPhotoEditorController *)self.parentViewController).player;
-        _dotVideoView = [[TGModernGalleryVideoView alloc] initWithFrame:CGRectMake(0.0, 0.0, 27.0, 44.0) player:player];
-        _dotVideoView.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-        _dotVideoView.hidden = true;
-        [_scrubberView setDotVideoView:_dotVideoView];
-    }
-}
-
-- (NSTimeInterval)coverPosition {
-    return _scrubberView.value;
-}
-
-- (NSTimeInterval)trimStartValue {
-    return _scrubberView.trimStartValue;
-}
-
-- (NSTimeInterval)trimEndValue {
-    return _scrubberView.trimEndValue;
 }
 
 @end

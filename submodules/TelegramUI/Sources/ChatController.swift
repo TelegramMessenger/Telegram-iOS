@@ -4585,6 +4585,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.openScheduledMessages()
             }
+        }, openPeersNearby: { [weak self] in
+            if let strongSelf = self {
+                let controller = strongSelf.context.sharedContext.makePeersNearbyController(context: strongSelf.context)
+                controller.navigationPresentation = .master
+                strongSelf.effectiveNavigationController?.pushViewController(controller, animated: true, completion: { })
+            }
         }, displaySearchResultsTooltip: { [weak self] node, nodeRect in
             if let strongSelf = self {
                 strongSelf.searchResultsTooltipController?.dismiss()

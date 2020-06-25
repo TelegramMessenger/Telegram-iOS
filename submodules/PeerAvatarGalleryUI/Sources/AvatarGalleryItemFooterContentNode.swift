@@ -77,7 +77,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.setMainButton = HighlightableButtonNode()
         self.setMainButton.isHidden = true
-        self.setMainButton.setAttributedTitle(NSAttributedString(string: self.strings.ProfilePhoto_SetMain, font: Font.regular(17.0), textColor: .white), for: .normal)
+        self.setMainButton.setAttributedTitle(NSAttributedString(string: self.strings.ProfilePhoto_SetMainPhoto, font: Font.regular(17.0), textColor: .white), for: .normal)
         
         self.mainNode = ASTextNode()
         self.mainNode.maximumNumberOfLines = 1

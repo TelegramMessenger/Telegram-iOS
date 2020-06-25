@@ -22,6 +22,7 @@
 @property (nonatomic, assign) TGMediaVideoConversionPreset preset;
 
 @property (nonatomic, weak) TGPhotoEditorPreviewView *previewOutput;
+@property (nonatomic, strong) NSArray *additionalOutputs;
 @property (nonatomic, readonly) NSArray *tools;
 
 @property (nonatomic, readonly) bool processing;

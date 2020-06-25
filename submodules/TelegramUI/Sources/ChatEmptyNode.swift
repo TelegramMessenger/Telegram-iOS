@@ -128,6 +128,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
             
             var displayName = ""
             let distance = interfaceState.peerNearbyData?.distance ?? 0
+            
             if let renderedPeer = interfaceState.renderedPeer {
                 if let chatPeer = renderedPeer.peers[renderedPeer.peerId] {
                     displayName = chatPeer.compactDisplayTitle
@@ -146,8 +147,18 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
         if let item = self.stickerItem {
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
+            let sticker: Signal<TelegramMediaFile?, NoError>
+            if let preloadedSticker = interfaceState.peerNearbyData?.sticker {
+                sticker = .single(preloadedSticker)
+            } else {
+                sticker = randomGreetingSticker(account: self.account)
+                |> map { item -> TelegramMediaFile? in
+                    return item?.file
+                }
+            }
+            
             self.didSetupSticker = true
-            self.disposable.set((randomGreetingSticker(account: self.account)
+            self.disposable.set((sticker
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self, let sticker = sticker {
                     let inputNodeInteraction = ChatMediaInputNodeInteraction(
@@ -172,7 +183,7 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
                     
                     let index = ItemCollectionItemIndex(index: 0, id: 0)
                     let collectionId = ItemCollectionId(namespace: 0, id: 0)
-                    let stickerPackItem = StickerPackItem(index: index, file: sticker.file, indexKeys: [])
+                    let stickerPackItem = StickerPackItem(index: index, file: sticker, indexKeys: [])
                     let item = ChatMediaInputStickerGridItem(account: strongSelf.account, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
                     strongSelf.stickerItem = item
                     strongSelf.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)

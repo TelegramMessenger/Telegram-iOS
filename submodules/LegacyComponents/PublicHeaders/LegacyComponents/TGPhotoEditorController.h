@@ -58,8 +58,6 @@ typedef enum {
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
 @property (nonatomic, strong) NSArray *faces;
 
-@property (nonatomic, strong) NSArray *cachedVideoThumbnails;
-
 @property (nonatomic, strong) AVPlayer *player;
 
 @property (nonatomic, strong) TGPhotoEntitiesContainerView *entitiesView;

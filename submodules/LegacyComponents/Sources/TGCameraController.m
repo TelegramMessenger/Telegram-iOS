@@ -912,7 +912,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     {
         case PGCameraModePhoto:
         {
-            if (_intent == TGCameraControllerGenericIntent)
+            if (_intent == TGCameraControllerGenericIntent || _intent == TGCameraControllerAvatarIntent)
             {
                 _switchToVideoTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(startVideoRecording) interval:0.25 repeat:false];
             }
@@ -2288,7 +2288,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     if (gestureRecognizer == _panGestureRecognizer)
         return !_camera.isRecordingVideo && _items.count == 0;
     else if (gestureRecognizer == _photoSwipeGestureRecognizer || gestureRecognizer == _videoSwipeGestureRecognizer)
-        return _intent == TGCameraControllerGenericIntent && !_camera.isRecordingVideo;
+        return (_intent == TGCameraControllerGenericIntent || _intent == TGCameraControllerAvatarIntent) && !_camera.isRecordingVideo;
     else if (gestureRecognizer == _pinchGestureRecognizer)
         return _camera.isZoomAvailable;
     

@@ -56,6 +56,10 @@
     if (_imageView == nil)
         return;
     
+    [self updateCropping];
+}
+
+- (void)updateCropping {
     CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(_cropOrientation));
     if (_cropMirrored)
         transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
@@ -79,11 +83,11 @@
         cropRect = CGRectMake(originalSize.width - cropRect.size.width - cropRect.origin.x, originalSize.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
     }
     
-    CGFloat ratio = frame.size.width / cropRect.size.width;
+    CGFloat ratio = self.frame.size.width / cropRect.size.width;
     _imageView.frame = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, originalSize.width * ratio, originalSize.height * ratio);
     
     CGFloat thickness = 1.0f - TGRetinaPixel;
-    _stripeView.frame = CGRectMake(frame.size.width - thickness, 0, thickness, frame.size.height);
+    _stripeView.frame = CGRectMake(self.frame.size.width - thickness, 0, thickness, self.frame.size.height);
 }
 
 @end

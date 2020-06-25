@@ -70,6 +70,8 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
         
         self.scrollNode.view.delegate = self
         self.scrollNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.showsVerticalScrollIndicator = false
         
         self.addSubnode(self.scrollNode)
     }
@@ -88,7 +90,7 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
     
     public func updateItems(_ items: [GalleryThumbnailItem], indexes: [Int], centralIndex: Int, progress: CGFloat) {
         self.indexes = indexes
-        var items: [GalleryThumbnailItem] = items.count <= 1 ? [] : items
+        let items: [GalleryThumbnailItem] = items.count <= 1 ? [] : items
         var updated = false
         if self.items.count == items.count {
             for i in 0 ..< self.items.count {

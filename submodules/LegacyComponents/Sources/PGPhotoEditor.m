@@ -414,9 +414,31 @@
             [_finalFilter addTarget:previewOutput.imageView];
         }
         
+        for (PGPhotoEditorView *view in _additionalOutputs) {
+            [_finalFilter addTarget:view];
+        }
+        
         if (_histogramGenerator != nil && !self.standalone) {
             [_finalFilter addTarget:_histogramGenerator];
         }
+    }
+}
+
+- (void)setAdditionalOutputs:(NSArray *)additionalOutputs {
+    _additionalOutputs = additionalOutputs;
+    
+    [_finalFilter removeAllTargets];
+    
+    if (self.previewOutput != nil) {
+        [_finalFilter addTarget:self.previewOutput.imageView];
+    }
+    
+    for (PGPhotoEditorView *view in _additionalOutputs) {
+        [_finalFilter addTarget:view];
+    }
+    
+    if (_histogramGenerator != nil && !self.standalone) {
+        [_finalFilter addTarget:_histogramGenerator];
     }
 }
 

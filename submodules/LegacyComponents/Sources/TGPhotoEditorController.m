@@ -18,7 +18,8 @@
 #import "TGProgressWindow.h"
 
 #import "PGPhotoEditor.h"
-#import "PGEnhanceTool.h"
+#import "PGPhotoEditorView.h"
+
 #import "TGPaintFaceDetector.h"
 
 #import <LegacyComponents/PGPhotoEditorValues.h>
@@ -42,13 +43,14 @@
 #import "TGPhotoAvatarPreviewController.h"
 
 #import "TGMessageImageViewOverlayView.h"
+#import "TGMediaPickerGalleryVideoScrubber.h"
 
 #import "TGMenuSheetController.h"
 
 #import <LegacyComponents/AVURLAsset+TGMediaItem.h>
 #import "TGCameraCapturedVideo.h"
 
-@interface TGPhotoEditorController () <ASWatcher, TGViewControllerNavigationBarAppearance, UIDocumentInteractionControllerDelegate>
+@interface TGPhotoEditorController () <ASWatcher, TGViewControllerNavigationBarAppearance, TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate, UIDocumentInteractionControllerDelegate>
 {
     bool _switchingTab;
     TGPhotoEditorTab _availableTabs;
@@ -75,8 +77,6 @@
     SMetaDisposable *_playerItemDisposable;
     id _playerStartedObserver;
     id _playerReachedEndObserver;
-    bool _registeredKeypathObserver;
-    NSTimer *_positionTimer;
     bool _scheduledVideoPlayback;
     
     id<TGMediaEditAdjustments> _initialAdjustments;
@@ -96,6 +96,13 @@
     TGMessageImageViewOverlayView *_progressView;
     
     SMetaDisposable *_faceDetectorDisposable;
+    
+    bool _initializedScrubber;
+    TGMediaPickerGalleryVideoScrubber *_scrubberView;
+    PGPhotoEditorView *_dotVideoView;
+    
+    bool _requestingThumbnails;
+    SMetaDisposable *_thumbnailsDisposable;
     
     id<LegacyComponentsContext> _context;
 }
@@ -145,6 +152,8 @@
             _photoEditor.trimEndValue = videoAdjustments.trimEndValue;
         }
         
+        _thumbnailsDisposable = [[SMetaDisposable alloc] init];
+        
         self.customAppearanceMethodsForwarding = true;
     }
     return self;
@@ -155,6 +164,7 @@
     [self stopVideoPlayback:true];
     [_actionHandle reset];
     [_faceDetectorDisposable dispose];
+    [_thumbnailsDisposable dispose];
 }
 
 - (void)loadView
@@ -297,6 +307,12 @@
     [_photoEditor setPreviewOutput:_previewView];
     [self updatePreviewView];
     
+    if (_intent == TGPhotoEditorControllerAvatarIntent && _item.isVideo) {
+        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolbarView.frame.size.width, 68.0f)];
+        _scrubberView.dataSource = self;
+        _scrubberView.delegate = self;
+    }
+    
     [self detectFaces];
     
     [self presentEditorTab:_currentTab];
@@ -363,6 +379,17 @@
     
     if ([_currentTabController isKindOfClass:[TGPhotoCropController class]])
         return;
+    
+    _scrubberView.allowsTrimming = self.item.originalDuration >= TGVideoEditMinimumTrimmableDuration;
+    _scrubberView.hasDotPicker = true;
+    _scrubberView.disableZoom = true;
+    _scrubberView.disableTimeDisplay = true;
+    _scrubberView.trimStartValue = 0.0;
+    _scrubberView.trimEndValue = MIN(9.9, self.item.originalDuration);
+    [_scrubberView setTrimApplied:self.item.originalDuration > 9.9];
+    _scrubberView.maximumLength = 9.9;
+    
+    [self setVideoEndTime:_scrubberView.trimEndValue];
     
     NSTimeInterval position = 0;
     TGMediaVideoEditAdjustments *adjustments = [_photoEditor exportAdjustments];
@@ -481,6 +508,9 @@
 
 - (void)_setupPlaybackReachedEndObserver
 {
+    if (_playerReachedEndObserver != nil)
+        [_player removeTimeObserver:_playerReachedEndObserver];
+    
     PGPhotoEditor *photoEditor = _photoEditor;
     CMTime endTime = CMTimeSubtract(_player.currentItem.duration, CMTimeMake(10, 100));
     if (photoEditor.trimEndValue > DBL_EPSILON && photoEditor.trimEndValue < CMTimeGetSeconds(_player.currentItem.duration))
@@ -496,9 +526,6 @@
         __strong TGPhotoEditorController *strongSelf = weakSelf;
         if (strongSelf != nil) {
             [strongSelf->_player seekToTime:startTime];
-            if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
-                [(TGPhotoAvatarPreviewController *)strongSelf->_currentTabController setScrubberPosition:photoEditor.trimStartValue reset:true];
-            }
         }
     }];
 }
@@ -518,17 +545,9 @@
         [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
         
         [self _setupPlaybackStartedObserver];
-        
-        if (!_registeredKeypathObserver) {
-            [_player addObserver:self forKeyPath:@"rate" options:NSKeyValueObservingOptionNew context:nil];
-            _registeredKeypathObserver = true;
-        }
     }
     
     [_player play];
-    
-    _positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(positionTimerEvent) interval:0.25 repeat:true];
-    [self positionTimerEvent];
 }
 
 - (void)stopVideoPlayback:(bool)reset {
@@ -537,33 +556,8 @@
             [_player removeTimeObserver:_playerStartedObserver];
         if (_playerReachedEndObserver != nil)
             [_player removeTimeObserver:_playerReachedEndObserver];
-        
-        if (_registeredKeypathObserver) {
-            [_player removeObserver:self forKeyPath:@"rate" context:nil];
-            _registeredKeypathObserver = false;
-        }
     }
     [_player pause];
-    
-    [_positionTimer invalidate];
-    _positionTimer = nil;
-}
-
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)__unused change context:(void *)__unused context
-{
-    if (object == _player && [keyPath isEqualToString:@"rate"])
-    {
-        if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
-            [(TGPhotoAvatarPreviewController *)_currentTabController setScrubberPlaying:_player.rate > FLT_EPSILON];
-        }
-    }
-}
-
-- (void)positionTimerEvent
-{
-    if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
-        [(TGPhotoAvatarPreviewController *)_currentTabController setScrubberPosition:CMTimeGetSeconds(_player.currentItem.currentTime) reset:false];
-    }
 }
 
 - (void)seekVideo:(NSTimeInterval)position {
@@ -573,6 +567,7 @@
 
 - (void)setVideoEndTime:(NSTimeInterval)endTime {
     _player.currentItem.forwardPlaybackEndTime = CMTimeMakeWithSeconds(endTime, NSEC_PER_SEC);
+    [self _setupPlaybackReachedEndObserver];
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -1330,7 +1325,11 @@
             
         case TGPhotoEditorPreviewTab:
         {
-            TGPhotoAvatarPreviewController *previewController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            if ([_currentTabController isKindOfClass:[TGPhotoToolsController class]]) {
+                [_scrubberView reloadThumbnails];
+            }
+            
+            TGPhotoAvatarPreviewController *previewController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView scrubberView:_scrubberView];
             previewController.item = _item;
             previewController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             previewController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
@@ -1338,6 +1337,10 @@
                 *referenceFrame = transitionReferenceFrame;
                 *parentView = transitionParentView;
                 *noTransitionView = transitionNoTransitionView;
+                
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                    [strongSelf startVideoPlayback:true];
                                 
                 return transitionReferenceView;
             };
@@ -1351,7 +1354,6 @@
                     strongSelf.finishedTransitionIn();
                 
                 strongSelf->_switchingTab = false;
-                [strongSelf startVideoPlayback:true];
             };
             previewController.controlVideoPlayback = ^(bool play) {
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
@@ -1635,10 +1637,9 @@
         [[NSUserDefaults standardUserDefaults] setObject:@(qualityController.preset) forKey:@"TG_preferredVideoPreset_v0"];
     } else if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]])
     {
-        TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
-        videoStartValue = previewController.coverPosition;
-        trimStartValue = previewController.trimStartValue;
-        trimEndValue = previewController.trimEndValue;
+        videoStartValue = _scrubberView.value;
+        trimStartValue = _scrubberView.trimStartValue;
+        trimEndValue = _scrubberView.trimEndValue;
     }
     
     TGVideoEditAdjustments *adjustments = [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
@@ -2034,6 +2035,21 @@
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         portraitToolbarViewBottomEdge = screenEdges.bottom;
     _portraitToolbarView.frame = CGRectMake(screenEdges.left, portraitToolbarViewBottomEdge - TGPhotoEditorToolbarSize - safeAreaInset.bottom, referenceSize.width, TGPhotoEditorToolbarSize + safeAreaInset.bottom);
+    
+    _scrubberView.frame = CGRectMake(0.0, 0.0, _portraitToolbarView.frame.size.width, _scrubberView.frame.size.height);
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!_initializedScrubber) {
+            [_scrubberView layoutSubviews];
+            _initializedScrubber = true;
+            [_scrubberView reloadData];
+            [_scrubberView resetToStart];
+            
+            [self updateDotImage];
+        } else {
+            [_scrubberView reloadThumbnails];
+        }
+    });
 }
 
 - (void)_setScreenImage:(UIImage *)screenImage
@@ -2166,5 +2182,248 @@
     });
     return avatarTabs;
 }
+
+#pragma mark - Video Scrubber Data Source & Delegate
+
+#pragma mark Scrubbing
+
+- (id<TGMediaEditableItem>)item {
+    return _item;
+}
+
+- (NSTimeInterval)videoScrubberDuration:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    return self.item.originalDuration;
+}
+
+- (CGFloat)videoScrubberThumbnailAspectRatio:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    if (CGSizeEqualToSize(self.item.originalSize, CGSizeZero))
+        return 1.0f;
+    
+    return self.item.originalSize.width / self.item.originalSize.height;
+}
+
+- (void)videoScrubberDidBeginScrubbing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    [self stopVideoPlayback:false];
+        
+    if (_dotVideoView == nil) {
+        _dotVideoView = [[PGPhotoEditorView alloc] initWithFrame:CGRectMake(0.0, 0.0, 26.0, 44.0)];
+        [_scrubberView setDotVideoView:_dotVideoView];
+        
+        _photoEditor.additionalOutputs = @[_dotVideoView];
+    } else {
+        _dotVideoView.hidden = false;
+    }
+    
+    TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
+    if (![previewController isKindOfClass:[TGPhotoAvatarPreviewController class]])
+        return;
+    
+    [previewController beginScrubbing];
+}
+
+- (void)updateDotImage {
+    id<TGMediaEditAdjustments> adjustments = [_photoEditor exportAdjustments];
+    AVPlayer *player = _player;
+    [[SQueue concurrentDefaultQueue] dispatch:^{
+        AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:player.currentItem.asset];
+        generator.appliesPreferredTrackTransform = true;
+        generator.maximumSize = CGSizeMake(128.0f, 128.0f);
+        generator.requestedTimeToleranceAfter = kCMTimeZero;
+        generator.requestedTimeToleranceBefore = kCMTimeZero;
+        CGImageRef imageRef = [generator copyCGImageAtTime:player.currentItem.currentTime actualTime:NULL error:NULL];
+        UIImage *image = [[UIImage alloc] initWithCGImage:imageRef];
+        CGImageRelease(imageRef);
+        
+        if (adjustments.toolsApplied) {
+            PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];
+            editor.standalone = true;
+            [editor setImage:image forCropRect:adjustments.cropRect cropRotation:0.0 cropOrientation:adjustments.cropOrientation cropMirrored:adjustments.cropMirrored fullSize:false];
+            image = editor.currentResultImage;
+        }
+        
+        TGDispatchOnMainThread(^{
+           [_scrubberView setDotImage:image];
+            _dotVideoView.hidden = true;
+        });
+    }];
+}
+
+- (void)videoScrubberDidEndScrubbing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    [self updateDotImage];
+    
+    __weak TGPhotoEditorController *weakSelf = self;
+    TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
+    if (![previewController isKindOfClass:[TGPhotoAvatarPreviewController class]])
+        return;
+    
+    [previewController endScrubbing:^bool{
+        __strong TGPhotoEditorController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return false;
+        
+        return !strongSelf->_scrubberView.isScrubbing;
+    }];
+}
+
+- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber valueDidChange:(NSTimeInterval)position
+{
+    [self seekVideo:position];
+}
+
+#pragma mark Trimming
+
+- (bool)hasTrimming
+{
+    return _scrubberView.hasTrimming;
+}
+
+- (CMTimeRange)trimRange
+{
+    return CMTimeRangeMake(CMTimeMakeWithSeconds(_scrubberView.trimStartValue , NSEC_PER_SEC), CMTimeMakeWithSeconds((_scrubberView.trimEndValue - _scrubberView.trimStartValue), NSEC_PER_SEC));
+}
+
+- (void)videoScrubberDidBeginEditing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    [self stopVideoPlayback:false];
+    
+    TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
+    if (![previewController isKindOfClass:[TGPhotoAvatarPreviewController class]])
+        return;
+    
+    [previewController setPlayButtonHidden:true animated:false];
+}
+
+- (void)videoScrubberDidEndEditing:(TGMediaPickerGalleryVideoScrubber *)videoScrubber
+{
+    [self setVideoEndTime:videoScrubber.trimEndValue];
+    
+    [self seekVideo:videoScrubber.trimStartValue];
+    [self stopVideoPlayback:false];
+    
+    TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
+    if (![previewController isKindOfClass:[TGPhotoAvatarPreviewController class]])
+        return;
+     
+    [previewController setPlayButtonHidden:true animated:false];
+}
+
+- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingStartValueDidChange:(NSTimeInterval)startValue
+{
+    [self seekVideo:startValue];
+}
+
+- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingEndValueDidChange:(NSTimeInterval)endValue
+{
+    [self seekVideo:endValue];
+}
+
+#pragma mark Thumbnails
+
+- (NSArray *)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)videoScrubber evenlySpacedTimestamps:(NSInteger)count startingAt:(NSTimeInterval)startTimestamp endingAt:(NSTimeInterval)endTimestamp
+{
+    if (endTimestamp < startTimestamp)
+        return nil;
+    
+    if (count == 0)
+        return nil;
+
+    NSTimeInterval duration = [self videoScrubberDuration:videoScrubber];
+    if (endTimestamp > duration)
+        endTimestamp = duration;
+    
+    NSTimeInterval interval = (endTimestamp - startTimestamp) / count;
+    
+    NSMutableArray *timestamps = [[NSMutableArray alloc] init];
+    for (NSInteger i = 0; i < count; i++)
+        [timestamps addObject:@(startTimestamp + i * interval)];
+    
+    return timestamps;
+}
+
+- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber requestThumbnailImagesForTimestamps:(NSArray *)timestamps size:(CGSize)size isSummaryThumbnails:(bool)isSummaryThumbnails
+{
+    if (timestamps.count == 0)
+        return;
+    
+    id<TGMediaEditAdjustments> adjustments = [_photoEditor exportAdjustments];
+        
+    SSignal *thumbnailsSignal = nil;
+    if ([self.item isKindOfClass:[TGMediaAsset class]]) {
+        thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item size:size timestamps:timestamps];
+    } else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]]) {
+        thumbnailsSignal = [((TGCameraCapturedVideo *)self.item).avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
+            return [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
+        }];
+    }
+        
+    _requestingThumbnails = true;
+    
+    __weak TGPhotoEditorController *weakSelf = self;
+    [_thumbnailsDisposable setDisposable:[[[thumbnailsSignal map:^NSArray *(NSArray *images) {
+        if (adjustments.toolsApplied) {
+            NSMutableArray *editedImages = [[NSMutableArray alloc] init];
+            PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];
+            editor.standalone = true;
+            for (UIImage *image in images) {
+                [editor setImage:image forCropRect:adjustments.cropRect cropRotation:0.0 cropOrientation:adjustments.cropOrientation cropMirrored:adjustments.cropMirrored fullSize:false];
+                UIImage *resultImage = editor.currentResultImage;
+                if (resultImage != nil) {
+                    [editedImages addObject:resultImage];
+                } else {
+                    [editedImages addObject:image];
+                }
+            }
+            return editedImages;
+        } else {
+            return images;
+        }
+    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *images)
+    {
+        __strong TGPhotoEditorController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [images enumerateObjectsUsingBlock:^(UIImage *image, NSUInteger index, __unused BOOL *stop)
+        {
+            if (index < timestamps.count)
+                [strongSelf->_scrubberView setThumbnailImage:image forTimestamp:[timestamps[index] doubleValue] isSummaryThubmnail:isSummaryThumbnails];
+        }];
+    } completed:^
+    {
+        __strong TGPhotoEditorController *strongSelf = weakSelf;
+        if (strongSelf != nil)
+            strongSelf->_requestingThumbnails = false;
+    }]];
+}
+
+- (void)videoScrubberDidFinishRequestingThumbnails:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    _requestingThumbnails = false;
+}
+
+- (void)videoScrubberDidCancelRequestingThumbnails:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
+{
+    _requestingThumbnails = false;
+}
+
+- (CGSize)videoScrubberOriginalSize:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber cropRect:(CGRect *)cropRect cropOrientation:(UIImageOrientation *)cropOrientation cropMirrored:(bool *)cropMirrored
+{
+    id<TGMediaEditAdjustments> adjustments = [_photoEditor exportAdjustments];
+    if (cropRect != NULL)
+        *cropRect = (adjustments != nil) ? adjustments.cropRect : CGRectMake(0, 0, self.item.originalSize.width, self.item.originalSize.height);
+    
+    if (cropOrientation != NULL)
+        *cropOrientation = (adjustments != nil) ? adjustments.cropOrientation : UIImageOrientationUp;
+    
+    if (cropMirrored != NULL)
+        *cropMirrored = adjustments.cropMirrored;
+    
+    return self.item.originalSize;
+}
+
 
 @end

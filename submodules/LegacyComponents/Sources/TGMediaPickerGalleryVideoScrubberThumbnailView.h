@@ -4,4 +4,6 @@
 
 - (instancetype)initWithImage:(UIImage *)image originalSize:(CGSize)originalSize cropRect:(CGRect)cropRect cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored;
 
+- (void)updateCropping;
+
 @end
