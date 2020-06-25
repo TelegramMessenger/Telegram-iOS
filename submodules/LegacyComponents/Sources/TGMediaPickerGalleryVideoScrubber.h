@@ -37,7 +37,6 @@
 - (void)reloadDataAndReset:(bool)reset;
 
 - (void)reloadThumbnails;
-- (void)reloadThumbnailsAnimated;
 - (void)ignoreThumbnails;
 - (void)resetThumbnails;
 

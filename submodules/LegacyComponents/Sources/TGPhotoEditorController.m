@@ -73,6 +73,8 @@
     UIImage *_screenImage;
     UIImage *_thumbnailImage;
     
+    CMTime _chaseTime;
+    bool _chasingTime;
     AVPlayerItem *_playerItem;
     SMetaDisposable *_playerItemDisposable;
     id _playerStartedObserver;
@@ -92,6 +94,7 @@
     TGMenuContainerView *_menuContainerView;
     UIDocumentInteractionController *_documentController;
     
+    bool _hadProgress;
     bool _progressVisible;
     TGMessageImageViewOverlayView *_progressView;
     
@@ -459,9 +462,15 @@
         }
         
         TGDispatchOnMainThread(^{
+            if (progressVisible)
+                _hadProgress = true;
             [self setProgressVisible:progressVisible value:progress animated:true];
-            
             [self updateDoneButtonEnabled:doneEnabled animated:true];
+            
+            if (_hadProgress) {
+                [_scrubberView reloadThumbnails];
+                [self updateDotImage];
+            }
         });
         
         if ([next isKindOfClass:[NSNumber class]]) {
@@ -571,7 +580,27 @@
 
 - (void)seekVideo:(NSTimeInterval)position {
     CMTime targetTime = CMTimeMakeWithSeconds(position, NSEC_PER_SEC);
-    [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+    
+    if (CMTIME_COMPARE_INLINE(targetTime, !=, _chaseTime))
+    {
+        _chaseTime = targetTime;
+        
+        if (!_chasingTime) {
+            [self chaseTime];
+        }
+    }
+}
+
+- (void)chaseTime {
+    _chasingTime = true;
+    CMTime currentChasingTime = _chaseTime;
+    
+    [_player.currentItem seekToTime:currentChasingTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
+        if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime))
+            _chasingTime = false;
+        else
+            [self chaseTime];
+    }];
 }
 
 - (void)setVideoEndTime:(NSTimeInterval)endTime {
@@ -2273,8 +2302,6 @@
 
 - (void)videoScrubberDidEndScrubbing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
 {
-    [self updateDotImage];
-    
     __weak TGPhotoEditorController *weakSelf = self;
     TGPhotoAvatarPreviewController *previewController = (TGPhotoAvatarPreviewController *)_currentTabController;
     if (![previewController isKindOfClass:[TGPhotoAvatarPreviewController class]])
@@ -2287,6 +2314,10 @@
         
         return !strongSelf->_scrubberView.isScrubbing;
     }];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+       [self updateDotImage];
+    });
 }
 
 - (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber valueDidChange:(NSTimeInterval)position
