@@ -383,6 +383,7 @@
     if (![_currentProcessChain isEqualToArray:processChain])
     {
         [_currentInput removeAllTargets];
+        [_cropFilter removeAllTargets];
         
         for (PGPhotoProcessPass *pass in _currentProcessChain)
             [pass.filter removeAllTargets];
