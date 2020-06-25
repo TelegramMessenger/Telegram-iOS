@@ -46,6 +46,7 @@ typedef enum
     UIImageView *_dotFrameView;
     
     UIPanGestureRecognizer *_panGestureRecognizer;
+    UIPanGestureRecognizer *_dotPanGestureRecognizer;
     UILongPressGestureRecognizer *_pressGestureRecognizer;
     UITapGestureRecognizer *_tapGestureRecognizer;
     
@@ -427,7 +428,10 @@ typedef enum
         _panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
         _panGestureRecognizer.delegate = self;
         [_scrubberHandle addGestureRecognizer:_panGestureRecognizer];
-        [_dotHandle addGestureRecognizer:_panGestureRecognizer];
+        
+        _dotPanGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+        _dotPanGestureRecognizer.delegate = self;
+        [_dotHandle addGestureRecognizer:_dotPanGestureRecognizer];
         
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
         _tapGestureRecognizer.enabled = false;
