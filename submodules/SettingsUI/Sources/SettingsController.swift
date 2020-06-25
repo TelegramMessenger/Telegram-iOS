@@ -39,6 +39,7 @@ import PhoneNumberFormat
 import AccountUtils
 import AuthTransferUI
 import Emoji
+import LegacyMediaPickerUI
 
 private let avatarFont = avatarPlaceholderFont(size: 13.0)
 
@@ -1311,6 +1312,83 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     }
                 }
                 
+                let completedVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
+                    if let data = image.jpegData(compressionQuality: 0.6) {
+                        let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
+                            var filteredPath = url.path
+                            if filteredPath.hasPrefix("file://") {
+                                filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
+                            }
+                            
+                            let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
+                            let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                                if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                                    return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                            let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                            
+                            let signalDisposable = signal.start(next: { next in
+                                if let result = next as? TGMediaVideoConversionResult {
+                                    var value = stat()
+                                    if stat(result.fileURL.path, &value) == 0 {
+                                        if let data = try? Data(contentsOf: result.fileURL) {
+                                            let resource: TelegramMediaResource
+                                            if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                                resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                            } else {
+                                                resource = LocalFileMediaResource(fileId: arc4random64())
+                                            }
+                                            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                            subscriber.putNext(resource)
+                                        }
+                                    }
+                                    subscriber.putCompletion()
+                                }
+                            }, error: { _ in
+                            }, completed: nil)
+                            
+                            let disposable = ActionDisposable {
+                                signalDisposable?.dispose()
+                            }
+                            
+                            return ActionDisposable {
+                                disposable.dispose()
+                            }
+                        }
+                        
+                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
+                        updateState { state in
+                            var state = state
+                            state.updatingAvatar = .image(representation, true)
+                            return state
+                        }
+                        
+                        updateAvatarDisposable.set((signal
+                        |> mapToSignal { videoResource in
+                            return updateAccountPhoto(account: context.account, resource: resource, videoResource: videoResource, mapResourceToAvatarSizes: { resource, representations in
+                                return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                            })
+                        } |> deliverOnMainQueue).start(next: { result in
+                            switch result {
+                                case .complete:
+                                    updateState { state in
+                                        var state = state
+                                        state.updatingAvatar = nil
+                                        return state
+                                    }
+                                case .progress:
+                                    break
+                            }
+                        }))
+                    }
+                }
+                
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
@@ -1323,6 +1401,11 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 mixin.didFinishWithImage = { image in
                     if let image = image {
                        completedImpl(image)
+                    }
+                }
+                mixin.didFinishWithVideo = { image, url, adjustments in
+                    if let image = image, let url = url {
+                        completedVideoImpl(image, url, adjustments)
                     }
                 }
                 mixin.didFinishWithDelete = {
