@@ -291,14 +291,10 @@
     if ([UIDevice currentDevice].userInterfaceIdiom != UIUserInterfaceIdiomPad)
         [_wrapperView addSubview:_landscapeToolbarView];
     
-    if (_intent & TGPhotoEditorControllerWebIntent)
+    if ((_intent & TGPhotoEditorControllerWebIntent) || (_intent & TGPhotoEditorControllerAvatarIntent && _item.isVideo))
         [self updateDoneButtonEnabled:false animated:false];
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:TGPhotoEditorToolbarSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:TGPhotoEditorToolbarSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(_photoEditor.rotatedCropSize, containerFrame.size);
     
     _previewView = [[TGPhotoEditorPreviewView alloc] initWithFrame:CGRectMake(0, 0, fittedSize.width, fittedSize.height)];
@@ -410,7 +406,7 @@
     else
     {
         if (_item.isVideo) {
-            signal = [[self.requestOriginalFullSizeImage(_item, position) takeLast] deliverOn:_queue];
+            signal = [self.requestOriginalFullSizeImage(_item, position) deliverOn:_queue];
         } else {
             signal = [[[[self.requestOriginalFullSizeImage(_item, position) takeLast] deliverOn:_queue] filter:^bool(id image)
             {
@@ -426,6 +422,7 @@
     {
         CGFloat progress = 0.0;
         bool progressVisible = false;
+        bool doneEnabled = false;
         if ([next isKindOfClass:[UIImage class]]) {
             [_photoEditor setImage:(UIImage *)next forCropRect:_photoEditor.cropRect cropRotation:_photoEditor.cropRotation cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored fullSize:false];
             progress = 1.0f;
@@ -452,6 +449,7 @@
                 }
             });
             progress = 1.0f;
+            doneEnabled = true;
         } else if ([next isKindOfClass:[NSNumber class]]) {
             progress = [next floatValue];
             progressVisible = true;
@@ -459,7 +457,14 @@
         
         TGDispatchOnMainThread(^{
            [self setProgressVisible:progressVisible value:progress animated:true];
+            
+            if (doneEnabled)
+                [self updateDoneButtonEnabled:true animated:true];
         });
+        
+        if ([next isKindOfClass:[NSNumber class]]) {
+            return;
+        }
         
         if (_ignoreDefaultPreviewViewTransitionIn)
         {
@@ -1977,6 +1982,13 @@
     return [_context fullscreenBounds].size;
 }
 
+- (bool)hasOnScreenNavigation {
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    return hasOnScreenNavigation;
+}
+
 - (UIInterfaceOrientation)effectiveOrientation {
     return [self effectiveOrientation:self.interfaceOrientation];
 }
@@ -2087,13 +2099,16 @@
         _progressView = [[TGMessageImageViewOverlayView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 50.0f, 50.0f)];
         _progressView.userInteractionEnabled = false;
         
-        _progressView.frame = (CGRect){{CGFloor((_wrapperView.frame.size.width - _progressView.frame.size.width) / 2.0f), CGFloor((_wrapperView.frame.size.height - _progressView.frame.size.height) / 2.0f)}, _progressView.frame.size};
+        CGSize referenceSize = [self referenceViewSize];
+        CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:0.0 hasOnScreenNavigation:self.hasOnScreenNavigation];
+        
+        _progressView.frame = (CGRect){{CGFloor(CGRectGetMidX(containerFrame) - _progressView.frame.size.width / 2.0f), CGFloor(CGRectGetMidY(containerFrame) - _progressView.frame.size.height / 2.0f)}, _progressView.frame.size};
     }
     
     if (progressVisible)
     {
         if (_progressView.superview == nil)
-            [_wrapperView addSubview:_progressView];
+            [_containerView addSubview:_progressView];
         
         _progressView.alpha = 1.0f;
     }
