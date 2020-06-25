@@ -396,7 +396,13 @@
         if (_intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent) {
             intent = TGPhotoEditorControllerSignupAvatarIntent;
         }
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:asset intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        
+        id<TGMediaEditableItem> editableItem = asset;
+        if (asset.type == TGMediaAssetGifType) {
+            editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
+        }
+        
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = self.editingContext;
         controller.didFinishRenderingFullSizeImage = ^(UIImage *resultImage)
         {

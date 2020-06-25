@@ -422,10 +422,12 @@
     {
         CGFloat progress = 0.0;
         bool progressVisible = false;
-        bool doneEnabled = false;
+        bool doneEnabled = true;
         if ([next isKindOfClass:[UIImage class]]) {
             [_photoEditor setImage:(UIImage *)next forCropRect:_photoEditor.cropRect cropRotation:_photoEditor.cropRotation cropOrientation:_photoEditor.cropOrientation cropMirrored:_photoEditor.cropMirrored fullSize:false];
-            progress = 1.0f;
+            if (!((UIImage *)next).degraded) {
+                progress = 1.0f;
+            }
         } else if ([next isKindOfClass:[AVAsset class]]) {
             _playerItem = [AVPlayerItem playerItemWithAsset:(AVAsset *)next];
             _player = [AVPlayer playerWithPlayerItem:_playerItem];
@@ -453,13 +455,13 @@
         } else if ([next isKindOfClass:[NSNumber class]]) {
             progress = [next floatValue];
             progressVisible = true;
+            doneEnabled = false;
         }
         
         TGDispatchOnMainThread(^{
-           [self setProgressVisible:progressVisible value:progress animated:true];
+            [self setProgressVisible:progressVisible value:progress animated:true];
             
-            if (doneEnabled)
-                [self updateDoneButtonEnabled:true animated:true];
+            [self updateDoneButtonEnabled:doneEnabled animated:true];
         });
         
         if ([next isKindOfClass:[NSNumber class]]) {
@@ -2373,7 +2375,7 @@
     if ([self.item isKindOfClass:[TGMediaAsset class]]) {
         thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item size:size timestamps:timestamps];
     } else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]]) {
-        thumbnailsSignal = [((TGCameraCapturedVideo *)self.item).avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
+        thumbnailsSignal = [[((TGCameraCapturedVideo *)self.item).avAsset takeLast] mapToSignal:^SSignal *(AVAsset *avAsset) {
             return [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
         }];
     }

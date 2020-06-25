@@ -91,7 +91,7 @@
                 return [SSignal single:_cachedAVAsset];
             } else {
                 if (_originalAsset.type == TGMediaAssetGifType) {
-                    return [[[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
+                    return [[SSignal single:@0.0] then:[[[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
                         NSData *data = assetData.imageData;
                         
                         const char *gif87Header = "GIF87";
@@ -110,7 +110,7 @@
                         }
                     }] onNext:^(id next) {
                         _cachedAVAsset = next;
-                    }];
+                    }]];
                 } else {
                     return [[[TGMediaAssetImageSignals avAssetForVideoAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(AVURLAsset *asset) {
                         return [SSignal single:asset];
