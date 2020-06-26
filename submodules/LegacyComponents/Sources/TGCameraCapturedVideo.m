@@ -14,7 +14,8 @@
 {
     CGSize _cachedSize;
     NSTimeInterval _cachedDuration;
-    
+
+    SVariable *_avAssetVariable;
     AVURLAsset *_cachedAVAsset;
     bool _livePhoto;
 }
@@ -90,8 +91,14 @@
                 _cachedAVAsset = [AVURLAsset assetWithURL:videoUrl];
                 return [SSignal single:_cachedAVAsset];
             } else {
+                if (_avAssetVariable != nil) {
+                    return [_avAssetVariable signal];
+                }
+        
+                _avAssetVariable = [[SVariable alloc] init];
+                
                 if (_originalAsset.type == TGMediaAssetGifType) {
-                    return [[SSignal single:@0.0] then:[[[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
+                    [_avAssetVariable set:[[SSignal single:@0.0] then:[[[TGMediaAssetImageSignals imageDataForAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData) {
                         NSData *data = assetData.imageData;
                         
                         const char *gif87Header = "GIF87";
@@ -110,14 +117,16 @@
                         }
                     }] onNext:^(id next) {
                         _cachedAVAsset = next;
-                    }]];
+                    }]]];
                 } else {
-                    return [[[TGMediaAssetImageSignals avAssetForVideoAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(AVURLAsset *asset) {
+                    [_avAssetVariable set:[[[TGMediaAssetImageSignals avAssetForVideoAsset:_originalAsset allowNetworkAccess:false] mapToSignal:^SSignal *(AVURLAsset *asset) {
                         return [SSignal single:asset];
                     }] onNext:^(id next) {
                         _cachedAVAsset = next;
-                    }];
+                    }]];
                 }
+                
+                return [_avAssetVariable signal];
             }
         }
     } else {
@@ -161,6 +170,7 @@
     if (_cachedAVAsset != nil) {
         _cachedDuration = CMTimeGetSeconds(_cachedAVAsset.duration);
     }
+    
     return _cachedDuration;
 }
 

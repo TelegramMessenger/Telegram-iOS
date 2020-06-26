@@ -157,6 +157,8 @@
         
         _thumbnailsDisposable = [[SMetaDisposable alloc] init];
         
+        _chaseTime = kCMTimeInvalid;
+        
         self.customAppearanceMethodsForwarding = true;
     }
     return self;
@@ -596,10 +598,12 @@
     CMTime currentChasingTime = _chaseTime;
     
     [_player.currentItem seekToTime:currentChasingTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
-        if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime))
+        if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime)) {
             _chasingTime = false;
-        else
+            _chaseTime = kCMTimeInvalid;
+        } else {
             [self chaseTime];
+        }
     }];
 }
 

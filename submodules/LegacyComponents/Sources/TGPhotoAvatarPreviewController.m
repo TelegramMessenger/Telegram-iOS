@@ -183,8 +183,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     }
 }
 
-- (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
+- (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion
 {
+    if (switching) {
+        _dismissing = true;
+    }
+    
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.touchedUp = nil;
     previewView.touchedDown = nil;

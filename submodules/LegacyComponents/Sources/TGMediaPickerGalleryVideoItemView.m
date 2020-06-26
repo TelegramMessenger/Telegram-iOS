@@ -127,6 +127,8 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        _chaseTime = kCMTimeInvalid;
+        
         _currentAudioSession = [[SMetaDisposable alloc] init];
         _playerItemDisposable = [[SMetaDisposable alloc] init];
         
@@ -1244,7 +1246,12 @@
 
 - (void)playerItemDidPlayToEndTime:(NSNotification *)__unused notification
 {
-    if (!_sendAsGif)
+    bool isGif = _sendAsGif;
+    if (!_sendAsGif && [self.item.asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        isGif = ((TGCameraCapturedVideo *)self.item.asset).originalAsset.type == TGMediaAssetGifType;
+    }
+    
+    if (!isGif)
     {
         self.isPlaying = false;
         [_player pause];
@@ -1289,10 +1296,12 @@
     CMTime currentChasingTime = _chaseTime;
     
     [self.player.currentItem seekToTime:currentChasingTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
-        if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime))
+        if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime)) {
             _chasingTime = false;
-        else
+            _chaseTime = kCMTimeInvalid;
+        } else {
             [self chaseTime];
+        }
     }];
 }
 

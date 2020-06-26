@@ -285,8 +285,11 @@
         
         for (TGMediaPickerCell *cell in [strongSelf->_collectionView visibleCells])
         {
-            if ([cell.item isEqual:item.asset])
+            if ([cell.item respondsToSelector:@selector(uniqueIdentifier)] && [[(id)cell.item uniqueIdentifier] isEqual:item.asset.uniqueIdentifier]) {
                 return cell;
+            } else if ([cell.item isEqual:item.asset.uniqueIdentifier]) {
+                return cell;
+            }
         }
         
         return nil;

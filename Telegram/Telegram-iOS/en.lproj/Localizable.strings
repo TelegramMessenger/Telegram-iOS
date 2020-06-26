@@ -5555,8 +5555,8 @@ Any member of this group will be able to see messages in the channel.";
 "ProfilePhoto.MainPhoto" = "Main Photo";
 "ProfilePhoto.SetMainPhoto" = "Set as Main Photo";
 
-"ProfilePhoto.MainVideo" = "Main Photo";
-"ProfilePhoto.SetMainVideo" = "Set as Main Photo";
+"ProfilePhoto.MainVideo" = "Main Video";
+"ProfilePhoto.SetMainVideo" = "Set as Main Video";
 
 "Stats.GroupOverview" = "OVERVIEW";
 "Stats.GroupMembers" = "Members";

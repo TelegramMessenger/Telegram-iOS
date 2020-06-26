@@ -830,7 +830,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     for (TGAttachmentAssetCell *cell in [_collectionView visibleCells])
     {
-        if ([cell.asset isEqual:asset])
+        if ([cell.asset.uniqueIdentifier isEqual:asset.uniqueIdentifier])
             return cell;
     }
     
@@ -1073,7 +1073,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 - (void)updateHiddenCellAnimated:(bool)animated
 {
     for (TGAttachmentAssetCell *cell in [_collectionView visibleCells])
-        [cell setHidden:([cell.asset isEqual:_hiddenItem]) animated:animated];
+        [cell setHidden:([cell.asset.uniqueIdentifier isEqual:_hiddenItem.uniqueIdentifier]) animated:animated];
 }
 
 #pragma mark -

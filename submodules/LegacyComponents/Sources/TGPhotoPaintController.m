@@ -216,7 +216,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.userInteractionEnabled = false;
     previewView.hidden = true;
-    [_containerView addSubview:_previewView];
     
     __weak TGPhotoPaintController *weakSelf = self;
     _paintingWrapperView = [[TGPaintingWrapperView alloc] init];
@@ -2044,7 +2043,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (CGRect)transitionOutReferenceFrame
 {
     TGPhotoEditorPreviewView *previewView = _previewView;
-    return previewView.frame;
+    return [previewView convertRect:previewView.bounds toView:self.view];
 }
 
 - (UIView *)transitionOutReferenceView
