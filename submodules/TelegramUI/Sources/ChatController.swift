@@ -4617,6 +4617,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return nil
                 }))
            }
+        }, unarchivePeer: { [weak self] in
+            guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                return
+            }
+            unarchiveAutomaticallyArchivedPeer(account: strongSelf.context.account, peerId: peerId)
+            
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone), elevatedLayout: false, action: { _ in return false }), in: .current)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         switch self.chatLocation {
