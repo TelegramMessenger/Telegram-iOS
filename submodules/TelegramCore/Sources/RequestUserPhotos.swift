@@ -45,7 +45,6 @@ public func requestPeerPhotos(account: Account, peerId: PeerId) -> Signal<[Teleg
                     for i in 0 ..< photos.count {
                         if let image = telegramMediaImageFromApiPhoto(photos[i]), let reference = image.reference {
                             var date: Int32 = 0
-                            var file: TelegramMediaFile?
                             switch photos[i] {
                                 case let .photo(_, _, _, _, apiDate, _, _, _):
                                     date = apiDate

@@ -232,6 +232,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
         _videoAreaView.alpha = 0.0f;
+        _areaMaskView.alpha = 0.0f;
     } completion:^(__unused BOOL finished)
     {
         if (completion != nil)
@@ -318,6 +319,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     {
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
+        _videoAreaView.alpha = 0.0f;
+        _areaMaskView.alpha = 0.0f;
     } completion:nil];
 }
 

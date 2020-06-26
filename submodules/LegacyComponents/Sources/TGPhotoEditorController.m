@@ -650,6 +650,8 @@
             [self setNeedsStatusBarAppearanceUpdate];
         else
             [_context forceSetStatusBarHidden:[self prefersStatusBarHidden] withAnimation:UIStatusBarAnimationNone];
+        
+        self.navigationController.interactivePopGestureRecognizer.enabled = false;
     }
     
     [super viewDidAppear:animated];
@@ -677,6 +679,8 @@
         {
             [_context setApplicationStatusBarAlpha:1.0f];
         }
+        
+        self.navigationController.interactivePopGestureRecognizer.enabled = true;
     }
     
     if ([self respondsToSelector:@selector(setNeedsUpdateOfScreenEdgesDeferringSystemGestures)])
@@ -2278,8 +2282,11 @@
 }
 
 - (void)updateDotImage {
-    id<TGMediaEditAdjustments> adjustments = [_photoEditor exportAdjustments];
     AVPlayer *player = _player;
+    if (player == nil) {
+        return;
+    }
+    id<TGMediaEditAdjustments> adjustments = [_photoEditor exportAdjustments];
     [[SQueue concurrentDefaultQueue] dispatch:^{
         AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:player.currentItem.asset];
         generator.appliesPreferredTrackTransform = true;

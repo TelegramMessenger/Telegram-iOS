@@ -317,7 +317,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         var deleteItems: [Int] = []
         var insertItems: [GalleryPagerInsertItem] = []
         var previousIndexById: [AnyHashable: Int] = [:]
-        var validIds = Set(items.map { $0.id })
+        let validIds = Set(items.map { $0.id })
         
         for i in 0 ..< self.items.count {
             previousIndexById[self.items[i].id] = i
@@ -327,7 +327,11 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         }
         
         for i in 0 ..< items.count {
-            insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: previousIndexById[items[i].id]))
+            if i == previousIndexById[items[i].id] {
+                updateItems.append(GalleryPagerUpdateItem(index: i, previousIndex: i, item: items[i]))
+            } else {
+                insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: previousIndexById[items[i].id]))
+            }
         }
 
         self.transaction(GalleryPagerTransaction(deleteItems: deleteItems, insertItems: insertItems, updateItems: updateItems, focusOnItem: centralItemIndex, synchronous: synchronous))
