@@ -27,6 +27,9 @@ extension PeerStatusSettings {
                 if (flags & (1 << 5)) != 0 {
                     result.insert(.canReportIrrelevantGeoLocation)
                 }
+                if (flags & (1 << 7)) != 0 {
+                    result.insert(.autoArchived)
+                }
                 self = PeerStatusSettings(flags: result, geoDistance: geoDistance)
         }
     }

@@ -28,7 +28,8 @@ typedef enum
 typedef enum
 {
     TGPhotoEditorDoneButtonSend,
-    TGPhotoEditorDoneButtonCheck
+    TGPhotoEditorDoneButtonCheck,
+    TGPhotoEditorDoneButtonDone
 } TGPhotoEditorDoneButton;
 
 @interface TGPhotoToolbarView : UIView
@@ -46,6 +47,9 @@ typedef enum
 
 @property (nonatomic, readonly) CGRect cancelButtonFrame;
 @property (nonatomic, readonly) CGRect doneButtonFrame;
+
+@property (nonatomic, assign) TGPhotoEditorBackButton backButtonType;
+@property (nonatomic, assign) TGPhotoEditorDoneButton doneButtonType;
 
 - (instancetype)initWithBackButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground;
 

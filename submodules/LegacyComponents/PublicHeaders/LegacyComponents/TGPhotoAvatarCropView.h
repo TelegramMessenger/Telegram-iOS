@@ -7,6 +7,7 @@
 @property (nonatomic, strong) UIImage *image;
 @property (nonatomic, strong) AVPlayer *player;
 
+@property (nonatomic, readonly) CGSize originalSize;
 @property (nonatomic, assign) CGRect cropRect;
 @property (nonatomic, assign) UIImageOrientation cropOrientation;
 @property (nonatomic, assign) bool cropMirrored;
@@ -35,6 +36,8 @@
 
 - (void)invalidateCropRect;
 - (void)invalidateVideoView;
+
+- (UIImage *)currentImage;
 
 - (void)hideImageForCustomTransition;
 

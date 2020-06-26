@@ -66,7 +66,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         self.present = present
     }
     
-    public func node() -> GalleryItemNode {
+    public func node(synchronous: Bool) -> GalleryItemNode {
         let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
         if let indexData = self.indexData {
@@ -78,7 +78,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         return node
     }
     
-    public func updateNode(node: GalleryItemNode) {
+    public func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? UniversalVideoGalleryItemNode {
             if let indexData = self.indexData {
                 node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))

@@ -35,13 +35,13 @@ class WebSearchVideoGalleryItem: GalleryItem {
         self.controllerInteraction = controllerInteraction
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = WebSearchVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
         node.setupItem(self)
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? WebSearchVideoGalleryItemNode {
             node.setupItem(self)
         }

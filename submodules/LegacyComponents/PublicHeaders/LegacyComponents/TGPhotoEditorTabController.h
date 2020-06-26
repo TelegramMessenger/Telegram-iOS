@@ -63,6 +63,7 @@
 
 - (bool)isDismissAllowed;
 
+- (bool)hasOnScreenNavigation;
 - (UIInterfaceOrientation)effectiveOrientation;
 - (UIInterfaceOrientation)effectiveOrientation:(UIInterfaceOrientation)orientation;
 

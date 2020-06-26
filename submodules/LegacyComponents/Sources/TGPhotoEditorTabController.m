@@ -82,6 +82,13 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     }
 }
 
+- (bool)hasOnScreenNavigation {
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    return hasOnScreenNavigation;
+}
+
 - (UIInterfaceOrientation)effectiveOrientation {
     return [self effectiveOrientation:self.interfaceOrientation];
 }

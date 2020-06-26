@@ -30,6 +30,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 {
     NSValue *_contentOffsetAfterRotation;
     bool _appeared;
+    bool _scheduledTransitionIn;
     CGFloat _cellWidth;
     
     NSArray *_allTools;
@@ -306,17 +307,17 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (void)transitionIn
 {
+    if (_portraitToolsWrapperView.frame.size.height < FLT_EPSILON) {
+        _scheduledTransitionIn = true;
+        return;
+    }
     [UIView animateWithDuration:0.3f animations:^
     {
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
     }];
     
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    switch (orientation)
+    switch (self.effectiveOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
@@ -350,8 +351,12 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     }
 }
 
-- (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
+- (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion
 {
+    if (switching) {
+        _dismissing = true;
+    }
+    
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.touchedUp = nil;
     previewView.touchedDown = nil;
@@ -360,11 +365,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     [_toolAreaView.superview bringSubviewToFront:_toolAreaView];
 
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    switch (orientation)
+    switch (self.effectiveOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
@@ -769,17 +770,18 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     [self updateLayout:[[LegacyComponentsGlobals provider] applicationStatusBarOrientation]];
     
+    if (_scheduledTransitionIn) {
+        _scheduledTransitionIn = false;
+        [self transitionIn];
+    }
+    
     if (![self inFormSheet])
         [self _applyPreparedContentOffset];
 }
 
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
     CGRect sourceFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
@@ -789,16 +791,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
     CGRect toFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
@@ -831,11 +824,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     CGFloat panelToolbarPortraitSize = panelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = panelSize + TGPhotoEditorToolbarSize;
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:self.hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
     screenEdges.top += safeAreaInset.top;
     screenEdges.left += safeAreaInset.left;
@@ -946,23 +935,14 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (void)updatePreviewView
 {
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([self inFormSheet] || TGIsPad())
-        orientation = UIInterfaceOrientationPortrait;
-    
-    CGSize referenceSize = [self referenceViewSize];
-    
     PGPhotoEditor *photoEditor = self.photoEditor;
     TGPhotoEditorPreviewView *previewView = self.previewView;
     
     if (_dismissing || previewView.superview != self.view)
         return;
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = _preview ? CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height) : [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGSize referenceSize = [self referenceViewSize];
+    CGRect containerFrame = _preview ? CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height) : [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(photoEditor.rotatedCropSize, containerFrame.size);
     previewView.frame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     

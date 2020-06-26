@@ -125,7 +125,7 @@
                 
                 CGSize dimensions = [avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
                 TGMediaVideoConversionPreset preset = adjustments.sendAsGif ? TGMediaVideoConversionPresetAnimation : [self presetFromAdjustments:adjustments];
-                if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage)
+                if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage && preset != TGMediaVideoConversionPresetProfile)
                 {
                     TGMediaVideoConversionPreset bestPreset = [self bestAvailablePresetForDimensions:dimensions];
                     if (preset > bestPreset)
@@ -344,8 +344,6 @@
     if (TGOrientationIsSideward(adjustments.cropOrientation, NULL))
         outputDimensions = CGSizeMake(outputDimensions.height, outputDimensions.width);
         
-    CMTimeRange instructionTimeRange = CMTimeRangeMake(kCMTimeZero, timeRange.duration);
-    
     AVMutableCompositionTrack *compositionTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
     if (adjustments.videoStartValue > 0.0 && adjustments.videoStartValue > adjustments.trimStartValue) {
         NSTimeInterval trimEndValue = adjustments.trimEndValue > adjustments.trimStartValue ? adjustments.trimEndValue : CMTimeGetSeconds(videoTrack.timeRange.duration);
@@ -1263,7 +1261,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
 
 + (bool)keepAudioForPreset:(TGMediaVideoConversionPreset)preset
 {
-    return preset != TGMediaVideoConversionPresetAnimation;
+    return preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetProfile;
 }
 
 + (NSDictionary *)audioSettingsForPreset:(TGMediaVideoConversionPreset)preset
@@ -1340,7 +1338,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 300;
             
         case TGMediaVideoConversionPresetProfile:
-            return 1000;
+            return 1400;
             
         default:
             return 900;
@@ -1371,7 +1369,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:
-            return 32;
+            return 0;
             
         default:
             return 32;

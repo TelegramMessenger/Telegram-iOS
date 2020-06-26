@@ -830,7 +830,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     for (TGAttachmentAssetCell *cell in [_collectionView visibleCells])
     {
-        if ([cell.asset isEqual:asset])
+        if ([cell.asset.uniqueIdentifier isEqual:asset.uniqueIdentifier])
             return cell;
     }
     
@@ -871,7 +871,12 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     {
         id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
         
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:asset intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        id<TGMediaEditableItem> editableItem = asset;
+        if (asset.type == TGMediaAssetGifType) {
+            editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
+        }
+        
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = _editingContext;
         controller.stickersContext = _stickersContext;
         controller.dontHideStatusBar = true;
@@ -937,7 +942,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             if (editableItem.isVideo) {
                 if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
                 } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
                     return ((TGCameraCapturedVideo *)editableItem).avAsset;
                 } else {
@@ -951,7 +956,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
         controllerWindow.hidden = false;
         controller.view.clipsToBounds = true;
-        
+    
         transition.referenceFrame = ^CGRect
         {
             UIView *referenceView = referenceViewForAsset(asset);
@@ -972,14 +977,14 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
-            
+
             transition.outReferenceFrame = outReferenceFrame;
             transition.repView = repView;
             [transition dismissAnimated:true completion:^
             {
                 strongSelf->_hiddenItem = nil;
                 [strongSelf updateHiddenCellAnimated:false];
-                
+
                 dispatch_async(dispatch_get_main_queue(), ^
                 {
                     if (completion != nil)
@@ -1068,7 +1073,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 - (void)updateHiddenCellAnimated:(bool)animated
 {
     for (TGAttachmentAssetCell *cell in [_collectionView visibleCells])
-        [cell setHidden:([cell.asset isEqual:_hiddenItem]) animated:animated];
+        [cell setHidden:([cell.asset.uniqueIdentifier isEqual:_hiddenItem.uniqueIdentifier]) animated:animated];
 }
 
 #pragma mark -

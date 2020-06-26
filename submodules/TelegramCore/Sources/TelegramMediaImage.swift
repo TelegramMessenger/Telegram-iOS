@@ -12,13 +12,13 @@ func telegramMediaImageRepresentationsFromApiSizes(datacenterId: Int32, photoId:
             case let .photoCachedSize(type, location, w, h, _):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
-                        let resource = CloudPhotoSizeMediaResource(datacenterId: datacenterId, photoId: photoId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
+                        let resource = CloudPhotoSizeMediaResource(datacenterId: datacenterId, photoId: photoId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: nil, fileReference: fileReference)
                         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
                 }
-            case let .photoSize(type, location, w, h, _):
+            case let .photoSize(type, location, w, h, size):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
-                        let resource = CloudPhotoSizeMediaResource(datacenterId: datacenterId, photoId: photoId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
+                        let resource = CloudPhotoSizeMediaResource(datacenterId: datacenterId, photoId: photoId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: Int(size), fileReference: fileReference)
                         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
                 }
             case let .photoStrippedSize(_, data):
@@ -44,11 +44,11 @@ func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
             if let videoSizes = videoSizes {
                 for size in videoSizes {
                     switch size {
-                        case let .videoSize(type, location, w, h, _):
+                        case let .videoSize(type, location, w, h, size):
                             let resource: TelegramMediaResource
                             switch location {
                                 case let .fileLocationToBeDeprecated(volumeId, localId):
-                                    resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
+                                    resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: Int(size), fileReference: fileReference.makeData())
                             }
                             
                             videoRepresentations.append(TelegramMediaImage.VideoRepresentation(

@@ -40,6 +40,9 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     private var currentNameText: String?
     private var currentDateText: String?
+    private var currentTypeText: String?
+    
+    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat, CGFloat)?
     
     var delete: (() -> Void)? {
         didSet {
@@ -77,13 +80,11 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.setMainButton = HighlightableButtonNode()
         self.setMainButton.isHidden = true
-        self.setMainButton.setAttributedTitle(NSAttributedString(string: self.strings.ProfilePhoto_SetMain, font: Font.regular(17.0), textColor: .white), for: .normal)
         
         self.mainNode = ASTextNode()
         self.mainNode.maximumNumberOfLines = 1
         self.mainNode.isUserInteractionEnabled = false
         self.mainNode.displaysAsynchronously = false
-        self.mainNode.attributedText = NSAttributedString(string: self.strings.ProfilePhoto_MainPhoto, font: Font.regular(17.0), textColor: UIColor(rgb: 0x808080))
         
         super.init()
         
@@ -103,10 +104,20 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     func setEntry(_ entry: AvatarGalleryEntry, content: AvatarGalleryItemFooterContent) {
         var nameText: String?
         var dateText: String?
+        var typeText: String?
+        var buttonText: String?
         switch entry {
-            case let .image(_, _, _, _, peer, date, _, _):
+            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
+            
+                if (!videoRepresentations.isEmpty) {
+                    typeText = self.strings.ProfilePhoto_MainVideo
+                    buttonText = self.strings.ProfilePhoto_SetMainVideo
+                } else {
+                    typeText = self.strings.ProfilePhoto_MainPhoto
+                    buttonText = self.strings.ProfilePhoto_SetMainPhoto
+                }
             default:
                 break
         }
@@ -128,6 +139,17 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
             }
         }
         
+        if self.currentTypeText != typeText {
+            self.currentTypeText = typeText
+            
+            self.mainNode.attributedText = NSAttributedString(string: typeText ?? "", font: Font.regular(17.0), textColor: UIColor(rgb: 0x808080))
+            self.setMainButton.setAttributedTitle(NSAttributedString(string: buttonText ?? "", font: Font.regular(17.0), textColor: .white), for: .normal)
+            
+            if let validLayout = self.validLayout {
+                let _ = self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: .immediate)
+            }
+        }
+        
         switch content {
             case .info:
                 self.nameNode.isHidden = false
@@ -143,6 +165,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset, contentInset)
+        
         let width = size.width
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset

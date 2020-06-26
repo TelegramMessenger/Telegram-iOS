@@ -410,14 +410,11 @@ typedef enum
     else
         return;
     
-    if (!reset && _summaryThumbnailViews.count > 0 && _summaryThumbnailSnapshotView == nil)
-    {
+    if (!reset && _summaryThumbnailViews.count > 0 && _summaryThumbnailSnapshotView == nil) {
         _summaryThumbnailSnapshotView = [_summaryThumbnailWrapperView snapshotViewAfterScreenUpdates:false];
         _summaryThumbnailSnapshotView.frame = _summaryThumbnailWrapperView.frame;
         [_summaryThumbnailWrapperView.superview insertSubview:_summaryThumbnailSnapshotView aboveSubview:_summaryThumbnailWrapperView];
-    }
-    else if (reset)
-    {
+    } else if (reset) {
         [_summaryThumbnailSnapshotView removeFromSuperview];
         _summaryThumbnailSnapshotView = nil;
     }

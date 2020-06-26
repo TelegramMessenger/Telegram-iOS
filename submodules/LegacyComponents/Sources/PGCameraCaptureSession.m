@@ -188,7 +188,7 @@ const NSInteger PGCameraFrameRate = 30;
     if (self.currentCameraPosition != _preferredCameraPosition)
         return true;
     
-    if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo)
+    if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo || self.currentMode == PGCameraModeSquareSwing)
         return true;
     
     if (self.zoomLevel > FLT_EPSILON)
@@ -270,11 +270,12 @@ const NSInteger PGCameraFrameRate = 30;
             
         case PGCameraModeVideo:
         case PGCameraModeSquareVideo:
+        case PGCameraModeSquareSwing:
         {
             self.sessionPreset = AVCaptureSessionPresetInputPriority;
             [self switchToBestVideoFormatForDevice:_videoDevice];
             [self _addAudioInputRequestAudioSession:true];
-            [self setFrameRate:PGCameraFrameRate forDevice:_videoDevice];
+            [self setFrameRate:mode == PGCameraFrameRate forDevice:_videoDevice];
         }
             break;
             
@@ -529,6 +530,7 @@ const NSInteger PGCameraFrameRate = 30;
     {
         case PGCameraModeVideo:
         case PGCameraModeSquareVideo:
+        case PGCameraModeSquareSwing:
             return _videoFlashMode;
             
         default:
@@ -544,6 +546,7 @@ const NSInteger PGCameraFrameRate = 30;
         {
             case PGCameraModeVideo:
             case PGCameraModeSquareVideo:
+            case PGCameraModeSquareSwing:
             {
                 AVCaptureTorchMode torchMode = [PGCameraCaptureSession _deviceTorchModeForCameraFlashMode:mode];
                 if (device.hasTorch && [device isTorchModeSupported:torchMode])
@@ -660,7 +663,7 @@ const NSInteger PGCameraFrameRate = 30;
         
         [self commitConfiguration];
         
-        if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo)
+        if (self.currentMode == PGCameraModeVideo || self.currentMode == PGCameraModeSquareVideo || self.currentMode == PGCameraModeSquareSwing)
             [self setFrameRate:PGCameraFrameRate forDevice:deviceForTargetPosition];
         else
             [self setFrameRate:0 forDevice:deviceForTargetPosition];

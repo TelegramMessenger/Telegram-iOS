@@ -186,7 +186,11 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
     private let labelNode: ImmediateTextNode
     private let filledBackgroundNode: LinkHighlightingNode
     
-    init(openPeer: @escaping () -> Void) {
+    private let openPeersNearby: () -> Void
+    
+    init(openPeersNearby: @escaping () -> Void) {
+        self.openPeersNearby = openPeersNearby
+        
         self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
         self.labelNode.textAlignment = .center
@@ -197,22 +201,17 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         
         self.addSubnode(self.filledBackgroundNode)
         self.addSubnode(self.labelNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
         
-        self.labelNode.highlightAttributeAction = { attributes in
-            for (key, _) in attributes {
-                if key.rawValue == "_Link" {
-                    return key
-                }
-            }
-            return nil
-        }
-        self.labelNode.tapAttributeAction = { attributes, _ in
-            for (key, _) in attributes {
-                if key.rawValue == "_Link" {
-                    openPeer()
-                }
-            }
-        }
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        self.openPeersNearby()
     }
     
     func update(width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, chatPeer: Peer, distance: Int32, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -233,7 +232,7 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         let attributedString = NSMutableAttributedString(string: stringAndRanges.0, font: Font.regular(13.0), textColor: primaryTextColor)
         
         let boldAttributes = [NSAttributedString.Key.font: Font.semibold(13.0), NSAttributedString.Key(rawValue: "_Link"): true as NSNumber]
-        for (_, range) in stringAndRanges.1 {
+        for (_, range) in stringAndRanges.1.prefix(1) {
             attributedString.addAttributes(boldAttributes, range: range)
         }
         
@@ -438,8 +437,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 peerNearbyInfoNode = current
             } else {
                 peerNearbyInfoTransition = .immediate
-                peerNearbyInfoNode = ChatInfoTitlePanelPeerNearbyInfoNode(openPeer: { [weak self] in
-                    self?.interfaceInteraction?.navigateToProfile(chatPeer.id)
+                peerNearbyInfoNode = ChatInfoTitlePanelPeerNearbyInfoNode(openPeersNearby: { [weak self] in
+                    self?.interfaceInteraction?.openPeersNearby()
                 })
                 self.addSubnode(peerNearbyInfoNode)
                 self.peerNearbyInfoNode = peerNearbyInfoNode

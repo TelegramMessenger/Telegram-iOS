@@ -361,6 +361,17 @@
         
         [menuController dismissAnimated:false];
     };
+    
+    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *videoURL, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
+        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        if (strongSelf.didFinishWithVideo != nil)
+            strongSelf.didFinishWithVideo(previewImage, videoURL, adjustments);
+        
+        [menuController dismissAnimated:false];
+    };
 }
 
 - (void)_displayLegacyCamera
@@ -394,14 +405,14 @@
             {
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil) {
-                    [strongController dismissViewControllerAnimated:true completion:nil];
+                    [strongController dismissViewControllerAnimated:false completion:nil];
                 }
                 
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
-                [strongSelf->_parentController dismissViewControllerAnimated:true completion:nil];
+                [strongSelf->_parentController dismissViewControllerAnimated:false completion:nil];
                 
                 if (strongSelf.didDismiss != nil)
                     strongSelf.didDismiss();
@@ -490,15 +501,6 @@
                 if (strongController != nil && strongController.dismissalBlock != nil)
                     strongController.dismissalBlock();
             };
-            if (strongSelf.requestSearchController != nil) {
-                controller.requestSearchController = ^
-                {
-                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-                    __strong TGMediaAssetsController *strongController = weakController;
-                    if (strongSelf != nil)
-                        strongSelf.requestSearchController(strongController);
-                };
-            }
             return presentBlock(controller);
         };
         

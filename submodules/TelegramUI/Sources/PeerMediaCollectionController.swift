@@ -548,6 +548,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {
+        }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
         }, statuses: nil)
         

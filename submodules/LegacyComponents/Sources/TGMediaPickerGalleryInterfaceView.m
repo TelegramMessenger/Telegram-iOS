@@ -1678,7 +1678,7 @@
             _landscapeToolbarView.frame = CGRectMake(_landscapeToolbarView.frame.origin.x, screenEdges.top, TGPhotoEditorToolbarSize, self.frame.size.height);
             
             CGFloat topInset = _safeAreaInset.top > FLT_EPSILON ? _safeAreaInset.top - 14.0 : 0.0f;
-            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top + topInset, self.frame.size.width, 44);
+            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top + topInset, self.frame.size.width, 64);
         }
             break;
     }

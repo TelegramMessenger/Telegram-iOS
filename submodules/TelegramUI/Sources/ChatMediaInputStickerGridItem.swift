@@ -360,7 +360,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
                 let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                let fitSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
+                let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
                 self.animationNode?.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             }
         }

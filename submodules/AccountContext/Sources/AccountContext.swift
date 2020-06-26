@@ -204,13 +204,20 @@ public final class ChatPeekTimeout {
 
 public final class ChatPeerNearbyData: Equatable {
     public static func == (lhs: ChatPeerNearbyData, rhs: ChatPeerNearbyData) -> Bool {
+        if let lhsSticker = lhs.sticker, let rhsSticker = rhs.sticker, !lhsSticker.isEqual(to: rhsSticker) {
+            return false
+        } else if (lhs.sticker == nil) != (rhs.sticker == nil) {
+            return false
+        }
         return lhs.distance == rhs.distance
     }
     
     public let distance: Int32
+    public let sticker: TelegramMediaFile?
     
-    public init(distance: Int32) {
+    public init(distance: Int32, sticker: TelegramMediaFile?) {
         self.distance = distance
+        self.sticker = sticker
     }
 }
 

@@ -14,7 +14,7 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
     let navigationController = makeLegacyNavigationController(rootController: emptyController)
     navigationController.setNavigationBarHidden(true, animated: false)
     navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
-    
+
     legacyController.bind(controller: navigationController)
     
     present(legacyController, nil)
@@ -27,7 +27,7 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
         }
         completion(image)
     }
-    mixin.didFinishWithView = { [weak legacyController] in
+    mixin.didFinishWithView = {
         openCurrent?()
     }
     mixin.didDismiss = { [weak legacyController] in

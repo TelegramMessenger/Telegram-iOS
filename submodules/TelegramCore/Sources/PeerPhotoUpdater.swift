@@ -125,12 +125,13 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                     |> mapError { _ in return UploadPeerPhotoError.generic }
                                     |> mapToSignal { photo -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                                         var representations: [TelegramMediaImageRepresentation] = []
+                                        var videoRepresentations: [TelegramMediaImage.VideoRepresentation] = []
                                         switch photo {
                                         case let .photo(photo: apiPhoto, users: _):
                                             switch apiPhoto {
                                                 case .photoEmpty:
                                                     break
-                                                case let .photo(_, _, _, _, _, sizes, videoSizes, dcId):
+                                                case let .photo(_, id, accessHash, fileReference, _, sizes, videoSizes, dcId):
                                                     var sizes = sizes
                                                     if sizes.count == 3 {
                                                         sizes.remove(at: 1)
@@ -147,14 +148,32 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                         }
                                                     }
                                                     
-                                                    if let resource = photoResult.resource as? LocalFileReferenceMediaResource {
-                                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
-                                                            for representation in representations {
-                                                                postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
+                                                    if let videoSizes = videoSizes {
+                                                        for size in videoSizes {
+                                                            switch size {
+                                                                case let .videoSize(type, location, w, h, size):
+                                                                    let resource: TelegramMediaResource
+                                                                    switch location {
+                                                                        case let .fileLocationToBeDeprecated(volumeId, localId):
+                                                                            resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: Int(size), fileReference: fileReference.makeData())
+                                                                    }
+                                                                    
+                                                                    videoRepresentations.append(TelegramMediaImage.VideoRepresentation(
+                                                                        dimensions: PixelDimensions(width: w, height: h),
+                                                                        resource: resource))
                                                             }
                                                         }
                                                     }
+                                                    
+                                                    for representation in representations {
+                                                        postbox.mediaBox.copyResourceData(from: photoResult.resource.id, to: representation.resource.id)
+                                                    }
                                                 
+                                                    if let resource = videoResult?.resource {
+                                                        for representation in videoRepresentations {
+                                                            postbox.mediaBox.copyResourceData(from: resource.id, to: representation.resource.id)
+                                                        }
+                                                    }
                                             }
                                         }
                                         return postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?) in
@@ -221,7 +240,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                 switch result {
                     case let .complete(representations):
                         if let resource = resource as? LocalFileReferenceMediaResource {
-                            if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath), options: [.mappedRead] ) {
                                 for representation in representations {
                                     postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
                                 }
@@ -285,13 +304,7 @@ public func updatePeerPhotoExisting(network: Network, reference: TelegramMediaIm
                 return .complete()
             }
             |> mapToSignal { _ -> Signal<Void, NoError> in
-                return network.request(Api.functions.photos.deletePhotos(id: [.inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: fileReference))]))
-                    |> `catch` { _ -> Signal<[Int64], NoError> in
-                        return .single([])
-                    }
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                }
+                return .complete()
             }
     }
 }

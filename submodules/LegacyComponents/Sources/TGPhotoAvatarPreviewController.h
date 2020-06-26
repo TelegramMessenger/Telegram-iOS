@@ -3,14 +3,14 @@
 @class PGPhotoEditor;
 @class PGPhotoTool;
 @class TGPhotoEditorPreviewView;
+@class TGMediaPickerGalleryVideoScrubber;
 
 @interface TGPhotoAvatarPreviewController : TGPhotoEditorTabController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView;
 
-- (void)setScrubberPosition:(NSTimeInterval)position reset:(bool)reset;
-- (void)setScrubberPlaying:(bool)value;
-
-- (NSTimeInterval)coverPosition;
+- (void)beginScrubbing;
+- (void)endScrubbing:(bool (^)(void))completion;
+- (void)setPlayButtonHidden:(bool)hidden animated:(bool)animated;
 
 @end

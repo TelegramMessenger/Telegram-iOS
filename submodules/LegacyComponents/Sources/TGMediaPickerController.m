@@ -334,8 +334,13 @@
 {
     _hiddenItem = item;
     
-    for (TGMediaPickerCell *cell in [_collectionView visibleCells])
-        [cell setHidden:([cell.item isEqual:_hiddenItem]) animated:animated];
+    for (TGMediaPickerCell *cell in [_collectionView visibleCells]) {
+        if ([cell.item respondsToSelector:@selector(uniqueIdentifier)] && [_hiddenItem respondsToSelector:@selector(uniqueIdentifier)]) {
+            [cell setHidden:([[(id)cell.item uniqueIdentifier] isEqual:[_hiddenItem uniqueIdentifier]]) animated:animated];
+        } else {
+            [cell setHidden:([cell.item isEqual:_hiddenItem]) animated:animated];
+        }
+    }
 }
 
 - (void)_setupSelectionGesture

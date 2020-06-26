@@ -109,6 +109,9 @@
     
     bool _sendAsGif;
     bool _autoplayed;
+    
+    CMTime _chaseTime;
+    bool _chasingTime;
 }
 
 @property (nonatomic, strong) TGMediaPickerGalleryVideoItem *item;
@@ -124,6 +127,8 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        _chaseTime = kCMTimeInvalid;
+        
         _currentAudioSession = [[SMetaDisposable alloc] init];
         _playerItemDisposable = [[SMetaDisposable alloc] init];
         
@@ -366,6 +371,7 @@
         
         [strongSelf setItem:strongSelf.item];
         [strongSelf->_progressView setPlay];
+        strongSelf->_progressView.alpha = 1.0;
         
         strongSelf->_downloaded = true;
         if (strongSelf->_currentAvailabilityObserver != nil)
@@ -944,15 +950,6 @@
 {
     _progressVisible = progressVisible;
     
-    if (progressVisible && _progressView == nil)
-    {
-        _progressView = [[TGMessageImageViewOverlayView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 60.0f, 60.0f)];
-        [_progressView setRadius:60.0];
-        _progressView.userInteractionEnabled = false;
-        
-        _progressView.frame = (CGRect){{CGFloor((self.frame.size.width - _progressView.frame.size.width) / 2.0f), CGFloor((self.frame.size.height - _progressView.frame.size.height) / 2.0f)}, _progressView.frame.size};
-    }
-    
     if (progressVisible)
     {
         _progressView.alpha = 1.0f;
@@ -962,16 +959,14 @@
         if (animated)
         {
             [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
-             {
+            {
                  _progressView.alpha = 0.0f;
-             } completion:^(BOOL finished)
-             {
-                 if (finished)
-                     [_progressView removeFromSuperview];
-             }];
+            } completion:^(BOOL finished) {
+            }];
         }
-        else
-            [_progressView removeFromSuperview];
+        else {
+            _progressView.alpha = 0.0f;
+        }
     }
     
     [_progressView setProgress:value cancelEnabled:false animated:animated];
@@ -1251,7 +1246,12 @@
 
 - (void)playerItemDidPlayToEndTime:(NSNotification *)__unused notification
 {
-    if (!_sendAsGif)
+    bool isGif = _sendAsGif;
+    if (!_sendAsGif && [self.item.asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        isGif = ((TGCameraCapturedVideo *)self.item.asset).originalAsset.type == TGMediaAssetGifType;
+    }
+    
+    if (!isGif)
     {
         self.isPlaying = false;
         [_player pause];
@@ -1280,7 +1280,29 @@
 - (void)_seekToPosition:(NSTimeInterval)position manual:(bool)__unused manual
 {
     CMTime targetTime = CMTimeMakeWithSeconds(position, NSEC_PER_SEC);
-    [self.player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+    
+    if (CMTIME_COMPARE_INLINE(targetTime, !=, _chaseTime))
+    {
+        _chaseTime = targetTime;
+        
+        if (!_chasingTime) {
+            [self chaseTime];
+        }
+    }
+}
+
+- (void)chaseTime {
+    _chasingTime = true;
+    CMTime currentChasingTime = _chaseTime;
+    
+    [self.player.currentItem seekToTime:currentChasingTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
+        if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime)) {
+            _chasingTime = false;
+            _chaseTime = kCMTimeInvalid;
+        } else {
+            [self chaseTime];
+        }
+    }];
 }
 
 #pragma mark - Video Scrubber Data Source & Delegate
