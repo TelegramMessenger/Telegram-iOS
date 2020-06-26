@@ -69,6 +69,9 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
     private let context: AccountContext
     private let backgroundNode: ASDisplayNode
     private let videoNode: OverlayUniversalVideoNode
+    private let disableInternalAnimationIn: Bool
+    private let isUIHiddenUpdated: () -> Void
+    private let unembedWhenPortrait: (OverlayMediaItemNode) -> Bool
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
@@ -78,9 +81,14 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
     private(set) var interactiveExtension: CGFloat = 0.0
     private var freezeInteractiveExtension = false
     
-    init(context: AccountContext, videoNode: OverlayUniversalVideoNode, interactiveExtensionUpdated: @escaping (ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void) {
+    private(set) var isUIHidden: Bool = false
+    
+    init(context: AccountContext, videoNode: OverlayUniversalVideoNode, disableInternalAnimationIn: Bool, interactiveExtensionUpdated: @escaping (ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, isUIHiddenUpdated: @escaping () -> Void, unembedWhenPortrait: @escaping (OverlayMediaItemNode) -> Bool) {
         self.dismissed = dismissed
         self.interactiveExtensionUpdated = interactiveExtensionUpdated
+        self.isUIHiddenUpdated = isUIHiddenUpdated
+        self.unembedWhenPortrait = unembedWhenPortrait
+        self.disableInternalAnimationIn = disableInternalAnimationIn
         
         self.context = context
         
@@ -96,6 +104,14 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
         
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        
+        self.videoNode.controlsAreShowingUpdated = { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isUIHidden = !value
+            strongSelf.isUIHiddenUpdated()
+        }
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -116,7 +132,7 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
             
             if translation.y > 80.0 {
                 self.freezeInteractiveExtension = true
-                self.videoNode.customExpand?()
+                self.expandIntoPiP()
             } else {
                 self.interactiveExtension = max(0.0, offset)
                 self.interactiveExtensionUpdated(.immediate)
@@ -146,72 +162,63 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
             let sourceFrame = self.videoNode.view.convert(self.videoNode.bounds, to: transitionSurface.view)
             let targetFrame = self.view.convert(videoFrame, to: transitionSurface.view)
             
-            self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
-            transitionSurface.addSubnode(self.videoNode)
-            
-            let navigationBarCopy = navigationBar?.view.snapshotView(afterScreenUpdates: true)
-            let navigationBarContainer = UIView()
-            navigationBarContainer.frame = targetFrame
-            navigationBarContainer.clipsToBounds = true
-            transitionSurface.view.addSubview(navigationBarContainer)
-            
-            navigationBarContainer.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-            
-            if let navigationBar = navigationBar, let navigationBarCopy = navigationBarCopy {
-                let navigationFrame = navigationBar.view.convert(navigationBar.bounds, to: transitionSurface.view)
-                let navigationSourceFrame = navigationFrame.offsetBy(dx: -sourceFrame.minX, dy: -sourceFrame.minY)
-                let navigationTargetFrame = navigationFrame.offsetBy(dx: -targetFrame.minX, dy: -targetFrame.minY)
-                navigationBarCopy.frame = navigationTargetFrame
-                navigationBarContainer.addSubview(navigationBarCopy)
+            var navigationBarCopy: UIView?
+            var navigationBarContainer: UIView?
+            var nodeTransition = transition
+            if self.disableInternalAnimationIn {
+                nodeTransition = .immediate
+            } else {
+                self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
+                transitionSurface.addSubnode(self.videoNode)
                 
-                navigationBarCopy.layer.animateFrame(from: navigationSourceFrame, to: navigationTargetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-                navigationBarCopy.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+                navigationBarCopy = navigationBar?.view.snapshotView(afterScreenUpdates: true)
+                let navigationBarContainerValue = UIView()
+                navigationBarContainer = navigationBarContainerValue
+                navigationBarContainerValue.frame = targetFrame
+                navigationBarContainerValue.clipsToBounds = true
+                transitionSurface.view.addSubview(navigationBarContainerValue)
             }
             
-            self.videoNode.updateRoundCorners(false, transition: .animated(duration: 0.25, curve: .spring))
-            self.videoNode.showControls()
+            if !self.disableInternalAnimationIn {
+                navigationBarContainer?.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            }
             
-            self.videoNode.updateLayout(targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
-            self.videoNode.frame = targetFrame
-            self.videoNode.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                navigationBarContainer.removeFromSuperview()
-                strongSelf.addSubnode(strongSelf.videoNode)
-                if let (size, topInset, interactiveExtension) = strongSelf.validLayout {
-                    strongSelf.updateLayout(size: size, topInset: topInset, interactiveExtension: interactiveExtension, transition: .immediate, transitionSurface: nil, navigationBar: nil)
-                }
-            })
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            
-            self.videoNode.customExpand = { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
-                
-                strongSelf.videoNode.customExpand = nil
-                strongSelf.videoNode.customClose = nil
-                
-                let previousFrame = strongSelf.videoNode.frame
-                strongSelf.context.sharedContext.mediaManager.setOverlayVideoNode(strongSelf.videoNode)
-                strongSelf.videoNode.updateRoundCorners(true, transition: transition)
-                
-                if let targetSuperview = strongSelf.videoNode.view.superview {
-                    let sourceFrame = strongSelf.view.convert(previousFrame, to: targetSuperview)
-                    let targetFrame = strongSelf.videoNode.frame
-                    strongSelf.videoNode.frame = sourceFrame
-                    strongSelf.videoNode.updateLayout(sourceFrame.size, transition: .immediate)
+            if !self.disableInternalAnimationIn {
+                if let navigationBar = navigationBar, let navigationBarCopy = navigationBarCopy {
+                    let navigationFrame = navigationBar.view.convert(navigationBar.bounds, to: transitionSurface.view)
+                    let navigationSourceFrame = navigationFrame.offsetBy(dx: -sourceFrame.minX, dy: -sourceFrame.minY)
+                    let navigationTargetFrame = navigationFrame.offsetBy(dx: -targetFrame.minX, dy: -targetFrame.minY)
+                    navigationBarCopy.frame = navigationTargetFrame
+                    navigationBarContainer?.addSubview(navigationBarCopy)
                     
-                    transition.updateFrame(node: strongSelf.videoNode, frame: targetFrame)
-                    strongSelf.videoNode.updateLayout(targetFrame.size, transition: transition)
+                    navigationBarCopy.layer.animateFrame(from: navigationSourceFrame, to: navigationTargetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+                    navigationBarCopy.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
                 }
-                
-                strongSelf.dismissed()
             }
             
+            self.videoNode.updateRoundCorners(false, transition: nodeTransition)
+            if !self.disableInternalAnimationIn {
+                self.videoNode.showControls()
+            }
+            
+            self.videoNode.updateLayout(targetFrame.size, transition: nodeTransition)
+            self.videoNode.frame = targetFrame
+            if self.disableInternalAnimationIn {
+                self.addSubnode(self.videoNode)
+            } else {
+                self.videoNode.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    navigationBarContainer?.removeFromSuperview()
+                    strongSelf.addSubnode(strongSelf.videoNode)
+                    if let (size, topInset, interactiveExtension) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, topInset: topInset, interactiveExtension: interactiveExtension, transition: .immediate, transitionSurface: nil, navigationBar: nil)
+                    }
+                })
+                self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+         
             self.videoNode.customClose = { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -226,6 +233,39 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
             self.videoNode.layer.transform = CATransform3DIdentity
             transition.updateFrame(node: self.videoNode, frame: videoFrame)
         }
+    }
+    
+    func expand(intoLandscape: Bool) {
+        if intoLandscape {
+            let unembedWhenPortrait = self.unembedWhenPortrait
+            self.videoNode.customUnembedWhenPortrait = { videoNode in
+                unembedWhenPortrait(videoNode)
+            }
+        }
+        self.videoNode.expand()
+    }
+    
+    func expandIntoPiP() {
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
+        
+        self.videoNode.customExpand = nil
+        self.videoNode.customClose = nil
+        
+        let previousFrame = self.videoNode.frame
+        self.context.sharedContext.mediaManager.setOverlayVideoNode(self.videoNode)
+        self.videoNode.updateRoundCorners(true, transition: transition)
+        
+        if let targetSuperview = self.videoNode.view.superview {
+            let sourceFrame = self.view.convert(previousFrame, to: targetSuperview)
+            let targetFrame = self.videoNode.frame
+            self.videoNode.frame = sourceFrame
+            self.videoNode.updateLayout(sourceFrame.size, transition: .immediate)
+            
+            transition.updateFrame(node: self.videoNode, frame: targetFrame)
+            self.videoNode.updateLayout(targetFrame.size, transition: transition)
+        }
+        
+        self.dismissed()
     }
 }
 
@@ -387,6 +427,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var embeddedTitlePeekContent: ChatEmbeddedTitlePeekContent = .none
     private var embeddedTitleContentNode: ChatEmbeddedTitleContentNode?
     private var dismissedEmbeddedTitleContentNode: ChatEmbeddedTitleContentNode?
+    var hasEmbeddedTitleContent: Bool {
+        return self.embeddedTitleContentNode != nil
+    }
     
     init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
         self.context = context
@@ -891,6 +934,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let statusBarHeight = layout.insets(options: [.statusBar]).top
+        
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.supernode != nil {
+            if layout.size.width > layout.size.height {
+                self.embeddedTitleContentNode = nil
+                self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                embeddedTitleContentNode.expand(intoLandscape: true)
+                self.updateHasEmbeddedTitleContent?()
+            }
+        }
         
         if let embeddedTitleContentNode = self.embeddedTitleContentNode {
             let embeddedSize = CGSize(width: layout.size.width, height: min(400.0, embeddedTitleContentNode.calculateHeight(width: layout.size.width)) + statusBarHeight + embeddedTitleContentNode.interactiveExtension)
@@ -2648,7 +2700,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    var updateHasEmbeddedTitleContent: ((Bool) -> Void)?
+    var isEmbeddedTitleContentHidden: Bool {
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
+            return embeddedTitleContentNode.isUIHidden
+        } else {
+            return false
+        }
+    }
+    
+    var updateHasEmbeddedTitleContent: (() -> Void)?
     
     func acceptEmbeddedTitlePeekContent(content: NavigationControllerDropContent) -> Bool {
         guard let (_, navigationHeight) = self.validLayout else {
@@ -2658,7 +2718,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
         if let item = content.item as? VideoNavigationControllerDropContentItem, let itemNode = item.itemNode as? OverlayUniversalVideoNode {
-            let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: itemNode, interactiveExtensionUpdated: { [weak self] transition in
+            let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: itemNode, disableInternalAnimationIn: false, interactiveExtensionUpdated: { [weak self] transition in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2671,12 +2731,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     strongSelf.embeddedTitleContentNode = nil
                     strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
                     strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
-                    strongSelf.updateHasEmbeddedTitleContent?(false)
+                    strongSelf.updateHasEmbeddedTitleContent?()
                 }
+            }, isUIHiddenUpdated: { [weak self] in
+                self?.updateHasEmbeddedTitleContent?()
+            }, unembedWhenPortrait: { [weak self] itemNode in
+                guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
+                    return false
+                }
+                strongSelf.unembedWhenPortrait(contentNode: itemNode)
+                return true
             })
             self.embeddedTitleContentNode = embeddedTitleContentNode
             self.embeddedTitlePeekContent = .none
-            self.updateHasEmbeddedTitleContent?(true)
+            self.updateHasEmbeddedTitleContent?()
             DispatchQueue.main.async {
                 self.requestLayout(.animated(duration: 0.25, curve: .spring))
             }
@@ -2684,5 +2752,47 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return true
         }
         return false
+    }
+    
+    private func unembedWhenPortrait(contentNode: OverlayUniversalVideoNode) {
+        let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: contentNode, disableInternalAnimationIn: true, interactiveExtensionUpdated: { [weak self] transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.requestLayout(transition)
+        }, dismissed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
+                strongSelf.embeddedTitleContentNode = nil
+                strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
+                strongSelf.updateHasEmbeddedTitleContent?()
+            }
+        }, isUIHiddenUpdated: { [weak self] in
+            self?.updateHasEmbeddedTitleContent?()
+        }, unembedWhenPortrait: { [weak self] itemNode in
+            guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
+                return false
+            }
+            strongSelf.unembedWhenPortrait(contentNode: itemNode)
+            return true
+        })
+        
+        self.embeddedTitleContentNode = embeddedTitleContentNode
+        self.embeddedTitlePeekContent = .none
+        self.updateHasEmbeddedTitleContent?()
+        self.requestLayout(.immediate)
+    }
+    
+    func willNavigateAway() {
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
+            self.embeddedTitleContentNode = nil
+            self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+            embeddedTitleContentNode.expandIntoPiP()
+            self.requestLayout(.animated(duration: 0.25, curve: .spring))
+            self.updateHasEmbeddedTitleContent?()
+        }
     }
 }

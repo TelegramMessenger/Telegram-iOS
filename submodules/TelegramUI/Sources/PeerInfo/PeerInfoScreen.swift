@@ -4345,6 +4345,9 @@ public final class PeerInfoScreen: ViewController {
             if other.contentNode != nil {
                 return nil
             }
+            if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
+                return nil
+            }
             if let tag = other.userInfo as? PeerInfoNavigationSourceTag, tag.peerId == peerId {
                 return PeerInfoNavigationTransitionNode(screenNode: strongSelf.controllerNode, presentationData: strongSelf.presentationData, headerNode: strongSelf.controllerNode.headerNode)
             }

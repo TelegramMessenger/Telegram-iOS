@@ -561,6 +561,9 @@ public enum TabBarItemContextActionType {
         super.viewDidDisappear(animated)
     }
     
+    open func viewWillLeaveNavigation() {
+    }
+    
     open override func viewDidAppear(_ animated: Bool) {
         self.activeInputView = nil
         
