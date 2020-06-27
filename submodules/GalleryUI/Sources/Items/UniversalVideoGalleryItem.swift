@@ -290,6 +290,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
+    private var customUnembedWhenPortrait: ((OverlayMediaItemNode) -> Bool)?
+    
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
@@ -423,6 +425,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        if let _ = self.customUnembedWhenPortrait, layout.size.width < layout.size.height {
+            self.expandIntoCustomPiP()
+        }
+        
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         var dismiss = false
@@ -888,6 +894,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if let node = node.0 as? OverlayMediaItemNode {
+            self.customUnembedWhenPortrait = node.customUnembedWhenPortrait
+            node.customUnembedWhenPortrait = nil
+        }
+        
+        if let node = node.0 as? OverlayMediaItemNode, self.context.sharedContext.mediaManager.hasOverlayVideoNode(node) {
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
             
@@ -960,10 +971,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
             }
             
-            videoNode.allowsGroupOpacity = true
-            videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak videoNode] _ in
-                videoNode?.allowsGroupOpacity = false
-            })
+            if surfaceCopyView.superview != nil {
+                videoNode.allowsGroupOpacity = true
+                videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak videoNode] _ in
+                    videoNode?.allowsGroupOpacity = false
+                })
+            }
             videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
             
             transformedFrame.origin = CGPoint()
@@ -1272,9 +1285,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    @objc func pictureInPictureButtonPressed() {
-        if let item = self.item, let videoNode = self.videoNode {
-            
+    private func expandIntoCustomPiP() {
+        if let item = self.item, let videoNode = self.videoNode, let customUnembedWhenPortrait = customUnembedWhenPortrait {
+            self.customUnembedWhenPortrait = nil
             videoNode.setContinuePlayingWithoutSoundOnLostAudioSession(false)
             
             let context = self.context
@@ -1306,9 +1319,77 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
                                 return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
                                     return (overlayNode?.view.snapshotContentTree(), nil)
-                                }), addToTransitionSurface: { [weak overlaySupernode, weak overlayNode] view in
-                                    overlaySupernode?.view.addSubview(view)
-                                    overlayNode?.canAttachContent = false
+                                }), addToTransitionSurface: { [weak context, weak overlaySupernode, weak overlayNode] view in
+                                    guard let context = context, let overlayNode = overlayNode else {
+                                        return
+                                    }
+                                    if context.sharedContext.mediaManager.hasOverlayVideoNode(overlayNode) {
+                                        overlaySupernode?.view.addSubview(view)
+                                    }
+                                    overlayNode.canAttachContent = false
+                                })
+                            } else if let info = context.sharedContext.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
+                                return GalleryTransitionArguments(transitionNode: (info.1, info.1.bounds, {
+                                    return info.2()
+                                }), addToTransitionSurface: info.0)
+                            }
+                            return nil
+                        }))
+                    case .webPage:
+                        break
+                }
+            }
+            if customUnembedWhenPortrait(overlayNode) {
+                self.beginCustomDismiss()
+                self.statusNode.isHidden = true
+                self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
+                    self?.completeCustomDismiss()
+                })
+            }
+        }
+    }
+    
+    @objc func pictureInPictureButtonPressed() {
+        if let item = self.item, let videoNode = self.videoNode {
+            videoNode.setContinuePlayingWithoutSoundOnLostAudioSession(false)
+            
+            let context = self.context
+            let baseNavigationController = self.baseNavigationController()
+            let mediaManager = self.context.sharedContext.mediaManager
+            var expandImpl: (() -> Void)?
+            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, expand: {
+                expandImpl?()
+            }, close: { [weak mediaManager] in
+                mediaManager?.setOverlayVideoNode(nil)
+            })
+            expandImpl = { [weak overlayNode] in
+                guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
+                    return
+                }
+                
+                switch contentInfo {
+                    case let .message(message):
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), replaceRootController: { controller, ready in
+                            if let baseNavigationController = baseNavigationController {
+                                baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
+                            }
+                        }, baseNavigationController: baseNavigationController)
+                        gallery.temporaryDoNotWaitForReady = true
+                        
+                        baseNavigationController?.view.endEditing(true)
+                        
+                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak overlayNode] id, media in
+                            if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
+                                return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
+                                    return (overlayNode?.view.snapshotContentTree(), nil)
+                                }), addToTransitionSurface: { [weak context, weak overlaySupernode, weak overlayNode] view in
+                                    guard let context = context, let overlayNode = overlayNode else {
+                                        return
+                                    }
+                                    if context.sharedContext.mediaManager.hasOverlayVideoNode(overlayNode) {
+                                        overlaySupernode?.view.addSubview(view)
+                                    }
+                                    overlayNode.canAttachContent = false
                                 })
                             } else if let info = context.sharedContext.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
                                 return GalleryTransitionArguments(transitionNode: (info.1, info.1.bounds, {

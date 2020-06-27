@@ -322,6 +322,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let peekTimerDisposable = MetaDisposable()
     
     private var hasEmbeddedTitleContent = false
+    private var isEmbeddedTitleContentHidden = false
 
     public override var customData: Any? {
         return self.chatLocation
@@ -375,7 +376,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .inline:
                 navigationBarPresentationData = nil
             default:
-                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true)
+                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true, hideBadge: false)
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
@@ -2059,6 +2060,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if case let .peer(peerId) = chatLocation, peerId != context.account.peerId, subject != .scheduledMessages {
             self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
         }
+        self.navigationBar?.allowsCustomTransition = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return !strongSelf.chatDisplayNode.hasEmbeddedTitleContent
+        }
         
         self.chatTitleView = ChatTitleView(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder)
         self.navigationItem.titleView = self.chatTitleView
@@ -2799,9 +2806,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let navigationBarTheme: NavigationBarTheme
             
         if self.hasEmbeddedTitleContent {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: true)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: true, hideBadge: true)
         } else {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: true)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: true, hideBadge: false)
         }
         
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -4610,6 +4617,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return nil
                 }))
            }
+        }, unarchivePeer: { [weak self] in
+            guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                return
+            }
+            unarchiveAutomaticallyArchivedPeer(account: strongSelf.context.account, peerId: peerId)
+            
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone), elevatedLayout: false, action: { _ in return false }), in: .current)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         switch self.chatLocation {
@@ -4756,10 +4770,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }))
         }
         
-        self.chatDisplayNode.updateHasEmbeddedTitleContent = { [weak self] hasEmbeddedTitleContent in
+        self.chatDisplayNode.updateHasEmbeddedTitleContent = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
+            
+            let hasEmbeddedTitleContent = strongSelf.chatDisplayNode.hasEmbeddedTitleContent
+            let isEmbeddedTitleContentHidden = strongSelf.chatDisplayNode.isEmbeddedTitleContentHidden
+            
             if strongSelf.hasEmbeddedTitleContent != hasEmbeddedTitleContent {
                 strongSelf.hasEmbeddedTitleContent = hasEmbeddedTitleContent
                 
@@ -4779,6 +4797,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 strongSelf.updateNavigationBarPresentation()
+            }
+            
+            if strongSelf.isEmbeddedTitleContentHidden != isEmbeddedTitleContentHidden {
+                strongSelf.isEmbeddedTitleContentHidden = isEmbeddedTitleContentHidden
+                
+                if let navigationBar = strongSelf.navigationBar {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                    transition.updateAlpha(node: navigationBar, alpha: isEmbeddedTitleContentHidden ? 0.0 : 1.0)
+                }
             }
         }
         
@@ -5172,6 +5199,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         })
+    }
+    
+    override public func viewWillLeaveNavigation() {
+        self.chatDisplayNode.willNavigateAway()
     }
     
     override public func inFocusUpdated(isInFocus: Bool) {

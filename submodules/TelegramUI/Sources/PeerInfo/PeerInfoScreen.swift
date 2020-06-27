@@ -416,7 +416,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, statuses: nil)
+        }, unarchivePeer: {}, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         
@@ -4388,6 +4388,9 @@ public final class PeerInfoScreen: ViewController {
                 return nil
             }
             if other.contentNode != nil {
+                return nil
+            }
+            if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
                 return nil
             }
             if let tag = other.userInfo as? PeerInfoNavigationSourceTag, tag.peerId == peerId {

@@ -16,6 +16,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case reportSpam
     case reportUserSpam
     case reportIrrelevantGeoLocation
+    case unarchive
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -35,6 +36,8 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_ReportSpam
             case .reportIrrelevantGeoLocation:
                 return strings.Conversation_ReportGroupLocation
+            case .unarchive:
+                return strings.Conversation_Unarchive
         }
     }
 }
@@ -42,7 +45,19 @@ private enum ChatReportPeerTitleButton: Equatable {
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
     if let peer = state.renderedPeer?.chatMainPeer as? TelegramUser, let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
-        if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+        if peerStatusSettings.contains(.autoArchived) {
+            if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
+                if peer.isDeleted {
+                    buttons.append(.reportUserSpam)
+                } else {
+                    if !state.peerIsBlocked {
+                        buttons.append(.block)
+                    }
+                }
+            }
+            
+            buttons.append(.unarchive)
+        } else if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
             if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
                 if !state.peerIsBlocked {
                     buttons.append(.block)
@@ -375,12 +390,15 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 }
             } else {
                 let additionalRightInset: CGFloat = 36.0
-                let areaWidth = width - maxInset * 2.0 - additionalRightInset
+                var areaWidth = width - maxInset * 2.0 - additionalRightInset
                 let maxButtonWidth = floor(areaWidth / CGFloat(self.buttons.count))
                 let buttonSizes = self.buttons.map { button -> CGFloat in
                     return button.1.sizeThatFits(CGSize(width: maxButtonWidth, height: 100.0)).width
                 }
                 let buttonsWidth = buttonSizes.reduce(0.0, +)
+                if buttonsWidth < areaWidth - 20.0 {
+                    areaWidth += additionalRightInset
+                }
                 let maxButtonSpacing = floor((areaWidth - buttonsWidth) / CGFloat(self.buttons.count - 1))
                 let buttonSpacing = min(maxButtonSpacing, 110.0)
                 let updatedButtonsWidth = buttonsWidth + CGFloat(self.buttons.count - 1) * buttonSpacing
@@ -469,6 +487,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.shareAccountContact()
                     case .block, .reportSpam, .reportUserSpam:
                         self.interfaceInteraction?.reportPeer()
+                    case .unarchive:
+                        self.interfaceInteraction?.unarchivePeer()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
                     case .reportIrrelevantGeoLocation:

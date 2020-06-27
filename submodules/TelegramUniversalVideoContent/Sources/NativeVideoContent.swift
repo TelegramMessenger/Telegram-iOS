@@ -289,10 +289,20 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             applyLayout()
         }
         
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.playerNode.frame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0)
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size))
+        let fromFrame = self.playerNode.frame
+        let toFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0)
+        if case let .animated(duration, curve) = transition, fromFrame != toFrame, !fromFrame.width.isZero, !fromFrame.height.isZero, !toFrame.width.isZero, !toFrame.height.isZero {
+            self.playerNode.frame = toFrame
+            transition.animatePosition(node: self.playerNode, from: CGPoint(x: fromFrame.center.x - toFrame.center.x, y: fromFrame.center.y - toFrame.center.y))
+            
+            let transform = CATransform3DScale(CATransform3DIdentity, fromFrame.width / toFrame.width, fromFrame.height / toFrame.height, 1.0)
+            self.playerNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: curve.timingFunction, duration: duration)
+        } else {
+            transition.updateFrame(node: self.playerNode, frame: toFrame)
+        }
         if let thumbnailNode = self.thumbnailNode {
-            thumbnailNode.frame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0)
+            transition.updateFrame(node: thumbnailNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
         }
     }
     

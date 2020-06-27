@@ -117,6 +117,7 @@ open class NavigationBar: ASDisplayNode {
     
     public var userInfo: Any?
     public var makeCustomTransitionNode: ((NavigationBar, Bool) -> CustomNavigationTransitionNode?)?
+    public var allowsCustomTransition: (() -> Bool)?
     
     private var collapsed: Bool {
         get {

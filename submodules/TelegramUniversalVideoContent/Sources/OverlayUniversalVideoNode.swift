@@ -33,17 +33,19 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     private let defaultExpand: () -> Void
     public var customExpand: (() -> Void)?
     public var customClose: (() -> Void)?
+    public var controlsAreShowingUpdated: ((Bool) -> Void)?
     
     public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
         self.defaultExpand = expand
         
         var expandImpl: (() -> Void)?
+        var controlsAreShowingUpdatedImpl: ((Bool) -> Void)?
         
         var unminimizeImpl: (() -> Void)?
         var togglePlayPauseImpl: (() -> Void)?
         var closeImpl: (() -> Void)?
-        let decoration = OverlayVideoDecoration(unminimize: {
+        let decoration = OverlayVideoDecoration(contentDimensions: content.dimensions, unminimize: {
             unminimizeImpl?()
         }, togglePlayPause: {
             togglePlayPauseImpl?()
@@ -51,6 +53,8 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
             expandImpl?()
         }, close: {
             closeImpl?()
+        }, controlsAreShowingUpdated: { value in
+            controlsAreShowingUpdatedImpl?(value)
         })
         self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
         self.decoration = decoration
@@ -58,14 +62,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         super.init()
         
         expandImpl = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            if let customExpand = strongSelf.customExpand {
-                customExpand()
-            } else {
-                strongSelf.defaultExpand()
-            }
+            self?.expand()
         }
         
         unminimizeImpl = { [weak self] in
@@ -90,6 +87,10 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
                 strongSelf.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
             }
         }
+        
+        controlsAreShowingUpdatedImpl = { [weak self] value in
+            self?.controlsAreShowingUpdated?(value)
+        }
 
         self.clipsToBounds = true
         self.cornerRadius = 4.0
@@ -104,7 +105,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
                 if previous != value {
                     if !value {
                         strongSelf.dismiss()
-                        close()
+                        closeImpl?()
                     }
                 }
             }
@@ -154,5 +155,13 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     
     public func showControls() {
         self.decoration.showControls()
+    }
+    
+    public func expand() {
+        if let customExpand = self.customExpand {
+            customExpand()
+        } else {
+            self.defaultExpand()
+        }
     }
 }

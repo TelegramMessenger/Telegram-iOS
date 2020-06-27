@@ -123,7 +123,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, statuses: nil)
+        }, unarchivePeer: {}, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         
