@@ -486,33 +486,33 @@
                 progress = 1.0f;
             }
         } else if ([next isKindOfClass:[AVAsset class]]) {
-//            strongSelf->_playerItem = [AVPlayerItem playerItemWithAsset:(AVAsset *)next];
-//            strongSelf->_player = [AVPlayer playerWithPlayerItem:strongSelf->_playerItem];
-//            strongSelf->_player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
-//            strongSelf->_player.muted = true;
-//            
-//            [photoEditor setPlayerItem:strongSelf->_playerItem forCropRect:photoEditor.cropRect cropRotation:0.0 cropOrientation:photoEditor.cropOrientation cropMirrored:photoEditor.cropMirrored];
-//                                    
-//            TGDispatchOnMainThread(^
-//            {
-//                if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]])
-//                    [(TGPhotoAvatarCropController *)strongSelf->_currentTabController setPlayer:strongSelf->_player];
-//                
-//                [strongSelf->_previewView performTransitionInWithCompletion:^
-//                {
-//                }];
-//                
-//                if (strongSelf->_scheduledVideoPlayback) {
-//                    strongSelf->_scheduledVideoPlayback = false;
-//                    [strongSelf startVideoPlayback:true];
-//                }
-//            });
+            strongSelf->_playerItem = [AVPlayerItem playerItemWithAsset:(AVAsset *)next];
+            strongSelf->_player = [AVPlayer playerWithPlayerItem:strongSelf->_playerItem];
+            strongSelf->_player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
+            strongSelf->_player.muted = true;
+            
+            [photoEditor setPlayerItem:strongSelf->_playerItem forCropRect:photoEditor.cropRect cropRotation:0.0 cropOrientation:photoEditor.cropOrientation cropMirrored:photoEditor.cropMirrored];
+                                    
+            TGDispatchOnMainThread(^
+            {
+                if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoAvatarCropController class]])
+                    [(TGPhotoAvatarCropController *)strongSelf->_currentTabController setPlayer:strongSelf->_player];
+                
+                [strongSelf->_previewView performTransitionInWithCompletion:^
+                {
+                }];
+                
+                if (strongSelf->_scheduledVideoPlayback) {
+                    strongSelf->_scheduledVideoPlayback = false;
+                    [strongSelf startVideoPlayback:true];
+                }
+            });
             progress = 1.0f;
             doneEnabled = true;
         } else if ([next isKindOfClass:[NSNumber class]]) {
             progress = [next floatValue];
             progressVisible = true;
-//            doneEnabled = false;
+            doneEnabled = false;
         }
         
         TGDispatchOnMainThread(^{
