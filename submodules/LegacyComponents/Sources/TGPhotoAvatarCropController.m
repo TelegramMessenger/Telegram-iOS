@@ -374,15 +374,24 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         [self.view addSubview:snapshotView];
 
         CGRect targetCropViewFrame = [self.view convertRect:targetFrame toView:_wrapperView];
+                
+        if (!self.item.isVideo) {
+            _previewView.hidden = true;
+        }
         
         [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
         {
             snapshotView.frame = targetFrame;
-            snapshotView.alpha = 1.0f;
+            if (self.item.isVideo) {
+                _cropView.alpha = 0.0f;
+            } else {
+                snapshotView.alpha = 1.0f;
+            }
             _cropView.frame = targetCropViewFrame;
             [_cropView invalidateCropRect];
         } completion:^(__unused BOOL finished)
         {
+            _previewView.hidden = false;
             if (self.finishedTransitionOut != nil)
                 self.finishedTransitionOut();
         }];

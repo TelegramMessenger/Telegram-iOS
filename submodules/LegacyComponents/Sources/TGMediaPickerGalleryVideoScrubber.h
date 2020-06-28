@@ -44,6 +44,8 @@
 
 - (void)setRecipientName:(NSString *)recipientName;
 
+- (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position;
+
 @end
 
 @protocol TGMediaPickerGalleryVideoScrubberDelegate <NSObject>

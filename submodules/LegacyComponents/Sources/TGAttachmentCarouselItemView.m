@@ -908,8 +908,6 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             
             if (strongSelf.avatarCompletionBlock != nil)
                 strongSelf.avatarCompletionBlock(resultImage);
-            
-            [strongController dismissAnimated:true];
         };
         controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
             if (!hasChanges)
@@ -925,8 +923,6 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             
             if (strongSelf.avatarVideoCompletionBlock != nil)
                 strongSelf.avatarVideoCompletionBlock(resultImage, url, adjustments);
-            
-            [strongController dismissAnimated:true];
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {
