@@ -599,7 +599,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.reindexUnread(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
-    entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
+    //entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.videoCalls(experimentalSettings.videoCalls))

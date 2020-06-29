@@ -986,9 +986,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else if let _ = message.peers[message.id.peerId] as? TelegramSecretChat {
                             displayMediaPreviews = false
                         }
-                        if !item.context.sharedContext.immediateExperimentalUISettings.chatListPhotos {
-                            displayMediaPreviews = false
-                        }
                         if displayMediaPreviews {
                             let contentImageFillSize = CGSize(width: 8.0, height: contentImageSize.height)
                             _ = contentImageFillSize
