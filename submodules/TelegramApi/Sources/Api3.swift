@@ -6803,12 +6803,12 @@ public extension Api {
                     })
                 }
             
-                public static func uploadProfilePhoto(flags: Int32, file: Api.InputFile, video: Api.InputFile?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                public static func uploadProfilePhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(770436592)
+                    buffer.appendInt32(28740206)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    file.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {video!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
                     return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("flags", flags), ("file", file), ("video", video)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
                         let reader = BufferReader(buffer)
                         var result: Api.photos.Photo?

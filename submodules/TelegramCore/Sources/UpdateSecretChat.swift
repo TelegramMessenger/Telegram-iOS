@@ -78,7 +78,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
             }
         case .encryptedChatEmpty(_):
             break
-        case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
+        case let .encryptedChatRequested(_, folderId, _, accessHash, date, adminId, participantId, gA):
             if currentPeer == nil && participantId == accountPeerId.id {
                 if settings.acceptOnThisDevice {
                     let state = SecretChatState(role: .participant, embeddedState: .handshake(.accepting), keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
@@ -92,11 +92,15 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                         
                         let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, role: updatedState.role, embeddedState: updatedState.embeddedState.peerState, messageAutoremoveTimeout: nil)
                         updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                        if folderId != nil {
+                            transaction.updatePeerChatListInclusion(peer.id, inclusion: .ifHasMessagesOrOneOf(groupId: Namespaces.PeerGroup.archive, pinningIndex: nil, minTimestamp: date))
+                        }
+                        
                         transaction.resetIncomingReadStates([peer.id: [
                             Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false),
                             Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false)
                             ]
-                            ])
+                        ])
                     } else {
                         assertionFailure()
                     }
