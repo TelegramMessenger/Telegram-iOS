@@ -1012,7 +1012,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     TGCameraCapturedVideo *capturedVideo = [[TGCameraCapturedVideo alloc] initWithURL:outputURL];
                     if (strongSelf->_intent == TGCameraControllerAvatarIntent || strongSelf->_intent == TGCameraControllerSignupAvatarIntent)
                     {
-                        [strongSelf presentPhotoResultControllerWithImage:capturedVideo metadata:nil completion:^{}];
+                        [strongSelf presentPhotoResultControllerWithImage:capturedVideo metadata:nil completion:^{
+                             [strongSelf->_interfaceView setRecordingVideo:false animated:true];
+                        }];
                     } else {
                         [strongSelf addResultItem:capturedVideo];
                         if (![strongSelf maybePresentResultControllerForItem:capturedVideo completion:nil])

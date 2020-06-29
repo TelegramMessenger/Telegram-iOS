@@ -113,8 +113,8 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 var index: Int32 = 0
                 for photo in photos {
                     let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                    if result.isEmpty, let first = initialEntries.first, photo.image.videoRepresentations.isEmpty {
-                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, first.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
+                    if result.isEmpty, let first = initialEntries.first {
+                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     } else {
                         result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     }
@@ -140,8 +140,8 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry
                 var index: Int32 = 0
                 for photo in photos {
                     let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                    if result.isEmpty, let first = initialEntries.first, photo.image.videoRepresentations.isEmpty {
-                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, first.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
+                    if result.isEmpty, let first = initialEntries.first {
+                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     } else {
                         result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     }

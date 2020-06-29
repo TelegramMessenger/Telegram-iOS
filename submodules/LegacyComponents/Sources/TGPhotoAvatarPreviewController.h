@@ -7,10 +7,9 @@
 
 @interface TGPhotoAvatarPreviewController : TGPhotoEditorTabController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIImageView *)dotImageView;
 
-- (void)beginScrubbing;
-- (void)endScrubbing:(bool (^)(void))completion;
-- (void)setPlayButtonHidden:(bool)hidden animated:(bool)animated;
+- (void)beginScrubbing:(bool)flash;
+- (void)endScrubbing:(bool)flash completion:(bool (^)(void))completion;
 
 @end

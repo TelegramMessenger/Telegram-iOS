@@ -236,7 +236,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         if let video = videoRepresentations.last, let id = id {
             let mediaManager = self.context.sharedContext.mediaManager
             let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-            let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+            let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
             videoNode.isUserInteractionEnabled = false
             videoNode.ownsContentNodeUpdated = { [weak self] owns in
@@ -626,7 +626,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 strongSelf.items = items
                 strongSelf.itemsUpdated?(items)
                 if let size = strongSelf.validLayout {
-                    strongSelf.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
+                    strongSelf.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: synchronous)
                 }
                 if items.isEmpty {
                     if !strongSelf.didSetReady {
@@ -762,7 +762,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let context: AccountContext
     let avatarNode: AvatarNode
     
-    private var videoNode: UniversalVideoNode?
+    fileprivate var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
     
     var tapped: (() -> Void)?
@@ -788,6 +788,21 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         }
     }
     
+    func reattachVideoNode() {
+        if let videoNode = self.videoNode {
+            let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
+            let shape = CAShapeLayer()
+            shape.path = maskPath.cgPath
+            videoNode.layer.mask = shape
+            
+            videoNode.transform = CATransform3DIdentity
+            videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
+            videoNode.frame = self.avatarNode.frame
+            
+            self.addSubnode(videoNode)
+        }
+    }
+    
     func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool) {
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
@@ -803,7 +818,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if let item = item, case let .image(reference, representations, videoRepresentations, immediateThumbnailData) = item, let video = videoRepresentations.last, case let .cloud(imageId, _, _) = reference {
                 let id = imageId
                 let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                 if videoContent.id != self.videoContent?.id {
                     let mediaManager = self.context.sharedContext.mediaManager
                     let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
@@ -835,9 +850,19 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 videoNode.frame = self.avatarNode.frame
                 
                 if isExpanded == videoNode.canAttachContent {
-                    videoNode.canAttachContent = !isExpanded
-                    if videoNode.canAttachContent {
-                        videoNode.play()
+                    let update = {
+                        videoNode.canAttachContent = !isExpanded
+                        if videoNode.canAttachContent {
+                            videoNode.seek(0.0)
+                            videoNode.play()
+                        }
+                    }
+                    if isExpanded {
+                        DispatchQueue.main.async {
+                            update()
+                        }
+                    } else {
+                        update()
                     }
                 }
             }
@@ -1011,20 +1036,28 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     }
     
     func animateAvatarCollapse(transition: ContainedViewLayoutTransition) {
-        if let currentItemNode = self.listContainerNode.currentItemNode, let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage, case .animated = transition {
-            let avatarCopyView = UIImageView()
-            avatarCopyView.image = unroundedImage
-            avatarCopyView.frame = self.avatarContainerNode.avatarNode.frame
-            avatarCopyView.center = currentItemNode.imageNode.position
-            currentItemNode.view.addSubview(avatarCopyView)
-            let scale = currentItemNode.imageNode.bounds.height / avatarCopyView.bounds.height
-            avatarCopyView.layer.transform = CATransform3DMakeScale(scale, scale, scale)
-            avatarCopyView.alpha = 0.0
-            transition.updateAlpha(layer: avatarCopyView.layer, alpha: 1.0, completion: { [weak avatarCopyView] _ in
-                Queue.mainQueue().after(0.1, {
-                    avatarCopyView?.removeFromSuperview()
+        if let currentItemNode = self.listContainerNode.currentItemNode, case .animated = transition {
+            if let videoNode = self.avatarContainerNode.videoNode {
+//                videoNode.position = currentItemNode.imageNode.position
+//                currentItemNode.addSubnode(videoNode)
+//                let scale = currentItemNode.imageNode.bounds.height / videoNode.bounds.height
+//                avatarCopyView.layer.transform = CATransform3DMakeScale(scale, scale, scale)
+//                self.avatarContainerNode.reattachVideoNode()
+            } else if let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage {
+                let avatarCopyView = UIImageView()
+                avatarCopyView.image = unroundedImage
+                avatarCopyView.frame = self.avatarContainerNode.avatarNode.frame
+                avatarCopyView.center = currentItemNode.imageNode.position
+                currentItemNode.view.addSubview(avatarCopyView)
+                let scale = currentItemNode.imageNode.bounds.height / avatarCopyView.bounds.height
+                avatarCopyView.layer.transform = CATransform3DMakeScale(scale, scale, scale)
+                avatarCopyView.alpha = 0.0
+                transition.updateAlpha(layer: avatarCopyView.layer, alpha: 1.0, completion: { [weak avatarCopyView] _ in
+                    Queue.mainQueue().after(0.1, {
+                        avatarCopyView?.removeFromSuperview()
+                    })
                 })
-            })
+            }
         }
     }
 }

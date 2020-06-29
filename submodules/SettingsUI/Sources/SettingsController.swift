@@ -1415,7 +1415,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                         if let profileImage = peer?.smallProfileImage {
                             state.updatingAvatar = .image(profileImage, false)
                         } else {
-                            state.updatingAvatar = .none
+                            state.updatingAvatar = ItemListAvatarAndNameInfoItemUpdatingAvatar.none
                         }
                         return state
                     }

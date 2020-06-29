@@ -1286,6 +1286,11 @@ typedef enum
     }
 }
 
+- (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position
+{
+    return [self _scrubberPositionForPosition:position duration:_duration];
+}
+
 - (CGPoint)_scrubberPositionForPosition:(NSTimeInterval)position duration:(NSTimeInterval)duration
 {
     return [self _scrubberPositionForPosition:position duration:duration zoomedIn:_zoomedIn];

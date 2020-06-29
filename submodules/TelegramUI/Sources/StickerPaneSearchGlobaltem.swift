@@ -103,7 +103,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
             }
         }
         
-        return (128.0 + additionalHeight, false)
+        return (128.0 + additionalHeight, !self.listAppearance)
     }
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {

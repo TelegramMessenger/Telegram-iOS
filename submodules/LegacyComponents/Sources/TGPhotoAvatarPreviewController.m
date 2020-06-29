@@ -26,6 +26,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     TGPhotoEditorSparseView *_wrapperView;
     TGMediaPickerGalleryVideoScrubber *_scrubberView;
+    
+    UIImageView *_dotImageView;
+    
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     UIView *_portraitWrapperBackgroundView;
@@ -35,8 +38,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     UIView *_flashView;
     UIView *_portraitToolControlView;
     UIView *_landscapeToolControlView;
-    UIImageView *_areaMaskView;
-    CGFloat _currentDiameter;
     UILabel *_coverLabel;
 }
 
@@ -47,7 +48,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIImageView *)dotImageView
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -55,6 +56,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         self.photoEditor = photoEditor;
         self.previewView = previewView;
         _scrubberView = scrubberView;
+        
+        _dotImageView = dotImageView;
     }
     return self;
 }
@@ -92,28 +95,26 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         
         _videoAreaView = [[UIView alloc] init];
         [self.view insertSubview:_videoAreaView belowSubview:_wrapperView];
+        
+        [_portraitToolsWrapperView addSubview:_scrubberView];
+        
+        _flashView = [[UIView alloc] init];
+        _flashView.alpha = 0.0;
+        _flashView.backgroundColor = [UIColor whiteColor];
+        _flashView.userInteractionEnabled = false;
+        [_videoAreaView addSubview:_flashView];
+        
+        _coverLabel = [[UILabel alloc] init];
+        _coverLabel.alpha = 0.7f;
+        _coverLabel.backgroundColor = [UIColor clearColor];
+        _coverLabel.font = TGSystemFontOfSize(14.0f);
+        _coverLabel.textColor = [UIColor whiteColor];
+        _coverLabel.text = TGLocalized(@"PhotoEditor.SelectCoverFrame");
+        [_coverLabel sizeToFit];
+        [_portraitToolsWrapperView addSubview:_coverLabel];
+        
+        [_wrapperView addSubview:_dotImageView];
     }
-    
-    _flashView = [[UIView alloc] init];
-    _flashView.alpha = 0.0;
-    _flashView.backgroundColor = [UIColor whiteColor];
-    _flashView.userInteractionEnabled = false;
-    [_videoAreaView addSubview:_flashView];
-    
-    _areaMaskView = [[UIImageView alloc] init];
-    _areaMaskView.alpha = 0.0f;
-    [self.view insertSubview:_areaMaskView aboveSubview:_videoAreaView];
-    
-    [_portraitToolsWrapperView addSubview:_scrubberView];
-    
-    _coverLabel = [[UILabel alloc] init];
-    _coverLabel.alpha = 0.7f;
-    _coverLabel.backgroundColor = [UIColor clearColor];
-    _coverLabel.font = TGSystemFontOfSize(14.0f);
-    _coverLabel.textColor = [UIColor whiteColor];
-    _coverLabel.text = TGLocalized(@"PhotoEditor.SelectCoverFrame");
-    [_coverLabel sizeToFit];
-    [_portraitToolsWrapperView addSubview:_coverLabel];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -232,7 +233,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
         _videoAreaView.alpha = 0.0f;
-        _areaMaskView.alpha = 0.0f;
     } completion:^(__unused BOOL finished)
     {
         if (completion != nil)
@@ -320,7 +320,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
         _videoAreaView.alpha = 0.0f;
-        _areaMaskView.alpha = 0.0f;
     } completion:nil];
 }
 
@@ -400,12 +399,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     CGSize referenceSize = [self referenceViewSize];
     
-    CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoAvatarPreviewPanelSize;
+    CGFloat screenSide = MAX(referenceSize.width, referenceSize.height);
     _wrapperView.frame = CGRectMake((referenceSize.width - screenSide) / 2, (referenceSize.height - screenSide) / 2, screenSide, screenSide);
     
     CGFloat panelSize = UIInterfaceOrientationIsPortrait(orientation) ? TGPhotoAvatarPreviewPanelSize : TGPhotoAvatarPreviewLandscapePanelSize;
-//    if (_portraitToolControlView != nil)
-//        panelSize = TGPhotoEditorPanelSize;
     
     CGFloat panelToolbarPortraitSize = panelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = panelSize + TGPhotoEditorToolbarSize;
@@ -497,34 +494,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     {
         _videoAreaView.frame = _previewView.frame;
         _flashView.frame = _videoAreaView.bounds;
-        _areaMaskView.frame = _previewView.frame;
-        
-        [self updateCircleImage];
     }];
-}
-
-- (void)updateCircleImage
-{
-    CGFloat diameter = _areaMaskView.frame.size.width;
- 
-    if (fabs(diameter - _currentDiameter) < DBL_EPSILON)
-        return;
-    
-    _currentDiameter = diameter;
-    
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(diameter, diameter), false, 0.0f);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, [TGPhotoEditorInterfaceAssets cropTransparentOverlayColor].CGColor);
-    
-    UIBezierPath *path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, diameter, diameter)];
-    [path appendPath:[UIBezierPath bezierPathWithRect:CGRectMake(0, 0, diameter, diameter)]];
-    path.usesEvenOddFillRule = true;
-    [path fill];
-    
-    UIImage *areaMaskImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    
-    _areaMaskView.image = areaMaskImage;
 }
 
 - (void)updateLayout:(UIInterfaceOrientation)orientation
@@ -540,7 +510,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (TGPhotoEditorTab)availableTabs
 {
-    return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
+    return TGPhotoEditorRotateTab | TGPhotoEditorMirrorTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
 }
 
 - (TGPhotoEditorTab)activeTab
@@ -561,58 +531,74 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     return tabs;
 }
 
-- (void)setPlayButtonHidden:(bool)hidden animated:(bool)animated
+- (void)handleTabAction:(TGPhotoEditorTab)tab
 {
-//    if (animated)
-//    {
-//        _actionButton.hidden = false;
-//        [UIView animateWithDuration:0.15f animations:^
-//        {
-//            _actionButton.alpha = hidden ? 0.0f : 1.0f;
-//        } completion:^(BOOL finished)
-//        {
-//            if (finished)
-//                _actionButton.hidden = hidden;
-//        }];
-//    }
-//    else
-//    {
-//        _actionButton.alpha = hidden ? 0.0f : 1.0f;
-//        _actionButton.hidden = hidden;
-//    }
+    switch (tab)
+    {
+        case TGPhotoEditorRotateTab:
+        {
+            [self rotate];
+        }
+            break;
+            
+        case TGPhotoEditorMirrorTab:
+        {
+            [self mirror];
+        }
+            break;
+                
+        default:
+            break;
+    }
 }
 
-- (void)beginScrubbing
-{
-    _coverLabel.alpha = 1.0f;
-    
-    [self setPlayButtonHidden:true animated:false];
-    
-    [UIView animateWithDuration:0.2 animations:^{
-        _areaMaskView.alpha = 1.0f;
-    }];
+#pragma mark - Cropping
+
+- (void)rotate {
+//    [_cropView rotate90DegreesCCWAnimated:true];
 }
 
-- (void)endScrubbing:(bool (^)(void))completion
+- (void)mirror {
+//    [_cropView mirror];
+}
+
+- (void)beginScrubbing:(bool)flash
 {
-    [UIView animateWithDuration:0.12 animations:^{
-        _flashView.alpha = 1.0f;
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.2 animations:^{
-            _flashView.alpha = 0.0f;
+    if (flash)
+        _coverLabel.alpha = 1.0f;
+}
+
+- (void)endScrubbing:(bool)flash completion:(bool (^)(void))completion
+{
+    if (flash) {
+        [UIView animateWithDuration:0.12 animations:^{
+            _flashView.alpha = 1.0f;
         } completion:^(BOOL finished) {
-            TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
-                if (completion()) {
-                    [UIView animateWithDuration:0.2 animations:^{
-                        _areaMaskView.alpha = 0.0f;
-                        _coverLabel.alpha = 0.7f;
-                    }];
-                    
-                    self.controlVideoPlayback(true);
-                }
-            });
+            [UIView animateWithDuration:0.2 animations:^{
+                _flashView.alpha = 0.0f;
+            } completion:^(BOOL finished) {
+                TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
+                    if (completion()) {
+                        [UIView animateWithDuration:0.2 animations:^{
+                            _coverLabel.alpha = 0.7f;
+                        }];
+                        
+                        self.controlVideoPlayback(true);
+                    }
+                });
+            }];
         }];
-    }];
+    } else {
+        TGDispatchAfter(1.32, dispatch_get_main_queue(), ^{
+            if (completion()) {
+                [UIView animateWithDuration:0.2 animations:^{
+                    _coverLabel.alpha = 0.7f;
+                }];
+                
+                self.controlVideoPlayback(true);
+            }
+        });
+    }
 }
 
 @end
