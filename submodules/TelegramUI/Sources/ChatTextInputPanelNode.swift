@@ -1049,12 +1049,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.addSubnode(audioRecordingDotNode)
             }
             
-            animateDotAppearing = transition.isAnimated && !isLocked && !hideInfo
+            animateDotAppearing = transition.isAnimated && !hideInfo
             
             audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))
             if animateDotAppearing {
                 audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
-                audioRecordingDotNode.layer.animateAlpha(from: 0, to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
+                audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
                     if finished {
                         let animation = CAKeyframeAnimation(keyPath: "opacity")
                         animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
@@ -1067,7 +1067,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 })
                 
-                self.attachmentButton.layer.animateAlpha(from: 1, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                self.attachmentButton.layer.animateAlpha(from: CGFloat(self.attachmentButton.layer.presentation()?.opacity ?? 1), to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
                 self.attachmentButton.layer.animateScale(from: 1, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
             }
             
