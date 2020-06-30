@@ -97,7 +97,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         if (strongSelf == nil)
             return;
         
-        PGPhotoEditor *photoEditor = strongSelf.photoEditor;
         photoEditor.cropRect = strongSelf->_cropView.cropRect;
         photoEditor.cropOrientation = strongSelf->_cropView.cropOrientation;
         photoEditor.cropMirrored = strongSelf->_cropView.cropMirrored;
@@ -210,7 +209,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (void)setPlayer:(AVPlayer *)player
 {
-    [_cropView setPlayer:player];
 }
 
 - (void)setSnapshotImage:(UIImage *)snapshotImage
@@ -277,11 +275,10 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 {
     [_cropView hideImageForCustomTransition];
     [_cropView animateTransitionOutSwitching:false];
-    [_cropView invalidateVideoView];
     
     [UIView animateWithDuration:0.3f animations:^
     {
-     _buttonsWrapperView.alpha = 0.0f;
+        _buttonsWrapperView.alpha = 0.0f;
     } completion:nil];
 }
 
@@ -290,7 +287,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     _dismissing = true;
     
     [_cropView animateTransitionOutSwitching:switching];
-    [_cropView invalidateVideoView];
         
     if (switching)
     {

@@ -1314,6 +1314,15 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 
                 let completedVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
                     if let data = image.jpegData(compressionQuality: 0.6) {
+                        let photoResource = LocalFileMediaResource(fileId: arc4random64())
+                        context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
+                        updateState { state in
+                            var state = state
+                            state.updatingAvatar = .image(representation, true)
+                            return state
+                        }
+                        
                         let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
                             var filteredPath = url.path
                             if filteredPath.hasPrefix("file://") {
@@ -1333,6 +1342,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                             
                             let signalDisposable = signal.start(next: { next in
                                 if let result = next as? TGMediaVideoConversionResult {
+                                    if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                                        context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                                    }
+                                    
                                     var value = stat()
                                     if stat(result.fileURL.path, &value) == 0 {
                                         if let data = try? Data(contentsOf: result.fileURL) {
@@ -1342,7 +1355,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                                             } else {
                                                 resource = LocalFileMediaResource(fileId: arc4random64())
                                             }
-                                            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
                                         }
                                     }
@@ -1359,19 +1372,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                                 disposable.dispose()
                             }
                         }
-                        
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
-                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
-                        updateState { state in
-                            var state = state
-                            state.updatingAvatar = .image(representation, true)
-                            return state
-                        }
-                        
+                                                
                         updateAvatarDisposable.set((signal
                         |> mapToSignal { videoResource in
-                            return updateAccountPhoto(account: context.account, resource: resource, videoResource: videoResource, mapResourceToAvatarSizes: { resource, representations in
+                            return updateAccountPhoto(account: context.account, resource: photoResource, videoResource: videoResource, mapResourceToAvatarSizes: { resource, representations in
                                 return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                             })
                         } |> deliverOnMainQueue).start(next: { result in

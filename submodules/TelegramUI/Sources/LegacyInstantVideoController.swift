@@ -182,7 +182,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 let resource: TelegramMediaResource
                 if let liveUploadData = liveUploadData as? LegacyLiveUploadInterfaceResult, resourceAdjustments == nil, let data = try? Data(contentsOf: videoUrl) {
                     resource = LocalFileMediaResource(fileId: liveUploadData.id)
-                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                 } else {
                     resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: videoUrl.path, adjustments: resourceAdjustments)
                 }

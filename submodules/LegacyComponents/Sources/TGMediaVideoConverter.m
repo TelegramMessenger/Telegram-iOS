@@ -125,7 +125,7 @@
                 
                 CGSize dimensions = [avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
                 TGMediaVideoConversionPreset preset = adjustments.sendAsGif ? TGMediaVideoConversionPresetAnimation : [self presetFromAdjustments:adjustments];
-                if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage && preset != TGMediaVideoConversionPresetProfile)
+                if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage && preset != TGMediaVideoConversionPresetProfile && preset != TGMediaVideoConversionPresetProfileHigh && preset != TGMediaVideoConversionPresetPassthrough)
                 {
                     TGMediaVideoConversionPreset bestPreset = [self bestAvailablePresetForDimensions:dimensions];
                     if (preset > bestPreset)
@@ -182,7 +182,9 @@
                             if (watcher != nil)
                                 liveUploadData = [watcher fileUpdated:true];
                             
-                            contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:0 duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
+                            NSUInteger fileSize = [[[NSFileManager defaultManager] attributesOfItemAtPath:outputUrl.path error:nil] fileSize];
+                            
+                            contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:fileSize duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
                             return [resultContext finishedContext];
                         }];
                         
@@ -580,6 +582,9 @@
         AVAssetReaderVideoCompositionOutput *output = [self setupVideoCompositionOutputWithAVAsset:avAsset image:nil composition:composition videoTrack:videoTrack preset:preset entityRenderer:entityRenderer adjustments:adjustments timeRange:timeRange outputSettings:&outputSettings dimensions:&dimensions conversionContext:outConversionContext];
         if (output == nil)
             return false;
+        
+        if (preset == TGMediaVideoConversionPresetPassthrough)
+            outputSettings = nil;
         
         AVAssetReader *assetReader = [[AVAssetReader alloc] initWithAsset:composition error:error];
         if (assetReader == nil)
@@ -1252,6 +1257,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return (CGSize){ 240.0f, 240.0f };
         
         case TGMediaVideoConversionPresetProfile:
+        case TGMediaVideoConversionPresetProfileHigh:
             return (CGSize){ 800.0f, 800.0f };
             
         default:
@@ -1261,7 +1267,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
 
 + (bool)keepAudioForPreset:(TGMediaVideoConversionPreset)preset
 {
-    return preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetProfile;
+    return preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetProfile && preset != TGMediaVideoConversionPresetProfileHigh;
 }
 
 + (NSDictionary *)audioSettingsForPreset:(TGMediaVideoConversionPreset)preset
@@ -1340,6 +1346,9 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         case TGMediaVideoConversionPresetProfile:
             return 1400;
             
+        case TGMediaVideoConversionPresetProfileHigh:
+            return 2000;
+            
         default:
             return 900;
     }
@@ -1369,6 +1378,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:
+        case TGMediaVideoConversionPresetProfileHigh:
             return 0;
             
         default:
@@ -1397,6 +1407,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:
+        case TGMediaVideoConversionPresetProfileHigh:
             return 0;
             
         default:

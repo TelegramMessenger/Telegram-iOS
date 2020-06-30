@@ -66,13 +66,13 @@ public enum AvatarGalleryEntry: Equatable {
     public static func ==(lhs: AvatarGalleryEntry, rhs: AvatarGalleryEntry) -> Bool {
         switch lhs {
             case let .topImage(lhsRepresentations, lhsIndexData, lhsImmediateThumbnailData):
-                if case let .topImage(rhsRepresentations, rhsIndexData, rhsImmediateThumbnailData) = rhs, lhsRepresentations == rhsRepresentations, lhsIndexData == rhsIndexData, lhsImmediateThumbnailData != rhsImmediateThumbnailData {
+                if case let .topImage(rhsRepresentations, rhsIndexData, rhsImmediateThumbnailData) = rhs, lhsRepresentations == rhsRepresentations, lhsIndexData == rhsIndexData, lhsImmediateThumbnailData == rhsImmediateThumbnailData {
                     return true
                 } else {
                     return false
                 }
             case let .image(lhsId, lhsImageReference, lhsRepresentations, lhsVideoRepresentations, lhsPeer, lhsDate, lhsIndexData, lhsMessageId, lhsImmediateThumbnailData):
-                if case let .image(rhsId, rhsImageReference, rhsRepresentations, rhsVideoRepresentations, rhsPeer, rhsDate, rhsIndexData, rhsMessageId, rhsImmediateThumbnailData) = rhs, lhsId == rhsId, lhsImageReference == rhsImageReference, lhsRepresentations == rhsRepresentations, lhsVideoRepresentations == rhsVideoRepresentations, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData, lhsMessageId == rhsMessageId, lhsImmediateThumbnailData != rhsImmediateThumbnailData {
+                if case let .image(rhsId, rhsImageReference, rhsRepresentations, rhsVideoRepresentations, rhsPeer, rhsDate, rhsIndexData, rhsMessageId, rhsImmediateThumbnailData) = rhs, lhsId == rhsId, lhsImageReference == rhsImageReference, lhsRepresentations == rhsRepresentations, lhsVideoRepresentations == rhsVideoRepresentations, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData, lhsMessageId == rhsMessageId, lhsImmediateThumbnailData == rhsImmediateThumbnailData {
                     return true
                 } else {
                     return false
@@ -265,7 +265,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             } : nil, setMain: { [weak self] in
                                 self?.setMainEntry(entry)
                             })
-                        }), centralItemIndex: 0, synchronous: !isFirstTime)
+                        }), centralItemIndex: strongSelf.centralEntryIndex, synchronous: !isFirstTime)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                             strongSelf?.didSetReady = true

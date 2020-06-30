@@ -8,7 +8,7 @@
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 #import "TGPhotoEditorInterfaceAssets.h"
 
-#import "TGModernGalleryVideoView.h"
+#import "PGPhotoEditorView.h"
 
 const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 
@@ -21,7 +21,6 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     UIScrollView *_scrollView;
     UIView *_wrapperView;
     UIImageView *_imageView;
-    TGModernGalleryVideoView *_videoView;
     UIView *_snapshotView;
     CGSize _snapshotSize;
     
@@ -65,7 +64,12 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
         
         _imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, _wrapperView.frame.size.width, _wrapperView.frame.size.height)];
         _imageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _imageView.userInteractionEnabled = false;
         [_wrapperView addSubview:_imageView];
+        
+        _fullPreviewView = [[PGPhotoEditorView alloc] initWithFrame:_imageView.frame];
+        _fullPreviewView.userInteractionEnabled = false;
+        [_wrapperView addSubview:_fullPreviewView];
         
         _topOverlayView = [[UIView alloc] initWithFrame:CGRectZero];
         _topOverlayView.backgroundColor = [TGPhotoEditorInterfaceAssets cropTransparentOverlayColor];
@@ -92,8 +96,16 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
         [self addSubview:_areaMaskView];
         
         [self updateCircleImageWithReferenceSize:screenSize];
+        
+        UITapGestureRecognizer *tapRecognier = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
+        [_wrapperView addGestureRecognizer:tapRecognier];
     }
     return self;
+}
+
+- (void)handleTap:(UITapGestureRecognizer *)gestureRecognizer {
+    if (self.tapped != nil)
+        self.tapped();
 }
 
 - (void)updateCircleImageWithReferenceSize:(CGSize)referenceSize
@@ -137,23 +149,6 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
         return;
     
     [self reloadImageIfNeeded];
-}
-
-- (void)setPlayer:(AVPlayer *)player
-{
-    _player = player;
-    
-    _videoView = [[TGModernGalleryVideoView alloc] initWithFrame:_imageView.bounds player:player];
-    _videoView.frame = _imageView.frame;
-    _videoView.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-    _videoView.playerLayer.opaque = false;
-    _videoView.playerLayer.backgroundColor = nil;
-    [_imageView.superview insertSubview:_videoView aboveSubview:_imageView];
-}
-
-- (void)invalidateVideoView
-{
-    _videoView.player = nil;
 }
 
 - (void)reloadImageIfNeeded
@@ -415,7 +410,7 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 {
     _cropMirrored = cropMirrored;
     _imageView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0f : 1.0f, 1.0f);
-    _videoView.transform = _imageView.transform;
+    _fullPreviewView.transform = _imageView.transform;
 }
 
 - (void)invalidateCropRect
@@ -489,24 +484,6 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 
 - (void)transitionInFinishedFromCamera:(bool)fromCamera
 {
-//    if (fromCamera)
-//    {
-//        [UIView animateWithDuration:0.3f animations:^
-//        {
-//            _topOverlayView.alpha = 1.0f;
-//            _leftOverlayView.alpha = 1.0f;
-//            _rightOverlayView.alpha = 1.0f;
-//            _bottomOverlayView.alpha = 1.0f;
-//        }];
-//    }
-//    else
-//    {
-//        _topOverlayView.alpha = 1.0f;
-//        _leftOverlayView.alpha = 1.0f;
-//        _rightOverlayView.alpha = 1.0f;
-//        _bottomOverlayView.alpha = 1.0f;
-//    }
-    
     _scrollView.hidden = false;
     _scrollView.backgroundColor = [UIColor clearColor];
     

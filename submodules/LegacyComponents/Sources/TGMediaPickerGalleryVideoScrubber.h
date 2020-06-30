@@ -40,7 +40,9 @@
 - (void)ignoreThumbnails;
 - (void)resetThumbnails;
 
-- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp isSummaryThubmnail:(bool)isSummaryThumbnail;
+- (void)updateThumbnails;
+
+- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail;
 
 - (void)setRecipientName:(NSString *)recipientName;
 

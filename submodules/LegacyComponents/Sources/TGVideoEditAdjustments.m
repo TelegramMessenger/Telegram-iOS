@@ -130,6 +130,8 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
     adjustments->_originalSize = originalSize;
     adjustments->_preset = preset;
+    if (preset == TGMediaVideoConversionPresetAnimation)
+        adjustments->_sendAsGif = true;
     
     return adjustments;
 }
@@ -165,10 +167,10 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_trimStartValue = _trimStartValue;
     adjustments->_trimEndValue = _trimEndValue;
     adjustments->_paintingData = _paintingData;
-    adjustments->_sendAsGif = _sendAsGif;
     adjustments->_preset = preset;
     adjustments->_toolValues = _toolValues;
     adjustments->_videoStartValue = _videoStartValue;
+    adjustments->_sendAsGif = preset == TGMediaVideoConversionPresetAnimation ? true : _sendAsGif;
     
     if (maxDuration > DBL_EPSILON)
     {

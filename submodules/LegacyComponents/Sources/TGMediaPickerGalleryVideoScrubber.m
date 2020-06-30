@@ -58,7 +58,6 @@ typedef enum
     NSTimeInterval _duration;
 
     bool _ignoreThumbnailLoad;
-    bool _fadingThumbnailViews;
     CGFloat _thumbnailAspectRatio;
     NSArray *_summaryTimestamps;
     NSMutableArray *_summaryThumbnailViews;
@@ -741,6 +740,41 @@ typedef enum
     [self _resetZooming];
 }
 
+- (void)updateThumbnails {
+    UIView *snapshotView = [_summaryThumbnailWrapperView snapshotViewAfterScreenUpdates:true];
+    snapshotView.frame = _summaryThumbnailWrapperView.frame;
+    [_summaryThumbnailWrapperView.superview insertSubview:snapshotView aboveSubview:_summaryThumbnailWrapperView];
+    
+    id<TGMediaPickerGalleryVideoScrubberDataSource> dataSource = self.dataSource;
+    if ([dataSource respondsToSelector:@selector(videoScrubberOriginalSize:cropRect:cropOrientation:cropMirrored:)])
+        _originalSize = [dataSource videoScrubberOriginalSize:self cropRect:&_cropRect cropOrientation:&_cropOrientation cropMirrored:&_cropMirrored];
+    
+    for (TGMediaPickerGalleryVideoScrubberThumbnailView *view in _summaryThumbnailWrapperView.subviews) {
+        view.cropRect = _cropRect;
+        view.cropOrientation = _cropOrientation;
+        view.cropMirrored = _cropMirrored;
+        [view updateCropping];
+    }
+    
+    for (TGMediaPickerGalleryVideoScrubberThumbnailView *view in _zoomedThumbnailWrapperView.subviews) {
+        view.cropRect = _cropRect;
+        view.cropOrientation = _cropOrientation;
+        view.cropMirrored = _cropMirrored;
+        [view updateCropping];
+    }
+    
+    if (snapshotView != nil)
+    {
+        [UIView animateWithDuration:0.2f animations:^
+        {
+            snapshotView.alpha = 0.0f;
+        } completion:^(__unused BOOL finished)
+        {
+            [snapshotView removeFromSuperview];
+        }];
+    }
+}
+
 - (void)reloadData
 {
     [self reloadDataAndReset:true];
@@ -771,23 +805,29 @@ typedef enum
     [self reloadThumbnails];
 }
 
-- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)__unused timestamp isSummaryThubmnail:(bool)isSummaryThumbnail
+- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)__unused timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail
 {
-    TGMediaPickerGalleryVideoScrubberThumbnailView *thumbnailView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:image originalSize:_originalSize cropRect:_cropRect cropOrientation:_cropOrientation cropMirrored:_cropMirrored];
-    
+    bool exists = false;
     if (isSummaryThumbnail)
     {
-        [_summaryThumbnailWrapperView addSubview:thumbnailView];
-        [_summaryThumbnailViews addObject:thumbnailView];
+        if (_summaryThumbnailViews.count >= index + 1) {
+            exists = true;
+            [_summaryThumbnailViews[index] setImage:image animated:true];
+        } else {
+            TGMediaPickerGalleryVideoScrubberThumbnailView *thumbnailView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:image originalSize:_originalSize cropRect:_cropRect cropOrientation:_cropOrientation cropMirrored:_cropMirrored];
+            [_summaryThumbnailWrapperView addSubview:thumbnailView];
+            [_summaryThumbnailViews addObject:thumbnailView];
+        }
     }
     else
     {
+        TGMediaPickerGalleryVideoScrubberThumbnailView *thumbnailView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:image originalSize:_originalSize cropRect:_cropRect cropOrientation:_cropOrientation cropMirrored:_cropMirrored];
         [_zoomedThumbnailWrapperView addSubview:thumbnailView];
         [_zoomedThumbnailViews addObject:thumbnailView];
     }
     
-    if ((isSummaryThumbnail && _summaryThumbnailViews.count == _summaryTimestamps.count)
-        || (!isSummaryThumbnail && _zoomedThumbnailViews.count == _zoomedTimestamps.count))
+    if (!exists && ((isSummaryThumbnail && _summaryThumbnailViews.count == _summaryTimestamps.count)
+        || (!isSummaryThumbnail && _zoomedThumbnailViews.count == _zoomedTimestamps.count)))
     {
         if (!_ignoreThumbnailLoad)
         {
@@ -806,13 +846,11 @@ typedef enum
             
             if (snapshotView != nil)
             {
-                _fadingThumbnailViews = true;
-                [UIView animateWithDuration:0.3f animations:^
+                [UIView animateWithDuration:0.2f animations:^
                 {
                     snapshotView.alpha = 0.0f;
                 } completion:^(__unused BOOL finished)
                 {
-                    _fadingThumbnailViews = false;
                     [snapshotView removeFromSuperview];
                 }];
             }

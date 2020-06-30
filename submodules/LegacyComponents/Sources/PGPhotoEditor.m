@@ -391,7 +391,7 @@
         _currentProcessChain = processChain;
         
         GPUImageOutput <GPUImageInput> *lastFilter = ((PGPhotoProcessPass *)_currentProcessChain.firstObject).filter;
-        if (_cropFilter != nil) {
+        if (_cropFilter != nil && !self.cropOnLast) {
             [_currentInput addTarget:_cropFilter];
             [_cropFilter addTarget:lastFilter];
         } else {
@@ -411,12 +411,23 @@
         }
         _finalFilter = lastFilter;
         
-        if (previewOutput != nil) {
-            [_finalFilter addTarget:previewOutput.imageView];
-        }
-        
-        for (PGPhotoEditorView *view in _additionalOutputs) {
-            [_finalFilter addTarget:view];
+        if (_cropFilter != nil && self.cropOnLast) {
+            for (PGPhotoEditorView *view in _additionalOutputs) {
+                [_finalFilter addTarget:view];
+            }
+            [_finalFilter addTarget:_cropFilter];
+            _finalFilter = _cropFilter;
+            
+            if (previewOutput != nil) {
+                [_finalFilter addTarget:previewOutput.imageView];
+            }
+        } else {
+            if (previewOutput != nil) {
+                [_finalFilter addTarget:previewOutput.imageView];
+            }
+            for (PGPhotoEditorView *view in _additionalOutputs) {
+                [_finalFilter addTarget:view];
+            }
         }
         
         if (_histogramGenerator != nil && !self.standalone) {
@@ -427,6 +438,9 @@
 
 - (void)setAdditionalOutputs:(NSArray *)additionalOutputs {
     _additionalOutputs = additionalOutputs;
+    
+    if (_finalFilter == nil)
+        return;
     
     [_finalFilter removeAllTargets];
     

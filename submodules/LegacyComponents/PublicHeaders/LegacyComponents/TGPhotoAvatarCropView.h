@@ -1,11 +1,12 @@
 #import <UIKit/UIKit.h>
 
-@class AVPlayer;
+@class PGPhotoEditorView;
 
 @interface TGPhotoAvatarCropView : UIView
 
+@property (nonatomic, readonly)  PGPhotoEditorView *fullPreviewView;
+
 @property (nonatomic, strong) UIImage *image;
-@property (nonatomic, strong) AVPlayer *player;
 
 @property (nonatomic, readonly) CGSize originalSize;
 @property (nonatomic, assign) CGRect cropRect;
@@ -15,6 +16,8 @@
 @property (nonatomic, copy) void(^croppingChanged)(void);
 @property (nonatomic, copy) void(^interactionBegan)(void);
 @property (nonatomic, copy) void(^interactionEnded)(void);
+
+@property (nonatomic, copy) void(^tapped)(void);
 
 @property (nonatomic, readonly) bool isTracking;
 @property (nonatomic, readonly) bool isAnimating;
@@ -35,7 +38,6 @@
 - (void)transitionInFinishedFromCamera:(bool)fromCamera;
 
 - (void)invalidateCropRect;
-- (void)invalidateVideoView;
 
 - (UIImage *)currentImage;
 
