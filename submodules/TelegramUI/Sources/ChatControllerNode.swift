@@ -1865,6 +1865,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.emptyNode?.isHidden = false
             }
             
+            var showNavigateButtons = true
+            if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                showNavigateButtons = false
+            }
+            transition.updateAlpha(node: self.navigateButtons, alpha: showNavigateButtons ? 1.0 : 0.0)
+            
             if let openStickersDisposable = self.openStickersDisposable {
                 if case .media = chatPresentationInterfaceState.inputMode {
                 } else {
