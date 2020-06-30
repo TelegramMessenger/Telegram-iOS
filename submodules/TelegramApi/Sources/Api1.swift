@@ -6029,6 +6029,7 @@ public extension Api {
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
         case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
+        case updateChannelParticipant(channelId: Int32, prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant, qts: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6709,6 +6710,15 @@ public extension Api {
                     serializeInt64(phoneCallId, buffer: buffer, boxed: false)
                     serializeBytes(data, buffer: buffer, boxed: false)
                     break
+                case .updateChannelParticipant(let channelId, let prevParticipant, let newParticipant, let qts):
+                    if boxed {
+                        buffer.appendInt32(-1812551503)
+                    }
+                    serializeInt32(channelId, buffer: buffer, boxed: false)
+                    prevParticipant.serialize(buffer, true)
+                    newParticipant.serialize(buffer, true)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6876,6 +6886,8 @@ public extension Api {
                 return ("updateDialogFilters", [])
                 case .updatePhoneCallSignalingData(let phoneCallId, let data):
                 return ("updatePhoneCallSignalingData", [("phoneCallId", phoneCallId), ("data", data)])
+                case .updateChannelParticipant(let channelId, let prevParticipant, let newParticipant, let qts):
+                return ("updateChannelParticipant", [("channelId", channelId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
     }
     }
     
@@ -8216,6 +8228,30 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updatePhoneCallSignalingData(phoneCallId: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateChannelParticipant(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            var _3: Api.ChannelParticipant?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateChannelParticipant(channelId: _1!, prevParticipant: _2!, newParticipant: _3!, qts: _4!)
             }
             else {
                 return nil
@@ -22468,9 +22504,9 @@ public extension Api {
     public enum EncryptedChat: TypeConstructorDescription {
         case encryptedChatEmpty(id: Int32)
         case encryptedChatWaiting(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32)
-        case encryptedChatRequested(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gA: Buffer)
         case encryptedChat(id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gAOrB: Buffer, keyFingerprint: Int64)
         case encryptedChatDiscarded(id: Int32)
+        case encryptedChatRequested(flags: Int32, folderId: Int32?, id: Int32, accessHash: Int64, date: Int32, adminId: Int32, participantId: Int32, gA: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -22490,17 +22526,6 @@ public extension Api {
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     serializeInt32(participantId, buffer: buffer, boxed: false)
                     break
-                case .encryptedChatRequested(let id, let accessHash, let date, let adminId, let participantId, let gA):
-                    if boxed {
-                        buffer.appendInt32(-931638658)
-                    }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(adminId, buffer: buffer, boxed: false)
-                    serializeInt32(participantId, buffer: buffer, boxed: false)
-                    serializeBytes(gA, buffer: buffer, boxed: false)
-                    break
                 case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
                     if boxed {
                         buffer.appendInt32(-94974410)
@@ -22519,6 +22544,19 @@ public extension Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
+                case .encryptedChatRequested(let flags, let folderId, let id, let accessHash, let date, let adminId, let participantId, let gA):
+                    if boxed {
+                        buffer.appendInt32(1651608194)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(adminId, buffer: buffer, boxed: false)
+                    serializeInt32(participantId, buffer: buffer, boxed: false)
+                    serializeBytes(gA, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -22528,12 +22566,12 @@ public extension Api {
                 return ("encryptedChatEmpty", [("id", id)])
                 case .encryptedChatWaiting(let id, let accessHash, let date, let adminId, let participantId):
                 return ("encryptedChatWaiting", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId)])
-                case .encryptedChatRequested(let id, let accessHash, let date, let adminId, let participantId, let gA):
-                return ("encryptedChatRequested", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gA", gA)])
                 case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
                 return ("encryptedChat", [("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gAOrB", gAOrB), ("keyFingerprint", keyFingerprint)])
                 case .encryptedChatDiscarded(let id):
                 return ("encryptedChatDiscarded", [("id", id)])
+                case .encryptedChatRequested(let flags, let folderId, let id, let accessHash, let date, let adminId, let participantId, let gA):
+                return ("encryptedChatRequested", [("flags", flags), ("folderId", folderId), ("id", id), ("accessHash", accessHash), ("date", date), ("adminId", adminId), ("participantId", participantId), ("gA", gA)])
     }
     }
     
@@ -22566,32 +22604,6 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.EncryptedChat.encryptedChatWaiting(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_encryptedChatRequested(_ reader: BufferReader) -> EncryptedChat? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Buffer?
-            _6 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.EncryptedChat.encryptedChatRequested(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gA: _6!)
             }
             else {
                 return nil
@@ -22632,6 +22644,38 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.EncryptedChat.encryptedChatDiscarded(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_encryptedChatRequested(_ reader: BufferReader) -> EncryptedChat? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Buffer?
+            _8 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.EncryptedChat.encryptedChatRequested(flags: _1!, folderId: _2, id: _3!, accessHash: _4!, date: _5!, adminId: _6!, participantId: _7!, gA: _8!)
             }
             else {
                 return nil

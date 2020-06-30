@@ -563,7 +563,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.navigateButtons)
         
         self.addSubnode(self.navigationBarBackroundNode)
+        self.navigationBarBackroundNode.isHidden = true
         self.addSubnode(self.navigationBarSeparatorNode)
+        self.navigationBarSeparatorNode.isHidden = true
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
@@ -1449,10 +1451,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let titleAccessoryPanelFrame = titleAccessoryPanelFrame, !titleAccessoryPanelNode.frame.equalTo(titleAccessoryPanelFrame) {
-            if immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance {
-                titleAccessoryPanelNode.frame = titleAccessoryPanelFrame.offsetBy(dx: 0.0, dy: -titleAccessoryPanelFrame.size.height)
-            }
-            transition.updateFrame(node: titleAccessoryPanelNode, frame: titleAccessoryPanelFrame)
+            titleAccessoryPanelNode.frame = titleAccessoryPanelFrame
+            transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
         if let inputPanelNode = self.inputPanelNode, let apparentInputPanelFrame = apparentInputPanelFrame, !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
@@ -1864,6 +1864,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.loadingNode.isHidden = false
                 self.emptyNode?.isHidden = false
             }
+            
+            var showNavigateButtons = true
+            if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                showNavigateButtons = false
+            }
+            transition.updateAlpha(node: self.navigateButtons, alpha: showNavigateButtons ? 1.0 : 0.0)
             
             if let openStickersDisposable = self.openStickersDisposable {
                 if case .media = chatPresentationInterfaceState.inputMode {
@@ -2685,6 +2691,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func updateEmbeddedTitlePeekContent(content: NavigationControllerDropContent?) {
+        return;
+        
         guard let (_, navigationHeight) = self.validLayout else {
             return
         }
@@ -2711,6 +2719,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var updateHasEmbeddedTitleContent: (() -> Void)?
     
     func acceptEmbeddedTitlePeekContent(content: NavigationControllerDropContent) -> Bool {
+        return false;
+        
         guard let (_, navigationHeight) = self.validLayout else {
             return false
         }

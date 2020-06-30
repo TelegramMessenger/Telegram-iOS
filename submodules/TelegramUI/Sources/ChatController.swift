@@ -376,7 +376,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .inline:
                 navigationBarPresentationData = nil
             default:
-                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true, hideBadge: false)
+                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: false, hideBadge: false)
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
@@ -2808,7 +2808,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if self.hasEmbeddedTitleContent {
             navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: true, hideBadge: true)
         } else {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: true, hideBadge: false)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: false, hideBadge: false)
         }
         
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -5085,18 +5085,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if let peekData = self.peekData {
+        if let peekData = self.peekData, case let .peer(peerId) = self.chatLocation {
             let timestamp = Int32(Date().timeIntervalSince1970)
             let remainingTime = max(1, peekData.deadline - timestamp)
             self.peekTimerDisposable.set((
-                (
+                combineLatest(
+                    self.context.account.postbox.peerView(id: peerId),
                     Signal<Bool, NoError>.single(true)
                     |> suspendAwareDelay(Double(remainingTime), granularity: 2.0, queue: .mainQueue())
                 )
                 |> deliverOnMainQueue
-            ).start(next: { [weak self] _ in
-                guard let strongSelf = self else {
+            ).start(next: { [weak self] peerView, _ in
+                guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
                     return
+                }
+                if let peer = peer as? TelegramChannel {
+                    switch peer.participationStatus {
+                    case .member:
+                        return
+                    default:
+                        break
+                    }
                 }
                 strongSelf.present(textAlertController(
                     context: strongSelf.context,

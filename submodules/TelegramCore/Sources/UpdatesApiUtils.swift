@@ -560,7 +560,7 @@ extension Api.EncryptedChat {
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
             case let .encryptedChatEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
-            case let .encryptedChatRequested(id, _, _, _, _, _):
+            case let .encryptedChatRequested(_, _, id, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
             case let .encryptedChatWaiting(id, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
