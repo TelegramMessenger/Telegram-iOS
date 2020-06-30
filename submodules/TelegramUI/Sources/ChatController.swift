@@ -9439,7 +9439,9 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 
 func parseUrl(url: String, wasConcealed: Bool) -> (string: String, concealed: Bool) {
     var parsedUrlValue: URL?
-    if let parsed = URL(string: url) {
+    if url.hasPrefix("tel:") {
+        return (url, false)
+    } else if let parsed = URL(string: url) {
         parsedUrlValue = parsed
     } else if let parsed = URL(string: "https://" + url) {
         parsedUrlValue = parsed
