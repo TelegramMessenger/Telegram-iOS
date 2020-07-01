@@ -239,6 +239,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
             videoNode.isUserInteractionEnabled = false
+            videoNode.isHidden = true
             videoNode.ownsContentNodeUpdated = { [weak self] owns in
                 if let strongSelf = self {
                     strongSelf.videoNode?.isHidden = !owns

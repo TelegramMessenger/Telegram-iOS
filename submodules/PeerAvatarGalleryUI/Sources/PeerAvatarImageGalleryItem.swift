@@ -137,6 +137,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
+    private let playbackStatusDisposable = MetaDisposable()
     
     init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
         self.context = context
@@ -183,6 +184,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     deinit {
         self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
+        self.playbackStatusDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -240,22 +242,44 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                     let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
                     videoNode.isUserInteractionEnabled = false
-                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
-                        if let strongSelf = self {
-                            strongSelf.videoNode?.isHidden = !owns
+                    videoNode.isHidden = true
+                    
+                    if let _ = video.startTimestamp {
+                        self.playbackStatusDisposable.set((videoNode.status
+                        |> map { status -> Bool in
+                            if let status = status, case .playing = status.status {
+                                return true
+                            } else {
+                                return false
+                            }
                         }
+                        |> filter { playing in
+                            return playing
+                        }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            if let strongSelf = self {
+                                Queue.mainQueue().after(0.03) {
+                                    strongSelf.videoNode?.isHidden = false
+                                }
+                            }
+                        }))
+                    } else {
+                        self.playbackStatusDisposable.set(nil)
+                        videoNode.isHidden = false
                     }
+                    
                     videoNode.canAttachContent = true
-                    if let startTimestamp = video.startTimestamp {
-                        videoNode.seek(startTimestamp)
-                    }
                     if videoNode.hasAttachedContext {
+                        if let startTimestamp = video.startTimestamp {
+                            videoNode.seek(startTimestamp)
+                        }
                         videoNode.play()
                     }
+                    videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
+                    
                     self.videoContent = videoContent
                     self.videoNode = videoNode
-                                        
-                    videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
                     
                     self.contentNode.addSubnode(videoNode)
                     

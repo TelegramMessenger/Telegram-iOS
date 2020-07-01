@@ -353,6 +353,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     actionsDisposable.add(hiddenAvatarRepresentationDisposable)
     
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
@@ -457,6 +458,19 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             })
         }
         
+        let peer = peerViewMainPeer(view)
+        if let peer = peer {
+            let _ = cachedAvatarEntries.modify { value in
+                if value != nil {
+                    return value
+                } else {
+                    let promise = Promise<[AvatarGalleryEntry]>()
+                    promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                    return promise
+                }
+            }
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks, ensureVisibleItemTag: focusOnItemTag)
         
@@ -500,9 +514,20 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         }
     }
     changeProfilePhotoImpl = { [weak controller] in
-        let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+        let avatarEntries = (cachedAvatarEntries.with({ $0 })?.get()) ?? .single([])
+        let _ = (combineLatest(context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
-        } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
+        }, avatarEntries |> take(1)) |> deliverOnMainQueue).start(next: { peerAndSearchBotsConfiguration, avatarEntries in
+            let peer = peerAndSearchBotsConfiguration.0
+            let searchBotsConfiguration = peerAndSearchBotsConfiguration.1
+            
+            let mainIsVideo: Bool
+            if let main = avatarEntries.first, case let .image(image) = main {
+                mainIsVideo = !image.3.isEmpty
+            } else {
+                mainIsVideo = false
+            }
+            
             controller?.view.endEditing(true)
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -539,6 +564,14 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                             case .complete:
                                 updateState {
                                     $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                           
+                                if let peer = peer {
+                                    let _ = cachedAvatarEntries.modify { value in
+                                        let promise = Promise<[AvatarGalleryEntry]>()
+                                        promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                                        return promise
+                                    }
                                 }
                             case .progress:
                                 break
@@ -610,9 +643,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                             disposable.dispose()
                         }
                     }
-                    
-                   
-                    
+
                     updateAvatarDisposable.set((signal
                     |> mapToSignal { videoResource in
                         return updateAccountPhoto(account: context.account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
@@ -624,6 +655,14 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                                 updateState {
                                     $0.withUpdatedUpdatingAvatar(nil)
                                 }
+                                
+                                if let peer = peer {
+                                    let _ = cachedAvatarEntries.modify { value in
+                                        let promise = Promise<[AvatarGalleryEntry]>()
+                                        promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                                        return promise
+                                    }
+                                }
                             case .progress:
                                 break
                         }
@@ -631,7 +670,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, isVideo: mainIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
@@ -667,6 +706,13 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(nil)
                             }
+                            if let peer = peer {
+                                let _ = cachedAvatarEntries.modify { value in
+                                    let promise = Promise<[AvatarGalleryEntry]>()
+                                    promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                                    return promise
+                                }
+                            }
                         case .progress:
                             break
                     }
@@ -679,12 +725,8 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peer in
                     if peer.smallProfileImage != nil {
-                        let galleryController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { controller, ready in
+                        let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: cachedAvatarEntries.with { $0 }, replaceRootController: { controller, ready in
                         })
-                        /*hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
-                            avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
-                            updateHiddenAvatarImpl?()
-                        }))*/
                         presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
                             return nil
                         }))
