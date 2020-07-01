@@ -81,7 +81,6 @@
 #import <LegacyComponents/TGCameraMainTabletView.h>
 #import <LegacyComponents/TGCameraMainView.h>
 #import <LegacyComponents/TGCameraModeControl.h>
-#import <LegacyComponents/TGCameraPhotoPreviewController.h>
 #import <LegacyComponents/TGCameraPreviewView.h>
 #import <LegacyComponents/TGCameraSegmentsView.h>
 #import <LegacyComponents/TGCameraShutterButton.h>

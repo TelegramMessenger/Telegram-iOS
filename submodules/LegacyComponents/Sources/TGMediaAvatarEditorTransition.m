@@ -94,6 +94,7 @@
     {
     }];
 
+    TGPhotoEditorController *controller = _controller;
     void (^imageReady)(void) = self.imageReady;
     _toTransitionView = [[TGImageView alloc] initWithFrame:fromTransitionFrame];
     [_toTransitionView setSignal:[[[self.referenceScreenImageSignal() deliverOn:[SQueue mainQueue]] filter:^bool(id result)
@@ -101,7 +102,7 @@
         return [result isKindOfClass:[UIImage class]];
     }] onNext:^(UIImage *next)
     {
-        [_controller _setScreenImage:next];
+        [controller _setScreenImage:next];
         if (imageReady != nil)
             imageReady();
     }]];

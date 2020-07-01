@@ -14,26 +14,33 @@ import GalleryUI
 public enum AvatarGalleryEntryId: Hashable {
     case topImage
     case image(MediaId)
+    case resource(String)
 }
 
 public enum AvatarGalleryEntry: Equatable {
-    case topImage([ImageRepresentationWithReference], GalleryItemIndexData?)
-    case image(MediaId, TelegramMediaImageReference?, [ImageRepresentationWithReference], [TelegramMediaImage.VideoRepresentation], Peer?, Int32, GalleryItemIndexData?, MessageId?)
+    case topImage([ImageRepresentationWithReference], GalleryItemIndexData?, Data?)
+    case image(MediaId, TelegramMediaImageReference?, [ImageRepresentationWithReference], [TelegramMediaImage.VideoRepresentation], Peer?, Int32, GalleryItemIndexData?, MessageId?, Data?)
     
     public var id: AvatarGalleryEntryId {
         switch self {
-        case .topImage:
+        case let .topImage(representations, _, _):
+            if let last = representations.last {
+                return .resource(last.representation.resource.id.uniqueId)
+            }
             return .topImage
-        case let .image(id, _, _, _, _, _, indexData, _):
+        case let .image(id, _, representations, _, _, _, _, _, _):
+            if let last = representations.last {
+                return .resource(last.representation.resource.id.uniqueId)
+            }
             return .image(id)
         }
     }
     
     public var representations: [ImageRepresentationWithReference] {
         switch self {
-            case let .topImage(representations, _):
+            case let .topImage(representations, _, _):
                 return representations
-            case let .image(_, _, representations, _, _, _, _, _):
+            case let .image(_, _, representations, _, _, _, _, _, _):
                 return representations
         }
     }
@@ -42,30 +49,30 @@ public enum AvatarGalleryEntry: Equatable {
         switch self {
             case .topImage:
                 return []
-            case let .image(_, _, _, videoRepresentations, _, _, _, _):
+            case let .image(_, _, _, videoRepresentations, _, _, _, _, _):
                 return videoRepresentations
         }
     }
     
     public var indexData: GalleryItemIndexData? {
         switch self {
-            case let .topImage(_, indexData):
+            case let .topImage(_, indexData, _):
                 return indexData
-            case let .image(_, _, _, _, _, _, indexData, _):
+            case let .image(_, _, _, _, _, _, indexData, _, _):
                 return indexData
         }
     }
     
     public static func ==(lhs: AvatarGalleryEntry, rhs: AvatarGalleryEntry) -> Bool {
         switch lhs {
-            case let .topImage(lhsRepresentations, lhsIndexData):
-                if case let .topImage(rhsRepresentations, rhsIndexData) = rhs, lhsRepresentations == rhsRepresentations, lhsIndexData == rhsIndexData {
+            case let .topImage(lhsRepresentations, lhsIndexData, lhsImmediateThumbnailData):
+                if case let .topImage(rhsRepresentations, rhsIndexData, rhsImmediateThumbnailData) = rhs, lhsRepresentations == rhsRepresentations, lhsIndexData == rhsIndexData, lhsImmediateThumbnailData == rhsImmediateThumbnailData {
                     return true
                 } else {
                     return false
                 }
-            case let .image(lhsId, lhsImageReference, lhsRepresentations, lhsVideoRepresentations, lhsPeer, lhsDate, lhsIndexData, lhsMessageId):
-                if case let .image(rhsId, rhsImageReference, rhsRepresentations, rhsVideoRepresentations, rhsPeer, rhsDate, rhsIndexData, rhsMessageId) = rhs, lhsId == rhsId, lhsImageReference == rhsImageReference, lhsRepresentations == rhsRepresentations, lhsVideoRepresentations == rhsVideoRepresentations, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData, lhsMessageId == rhsMessageId {
+            case let .image(lhsId, lhsImageReference, lhsRepresentations, lhsVideoRepresentations, lhsPeer, lhsDate, lhsIndexData, lhsMessageId, lhsImmediateThumbnailData):
+                if case let .image(rhsId, rhsImageReference, rhsRepresentations, rhsVideoRepresentations, rhsPeer, rhsDate, rhsIndexData, rhsMessageId, rhsImmediateThumbnailData) = rhs, lhsId == rhsId, lhsImageReference == rhsImageReference, lhsRepresentations == rhsRepresentations, lhsVideoRepresentations == rhsVideoRepresentations, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData, lhsMessageId == rhsMessageId, lhsImmediateThumbnailData == rhsImmediateThumbnailData {
                     return true
                 } else {
                     return false
@@ -87,7 +94,7 @@ public final class AvatarGalleryControllerPresentationArguments {
 public func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry] {
     var initialEntries: [AvatarGalleryEntry] = []
     if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
-        initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), nil))
+        initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), nil, nil))
     }
     return initialEntries
 }
@@ -106,10 +113,10 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 var index: Int32 = 0
                 for photo in photos {
                     let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                    if result.isEmpty, let first = initialEntries.first, photo.image.videoRepresentations.isEmpty {
-                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, first.videoRepresentations, peer, photo.date, indexData, photo.messageId))
+                    if result.isEmpty, let first = initialEntries.first {
+                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     } else {
-                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId))
+                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     }
                     index += 1
                 }
@@ -133,10 +140,10 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry
                 var index: Int32 = 0
                 for photo in photos {
                     let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                    if result.isEmpty, let first = initialEntries.first, photo.image.videoRepresentations.isEmpty {
-                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, first.videoRepresentations, peer, photo.date, indexData, photo.messageId))
+                    if result.isEmpty, let first = initialEntries.first {
+                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     } else {
-                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId))
+                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData))
                     }
                     index += 1
                 }
@@ -223,6 +230,15 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.disposable.set(combineLatest(entriesSignal, self.animatedIn.get()).start(next: { [weak self] entries, animatedIn in
             let f: () -> Void = {
                 if let strongSelf = self, animatedIn {
+                    let isFirstTime = strongSelf.entries.isEmpty
+                    
+                    var entries = entries
+                    if !isFirstTime, let updated = entries.first, case let .image(image) = updated, !image.3.isEmpty, let previous = strongSelf.entries.first, case let .topImage(topImage) = previous {
+                        let firstEntry = AvatarGalleryEntry.image(image.0, image.1, topImage.0, image.3, image.4, image.5, image.6, image.7, image.8)
+                        entries.remove(at: 0)
+                        entries.insert(firstEntry, at: 0)
+                    }
+                    
                     strongSelf.entries = entries
                     if strongSelf.centralEntryIndex == nil {
                         strongSelf.centralEntryIndex = 0
@@ -243,12 +259,13 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         } else {
                             canDelete = false
                         }
+   
                         strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, sourceHasRoundCorners: sourceHasRoundCorners, delete: canDelete ? {
                             self?.deleteEntry(entry)
                             } : nil, setMain: { [weak self] in
                                 self?.setMainEntry(entry)
                             })
-                        }), centralItemIndex: 0, keepFirst: false)
+                        }), centralItemIndex: strongSelf.centralEntryIndex, synchronous: !isFirstTime)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                             strongSelf?.didSetReady = true
@@ -500,10 +517,10 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         var index: Int32 = 0
         for entry in entries {
             let indexData = GalleryItemIndexData(position: index, totalCount: count)
-            if case let .topImage(representations, _) = entry {
-                updatedEntries.append(.topImage(representations, indexData))
-            } else if case let .image(id, reference, representations, videoRepresentations, peer, date, _, messageId) = entry {
-                updatedEntries.append(.image(id, reference, representations, videoRepresentations, peer, date, indexData, messageId))
+            if case let .topImage(representations, _, immediateThumbnailData) = entry {
+                updatedEntries.append(.topImage(representations, indexData, immediateThumbnailData))
+            } else if case let .image(id, reference, representations, videoRepresentations, peer, date, _, messageId, immediateThumbnailData) = entry {
+                updatedEntries.append(.image(id, reference, representations, videoRepresentations, peer, date, indexData, messageId, immediateThumbnailData))
             }
             index += 1
         }
@@ -521,7 +538,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 if self.peer.id == self.context.account.peerId {
                 } else {
                 }
-            case let .image(_, reference, _, _, _, _, _, messageId):
+            case let .image(_, reference, _, _, _, _, _, messageId, _):
                 if self.peer.id == self.context.account.peerId {
                     if let reference = reference {
                         let _ = updatePeerPhotoExisting(network: self.context.account.network, reference: reference).start()
@@ -597,11 +614,11 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if let index = self.entries.firstIndex(of: entry) {
                             self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
                         }
                     }
                 }
-            case let .image(_, reference, _, _, _, _, _, messageId):
+            case let .image(_, reference, _, _, _, _, _, messageId, _):
                 if self.peer.id == self.context.account.peerId {
                     if let reference = reference {
                         let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
@@ -611,7 +628,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if let index = self.entries.firstIndex(of: entry) {
                             self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
                         }
                     }
                 } else {
@@ -625,7 +642,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if let index = self.entries.firstIndex(of: entry) {
                             self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
                         }
                     }
                 }

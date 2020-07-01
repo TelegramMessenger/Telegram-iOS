@@ -39,6 +39,7 @@ import PhoneNumberFormat
 import AccountUtils
 import AuthTransferUI
 import Emoji
+import LegacyMediaPickerUI
 
 private let avatarFont = avatarPlaceholderFont(size: 13.0)
 
@@ -660,7 +661,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: nil, updatingName: nil)
         entries.append(.userInfo(account, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, view.cachedData, userInfoState, state.updatingAvatar))
         if peer.photo.isEmpty {
-            entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhoto))
+            entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Settings_SetProfilePhotoOrVideo))
         }
         if peer.addressName == nil {
             entries.append(.setUsername(presentationData.theme, presentationData.strings.Settings_SetUsername))
@@ -1294,7 +1295,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                             state.updatingAvatar = .image(representation, true)
                             return state
                         }
-                        updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in
+                        updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         }) |> deliverOnMainQueue).start(next: { result in
                             switch result {
@@ -1311,7 +1312,93 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     }
                 }
                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
+                let completedVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
+                    if let data = image.jpegData(compressionQuality: 0.6) {
+                        let photoResource = LocalFileMediaResource(fileId: arc4random64())
+                        context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
+                        updateState { state in
+                            var state = state
+                            state.updatingAvatar = .image(representation, true)
+                            return state
+                        }
+                        
+                        var videoStartTimestamp: Double? = nil
+                        if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+                            videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+                        }
+                        
+                        let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
+                            var filteredPath = url.path
+                            if filteredPath.hasPrefix("file://") {
+                                filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
+                            }
+                            
+                            let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
+                            let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                                if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                                    return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                            let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                            
+                            let signalDisposable = signal.start(next: { next in
+                                if let result = next as? TGMediaVideoConversionResult {
+                                    if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                                        context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                                    }
+                                    
+                                    var value = stat()
+                                    if stat(result.fileURL.path, &value) == 0 {
+                                        if let data = try? Data(contentsOf: result.fileURL) {
+                                            let resource: TelegramMediaResource
+                                            if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                                resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                            } else {
+                                                resource = LocalFileMediaResource(fileId: arc4random64())
+                                            }
+                                            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                            subscriber.putNext(resource)
+                                        }
+                                    }
+                                    subscriber.putCompletion()
+                                }
+                            }, error: { _ in
+                            }, completed: nil)
+                            
+                            let disposable = ActionDisposable {
+                                signalDisposable?.dispose()
+                            }
+                            
+                            return ActionDisposable {
+                                disposable.dispose()
+                            }
+                        }
+                                                
+                        updateAvatarDisposable.set((signal
+                        |> mapToSignal { videoResource in
+                            return updateAccountPhoto(account: context.account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                                return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                            })
+                        } |> deliverOnMainQueue).start(next: { result in
+                            switch result {
+                                case .complete:
+                                    updateState { state in
+                                        var state = state
+                                        state.updatingAvatar = nil
+                                        return state
+                                    }
+                                case .progress:
+                                    break
+                            }
+                        }))
+                    }
+                }
+                
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
                     let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
@@ -1325,6 +1412,11 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                        completedImpl(image)
                     }
                 }
+                mixin.didFinishWithVideo = { image, url, adjustments in
+                    if let image = image, let url = url {
+                        completedVideoImpl(image, url, adjustments)
+                    }
+                }
                 mixin.didFinishWithDelete = {
                     let _ = currentAvatarMixin.swap(nil)
                     updateState { state in
@@ -1332,11 +1424,11 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                         if let profileImage = peer?.smallProfileImage {
                             state.updatingAvatar = .image(profileImage, false)
                         } else {
-                            state.updatingAvatar = .none
+                            state.updatingAvatar = ItemListAvatarAndNameInfoItemUpdatingAvatar.none
                         }
                         return state
                     }
-                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in
+                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
@@ -1946,4 +2038,8 @@ private func accountContextMenuItems(context: AccountContext, logout: @escaping 
         
         return items
     }
+}
+
+public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
+    return privacyAndSecurityController(context: context)
 }

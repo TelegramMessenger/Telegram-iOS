@@ -16,6 +16,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case reportSpam
     case reportUserSpam
     case reportIrrelevantGeoLocation
+    case unarchive
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -35,6 +36,8 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_ReportSpam
             case .reportIrrelevantGeoLocation:
                 return strings.Conversation_ReportGroupLocation
+            case .unarchive:
+                return strings.Conversation_Unarchive
         }
     }
 }
@@ -42,7 +45,19 @@ private enum ChatReportPeerTitleButton: Equatable {
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
     if let peer = state.renderedPeer?.chatMainPeer as? TelegramUser, let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
-        if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+        if peerStatusSettings.contains(.autoArchived) {
+            if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
+                if peer.isDeleted {
+                    buttons.append(.reportUserSpam)
+                } else {
+                    if !state.peerIsBlocked {
+                        buttons.append(.block)
+                    }
+                }
+            }
+            
+            buttons.append(.unarchive)
+        } else if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
             if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
                 if !state.peerIsBlocked {
                     buttons.append(.block)
@@ -186,7 +201,11 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
     private let labelNode: ImmediateTextNode
     private let filledBackgroundNode: LinkHighlightingNode
     
-    init(openPeer: @escaping () -> Void) {
+    private let openPeersNearby: () -> Void
+    
+    init(openPeersNearby: @escaping () -> Void) {
+        self.openPeersNearby = openPeersNearby
+        
         self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
         self.labelNode.textAlignment = .center
@@ -197,22 +216,17 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         
         self.addSubnode(self.filledBackgroundNode)
         self.addSubnode(self.labelNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
         
-        self.labelNode.highlightAttributeAction = { attributes in
-            for (key, _) in attributes {
-                if key.rawValue == "_Link" {
-                    return key
-                }
-            }
-            return nil
-        }
-        self.labelNode.tapAttributeAction = { attributes, _ in
-            for (key, _) in attributes {
-                if key.rawValue == "_Link" {
-                    openPeer()
-                }
-            }
-        }
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        self.openPeersNearby()
     }
     
     func update(width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, chatPeer: Peer, distance: Int32, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -233,7 +247,7 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         let attributedString = NSMutableAttributedString(string: stringAndRanges.0, font: Font.regular(13.0), textColor: primaryTextColor)
         
         let boldAttributes = [NSAttributedString.Key.font: Font.semibold(13.0), NSAttributedString.Key(rawValue: "_Link"): true as NSNumber]
-        for (_, range) in stringAndRanges.1 {
+        for (_, range) in stringAndRanges.1.prefix(1) {
             attributedString.addAttributes(boldAttributes, range: range)
         }
         
@@ -376,12 +390,15 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 }
             } else {
                 let additionalRightInset: CGFloat = 36.0
-                let areaWidth = width - maxInset * 2.0 - additionalRightInset
+                var areaWidth = width - maxInset * 2.0 - additionalRightInset
                 let maxButtonWidth = floor(areaWidth / CGFloat(self.buttons.count))
                 let buttonSizes = self.buttons.map { button -> CGFloat in
                     return button.1.sizeThatFits(CGSize(width: maxButtonWidth, height: 100.0)).width
                 }
                 let buttonsWidth = buttonSizes.reduce(0.0, +)
+                if buttonsWidth < areaWidth - 20.0 {
+                    areaWidth += additionalRightInset
+                }
                 let maxButtonSpacing = floor((areaWidth - buttonsWidth) / CGFloat(self.buttons.count - 1))
                 let buttonSpacing = min(maxButtonSpacing, 110.0)
                 let updatedButtonsWidth = buttonsWidth + CGFloat(self.buttons.count - 1) * buttonSpacing
@@ -438,8 +455,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 peerNearbyInfoNode = current
             } else {
                 peerNearbyInfoTransition = .immediate
-                peerNearbyInfoNode = ChatInfoTitlePanelPeerNearbyInfoNode(openPeer: { [weak self] in
-                    self?.interfaceInteraction?.navigateToProfile(chatPeer.id)
+                peerNearbyInfoNode = ChatInfoTitlePanelPeerNearbyInfoNode(openPeersNearby: { [weak self] in
+                    self?.interfaceInteraction?.openPeersNearby()
                 })
                 self.addSubnode(peerNearbyInfoNode)
                 self.peerNearbyInfoNode = peerNearbyInfoNode
@@ -470,6 +487,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.shareAccountContact()
                     case .block, .reportSpam, .reportUserSpam:
                         self.interfaceInteraction?.reportPeer()
+                    case .unarchive:
+                        self.interfaceInteraction?.unarchivePeer()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
                     case .reportIrrelevantGeoLocation:

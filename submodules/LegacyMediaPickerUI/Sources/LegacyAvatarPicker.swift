@@ -14,12 +14,12 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
     let navigationController = makeLegacyNavigationController(rootController: emptyController)
     navigationController.setNavigationBarHidden(true, animated: false)
     navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
-    
+
     legacyController.bind(controller: navigationController)
     
     present(legacyController, nil)
         
-    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: false, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup)!
+    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: false, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup)!
     let _ = holder.swap(mixin)
     mixin.didFinishWithImage = { image in
         guard let image = image else {
@@ -27,7 +27,7 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
         }
         completion(image)
     }
-    mixin.didFinishWithView = { [weak legacyController] in
+    mixin.didFinishWithView = {
         openCurrent?()
     }
     mixin.didDismiss = { [weak legacyController] in

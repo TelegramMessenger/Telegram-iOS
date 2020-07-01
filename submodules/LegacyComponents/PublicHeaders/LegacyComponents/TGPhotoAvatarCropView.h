@@ -1,12 +1,12 @@
 #import <UIKit/UIKit.h>
 
-@class AVPlayer;
+@class PGPhotoEditorView;
 
 @interface TGPhotoAvatarCropView : UIView
 
 @property (nonatomic, strong) UIImage *image;
-@property (nonatomic, strong) AVPlayer *player;
 
+@property (nonatomic, readonly) CGSize originalSize;
 @property (nonatomic, assign) CGRect cropRect;
 @property (nonatomic, assign) UIImageOrientation cropOrientation;
 @property (nonatomic, assign) bool cropMirrored;
@@ -15,10 +15,12 @@
 @property (nonatomic, copy) void(^interactionBegan)(void);
 @property (nonatomic, copy) void(^interactionEnded)(void);
 
+@property (nonatomic, copy) void(^tapped)(void);
+
 @property (nonatomic, readonly) bool isTracking;
 @property (nonatomic, readonly) bool isAnimating;
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize;
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView;
 
 - (void)setSnapshotImage:(UIImage *)image;
 - (void)setSnapshotView:(UIView *)snapshotView;
@@ -31,10 +33,15 @@
 
 - (void)animateTransitionIn;
 - (void)animateTransitionOutSwitching:(bool)switching;
+- (void)animateTransitionOut;
 - (void)transitionInFinishedFromCamera:(bool)fromCamera;
 
+- (void)closeCurtains;
+- (void)openCurtains;
+
 - (void)invalidateCropRect;
-- (void)invalidateVideoView;
+
+- (UIImage *)currentImage;
 
 - (void)hideImageForCustomTransition;
 

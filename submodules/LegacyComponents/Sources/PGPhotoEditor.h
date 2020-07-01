@@ -22,12 +22,15 @@
 @property (nonatomic, assign) TGMediaVideoConversionPreset preset;
 
 @property (nonatomic, weak) TGPhotoEditorPreviewView *previewOutput;
+@property (nonatomic, strong) NSArray *additionalOutputs;
 @property (nonatomic, readonly) NSArray *tools;
 
 @property (nonatomic, readonly) bool processing;
 @property (nonatomic, readonly) bool readyForProcessing;
 
 @property (nonatomic, readonly) bool enableStickers;
+
+@property (nonatomic, assign) bool cropOnLast;
 
 @property (nonatomic, readonly) bool forVideo;
 

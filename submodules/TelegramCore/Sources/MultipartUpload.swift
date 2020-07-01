@@ -152,11 +152,11 @@ private final class MultipartUploadManager {
         self.progress = progress
         self.completed = completed
         
-        //if headerSize == 0 {
+        if headerSize == 0 {
             self.headerPartState = .ready
-        /*} else {
+        } else {
             self.headerPartState = .notStarted
-        }*/
+        }
         
         if let hintFileSize = hintFileSize, hintFileSize > 10 * 1024 * 1024 {
             self.defaultPartSize = 512 * 1024

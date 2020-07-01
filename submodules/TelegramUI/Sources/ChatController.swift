@@ -322,6 +322,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let peekTimerDisposable = MetaDisposable()
     
     private var hasEmbeddedTitleContent = false
+    private var isEmbeddedTitleContentHidden = false
 
     public override var customData: Any? {
         return self.chatLocation
@@ -375,7 +376,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .inline:
                 navigationBarPresentationData = nil
             default:
-                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: true)
+                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
@@ -2059,6 +2060,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if case let .peer(peerId) = chatLocation, peerId != context.account.peerId, subject != .scheduledMessages {
             self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
         }
+        self.navigationBar?.allowsCustomTransition = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return !strongSelf.chatDisplayNode.hasEmbeddedTitleContent
+        }
         
         self.chatTitleView = ChatTitleView(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder)
         self.navigationItem.titleView = self.chatTitleView
@@ -2799,9 +2806,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let navigationBarTheme: NavigationBarTheme
             
         if self.hasEmbeddedTitleContent {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: true)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: true)
         } else {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: true)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
         
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -4585,6 +4592,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.openScheduledMessages()
             }
+        }, openPeersNearby: { [weak self] in
+            if let strongSelf = self {
+                let controller = strongSelf.context.sharedContext.makePeersNearbyController(context: strongSelf.context)
+                controller.navigationPresentation = .master
+                strongSelf.effectiveNavigationController?.pushViewController(controller, animated: true, completion: { })
+            }
         }, displaySearchResultsTooltip: { [weak self] node, nodeRect in
             if let strongSelf = self {
                 strongSelf.searchResultsTooltipController?.dismiss()
@@ -4604,6 +4617,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return nil
                 }))
            }
+        }, unarchivePeer: { [weak self] in
+            guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                return
+            }
+            unarchiveAutomaticallyArchivedPeer(account: strongSelf.context.account, peerId: peerId)
+            
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone), elevatedLayout: false, action: { _ in return false }), in: .current)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         switch self.chatLocation {
@@ -4750,10 +4770,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }))
         }
         
-        self.chatDisplayNode.updateHasEmbeddedTitleContent = { [weak self] hasEmbeddedTitleContent in
+        self.chatDisplayNode.updateHasEmbeddedTitleContent = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
+            
+            let hasEmbeddedTitleContent = strongSelf.chatDisplayNode.hasEmbeddedTitleContent
+            let isEmbeddedTitleContentHidden = strongSelf.chatDisplayNode.isEmbeddedTitleContentHidden
+            
             if strongSelf.hasEmbeddedTitleContent != hasEmbeddedTitleContent {
                 strongSelf.hasEmbeddedTitleContent = hasEmbeddedTitleContent
                 
@@ -4773,6 +4797,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 strongSelf.updateNavigationBarPresentation()
+            }
+            
+            if strongSelf.isEmbeddedTitleContentHidden != isEmbeddedTitleContentHidden {
+                strongSelf.isEmbeddedTitleContentHidden = isEmbeddedTitleContentHidden
+                
+                if let navigationBar = strongSelf.navigationBar {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                    transition.updateAlpha(node: navigationBar, alpha: isEmbeddedTitleContentHidden ? 0.0 : 1.0)
+                }
             }
         }
         
@@ -5052,18 +5085,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if let peekData = self.peekData {
+        if let peekData = self.peekData, case let .peer(peerId) = self.chatLocation {
             let timestamp = Int32(Date().timeIntervalSince1970)
             let remainingTime = max(1, peekData.deadline - timestamp)
             self.peekTimerDisposable.set((
-                (
+                combineLatest(
+                    self.context.account.postbox.peerView(id: peerId),
                     Signal<Bool, NoError>.single(true)
                     |> suspendAwareDelay(Double(remainingTime), granularity: 2.0, queue: .mainQueue())
                 )
                 |> deliverOnMainQueue
-            ).start(next: { [weak self] _ in
-                guard let strongSelf = self else {
+            ).start(next: { [weak self] peerView, _ in
+                guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
                     return
+                }
+                if let peer = peer as? TelegramChannel {
+                    switch peer.participationStatus {
+                    case .member:
+                        return
+                    default:
+                        break
+                    }
                 }
                 strongSelf.present(textAlertController(
                     context: strongSelf.context,
@@ -5166,6 +5208,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         })
+    }
+    
+    override public func viewWillLeaveNavigation() {
+        self.chatDisplayNode.willNavigateAway()
     }
     
     override public func inFocusUpdated(isInFocus: Bool) {
@@ -8406,6 +8452,58 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
         self.commitPurposefulAction()
         
+        if self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback {
+            if url.hasSuffix(".m3u8") {
+                let navigationController = self.navigationController as? NavigationController
+                
+                let webPage = TelegramMediaWebpage(
+                    webpageId: MediaId(namespace: 0, id: 0),
+                    content: .Loaded(TelegramMediaWebpageLoadedContent(
+                        url: url,
+                        displayUrl: url,
+                        hash: 0,
+                        type: "video",
+                        websiteName: nil,
+                        title: nil,
+                        text: nil,
+                        embedUrl: url,
+                        embedType: "video",
+                        embedSize: nil,
+                        duration: nil,
+                        author: nil,
+                        image: nil,
+                        file: nil,
+                        attributes: [],
+                        instantPage: nil
+                    ))
+                )
+                let entry = InstantPageGalleryEntry(
+                    index: 0,
+                    pageId: webPage.webpageId,
+                    media: InstantPageMedia(
+                        index: 0,
+                        media: webPage,
+                        url: nil,
+                        caption: nil,
+                        credit: nil
+                    ),
+                    caption: nil,
+                    credit: nil,
+                    location: nil
+                )
+                
+                let gallery = InstantPageGalleryController(context: context, webPage: webPage, entries: [entry], centralIndex: 0, replaceRootController: { [weak navigationController] controller, ready in
+                    if let navigationController = navigationController {
+                        navigationController.replaceTopController(controller, animated: false, ready: ready)
+                    }
+                }, baseNavigationController: navigationController)
+                self.present(gallery, in: .window(.root), with: InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
+                    return nil
+                }))
+                return;
+            }
+        }
+        
         openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, present: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, openResolved: { [weak self] resolved in
@@ -9342,7 +9440,9 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 
 func parseUrl(url: String, wasConcealed: Bool) -> (string: String, concealed: Bool) {
     var parsedUrlValue: URL?
-    if let parsed = URL(string: url) {
+    if url.hasPrefix("tel:") {
+        return (url, false)
+    } else if let parsed = URL(string: url) {
         parsedUrlValue = parsed
     } else if let parsed = URL(string: "https://" + url) {
         parsedUrlValue = parsed

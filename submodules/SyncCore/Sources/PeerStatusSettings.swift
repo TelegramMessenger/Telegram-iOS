@@ -14,6 +14,8 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         public static let canAddContact = Flags(rawValue: 1 << 4)
         public static let addExceptionWhenAddingContact = Flags(rawValue: 1 << 5)
         public static let canReportIrrelevantGeoLocation = Flags(rawValue: 1 << 6)
+        public static let autoArchived = Flags(rawValue: 1 << 7)
+
     }
     
     public var flags: PeerStatusSettings.Flags

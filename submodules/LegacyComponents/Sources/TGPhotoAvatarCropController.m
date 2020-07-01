@@ -28,6 +28,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     TGModernButton *_resetButton;
     
     TGPhotoAvatarCropView *_cropView;
+
     UIView *_snapshotView;
     UIImage *_snapshotImage;
     
@@ -87,7 +88,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     [self.view addSubview:_wrapperView];
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize]];
+    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:nil];
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];
     [_cropView setCropMirrored:photoEditor.cropMirrored];
@@ -97,7 +98,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         if (strongSelf == nil)
             return;
         
-        PGPhotoEditor *photoEditor = strongSelf.photoEditor;
         photoEditor.cropRect = strongSelf->_cropView.cropRect;
         photoEditor.cropOrientation = strongSelf->_cropView.cropOrientation;
         photoEditor.cropMirrored = strongSelf->_cropView.cropMirrored;
@@ -210,7 +210,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (void)setPlayer:(AVPlayer *)player
 {
-    [_cropView setPlayer:player];
 }
 
 - (void)setSnapshotImage:(UIImage *)snapshotImage
@@ -277,9 +276,10 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 {
     [_cropView hideImageForCustomTransition];
     [_cropView animateTransitionOutSwitching:false];
+    
     [UIView animateWithDuration:0.3f animations:^
     {
-     _buttonsWrapperView.alpha = 0.0f;
+        _buttonsWrapperView.alpha = 0.0f;
     } completion:nil];
 }
 
@@ -288,7 +288,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     _dismissing = true;
     
     [_cropView animateTransitionOutSwitching:switching];
-    [_cropView invalidateVideoView];
         
     if (switching)
     {
@@ -309,6 +308,12 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
             if (self.finishedPhotoProcessing != nil)
                 self.finishedPhotoProcessing();
         } else {
+            UIImage *image = _cropView.currentImage;
+            CGRect cropRect = _cropView.cropRect;
+            UIImageOrientation cropOrientation = _cropView.cropOrientation;
+            bool cropMirrored = _cropView.cropMirrored;
+            CGSize originalSize = _cropView.originalSize;
+            
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
             {
                 if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC))))
@@ -317,13 +322,13 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
                     return;
                 }
                 
-                UIImage *croppedImage = [_cropView croppedImageWithMaxSize:TGPhotoEditorScreenImageMaxSize()];
-                [photoEditor setImage:croppedImage forCropRect:_cropView.cropRect cropRotation:0.0f cropOrientation:_cropView.cropOrientation cropMirrored:_cropView.cropMirrored fullSize:false];
+                UIImage *croppedImage = TGPhotoEditorCrop(image, nil, cropOrientation, 0.0f, cropRect, false, TGPhotoEditorScreenImageMaxSize(), originalSize, true);
+                [photoEditor setImage:croppedImage forCropRect:cropRect cropRotation:0.0f cropOrientation:cropOrientation cropMirrored:cropMirrored fullSize:false];
                 
                 [photoEditor processAnimated:false completion:^
-                 {
+                {
                     TGDispatchOnMainThread(^
-                                           {
+                    {
                         [previewView setSnapshotImage:croppedImage];
                         
                         if (!previewView.hidden)
@@ -340,23 +345,19 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         
         UIInterfaceOrientation orientation = self.effectiveOrientation;
         
-        bool hasOnScreenNavigation = false;
-        if (iosMajorVersion() >= 11)
-            hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-        
         CGRect cropRectFrame = [_cropView cropRectFrameForView:self.view];
         CGSize referenceSize = [self referenceViewSizeForOrientation:orientation];
         CGRect referenceBounds = CGRectMake(0, 0, referenceSize.width, referenceSize.height);
-        CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+        CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
         
-        if (self.switchingToTab == TGPhotoEditorPreviewTab)
-        {
-             containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0 hasOnScreenNavigation:hasOnScreenNavigation];
-        }
-        else if (self.switchingToTab == TGPhotoEditorPaintTab)
-        {
-            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
-        }
+//        if (self.switchingToTab == TGPhotoEditorPreviewTab)
+//        {
+//            containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0 hasOnScreenNavigation:self.hasOnScreenNavigation];
+//        }
+//        else if (self.switchingToTab == TGPhotoEditorPaintTab)
+//        {
+//            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+//        }
         
         CGSize fittedSize = TGScaleToSize(cropRectFrame.size, containerFrame.size);
         CGRect targetFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2,
@@ -370,15 +371,24 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         [self.view addSubview:snapshotView];
 
         CGRect targetCropViewFrame = [self.view convertRect:targetFrame toView:_wrapperView];
+                
+        if (!self.item.isVideo) {
+            _previewView.hidden = true;
+        }
         
         [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
         {
             snapshotView.frame = targetFrame;
-            snapshotView.alpha = 1.0f;
+            if (self.item.isVideo) {
+                _cropView.alpha = 0.0f;
+            } else {
+                snapshotView.alpha = 1.0f;
+            }
             _cropView.frame = targetCropViewFrame;
             [_cropView invalidateCropRect];
         } completion:^(__unused BOOL finished)
         {
+            _previewView.hidden = false;
             if (self.finishedTransitionOut != nil)
                 self.finishedTransitionOut();
         }];
@@ -469,11 +479,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     CGSize referenceSize = [self referenceViewSize];
     UIInterfaceOrientation orientation = self.effectiveOrientation;
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:self.hasOnScreenNavigation];
 
     CGRect targetFrame = CGRectZero;
     

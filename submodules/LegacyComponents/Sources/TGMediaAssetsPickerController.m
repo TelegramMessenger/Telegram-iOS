@@ -285,8 +285,11 @@
         
         for (TGMediaPickerCell *cell in [strongSelf->_collectionView visibleCells])
         {
-            if ([cell.item isEqual:item.asset])
+            if ([cell.item respondsToSelector:@selector(uniqueIdentifier)] && [[(id)cell.item uniqueIdentifier] isEqual:item.asset.uniqueIdentifier]) {
                 return cell;
+            } else if ([cell.item isEqual:item.asset.uniqueIdentifier]) {
+                return cell;
+            }
         }
         
         return nil;
@@ -396,7 +399,13 @@
         if (_intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent) {
             intent = TGPhotoEditorControllerSignupAvatarIntent;
         }
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:asset intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        
+        id<TGMediaEditableItem> editableItem = asset;
+        if (asset.type == TGMediaAssetGifType) {
+            editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
+        }
+        
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = self.editingContext;
         controller.didFinishRenderingFullSizeImage = ^(UIImage *resultImage)
         {
@@ -441,7 +450,7 @@
         {
             if (editableItem.isVideo) {
                 if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
                 } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
                     return ((TGCameraCapturedVideo *)editableItem).avAsset;
                 } else {

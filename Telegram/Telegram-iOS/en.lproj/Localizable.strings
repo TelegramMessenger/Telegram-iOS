@@ -5548,12 +5548,15 @@ Any member of this group will be able to see messages in the channel.";
 "PhotoEditor.BlurToolPortrait" = "Portrait";
 "PhotoEditor.SelectCoverFrame" = "Choose a cover for your profile video";
 
-"Conversation.PeerNearbyTitle" = "%@ is %@ away";
+"Conversation.PeerNearbyTitle" = "%1$@ is %2$@ away";
 "Conversation.PeerNearbyText" = "Send a message or tap on the greeting below to show that you are ready to chat.";
-"Conversation.PeerNearbyDistance" = "%@ is %@ away";
+"Conversation.PeerNearbyDistance" = "%1$@ is %2$@ away";
 
 "ProfilePhoto.MainPhoto" = "Main Photo";
-"ProfilePhoto.SetMain" = "Set as Main Photo";
+"ProfilePhoto.SetMainPhoto" = "Set as Main Photo";
+
+"ProfilePhoto.MainVideo" = "Main Video";
+"ProfilePhoto.SetMainVideo" = "Set as Main Video";
 
 "Stats.GroupOverview" = "OVERVIEW";
 "Stats.GroupMembers" = "Members";
@@ -5629,3 +5632,15 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
 
 "Call.RemoteVideoPaused" = "%@'s video paused";
+
+"Settings.SetProfilePhotoOrVideo" = "Set Profile Photo or Video";
+"Settings.SetNewProfilePhotoOrVideo" = "Set New Profile Photo or Video";
+"Settings.ViewVideo" = "View Video";
+"Settings.RemoveVideo" = "Remove Video";
+
+"Conversation.Unarchive" = "Unarchive";
+"Conversation.UnarchiveDone" = "The chat was moved to your main list.";
+
+"ChatList.AutoarchiveSuggestion.Title" = "Hide new chats?";
+"ChatList.AutoarchiveSuggestion.Text" = "You are receiving lots of new chats from users who are not in your Contact List. Do you want to have such chats **automatically muted** and **archived**?";
+"ChatList.AutoarchiveSuggestion.OpenSettings" = "Go to Settings";

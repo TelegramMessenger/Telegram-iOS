@@ -9,7 +9,7 @@
 #import "TGPhotoPaintStickerEntity.h"
 #import "TGPhotoPaintTextEntity.h"
 
-const NSTimeInterval TGVideoEditMinimumTrimmableDuration = 1.0;
+const NSTimeInterval TGVideoEditMinimumTrimmableDuration = 1.5;
 const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
 
 @implementation TGVideoEditAdjustments
@@ -130,6 +130,8 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
     adjustments->_originalSize = originalSize;
     adjustments->_preset = preset;
+    if (preset == TGMediaVideoConversionPresetAnimation)
+        adjustments->_sendAsGif = true;
     
     return adjustments;
 }
@@ -153,7 +155,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return adjustments;
 }
 
-- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration videoStartValue:(NSTimeInterval)videoStartValue
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration
 {
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
     adjustments->_originalSize = _originalSize;
@@ -165,10 +167,10 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_trimStartValue = _trimStartValue;
     adjustments->_trimEndValue = _trimEndValue;
     adjustments->_paintingData = _paintingData;
-    adjustments->_sendAsGif = _sendAsGif;
     adjustments->_preset = preset;
     adjustments->_toolValues = _toolValues;
-    adjustments->_videoStartValue = videoStartValue;
+    adjustments->_videoStartValue = _videoStartValue;
+    adjustments->_sendAsGif = preset == TGMediaVideoConversionPresetAnimation ? true : _sendAsGif;
     
     if (maxDuration > DBL_EPSILON)
     {
@@ -183,6 +185,26 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
         }
     }
         
+    return adjustments;
+}
+
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset videoStartValue:(NSTimeInterval)videoStartValue trimStartValue:(NSTimeInterval)trimStartValue trimEndValue:(NSTimeInterval)trimEndValue
+{
+    TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
+    adjustments->_originalSize = _originalSize;
+    adjustments->_cropRect = _cropRect;
+    adjustments->_cropOrientation = _cropOrientation;
+    adjustments->_cropRotation = _cropRotation;
+    adjustments->_cropLockedAspectRatio = _cropLockedAspectRatio;
+    adjustments->_cropMirrored = _cropMirrored;
+    adjustments->_trimStartValue = trimStartValue;
+    adjustments->_trimEndValue = trimEndValue;
+    adjustments->_paintingData = _paintingData;
+    adjustments->_sendAsGif = _sendAsGif;
+    adjustments->_preset = preset;
+    adjustments->_toolValues = _toolValues;
+    adjustments->_videoStartValue = videoStartValue;
+  
     return adjustments;
 }
 

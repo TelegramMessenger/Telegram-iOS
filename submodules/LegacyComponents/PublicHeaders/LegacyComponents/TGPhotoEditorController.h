@@ -10,6 +10,7 @@
 @class PGCameraShotMetadata;
 @class TGSuggestionContext;
 @class TGPhotoEditorController;
+@class AVPlayer;
 
 @protocol TGPhotoPaintStickersContext;
 @class TGPhotoEntitiesContainerView;
@@ -56,6 +57,8 @@ typedef enum {
 @property (nonatomic, assign) bool dontHideStatusBar;
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
 @property (nonatomic, strong) NSArray *faces;
+
+@property (nonatomic, strong) AVPlayer *player;
 
 @property (nonatomic, strong) TGPhotoEntitiesContainerView *entitiesView;
 

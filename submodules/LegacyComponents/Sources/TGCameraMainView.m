@@ -50,17 +50,17 @@
             break;
             
         case PGCameraModeVideo:
+        case PGCameraModeSquareVideo:
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonVideoMode animated:true];
             [_timecodeView setHidden:false animated:true];
         }
             break;
             
-        case PGCameraModeSquareVideo:
+        case PGCameraModeSquareSwing:
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonVideoMode animated:true];
             [_timecodeView setHidden:true animated:true];
-
         }
             break;
             

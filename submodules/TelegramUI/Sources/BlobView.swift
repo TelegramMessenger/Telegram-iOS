@@ -18,34 +18,37 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         maxSpeed: 0.6,
         minScale: 0.45,
         maxScale: 0.55,
-        scaleSpeed: 0.2
+        scaleSpeed: 0.2,
+        isCircle: true
     )
     private let mediumBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 1,
-        minSpeed: 3,
+        minSpeed: 1,
         maxSpeed: 7,
         minScale: 0.55,
         maxScale: 0.9,
-        scaleSpeed: 0.2
+        scaleSpeed: 0.2,
+        isCircle: true
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 1,
-        minSpeed: 3,
+        minSpeed: 1,
         maxSpeed: 7,
         minScale: 0.55,
         maxScale: 1,
-        scaleSpeed: 0.2
+        scaleSpeed: 0.2,
+        isCircle: true
     )
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         
         addSubview(bigBlob)
-        addSubview(mediumBlob)
+        //addSubview(mediumBlob)
         addSubview(smallBlob)
     }
     
@@ -101,6 +104,9 @@ final class BlobView: UIView {
     let maxScale: CGFloat
     let scaleSpeed: CGFloat
     
+    // If true ignores randomness and pointsCount
+    let isCircle: Bool
+    
     var level: CGFloat = 0 {
         didSet {
             speedLevel = max(level, speedLevel)
@@ -153,7 +159,8 @@ final class BlobView: UIView {
         maxSpeed: CGFloat,
         minScale: CGFloat,
         maxScale: CGFloat,
-        scaleSpeed: CGFloat
+        scaleSpeed: CGFloat,
+        isCircle: Bool
     ) {
         self.pointsCount = pointsCount
         self.minRandomness = minRandomness
@@ -163,6 +170,7 @@ final class BlobView: UIView {
         self.minScale = minScale
         self.maxScale = maxScale
         self.scaleSpeed = scaleSpeed
+        self.isCircle = isCircle
         
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
@@ -208,6 +216,8 @@ final class BlobView: UIView {
     }
     
     func animateToNewShape() {
+        guard !isCircle else { return }
+        
         if pop_animation(forKey: "blob") != nil {
             fromPoints = currentPoints
             toPoints = nil
@@ -296,6 +306,13 @@ final class BlobView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        if isCircle {
+            let halfWidth = bounds.width * 0.5
+            shapeLayer.path = UIBezierPath(
+                roundedRect: bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
+                cornerRadius: halfWidth
+            ).cgPath
+        }
         CATransaction.commit()
     }
 }

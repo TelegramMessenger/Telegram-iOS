@@ -651,7 +651,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         [self _updateVideoDuration:((TGMediaAsset *)self.item).videoDuration hasAudio:true];
     
     TGVideoEditAdjustments *adjustments = [self.photoEditor exportAdjustments];
-    adjustments = [adjustments editAdjustmentsWithPreset:self.preset maxDuration:TGPhotoQualityPreviewDuration videoStartValue:0.0];
+    adjustments = [adjustments editAdjustmentsWithPreset:self.preset maxDuration:TGPhotoQualityPreviewDuration];
     
     __block NSTimeInterval delay = 0.0;
     __weak TGPhotoQualityController *weakSelf = self;

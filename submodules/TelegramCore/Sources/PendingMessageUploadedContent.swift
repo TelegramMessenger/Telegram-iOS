@@ -662,7 +662,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                     return .single(.pending)
                 case let .done(media):
                     if let media = media as? TelegramMediaFile, let smallestThumbnail = smallestImageRepresentation(media.previewRepresentations) {
-                        if peerId.namespace == Namespaces.Peer.SecretChat || (smallestThumbnail.resource is LocalFileMediaResource) {
+                        if peerId.namespace == Namespaces.Peer.SecretChat {
                             return .single(.done(media, .none))
                         } else {
                             let fileReference: AnyMediaReference

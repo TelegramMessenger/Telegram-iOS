@@ -616,4 +616,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             self.overlayMediaManager.controller?.addNode(node, customTransition: true)
         }
     }
+    
+    public func hasOverlayVideoNode(_ node: OverlayMediaItemNode) -> Bool {
+        return self.currentOverlayVideoNode === node
+    }
 }

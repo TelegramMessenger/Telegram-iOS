@@ -105,7 +105,7 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
                         $0.item(context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, secureIdContext: strongSelf.secureIdContext, delete: { resource in
                             self?.deleteItem(resource)
                         })
-                    }), centralItemIndex: centralIndex, keepFirst: false)
+                    }), centralItemIndex: centralIndex)
                     
                     let ready = (strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void()))) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true

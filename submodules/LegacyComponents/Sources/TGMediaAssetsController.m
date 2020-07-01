@@ -707,8 +707,13 @@
     if (grouping && selectedItems.count > 1)
         groupedId = @([self generateGroupedId]);
     
-    for (TGMediaAsset *asset in selectedItems)
+    for (TGMediaAsset *item in selectedItems)
     {
+        TGMediaAsset *asset = item;
+        if ([asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+            asset = ((TGCameraCapturedVideo *)asset).originalAsset;
+        }
+        
         switch (asset.type)
         {
             case TGMediaAssetPhotoType:
@@ -1044,84 +1049,77 @@
                 
             case TGMediaAssetGifType:
             {
-                NSString *caption = [editingContext captionForItem:asset];
-                NSArray *entities = [editingContext entitiesForItem:asset];
+                TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)item;
                 
-                [signals addObject:[[[TGMediaAssetImageSignals imageDataForAsset:asset allowNetworkAccess:false] mapToSignal:^SSignal *(TGMediaAssetImageData *assetData)
+                TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:video];
+                NSString *caption = [editingContext captionForItem:video];
+                NSArray *entities = [editingContext entitiesForItem:video];
+                NSNumber *timer = [editingContext timerForItem:video];
+                
+                UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
                 {
-                    NSString *tempFileName = TGTemporaryFileName(nil);
-                    NSData *data = assetData.imageData;
-                    
-                    const char *gif87Header = "GIF87";
-                    const char *gif89Header = "GIF89";
-                    if (data.length >= 5 && (!memcmp(data.bytes, gif87Header, 5) || !memcmp(data.bytes, gif89Header, 5)))
+                    if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
                     {
-                        return [[[TGGifConverter convertGifToMp4:data] map:^id(NSDictionary *result)
-                        {
-                            NSString *filePath = result[@"path"];
-                            
-                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                            dict[@"type"] = @"file";
-                            dict[@"tempFileUrl"] = [NSURL fileURLWithPath:filePath];
-                            dict[@"fileName"] = @"animation.mp4";
-                            dict[@"mimeType"] = @"video/mp4";
-                            dict[@"isAnimation"] = @true;
-                            if (result[@"dimensions"] != nil) {
-                                dict[@"dimensions"] = result[@"dimensions"];
-                            }
-                            if (result[@"duration"] != nil) {
-                                dict[@"duration"] = result[@"duration"];
-                            }
-                            if (result[@"previewImage"] != nil) {
-                                dict[@"previewImage"] = result[@"previewImage"];
-                            }
-                            
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                            return generatedItem;
-                        }] catch:^SSignal *(id error)
-                        {
-                            [data writeToURL:[NSURL fileURLWithPath:tempFileName] atomically:true];
-                            
-                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                            dict[@"type"] = @"file";
-                            dict[@"tempFileUrl"] = [NSURL fileURLWithPath:tempFileName];
-                            dict[@"fileName"] = assetData.fileName;
-                            dict[@"mimeType"] = TGMimeTypeForFileUTI(assetData.fileUTI);
-                            
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                            return [SSignal single:generatedItem];
-                        }];
+                        CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
+                        UIImage *paintingImage = adjustments.paintingData.stillImage;
+                        if (paintingImage == nil) {
+                            paintingImage = adjustments.paintingData.image;
+                        }
+                        if (adjustments.toolsApplied) {
+                            image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                        }
+                        return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
                     }
-                    else
-                    {
-                        [data writeToURL:[NSURL fileURLWithPath:tempFileName] atomically:true];
-                        
-                        NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                        dict[@"type"] = @"file";
-                        dict[@"tempFileUrl"] = [NSURL fileURLWithPath:tempFileName];
-                        dict[@"fileName"] = assetData.fileName;
-                        dict[@"mimeType"] = TGMimeTypeForFileUTI(assetData.fileUTI);
-                        
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                        return [SSignal single:generatedItem];
-                    }
-                }] catch:^SSignal *(id error)
-                {
-                    if (![error isKindOfClass:[NSNumber class]])
-                        return [SSignal complete];
                     
-                    return [inlineThumbnailSignal(asset) map:^id(UIImage *image)
+                    return image;
+                };
+                
+                CGSize imageSize = TGFillSize(video.originalSize, CGSizeMake(512, 512));
+                SSignal *trimmedVideoThumbnailSignal = [[video avAsset] mapToSignal:^SSignal *(AVURLAsset *avAsset) {
+                    return [[TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
                     {
-                        NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                        dict[@"type"] = @"cloudPhoto";
-                        dict[@"document"] = @true;
-                        dict[@"asset"] = asset;
-                        dict[@"previewImage"] = image;
-                        
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                        return generatedItem;
+                        return cropVideoThumbnail(image, TGScaleToFill(video.originalSize, CGSizeMake(512, 512)), video.originalSize, true);
                     }];
+                }];
+                
+                SSignal *videoThumbnailSignal = [[video thumbnailImageSignal] map:^UIImage *(UIImage *image)
+                {
+                    return cropVideoThumbnail(image, image.size, image.size, false);
+                }];
+                
+                SSignal *thumbnailSignal = adjustments.trimStartValue > FLT_EPSILON ? trimmedVideoThumbnailSignal : videoThumbnailSignal;
+                
+                TGMediaVideoConversionPreset preset = TGMediaVideoConversionPresetAnimation;
+                if (adjustments != nil) {
+                    adjustments = [adjustments editAdjustmentsWithPreset:preset maxDuration:0.0];
+                } else {
+                    adjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:video.originalSize preset:preset];
+                }
+                CGSize dimensions = [TGMediaVideoConverter dimensionsFor:video.originalSize adjustments:adjustments preset:preset];
+                NSTimeInterval duration = adjustments.trimApplied ? (adjustments.trimEndValue - adjustments.trimStartValue) : video.videoDuration;
+                
+                [signals addObject:[thumbnailSignal map:^id(UIImage *image)
+                {
+                    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                    dict[@"type"] = @"cameraVideo";
+                    dict[@"url"] = ((TGCameraCapturedVideo *)item).immediateAVAsset.URL;
+                    dict[@"previewImage"] = image;
+                    dict[@"adjustments"] = adjustments;
+                    dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                    dict[@"duration"] = @(duration);
+                    
+                    if (adjustments.paintingData.stickers.count > 0)
+                        dict[@"stickers"] = adjustments.paintingData.stickers;
+                    if (timer != nil)
+                        dict[@"timer"] = timer;
+                    else if (groupedId != nil && !hasAnyTimers)
+                        dict[@"groupedId"] = groupedId;
+                    
+                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    return generatedItem;
                 }]];
+                
+                i++;
             }
                 break;
                 
@@ -1374,7 +1372,7 @@
 
 @implementation TGMediaAssetsPallete
 
-+ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor sendIconImage:(UIImage *)sendIconImage maybeAccentColor:(UIColor *)maybeAccentColor
++ (instancetype)palleteWithDark:(bool)dark backgroundColor:(UIColor *)backgroundColor selectionColor:(UIColor *)selectionColor separatorColor:(UIColor *)separatorColor textColor:(UIColor *)textColor secondaryTextColor:(UIColor *)secondaryTextColor accentColor:(UIColor *)accentColor barBackgroundColor:(UIColor *)barBackgroundColor barSeparatorColor:(UIColor *)barSeparatorColor navigationTitleColor:(UIColor *)navigationTitleColor badge:(UIImage *)badge badgeTextColor:(UIColor *)badgeTextColor sendIconImage:(UIImage *)sendIconImage doneIconImage:(UIImage *)doneIconImage maybeAccentColor:(UIColor *)maybeAccentColor
 {
     TGMediaAssetsPallete *pallete = [[TGMediaAssetsPallete alloc] init];
     pallete->_isDark = dark;
@@ -1390,6 +1388,7 @@
     pallete->_badge = badge;
     pallete->_badgeTextColor = badgeTextColor;
     pallete->_sendIconImage = sendIconImage;
+    pallete->_doneIconImage = doneIconImage;
     pallete->_maybeAccentColor = maybeAccentColor;
     return pallete;
 }

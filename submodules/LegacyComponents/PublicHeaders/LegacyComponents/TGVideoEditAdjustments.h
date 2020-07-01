@@ -13,7 +13,10 @@ typedef enum
     TGMediaVideoConversionPresetCompressedVeryHigh,
     TGMediaVideoConversionPresetAnimation,
     TGMediaVideoConversionPresetVideoMessage,
-    TGMediaVideoConversionPresetProfile
+    TGMediaVideoConversionPresetProfile,
+    TGMediaVideoConversionPresetProfileHigh,
+    TGMediaVideoConversionPresetProfileVeryHigh,
+    TGMediaVideoConversionPresetPassthrough
 } TGMediaVideoConversionPreset;
 
 @interface TGVideoEditAdjustments : NSObject <TGMediaEditAdjustments>
@@ -31,7 +34,8 @@ typedef enum
 
 - (NSDictionary *)dictionary;
 
-- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration videoStartValue:(NSTimeInterval)videoStartValue;
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration;
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset videoStartValue:(NSTimeInterval)videoStartValue trimStartValue:(NSTimeInterval)trimStartValue trimEndValue:(NSTimeInterval)trimEndValue;
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize preset:(TGMediaVideoConversionPreset)preset;
 + (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values;
 + (instancetype)editAdjustmentsWithDictionary:(NSDictionary *)dictionary;

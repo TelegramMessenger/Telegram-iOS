@@ -76,10 +76,11 @@
         __block id<TGModernGalleryItem> focusItem = nil;
         void (^enumerationBlock)(TGMediaPickerGalleryItem *) = ^(TGMediaPickerGalleryItem *galleryItem)
         {
-            if (focusItem == nil && [galleryItem.asset isEqual:item])
-            {
-                focusItem = galleryItem;
-                galleryItem.immediateThumbnailImage = thumbnailImage;
+            if (focusItem == nil) {
+                if (([item isKindOfClass:[TGMediaAsset class]] && [galleryItem.asset.uniqueIdentifier isEqual:((TGMediaAsset *)item).uniqueIdentifier]) || [galleryItem.asset isEqual:item]) {
+                    focusItem = galleryItem;
+                    galleryItem.immediateThumbnailImage = thumbnailImage;
+                }
             }
         };
         
@@ -372,16 +373,15 @@
             {
                 TGCameraCapturedVideo *convertedAsset = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
                 galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:convertedAsset];
-//                galleryItem = [[TGMediaPickerGalleryGifItem alloc] initWithAsset:asset];
             }
                 break;
                 
             default:
             {
-                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
-                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
-                else
-                    galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
+//                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
+//                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
+//                else
+                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
             }
                 break;
         }

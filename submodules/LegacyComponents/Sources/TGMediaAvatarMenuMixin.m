@@ -27,6 +27,7 @@
     bool _saveCapturedMedia;
     bool _saveEditedPhotos;
     bool _signup;
+    bool _isVideo;
 }
 @end
 
@@ -39,10 +40,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
+    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
 {
     self = [super init];
     if (self != nil)
@@ -55,6 +56,7 @@
         _hasDeleteButton = hasDeleteButton;
         _hasViewButton = hasViewButton;
         _personalPhoto = ![TGCameraController useLegacyCamera] ? personalPhoto : false;
+        _isVideo = isVideo;
         _signup = signup;
     }
     return self;
@@ -179,7 +181,7 @@
     
     if (_hasViewButton)
     {
-        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Settings.ViewPhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:_isVideo ? TGLocalized(@"Settings.ViewVideo") : TGLocalized(@"Settings.ViewPhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -197,7 +199,7 @@
         
     if (_hasDeleteButton)
     {
-        TGMenuSheetButtonItemView *deleteItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"GroupInfo.SetGroupPhotoDelete") type:TGMenuSheetButtonTypeDestructive fontSize:20.0 action:^
+        TGMenuSheetButtonItemView *deleteItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:_isVideo ? TGLocalized(@"Settings.RemoveVideo") : TGLocalized(@"GroupInfo.SetGroupPhotoDelete") type:TGMenuSheetButtonTypeDestructive fontSize:20.0 action:^
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -361,6 +363,17 @@
         
         [menuController dismissAnimated:false];
     };
+    
+    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *videoURL, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
+        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        if (strongSelf.didFinishWithVideo != nil)
+            strongSelf.didFinishWithVideo(previewImage, videoURL, adjustments);
+        
+        [menuController dismissAnimated:false];
+    };
 }
 
 - (void)_displayLegacyCamera
@@ -394,14 +407,14 @@
             {
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil) {
-                    [strongController dismissViewControllerAnimated:true completion:nil];
+                    [strongController dismissViewControllerAnimated:false completion:nil];
                 }
                 
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
-                [strongSelf->_parentController dismissViewControllerAnimated:true completion:nil];
+                [strongSelf->_parentController dismissViewControllerAnimated:false completion:nil];
                 
                 if (strongSelf.didDismiss != nil)
                     strongSelf.didDismiss();
@@ -490,15 +503,6 @@
                 if (strongController != nil && strongController.dismissalBlock != nil)
                     strongController.dismissalBlock();
             };
-            if (strongSelf.requestSearchController != nil) {
-                controller.requestSearchController = ^
-                {
-                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-                    __strong TGMediaAssetsController *strongController = weakController;
-                    if (strongSelf != nil)
-                        strongSelf.requestSearchController(strongController);
-                };
-            }
             return presentBlock(controller);
         };
         

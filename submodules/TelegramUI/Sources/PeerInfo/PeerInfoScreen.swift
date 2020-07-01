@@ -37,6 +37,7 @@ import LocationUI
 import Geocoding
 import TextFormat
 import StatisticsUI
+import StickerResources
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -413,8 +414,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {
+        }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, statuses: nil)
+        }, unarchivePeer: {}, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         
@@ -1091,6 +1093,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         return self._ready
     }
     private var didSetReady = false
+    
+    private let preloadedSticker = Promise<TelegramMediaFile?>(nil)
+    private let preloadStickerDisposable = MetaDisposable()
     
     init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], ignoreGroupInCommon: PeerId?) {
         self.controller = controller
@@ -2011,6 +2016,27 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             strongSelf.updateData(data)
         })
+        
+        if let _ = nearbyPeerDistance {
+            self.preloadedSticker.set(.single(nil)
+            |> then(randomGreetingSticker(account: context.account)
+            |> map { item in
+                return item?.file
+            }))
+            
+            self.preloadStickerDisposable.set((self.preloadedSticker.get()
+            |> mapToSignal { sticker -> Signal<Void, NoError> in
+                if let sticker = sticker {
+                    let _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: sticker)).start()
+                    return chatMessageAnimationData(postbox: context.account.postbox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                        return .complete()
+                    }
+                } else {
+                    return .complete()
+                }
+            }).start())
+        }
     }
     
     deinit {
@@ -2023,6 +2049,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.updateAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
+        self.preloadStickerDisposable.dispose()
     }
     
     override func didLoad() {
@@ -2206,7 +2233,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         switch key {
         case .message:
             if let navigationController = controller.navigationController as? NavigationController {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
+                let _ = (self.preloadedSticker.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] sticker in
+                    if let strongSelf = self {
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) })))
+                    }
+                })
             }
         case .discussion:
             if let cachedData = self.data?.cachedData as? CachedChannelData, let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
@@ -2414,7 +2447,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChatWithMessageSearch() {
         if let navigationController = (self.controller?.navigationController as? NavigationController) {
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), activateMessageSearch: (.everything, ""), peerNearbyData:  self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
+            let _ = (self.preloadedSticker.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] sticker in
+                if let strongSelf = self {
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) })))
+                    }
+            })
         }
     }
     
@@ -2718,7 +2757,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func openChat() {
         if let navigationController = self.controller?.navigationController as? NavigationController {
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId), peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) })))
+            let _ = (self.preloadedSticker.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] sticker in
+                if let strongSelf = self {
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) })))
+                    }
+            })
         }
     }
     
@@ -3258,7 +3303,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 guard let strongSelf = self else {
@@ -4343,6 +4388,9 @@ public final class PeerInfoScreen: ViewController {
                 return nil
             }
             if other.contentNode != nil {
+                return nil
+            }
+            if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
                 return nil
             }
             if let tag = other.userInfo as? PeerInfoNavigationSourceTag, tag.peerId == peerId {

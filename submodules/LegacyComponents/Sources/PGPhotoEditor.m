@@ -169,6 +169,25 @@
     return MAX(_originalSize.width, _originalSize.height) * 0.005f;
 }
 
+- (CGRect)normalizedCropRect:(CGRect)cropRect
+{
+    CGRect normalizedCropRect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
+    normalizedCropRect = CGRectMake(MAX(0.0, MIN(1.0, cropRect.origin.x / _originalSize.width)), MAX(0.0, MIN(1.0, cropRect.origin.y / _originalSize.height)), MAX(0.0, MIN(1.0, cropRect.size.width / _originalSize.width)), MAX(0.0, MIN(1.0, cropRect.size.height / _originalSize.height)));
+    return normalizedCropRect;
+}
+
+- (void)setCropRect:(CGRect)cropRect
+{
+    _cropRect = cropRect;
+    _cropFilter.cropRegion = [self normalizedCropRect:cropRect];
+}
+
+- (void)setCropOrientation:(UIImageOrientation)cropOrientation
+{
+    _cropOrientation = cropOrientation;
+    
+}
+
 - (void)setPlayerItem:(AVPlayerItem *)playerItem forCropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored {
     [_toolComposer invalidate];
     _currentProcessChain = nil;
@@ -182,11 +201,10 @@
     
     _rotationMode = kGPUImageNoRotation;
     if (cropOrientation != UIImageOrientationUp || cropMirrored || hasCropping) {
-        CGRect normalizedCropRect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
-        if (hasCropping) {
-            normalizedCropRect = CGRectMake(MAX(0.0, MIN(1.0, cropRect.origin.x / _originalSize.width)), MAX(0.0, MIN(1.0, cropRect.origin.y / _originalSize.height)), MAX(0.0, MIN(1.0, cropRect.size.width / _originalSize.width)), MAX(0.0, MIN(1.0, cropRect.size.height / _originalSize.height)));
-        }
-        _cropFilter = [[GPUImageCropFilter alloc] initWithCropRegion:normalizedCropRect];
+        if (_cropFilter == nil)
+            _cropFilter = [[GPUImageCropFilter alloc] initWithCropRegion:[self normalizedCropRect:cropRect]];
+        else
+            _cropFilter.cropRegion = [self normalizedCropRect:cropRect];
         if (cropOrientation != UIImageOrientationUp || cropMirrored) {
             switch (cropOrientation) {
                 case UIImageOrientationLeft:
@@ -383,6 +401,7 @@
     if (![_currentProcessChain isEqualToArray:processChain])
     {
         [_currentInput removeAllTargets];
+        [_cropFilter removeAllTargets];
         
         for (PGPhotoProcessPass *pass in _currentProcessChain)
             [pass.filter removeAllTargets];
@@ -390,7 +409,7 @@
         _currentProcessChain = processChain;
         
         GPUImageOutput <GPUImageInput> *lastFilter = ((PGPhotoProcessPass *)_currentProcessChain.firstObject).filter;
-        if (_cropFilter != nil) {
+        if (_cropFilter != nil && !self.cropOnLast) {
             [_currentInput addTarget:_cropFilter];
             [_cropFilter addTarget:lastFilter];
         } else {
@@ -410,13 +429,65 @@
         }
         _finalFilter = lastFilter;
         
-        if (previewOutput != nil) {
-            [_finalFilter addTarget:previewOutput.imageView];
+        if (self.cropOnLast) {
+            if (_cropFilter == nil)
+                _cropFilter = [[GPUImageCropFilter alloc] initWithCropRegion:[self normalizedCropRect:_cropRect]];
+            
+            for (PGPhotoEditorView *view in _additionalOutputs) {
+                [_finalFilter addTarget:view];
+            }
+            [_finalFilter addTarget:_cropFilter];
+            
+            if (previewOutput != nil) {
+                [_cropFilter addTarget:previewOutput.imageView];
+            }
+        } else {
+            if (previewOutput != nil) {
+                [_finalFilter addTarget:previewOutput.imageView];
+            }
+            for (PGPhotoEditorView *view in _additionalOutputs) {
+                [_finalFilter addTarget:view];
+            }
         }
         
         if (_histogramGenerator != nil && !self.standalone) {
             [_finalFilter addTarget:_histogramGenerator];
         }
+    }
+}
+
+- (void)setAdditionalOutputs:(NSArray *)additionalOutputs {
+    _additionalOutputs = additionalOutputs;
+    
+    if (_finalFilter == nil)
+        return;
+    
+    [_cropFilter removeAllTargets];
+    [_finalFilter removeAllTargets];
+    
+    if (self.cropOnLast) {
+        for (PGPhotoEditorView *view in _additionalOutputs) {
+            [_finalFilter addTarget:view];
+        }
+        
+        [_finalFilter addTarget:_cropFilter];
+        
+        if (self.previewOutput != nil) {
+            [_cropFilter addTarget:self.previewOutput.imageView];
+        }
+    } else {
+        for (PGPhotoEditorView *view in _additionalOutputs) {
+            [_finalFilter addTarget:view];
+        }
+        
+        if (self.previewOutput != nil) {
+            [_finalFilter addTarget:self.previewOutput.imageView];
+        }
+    }
+
+    
+    if (_histogramGenerator != nil && !self.standalone) {
+        [_finalFilter addTarget:_histogramGenerator];
     }
 }
 

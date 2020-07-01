@@ -26,7 +26,7 @@ private struct Constants {
     static let idleRotationDiff: CGFloat = 0.1 * idleRotationSpeed
 }
 
-class CombinedWaveView: UIView {
+class CombinedWaveView: UIView, TGModernConversationInputMicButtonDecoration {
     private let bigWaveView: WaveView
     private let smallWaveView: WaveView
     
@@ -70,6 +70,9 @@ class CombinedWaveView: UIView {
         let radius = 56.0 + 30.0 * level * 0.2
         self.bigWaveView.tick(circleRadius: radius)
         self.smallWaveView.tick(circleRadius: radius)
+    }
+    
+    func setColor(_ color: UIColor) {
     }
 }
 
