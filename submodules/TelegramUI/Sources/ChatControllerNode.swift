@@ -563,9 +563,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.navigateButtons)
         
         self.addSubnode(self.navigationBarBackroundNode)
-        self.navigationBarBackroundNode.isHidden = true
         self.addSubnode(self.navigationBarSeparatorNode)
-        self.navigationBarSeparatorNode.isHidden = true
+        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
+            self.navigationBarBackroundNode.isHidden = true
+            self.navigationBarSeparatorNode.isHidden = true
+        }
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
@@ -2691,7 +2693,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func updateEmbeddedTitlePeekContent(content: NavigationControllerDropContent?) {
-        return;
+        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
+            return
+        }
         
         guard let (_, navigationHeight) = self.validLayout else {
             return
@@ -2719,7 +2723,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var updateHasEmbeddedTitleContent: (() -> Void)?
     
     func acceptEmbeddedTitlePeekContent(content: NavigationControllerDropContent) -> Bool {
-        return false;
+        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
+            return false
+        }
         
         guard let (_, navigationHeight) = self.validLayout else {
             return false

@@ -376,7 +376,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .inline:
                 navigationBarPresentationData = nil
             default:
-                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: false, hideBadge: false)
+                navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
@@ -2806,9 +2806,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let navigationBarTheme: NavigationBarTheme
             
         if self.hasEmbeddedTitleContent {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: true, hideBadge: true)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: defaultDarkPresentationTheme, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: true)
         } else {
-            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: false, hideBadge: false)
+            navigationBarTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
         
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -8452,6 +8452,58 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
         self.commitPurposefulAction()
         
+        if self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback {
+            if url.hasSuffix(".m3u8") {
+                let navigationController = self.navigationController as? NavigationController
+                
+                let webPage = TelegramMediaWebpage(
+                    webpageId: MediaId(namespace: 0, id: 0),
+                    content: .Loaded(TelegramMediaWebpageLoadedContent(
+                        url: url,
+                        displayUrl: url,
+                        hash: 0,
+                        type: "video",
+                        websiteName: nil,
+                        title: nil,
+                        text: nil,
+                        embedUrl: url,
+                        embedType: "video",
+                        embedSize: nil,
+                        duration: nil,
+                        author: nil,
+                        image: nil,
+                        file: nil,
+                        attributes: [],
+                        instantPage: nil
+                    ))
+                )
+                let entry = InstantPageGalleryEntry(
+                    index: 0,
+                    pageId: webPage.webpageId,
+                    media: InstantPageMedia(
+                        index: 0,
+                        media: webPage,
+                        url: nil,
+                        caption: nil,
+                        credit: nil
+                    ),
+                    caption: nil,
+                    credit: nil,
+                    location: nil
+                )
+                
+                let gallery = InstantPageGalleryController(context: context, webPage: webPage, entries: [entry], centralIndex: 0, replaceRootController: { [weak navigationController] controller, ready in
+                    if let navigationController = navigationController {
+                        navigationController.replaceTopController(controller, animated: false, ready: ready)
+                    }
+                }, baseNavigationController: navigationController)
+                self.present(gallery, in: .window(.root), with: InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
+                    return nil
+                }))
+                return;
+            }
+        }
+        
         openUserGeneratedUrl(context: self.context, url: url, concealed: concealed, present: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, openResolved: { [weak self] resolved in
@@ -9387,7 +9439,9 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 
 func parseUrl(url: String, wasConcealed: Bool) -> (string: String, concealed: Bool) {
     var parsedUrlValue: URL?
-    if let parsed = URL(string: url) {
+    if url.hasPrefix("tel:") {
+        return (url, false)
+    } else if let parsed = URL(string: url) {
         parsedUrlValue = parsed
     } else if let parsed = URL(string: "https://" + url) {
         parsedUrlValue = parsed

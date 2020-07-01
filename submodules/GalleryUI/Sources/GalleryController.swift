@@ -157,7 +157,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
                         content = NativeVideoContent(id: .message(message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath)
                     } else {
-                        content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
+                        content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), content: .file(.message(message: MessageReference(message), media: file)), streamVideo: streamVideos, loopVideo: loopVideos)
                     }
                 }
                 
