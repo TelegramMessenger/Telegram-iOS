@@ -198,10 +198,10 @@ private func requestChannelStats(postbox: Postbox, network: Network, datacenterI
             signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
             |> castError(MTRpcError.self)
             |> mapToSignal { worker in
-                return worker.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel, tzOffset: 0))
+                return worker.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
             }
         } else {
-            signal = network.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel, tzOffset: 0))
+            signal = network.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
         }
         
         return signal

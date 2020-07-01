@@ -88,21 +88,29 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     public final class VideoRepresentation: Equatable, PostboxCoding {
         public let dimensions: PixelDimensions
         public let resource: TelegramMediaResource
+        public let startTimestamp: Double?
         
-        public init(dimensions: PixelDimensions, resource: TelegramMediaResource) {
+        public init(dimensions: PixelDimensions, resource: TelegramMediaResource, startTimestamp: Double?) {
             self.dimensions = dimensions
             self.resource = resource
+            self.startTimestamp = startTimestamp
         }
         
         public init(decoder: PostboxDecoder) {
             self.dimensions = PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0))
             self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
+            self.startTimestamp = decoder.decodeOptionalDoubleForKey("s")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeInt32(self.dimensions.width, forKey: "w")
             encoder.encodeInt32(self.dimensions.height, forKey: "h")
             encoder.encodeObject(self.resource, forKey: "r")
+            if let startTimestamp = self.startTimestamp {
+                encoder.encodeDouble(startTimestamp, forKey: "s")
+            } else {
+                encoder.encodeNil(forKey: "s")
+            }
         }
         
         public static func ==(lhs: VideoRepresentation, rhs: VideoRepresentation) -> Bool {
@@ -113,6 +121,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
                 return false
             }
             if !lhs.resource.isEqual(to: rhs.resource) {
+                return false
+            }
+            if lhs.startTimestamp != rhs.startTimestamp {
                 return false
             }
             return true

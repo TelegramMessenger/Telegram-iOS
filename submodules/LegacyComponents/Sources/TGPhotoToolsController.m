@@ -181,7 +181,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil)
             [strongSelf setPreview:!strongSelf->_preview animated:true];
     };
-    previewView.customTouchDownHandling = forVideo;
+    previewView.customTouchDownHandling = true;
     [self.view addSubview:_previewView];
     
     _wrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectZero];

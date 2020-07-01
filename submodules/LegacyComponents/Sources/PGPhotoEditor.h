@@ -30,6 +30,8 @@
 
 @property (nonatomic, readonly) bool enableStickers;
 
+@property (nonatomic, assign) bool cropOnLast;
+
 @property (nonatomic, readonly) bool forVideo;
 
 @property (nonatomic, assign) bool standalone;

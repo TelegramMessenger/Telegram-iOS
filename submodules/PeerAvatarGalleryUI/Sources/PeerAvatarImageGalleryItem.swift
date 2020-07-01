@@ -137,6 +137,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
+    private let playbackStatusDisposable = MetaDisposable()
     
     init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
         self.context = context
@@ -183,6 +184,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     deinit {
         self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
+        self.playbackStatusDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -230,47 +232,6 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
-//                self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
-//                |> deliverOnMainQueue).start(next: { [weak self] status in
-//                    if let strongSelf = self {
-//                        let previousStatus = strongSelf.status
-//                        strongSelf.status = status
-//                        switch status {
-//                            case .Remote:
-//                                strongSelf.statusNode.isHidden = false
-//                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-//                                strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-//                            case let .Fetching(_, progress):
-//                                strongSelf.statusNode.isHidden = false
-//                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-//                                let adjustedProgress = max(progress, 0.027)
-//                                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true), completion: {})
-//                            case .Local:
-//                                if let previousStatus = previousStatus, case .Fetching = previousStatus {
-//                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
-//                                        if let strongSelf = self {
-//                                            strongSelf.statusNode.alpha = 0.0
-//                                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-//                                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-//                                                if let strongSelf = self {
-//                                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-//                                                }
-//                                            })
-//                                        }
-//                                    })
-//                                } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
-//                                    strongSelf.statusNode.alpha = 0.0
-//                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-//                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-//                                        if let strongSelf = self {
-//                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-//                                        }
-//                                    })
-//                                }
-//                        }
-//                    }
-//                }))
-                
                 var id: Int64?
                 if case let .image(image) = entry {
                     id = image.0.id
@@ -281,20 +242,44 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                     let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
                     videoNode.isUserInteractionEnabled = false
-                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
-                        if let strongSelf = self {
-                            strongSelf.videoNode?.isHidden = !owns
+                    videoNode.isHidden = true
+                    
+                    if let _ = video.startTimestamp {
+                        self.playbackStatusDisposable.set((videoNode.status
+                        |> map { status -> Bool in
+                            if let status = status, case .playing = status.status {
+                                return true
+                            } else {
+                                return false
+                            }
                         }
+                        |> filter { playing in
+                            return playing
+                        }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            if let strongSelf = self {
+                                Queue.mainQueue().after(0.03) {
+                                    strongSelf.videoNode?.isHidden = false
+                                }
+                            }
+                        }))
+                    } else {
+                        self.playbackStatusDisposable.set(nil)
+                        videoNode.isHidden = false
                     }
+                    
                     videoNode.canAttachContent = true
                     if videoNode.hasAttachedContext {
+                        if let startTimestamp = video.startTimestamp {
+                            videoNode.seek(startTimestamp)
+                        }
                         videoNode.play()
                     }
+                    videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
                     
                     self.videoContent = videoContent
                     self.videoNode = videoNode
-                    
-                    videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
                     
                     self.contentNode.addSubnode(videoNode)
                     

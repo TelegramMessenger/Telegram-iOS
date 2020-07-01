@@ -353,6 +353,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     actionsDisposable.add(hiddenAvatarRepresentationDisposable)
     
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
+    let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
@@ -457,6 +458,19 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             })
         }
         
+        let peer = peerViewMainPeer(view)
+        if let peer = peer {
+            let _ = cachedAvatarEntries.modify { value in
+                if value != nil {
+                    return value
+                } else {
+                    let promise = Promise<[AvatarGalleryEntry]>()
+                    promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                    return promise
+                }
+            }
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks, ensureVisibleItemTag: focusOnItemTag)
         
@@ -500,9 +514,20 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         }
     }
     changeProfilePhotoImpl = { [weak controller] in
-        let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+        let avatarEntries = (cachedAvatarEntries.with({ $0 })?.get()) ?? .single([])
+        let _ = (combineLatest(context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
-        } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
+        }, avatarEntries |> take(1)) |> deliverOnMainQueue).start(next: { peerAndSearchBotsConfiguration, avatarEntries in
+            let peer = peerAndSearchBotsConfiguration.0
+            let searchBotsConfiguration = peerAndSearchBotsConfiguration.1
+            
+            let mainIsVideo: Bool
+            if let main = avatarEntries.first, case let .image(image) = main {
+                mainIsVideo = !image.3.isEmpty
+            } else {
+                mainIsVideo = false
+            }
+            
             controller?.view.endEditing(true)
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -532,13 +557,21 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     updateState {
                         $0.withUpdatedUpdatingAvatar(.image(representation, true))
                     }
-                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in
+                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
                                     $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                           
+                                if let peer = peer {
+                                    let _ = cachedAvatarEntries.modify { value in
+                                        let promise = Promise<[AvatarGalleryEntry]>()
+                                        promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                                        return promise
+                                    }
                                 }
                             case .progress:
                                 break
@@ -549,6 +582,18 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             
             let completedVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
                 if let data = image.jpegData(compressionQuality: 0.6) {
+                    let photoResource = LocalFileMediaResource(fileId: arc4random64())
+                    context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
+                    updateState {
+                        $0.withUpdatedUpdatingAvatar(.image(representation, true))
+                    }
+                    
+                    var videoStartTimestamp: Double? = nil
+                    if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+                        videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+                    }
+                    
                     let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
                         var filteredPath = url.path
                         if filteredPath.hasPrefix("file://") {
@@ -568,6 +613,10 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                         
                         let signalDisposable = signal.start(next: { next in
                             if let result = next as? TGMediaVideoConversionResult {
+                                if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                                    context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                                }
+                                
                                 var value = stat()
                                 if stat(result.fileURL.path, &value) == 0 {
                                     if let data = try? Data(contentsOf: result.fileURL) {
@@ -577,7 +626,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                                         } else {
                                             resource = LocalFileMediaResource(fileId: arc4random64())
                                         }
-                                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                         subscriber.putNext(resource)
                                     }
                                 }
@@ -594,17 +643,10 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                             disposable.dispose()
                         }
                     }
-                    
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
-                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
-                    updateState {
-                        $0.withUpdatedUpdatingAvatar(.image(representation, true))
-                    }
-                    
+
                     updateAvatarDisposable.set((signal
                     |> mapToSignal { videoResource in
-                        return updateAccountPhoto(account: context.account, resource: resource, videoResource: videoResource, mapResourceToAvatarSizes: { resource, representations in
+                        return updateAccountPhoto(account: context.account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         })
                     } |> deliverOnMainQueue).start(next: { result in
@@ -613,6 +655,14 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                                 updateState {
                                     $0.withUpdatedUpdatingAvatar(nil)
                                 }
+                                
+                                if let peer = peer {
+                                    let _ = cachedAvatarEntries.modify { value in
+                                        let promise = Promise<[AvatarGalleryEntry]>()
+                                        promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                                        return promise
+                                    }
+                                }
                             case .progress:
                                 break
                         }
@@ -620,7 +670,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, isVideo: mainIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
@@ -648,13 +698,20 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                         return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                     }
                 }
-                updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in
+                updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                 }) |> deliverOnMainQueue).start(next: { result in
                     switch result {
                         case .complete:
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(nil)
+                            }
+                            if let peer = peer {
+                                let _ = cachedAvatarEntries.modify { value in
+                                    let promise = Promise<[AvatarGalleryEntry]>()
+                                    promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                                    return promise
+                                }
                             }
                         case .progress:
                             break
@@ -668,12 +725,8 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peer in
                     if peer.smallProfileImage != nil {
-                        let galleryController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { controller, ready in
+                        let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: cachedAvatarEntries.with { $0 }, replaceRootController: { controller, ready in
                         })
-                        /*hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
-                            avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
-                            updateHiddenAvatarImpl?()
-                        }))*/
                         presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
                             return nil
                         }))

@@ -58,7 +58,6 @@ typedef enum
     NSTimeInterval _duration;
 
     bool _ignoreThumbnailLoad;
-    bool _fadingThumbnailViews;
     CGFloat _thumbnailAspectRatio;
     NSArray *_summaryTimestamps;
     NSMutableArray *_summaryThumbnailViews;
@@ -159,11 +158,7 @@ typedef enum
             
             [strongSelf->_trimView setTrimming:true animated:true];
             
-            if (strongSelf->_hasDotPicker) {
-                [strongSelf setDotHandleHidden:true animated:false];
-            } else {
-                [strongSelf setScrubberHandleHidden:true animated:false];
-            }
+            [strongSelf setScrubberHandleHidden:true animated:false];
         };
         _trimView.didEndEditing = ^
         {
@@ -211,11 +206,7 @@ typedef enum
             
             [strongSelf->_trimView setTrimming:isTrimmed animated:true];
             
-            if (strongSelf->_hasDotPicker) {
-                [strongSelf setDotHandleHidden:false animated:true];
-            } else {
-                [strongSelf setScrubberHandleHidden:false animated:true];
-            }
+            [strongSelf setScrubberHandleHidden:false animated:true];
             
             [strongSelf cancelZoomIn];
             if (strongSelf->_zoomedIn)
@@ -263,13 +254,8 @@ typedef enum
             strongSelf->_trimStartValue = trimStartPosition;
             strongSelf->_trimEndValue = trimEndPosition;
             
-            if (strongSelf->_hasDotPicker) {
-                if (strongSelf->_value < trimStartPosition) {
-                    strongSelf->_value = trimStartPosition;
-                }
-            } else {
-                [strongSelf setValue:trimStartPosition];
-            }
+            [strongSelf setValue:trimStartPosition];
+            
             UIView *handle = strongSelf->_scrubberHandle;
             handle.center = CGPointMake(trimView.frame.origin.x + 12 + handle.frame.size.width / 2, handle.center.y);
             
@@ -334,13 +320,7 @@ typedef enum
             strongSelf->_trimStartValue = trimStartPosition;
             strongSelf->_trimEndValue = trimEndPosition;
             
-            if (strongSelf->_hasDotPicker) {
-                if (strongSelf->_value > trimEndPosition) {
-                    strongSelf->_value = trimEndPosition;
-                }
-            } else {
-                [strongSelf setValue:trimEndPosition];
-            }
+            [strongSelf setValue:trimEndPosition];
             
             UIView *handle = strongSelf->_scrubberHandle;
             handle.center = CGPointMake(CGRectGetMaxX(trimView.frame) - 12 - handle.frame.size.width / 2, handle.center.y);
@@ -465,8 +445,6 @@ typedef enum
 
 - (void)setHasDotPicker:(bool)hasDotPicker {
     _hasDotPicker = hasDotPicker;
-    _dotHandle.hidden = !hasDotPicker;
-    _scrubberHandle.hidden = true;
     _tapGestureRecognizer.enabled = hasDotPicker;
 }
 
@@ -691,12 +669,7 @@ typedef enum
         frameAspectRatio = originalAspectRatio;
  
     _thumbnailAspectRatio = frameAspectRatio;
-    
-    if (_hasDotPicker) {
-        CGSize videoSize = TGFillSize([self _thumbnailSize], _dotImageView.frame.size);
-        _dotImageView.frame = CGRectMake(TGScreenPixelFloor((_dotContentView.frame.size.width - videoSize.width) / 2.0), 0.0, videoSize.width, videoSize.height);
-    }
-    
+        
     NSInteger thumbnailCount = (NSInteger)CGCeil(_summaryThumbnailWrapperView.frame.size.width / [self _thumbnailSizeWithAspectRatio:frameAspectRatio orientation:_cropOrientation].width);
     
     if ([dataSource respondsToSelector:@selector(videoScrubber:evenlySpacedTimestamps:startingAt:endingAt:)])
@@ -741,6 +714,41 @@ typedef enum
     [self _resetZooming];
 }
 
+- (void)updateThumbnails {
+    UIView *snapshotView = [_summaryThumbnailWrapperView snapshotViewAfterScreenUpdates:true];
+    snapshotView.frame = _summaryThumbnailWrapperView.frame;
+    [_summaryThumbnailWrapperView.superview insertSubview:snapshotView aboveSubview:_summaryThumbnailWrapperView];
+    
+    id<TGMediaPickerGalleryVideoScrubberDataSource> dataSource = self.dataSource;
+    if ([dataSource respondsToSelector:@selector(videoScrubberOriginalSize:cropRect:cropOrientation:cropMirrored:)])
+        _originalSize = [dataSource videoScrubberOriginalSize:self cropRect:&_cropRect cropOrientation:&_cropOrientation cropMirrored:&_cropMirrored];
+    
+    for (TGMediaPickerGalleryVideoScrubberThumbnailView *view in _summaryThumbnailWrapperView.subviews) {
+        view.cropRect = _cropRect;
+        view.cropOrientation = _cropOrientation;
+        view.cropMirrored = _cropMirrored;
+        [view updateCropping];
+    }
+    
+    for (TGMediaPickerGalleryVideoScrubberThumbnailView *view in _zoomedThumbnailWrapperView.subviews) {
+        view.cropRect = _cropRect;
+        view.cropOrientation = _cropOrientation;
+        view.cropMirrored = _cropMirrored;
+        [view updateCropping];
+    }
+    
+    if (snapshotView != nil)
+    {
+        [UIView animateWithDuration:0.2f animations:^
+        {
+            snapshotView.alpha = 0.0f;
+        } completion:^(__unused BOOL finished)
+        {
+            [snapshotView removeFromSuperview];
+        }];
+    }
+}
+
 - (void)reloadData
 {
     [self reloadDataAndReset:true];
@@ -771,23 +779,29 @@ typedef enum
     [self reloadThumbnails];
 }
 
-- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)__unused timestamp isSummaryThubmnail:(bool)isSummaryThumbnail
+- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)__unused timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail
 {
-    TGMediaPickerGalleryVideoScrubberThumbnailView *thumbnailView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:image originalSize:_originalSize cropRect:_cropRect cropOrientation:_cropOrientation cropMirrored:_cropMirrored];
-    
+    bool exists = false;
     if (isSummaryThumbnail)
     {
-        [_summaryThumbnailWrapperView addSubview:thumbnailView];
-        [_summaryThumbnailViews addObject:thumbnailView];
+        if (_summaryThumbnailViews.count >= index + 1) {
+            exists = true;
+            [_summaryThumbnailViews[index] setImage:image animated:true];
+        } else {
+            TGMediaPickerGalleryVideoScrubberThumbnailView *thumbnailView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:image originalSize:_originalSize cropRect:_cropRect cropOrientation:_cropOrientation cropMirrored:_cropMirrored];
+            [_summaryThumbnailWrapperView addSubview:thumbnailView];
+            [_summaryThumbnailViews addObject:thumbnailView];
+        }
     }
     else
     {
+        TGMediaPickerGalleryVideoScrubberThumbnailView *thumbnailView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:image originalSize:_originalSize cropRect:_cropRect cropOrientation:_cropOrientation cropMirrored:_cropMirrored];
         [_zoomedThumbnailWrapperView addSubview:thumbnailView];
         [_zoomedThumbnailViews addObject:thumbnailView];
     }
     
-    if ((isSummaryThumbnail && _summaryThumbnailViews.count == _summaryTimestamps.count)
-        || (!isSummaryThumbnail && _zoomedThumbnailViews.count == _zoomedTimestamps.count))
+    if (!exists && ((isSummaryThumbnail && _summaryThumbnailViews.count == _summaryTimestamps.count)
+        || (!isSummaryThumbnail && _zoomedThumbnailViews.count == _zoomedTimestamps.count)))
     {
         if (!_ignoreThumbnailLoad)
         {
@@ -806,13 +820,11 @@ typedef enum
             
             if (snapshotView != nil)
             {
-                _fadingThumbnailViews = true;
-                [UIView animateWithDuration:0.3f animations:^
+                [UIView animateWithDuration:0.2f animations:^
                 {
                     snapshotView.alpha = 0.0f;
                 } completion:^(__unused BOOL finished)
                 {
-                    _fadingThumbnailViews = false;
                     [snapshotView removeFromSuperview];
                 }];
             }
