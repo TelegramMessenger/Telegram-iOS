@@ -11,6 +11,8 @@
 #import "PGPhotoEditorView.h"
 
 const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
+const CGFloat TGPhotoAvatarCropViewCurtainSize = 300;
+const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
 
 @interface TGPhotoAvatarCropView () <UIScrollViewDelegate>
 {
@@ -28,17 +30,22 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     UIView *_leftOverlayView;
     UIView *_rightOverlayView;
     UIView *_bottomOverlayView;
+    
+    UIView *_topCurtainView;
+    UIView *_bottomCurtainView;
     UIImageView *_areaMaskView;
     
     bool _imageReloadingNeeded;
     
     CGFloat _currentDiameter;
+    
+    PGPhotoEditorView *_fullPreviewView;
 }
 @end
 
 @implementation TGPhotoAvatarCropView
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -67,9 +74,21 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
         _imageView.userInteractionEnabled = false;
         [_wrapperView addSubview:_imageView];
         
-        _fullPreviewView = [[PGPhotoEditorView alloc] initWithFrame:_imageView.frame];
+        _fullPreviewView = fullPreviewView;
+        _fullPreviewView.center = _imageView.center;
+        CGSize fittedSize  = TGScaleToSize(_originalSize, CGSizeMake(1024, 1024));
+        CGFloat scale = _imageView.bounds.size.width / fittedSize.width;
+        _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
         _fullPreviewView.userInteractionEnabled = false;
         [_wrapperView addSubview:_fullPreviewView];
+        
+        _topCurtainView = [[UIView alloc] initWithFrame:CGRectZero];
+        _topCurtainView.backgroundColor = [UIColor blackColor];
+        [self addSubview:_topCurtainView];
+        
+        _bottomCurtainView = [[UIView alloc] initWithFrame:CGRectZero];
+        _bottomCurtainView.backgroundColor = [UIColor blackColor];
+        [self addSubview:_bottomCurtainView];
         
         _topOverlayView = [[UIView alloc] initWithFrame:CGRectZero];
         _topOverlayView.backgroundColor = [TGPhotoEditorInterfaceAssets cropTransparentOverlayColor];
@@ -336,18 +355,24 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)__unused scrollView willDecelerate:(BOOL)decelerate
 {
-    if (!decelerate)
+    if (!decelerate) {
         [self scrollViewDidEndDecelerating:scrollView];
+        
+        if (self.croppingChanged != nil)
+            self.croppingChanged();
+    }
 }
 
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)__unused scrollView
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     _isAnimating = false;
     
     [self _updateCropRect];
     
-    if (self.croppingChanged != nil)
-        self.croppingChanged();
+    if (!scrollView.isTracking) {
+        if (self.croppingChanged != nil)
+            self.croppingChanged();
+    }
     
     [self reloadImageIfNeeded];
     
@@ -410,7 +435,10 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 {
     _cropMirrored = cropMirrored;
     _imageView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0f : 1.0f, 1.0f);
-    _fullPreviewView.transform = _imageView.transform;
+    
+    CGSize fittedSize  = TGScaleToSize(_originalSize, CGSizeMake(1024, 1024));
+    CGFloat scale = _imageView.bounds.size.width / fittedSize.width;
+    _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
 }
 
 - (void)invalidateCropRect
@@ -513,6 +541,18 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     }];
 }
 
+- (void)animateTransitionOut
+{
+    [UIView animateWithDuration:0.2f animations:^
+    {
+        _topOverlayView.alpha = 0.0f;
+        _leftOverlayView.alpha = 0.0f;
+        _rightOverlayView.alpha = 0.0f;
+        _bottomOverlayView.alpha = 0.0f;
+        _areaMaskView.alpha = 0.0f;
+    }];
+}
+
 - (void)hideImageForCustomTransition
 {
     _scrollView.hidden = true;
@@ -522,15 +562,49 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 
 - (void)_layoutOverlayViews
 {
-    CGRect topOverlayFrame = CGRectMake(0, -TGPhotoAvatarCropViewOverscreenSize, self.frame.size.width, TGPhotoAvatarCropViewOverscreenSize);
-    CGRect leftOverlayFrame = CGRectMake(-TGPhotoAvatarCropViewOverscreenSize, -TGPhotoAvatarCropViewOverscreenSize, TGPhotoAvatarCropViewOverscreenSize, self.frame.size.height + 2 * TGPhotoAvatarCropViewOverscreenSize);
-    CGRect rightOverlayFrame = CGRectMake(self.frame.size.width, -TGPhotoAvatarCropViewOverscreenSize, TGPhotoAvatarCropViewOverscreenSize, self.frame.size.height + 2 * TGPhotoAvatarCropViewOverscreenSize);
-    CGRect bottomOverlayFrame = CGRectMake(0, self.frame.size.height, self.frame.size.width, TGPhotoAvatarCropViewOverscreenSize);
+    CGRect topOverlayFrame = CGRectMake(0, -TGPhotoAvatarCropViewOverscreenSize, self.bounds.size.width, TGPhotoAvatarCropViewOverscreenSize);
+    CGRect leftOverlayFrame = CGRectMake(-TGPhotoAvatarCropViewOverscreenSize, -TGPhotoAvatarCropViewOverscreenSize, TGPhotoAvatarCropViewOverscreenSize, self.bounds.size.height + 2 * TGPhotoAvatarCropViewOverscreenSize);
+    CGRect rightOverlayFrame = CGRectMake(self.bounds.size.width, -TGPhotoAvatarCropViewOverscreenSize, TGPhotoAvatarCropViewOverscreenSize, self.bounds.size.height + 2 * TGPhotoAvatarCropViewOverscreenSize);
+    CGRect bottomOverlayFrame = CGRectMake(0, self.bounds.size.height, self.bounds.size.width, TGPhotoAvatarCropViewOverscreenSize);
     
     _topOverlayView.frame = topOverlayFrame;
     _leftOverlayView.frame = leftOverlayFrame;
     _rightOverlayView.frame = rightOverlayFrame;
     _bottomOverlayView.frame = bottomOverlayFrame;
+}
+
+- (void)closeCurtains {
+    CGRect topFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, -TGPhotoAvatarCropViewCurtainSize, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, 1.0);
+    CGRect bottomFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, self.bounds.size.height + TGPhotoAvatarCropViewCurtainSize, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, 1.0);
+       
+    _topCurtainView.frame = topFrame;
+    _bottomCurtainView.frame = bottomFrame;
+    
+    [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseOut animations:^
+    {
+        CGRect topFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, -TGPhotoAvatarCropViewCurtainSize, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, TGPhotoAvatarCropViewCurtainSize);
+        CGRect bottomFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, self.bounds.size.height, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, TGPhotoAvatarCropViewCurtainSize);
+  
+        _topCurtainView.frame = topFrame;
+        _bottomCurtainView.frame = bottomFrame;
+    } completion:nil];
+}
+
+- (void)openCurtains {
+    CGRect topFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, -TGPhotoAvatarCropViewCurtainSize, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, TGPhotoAvatarCropViewCurtainSize);
+    CGRect bottomFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, self.bounds.size.height, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, TGPhotoAvatarCropViewCurtainSize);
+    
+    _topCurtainView.frame = topFrame;
+    _bottomCurtainView.frame = bottomFrame;
+    
+    [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseIn animations:^
+    {
+        CGRect topFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, -TGPhotoAvatarCropViewCurtainSize, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, 1.0);
+        CGRect bottomFrame = CGRectMake(-TGPhotoAvatarCropViewCurtainMargin, self.bounds.size.height + TGPhotoAvatarCropViewCurtainSize, self.bounds.size.width + TGPhotoAvatarCropViewCurtainMargin * 2.0, 1.0);
+        
+        _topCurtainView.frame = topFrame;
+        _bottomCurtainView.frame = bottomFrame;
+    } completion:nil];
 }
 
 - (void)layoutSubviews

@@ -532,7 +532,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     updateState {
                         $0.withUpdatedUpdatingAvatar(.image(representation, true))
                     }
-                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in
+                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
@@ -554,6 +554,11 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
                     updateState {
                         $0.withUpdatedUpdatingAvatar(.image(representation, true))
+                    }
+                    
+                    var videoStartTimestamp: Double? = nil
+                    if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+                        videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
                     }
                     
                     let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
@@ -606,9 +611,11 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                         }
                     }
                     
+                   
+                    
                     updateAvatarDisposable.set((signal
                     |> mapToSignal { videoResource in
-                        return updateAccountPhoto(account: context.account, resource: photoResource, videoResource: videoResource, mapResourceToAvatarSizes: { resource, representations in
+                        return updateAccountPhoto(account: context.account, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         })
                     } |> deliverOnMainQueue).start(next: { result in
@@ -624,7 +631,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
@@ -652,7 +659,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                         return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                     }
                 }
-                updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, mapResourceToAvatarSizes: { resource, representations in
+                updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                 }) |> deliverOnMainQueue).start(next: { result in
                     switch result {

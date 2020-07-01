@@ -979,7 +979,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             [transition dismissAnimated:true completion:^
             {
                 strongSelf->_hiddenItem = nil;
-                [strongSelf updateHiddenCellAnimated:false];
+                [strongSelf updateHiddenCellAnimated:true];
 
                 dispatch_async(dispatch_get_main_queue(), ^
                 {

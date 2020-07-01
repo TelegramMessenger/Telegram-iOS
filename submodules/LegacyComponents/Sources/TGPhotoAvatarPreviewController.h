@@ -3,6 +3,7 @@
 @class PGPhotoEditor;
 @class PGPhotoTool;
 @class TGPhotoEditorPreviewView;
+@class PGPhotoEditorView;
 @class TGMediaPickerGalleryVideoScrubber;
 
 @interface TGPhotoAvatarPreviewController : TGPhotoEditorTabController
@@ -14,7 +15,7 @@
 @property (nonatomic, copy) void (^croppingChanged)(void);
 @property (nonatomic, copy) void (^togglePlayback)(void);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIView *)dotImageView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIView *)dotImageView fullPreviewView:(PGPhotoEditorView *)fullPreviewView;
 
 - (void)setImage:(UIImage *)image;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;

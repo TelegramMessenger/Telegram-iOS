@@ -158,11 +158,7 @@ typedef enum
             
             [strongSelf->_trimView setTrimming:true animated:true];
             
-            if (strongSelf->_hasDotPicker) {
-                [strongSelf setDotHandleHidden:true animated:false];
-            } else {
-                [strongSelf setScrubberHandleHidden:true animated:false];
-            }
+            [strongSelf setScrubberHandleHidden:true animated:false];
         };
         _trimView.didEndEditing = ^
         {
@@ -210,11 +206,7 @@ typedef enum
             
             [strongSelf->_trimView setTrimming:isTrimmed animated:true];
             
-            if (strongSelf->_hasDotPicker) {
-                [strongSelf setDotHandleHidden:false animated:true];
-            } else {
-                [strongSelf setScrubberHandleHidden:false animated:true];
-            }
+            [strongSelf setScrubberHandleHidden:false animated:true];
             
             [strongSelf cancelZoomIn];
             if (strongSelf->_zoomedIn)
@@ -262,13 +254,8 @@ typedef enum
             strongSelf->_trimStartValue = trimStartPosition;
             strongSelf->_trimEndValue = trimEndPosition;
             
-            if (strongSelf->_hasDotPicker) {
-                if (strongSelf->_value < trimStartPosition) {
-                    strongSelf->_value = trimStartPosition;
-                }
-            } else {
-                [strongSelf setValue:trimStartPosition];
-            }
+            [strongSelf setValue:trimStartPosition];
+            
             UIView *handle = strongSelf->_scrubberHandle;
             handle.center = CGPointMake(trimView.frame.origin.x + 12 + handle.frame.size.width / 2, handle.center.y);
             
@@ -333,13 +320,7 @@ typedef enum
             strongSelf->_trimStartValue = trimStartPosition;
             strongSelf->_trimEndValue = trimEndPosition;
             
-            if (strongSelf->_hasDotPicker) {
-                if (strongSelf->_value > trimEndPosition) {
-                    strongSelf->_value = trimEndPosition;
-                }
-            } else {
-                [strongSelf setValue:trimEndPosition];
-            }
+            [strongSelf setValue:trimEndPosition];
             
             UIView *handle = strongSelf->_scrubberHandle;
             handle.center = CGPointMake(CGRectGetMaxX(trimView.frame) - 12 - handle.frame.size.width / 2, handle.center.y);
@@ -464,8 +445,6 @@ typedef enum
 
 - (void)setHasDotPicker:(bool)hasDotPicker {
     _hasDotPicker = hasDotPicker;
-    _dotHandle.hidden = !hasDotPicker;
-    _scrubberHandle.hidden = true;
     _tapGestureRecognizer.enabled = hasDotPicker;
 }
 
@@ -690,12 +669,7 @@ typedef enum
         frameAspectRatio = originalAspectRatio;
  
     _thumbnailAspectRatio = frameAspectRatio;
-    
-    if (_hasDotPicker) {
-        CGSize videoSize = TGFillSize([self _thumbnailSize], _dotImageView.frame.size);
-        _dotImageView.frame = CGRectMake(TGScreenPixelFloor((_dotContentView.frame.size.width - videoSize.width) / 2.0), 0.0, videoSize.width, videoSize.height);
-    }
-    
+        
     NSInteger thumbnailCount = (NSInteger)CGCeil(_summaryThumbnailWrapperView.frame.size.width / [self _thumbnailSizeWithAspectRatio:frameAspectRatio orientation:_cropOrientation].width);
     
     if ([dataSource respondsToSelector:@selector(videoScrubber:evenlySpacedTimestamps:startingAt:endingAt:)])

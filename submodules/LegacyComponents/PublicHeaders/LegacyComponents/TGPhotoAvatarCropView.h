@@ -4,8 +4,6 @@
 
 @interface TGPhotoAvatarCropView : UIView
 
-@property (nonatomic, readonly)  PGPhotoEditorView *fullPreviewView;
-
 @property (nonatomic, strong) UIImage *image;
 
 @property (nonatomic, readonly) CGSize originalSize;
@@ -22,7 +20,7 @@
 @property (nonatomic, readonly) bool isTracking;
 @property (nonatomic, readonly) bool isAnimating;
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize;
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView;
 
 - (void)setSnapshotImage:(UIImage *)image;
 - (void)setSnapshotView:(UIView *)snapshotView;
@@ -35,7 +33,11 @@
 
 - (void)animateTransitionIn;
 - (void)animateTransitionOutSwitching:(bool)switching;
+- (void)animateTransitionOut;
 - (void)transitionInFinishedFromCamera:(bool)fromCamera;
+
+- (void)closeCurtains;
+- (void)openCurtains;
 
 - (void)invalidateCropRect;
 

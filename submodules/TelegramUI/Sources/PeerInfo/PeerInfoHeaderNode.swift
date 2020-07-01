@@ -244,7 +244,10 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                     strongSelf.videoNode?.isHidden = !owns
                 }
             }
-        
+            if let startTimestamp = video.startTimestamp {
+                videoNode.seek(startTimestamp)
+            }
+            
             self.videoContent = videoContent
             self.videoNode = videoNode
             

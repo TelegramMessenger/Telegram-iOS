@@ -230,47 +230,6 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
-//                self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
-//                |> deliverOnMainQueue).start(next: { [weak self] status in
-//                    if let strongSelf = self {
-//                        let previousStatus = strongSelf.status
-//                        strongSelf.status = status
-//                        switch status {
-//                            case .Remote:
-//                                strongSelf.statusNode.isHidden = false
-//                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-//                                strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-//                            case let .Fetching(_, progress):
-//                                strongSelf.statusNode.isHidden = false
-//                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-//                                let adjustedProgress = max(progress, 0.027)
-//                                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true), completion: {})
-//                            case .Local:
-//                                if let previousStatus = previousStatus, case .Fetching = previousStatus {
-//                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
-//                                        if let strongSelf = self {
-//                                            strongSelf.statusNode.alpha = 0.0
-//                                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-//                                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-//                                                if let strongSelf = self {
-//                                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-//                                                }
-//                                            })
-//                                        }
-//                                    })
-//                                } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
-//                                    strongSelf.statusNode.alpha = 0.0
-//                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-//                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-//                                        if let strongSelf = self {
-//                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-//                                        }
-//                                    })
-//                                }
-//                        }
-//                    }
-//                }))
-                
                 var id: Int64?
                 if case let .image(image) = entry {
                     id = image.0.id
@@ -287,13 +246,15 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                     videoNode.canAttachContent = true
+                    if let startTimestamp = video.startTimestamp {
+                        videoNode.seek(startTimestamp)
+                    }
                     if videoNode.hasAttachedContext {
                         videoNode.play()
                     }
-                    
                     self.videoContent = videoContent
                     self.videoNode = videoNode
-                    
+                                        
                     videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
                     
                     self.contentNode.addSubnode(videoNode)

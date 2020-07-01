@@ -15,6 +15,7 @@ typedef enum
     TGMediaVideoConversionPresetVideoMessage,
     TGMediaVideoConversionPresetProfile,
     TGMediaVideoConversionPresetProfileHigh,
+    TGMediaVideoConversionPresetProfileVeryHigh,
     TGMediaVideoConversionPresetPassthrough
 } TGMediaVideoConversionPreset;
 

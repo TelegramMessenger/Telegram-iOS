@@ -5635,6 +5635,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Settings.SetProfilePhotoOrVideo" = "Set Profile Photo or Video";
 "Settings.SetNewProfilePhotoOrVideo" = "Set New Profile Photo or Video";
+"Settings.ViewVideo" = "View Video";
+"Settings.RemoveVideo" = "Remove Video";
 
 "Conversation.Unarchive" = "Unarchive";
 "Conversation.UnarchiveDone" = "The chat was moved to your main list.";
