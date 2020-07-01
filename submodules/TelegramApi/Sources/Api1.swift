@@ -6037,6 +6037,7 @@ public extension Api {
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
         case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
+        case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, qts: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6717,6 +6718,18 @@ public extension Api {
                     serializeInt64(phoneCallId, buffer: buffer, boxed: false)
                     serializeBytes(data, buffer: buffer, boxed: false)
                     break
+                case .updateChannelParticipant(let flags, let channelId, let date, let userId, let prevParticipant, let newParticipant, let qts):
+                    if boxed {
+                        buffer.appendInt32(1708307556)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(channelId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {prevParticipant!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {newParticipant!.serialize(buffer, true)}
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6884,6 +6897,8 @@ public extension Api {
                 return ("updateDialogFilters", [])
                 case .updatePhoneCallSignalingData(let phoneCallId, let data):
                 return ("updatePhoneCallSignalingData", [("phoneCallId", phoneCallId), ("data", data)])
+                case .updateChannelParticipant(let flags, let channelId, let date, let userId, let prevParticipant, let newParticipant, let qts):
+                return ("updateChannelParticipant", [("flags", flags), ("channelId", channelId), ("date", date), ("userId", userId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
     }
     }
     
@@ -8224,6 +8239,39 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updatePhoneCallSignalingData(phoneCallId: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateChannelParticipant(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Api.ChannelParticipant?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            } }
+            var _6: Api.ChannelParticipant?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
+            } }
+            var _7: Int32?
+            _7 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Update.updateChannelParticipant(flags: _1!, channelId: _2!, date: _3!, userId: _4!, prevParticipant: _5, newParticipant: _6, qts: _7!)
             }
             else {
                 return nil

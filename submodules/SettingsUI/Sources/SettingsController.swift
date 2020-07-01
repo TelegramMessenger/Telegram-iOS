@@ -2039,3 +2039,7 @@ private func accountContextMenuItems(context: AccountContext, logout: @escaping 
         return items
     }
 }
+
+public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
+    return privacyAndSecurityController(context: context)
+}

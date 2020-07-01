@@ -1295,6 +1295,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController {
         return recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: WebSessionsContext(account: context.account), websitesOnly: false)
     }
+    
+    public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
+        return SettingsUI.makePrivacyAndSecurityController(context: context)
+    }
 }
 
 private let defaultChatControllerInteraction = ChatControllerInteraction.default

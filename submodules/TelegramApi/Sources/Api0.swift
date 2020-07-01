@@ -254,6 +254,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1512627963] = { return Api.Update.parse_updateDialogFilterOrder($0) }
     dict[889491791] = { return Api.Update.parse_updateDialogFilters($0) }
     dict[643940105] = { return Api.Update.parse_updatePhoneCallSignalingData($0) }
+    dict[1708307556] = { return Api.Update.parse_updateChannelParticipant($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
