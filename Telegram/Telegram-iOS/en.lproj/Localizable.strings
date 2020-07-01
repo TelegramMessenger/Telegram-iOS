@@ -5640,3 +5640,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Unarchive" = "Unarchive";
 "Conversation.UnarchiveDone" = "The chat was moved to your main list.";
+
+"SettingsSearch.Synonyms.ChatSettings.IntentSettings" = "Siri Suggestions";
