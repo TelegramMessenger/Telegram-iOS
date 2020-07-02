@@ -350,6 +350,10 @@
     
     if (TGOrientationIsSideward(adjustments.cropOrientation, NULL))
         outputDimensions = CGSizeMake(outputDimensions.height, outputDimensions.width);
+    
+    if ((preset == TGMediaVideoConversionPresetProfile || preset == TGMediaVideoConversionPresetProfileHigh || preset == TGMediaVideoConversionPresetProfileVeryHigh) && MIN(outputDimensions.width, outputDimensions.height) < 160.0) {
+        outputDimensions = CGSizeMake(160.0, 160.0);
+    }
         
     AVMutableCompositionTrack *compositionTrack = [composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
     [compositionTrack insertTimeRange:timeRange ofTrack:videoTrack atTime:kCMTimeZero error:NULL];

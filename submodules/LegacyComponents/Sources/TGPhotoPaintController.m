@@ -117,7 +117,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGMenuContainerView *_menuContainerView;
     
     TGPaintingData *_resultData;
-    UIImage *_stillImage;
         
     TGPaintingWrapperView *_paintingWrapperView;
         

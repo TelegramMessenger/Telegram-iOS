@@ -328,7 +328,7 @@
     _previewView.clipsToBounds = true;
     [_previewView setSnapshotImage:_screenImage];
     [_photoEditor setPreviewOutput:_previewView];
-    [self updatePreviewView];
+    [self updatePreviewView:true];
     
     if ([self presentedForAvatarCreation]) {
         CGSize fittedSize  = TGScaleToSize(_photoEditor.originalSize, CGSizeMake(1024, 1024));
@@ -1267,6 +1267,8 @@
                         strongSelf->_dotImageView.cropOrientation = strongSelf->_photoEditor.cropOrientation;
                         strongSelf->_dotImageView.cropMirrored = strongSelf->_photoEditor.cropMirrored;
                         [strongSelf->_dotImageView updateCropping:true];
+                        
+                        [strongSelf updatePreviewView:false];
                     }
                 };
                 cropController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
@@ -1584,7 +1586,7 @@
     {
         __strong TGPhotoEditorController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf updatePreviewView];        
+            [strongSelf updatePreviewView:true];
     };
     _currentTabController.tabsChanged = ^
     {
@@ -1610,10 +1612,16 @@
         [self setNeedsUpdateOfScreenEdgesDeferringSystemGestures];
 }
 
-- (void)updatePreviewView
+- (void)updatePreviewView:(bool)full
 {
-    [_previewView setPaintingImageWithData:_photoEditor.paintingData];
-    [_previewView setCropRect:_photoEditor.cropRect cropOrientation:_photoEditor.cropOrientation cropRotation:_photoEditor.cropRotation cropMirrored:_photoEditor.cropMirrored originalSize:_photoEditor.originalSize];
+    if (full)
+        [_previewView setPaintingImageWithData:_photoEditor.paintingData];
+    
+    UIImageOrientation cropOrientation = _photoEditor.cropOrientation;
+    if ([self presentedForAvatarCreation]) {
+        cropOrientation = UIImageOrientationUp;
+    }
+    [_previewView setCropRect:_photoEditor.cropRect cropOrientation:cropOrientation cropRotation:_photoEditor.cropRotation cropMirrored:_photoEditor.cropMirrored originalSize:_photoEditor.originalSize];
 }
 
 - (void)updateEditorButtons
@@ -1823,6 +1831,9 @@
     
     if (paintingData != nil)
         [TGPaintingData storePaintingData:paintingData inContext:self.editingContext forItem:_item forVideo:(_intent == TGPhotoEditorControllerVideoIntent)];
+    
+    [_previewView setPaintingImageWithData:_photoEditor.paintingData];
+    [_previewView setPaintingHidden:false];
 }
 
 - (void)applyEditor

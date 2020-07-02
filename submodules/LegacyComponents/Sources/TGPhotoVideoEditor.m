@@ -26,7 +26,7 @@
             arc4random_buf(&fileId, sizeof(fileId));
             NSString *videoMp4FilePath = [tmpPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%" PRId64 ".mp4", fileId]];
             [[NSFileManager defaultManager] removeItemAtPath:videoMp4FilePath error:nil];
-            [[NSFileManager defaultManager] createSymbolicLinkAtPath:videoMp4FilePath withDestinationPath:video.path error:nil];
+            [[NSFileManager defaultManager] copyItemAtPath:video.path toPath:videoMp4FilePath error:nil];
             video = [NSURL fileURLWithPath:videoMp4FilePath];
         }
         
