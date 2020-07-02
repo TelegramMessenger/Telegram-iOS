@@ -15,6 +15,8 @@ extern NSString *const kGPUImageTwoInputTextureVertexShaderString;
     BOOL firstFrameCheckDisabled, secondFrameCheckDisabled;
 }
 
+@property (nonatomic, assign) bool rotateOnlyFirstTexture;
+
 - (void)disableFirstFrameCheck;
 - (void)disableSecondFrameCheck;
 

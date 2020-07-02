@@ -131,7 +131,7 @@
 {
     for (GPUImageOutput<GPUImageInput> *currentFilter in _initialFilters)
     {
-        [currentFilter setInputRotation:newInputRotation  atIndex:(NSInteger)textureIndex];
+        [currentFilter setInputRotation:newInputRotation atIndex:(NSInteger)textureIndex];
     }
 }
 

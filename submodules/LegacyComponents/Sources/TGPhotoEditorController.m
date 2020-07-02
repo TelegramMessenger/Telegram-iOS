@@ -1837,17 +1837,21 @@
                 if (adjustments.toolsApplied) {
                     image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
                     
-                    CGSize fillSize = TGScaleToFillSize(videoDimensions, image.size);
-                    
-                    UIGraphicsBeginImageContextWithOptions(fillSize, true, 0.0f);
-                    CGContextRef context = UIGraphicsGetCurrentContext();
-                    CGContextSetInterpolationQuality(context, kCGInterpolationMedium);
-                    
-                    [image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
-                    [paintingImage drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
-                    
-                    fullImage = UIGraphicsGetImageFromCurrentImageContext();
-                    UIGraphicsEndImageContext();
+                    if ([self presentedForAvatarCreation]) {
+                         fullImage = TGPhotoEditorVideoCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, CGSizeMake(640, 640), item.originalSize, true, false);
+                    } else {
+                        CGSize fillSize = TGScaleToFillSize(videoDimensions, image.size);
+                        
+                        UIGraphicsBeginImageContextWithOptions(fillSize, true, 0.0f);
+                        CGContextRef context = UIGraphicsGetCurrentContext();
+                        CGContextSetInterpolationQuality(context, kCGInterpolationMedium);
+                        
+                        [image drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
+                        [paintingImage drawInRect:CGRectMake(0, 0, fillSize.width, fillSize.height)];
+                        
+                        fullImage = UIGraphicsGetImageFromCurrentImageContext();
+                        UIGraphicsEndImageContext();
+                    }
                 } else {
                     fullImage = TGPhotoEditorVideoCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, CGSizeMake(640, 640), item.originalSize, true, false);
                 }
@@ -2320,14 +2324,16 @@
     if (self.requestOriginalScreenSizeImage == nil)
         return;
     
-    SSignal *cachedSignal = [[self.editingContext facesForItem:item] mapToSignal:^SSignal *(id result)
+    SSignal *cachedFaces = self.editingContext != nil ? [self.editingContext facesForItem:item] : [SSignal single:nil];
+    
+    SSignal *cachedSignal = [cachedFaces mapToSignal:^SSignal *(id result)
     {
         if (result == nil)
             return [SSignal fail:nil];
         return [SSignal single:result];
     }];
-    SSignal *imageSignal = [self.requestOriginalScreenSizeImage(item, 0) take:1];
-    SSignal *detectSignal = [[imageSignal filter:^bool(UIImage *image)
+    SSignal *imageSignal = self.requestOriginalScreenSizeImage(item, 0);
+    SSignal *detectSignal = [[[imageSignal filter:^bool(UIImage *image)
     {
         if (![image isKindOfClass:[UIImage class]])
             return false;
@@ -2336,7 +2342,7 @@
             return false;
         
         return true;
-    }] mapToSignal:^SSignal *(UIImage *image) {
+    }] take:1] mapToSignal:^SSignal *(UIImage *image) {
         return [[TGPaintFaceDetector detectFacesInImage:image originalSize:originalSize] startOn:[SQueue concurrentDefaultQueue]];
     }];
     
