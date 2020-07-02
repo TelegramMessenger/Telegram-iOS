@@ -19,6 +19,9 @@
 
 #include "api/video_codecs/builtin_video_encoder_factory.h"
 
+#include "TgVoip.h"
+#include "VideoCaptureInterfaceImpl.h"
+
 #if TARGET_OS_IPHONE
 
 #include "CodecsApple.h"
@@ -164,7 +167,7 @@ static rtc::Thread *makeWorkerThread() {
 }
 
 
-static rtc::Thread *MediaManager::getWorkerThread() {
+rtc::Thread *MediaManager::getWorkerThread() {
     static rtc::Thread *value = makeWorkerThread();
     return value;
 }
@@ -172,7 +175,7 @@ static rtc::Thread *MediaManager::getWorkerThread() {
 MediaManager::MediaManager(
     rtc::Thread *thread,
     bool isOutgoing,
-    bool startWithVideo,
+    std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
     std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted,
     std::function<void (bool)> localVideoCaptureActiveUpdated
 ) :
@@ -180,7 +183,8 @@ _packetEmitted(packetEmitted),
 _localVideoCaptureActiveUpdated(localVideoCaptureActiveUpdated),
 _thread(thread),
 _eventLog(std::make_unique<webrtc::RtcEventLogNull>()),
-_taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
+_taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()),
+_videoCapture(videoCapture) {
     _ssrcAudio.incoming = isOutgoing ? ssrcAudioIncoming : ssrcAudioOutgoing;
     _ssrcAudio.outgoing = (!isOutgoing) ? ssrcAudioIncoming : ssrcAudioOutgoing;
     _ssrcAudio.fecIncoming = isOutgoing ? ssrcAudioFecIncoming : ssrcAudioFecOutgoing;
@@ -199,7 +203,6 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     _videoCodecs = AssignPayloadTypesAndDefaultCodecs(videoEncoderFactory->GetSupportedFormats());
     
     _isSendingVideo = false;
-    _useFrontCamera = true;
     
     _audioNetworkInterface = std::unique_ptr<MediaManager::NetworkInterfaceImpl>(new MediaManager::NetworkInterfaceImpl(this, false));
     _videoNetworkInterface = std::unique_ptr<MediaManager::NetworkInterfaceImpl>(new MediaManager::NetworkInterfaceImpl(this, true));
@@ -283,9 +286,9 @@ _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
     
     _videoChannel->SetInterface(_videoNetworkInterface.get(), webrtc::MediaTransportConfig());
     
-    _nativeVideoSource = makeVideoSource(_thread, getWorkerThread());
-    
-    if (startWithVideo) {
+    if (_videoCapture != nullptr) {
+        ((TgVoipVideoCaptureInterfaceImpl *)_videoCapture.get())->_impl->getSyncAssumingSameThread()->setIsActiveUpdated(this->_localVideoCaptureActiveUpdated);
+        
         setSendVideo(true);
     }
 }
@@ -372,10 +375,6 @@ void MediaManager::setSendVideo(bool sendVideo) {
             codec.SetParam(cricket::kCodecParamStartBitrate, 512);
             codec.SetParam(cricket::kCodecParamMaxBitrate, 2500);
             
-            _videoCapturer = makeVideoCapturer(_nativeVideoSource, _useFrontCamera, [localVideoCaptureActiveUpdated = _localVideoCaptureActiveUpdated](bool isActive) {
-                localVideoCaptureActiveUpdated(isActive);
-            });
-            
             cricket::VideoSendParameters videoSendParameters;
             videoSendParameters.codecs.push_back(codec);
             
@@ -402,11 +401,15 @@ void MediaManager::setSendVideo(bool sendVideo) {
                 videoSendStreamParams.cname = "cname";
                 _videoChannel->AddSendStream(videoSendStreamParams);
                 
-                _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+                if (_videoCapture != nullptr) {
+                    _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, ((TgVoipVideoCaptureInterfaceImpl *)_videoCapture.get())->_impl->getSyncAssumingSameThread()->_videoSource.get());
+                }
                 _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
             } else {
                 _videoChannel->AddSendStream(cricket::StreamParams::CreateLegacy(_ssrcVideo.outgoing));
-                _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, _nativeVideoSource.get());
+                if (_videoCapture != nullptr) {
+                    _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, ((TgVoipVideoCaptureInterfaceImpl *)_videoCapture.get())->_impl->getSyncAssumingSameThread()->_videoSource);
+                }
             }
             
             cricket::VideoRecvParameters videoRecvParameters;
@@ -449,8 +452,6 @@ void MediaManager::setSendVideo(bool sendVideo) {
         _videoChannel->SetVideoSend(_ssrcVideo.outgoing, NULL, nullptr);
         _videoChannel->SetVideoSend(_ssrcVideo.fecOutgoing, NULL, nullptr);
         
-        _videoCapturer.reset();
-        
         _videoChannel->RemoveRecvStream(_ssrcVideo.incoming);
         _videoChannel->RemoveRecvStream(_ssrcVideo.fecIncoming);
         _videoChannel->RemoveSendStream(_ssrcVideo.outgoing);
@@ -466,23 +467,9 @@ void MediaManager::setMuteOutgoingAudio(bool mute) {
     _audioChannel->SetAudioSend(_ssrcAudio.outgoing, _isConnected && !_muteOutgoingAudio, nullptr, &_audioSource);
 }
 
-void MediaManager::switchVideoCamera() {
-    if (_isSendingVideo) {
-        _useFrontCamera = !_useFrontCamera;
-        _videoCapturer = makeVideoCapturer(_nativeVideoSource, _useFrontCamera, [localVideoCaptureActiveUpdated = _localVideoCaptureActiveUpdated](bool isActive) {
-            localVideoCaptureActiveUpdated(isActive);
-        });
-    }
-}
-
 void MediaManager::setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
     _currentIncomingVideoSink = sink;
     _videoChannel->SetSink(_ssrcVideo.incoming, _currentIncomingVideoSink.get());
-}
-
-void MediaManager::setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
-    _currentOutgoingVideoSink = sink;
-    _nativeVideoSource->AddOrUpdateSink(_currentOutgoingVideoSink.get(), rtc::VideoSinkWants());
 }
 
 MediaManager::NetworkInterfaceImpl::NetworkInterfaceImpl(MediaManager *mediaManager, bool isVideo) :

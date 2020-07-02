@@ -233,7 +233,9 @@ public final class PresentationCallImpl: PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
-    init(account: Account, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), initialState: CallSession?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, auxiliaryServers: [CallAuxiliaryServer], currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    private var videoCapturer: OngoingCallVideoCapturer?
+    
+    init(account: Account, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), initialState: CallSession?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, auxiliaryServers: [CallAuxiliaryServer], currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, startWithVideo: Bool) {
         self.account = account
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
@@ -259,6 +261,11 @@ public final class PresentationCallImpl: PresentationCall {
         self.isOutgoing = isOutgoing
         self.isVideo = initialState?.type == .video
         self.peer = peer
+        self.isVideo = startWithVideo
+        if self.isVideo {
+            self.videoCapturer = OngoingCallVideoCapturer()
+            self.statePromise.set(PresentationCallState(state: .waiting, videoState: .activeOutgoing, remoteVideoState: .inactive))
+        }
         
         self.serializedData = serializedData
         self.dataSaving = dataSaving
@@ -440,7 +447,11 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedRemoteVideoState = .active
             }
         } else {
-            mappedVideoState = .notAvailable
+            if self.isVideo {
+                mappedVideoState = .activeOutgoing
+            } else {
+                mappedVideoState = .notAvailable
+            }
             mappedRemoteVideoState = .inactive
         }
         
@@ -523,7 +534,7 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, auxiliaryServers: auxiliaryServers, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, isVideo: sessionState.type == .video, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, auxiliaryServers: auxiliaryServers, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
                     self.ongoingContext = ongoingContext
                     
                     self.debugInfoValue.set(ongoingContext.debugInfo())
@@ -718,10 +729,6 @@ public final class PresentationCallImpl: PresentationCall {
         self.ongoingContext?.setEnableVideo(value)
     }
     
-    public func switchVideoCamera() {
-        self.ongoingContext?.switchVideoCamera()
-    }
-    
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
         guard self.currentAudioOutputValue != output else {
             return
@@ -748,6 +755,10 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
-        self.ongoingContext?.makeOutgoingVideoView(completion: completion)
+        self.videoCapturer?.makeOutgoingVideoView(completion: completion)
+    }
+    
+    public func switchVideoCamera() {
+        self.videoCapturer?.switchCamera()
     }
 }

@@ -43,6 +43,12 @@ public:
         });
     }
     
+    T *getSyncAssumingSameThread() {
+        assert(_thread->IsCurrent());
+        assert(_valueHolder->_value != nullptr);
+        return _valueHolder->_value.get();
+    }
+    
 private:
     rtc::Thread *_thread;
     std::shared_ptr<ValueHolder<T>> _valueHolder;

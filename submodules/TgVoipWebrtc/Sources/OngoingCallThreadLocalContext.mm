@@ -21,6 +21,45 @@ using namespace TGVOIP_NAMESPACE;
 
 @end
 
+@interface OngoingCallThreadLocalContextVideoCapturer () {
+    std::shared_ptr<TgVoipVideoCaptureInterface> _interface;
+}
+
+@end
+
+@implementation OngoingCallThreadLocalContextVideoCapturer
+
+- (instancetype _Nonnull)init {
+    self = [super init];
+    if (self != nil) {
+        _interface = TgVoipVideoCaptureInterface::makeInstance();
+    }
+    return self;
+}
+
+- (void)switchVideoCamera {
+    _interface->switchCamera();
+}
+
+- (std::shared_ptr<TgVoipVideoCaptureInterface>)getInterface {
+    return _interface;
+}
+
+- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion {
+    std::shared_ptr<TgVoipVideoCaptureInterface> interface = _interface;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+        remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+        
+        std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+        interface->setVideoOutput(sink);
+        
+        completion(remoteRenderer);
+    });
+}
+
+@end
+
 @interface OngoingCallThreadLocalContextWebrtc () {
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
     int32_t _contextId;
@@ -36,6 +75,7 @@ using namespace TGVOIP_NAMESPACE;
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
     OngoingCallRemoteVideoStateWebrtc _remoteVideoState;
+    OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
     
     int32_t _signalBars;
     NSData *_lastDerivedState;
@@ -134,7 +174,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return @"2.7.7";
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing isVideo:(bool)isVideo primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData; {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -146,7 +186,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _callPacketTimeout = 10.0;
         _networkType = networkType;
         _sendSignalingData = [sendSignalingData copy];
-        if (isVideo) {
+        _videoCapturer = videoCapturer;
+        if (videoCapturer != nil) {
             _videoState = OngoingCallVideoStateActiveOutgoing;
             _remoteVideoState = OngoingCallRemoteVideoStateActive;
         } else {
@@ -236,7 +277,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             parsedRtcServers,
             callControllerNetworkTypeForType(networkType),
             encryptionKey,
-            isVideo,
+            [_videoCapturer getInterface],
             [weakSelf, queue](TgVoipState state) {
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
@@ -424,12 +465,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)switchVideoCamera {
-    if (_tgVoip) {
-        _tgVoip->switchVideoCamera();
-    }
-}
-
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType {
     if (_networkType != networkType) {
         _networkType = networkType;
@@ -450,24 +485,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
             if (strongSelf) {
                 strongSelf->_tgVoip->setIncomingVideoOutput(sink);
-            }
-            
-            completion(remoteRenderer);
-        });
-    }
-}
-
-- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion {
-    if (_tgVoip) {
-        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-            
-            std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
-            if (strongSelf) {
-                strongSelf->_tgVoip->setOutgoingVideoOutput(sink);
             }
             
             completion(remoteRenderer);

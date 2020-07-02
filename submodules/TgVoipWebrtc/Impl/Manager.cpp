@@ -36,7 +36,6 @@ Manager::Manager(
     TgVoipEncryptionKey encryptionKey,
     bool enableP2P,
     std::vector<TgVoipRtcServer> const &rtcServers,
-    bool isVideo,
     std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
     std::function<void (const TgVoipState &)> stateUpdated,
     std::function<void (bool)> videoStateUpdated,
@@ -47,7 +46,6 @@ _thread(thread),
 _encryptionKey(encryptionKey),
 _enableP2P(enableP2P),
 _rtcServers(rtcServers),
-_startWithVideo(isVideo),
 _videoCapture(videoCapture),
 _stateUpdated(stateUpdated),
 _videoStateUpdated(videoStateUpdated),
@@ -112,11 +110,10 @@ void Manager::start() {
         );
     }));
     bool isOutgoing = _encryptionKey.isOutgoing;
-    _mediaManager.reset(new ThreadLocalObject<MediaManager>(getMediaThread(), [isOutgoing, thread = _thread, startWithVideo = _startWithVideo, videoCapture = _videoCapture, weakThis]() {
+    _mediaManager.reset(new ThreadLocalObject<MediaManager>(getMediaThread(), [isOutgoing, thread = _thread, videoCapture = _videoCapture, weakThis]() {
         return new MediaManager(
             getMediaThread(),
             isOutgoing,
-            startWithVideo,
             videoCapture,
             [thread, weakThis](const rtc::CopyOnWriteBuffer &packet) {
                 thread->PostTask(RTC_FROM_HERE, [weakThis, packet]() {
@@ -205,12 +202,6 @@ void Manager::setMuteOutgoingAudio(bool mute) {
     });
 }
 
-void Manager::switchVideoCamera() {
-    _mediaManager->perform([](MediaManager *mediaManager) {
-        mediaManager->switchVideoCamera();
-    });
-}
-
 void Manager::notifyIsLocalVideoActive(bool isActive) {
     rtc::CopyOnWriteBuffer buffer;
     uint8_t mode = 4;
@@ -227,12 +218,6 @@ void Manager::notifyIsLocalVideoActive(bool isActive) {
 void Manager::setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
     _mediaManager->perform([sink](MediaManager *mediaManager) {
         mediaManager->setIncomingVideoOutput(sink);
-    });
-}
-
-void Manager::setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
-    _mediaManager->perform([sink](MediaManager *mediaManager) {
-        mediaManager->setOutgoingVideoOutput(sink);
     });
 }
 

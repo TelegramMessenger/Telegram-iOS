@@ -7,6 +7,8 @@
 #include "api/transport/field_trial_based_config.h"
 #include "pc/rtp_sender.h"
 
+#include "TgVoip.h"
+
 #include <functional>
 #include <memory>
 
@@ -59,7 +61,6 @@ public:
     MediaManager(
         rtc::Thread *thread,
         bool isOutgoing,
-        bool startWithVideo,
         std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
         std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted,
         std::function<void (bool)> localVideoCaptureActiveUpdated
@@ -71,9 +72,7 @@ public:
     void notifyPacketSent(const rtc::SentPacket &sentPacket);
     void setSendVideo(bool sendVideo);
     void setMuteOutgoingAudio(bool mute);
-    void switchVideoCamera();
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
-    void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     
 protected:
     std::function<void (const rtc::CopyOnWriteBuffer &)> _packetEmitted;
@@ -93,7 +92,6 @@ private:
     
     std::vector<cricket::VideoCodec> _videoCodecs;
     bool _isSendingVideo;
-    bool _useFrontCamera;
     
     std::unique_ptr<cricket::MediaEngineInterface> _mediaEngine;
     std::unique_ptr<webrtc::Call> _call;
@@ -104,7 +102,6 @@ private:
     std::unique_ptr<webrtc::VideoBitrateAllocatorFactory> _videoBitrateAllocatorFactory;
     std::shared_ptr<TgVoipVideoCaptureInterface> _videoCapture;
     std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> _currentIncomingVideoSink;
-    std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> _currentOutgoingVideoSink;
     
     std::unique_ptr<MediaManager::NetworkInterfaceImpl> _audioNetworkInterface;
     std::unique_ptr<MediaManager::NetworkInterfaceImpl> _videoNetworkInterface;

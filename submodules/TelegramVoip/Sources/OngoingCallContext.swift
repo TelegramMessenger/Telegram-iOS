@@ -245,7 +245,6 @@ private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
     func nativeSetVideoEnabled(_ value: Bool)
-    func nativeSwitchVideoCamera()
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
@@ -292,6 +291,22 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     }
 }
 
+public final class OngoingCallVideoCapturer {
+    fileprivate let impl: OngoingCallThreadLocalContextVideoCapturer
+    
+    public init() {
+        self.impl = OngoingCallThreadLocalContextVideoCapturer()
+    }
+    
+    public func switchCamera() {
+        self.impl.switchVideoCamera()
+    }
+    
+    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
+        self.impl.makeOutgoingVideoView(completion)
+    }
+}
+
 extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProtocol {
     func nativeSetNetworkType(_ type: NetworkType) {
         self.setNetworkType(ongoingNetworkTypeForTypeWebrtc(type))
@@ -307,10 +322,6 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeSetVideoEnabled(_ value: Bool) {
         self.setVideoEnabled(value)
-    }
-    
-    func nativeSwitchVideoCamera() {
-        self.switchVideoCamera()
     }
     
     func nativeDebugInfo() -> String {
@@ -463,7 +474,7 @@ public final class OngoingCallContext {
         return result
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, auxiliaryServers: [AuxiliaryServer], initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, isVideo: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
+    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, auxiliaryServers: [AuxiliaryServer], initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         //OngoingCallThreadLocalContextWebrtc.applyServerConfig(serializedData)
@@ -542,9 +553,9 @@ public final class OngoingCallContext {
                             ))
                         }
                     }
-                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, isVideo: isVideo, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
-                    })
+                    }, videoCapturer: video?.impl)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state, videoState, remoteVideoState in
@@ -696,12 +707,6 @@ public final class OngoingCallContext {
         }
     }
     
-    public func switchVideoCamera() {
-        self.withContext { context in
-            context.nativeSwitchVideoCamera()
-        }
-    }
-    
     public func debugInfo() -> Signal<(String, String), NoError> {
         let poll = Signal<(String, String), NoError> { subscriber in
             self.withContext { context in
@@ -720,16 +725,6 @@ public final class OngoingCallContext {
         self.withContext { context in
             if let context = context as? OngoingCallThreadLocalContextWebrtc {
                 context.makeIncomingVideoView(completion)
-            } else {
-                completion(nil)
-            }
-        }
-    }
-    
-    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
-        self.withContext { context in
-            if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                context.makeOutgoingVideoView(completion)
             } else {
                 completion(nil)
             }

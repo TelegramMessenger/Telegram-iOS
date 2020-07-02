@@ -107,9 +107,10 @@ typealias CallSessionStableId = Int64
 public struct CallSessionRingingState: Equatable {
     public let id: CallSessionInternalId
     public let peerId: PeerId
+    public let isVideo: Bool
     
     public static func ==(lhs: CallSessionRingingState, rhs: CallSessionRingingState) -> Bool {
-        return lhs.id == rhs.id && lhs.peerId == rhs.peerId
+        return lhs.id == rhs.id && lhs.peerId == rhs.peerId && lhs.isVideo == rhs.isVideo
     }
 }
 
@@ -365,7 +366,7 @@ private final class CallSessionManagerContext {
         var ringingContexts: [CallSessionRingingState] = []
         for (id, context) in self.contexts {
             if case .ringing = context.state {
-                ringingContexts.append(CallSessionRingingState(id: id, peerId: context.peerId))
+                ringingContexts.append(CallSessionRingingState(id: id, peerId: context.peerId, isVideo: context.type == .video))
             }
         }
         return ringingContexts
