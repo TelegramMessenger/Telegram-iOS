@@ -1656,6 +1656,9 @@
             self.view.frame = targetFrame;
         } completion:^(__unused BOOL finished)
         {
+            TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
+                [_photoEditor updateProcessChain:true];
+            });
         }];
     }
 }

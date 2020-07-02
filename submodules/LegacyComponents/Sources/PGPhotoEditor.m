@@ -383,6 +383,10 @@
 }
 
 - (void)updateProcessChain {
+    [self updateProcessChain:false];
+}
+
+- (void)updateProcessChain:(bool)force {
     [GPUImageFramebuffer setMark:self.forVideo];
     
     NSMutableArray *processChain = [NSMutableArray array];
@@ -398,7 +402,7 @@
     
     TGPhotoEditorPreviewView *previewOutput = self.previewOutput;
     
-    if (![_currentProcessChain isEqualToArray:processChain])
+    if (![_currentProcessChain isEqualToArray:processChain] || force)
     {
         [_currentInput removeAllTargets];
         [_cropFilter removeAllTargets];

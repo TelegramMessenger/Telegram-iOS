@@ -629,6 +629,24 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: rawEntry.representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
             mediaReference = .standalone(media: media)
         }
+        
+        
+//        var cancelImpl: (() -> Void)?
+//        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+//        let progressSignal = Signal<Never, NoError> { subscriber in
+//            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+//                cancelImpl?()
+//            }))
+//            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+//            return ActionDisposable { [weak controller] in
+//                Queue.mainQueue().async() {
+//                    controller?.dismiss()
+//                }
+//            }
+//            }
+//        |> runOn(Queue.mainQueue())
+//        |> delay(0.15, queue: Queue.mainQueue())
+        
       
         self.editDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
         |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
