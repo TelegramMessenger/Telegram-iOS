@@ -263,7 +263,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 - (void)prepareTransitionInWithReferenceView:(UIView *)referenceView referenceFrame:(CGRect)referenceFrame parentView:(UIView *)parentView noTransitionView:(bool)noTransitionView
 {
     [super prepareTransitionInWithReferenceView:referenceView referenceFrame:referenceFrame parentView:parentView noTransitionView:noTransitionView];
-    [self.view insertSubview:_transitionView belowSubview:_wrapperView];
+    
+    if (self.initialAppearance && self.fromCamera)
+        [self.view insertSubview:_transitionView belowSubview:_wrapperView];
 }
 
 - (void)transitionIn

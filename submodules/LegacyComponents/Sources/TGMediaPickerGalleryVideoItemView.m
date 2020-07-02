@@ -41,6 +41,7 @@
 #import <LegacyComponents/TGMenuView.h>
 
 #import "PGPhotoEditor.h"
+#import "TGPaintFaceDetector.h"
 
 @interface TGMediaPickerGalleryVideoItemView() <TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate>
 {
@@ -96,6 +97,7 @@
     SMetaDisposable *_adjustmentsDisposable;
     SMetaDisposable *_attributesDisposable;
     SMetaDisposable *_downloadDisposable;
+    SMetaDisposable *_facesDisposable;
     SMetaDisposable *_currentAudioSession;
     
     SVariable *_editableItemVariable;
@@ -131,6 +133,7 @@
         
         _currentAudioSession = [[SMetaDisposable alloc] init];
         _playerItemDisposable = [[SMetaDisposable alloc] init];
+        _facesDisposable = [[SMetaDisposable alloc] init];
         
         _videoDurationVar = [[SVariable alloc] init];
         _videoDurationDisposable = [[SMetaDisposable alloc] init];
@@ -251,6 +254,7 @@
     [_thumbnailsDisposable dispose];
     [_attributesDisposable dispose];
     [_downloadDisposable dispose];
+    [_facesDisposable dispose];
     [self stopPlayer];
     
     [self releaseVolumeOverlay];
@@ -385,8 +389,13 @@
     
     [super setItem:item synchronously:synchronously];
     
-    if (itemChanged)
+    if (itemChanged) {
         [self _playerCleanup];
+     
+        if (!item.asFile) {
+            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startWithNext:nil]];
+        }
+    }
     
     _scrubberView.allowsTrimming = false;
     _videoDimensions = item.dimensions;
