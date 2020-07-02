@@ -10,6 +10,9 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 import GalleryUI
+import LegacyComponents
+import LegacyMediaPickerUI
+import SaveToCameraRoll
 
 public enum AvatarGalleryEntryId: Hashable {
     case topImage
@@ -180,9 +183,13 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
+    private let centralItemRightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
+    
+    public var avatarPhotoEditCompletion: ((UIImage) -> Void)?
+    public var avatarVideoEditCompletion: ((UIImage, URL, TGVideoEditAdjustments?) -> Void)?
     
     private let _hiddenMedia = Promise<AvatarGalleryEntry?>(nil)
     public var hiddenMedia: Signal<AvatarGalleryEntry?, NoError> {
@@ -190,6 +197,8 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     }
     
     private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
+    
+    private let editDisposable = MetaDisposable ()
     
     public init(context: AccountContext, peer: Peer, sourceHasRoundCorners: Bool = true, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
@@ -264,7 +273,9 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             self?.deleteEntry(entry)
                             } : nil, setMain: { [weak self] in
                                 self?.setMainEntry(entry)
-                            })
+                            }, edit: { [weak self] in
+                                self?.editEntry(entry)
+                        })
                         }), centralItemIndex: strongSelf.centralEntryIndex, synchronous: !isFirstTime)
                         
                         let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -313,6 +324,10 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self?.navigationItem.titleView = titleView
         }))
         
+        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItems.get().start(next: { [weak self] rightBarButtonItems in
+            self?.navigationItem.rightBarButtonItems = rightBarButtonItems
+        }))
+        
         self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode, _ in
             self?.galleryNode.updatePresentationState({
                 $0.withUpdatedFooterContentNode(footerContentNode)
@@ -327,6 +342,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     deinit {
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
+        self.editDisposable.dispose()
     }
     
     @objc func donePressed() {
@@ -379,6 +395,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
         
+        self.galleryNode.pager.updateOnReplacement = true
         self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         
@@ -421,6 +438,8 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self?.deleteEntry(entry)
         } : nil, setMain: { [weak self] in
             self?.setMainEntry(entry)
+        }, edit: { [weak self] in
+            self?.editEntry(entry)
         }) }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
@@ -432,6 +451,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     if let node = strongSelf.galleryNode.pager.centralItemNode() {
                         strongSelf.centralItemTitle.set(node.title())
                         strongSelf.centralItemTitleView.set(node.titleView())
+                        strongSelf.centralItemRightBarButtonItems.set(node.rightBarButtonItems())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
@@ -460,6 +480,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? AvatarGalleryControllerPresentationArguments {
             self.centralItemTitle.set(centralItemNode.title())
             self.centralItemTitleView.set(centralItemNode.titleView())
+            self.centralItemRightBarButtonItems.set(centralItemNode.rightBarButtonItems())
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
             
@@ -577,7 +598,9 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             self?.deleteEntry(entry)
                         } : nil, setMain: { [weak self] in
                             self?.setMainEntry(entry)
-                        }) }), centralItemIndex: 0)
+                        }, edit: { [weak self] in
+                            self?.editEntry(entry)
+                        }) }), centralItemIndex: 0, synchronous: true)
                         self.entries = entries
                     }
                 } else {
@@ -596,6 +619,76 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
 //                    }
             }
         }
+    }
+    
+    private func editEntry(_ rawEntry: AvatarGalleryEntry) {
+        let mediaReference: AnyMediaReference
+        if let video = rawEntry.videoRepresentations.last {
+            mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+        } else {
+            let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: rawEntry.representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+            mediaReference = .standalone(media: media)
+        }
+        
+        
+//        var cancelImpl: (() -> Void)?
+//        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+//        let progressSignal = Signal<Never, NoError> { subscriber in
+//            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+//                cancelImpl?()
+//            }))
+//            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+//            return ActionDisposable { [weak controller] in
+//                Queue.mainQueue().async() {
+//                    controller?.dismiss()
+//                }
+//            }
+//            }
+//        |> runOn(Queue.mainQueue())
+//        |> delay(0.15, queue: Queue.mainQueue())
+        
+      
+        self.editDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
+        |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
+            guard let strongSelf = self else {
+                return
+            }
+            switch state {
+                case let .progress(value):
+                    break
+                case let .data(data):
+                    let image: UIImage?
+                    let video: URL?
+                    if isImage {
+                        if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                            image = UIImage(data: fileData)
+                        } else {
+                            image = nil
+                        }
+                        video = nil
+                    } else {
+                        image = nil
+                        video = URL(fileURLWithPath: data.path)
+                    }
+                    
+                    let avatarPhotoEditCompletion = strongSelf.avatarPhotoEditCompletion
+                    let avatarVideoEditCompletion = strongSelf.avatarVideoEditCompletion
+                    
+                    presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, image: image, video: video, present: { [weak self] c, a in
+                        if let strongSelf = self {
+                            strongSelf.present(c, in: .window(.root), with: a, blockInteraction: true)
+                        }
+                    }, imageCompletion: { image in
+                        avatarPhotoEditCompletion?(image)
+                    }, videoCompletion: { image, url, adjustments in
+                        avatarVideoEditCompletion?(image, url, adjustments)
+                    })
+                
+                    Queue.mainQueue().after(0.4) {
+                        strongSelf.dismiss(forceAway: true)
+                    }
+            }
+        }))
     }
     
     private func deleteEntry(_ rawEntry: AvatarGalleryEntry) {

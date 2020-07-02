@@ -408,8 +408,24 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                             var finalDuration: Double
                             switch data {
                                 case let .asset(asset):
-                                    finalDimensions = asset.dimensions
-                                    finalDuration = asset.videoDuration
+                                    if let adjustments = adjustments {
+                                        if adjustments.cropApplied(forAvatar: false) {
+                                            finalDimensions = adjustments.cropRect.size
+                                            if adjustments.cropOrientation == .left || adjustments.cropOrientation == .right {
+                                                finalDimensions = CGSize(width: finalDimensions.height, height: finalDimensions.width)
+                                            }
+                                        } else {
+                                            finalDimensions = asset.dimensions
+                                        }
+                                        if adjustments.trimEndValue > 0.0 {
+                                            finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
+                                        } else {
+                                            finalDuration = asset.videoDuration
+                                        }
+                                    } else {
+                                        finalDimensions = asset.dimensions
+                                        finalDuration = asset.videoDuration
+                                    }
                                 case let .tempFile(_, dimensions, duration):
                                     finalDimensions = dimensions
                                     finalDuration = duration

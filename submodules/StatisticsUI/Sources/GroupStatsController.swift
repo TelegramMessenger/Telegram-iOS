@@ -16,6 +16,9 @@ import PresentationDataUtils
 import AppBundle
 import GraphUI
 import ItemListPeerItem
+import ItemListPeerActionItem
+
+private let maxUsersDisplayedLimit: Int32 = 10
 
 private final class GroupStatsControllerArguments {
     let context: AccountContext
@@ -24,17 +27,23 @@ private final class GroupStatsControllerArguments {
     let openPeerHistory: (PeerId) -> Void
     let openPeerAdminActions: (PeerId) -> Void
     let promotePeer: (PeerId) -> Void
+    let expandTopPosters: () -> Void
+    let expandTopAdmins: () -> Void
+    let expandTopInviters: () -> Void
     let setPostersPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let setAdminsPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let setInvitersPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPeer: @escaping (PeerId) -> Void, openPeerHistory: @escaping (PeerId) -> Void, openPeerAdminActions: @escaping (PeerId) -> Void, promotePeer: @escaping (PeerId) -> Void, setPostersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setAdminsPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setInvitersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPeer: @escaping (PeerId) -> Void, openPeerHistory: @escaping (PeerId) -> Void, openPeerAdminActions: @escaping (PeerId) -> Void, promotePeer: @escaping (PeerId) -> Void, expandTopPosters: @escaping () -> Void, expandTopAdmins: @escaping () -> Void, expandTopInviters: @escaping () -> Void, setPostersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setAdminsPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setInvitersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPeer = openPeer
         self.openPeerHistory = openPeerHistory
         self.openPeerAdminActions = openPeerAdminActions
         self.promotePeer = promotePeer
+        self.expandTopPosters = expandTopPosters
+        self.expandTopAdmins = expandTopAdmins
+        self.expandTopInviters = expandTopInviters
         self.setPostersPeerIdWithRevealedOptions = setPostersPeerIdWithRevealedOptions
         self.setAdminsPeerIdWithRevealedOptions = setAdminsPeerIdWithRevealedOptions
         self.setInvitersPeerIdWithRevealedOptions = setInvitersPeerIdWithRevealedOptions
@@ -86,13 +95,16 @@ private enum StatsEntry: ItemListNodeEntry {
     
     case topPostersTitle(PresentationTheme, String, String)
     case topPoster(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopPoster, Bool)
+    case topPostersExpand(PresentationTheme, String)
     
     case topAdminsTitle(PresentationTheme, String, String)
     case topAdmin(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopAdmin, Bool)
+    case topAdminsExpand(PresentationTheme, String)
     
     case topInvitersTitle(PresentationTheme, String, String)
     case topInviter(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopInviter, Bool)
-        
+    case topInvitersExpand(PresentationTheme, String)
+    
     var section: ItemListSectionId {
         switch self {
             case .overviewTitle, .overview:
@@ -113,11 +125,11 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.topHours.rawValue
             case .topWeekdaysTitle, .topWeekdaysGraph:
                 return StatsSection.topWeekdays.rawValue
-            case .topPostersTitle, .topPoster:
+            case .topPostersTitle, .topPoster, .topPostersExpand:
                 return StatsSection.topPosters.rawValue
-            case .topAdminsTitle, .topAdmin:
+            case .topAdminsTitle, .topAdmin, .topAdminsExpand:
                 return StatsSection.topAdmins.rawValue
-            case .topInvitersTitle, .topInviter:
+            case .topInvitersTitle, .topInviter, .topInvitersExpand:
                 return StatsSection.topInviters.rawValue
         }
     }
@@ -164,14 +176,20 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 1000
             case let .topPoster(index, _, _, _, _, _, _):
                 return 1001 + index
+            case .topPostersExpand:
+                return 1999
             case .topAdminsTitle:
                 return 2000
             case let .topAdmin(index, _, _, _, _, _, _):
                 return 2001 + index
+            case .topAdminsExpand:
+                return 2999
             case .topInvitersTitle:
                 return 3000
             case let .topInviter(index, _, _, _, _, _, _):
-                return 30001 + index
+                return 3001 + index
+            case .topInvitersExpand:
+                return 3999
         }
     }
     
@@ -297,6 +315,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .topPostersExpand(lhsTheme, lhsText):
+                if case let .topPostersExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .topAdminsTitle(lhsTheme, lhsText, lhsDates):
                 if case let .topAdminsTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
@@ -309,6 +333,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .topAdminsExpand(lhsTheme, lhsText):
+                if case let .topAdminsExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .topInvitersTitle(lhsTheme, lhsText, lhsDates):
                 if case let .topInvitersTitle(rhsTheme, rhsText, rhsDates) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsDates == rhsDates {
                     return true
@@ -317,6 +347,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 }
             case let .topInviter(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsTopInviter, lhsRevealed):
                 if case let .topInviter(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopInviter, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsTopInviter == rhsTopInviter, lhsRevealed == rhsRevealed {
+                    return true
+                } else {
+                    return false
+                }
+            case let .topInvitersExpand(lhsTheme, lhsText):
+                if case let .topInvitersExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -377,6 +413,10 @@ private enum StatsEntry: ItemListNodeEntry {
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setPostersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
+            case let .topPostersExpand(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.expandTopPosters()
+                })
             case let .topAdmin(_, _, strings, dateTimeFormat, peer, topAdmin, revealed):
                 var textComponents: [String] = []
                 if topAdmin.deletedCount > 0 {
@@ -400,6 +440,10 @@ private enum StatsEntry: ItemListNodeEntry {
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setAdminsPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
+            case let .topAdminsExpand(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.expandTopAdmins()
+                })
             case let .topInviter(_, _, strings, dateTimeFormat, peer, topInviter, revealed):
                 var textComponents: [String] = []
                 textComponents.append(strings.Stats_GroupTopInviterInvites(topInviter.inviteCount))
@@ -415,6 +459,10 @@ private enum StatsEntry: ItemListNodeEntry {
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setInvitersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
+            case let .topInvitersExpand(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.expandTopInviters()
+                })
         }
     }
 }
@@ -474,31 +522,70 @@ private func groupStatsControllerEntries(state: GroupStatsState, data: GroupStat
             if !data.topPosters.isEmpty {
                 entries.append(.topPostersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopPostersTitle, dates))
                 var index: Int32 = 0
-                for topPoster in data.topPosters {
+                
+                var topPosters = data.topPosters
+                var effectiveExpanded = state.topPostersExpanded
+                if topPosters.count > maxUsersDisplayedLimit && !effectiveExpanded {
+                    topPosters = Array(topPosters.prefix(Int(maxUsersDisplayedLimit)))
+                } else {
+                    effectiveExpanded = true
+                }
+                
+                for topPoster in topPosters {
                     if let peer = peers[topPoster.peerId], topPoster.messageCount > 0 {
                         entries.append(.topPoster(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topPoster, topPoster.peerId == state.posterPeerIdWithRevealedOptions))
                         index += 1
                     }
                 }
+
+                if !effectiveExpanded {
+                    entries.append(.topPostersExpand(presentationData.theme, presentationData.strings.Stats_GroupShowMoreTopPosters(Int32(data.topPosters.count) - maxUsersDisplayedLimit)))
+                }
             }
             if !data.topAdmins.isEmpty {
                 entries.append(.topAdminsTitle(presentationData.theme, presentationData.strings.Stats_GroupTopAdminsTitle, dates))
                 var index: Int32 = 0
+                
+                var topAdmins = data.topAdmins
+                var effectiveExpanded = state.topAdminsExpanded
+                if topAdmins.count > maxUsersDisplayedLimit && !effectiveExpanded {
+                    topAdmins = Array(topAdmins.prefix(Int(maxUsersDisplayedLimit)))
+                } else {
+                    effectiveExpanded = true
+                }
+                
                 for topAdmin in data.topAdmins {
                     if let peer = peers[topAdmin.peerId], (topAdmin.deletedCount + topAdmin.kickedCount + topAdmin.bannedCount) > 0 {
                         entries.append(.topAdmin(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topAdmin, topAdmin.peerId == state.adminPeerIdWithRevealedOptions))
                         index += 1
                     }
                 }
+                
+                if !effectiveExpanded {
+                    entries.append(.topAdminsExpand(presentationData.theme, presentationData.strings.Stats_GroupShowMoreTopAdmins(Int32(data.topAdmins.count) - maxUsersDisplayedLimit)))
+                }
             }
             if !data.topInviters.isEmpty {
                 entries.append(.topInvitersTitle(presentationData.theme, presentationData.strings.Stats_GroupTopInvitersTitle, dates))
                 var index: Int32 = 0
+                
+                var topInviters = data.topInviters
+                var effectiveExpanded = state.topInvitersExpanded
+                if topInviters.count > maxUsersDisplayedLimit && !effectiveExpanded {
+                    topInviters = Array(topInviters.prefix(Int(maxUsersDisplayedLimit)))
+                } else {
+                    effectiveExpanded = true
+                }
+                
                 for topInviter in data.topInviters {
                     if let peer = peers[topInviter.peerId], topInviter.inviteCount > 0 {
                         entries.append(.topInviter(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topInviter, topInviter.peerId == state.inviterPeerIdWithRevealedOptions))
                         index += 1
                     }
+                }
+                
+                if !effectiveExpanded {
+                    entries.append(.topInvitersExpand(presentationData.theme, presentationData.strings.Stats_GroupShowMoreTopInviters(Int32(data.topInviters.count) - maxUsersDisplayedLimit)))
                 }
             }
         }
@@ -508,23 +595,41 @@ private func groupStatsControllerEntries(state: GroupStatsState, data: GroupStat
 }
 
 private struct GroupStatsState: Equatable {
+    let topPostersExpanded: Bool
+    let topAdminsExpanded: Bool
+    let topInvitersExpanded: Bool
     let posterPeerIdWithRevealedOptions: PeerId?
     let adminPeerIdWithRevealedOptions: PeerId?
     let inviterPeerIdWithRevealedOptions: PeerId?
     
     init() {
+        self.topPostersExpanded = false
+        self.topAdminsExpanded = false
+        self.topInvitersExpanded = false
         self.posterPeerIdWithRevealedOptions = nil
         self.adminPeerIdWithRevealedOptions = nil
         self.inviterPeerIdWithRevealedOptions = nil
     }
     
-    init(posterPeerIdWithRevealedOptions: PeerId?, adminPeerIdWithRevealedOptions: PeerId?, inviterPeerIdWithRevealedOptions: PeerId?) {
+    init(topPostersExpanded: Bool, topAdminsExpanded: Bool, topInvitersExpanded: Bool, posterPeerIdWithRevealedOptions: PeerId?, adminPeerIdWithRevealedOptions: PeerId?, inviterPeerIdWithRevealedOptions: PeerId?) {
+        self.topPostersExpanded = topPostersExpanded
+        self.topAdminsExpanded = topAdminsExpanded
+        self.topInvitersExpanded = topInvitersExpanded
         self.posterPeerIdWithRevealedOptions = posterPeerIdWithRevealedOptions
         self.adminPeerIdWithRevealedOptions = adminPeerIdWithRevealedOptions
         self.inviterPeerIdWithRevealedOptions = inviterPeerIdWithRevealedOptions
     }
   
     static func ==(lhs: GroupStatsState, rhs: GroupStatsState) -> Bool {
+        if lhs.topPostersExpanded != rhs.topPostersExpanded {
+            return false
+        }
+        if lhs.topAdminsExpanded != rhs.topAdminsExpanded {
+            return false
+        }
+        if lhs.topInvitersExpanded != rhs.topInvitersExpanded {
+            return false
+        }
         if lhs.posterPeerIdWithRevealedOptions != rhs.posterPeerIdWithRevealedOptions {
             return false
         }
@@ -537,16 +642,28 @@ private struct GroupStatsState: Equatable {
         return true
     }
     
+    func withUpdatedTopPostersExpanded(_ topPostersExpanded: Bool) -> GroupStatsState {
+        return GroupStatsState(topPostersExpanded: topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: self.inviterPeerIdWithRevealedOptions)
+    }
+    
+    func withUpdatedTopAdminsExpanded(_ topAdminsExpanded: Bool) -> GroupStatsState {
+        return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: self.inviterPeerIdWithRevealedOptions)
+    }
+    
+    func withUpdatedTopInvitersExpanded(_ topInvitersExpanded: Bool) -> GroupStatsState {
+        return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: topInvitersExpanded, posterPeerIdWithRevealedOptions: self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: self.inviterPeerIdWithRevealedOptions)
+    }
+    
     func withUpdatedPosterPeerIdWithRevealedOptions(_ posterPeerIdWithRevealedOptions: PeerId?) -> GroupStatsState {
-        return GroupStatsState(posterPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions != nil ? nil : self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions != nil ? nil : self.inviterPeerIdWithRevealedOptions)
+        return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions != nil ? nil : self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions != nil ? nil : self.inviterPeerIdWithRevealedOptions)
     }
     
     func withUpdatedAdminPeerIdWithRevealedOptions(_ adminPeerIdWithRevealedOptions: PeerId?) -> GroupStatsState {
-        return GroupStatsState(posterPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions != nil ? nil : self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions != nil ? nil : self.inviterPeerIdWithRevealedOptions)
+        return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions != nil ? nil : self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions != nil ? nil : self.inviterPeerIdWithRevealedOptions)
     }
     
     func withUpdatedInviterPeerIdWithRevealedOptions(_ inviterPeerIdWithRevealedOptions: PeerId?) -> GroupStatsState {
-        return GroupStatsState(posterPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions != nil ? nil : self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions != nil ? nil : self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions)
+        return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions != nil ? nil : self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions != nil ? nil : self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions)
     }
 }
 
@@ -633,6 +750,18 @@ public func groupStatsController(context: AccountContext, peerId: PeerId, cached
         openPeerAdminActionsImpl?(peerId)
     }, promotePeer: { peerId in
         promotePeerImpl?(peerId)
+    }, expandTopPosters: {
+        updateState { state in
+            return state.withUpdatedTopPostersExpanded(true)
+        }
+    }, expandTopAdmins: {
+        updateState { state in
+            return state.withUpdatedTopAdminsExpanded(true)
+        }
+    }, expandTopInviters: {
+        updateState { state in
+            return state.withUpdatedTopInvitersExpanded(true)
+        }
     }, setPostersPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.posterPeerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {

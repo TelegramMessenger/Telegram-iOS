@@ -14,6 +14,7 @@ import AccountContext
 import TelegramUniversalVideoContent
 import WebsiteType
 import OpenInExternalAppUI
+import ScreenCaptureDetection
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
@@ -380,6 +381,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
     private let updateVisibleDisposable = MetaDisposable()
+    
+    private var screenCaptureEventsDisposable: Disposable?
     
     public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
@@ -808,6 +811,20 @@ public class GalleryController: ViewController, StandalonePresentableController 
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true
         self.isOpaqueWhenInOverlay = true
+        
+        switch source {
+        case let .peerMessagesAtId(id):
+            if id.peerId.namespace == Namespaces.Peer.SecretChat {
+                self.screenCaptureEventsDisposable = (screenCaptureEvents()
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    if let strongSelf = self, strongSelf.traceVisibility() {
+                        let _ = addSecretChatMessageScreenshot(account: strongSelf.context.account, peerId: id.peerId).start()
+                    }
+                })
+            }
+        default:
+            break
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -822,6 +839,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
         self.updateVisibleDisposable.dispose()
+        self.screenCaptureEventsDisposable?.dispose()
     }
     
     @objc private func donePressed() {

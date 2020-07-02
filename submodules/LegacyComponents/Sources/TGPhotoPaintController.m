@@ -117,7 +117,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGMenuContainerView *_menuContainerView;
     
     TGPaintingData *_resultData;
-    UIImage *_stillImage;
         
     TGPaintingWrapperView *_paintingWrapperView;
         
@@ -1842,7 +1841,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _appeared = true;
     
     if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
-        [_containerView insertSubview:transitionView belowSubview:_paintingWrapperView];
+
     } else {
         [transitionView removeFromSuperview];
     }
@@ -1853,6 +1852,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [previewView setPaintingHidden:true];
     previewView.hidden = false;
     [_containerView insertSubview:previewView belowSubview:_paintingWrapperView];
+    [self updateContentViewLayout];
     [previewView performTransitionInIfNeeded];
     
     CGRect rect = [self fittedCropRect:true];
@@ -2140,6 +2140,14 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     }
     
     [self updateLayout:toInterfaceOrientation];
+}
+
+- (void)updateContentViewLayout
+{
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(_photoEditor.cropOrientation));
+    _contentView.transform = rotationTransform;
+    _contentView.frame = self.previewView.frame;
+    [self resetScrollView];
 }
 
 - (void)updateLayout:(UIInterfaceOrientation)orientation

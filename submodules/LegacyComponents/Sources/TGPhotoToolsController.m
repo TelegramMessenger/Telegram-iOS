@@ -160,8 +160,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil) {
             [strongSelf->_hudView setText:nil];
             
-            if (forVideo) {
-                strongSelf->_photoEditor.disableAll = false;
+            strongSelf->_photoEditor.disableAll = false;
+            if (!forVideo) {
+                [strongSelf->_photoEditor processAnimated:false completion:nil];
             }
         }
     };
@@ -171,8 +172,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil) {
             [strongSelf->_hudView setText:TGLocalized(@"PhotoEditor.Original")];
             
-            if (forVideo) {
-                strongSelf->_photoEditor.disableAll = true;
+            strongSelf->_photoEditor.disableAll = true;
+            if (!forVideo) {
+                [strongSelf->_photoEditor processAnimated:false completion:nil];
             }
         }
     };
@@ -944,6 +946,14 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     CGSize referenceSize = [self referenceViewSize];
     CGRect containerFrame = _preview ? CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height) : [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(photoEditor.rotatedCropSize, containerFrame.size);
+    
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
+    
     previewView.frame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
     [UIView performWithoutAnimation:^

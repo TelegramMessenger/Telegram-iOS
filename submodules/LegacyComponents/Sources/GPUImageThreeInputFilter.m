@@ -194,11 +194,11 @@ NSString *const kGPUImageThreeInputTextureVertexShaderString = SHADER_STRING
     {
         inputRotation = newInputRotation;
     }
-    else if (textureIndex == 1)
+    else if (textureIndex == 1 && !self.rotateOnlyFirstTexture)
     {
         inputRotation2 = newInputRotation;
     }
-    else
+    else if (textureIndex == 2 && !self.rotateOnlyFirstTexture)
     {
         inputRotation3 = newInputRotation;
     }

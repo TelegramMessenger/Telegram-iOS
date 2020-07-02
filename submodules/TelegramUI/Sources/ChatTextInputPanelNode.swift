@@ -982,13 +982,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let indicatorTranslation = max(0.0, self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold)
             
-            audioRecordingCancelIndicator.frame = CGRect(
+            let audioRecordingCancelIndicatorFrame = CGRect(
                 origin: CGPoint(
                     x: leftInset + floor((baseWidth - audioRecordingCancelIndicator.bounds.size.width - indicatorTranslation) / 2.0),
                     y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingCancelIndicator.bounds.size.height) / 2.0)),
                 size: audioRecordingCancelIndicator.bounds.size)
+            audioRecordingCancelIndicator.frame = audioRecordingCancelIndicatorFrame
             if self.actionButtons.micButton.cancelTranslation > cancelTransformThreshold {
-                let progress = 1 - (self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold) / 80
+                //let progress = 1 - (self.actionButtons.micButton.cancelTranslation - cancelTransformThreshold) / 80
+                let progress: CGFloat = max(0.0, min(1.0, (audioRecordingCancelIndicatorFrame.minX - 100.0) / 10.0))
                 audioRecordingCancelIndicator.alpha = progress
             } else {
                 audioRecordingCancelIndicator.alpha = 1

@@ -215,6 +215,11 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
 }
 
+- (void)finishCustomTransitionOut
+{
+    
+}
+
 - (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))__unused completion
 {
 
@@ -299,6 +304,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         }
         
         [parentView addSubview:toTransitionView];
+        
+        if (_noTransitionToSnapshot)
+            toTransitionView.alpha = 0.0f;
         
         UIInterfaceOrientation orientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
         if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
@@ -496,6 +504,11 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         highlightedButtons |= TGPhotoEditorToolsTab;
     
     return highlightedButtons;
+}
+
+- (bool)presentedForAvatarCreation
+{
+    return _intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent);
 }
 
 @end

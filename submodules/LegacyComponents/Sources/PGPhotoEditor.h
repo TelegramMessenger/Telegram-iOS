@@ -46,6 +46,8 @@
 - (void)setPlayerItem:(AVPlayerItem *)playerItem forCropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropMirrored:(bool)cropMirrored;
 - (void)setCIImage:(CIImage *)ciImage;
 
+- (void)updateProcessChain:(bool)force;
+
 - (void)processAnimated:(bool)animated completion:(void (^)(void))completion;
 - (void)reprocess;
 

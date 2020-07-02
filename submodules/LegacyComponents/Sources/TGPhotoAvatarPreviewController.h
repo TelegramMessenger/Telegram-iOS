@@ -15,7 +15,12 @@
 @property (nonatomic, copy) void (^croppingChanged)(void);
 @property (nonatomic, copy) void (^togglePlayback)(void);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIView *)dotImageView fullPreviewView:(PGPhotoEditorView *)fullPreviewView;
+@property (nonatomic, weak) UIView *dotImageView;
+@property (nonatomic, weak) UIView *dotMarkerView;
+@property (nonatomic, weak) PGPhotoEditorView *fullPreviewView;
+@property (nonatomic, weak) TGMediaPickerGalleryVideoScrubber *scrubberView;
+
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
 
 - (void)setImage:(UIImage *)image;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;

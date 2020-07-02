@@ -627,7 +627,10 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         }),
         SettingsSearchableItem(id: .data(14), title: strings.ChatSettings_OpenLinksIn, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatSettings_OpenLinksIn), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             present(.push, webBrowserSettingsController(context: context))
-        })
+        }),
+        SettingsSearchableItem(id: .data(15), title: strings.ChatSettings_IntentsSettings, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatSettings_IntentsSettings), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
+            present(.push, intentsSettingsController(context: context))
+        }),
     ]
 }
 

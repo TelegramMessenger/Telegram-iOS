@@ -26,6 +26,8 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     UIView *_snapshotView;
     CGSize _snapshotSize;
     
+    UIView *_flashView;
+    
     UIView *_topOverlayView;
     UIView *_leftOverlayView;
     UIView *_rightOverlayView;
@@ -39,7 +41,7 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     
     CGFloat _currentDiameter;
     
-    PGPhotoEditorView *_fullPreviewView;
+    __weak PGPhotoEditorView *_fullPreviewView;
 }
 @end
 
@@ -82,6 +84,12 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         _fullPreviewView.userInteractionEnabled = false;
         [_wrapperView addSubview:_fullPreviewView];
         
+        _flashView = [[UIView alloc] init];
+        _flashView.alpha = 0.0;
+        _flashView.backgroundColor = [UIColor whiteColor];
+        _flashView.userInteractionEnabled = false;
+        [self addSubview:_flashView];
+        
         _topCurtainView = [[UIView alloc] initWithFrame:CGRectZero];
         _topCurtainView.backgroundColor = [UIColor blackColor];
         [self addSubview:_topCurtainView];
@@ -120,6 +128,11 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         [_wrapperView addGestureRecognizer:tapRecognier];
     }
     return self;
+}
+
+- (void)dealloc
+{
+    _scrollView.delegate = nil;
 }
 
 - (void)handleTap:(UITapGestureRecognizer *)gestureRecognizer {
@@ -611,6 +624,8 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
 {
     [self _layoutOverlayViews];
     
+    _flashView.frame = self.bounds;
+    
     if (_scrollView.superview == nil)
     {
         _scrollView.frame = self.bounds;
@@ -645,6 +660,18 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         return CGSizeMake(10, 10);
     else
         return CGSizeMake(20, 20);
+}
+
+- (void)flash:(void (^)(void))completion {
+    [UIView animateWithDuration:0.12 animations:^{
+        _flashView.alpha = 1.0f;
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.2 animations:^{
+            _flashView.alpha = 0.0f;
+        } completion:^(BOOL finished) {
+            completion();
+        }];
+    }];
 }
 
 @end

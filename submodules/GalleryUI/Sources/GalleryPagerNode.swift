@@ -312,6 +312,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         }
     }
     
+    public var updateOnReplacement = false
     public func replaceItems(_ items: [GalleryItem], centralItemIndex: Int?, synchronous: Bool = false) {
         var updateItems: [GalleryPagerUpdateItem] = []
         var deleteItems: [Int] = []
@@ -326,14 +327,20 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             }
         }
         
-        for i in 0 ..< items.count {
-            if i == previousIndexById[items[i].id] {
-                updateItems.append(GalleryPagerUpdateItem(index: i, previousIndex: i, item: items[i]))
-            } else {
+        if self.updateOnReplacement {
+            for i in 0 ..< items.count {
+                if (previousIndexById[items[i].id] == nil)  {
+                    insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: previousIndexById[items[i].id]))
+                } else {
+                    updateItems.append(GalleryPagerUpdateItem(index: i, previousIndex: i, item: items[i]))
+                }
+            }
+        } else {
+            for i in 0 ..< items.count {
                 insertItems.append(GalleryPagerInsertItem(index: i, item: items[i], previousIndex: previousIndexById[items[i].id]))
             }
         }
-
+        
         self.transaction(GalleryPagerTransaction(deleteItems: deleteItems, insertItems: insertItems, updateItems: updateItems, focusOnItem: centralItemIndex, synchronous: synchronous))
     }
     
@@ -404,7 +411,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             self.ignoreCentralItemIndexUpdate = true
             self.centralItemIndex = focusOnItem
             self.ignoreCentralItemIndexUpdate = false
-            self.updateItemNodes(transition: .immediate, forceOffsetReset: true)
+            self.updateItemNodes(transition: .immediate, forceOffsetReset: true, synchronous: transaction.synchronous)
         }
     }
     

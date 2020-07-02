@@ -24,6 +24,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @interface TGPhotoAvatarPreviewController ()
 {
+    bool _dismissingToCamera;
     bool _appeared;
     UIImage *_imagePendingLoad;
     UIView *_snapshotView;
@@ -31,18 +32,13 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     UIView *_wrapperView;
     
-    TGPhotoAvatarCropView *_cropView;
-    PGPhotoEditorView *_fullPreviewView;
+    __weak TGPhotoAvatarCropView *_cropView;
         
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     UIView *_portraitWrapperBackgroundView;
     UIView *_landscapeWrapperBackgroundView;
-    
-    TGMediaPickerGalleryVideoScrubber *_scrubberView;
-    UIView *_dotImageView;
-    UIView *_videoAreaView;
-    UIView *_flashView;
+
     UIView *_portraitToolControlView;
     UIView *_landscapeToolControlView;
     UILabel *_coverLabel;
@@ -57,19 +53,18 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIView *)dotImageView fullPreviewView:(PGPhotoEditorView *)fullPreviewView
-{
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView {
     self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
-        _fullPreviewView = fullPreviewView;
-        _scrubberView = scrubberView;
-        
-        _dotImageView = dotImageView;
     }
     return self;
+}
+
+- (void)dealloc {
+    NSLog(@"");
 }
 
 - (void)loadView
@@ -89,7 +84,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         if (strongSelf == nil)
             return;
         
-        self.controlVideoPlayback(false);
+        strongSelf.controlVideoPlayback(false);
     };
     void(^interactionEnded)(void) = ^
     {
@@ -100,11 +95,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         if ([strongSelf shouldAutorotate])
             [TGViewController attemptAutorotation];
         
-        self.controlVideoPlayback(true);
+        strongSelf.controlVideoPlayback(true);
     };
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView];
+    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView];
+    _cropView = cropView;
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];
     [_cropView setCropMirrored:photoEditor.cropMirrored];
@@ -141,7 +137,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     }
     _cropView.interactionBegan = interactionBegan;
     _cropView.interactionEnded = interactionEnded;
-    [_wrapperView addSubview:_cropView];
+    [_wrapperView addSubview:cropView];
     
     _portraitToolsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
     [_wrapperView addSubview:_portraitToolsWrapperView];
@@ -161,17 +157,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _landscapeWrapperBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
         _landscapeWrapperBackgroundView.userInteractionEnabled = false;
         [_landscapeToolsWrapperView addSubview:_landscapeWrapperBackgroundView];
-        
-        _videoAreaView = [[UIView alloc] init];
-        [self.view insertSubview:_videoAreaView belowSubview:_wrapperView];
-        
+                
         [_portraitToolsWrapperView addSubview:_scrubberView];
-        
-        _flashView = [[UIView alloc] init];
-        _flashView.alpha = 0.0;
-        _flashView.backgroundColor = [UIColor whiteColor];
-        _flashView.userInteractionEnabled = false;
-        [_videoAreaView addSubview:_flashView];
         
         _coverLabel = [[UILabel alloc] init];
         _coverLabel.alpha = 0.7f;
@@ -182,7 +169,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         [_coverLabel sizeToFit];
         [_portraitToolsWrapperView addSubview:_coverLabel];
         
-        _dotImageView.alpha = 1.0f;
         [_wrapperView addSubview:_dotImageView];
     }
 }
@@ -259,6 +245,14 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 #pragma mark - Transition
 
+- (void)prepareTransitionInWithReferenceView:(UIView *)referenceView referenceFrame:(CGRect)referenceFrame parentView:(UIView *)parentView noTransitionView:(bool)noTransitionView
+{
+    [super prepareTransitionInWithReferenceView:referenceView referenceFrame:referenceFrame parentView:parentView noTransitionView:noTransitionView];
+    
+    if (self.initialAppearance && self.fromCamera)
+        [self.view insertSubview:_transitionView belowSubview:_wrapperView];
+}
+
 - (void)transitionIn
 {
     if (_portraitToolsWrapperView.frame.size.height < FLT_EPSILON) {
@@ -275,6 +269,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     {
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
+        _dotImageView.alpha = 1.0f;
+        _dotMarkerView.alpha = 1.0f;
     } completion:^(BOOL finished) {
         _scrubberView.layer.shouldRasterize = false;
     }];
@@ -320,14 +316,30 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     }
 }
 
+- (void)transitionOutSaving:(bool)saving completion:(void (^)(void))completion
+{
+    if (!saving && self.fromCamera) {
+        _dismissingToCamera = true;
+        _noTransitionToSnapshot = true;
+        
+        _fullPreviewView.frame = [_fullPreviewView.superview convertRect:_fullPreviewView.frame toView:self.view];
+        [self.view insertSubview:_fullPreviewView belowSubview:_wrapperView];
+        [_cropView hideImageForCustomTransition];
+    }
+    
+    [super transitionOutSaving:saving completion:completion];
+}
+
 - (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion
 {
     if (switching) {
         _dismissing = true;
     }
     
-    [self.view insertSubview:_previewView belowSubview:_wrapperView];
-    _previewView.frame = [_wrapperView convertRect:_cropView.frame toView:self.view];
+    if (!self.fromCamera || switching) {
+        [self.view insertSubview:_previewView belowSubview:_wrapperView];
+        _previewView.frame = [_wrapperView convertRect:_cropView.frame toView:self.view];
+    }
     
     [_cropView animateTransitionOut];
     
@@ -364,6 +376,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _cropView.transform = CGAffineTransformMakeScale(targetCropViewScale, targetCropViewScale);
         } completion:^(__unused BOOL finished)
          {
+            [_cropView removeFromSuperview];
             _previewView.alpha = 1.0;
             if (self.finishedTransitionOut != nil)
                 self.finishedTransitionOut();
@@ -371,6 +384,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             if (completion != nil)
                 completion();
         }];
+    } else {
+        if (self.fromCamera)
+            _previewView.alpha = 0.0f;
     }
     
     switch (self.effectiveOrientation)
@@ -413,9 +429,11 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
         _dotImageView.alpha = 0.0f;
+        _dotMarkerView.alpha = 0.0f;
     } completion:^(__unused BOOL finished)
     {
         if (!switching) {
+            [_cropView removeFromSuperview];
             if (completion != nil)
                 completion();
         }
@@ -426,8 +444,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 {
     _dismissing = true;
     
-    TGPhotoEditorPreviewView *previewView = self.previewView;
-    [previewView prepareForTransitionOut];
+    UIView *previewView = self.previewView;
+    if (_dismissingToCamera) {
+        previewView = _fullPreviewView;
+    } else {
+        [self.previewView prepareForTransitionOut];
+    }
     
     UIView *snapshotView = nil;
     POPSpringAnimation *snapshotAnimation = nil;
@@ -488,9 +510,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     previewView.hidden = true;
     [previewView performTransitionInIfNeeded];
     
-    [_cropView openCurtains];
+    if (!self.initialAppearance)
+        [_cropView openCurtains];
     [_cropView transitionInFinishedFromCamera:(self.fromCamera && self.initialAppearance)];
-    
+        
     PGPhotoEditor *photoEditor = self.photoEditor;
     [photoEditor processAnimated:false completion:nil];
 }
@@ -500,8 +523,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 //    [_cropView animateTransitionIn];
     [_cropView transitionInFinishedFromCamera:true];
     
-    self.finishedTransitionIn();
-    self.finishedTransitionIn = nil;
+    if (self.finishedTransitionIn) {
+        self.finishedTransitionIn();
+        self.finishedTransitionIn = nil;
+    }
 }
 
 - (void)prepareForCustomTransitionOut
@@ -514,20 +539,31 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     {
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
-        _videoAreaView.alpha = 0.0f;
         _dotImageView.alpha = 0.0f;
     } completion:nil];
 }
 
+- (void)finishCustomTransitionOut
+{
+    [_cropView removeFromSuperview];
+}
+
 - (CGRect)transitionOutReferenceFrame
 {
-    TGPhotoEditorPreviewView *previewView = _previewView;
-    return previewView.frame;
+    if (_dismissingToCamera) {
+        return [_fullPreviewView.superview convertRect:_fullPreviewView.frame toView:self.view];
+    } else {
+        return [_wrapperView convertRect:_cropView.frame toView:self.view];
+    }
 }
 
 - (UIView *)transitionOutReferenceView
 {
-    return _previewView;
+    if (_dismissingToCamera) {
+        return _fullPreviewView;
+    } else {
+        return _previewView;
+    }
 }
 
 - (id)currentResultRepresentation
@@ -698,12 +734,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     CGRect containerFrame = [TGPhotoAvatarPreviewController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:0 hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(photoEditor.rotatedCropSize, containerFrame.size);
     previewView.frame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
-    
-    [UIView performWithoutAnimation:^
-    {
-        _videoAreaView.frame = _previewView.frame;
-        _flashView.frame = _videoAreaView.bounds;
-    }];
 }
 
 - (void)updateLayout:(UIInterfaceOrientation)orientation
@@ -789,29 +819,24 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (void)beginScrubbing:(bool)flash
 {
-    if (flash)
+    if (flash) {
         _coverLabel.alpha = 1.0f;
+    }
 }
 
 - (void)endScrubbing:(bool)flash completion:(bool (^)(void))completion
 {
     if (flash) {
-        [UIView animateWithDuration:0.12 animations:^{
-            _flashView.alpha = 1.0f;
-        } completion:^(BOOL finished) {
-            [UIView animateWithDuration:0.2 animations:^{
-                _flashView.alpha = 0.0f;
-            } completion:^(BOOL finished) {
-                TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
-                    if (completion()) {
-                        [UIView animateWithDuration:0.2 animations:^{
-                            _coverLabel.alpha = 0.7f;
-                        }];
-                        
-                        self.controlVideoPlayback(true);
-                    }
-                });
-            }];
+        [_cropView flash:^{
+            TGDispatchAfter(1.0, dispatch_get_main_queue(), ^{
+                if (completion()) {
+                    [UIView animateWithDuration:0.2 animations:^{
+                        _coverLabel.alpha = 0.7f;
+                    }];
+                    
+                    self.controlVideoPlayback(true);
+                }
+            });
         }];
     } else {
         TGDispatchAfter(1.32, dispatch_get_main_queue(), ^{

@@ -983,18 +983,13 @@ typedef enum
     CGPoint point = [self _scrubberPositionForPosition:_value duration:_duration zoomedIn:zoomedIn];
     CGRect frame = CGRectMake(CGFloor(point.x) - _scrubberHandle.frame.size.width / 2, _scrubberHandle.frame.origin.y, _scrubberHandle.frame.size.width, _scrubberHandle.frame.size.height);
     
-    CGPoint dotPoint = [self _dotPositionForPosition:_value duration:_duration];
-    CGRect dotFrame = CGRectMake(CGFloor(dotPoint.x) - _dotHandle.frame.size.width / 2, _dotHandle.frame.origin.y, _dotHandle.frame.size.width, _dotHandle.frame.size.height);
-    
     if (_trimStartValue > DBL_EPSILON && fabs(_value - _trimStartValue) < 0.01)
     {
         frame = CGRectMake(_trimView.frame.origin.x + [self _scrubbingRectZoomedIn:zoomedIn].origin.x, _scrubberHandle.frame.origin.y, _scrubberHandle.frame.size.width, _scrubberHandle.frame.size.height);
-        dotFrame = CGRectMake(_trimView.frame.origin.x + [self _scrubbingRectZoomedIn:false].origin.x, _dotHandle.frame.origin.y, _dotHandle.frame.size.width, _dotHandle.frame.size.height);
     }
     else if (fabs(_value - _trimEndValue) < 0.01)
     {
         frame = CGRectMake(_trimView.frame.origin.x + _trimView.frame.size.width - [self _scrubbingRectZoomedIn:zoomedIn].origin.x - _scrubberHandle.frame.size.width, _scrubberHandle.frame.origin.y, _scrubberHandle.frame.size.width, _scrubberHandle.frame.size.height);
-        dotFrame = CGRectMake(_trimView.frame.origin.x + _trimView.frame.size.width - [self _scrubbingRectZoomedIn:false].origin.x - _dotHandle.frame.size.width, _dotHandle.frame.origin.y, _dotHandle.frame.size.width, _dotHandle.frame.size.height);
     }
     
     if (_isPlaying)
@@ -1023,8 +1018,6 @@ typedef enum
         [self removeHandleAnimation];
         _scrubberHandle.frame = frame;
     }
-    
-    _dotHandle.frame = dotFrame;
 }
 
 - (void)addHandleAnimationFromFrame:(CGRect)fromFrame toFrame:(CGRect)toFrame duration:(NSTimeInterval)duration

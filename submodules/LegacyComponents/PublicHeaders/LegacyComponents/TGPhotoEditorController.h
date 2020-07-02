@@ -35,6 +35,8 @@ typedef enum {
 @property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView);
 @property (nonatomic, copy) void (^finishedTransitionOut)(bool saved);
 
+@property (nonatomic, copy) void (^onDismiss)();
+
 @property (nonatomic, copy) void (^beginCustomTransitionOut)(CGRect, UIView *, void(^)(void));
 
 @property (nonatomic, copy) SSignal *(^requestThumbnailImage)(id<TGMediaEditableItem> item);

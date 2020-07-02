@@ -416,6 +416,19 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 }
                                             }
                                             
+                                            if let participantResult = participantResult {
+                                                switch participantResult {
+                                                case let .channelParticipant(_, users):
+                                                    for user in users {
+                                                        let telegramUser = TelegramUser(user: user)
+                                                        peers.append(telegramUser)
+                                                        if let presence = TelegramUserPresence(apiUser: user) {
+                                                            peerPresences[telegramUser.id] = presence
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
                                             updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                                 return updated
                                             })
