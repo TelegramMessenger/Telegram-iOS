@@ -10,6 +10,7 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 import GalleryUI
+import LegacyComponents
 import LegacyMediaPickerUI
 import SaveToCameraRoll
 
@@ -186,6 +187,9 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
+    
+    public var avatarPhotoEditCompletion: ((UIImage) -> Void)?
+    public var avatarVideoEditCompletion: ((UIImage, URL, TGVideoEditAdjustments?) -> Void)?
     
     private let _hiddenMedia = Promise<AvatarGalleryEntry?>(nil)
     public var hiddenMedia: Signal<AvatarGalleryEntry?, NoError> {
@@ -635,7 +639,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 case let .progress(value):
                     break
                 case let .data(data):
-                    let screenImage: UIImage?
                     let image: UIImage?
                     let video: URL?
                     if isImage {
@@ -644,22 +647,28 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         } else {
                             image = nil
                         }
-                        screenImage = image
                         video = nil
                     } else {
                         image = nil
                         video = URL(fileURLWithPath: data.path)
-                        screenImage = nil
                     }
-                    presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, screenImage: screenImage, image: image, video: video, present: { [weak self] c, a in
+                    
+                    let avatarPhotoEditCompletion = strongSelf.avatarPhotoEditCompletion
+                    let avatarVideoEditCompletion = strongSelf.avatarVideoEditCompletion
+                    
+                    presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, image: image, video: video, present: { [weak self] c, a in
                         if let strongSelf = self {
                             strongSelf.present(c, in: .window(.root), with: a, blockInteraction: true)
                         }
-                    }, imageCompletion: { [weak self] image in
-                            
-                    }, videoCompletion: { [weak self] image, url, adjustments in
-                        
+                    }, imageCompletion: { image in
+                        avatarPhotoEditCompletion?(image)
+                    }, videoCompletion: { image, url, adjustments in
+                        avatarVideoEditCompletion?(image, url, adjustments)
                     })
+                
+                    Queue.mainQueue().after(0.4) {
+                        strongSelf.dismiss(forceAway: true)
+                    }
             }
         }))
     }

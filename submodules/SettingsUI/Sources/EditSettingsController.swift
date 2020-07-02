@@ -549,7 +549,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 hasPhotos = true
             }
             
-            let completedPhotoImpl: (UIImage) -> Void = { image in
+            let completedProfilePhotoImpl: (UIImage) -> Void = { image in
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
@@ -580,7 +580,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
             
-            let completedVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
+            let completedProfileVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let photoResource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
@@ -675,18 +675,18 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
                     assetsController?.dismiss()
-                    completedPhotoImpl(result)
+                    completedProfilePhotoImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             mixin.didFinishWithImage = { image in
                 if let image = image {
-                    completedPhotoImpl(image)
+                    completedProfilePhotoImpl(image)
                 }
             }
             mixin.didFinishWithVideo = { image, url, adjustments in
                 if let image = image, let url = url {
-                    completedVideoImpl(image, url, adjustments)
+                    completedProfileVideoImpl(image, url, adjustments)
                 }
             }
             mixin.didFinishWithDelete = {
@@ -727,6 +727,12 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     if peer.smallProfileImage != nil {
                         let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: cachedAvatarEntries.with { $0 }, replaceRootController: { controller, ready in
                         })
+                        galleryController.avatarPhotoEditCompletion = { image in
+                            completedProfilePhotoImpl(image)
+                        }
+                        galleryController.avatarVideoEditCompletion = { image, url, adjustments in
+                            completedProfileVideoImpl(image, url, adjustments)
+                        }
                         presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
                             return nil
                         }))

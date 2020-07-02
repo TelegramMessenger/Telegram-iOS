@@ -22,6 +22,7 @@ swift_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/ShareController:ShareController",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
     ],

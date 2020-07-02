@@ -6,7 +6,7 @@ import LegacyComponents
 import TelegramPresentationData
 import LegacyUI
 
-public func presentLegacyAvatarEditor(theme: PresentationTheme, screenImage: UIImage?, image: UIImage?, video: URL?, present: (ViewController, Any?) -> Void, imageCompletion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments?) -> Void) {
+public func presentLegacyAvatarEditor(theme: PresentationTheme, image: UIImage?, video: URL?, present: (ViewController, Any?) -> Void, imageCompletion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments?) -> Void) {
     let legacyController = LegacyController(presentation: .custom, theme: theme)
     legacyController.statusBar.statusBarStyle = .Ignore
     
@@ -19,7 +19,7 @@ public func presentLegacyAvatarEditor(theme: PresentationTheme, screenImage: UII
     
     present(legacyController, nil)
     
-    TGPhotoVideoEditor.present(with: legacyController.context, parentController: emptyController, screenImage: screenImage, image: image, video: video, didFinishWithImage: { image in
+    TGPhotoVideoEditor.present(with: legacyController.context, parentController: emptyController, image: image, video: video, didFinishWithImage: { image in
         if let image = image {
             imageCompletion(image)
         }
