@@ -384,6 +384,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
         
+        self.galleryNode.pager.updateOnReplacement = true
         self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         
@@ -584,7 +585,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             self?.deleteEntry(entry)
                         } : nil, setMain: { [weak self] in
                             self?.setMainEntry(entry)
-                        }) }), centralItemIndex: 0)
+                        }) }), centralItemIndex: 0, synchronous: true)
                         self.entries = entries
                     }
                 } else {
