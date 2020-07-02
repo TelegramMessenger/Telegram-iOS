@@ -26,8 +26,7 @@ static rtc::Thread *makeMediaThread() {
     return value.get();
 }
 
-
-static rtc::Thread *getMediaThread() {
+rtc::Thread *Manager::getMediaThread() {
     static rtc::Thread *value = makeMediaThread();
     return value;
 }
@@ -38,6 +37,7 @@ Manager::Manager(
     bool enableP2P,
     std::vector<TgVoipRtcServer> const &rtcServers,
     bool isVideo,
+    std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
     std::function<void (const TgVoipState &)> stateUpdated,
     std::function<void (bool)> videoStateUpdated,
     std::function<void (bool)> remoteVideoIsActiveUpdated,
@@ -48,6 +48,7 @@ _encryptionKey(encryptionKey),
 _enableP2P(enableP2P),
 _rtcServers(rtcServers),
 _startWithVideo(isVideo),
+_videoCapture(videoCapture),
 _stateUpdated(stateUpdated),
 _videoStateUpdated(videoStateUpdated),
 _remoteVideoIsActiveUpdated(remoteVideoIsActiveUpdated),
@@ -111,11 +112,12 @@ void Manager::start() {
         );
     }));
     bool isOutgoing = _encryptionKey.isOutgoing;
-    _mediaManager.reset(new ThreadLocalObject<MediaManager>(getMediaThread(), [isOutgoing, thread = _thread, startWithVideo = _startWithVideo, weakThis]() {
+    _mediaManager.reset(new ThreadLocalObject<MediaManager>(getMediaThread(), [isOutgoing, thread = _thread, startWithVideo = _startWithVideo, videoCapture = _videoCapture, weakThis]() {
         return new MediaManager(
             getMediaThread(),
             isOutgoing,
             startWithVideo,
+            videoCapture,
             [thread, weakThis](const rtc::CopyOnWriteBuffer &packet) {
                 thread->PostTask(RTC_FROM_HERE, [weakThis, packet]() {
                     auto strongThis = weakThis.lock();

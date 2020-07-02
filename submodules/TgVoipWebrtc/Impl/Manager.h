@@ -12,12 +12,15 @@ namespace TGVOIP_NAMESPACE {
 
 class Manager : public std::enable_shared_from_this<Manager> {
 public:
+    static rtc::Thread *getMediaThread();
+    
     Manager(
         rtc::Thread *thread,
         TgVoipEncryptionKey encryptionKey,
         bool enableP2P,
         std::vector<TgVoipRtcServer> const &rtcServers,
         bool isVideo,
+        std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
         std::function<void (const TgVoipState &)> stateUpdated,
         std::function<void (bool)> videoStateUpdated,
         std::function<void (bool)> remoteVideoIsActiveUpdated,
@@ -40,6 +43,7 @@ private:
     bool _enableP2P;
     std::vector<TgVoipRtcServer> _rtcServers;
     bool _startWithVideo;
+    std::shared_ptr<TgVoipVideoCaptureInterface> _videoCapture;
     std::function<void (const TgVoipState &)> _stateUpdated;
     std::function<void (bool)> _videoStateUpdated;
     std::function<void (bool)> _remoteVideoIsActiveUpdated;

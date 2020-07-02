@@ -5,9 +5,18 @@
 #include "rtc_base/logging.h"
 
 #include "Manager.h"
+#include "MediaManager.h"
 
 #include <stdarg.h>
 #include <iostream>
+
+#if TARGET_OS_IPHONE
+
+#include "CodecsApple.h"
+
+#else
+#error "Unsupported platform"
+#endif
 
 #import <Foundation/Foundation.h>
 
@@ -143,6 +152,7 @@ public:
             TgVoipConfig const &config,
             TgVoipEncryptionKey const &encryptionKey,
             bool isVideo,
+            std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
             TgVoipNetworkType initialNetworkType,
             std::function<void(TgVoipState)> stateUpdated,
             std::function<void(bool)> videoStateUpdated,
@@ -160,13 +170,14 @@ public:
         
         bool enableP2P = config.enableP2P;
         
-        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, isVideo, stateUpdated, videoStateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers](){
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, isVideo, stateUpdated, videoStateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers, videoCapture](){
             return new Manager(
                 getManagerThread(),
                 encryptionKey,
                 enableP2P,
                 rtcServers,
                 isVideo,
+                videoCapture,
                 [stateUpdated](const TgVoipState &state) {
                     stateUpdated(state);
                 },
@@ -388,6 +399,7 @@ TgVoip *TgVoip::makeInstance(
         TgVoipNetworkType initialNetworkType,
         TgVoipEncryptionKey const &encryptionKey,
         bool isVideo,
+        std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
         std::function<void(TgVoipState)> stateUpdated,
         std::function<void(bool)> videoStateUpdated,
         std::function<void(bool)> remoteVideoIsActiveUpdated,
@@ -401,6 +413,7 @@ TgVoip *TgVoip::makeInstance(
             config,
             encryptionKey,
             isVideo,
+            videoCapture,
             initialNetworkType,
             stateUpdated,
             videoStateUpdated,
@@ -410,6 +423,78 @@ TgVoip *TgVoip::makeInstance(
 }
 
 TgVoip::~TgVoip() = default;
+
+class TgVoipVideoCaptureInterfaceObject {
+public:
+    TgVoipVideoCaptureInterfaceObject() {
+        _videoSource = makeVideoSource(Manager::getMediaThread(), MediaManager::getWorkerThread());
+        //this should outlive the capturer
+        _videoCapturer = makeVideoCapturer(_videoSource, true, [this](bool isActive) {
+            if (this->_isActiveUpdated) {
+                this->_isActiveUpdated(isActive);
+            }
+        });
+    }
+    
+    ~TgVoipVideoCaptureInterfaceObject() {
+        if (_currentSink != nullptr) {
+            _videoSource->RemoveSink(_currentSink.get());
+        }
+    }
+    
+    void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
+        if (_currentSink != nullptr) {
+            _videoSource->RemoveSink(_currentSink.get());
+        }
+        _currentSink = sink;
+        if (_currentSink != nullptr) {
+            _videoSource->AddOrUpdateSink(_currentSink.get(), rtc::VideoSinkWants());
+        }
+    }
+    
+    void setIsActiveUpdated(std::function<void (bool)> isActiveUpdated) {
+        _isActiveUpdated = isActiveUpdated;
+    }
+    
+public:
+    rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> _videoSource;
+    std::unique_ptr<VideoCapturerInterface> _videoCapturer;
+    
+private:
+    std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> _currentSink;
+    std::function<void (bool)> _isActiveUpdated;
+};
+
+class TgVoipVideoCaptureInterfaceImpl : public TgVoipVideoCaptureInterface {
+public:
+    TgVoipVideoCaptureInterfaceImpl() {
+        _impl.reset(new ThreadLocalObject<TgVoipVideoCaptureInterfaceObject>(
+            Manager::getMediaThread(),
+            []() {
+                return new TgVoipVideoCaptureInterfaceObject();
+            }
+        ));
+    }
+    
+    virtual ~TgVoipVideoCaptureInterfaceImpl() {
+        
+    }
+    
+    virtual void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
+        _impl->perform([sink](TgVoipVideoCaptureInterfaceObject *impl) {
+            impl->setVideoOutput(sink);
+        });
+    }
+    
+public:
+    std::unique_ptr<ThreadLocalObject<TgVoipVideoCaptureInterfaceObject>> _impl;
+};
+
+std::shared_ptr<TgVoipVideoCaptureInterface>TgVoipVideoCaptureInterface::makeInstance() {
+    return std::shared_ptr<TgVoipVideoCaptureInterface>(new TgVoipVideoCaptureInterfaceImpl());
+}
+
+TgVoipVideoCaptureInterface::~TgVoipVideoCaptureInterface() = default;
 
 #ifdef TGVOIP_NAMESPACE
 }

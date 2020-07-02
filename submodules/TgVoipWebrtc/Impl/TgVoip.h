@@ -129,6 +129,16 @@ struct TgVoipAudioDataCallbacks {
     std::function<void(int16_t*, size_t)> preprocessed;
 };
 
+class TgVoipVideoCaptureInterface {
+protected:
+    TgVoipVideoCaptureInterface() = default;
+public:
+    static std::shared_ptr<TgVoipVideoCaptureInterface> makeInstance();
+    
+    virtual ~TgVoipVideoCaptureInterface();
+    virtual void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
+};
+
 class TgVoip {
 protected:
     TgVoip() = default;
@@ -147,6 +157,7 @@ public:
             TgVoipNetworkType initialNetworkType,
             TgVoipEncryptionKey const &encryptionKey,
             bool isVideo,
+            std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
             std::function<void(TgVoipState)> stateUpdated,
             std::function<void(bool)> videoStateUpdated,
             std::function<void(bool)> remoteVideoIsActiveUpdated,

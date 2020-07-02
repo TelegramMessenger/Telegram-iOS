@@ -164,7 +164,7 @@ static rtc::Thread *makeWorkerThread() {
 }
 
 
-static rtc::Thread *getWorkerThread() {
+static rtc::Thread *MediaManager::getWorkerThread() {
     static rtc::Thread *value = makeWorkerThread();
     return value;
 }

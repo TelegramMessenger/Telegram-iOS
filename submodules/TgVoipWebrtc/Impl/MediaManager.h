@@ -54,10 +54,13 @@ private:
     friend class MediaManager::NetworkInterfaceImpl;
     
 public:
+    static rtc::Thread *getWorkerThread();
+    
     MediaManager(
         rtc::Thread *thread,
         bool isOutgoing,
         bool startWithVideo,
+        std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
         std::function<void (const rtc::CopyOnWriteBuffer &)> packetEmitted,
         std::function<void (bool)> localVideoCaptureActiveUpdated
     );
@@ -99,8 +102,7 @@ private:
     std::unique_ptr<cricket::VoiceMediaChannel> _audioChannel;
     std::unique_ptr<cricket::VideoMediaChannel> _videoChannel;
     std::unique_ptr<webrtc::VideoBitrateAllocatorFactory> _videoBitrateAllocatorFactory;
-    rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> _nativeVideoSource;
-    std::unique_ptr<VideoCapturerInterface> _videoCapturer;
+    std::shared_ptr<TgVoipVideoCaptureInterface> _videoCapture;
     std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> _currentIncomingVideoSink;
     std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> _currentOutgoingVideoSink;
     
