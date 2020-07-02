@@ -352,6 +352,7 @@
     
     if ([self presentedForAvatarCreation] && _item.isVideo) {
         _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolbarView.frame.size.width, 68.0f)];
+        _scrubberView.layer.allowsGroupOpacity = true;
         _scrubberView.hasDotPicker = true;
         _scrubberView.dataSource = self;
         _scrubberView.delegate = self;
@@ -837,6 +838,16 @@
     
     [_portraitToolbarView setDoneButtonEnabled:enabled animated:animated];
     [_landscapeToolbarView setDoneButtonEnabled:enabled animated:animated];
+    
+    if (animated) {
+        [UIView animateWithDuration:0.2 animations:^{
+            _scrubberView.alpha = enabled ? 1.0 : 0.2;
+        }];
+    } else {
+        _scrubberView.alpha = enabled ? 1.0 : 0.2;
+    }
+    
+    _scrubberView.userInteractionEnabled = enabled;
 }
 
 - (void)updateStatusBarAppearanceForDismiss
@@ -2677,29 +2688,36 @@
         return;
     
     id<TGMediaEditAdjustments> adjustments = [_photoEditor exportAdjustments];
-        
+            
+    __weak TGPhotoEditorController *weakSelf = self;
     SSignal *thumbnailsSignal = nil;
     if (_cachedThumbnails != nil) {
         thumbnailsSignal = [SSignal single:_cachedThumbnails];
     } else if ([self.item isKindOfClass:[TGMediaAsset class]]) {
-        thumbnailsSignal = [[SSignal single:[self _placeholderThumbnails:timestamps]] then:[TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item size:size timestamps:timestamps]];
+        thumbnailsSignal = [[SSignal single:[self _placeholderThumbnails:timestamps]] then:[[TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item size:size timestamps:timestamps] onNext:^(NSArray *images) {
+               __strong TGPhotoEditorController *strongSelf = weakSelf;
+               if (strongSelf == nil)
+                   return;
+               
+               if (strongSelf->_cachedThumbnails == nil)
+                   strongSelf->_cachedThumbnails = images;
+           }]];
     } else if ([self.item isKindOfClass:[TGCameraCapturedVideo class]]) {
         thumbnailsSignal = [[((TGCameraCapturedVideo *)self.item).avAsset takeLast] mapToSignal:^SSignal *(AVAsset *avAsset) {
-            return [[SSignal single:[self _placeholderThumbnails:timestamps]] then:[TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps]];
+            return [[SSignal single:[self _placeholderThumbnails:timestamps]] then:[[TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps]  onNext:^(NSArray *images) {
+                   __strong TGPhotoEditorController *strongSelf = weakSelf;
+                   if (strongSelf == nil)
+                       return;
+                   
+                   if (strongSelf->_cachedThumbnails == nil)
+                       strongSelf->_cachedThumbnails = images;
+               }]];
         }];
     }
         
     _requestingThumbnails = true;
     
-    __weak TGPhotoEditorController *weakSelf = self;
-    [_thumbnailsDisposable setDisposable:[[[[thumbnailsSignal onNext:^(NSArray *images) {
-        __strong TGPhotoEditorController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        if (strongSelf->_cachedThumbnails == nil)
-            strongSelf->_cachedThumbnails = images;
-    }] map:^NSArray *(NSArray *images) {
+    [_thumbnailsDisposable setDisposable:[[[thumbnailsSignal map:^NSArray *(NSArray *images) {
         if (adjustments.toolsApplied) {
             NSMutableArray *editedImages = [[NSMutableArray alloc] init];
             PGPhotoEditor *editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:false enableStickers:true];

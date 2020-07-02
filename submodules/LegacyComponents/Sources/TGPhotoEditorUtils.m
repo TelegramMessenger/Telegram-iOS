@@ -506,14 +506,18 @@ UIImageOrientation TGVideoOrientationForAsset(AVAsset *asset, bool *mirrored)
         *mirrored = (scale.width < 0);
     }
     
-    if (fabs(videoRotation - M_PI) < FLT_EPSILON)
+    if (fabs(videoRotation - M_PI) < FLT_EPSILON) {
         return UIImageOrientationLeft;
-    else if (fabs(videoRotation - M_PI_2) < FLT_EPSILON)
+    } else if (fabs(videoRotation - M_PI_2) < FLT_EPSILON) {
+        if (t.c == 1 && mirrored != NULL) {
+            *mirrored = true;
+        }
         return UIImageOrientationUp;
-    else if (fabs(videoRotation + M_PI_2) < FLT_EPSILON)
+    } else if (fabs(videoRotation + M_PI_2) < FLT_EPSILON) {
         return UIImageOrientationDown;
-    else
+    } else {
         return UIImageOrientationRight;
+    }
 }
 
 UIImageOrientation TGVideoFinalOrientationForOrientation(UIImageOrientation videoOrientation, UIImageOrientation cropOrientation)
