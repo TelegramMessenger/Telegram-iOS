@@ -498,4 +498,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     return highlightedButtons;
 }
 
+- (bool)presentedForAvatarCreation
+{
+    return _intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent);
+}
+
 @end

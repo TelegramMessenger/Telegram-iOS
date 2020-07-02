@@ -2218,6 +2218,8 @@
             _initializedScrubber = true;
             [_scrubberView reloadData];
             [_scrubberView resetToStart];
+            if (_isPlaying)
+                [_scrubberView _updateScrubberAnimationsAndResetCurrentPosition:true];
         } else {
             if (previousWidth != _portraitToolbarView.frame.size.width)
                 [_scrubberView reloadThumbnails];

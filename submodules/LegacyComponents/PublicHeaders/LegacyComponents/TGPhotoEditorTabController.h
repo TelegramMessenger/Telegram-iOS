@@ -71,6 +71,8 @@
 - (TGPhotoEditorTab)activeTab;
 - (TGPhotoEditorTab)highlightedTabs;
 
+- (bool)presentedForAvatarCreation;
+
 + (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation panelSize:(CGFloat)panelSize hasOnScreenNavigation:(bool)hasOnScreenNavigation;
 
 + (TGPhotoEditorTab)highlightedButtonsForEditorValues:(id<TGMediaEditAdjustments>)editorValues forAvatar:(bool)forAvatar;

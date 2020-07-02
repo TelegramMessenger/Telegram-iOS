@@ -118,6 +118,7 @@ private class PeerAvatarImageGalleryContentNode: ASDisplayNode {
 
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
+    private let presentationData: PresentationData
     private let peer: Peer
     private let sourceHasRoundCorners: Bool
     
@@ -130,6 +131,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>()
+    
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     fileprivate let footerContentNode: AvatarGalleryItemFooterContentNode
@@ -141,6 +144,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
         self.context = context
+        self.presentationData = presentationData
         self.peer = peer
         self.sourceHasRoundCorners = sourceHasRoundCorners
         
@@ -204,12 +208,16 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if self.entry != entry {
             self.entry = entry
             
+            var barButtonItems: [UIBarButtonItem] = []
             var footerContent: AvatarGalleryItemFooterContent
             if self.peer.id == self.context.account.peerId {
                 footerContent = .own((entry.indexData?.position ?? 0) == 0)
+                let rightBarButtonItem =  UIBarButtonItem(title: self.presentationData.strings.Settings_EditProfileMedia, style: .plain, target: self, action: #selector(editPressed))
+                barButtonItems.append(rightBarButtonItem)
             } else {
                 footerContent = .info
             }
+            self._rightBarButtonItems.set(.single(barButtonItems))
                         
             self.footerContentNode.setEntry(entry, content: footerContent)
             
@@ -471,6 +479,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._title.get()
     }
     
+    override func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {
+        return self._rightBarButtonItems.get()
+    }
+    
     @objc func statusPressed() {
         if let entry = self.entry, let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })), let status = self.status {
             switch status {
@@ -492,6 +504,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     break
             }
         }
+    }
+    
+    @objc private func editPressed() {
+        
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {

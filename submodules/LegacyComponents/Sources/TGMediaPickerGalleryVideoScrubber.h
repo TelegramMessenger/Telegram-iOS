@@ -48,6 +48,8 @@
 
 - (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position;
 
+- (void)_updateScrubberAnimationsAndResetCurrentPosition:(bool)resetCurrentPosition;
+
 @end
 
 @protocol TGMediaPickerGalleryVideoScrubberDelegate <NSObject>

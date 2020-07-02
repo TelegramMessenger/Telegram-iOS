@@ -2217,7 +2217,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
     else if (gestureRecognizer == _videoSwipeGestureRecognizer)
     {
-        newMode = PGCameraModeVideo;
+        if (_intent == TGCameraControllerAvatarIntent) {
+            newMode = PGCameraModeSquareVideo;
+        } else {
+            newMode = PGCameraModeVideo;
+        }
     }
     
     if (newMode != PGCameraModeUndefined && _camera.cameraMode != newMode)

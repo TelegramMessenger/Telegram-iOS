@@ -488,7 +488,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     previewView.hidden = true;
     [previewView performTransitionInIfNeeded];
     
-    [_cropView openCurtains];
+    if (!self.initialAppearance)
+        [_cropView openCurtains];
     [_cropView transitionInFinishedFromCamera:(self.fromCamera && self.initialAppearance)];
     
     PGPhotoEditor *photoEditor = self.photoEditor;

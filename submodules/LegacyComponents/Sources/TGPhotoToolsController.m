@@ -944,6 +944,14 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     CGSize referenceSize = [self referenceViewSize];
     CGRect containerFrame = _preview ? CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height) : [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(photoEditor.rotatedCropSize, containerFrame.size);
+    
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
+    
     previewView.frame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
     [UIView performWithoutAnimation:^
