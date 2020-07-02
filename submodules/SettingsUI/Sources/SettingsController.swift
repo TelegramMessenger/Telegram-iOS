@@ -1061,7 +1061,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     blockedPeers.set(.single(blockedPeersContext))
                 }, updatedHasTwoStepAuth: { hasTwoStepAuthValue in
                     hasTwoStepAuthPromise.set(.single(hasTwoStepAuthValue))
-                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth))
+                }, focusOnItemTag: nil, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth))
             })
         })
     }, openDataAndStorage: {
@@ -2041,5 +2041,5 @@ private func accountContextMenuItems(context: AccountContext, logout: @escaping 
 }
 
 public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
-    return privacyAndSecurityController(context: context)
+    return privacyAndSecurityController(context: context, focusOnItemTag: PrivacyAndSecurityEntryTag.autoArchive)
 }
