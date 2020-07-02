@@ -215,6 +215,11 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
 }
 
+- (void)finishCustomTransitionOut
+{
+    
+}
+
 - (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))__unused completion
 {
 

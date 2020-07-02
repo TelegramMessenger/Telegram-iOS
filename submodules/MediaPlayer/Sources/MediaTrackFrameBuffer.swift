@@ -161,7 +161,7 @@ public final class MediaTrackFrameBuffer {
             if self.endOfStream, let decodedFrame = self.decoder.takeRemainingFrame() {
                 return .frame(decodedFrame)
             } else {
-                if let bufferedUntilTime = bufferedUntilTime {
+                if let bufferedUntilTime = self.bufferedUntilTime {
                     if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
                         return .finished
                     }

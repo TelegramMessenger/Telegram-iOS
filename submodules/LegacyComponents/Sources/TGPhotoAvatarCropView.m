@@ -41,7 +41,7 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     
     CGFloat _currentDiameter;
     
-    PGPhotoEditorView *_fullPreviewView;
+    __weak PGPhotoEditorView *_fullPreviewView;
 }
 @end
 
@@ -83,7 +83,6 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
         _fullPreviewView.userInteractionEnabled = false;
         [_wrapperView addSubview:_fullPreviewView];
-        
         
         _flashView = [[UIView alloc] init];
         _flashView.alpha = 0.0;
@@ -129,6 +128,11 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         [_wrapperView addGestureRecognizer:tapRecognier];
     }
     return self;
+}
+
+- (void)dealloc
+{
+    _scrollView.delegate = nil;
 }
 
 - (void)handleTap:(UITapGestureRecognizer *)gestureRecognizer {

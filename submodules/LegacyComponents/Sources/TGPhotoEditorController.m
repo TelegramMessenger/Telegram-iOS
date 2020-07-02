@@ -564,6 +564,9 @@
         
         if (strongSelf->_ignoreDefaultPreviewViewTransitionIn)
         {
+            __strong TGPhotoEditorController *strongSelf = weakSelf;
+             if (strongSelf == nil)
+                 return;
             TGDispatchOnMainThread(^
             {
                 if (strongSelf->_dismissed)
@@ -578,6 +581,9 @@
         {
             [photoEditor processAnimated:false completion:^
             {
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                 if (strongSelf == nil)
+                     return;
                 TGDispatchOnMainThread(^
                 {
                     if (strongSelf->_dismissed)
@@ -1093,7 +1099,13 @@
             rep = imageView;
         }
         [_currentTabController prepareForCustomTransitionOut];
-        self.beginCustomTransitionOut([_currentTabController transitionOutReferenceFrame], rep, completion);
+        
+        TGPhotoEditorTabController *tabController = _currentTabController;
+        self.beginCustomTransitionOut([_currentTabController transitionOutReferenceFrame], rep, ^{
+            [tabController finishCustomTransitionOut];
+            if (completion)
+                completion();
+        });
     }
     else
     {
@@ -1128,6 +1140,8 @@
     {
         if (![currentController isDismissAllowed])
             return;
+        
+        [self savePaintingData];
                 
         currentController.switchingToTab = tab;
         [currentController transitionOutSwitching:true completion:^
@@ -1643,6 +1657,7 @@
             self.view.frame = targetFrame;
         } completion:^(__unused BOOL finished)
         {
+            [_currentTabController finishCustomTransitionOut];
             if (self.navigationController != nil) {
                 [self.navigationController popViewControllerAnimated:false];
             } else {
@@ -1653,6 +1668,7 @@
     else
     {
         if (self.navigationController != nil) {
+            [_currentTabController finishCustomTransitionOut];
             [self.navigationController popViewControllerAnimated:false];
         } else {
             [self dismiss];
@@ -1767,6 +1783,18 @@
     }
 }
 
+- (void)savePaintingData {
+    if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])
+        return;
+    
+    TGPhotoPaintController *paintController = (TGPhotoPaintController *)_currentTabController;
+    TGPaintingData *paintingData = [paintController paintingData];
+    _photoEditor.paintingData = paintingData;
+    
+    if (paintingData != nil)
+        [TGPaintingData storePaintingData:paintingData inContext:self.editingContext forItem:_item forVideo:(_intent == TGPhotoEditorControllerVideoIntent)];
+}
+
 - (void)applyEditor
 {
     if (![_currentTabController isDismissAllowed])
@@ -1775,8 +1803,6 @@
     self.view.userInteractionEnabled = false;
     [_currentTabController prepareTransitionOutSaving:true];
     
-    TGPaintingData *paintingData = _photoEditor.paintingData;
-
     bool saving = true;
     NSTimeInterval videoStartValue = 0.0;
     NSTimeInterval trimStartValue = 0.0;
@@ -1784,12 +1810,7 @@
     
     if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
     {
-        TGPhotoPaintController *paintController = (TGPhotoPaintController *)_currentTabController;
-        paintingData = [paintController paintingData];
-        _photoEditor.paintingData = paintingData;
-        
-        if (paintingData != nil)
-            [TGPaintingData storePaintingData:paintingData inContext:self.editingContext forItem:_item forVideo:(_intent == TGPhotoEditorControllerVideoIntent)];
+        [self savePaintingData];
     }
     else if ([_currentTabController isKindOfClass:[TGPhotoQualityController class]])
     {
@@ -1807,6 +1828,7 @@
     
     [self stopVideoPlayback:true];
     
+    TGPaintingData *paintingData = _photoEditor.paintingData;
     TGVideoEditAdjustments *adjustments = [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
     if ([self presentedForAvatarCreation] && _item.isVideo) {
         [[SQueue concurrentDefaultQueue] dispatch:^
