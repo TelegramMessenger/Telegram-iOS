@@ -30,7 +30,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         minScale: 0.55,
         maxScale: 0.9,
         scaleSpeed: 0.2,
-        isCircle: false
+        isCircle: true
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
@@ -41,14 +41,14 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         minScale: 0.55,
         maxScale: 1,
         scaleSpeed: 0.2,
-        isCircle: false
+        isCircle: true
     )
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         
         addSubview(bigBlob)
-        addSubview(mediumBlob)
+        //addSubview(mediumBlob)
         addSubview(smallBlob)
     }
     

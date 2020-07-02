@@ -8,6 +8,7 @@
 {
     bool _dismissing;
     UIView *_transitionView;
+    bool _noTransitionToSnapshot;
 }
 
 @property (nonatomic, weak) id<TGMediaEditableItem> item;

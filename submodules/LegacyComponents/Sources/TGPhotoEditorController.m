@@ -1160,7 +1160,7 @@
             }
         }
         
-        if ([self presentedForAvatarCreation])
+        if ([self presentedForAvatarCreation] && ![self presentedFromCamera])
             transitionNoTransitionView = true;
         
         snapshotImage = _screenImage;

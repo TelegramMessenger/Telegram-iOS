@@ -5430,6 +5430,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func dismissSuggestion(suggestion: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(125807007)
+                    serializeString(suggestion, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.dismissSuggestion", parameters: [("suggestion", suggestion)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             public struct updates {
                 public static func getState() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.State>) {

@@ -5643,4 +5643,8 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.Unarchive" = "Unarchive";
 "Conversation.UnarchiveDone" = "The chat was moved to your main list.";
 
+"ChatList.AutoarchiveSuggestion.Title" = "Hide new chats?";
+"ChatList.AutoarchiveSuggestion.Text" = "You are receiving lots of new chats from users who are not in your Contact List. Do you want to have such chats **automatically muted** and **archived**?";
+"ChatList.AutoarchiveSuggestion.OpenSettings" = "Go to Settings";
+
 "SettingsSearch.Synonyms.ChatSettings.IntentsSettings" = "Siri Suggestions";
