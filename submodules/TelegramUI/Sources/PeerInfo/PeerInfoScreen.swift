@@ -1082,6 +1082,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let toggleShouldChannelMessagesSignaturesDisposable = MetaDisposable()
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
+    private let preloadHistoryDisposable = MetaDisposable()
     
     private let updateAvatarDisposable = MetaDisposable()
     private let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
@@ -2018,6 +2019,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         })
         
         if let _ = nearbyPeerDistance {
+            self.preloadHistoryDisposable.set(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerId))
+            
             self.preloadedSticker.set(.single(nil)
             |> then(randomGreetingSticker(account: context.account)
             |> map { item in
@@ -2049,6 +2052,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.updateAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
+        self.preloadHistoryDisposable.dispose()
         self.preloadStickerDisposable.dispose()
     }
     
