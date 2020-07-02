@@ -176,7 +176,7 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
     {
         inputRotation = newInputRotation;
     }
-    else
+    else if (textureIndex == 1 && !_rotateOnlyFirstTexture)
     {
         inputRotation2 = newInputRotation;
     }

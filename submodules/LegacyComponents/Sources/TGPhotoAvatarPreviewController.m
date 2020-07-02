@@ -24,6 +24,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @interface TGPhotoAvatarPreviewController ()
 {
+    bool _dismissingToCamera;
     bool _appeared;
     UIImage *_imagePendingLoad;
     UIView *_snapshotView;
@@ -259,6 +260,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 #pragma mark - Transition
 
+- (void)prepareTransitionInWithReferenceView:(UIView *)referenceView referenceFrame:(CGRect)referenceFrame parentView:(UIView *)parentView noTransitionView:(bool)noTransitionView
+{
+    [super prepareTransitionInWithReferenceView:referenceView referenceFrame:referenceFrame parentView:parentView noTransitionView:noTransitionView];
+    [self.view insertSubview:_transitionView belowSubview:_wrapperView];
+}
+
 - (void)transitionIn
 {
     if (_portraitToolsWrapperView.frame.size.height < FLT_EPSILON) {
@@ -320,14 +327,30 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     }
 }
 
+- (void)transitionOutSaving:(bool)saving completion:(void (^)(void))completion
+{
+    if (!saving && self.fromCamera) {
+        _dismissingToCamera = true;
+        _noTransitionToSnapshot = true;
+        
+        _fullPreviewView.frame = [_fullPreviewView.superview convertRect:_fullPreviewView.frame toView:self.view];
+        [self.view insertSubview:_fullPreviewView belowSubview:_wrapperView];
+        [_cropView hideImageForCustomTransition];
+    }
+    
+    [super transitionOutSaving:saving completion:completion];
+}
+
 - (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion
 {
     if (switching) {
         _dismissing = true;
     }
     
-    [self.view insertSubview:_previewView belowSubview:_wrapperView];
-    _previewView.frame = [_wrapperView convertRect:_cropView.frame toView:self.view];
+    if (!self.fromCamera || switching) {
+        [self.view insertSubview:_previewView belowSubview:_wrapperView];
+        _previewView.frame = [_wrapperView convertRect:_cropView.frame toView:self.view];
+    }
     
     [_cropView animateTransitionOut];
     
@@ -371,6 +394,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             if (completion != nil)
                 completion();
         }];
+    } else if (self.fromCamera) {
+        _previewView.alpha = 0.0f;
     }
     
     switch (self.effectiveOrientation)
@@ -426,8 +451,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 {
     _dismissing = true;
     
-    TGPhotoEditorPreviewView *previewView = self.previewView;
-    [previewView prepareForTransitionOut];
+    UIView *previewView = self.previewView;
+    if (_dismissingToCamera) {
+        previewView = _fullPreviewView;
+    } else {
+        [self.previewView prepareForTransitionOut];
+    }
     
     UIView *snapshotView = nil;
     POPSpringAnimation *snapshotAnimation = nil;
@@ -488,7 +517,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     previewView.hidden = true;
     [previewView performTransitionInIfNeeded];
     
-    [_cropView openCurtains];
+    if (!self.initialAppearance)
+        [_cropView openCurtains];
     [_cropView transitionInFinishedFromCamera:(self.fromCamera && self.initialAppearance)];
     
     PGPhotoEditor *photoEditor = self.photoEditor;
@@ -521,13 +551,20 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (CGRect)transitionOutReferenceFrame
 {
-    TGPhotoEditorPreviewView *previewView = _previewView;
-    return previewView.frame;
+    if (_dismissingToCamera) {
+        return _fullPreviewView.frame;
+    } else {
+        return _previewView.frame;
+    }
 }
 
 - (UIView *)transitionOutReferenceView
 {
-    return _previewView;
+    if (_dismissingToCamera) {
+        return _fullPreviewView;
+    } else {
+        return _previewView;
+    }
 }
 
 - (id)currentResultRepresentation

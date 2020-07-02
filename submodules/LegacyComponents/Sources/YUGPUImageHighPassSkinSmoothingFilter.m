@@ -60,7 +60,7 @@ SHADER_STRING
  
  void main() {
      vec4 image = texture2D(sourceImage, texCoord);
-     vec4 blurredImage = texture2D(inputImageTexture2, texCoord);
+     vec4 blurredImage = texture2D(inputImageTexture2, texCoord2);
      gl_FragColor = vec4((image.rgb - blurredImage.rgb + vec3(0.5,0.5,0.5)), image.a);
  }
 );
@@ -202,8 +202,8 @@ SHADER_STRING
  
  void main() {
      vec4 image = texture2D(sourceImage, texCoord);
-     vec4 toneCurvedImage = texture2D(inputImageTexture2, texCoord);
-     vec4 mask = texture2D(inputImageTexture3, texCoord);
+     vec4 toneCurvedImage = texture2D(inputImageTexture2, texCoord2);
+     vec4 mask = texture2D(inputImageTexture3, texCoord3);
      gl_FragColor = vec4(mix(image.rgb,toneCurvedImage.rgb,1.0 - mask.b),1.0);
  }
 );
@@ -240,12 +240,14 @@ SHADER_STRING
         self.skinToneCurveFilter = skinToneCurveFilter;
         
         GPUImageDissolveBlendFilter *dissolveFilter = [[GPUImageDissolveBlendFilter alloc] init];
+        dissolveFilter.rotateOnlyFirstTexture = true;
         [self addFilter:dissolveFilter];
         self.dissolveFilter = dissolveFilter;
         
         [skinToneCurveFilter addTarget:dissolveFilter atTextureLocation:1];
         
         GPUImageThreeInputFilter *composeFilter = [[GPUImageThreeInputFilter alloc] initWithFragmentShaderFromString:YUGPUImageHighpassSkinSmoothingCompositingFilterFragmentShaderString];
+        composeFilter.rotateOnlyFirstTexture = true;
         [self addFilter:composeFilter];
         
         [maskGenerator addTarget:composeFilter atTextureLocation:2];
@@ -279,6 +281,10 @@ SHADER_STRING
     [super setInputSize:newSize atIndex:textureIndex];
     self.currentInputSize = newSize;
     [self updateHighPassRadius];
+}
+
+- (void)setInputRotation:(GPUImageRotationMode)newInputRotation atIndex:(NSInteger)textureIndex {
+    [super setInputRotation:newInputRotation atIndex:textureIndex];
 }
 
 - (void)updateHighPassRadius {

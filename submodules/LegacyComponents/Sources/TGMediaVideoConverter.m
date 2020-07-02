@@ -331,7 +331,7 @@
 
 + (AVAssetReaderVideoCompositionOutput *)setupVideoCompositionOutputWithAVAsset:(AVAsset *)avAsset image:(UIImage *)image composition:(AVMutableComposition *)composition videoTrack:(AVAssetTrack *)videoTrack preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments timeRange:(CMTimeRange)timeRange outputSettings:(NSDictionary **)outputSettings dimensions:(CGSize *)dimensions conversionContext:(SAtomic *)conversionContext
 {
-    CGSize transformedSize = CGRectApplyAffineTransform((CGRect){CGPointZero, videoTrack.naturalSize}, videoTrack.preferredTransform).size;;
+    CGSize transformedSize = CGRectApplyAffineTransform((CGRect){CGPointZero, videoTrack.naturalSize}, videoTrack.preferredTransform).size;
     CGRect transformedRect = CGRectMake(0, 0, transformedSize.width, transformedSize.height);
     if (CGSizeEqualToSize(transformedRect.size, CGSizeZero))
         transformedRect = CGRectMake(0, 0, videoTrack.naturalSize.width, videoTrack.naturalSize.height);
@@ -368,7 +368,7 @@
     UIImage *overlayImage = nil;
     if (adjustments.paintingData.imagePath != nil)
         overlayImage = [UIImage imageWithContentsOfFile:adjustments.paintingData.imagePath];
-        
+    
     AVMutableVideoComposition *videoComposition;
     if (entityRenderer != nil || adjustments.toolsApplied) {
         PGPhotoEditor *editor = nil;

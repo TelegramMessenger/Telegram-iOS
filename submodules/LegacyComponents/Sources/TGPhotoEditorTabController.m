@@ -300,6 +300,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         
         [parentView addSubview:toTransitionView];
         
+        if (_noTransitionToSnapshot)
+            toTransitionView.alpha = 0.0f;
+        
         UIInterfaceOrientation orientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
         if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
             orientation = UIInterfaceOrientationPortrait;
@@ -496,6 +499,11 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         highlightedButtons |= TGPhotoEditorToolsTab;
     
     return highlightedButtons;
+}
+
+- (bool)presentedForAvatarCreation
+{
+    return _intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent);
 }
 
 @end

@@ -640,7 +640,7 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
         pushControllerImpl?(controller)
     }, openIntents: {
         let controller = intentsSettingsController(context: context)
-          pushControllerImpl?(controller)
+        pushControllerImpl?(controller)
     }, toggleEnableSensitiveContent: { value in
         let _ = (contentSettingsConfiguration.get()
         |> take(1)

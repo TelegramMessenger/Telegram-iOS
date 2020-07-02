@@ -8,6 +8,7 @@
 {
     bool _dismissing;
     UIView *_transitionView;
+    bool _noTransitionToSnapshot;
 }
 
 @property (nonatomic, weak) id<TGMediaEditableItem> item;
@@ -70,6 +71,8 @@
 - (void)_updateTabs;
 - (TGPhotoEditorTab)activeTab;
 - (TGPhotoEditorTab)highlightedTabs;
+
+- (bool)presentedForAvatarCreation;
 
 + (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation panelSize:(CGFloat)panelSize hasOnScreenNavigation:(bool)hasOnScreenNavigation;
 
