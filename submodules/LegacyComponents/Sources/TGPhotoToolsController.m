@@ -160,8 +160,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil) {
             [strongSelf->_hudView setText:nil];
             
-            if (forVideo) {
-                strongSelf->_photoEditor.disableAll = false;
+            strongSelf->_photoEditor.disableAll = false;
+            if (!forVideo) {
+                [strongSelf->_photoEditor processAnimated:false completion:nil];
             }
         }
     };
@@ -171,8 +172,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil) {
             [strongSelf->_hudView setText:TGLocalized(@"PhotoEditor.Original")];
             
-            if (forVideo) {
-                strongSelf->_photoEditor.disableAll = true;
+            strongSelf->_photoEditor.disableAll = true;
+            if (!forVideo) {
+                [strongSelf->_photoEditor processAnimated:false completion:nil];
             }
         }
     };

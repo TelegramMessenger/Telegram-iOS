@@ -44,6 +44,7 @@
 - (void)prepareTransitionOutSaving:(bool)saving;
 
 - (void)prepareForCustomTransitionOut;
+- (void)finishCustomTransitionOut;
 
 - (void)animateTransitionIn;
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame;

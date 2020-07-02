@@ -484,7 +484,6 @@
             [_finalFilter addTarget:self.previewOutput.imageView];
         }
     }
-
     
     if (_histogramGenerator != nil && !self.standalone) {
         [_finalFilter addTarget:_histogramGenerator];

@@ -21,6 +21,8 @@ static_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/ShareController:ShareController",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
