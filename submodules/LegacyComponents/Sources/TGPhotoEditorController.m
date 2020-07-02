@@ -59,6 +59,8 @@
     TGPhotoEditorTab _currentTab;
     TGPhotoEditorTabController *_currentTabController;
     
+    TGMediaEditingContext *_standaloneEditingContext;
+    
     UIView *_backgroundView;
     UIView *_containerView;
     UIView *_wrapperView;
@@ -140,6 +142,7 @@
     {
         _context = context;
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
+        _standaloneEditingContext = [[TGMediaEditingContext alloc] init];
         
         self.automaticallyManageScrollViewInsets = false;
         self.autoManageStatusBarBackground = false;
@@ -1203,7 +1206,11 @@
             {
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 
-                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView scrubberView:_scrubberView dotImageView:_dotImageView fullPreviewView:_fullPreviewView];
+                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+                cropController.scrubberView = _scrubberView;
+                cropController.dotImageView = _dotImageView;
+                cropController.dotMarkerView = _dotMarkerView;
+                cropController.fullPreviewView = _fullPreviewView;
                 cropController.fromCamera = [self presentedFromCamera];
                 cropController.skipTransitionIn = skipInitialTransition;
                 if (snapshotImage != nil)
@@ -1782,7 +1789,7 @@
         _photoEditor.paintingData = paintingData;
         
         if (paintingData != nil)
-            [TGPaintingData storePaintingData:paintingData inContext:_editingContext forItem:_item forVideo:(_intent == TGPhotoEditorControllerVideoIntent)];
+            [TGPaintingData storePaintingData:paintingData inContext:self.editingContext forItem:_item forVideo:(_intent == TGPhotoEditorControllerVideoIntent)];
     }
     else if ([_currentTabController isKindOfClass:[TGPhotoQualityController class]])
     {
@@ -1968,7 +1975,7 @@
                     thumbnailImage = UIGraphicsGetImageFromCurrentImageContext();
                     UIGraphicsEndImageContext();
                     
-                    [_editingContext setImage:fullImage thumbnailImage:thumbnailImage forItem:_item synchronous:true];
+                    [self.editingContext setImage:fullImage thumbnailImage:thumbnailImage forItem:_item synchronous:true];
                 }];
             }];
         }
@@ -1988,6 +1995,14 @@
             }];
         }
     }
+}
+
+- (TGMediaEditingContext *)editingContext
+{
+    if (_editingContext)
+        return _editingContext;
+    else
+        return _standaloneEditingContext;
 }
 
 - (void)doneButtonLongPressed:(UIButton *)sender

@@ -33,15 +33,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     UIView *_wrapperView;
     
     TGPhotoAvatarCropView *_cropView;
-    PGPhotoEditorView *_fullPreviewView;
         
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     UIView *_portraitWrapperBackgroundView;
     UIView *_landscapeWrapperBackgroundView;
-    
-    TGMediaPickerGalleryVideoScrubber *_scrubberView;
-    UIView *_dotImageView;
+
     UIView *_portraitToolControlView;
     UIView *_landscapeToolControlView;
     UILabel *_coverLabel;
@@ -56,17 +53,12 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView scrubberView:(TGMediaPickerGalleryVideoScrubber *)scrubberView dotImageView:(UIView *)dotImageView fullPreviewView:(PGPhotoEditorView *)fullPreviewView
-{
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView {
     self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
-        _fullPreviewView = fullPreviewView;
-        _scrubberView = scrubberView;
-        
-        _dotImageView = dotImageView;
     }
     return self;
 }
@@ -172,7 +164,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         [_coverLabel sizeToFit];
         [_portraitToolsWrapperView addSubview:_coverLabel];
         
-        _dotImageView.alpha = 1.0f;
         [_wrapperView addSubview:_dotImageView];
     }
 }
@@ -273,6 +264,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     {
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
+        _dotImageView.alpha = 1.0f;
+        _dotMarkerView.alpha = 1.0f;
     } completion:^(BOOL finished) {
         _scrubberView.layer.shouldRasterize = false;
     }];
@@ -429,6 +422,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _portraitToolsWrapperView.alpha = 0.0f;
         _landscapeToolsWrapperView.alpha = 0.0f;
         _dotImageView.alpha = 0.0f;
+        _dotMarkerView.alpha = 0.0f;
     } completion:^(__unused BOOL finished)
     {
         if (!switching) {
