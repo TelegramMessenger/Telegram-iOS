@@ -10,7 +10,7 @@
 
 @implementation TGPhotoVideoEditor
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController image:(UIImage *)image video:(NSURL *)video didFinishWithImage:(void (^)(UIImage *image))didFinishWithImage didFinishWithVideo:(void (^)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments))didFinishWithVideo
++ (void)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController screenImage:(UIImage *)screenImage image:(UIImage *)image video:(NSURL *)video didFinishWithImage:(void (^)(UIImage *image))didFinishWithImage didFinishWithVideo:(void (^)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments))didFinishWithVideo dismissed:(void (^)(void))dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
@@ -21,8 +21,9 @@
         editableItem = [[TGCameraCapturedVideo alloc] initWithURL:video];
     }
     
-    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:nil availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
 //    controller.stickersContext = _stickersContext;
+    controller.skipInitialTransition = true;
     controller.dontHideStatusBar = true;
     controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
     {
@@ -42,7 +43,6 @@
     {
         return [editableItem screenImageSignal:position];
     };
-    
     controller.requestOriginalFullSizeImage = ^(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
     {
         if (editableItem.isVideo) {
@@ -56,6 +56,9 @@
         } else {
             return [editableItem originalImageSignal:position];
         }
+    };
+    controller.onDismiss = ^{
+        dismissed();
     };
     
     TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:controller];

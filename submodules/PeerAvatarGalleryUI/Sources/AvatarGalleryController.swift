@@ -635,6 +635,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 case let .progress(value):
                     break
                 case let .data(data):
+                    let screenImage: UIImage?
                     let image: UIImage?
                     let video: URL?
                     if isImage {
@@ -643,12 +644,14 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         } else {
                             image = nil
                         }
+                        screenImage = image
                         video = nil
                     } else {
                         image = nil
                         video = URL(fileURLWithPath: data.path)
+                        screenImage = nil
                     }
-                    presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, image: image, video: video, present: { [weak self] c, a in
+                    presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, screenImage: screenImage, image: image, video: video, present: { [weak self] c, a in
                         if let strongSelf = self {
                             strongSelf.present(c, in: .window(.root), with: a, blockInteraction: true)
                         }

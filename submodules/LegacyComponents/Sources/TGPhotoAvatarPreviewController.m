@@ -523,8 +523,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 //    [_cropView animateTransitionIn];
     [_cropView transitionInFinishedFromCamera:true];
     
-    self.finishedTransitionIn();
-    self.finishedTransitionIn = nil;
+    if (self.finishedTransitionIn) {
+        self.finishedTransitionIn();
+        self.finishedTransitionIn = nil;
+    }
 }
 
 - (void)prepareForCustomTransitionOut

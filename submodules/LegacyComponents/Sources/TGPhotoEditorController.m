@@ -582,7 +582,7 @@
             [photoEditor processAnimated:false completion:^
             {
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
-                 if (strongSelf == nil)
+                if (strongSelf == nil)
                      return;
                 TGDispatchOnMainThread(^
                 {
@@ -590,7 +590,8 @@
                         return;
                     [strongSelf->_previewView performTransitionInWithCompletion:^
                     {
-                        [strongSelf->_previewView setSnapshotImage:next];
+                        if (!strongSelf.skipInitialTransition)
+                            [strongSelf->_previewView setSnapshotImage:next];
                     }];
                 });
             }];
@@ -1194,6 +1195,10 @@
         snapshotImage = _screenImage;
     }
     
+    if (_currentTabController == nil && self.skipInitialTransition) {
+        [self presentAnimated:true];
+    }
+    
     _switchingTab = true;
     
     if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]]) {
@@ -1637,6 +1642,24 @@
 }
 #pragma mark -
 
+- (void)presentAnimated:(bool)animated
+{
+    if (animated)
+    {
+        const CGFloat velocity = 2000.0f;
+        CGFloat duration = self.view.frame.size.height / velocity;
+        CGRect targetFrame =  self.view.frame;
+        self.view.frame = CGRectOffset(self.view.frame, 0, self.view.frame.size.height);
+        
+        [UIView animateWithDuration:duration animations:^
+        {
+            self.view.frame = targetFrame;
+        } completion:^(__unused BOOL finished)
+        {
+        }];
+    }
+}
+
 - (void)dismissAnimated:(bool)animated
 {
     _dismissed = true;
@@ -1662,6 +1685,8 @@
                 [self.navigationController popViewControllerAnimated:false];
             } else {
                 [self dismiss];
+                if (self.onDismiss)
+                    self.onDismiss();
             }
         }];
     }
@@ -1701,7 +1726,9 @@
         strongSelf.view.userInteractionEnabled = false;
         [strongSelf->_currentTabController prepareTransitionOutSaving:false];
         
-        if (strongSelf.navigationController != nil && [strongSelf.navigationController.viewControllers containsObject:strongSelf])
+        if (self.skipInitialTransition) {
+            [strongSelf dismissAnimated:true];
+        } else if (strongSelf.navigationController != nil && [strongSelf.navigationController.viewControllers containsObject:strongSelf])
         {
             [strongSelf.navigationController popViewControllerAnimated:true];
         }
