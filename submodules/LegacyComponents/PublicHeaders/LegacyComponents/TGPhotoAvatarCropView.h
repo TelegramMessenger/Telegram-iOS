@@ -39,6 +39,8 @@
 - (void)closeCurtains;
 - (void)openCurtains;
 
+- (void)flash:(void (^)(void))completion;
+
 - (void)invalidateCropRect;
 
 - (UIImage *)currentImage;

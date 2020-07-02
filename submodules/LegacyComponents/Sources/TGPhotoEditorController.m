@@ -2591,7 +2591,7 @@
         return !strongSelf->_scrubberView.isScrubbing;
     }];
     
-    dispatch_async(dispatch_get_main_queue(), ^{
+    TGDispatchAfter(0.16, dispatch_get_main_queue(), ^{
         [self updateDotImage:true];
     });
 }
